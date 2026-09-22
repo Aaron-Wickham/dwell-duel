@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { listInvites } from '@/lib/invites/list-invites'
-import { addInviteAction, revokeInviteAction } from '@/lib/invites/actions'
+import { revokeInviteAction } from '@/lib/invites/actions'
+import { AddInviteForm } from './add-invite-form'
 
 export default async function AdminInvitesPage() {
   const { supabase, user } = await requireUser()
@@ -14,10 +15,7 @@ export default async function AdminInvitesPage() {
   return (
     <div className="mx-auto max-w-xl p-8">
       <h1 className="text-xl font-semibold">Invites</h1>
-      <form action={addInviteAction} className="mt-4 flex gap-2">
-        <input name="email" type="email" required placeholder="friend@gmail.com" className="border px-2 py-1" />
-        <button type="submit">Add</button>
-      </form>
+      <AddInviteForm />
       <ul className="mt-6 space-y-2">
         {invites.map((invite) => (
           <li key={invite.email} className="flex items-center justify-between">

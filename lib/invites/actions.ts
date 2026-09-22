@@ -5,12 +5,21 @@ import { requireUser } from '@/lib/auth/require-user'
 import { addInvite } from './add-invite'
 import { revokeInvite } from './revoke-invite'
 
-export async function addInviteAction(formData: FormData) {
+export interface AddInviteFormState {
+  formError?: string
+}
+
+export async function addInviteAction(
+  _prevState: AddInviteFormState | undefined,
+  formData: FormData,
+): Promise<AddInviteFormState | undefined> {
   const { supabase, user } = await requireUser()
-  if (!user) return
+  if (!user) return { formError: 'Not signed in.' }
   const email = String(formData.get('email') ?? '')
-  await addInvite(supabase, user.id, email)
+  const result = await addInvite(supabase, user.id, email)
   revalidatePath('/admin/invites')
+  if (!result.ok) return { formError: result.formError }
+  return undefined
 }
 
 export async function revokeInviteAction(formData: FormData) {

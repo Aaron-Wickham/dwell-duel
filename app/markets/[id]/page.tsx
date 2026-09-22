@@ -20,6 +20,12 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const odds = computeOdds(market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })))
 
   const isCreator = market.createdBy === user.id
+  // Server Components render once per request with no re-render/
+  // reconciliation cycle for React to keep consistent across -- the
+  // purity rule protects Client Components from that, which doesn't
+  // apply here, and this page already does non-deterministic async DB
+  // reads (getMarket, getOwnBets, isAdmin) on every invocation regardless.
+  // eslint-disable-next-line react-hooks/purity
   const isPastClose = new Date(market.closeAt).getTime() <= Date.now()
   const canBet = market.status === 'open' && !isPastClose
   const canResolve = market.status === 'open' && ((isCreator && isPastClose) || admin)

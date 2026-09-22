@@ -5,6 +5,7 @@ import { createMarketAction, type ActionState } from '@/lib/markets/create-marke
 
 export function CreateMarketForm() {
   const [kind, setKind] = useState<'binary' | 'multiple_choice'>('binary')
+  const [closeAtIso, setCloseAtIso] = useState('')
   const [state, formAction] = useActionState<ActionState, FormData>(createMarketAction, undefined)
 
   return (
@@ -50,8 +51,14 @@ export function CreateMarketForm() {
 
       <label className="flex flex-col gap-1">
         Close time
-        <input name="close_at" type="datetime-local" required className="border px-2 py-1" />
+        <input
+          type="datetime-local"
+          required
+          onChange={(e) => setCloseAtIso(e.target.value ? new Date(e.target.value).toISOString() : '')}
+          className="border px-2 py-1"
+        />
       </label>
+      <input type="hidden" name="close_at" value={closeAtIso} />
 
       <button type="submit">Create market</button>
       {state?.formError && <p className="text-sm text-red-600">{state.formError}</p>}

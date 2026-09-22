@@ -12,11 +12,11 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
   const title = String(formData.get('title') ?? '').trim()
   const description = String(formData.get('description') ?? '').trim()
   const kind = String(formData.get('kind') ?? '')
-  const closeAtRaw = String(formData.get('close_at') ?? '')
+  const closeAt = String(formData.get('close_at') ?? '')
 
   if (!title) return { formError: 'Enter a title.' }
   if (kind !== 'binary' && kind !== 'multiple_choice') return { formError: 'Choose a market kind.' }
-  if (!closeAtRaw) return { formError: 'Choose a close time.' }
+  if (!closeAt) return { formError: 'Choose a close time.' }
 
   const outcomeLabels =
     kind === 'binary'
@@ -25,8 +25,6 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
           .split('\n')
           .map((s) => s.trim())
           .filter(Boolean)
-
-  const closeAt = new Date(closeAtRaw).toISOString()
 
   const { data: marketId, error } = await supabase.rpc('create_market', {
     p_title: title,

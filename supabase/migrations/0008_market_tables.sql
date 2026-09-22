@@ -1,6 +1,6 @@
 create table markets (
   id uuid primary key default gen_random_uuid(),
-  created_by uuid not null references profiles (id) on delete cascade,
+  created_by uuid not null references profiles (id),
   title text not null,
   description text,
   kind text not null check (kind in ('binary', 'multiple_choice')),
@@ -23,7 +23,7 @@ create table bets (
   id bigint generated always as identity primary key,
   market_id uuid not null references markets (id) on delete cascade,
   outcome_id uuid not null references market_outcomes (id) on delete cascade,
-  profile_id uuid not null references profiles (id) on delete cascade,
+  profile_id uuid not null references profiles (id),
   amount integer not null check (amount > 0),
   created_at timestamptz not null default now()
 );
@@ -32,10 +32,10 @@ create table market_resolutions (
   id uuid primary key default gen_random_uuid(),
   market_id uuid not null references markets (id) on delete cascade,
   outcome_id uuid not null references market_outcomes (id) on delete cascade,
-  resolved_by uuid not null references profiles (id) on delete cascade,
+  resolved_by uuid not null references profiles (id),
   resolved_at timestamptz not null default now(),
   reversed_at timestamptz,
-  reversed_by uuid references profiles (id) on delete cascade
+  reversed_by uuid references profiles (id)
 );
 
 -- markets.current_resolution_id and market_resolutions.market_id

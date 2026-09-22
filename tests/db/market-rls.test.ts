@@ -107,4 +107,17 @@ describe('direct table writes', () => {
     const { count } = await db.from('bets').select('*', { count: 'exact', head: true }).eq('market_id', marketId)
     expect(count).toBe(0)
   })
+
+  it('rejects a direct update to market_outcomes.pool_total, bypassing place_bet', async () => {
+    const aliceClient = await clientFor(alice)
+    const { outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'])
+
+    const { error } = await aliceClient.from('market_outcomes').update({ pool_total: 999 }).eq('id', outcomeIds[0])
+    expect(error).not.toBeNull()
+    expect(error?.code).toBe('42501')
+
+    const db = serviceClient()
+    const { data: outcome } = await db.from('market_outcomes').select('pool_total').eq('id', outcomeIds[0]).single()
+    expect(outcome?.pool_total).toBe(0)
+  })
 })

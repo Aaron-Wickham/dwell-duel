@@ -1,0 +1,36 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+export type CreateOwnProfileResult = { ok: true } | { ok: false; reason: 'not_invited' | 'error' }
+
+/**
+ * Inserts the caller's own profile row using their own session's Supabase
+ * client, so insert_own_profile's is_invited() RLS check actually runs.
+ * `supabase` must be a client bound to the calling user's own session;
+ * `userId`/`email` must come from that same session — never from
+ * client-suppliable input.
+ */
+export async function createOwnProfile(
+  supabase: SupabaseClient,
+  userId: string,
+  email: string,
+  displayName: string,
+  avatarUrl: string | null,
+): Promise<CreateOwnProfileResult> {
+  const { error } = await supabase
+    .from('profiles')
+    .insert({ id: userId, email, display_name: displayName, avatar_url: avatarUrl })
+
+  if (!error) return { ok: true }
+
+  // 23505 = unique_violation on the primary key: a profile already exists
+  // for this id (a returning user) — expected, not a failure.
+  if (error.code === '23505') return { ok: true }
+
+  // 42501 = insufficient_privilege: either insert_own_profile's RLS check
+  // rejected the row (is_invited() was false) or the column-restricted
+  // grant rejected an attempted column — this function never sends
+  // balance/is_admin, so in practice this means "not invited."
+  if (error.code === '42501') return { ok: false, reason: 'not_invited' }
+
+  return { ok: false, reason: 'error' }
+}

@@ -2,8 +2,8 @@ import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { listInvites } from '@/lib/invites/list-invites'
-import { revokeInviteAction } from '@/lib/invites/actions'
 import { AddInviteForm } from './add-invite-form'
+import { RevokeInviteButton } from './revoke-invite-button'
 
 export default async function AdminInvitesPage() {
   const { supabase, user } = await requireUser()
@@ -22,12 +22,7 @@ export default async function AdminInvitesPage() {
             <span>
               {invite.email} {invite.claimed ? '(claimed)' : ''}
             </span>
-            {!invite.claimed && (
-              <form action={revokeInviteAction}>
-                <input type="hidden" name="email" value={invite.email} />
-                <button type="submit">Revoke</button>
-              </form>
-            )}
+            {!invite.claimed && <RevokeInviteButton email={invite.email} />}
           </li>
         ))}
       </ul>

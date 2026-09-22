@@ -22,10 +22,19 @@ export async function addInviteAction(
   return undefined
 }
 
-export async function revokeInviteAction(formData: FormData) {
+export interface RevokeInviteFormState {
+  formError?: string
+}
+
+export async function revokeInviteAction(
+  _prevState: RevokeInviteFormState | undefined,
+  formData: FormData,
+): Promise<RevokeInviteFormState | undefined> {
   const { supabase, user } = await requireUser()
-  if (!user) return
+  if (!user) return { formError: 'Not signed in.' }
   const email = String(formData.get('email') ?? '')
-  await revokeInvite(supabase, email)
+  const result = await revokeInvite(supabase, email)
   revalidatePath('/admin/invites')
+  if (!result.ok) return { formError: 'Could not revoke that invite.' }
+  return undefined
 }

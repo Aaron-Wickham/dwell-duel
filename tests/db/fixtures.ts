@@ -24,6 +24,13 @@ export async function makeAuthUserWithoutProfile(email: string): Promise<string>
  * test). `on_profile_created` (Task 4) still fires on this insert like
  * any other, so every member returned here already carries the 100-coin
  * starting balance the same code path a real sign-in goes through grants.
+ *
+ * This deliberately skips the real invite flow, so a member returned
+ * here has no `allowed_emails` row and `is_invited()` is false for
+ * them — a state no real user can ever be in (profile creation itself
+ * requires it). Harmless for most tests, but a trap for anything gated
+ * on `is_invited()` (e.g. `select_all_profiles`, `create_market()`) —
+ * call `ensureInvited()` (below) on that member's client first.
  */
 export async function makeMember(displayName: string): Promise<Member> {
   const email = `${displayName.toLowerCase()}@example.com`

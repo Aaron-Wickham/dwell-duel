@@ -1,12 +1,38 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, clientForEmail, makeAuthUserWithoutProfile, type Member } from './fixtures'
+import { seedMembers, clientFor, clientForEmail, makeAuthUserWithoutProfile, ensureInvited, type Member } from './fixtures'
 
 let alice: Member
 let bob: Member
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
+})
+
+describe('profiles select policy', () => {
+  it('denies a non-invited authenticated session any profile rows', async () => {
+    // seedMembers() deliberately bypasses the real invite flow for fixture
+    // speed (see ensureInvited()'s own doc comment in fixtures.ts), so
+    // Alice is never actually invited here unless a test calls
+    // ensureInvited() itself -- exactly the case this test exercises.
+    const client = await clientFor(alice)
+    const { data, error } = await client.from('profiles').select('id')
+
+    expect(error).toBeNull()
+    expect(data).toEqual([])
+  })
+
+  it('lets an invited member read every profile', async () => {
+    const client = await clientFor(alice)
+    await ensureInvited(client)
+
+    const { data, error } = await client.from('profiles').select('id')
+
+    expect(error).toBeNull()
+    const ids = new Set(data?.map((row) => row.id))
+    expect(ids.has(alice.id)).toBe(true)
+    expect(ids.has(bob.id)).toBe(true)
+  })
 })
 
 describe('profiles insert policy', () => {

@@ -85,8 +85,9 @@ describe('allowed_emails policies', () => {
   it('denies a non-admin read/write', async () => {
     const client = await clientFor(alice)
 
-    const { error: selectErr } = await client.from('allowed_emails').select('*')
-    expect(selectErr).not.toBeNull()
+    const { data: selectData, error: selectErr } = await client.from('allowed_emails').select('*')
+    expect(selectErr).toBeNull()
+    expect(selectData).toEqual([])
 
     const { error: insertErr } = await client.from('allowed_emails').insert({ email: 'x@example.com' })
     expect(insertErr).not.toBeNull()

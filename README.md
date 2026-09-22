@@ -1,7 +1,8 @@
 # DwellDule
 
-**Status:** Foundation complete — Google sign-in (invite-only), a single
-admin account, and a coin ledger. No betting features yet.
+**Status:** Foundation + Market Engine complete — Google sign-in
+(invite-only), a single admin account, a Dwell Coin (DC) ledger, and a
+pari-mutuel betting market (create, bet, resolve, admin override).
 
 ## Stack
 

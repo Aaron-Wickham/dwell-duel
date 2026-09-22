@@ -1,6 +1,7 @@
 # DwellDule
 
-**Status:** scaffolding — no features yet.
+**Status:** Foundation complete — Google sign-in (invite-only), a single
+admin account, and a coin ledger. No betting features yet.
 
 ## Stack
 
@@ -29,6 +30,20 @@ npm run test:e2e  # Playwright critical path
 npm run lint      # ESLint
 npm run build     # production build
 ```
+
+### One-time manual setup (not app code)
+
+- A Google Cloud OAuth client (web application type), with the Supabase
+  project's callback URL (`https://<project-ref>.supabase.co/auth/v1/callback`)
+  registered as an authorized redirect URI.
+- That client's ID/secret entered into the Supabase dashboard's Auth →
+  Providers → Google settings.
+- The app's own redirect URLs (`http://localhost:3000/callback` for dev,
+  the production URL once deployed) added to Supabase's Auth → URL
+  Configuration allowlist.
+- After your own first sign-in, flip your profile row's `is_admin` to
+  `true` once, by hand, via the Supabase dashboard's SQL editor:
+  `update profiles set is_admin = true where email = 'you@gmail.com';`
 
 ## CI (`.github/workflows/ci.yml`)
 

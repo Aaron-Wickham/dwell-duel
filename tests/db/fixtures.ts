@@ -38,6 +38,7 @@ export async function makeMember(displayName: string): Promise<Member> {
 export async function seedMembers(): Promise<[Member, Member]> {
   const db = serviceClient()
 
+  await db.from('markets').delete().neq('id', '00000000-0000-0000-0000-000000000000')
   await db.from('coin_transactions').delete().gte('id', 0)
   await db.from('allowed_emails').delete().neq('email', '')
   await db.from('profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000')
@@ -109,4 +110,73 @@ export async function sessionCookieHeader(client: SupabaseClient): Promise<strin
   if (setErr) throw setErr
 
   return [...jar.entries()].map(([name, value]) => `${name}=${value}`).join('; ')
+}
+
+export interface TestMarket {
+  marketId: string
+  outcomeIds: string[]
+}
+
+/**
+ * create_market() requires is_invited() -- correct in production, since
+ * nobody can have a profile without having been invited first, but
+ * seedMembers()/makeMember() deliberately bypass that real flow for
+ * fixture speed, so a fixture member has no allowed_emails row of their
+ * own. This fixes that for one client's own user -- upsert, not insert,
+ * so it never collides with a test that explicitly inserts its own row
+ * for the same email (e.g. tests/db/list-invites.test.ts inserting
+ * { email: admin.email, claimed_by: admin.id }). Deliberately not baked
+ * into makeMember()/seedMembers() themselves: that would run this upsert
+ * for every fixture member unconditionally, including in that same test.
+ */
+export async function ensureInvited(client: SupabaseClient): Promise<void> {
+  const {
+    data: { user },
+  } = await client.auth.getUser()
+  if (!user?.email) throw new Error('ensureInvited: client has no authenticated user')
+
+  const { error } = await serviceClient()
+    .from('allowed_emails')
+    .upsert({ email: user.email.toLowerCase() }, { onConflict: 'email', ignoreDuplicates: true })
+  if (error) throw error
+}
+
+/**
+ * Creates a market via the real create_market() RPC (not a raw insert),
+ * so every test that needs a market also exercises the same validation
+ * path a real user's create-market request goes through. Returns
+ * outcome ids in the same order as the labels passed in.
+ */
+export async function createTestMarket(
+  creatorClient: SupabaseClient,
+  labels: string[],
+  opts?: { kind?: 'binary' | 'multiple_choice'; closeInMs?: number; title?: string },
+): Promise<TestMarket> {
+  await ensureInvited(creatorClient)
+
+  const kind = opts?.kind ?? (labels.length === 2 ? 'binary' : 'multiple_choice')
+  const closeAt = new Date(Date.now() + (opts?.closeInMs ?? 1000 * 60 * 60)).toISOString()
+
+  const { data: marketId, error } = await creatorClient.rpc('create_market', {
+    p_title: opts?.title ?? 'Test market',
+    p_description: null,
+    p_kind: kind,
+    p_outcome_labels: labels,
+    p_close_at: closeAt,
+  })
+  if (error) throw error
+
+  const { data: outcomes, error: outcomesErr } = await serviceClient()
+    .from('market_outcomes')
+    .select('id, label')
+    .eq('market_id', marketId as string)
+  if (outcomesErr) throw outcomesErr
+
+  const outcomeIds = labels.map((label) => {
+    const row = outcomes!.find((o) => o.label === label)
+    if (!row) throw new Error(`outcome ${label} not found after create_market`)
+    return row.id
+  })
+
+  return { marketId: marketId as string, outcomeIds }
 }

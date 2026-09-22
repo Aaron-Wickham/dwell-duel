@@ -46,12 +46,15 @@ describe('bets select policy', () => {
     const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'])
 
     const bobClient = await clientFor(bob)
-    await aliceClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[0], p_amount: 10 })
-    await bobClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[1], p_amount: 10 })
+    const aliceBet = await aliceClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[0], p_amount: 10 })
+    expect(aliceBet.error).toBeNull()
+    const bobBet = await bobClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[1], p_amount: 10 })
+    expect(bobBet.error).toBeNull()
 
     const { data, error } = await aliceClient.from('bets').select('profile_id')
     expect(error).toBeNull()
-    expect(data?.every((b) => b.profile_id === alice.id)).toBe(true)
+    expect(data).toHaveLength(1)
+    expect(data?.[0].profile_id).toBe(alice.id)
   })
 
   it('shows an admin every bet', async () => {
@@ -82,6 +85,10 @@ describe('direct table writes', () => {
       close_at: new Date(Date.now() + 60_000).toISOString(),
     })
     expect(error).not.toBeNull()
+
+    const db = serviceClient()
+    const { count } = await db.from('markets').select('*', { count: 'exact', head: true }).eq('title', 'Sneaky')
+    expect(count).toBe(0)
   })
 
   it('rejects a direct insert into bets, bypassing place_bet', async () => {

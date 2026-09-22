@@ -38,12 +38,18 @@ npm run build     # production build
   registered as an authorized redirect URI.
 - That client's ID/secret entered into the Supabase dashboard's Auth →
   Providers → Google settings.
+- **Required:** in the Supabase dashboard's Auth → Providers settings,
+  disable every provider except Google, and disable email/password
+  sign-ups. Without this, anyone can obtain a session against the public
+  anon key without ever going through the invite-gated Google flow.
 - The app's own redirect URLs (`http://localhost:3000/callback` for dev,
   the production URL once deployed) added to Supabase's Auth → URL
   Configuration allowlist.
 - After your own first sign-in, flip your profile row's `is_admin` to
-  `true` once, by hand, via the Supabase dashboard's SQL editor:
-  `update profiles set is_admin = true where email = 'you@gmail.com';`
+  `true` once, by hand, via the Supabase dashboard's SQL editor, keyed off
+  the verified `auth.users` record rather than the app-writable
+  `profiles.email` column:
+  `update public.profiles set is_admin = true where id = (select id from auth.users where email = 'you@gmail.com');`
 
 ## CI (`.github/workflows/ci.yml`)
 

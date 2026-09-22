@@ -9,6 +9,7 @@ export interface MarketDetail {
   closeAt: string
   createdBy: string
   currentResolutionId: string | null
+  resolvedOutcomeLabel: string | null
   outcomes: { id: string; label: string; poolTotal: number }[]
 }
 
@@ -31,6 +32,23 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
   if (error) throw error
   if (!data) return null
 
+  const outcomes = (data.market_outcomes ?? []).map((o: { id: string; label: string; pool_total: number }) => ({
+    id: o.id,
+    label: o.label,
+    poolTotal: o.pool_total,
+  }))
+
+  let resolvedOutcomeLabel: string | null = null
+  if (data.current_resolution_id) {
+    const { data: resolution, error: resolutionErr } = await supabase
+      .from('market_resolutions')
+      .select('outcome_id')
+      .eq('id', data.current_resolution_id)
+      .single()
+    if (resolutionErr) throw resolutionErr
+    resolvedOutcomeLabel = outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null
+  }
+
   return {
     id: data.id,
     title: data.title,
@@ -40,11 +58,8 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
     closeAt: data.close_at,
     createdBy: data.created_by,
     currentResolutionId: data.current_resolution_id,
-    outcomes: (data.market_outcomes ?? []).map((o: { id: string; label: string; pool_total: number }) => ({
-      id: o.id,
-      label: o.label,
-      poolTotal: o.pool_total,
-    })),
+    resolvedOutcomeLabel,
+    outcomes,
   }
 }
 

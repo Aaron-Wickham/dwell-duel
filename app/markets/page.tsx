@@ -26,7 +26,10 @@ export default async function MarketsPage() {
               <Link href={`/markets/${market.id}`} className="font-medium underline">
                 {market.title}
               </Link>
-              <p className="text-sm text-foreground/70">{market.status}</p>
+              <p className="text-sm text-foreground/70">
+                {market.status}
+                {market.status === 'resolved' && market.resolvedOutcomeLabel && ` — ${market.resolvedOutcomeLabel} won`}
+              </p>
               <ul className="mt-2 text-sm">
                 {odds.map((o) => (
                   <li key={o.outcomeId}>

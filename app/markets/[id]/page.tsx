@@ -37,6 +37,9 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
       <h1 className="text-xl font-semibold">{market.title}</h1>
       {market.description && <p className="mt-1 text-sm text-foreground/70">{market.description}</p>}
       <p className="mt-1 text-sm">Status: {market.status}</p>
+      {market.status === 'resolved' && market.resolvedOutcomeLabel && (
+        <p className="mt-1 text-sm font-medium">Winning outcome: {market.resolvedOutcomeLabel}</p>
+      )}
 
       <ul className="mt-4 space-y-1">
         {odds.map((o) => (

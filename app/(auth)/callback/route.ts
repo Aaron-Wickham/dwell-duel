@@ -32,6 +32,11 @@ export async function GET(request: Request) {
           return NextResponse.redirect(`${origin}/not-invited`)
         }
       }
+
+      // Either createOwnProfile hit a genuine error, or getUser() returned
+      // no user despite a successful code exchange — either way a session
+      // may have been established; never leave it half-authenticated.
+      await supabase.auth.signOut()
     }
   }
 

@@ -1,13 +1,14 @@
 import { defineConfig, devices } from '@playwright/test'
+import { STORAGE_STATE_PATH } from './e2e/global-setup'
 
 export default defineConfig({
   testDir: './e2e',
-  // A stray `test.only` would otherwise let CI pass green while skipping
-  // every other test — fail loudly there instead. No effect locally.
+  globalSetup: './e2e/global-setup.ts',
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   use: {
     baseURL: 'http://localhost:3000',
+    storageState: STORAGE_STATE_PATH,
     trace: 'on-first-retry',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

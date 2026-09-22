@@ -45,6 +45,11 @@ npm run build     # production build
 - The app's own redirect URLs (`http://localhost:3000/callback` for dev,
   the production URL once deployed) added to Supabase's Auth → URL
   Configuration allowlist.
+- **Before your first sign-in:** add your own Gmail address to the invite
+  allowlist by hand, via the Supabase dashboard's SQL editor — sign-in is
+  invite-gated from the first request, so there's no admin yet to add you
+  through the app itself:
+  `insert into public.allowed_emails (email) values ('you@gmail.com');`
 - After your own first sign-in, flip your profile row's `is_admin` to
   `true` once, by hand, via the Supabase dashboard's SQL editor, keyed off
   the verified `auth.users` record rather than the app-writable

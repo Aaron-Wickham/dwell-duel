@@ -79,6 +79,42 @@ describe('profiles insert policy', () => {
 
     expect(error).not.toBeNull()
   })
+
+  it("rejects an insert whose email does not match the caller's JWT email", async () => {
+    await serviceClient().from('allowed_emails').insert({ email: 'invitee5@example.com' })
+    const userId = await makeAuthUserWithoutProfile('invitee5@example.com')
+    const client = await clientForEmail('invitee5@example.com')
+
+    const { error } = await client
+      .from('profiles')
+      .insert({ id: userId, email: 'someoneelse@example.com', display_name: 'Spoofer' })
+
+    expect(error).not.toBeNull()
+    expect(error?.code).toBe('42501')
+
+    const { data: profile } = await serviceClient().from('profiles').select('id').eq('id', userId).maybeSingle()
+    expect(profile).toBeNull()
+  })
+})
+
+describe('profiles update policy', () => {
+  it('denies a member self-granting a large balance via UPDATE', async () => {
+    const client = await clientFor(alice)
+
+    await client.from('profiles').update({ balance: 999999 }).eq('id', alice.id)
+
+    const { data } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
+    expect(data?.balance).toBe(100)
+  })
+
+  it('denies a member self-granting admin via UPDATE', async () => {
+    const client = await clientFor(alice)
+
+    await client.from('profiles').update({ is_admin: true }).eq('id', alice.id)
+
+    const { data } = await serviceClient().from('profiles').select('is_admin').eq('id', alice.id).single()
+    expect(data?.is_admin).toBe(false)
+  })
 })
 
 describe('allowed_emails policies', () => {
@@ -104,6 +140,20 @@ describe('allowed_emails policies', () => {
     expect(selectErr).toBeNull()
     expect(data?.some((row) => row.email === 'y@example.com')).toBe(true)
   })
+
+  it('denies a non-admin claiming an unclaimed invite via UPDATE', async () => {
+    await serviceClient().from('allowed_emails').insert({ email: 'unclaimed@example.com' })
+    const client = await clientFor(alice)
+
+    await client.from('allowed_emails').update({ claimed_by: alice.id }).eq('email', 'unclaimed@example.com')
+
+    const { data } = await serviceClient()
+      .from('allowed_emails')
+      .select('claimed_by')
+      .eq('email', 'unclaimed@example.com')
+      .single()
+    expect(data?.claimed_by).toBeNull()
+  })
 })
 
 describe('coin_transactions select policy', () => {
@@ -124,5 +174,44 @@ describe('coin_transactions select policy', () => {
     const profileIds = new Set(data?.map((r) => r.profile_id))
     expect(profileIds.has(alice.id)).toBe(true)
     expect(profileIds.has(bob.id)).toBe(true)
+  })
+})
+
+describe('coin_transactions write policies', () => {
+  it('rejects a member inserting directly, bypassing apply_coin_transaction', async () => {
+    const client = await clientFor(alice)
+
+    const { error } = await client
+      .from('coin_transactions')
+      .insert({ profile_id: alice.id, amount: 1000000, type: 'admin_adjustment' })
+
+    // There is no INSERT grant at all on this table for `authenticated`
+    // (see migration 0006) — the only writer is apply_coin_transaction,
+    // a SECURITY DEFINER function that bypasses RLS as its owner. So this
+    // fails at the grant layer, not the RLS layer.
+    expect(error).not.toBeNull()
+    expect(error?.code).toBe('42501')
+
+    const { count } = await serviceClient()
+      .from('coin_transactions')
+      .select('*', { count: 'exact', head: true })
+      .eq('profile_id', alice.id)
+      .eq('type', 'admin_adjustment')
+    expect(count).toBe(0)
+  })
+
+  it('leaves an existing transaction unchanged after a member UPDATE attempt', async () => {
+    const db = serviceClient()
+    const { data: existing } = await db
+      .from('coin_transactions')
+      .select('id, amount')
+      .eq('profile_id', alice.id)
+      .single()
+
+    const client = await clientFor(alice)
+    await client.from('coin_transactions').update({ amount: 999999 }).eq('id', existing!.id)
+
+    const { data: after } = await db.from('coin_transactions').select('amount').eq('id', existing!.id).single()
+    expect(after?.amount).toBe(existing!.amount)
   })
 })

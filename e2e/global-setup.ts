@@ -18,6 +18,14 @@ export default async function globalSetup(): Promise<void> {
   const [alice] = await seedMembers()
   await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
 
+  // seedMembers()/makeMember() create alice's profile directly via the
+  // service-role client, bypassing the real invite-claim flow — unlike an
+  // actual sign-in, no allowed_emails row for her exists yet. Since
+  // migration 0006 tightened select_all_profiles to require is_invited(),
+  // alice needs a matching allowed_emails row to read her own profile on
+  // the home page, same as any real invited member would have.
+  await serviceClient().from('allowed_emails').insert({ email: alice.email, claimed_by: alice.id })
+
   const client = await clientFor(alice)
   const cookieHeader = await sessionCookieHeader(client)
 

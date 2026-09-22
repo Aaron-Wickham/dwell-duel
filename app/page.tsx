@@ -15,7 +15,7 @@ export default async function Home() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4">
       <h1 className="text-2xl font-semibold">Welcome, {profile?.display_name}</h1>
-      <p>Balance: {profile?.balance} coins</p>
+      <p>Balance: {profile?.balance} DC</p>
       <form action={signOut}>
         <button type="submit" className="text-sm underline">
           Sign out

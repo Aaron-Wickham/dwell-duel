@@ -184,6 +184,7 @@ describe('resolve_market (admin override)', () => {
     const adminClient = await clientFor(bob)
     const { error } = await adminClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[1] })
     expect(error).not.toBeNull()
+    expect(error?.message).toMatch(/balance/)
 
     // Nothing changed: original resolution still active, nobody's balance moved.
     const { data: market } = await db.from('markets').select('current_resolution_id').eq('id', marketId).single()
@@ -197,5 +198,57 @@ describe('resolve_market (admin override)', () => {
 
     const { data: aliceAfter } = await db.from('profiles').select('balance').eq('id', alice.id).single()
     expect(aliceAfter?.balance).toBe(5)
+  })
+
+  it('a second override reverses only the first override, not the original resolution', async () => {
+    const aliceClient = await clientFor(alice)
+    const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Red', 'Blue', 'Green'], { kind: 'multiple_choice' })
+
+    const bobClient = await clientFor(bob)
+    await aliceClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[0], p_amount: 10 })
+    await bobClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[1], p_amount: 20 })
+
+    await serviceClient()
+      .from('markets')
+      .update({ close_at: new Date(Date.now() - 1000).toISOString() })
+      .eq('id', marketId)
+
+    await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+
+    const db = serviceClient()
+    await db.from('profiles').update({ is_admin: true }).eq('id', bob.id)
+    const adminClient = await clientFor(bob)
+
+    // First override: Red -> Blue. Pool is 30 (10 + 20); Red's reversal
+    // takes back Alice's win of floor(10*30/10)=30, then Blue's only
+    // bettor (Bob, 20) wins floor(20*30/20)=30.
+    await adminClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[1] })
+    const { data: afterFirstOverride } = await db.from('profiles').select('balance').eq('id', bob.id).single()
+    expect(afterFirstOverride?.balance).toBe(100 - 20 + 30) // Bob now winner of the 30-total pool
+
+    // Second override: Blue -> Green (nobody bet Green, so this refunds everyone).
+    const { error } = await adminClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[2] })
+    expect(error).toBeNull()
+
+    const { data: aliceFinal } = await db.from('profiles').select('balance').eq('id', alice.id).single()
+    const { data: bobFinal } = await db.from('profiles').select('balance').eq('id', bob.id).single()
+    // Green has no bets, so resolve_market's refund branch pays back
+    // every bet in the market (not just a share of the pool). Net effect
+    // across each person's whole history (bet, win, reversal, refund)
+    // is zero: Alice -10 (bet) +30 (win, reversed) -30 (reversal) +10
+    // (refund) = 0; Bob -20 (bet) +30 (win) -30 (reversal) +20 (refund)
+    // = 0. Both end back at their starting 100.
+    expect(aliceFinal?.balance).toBe(100) // her original stake, refunded, never touched by either override's reversal
+    expect(bobFinal?.balance).toBe(100) // his original stake, refunded; his first-override win was correctly clawed back exactly once
+
+    const { data: resolutions } = await db
+      .from('market_resolutions')
+      .select('outcome_id, reversed_at')
+      .eq('market_id', marketId)
+      .order('resolved_at', { ascending: true })
+    expect(resolutions).toHaveLength(3)
+    expect(resolutions?.[0].reversed_at).not.toBeNull() // Red, reversed by first override
+    expect(resolutions?.[1].reversed_at).not.toBeNull() // Blue, reversed by second override
+    expect(resolutions?.[2].reversed_at).toBeNull() // Green, currently active
   })
 })

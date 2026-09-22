@@ -24,10 +24,9 @@ describe('apply_coin_transaction', () => {
 
     const ledgerSum = (txns ?? []).reduce((sum, t) => sum + t.amount, 0)
     expect(profile?.balance).toBe(ledgerSum)
-    // No starting-grant trigger exists yet at this point in the plan (that is Task 4),
-    // so seedMembers() produces members with balance 0. The expected total is
-    // that 0 starting balance plus this test's own +50 credit.
-    expect(profile?.balance).toBe(50)
+    // seedMembers()'s own profile-creation trigger now grants +100 (Task 4), so
+    // the expected total is that starting grant plus this test's own +50 credit.
+    expect(profile?.balance).toBe(150)
   })
 
   it('rejects an over-draft, leaving the ledger and balance unchanged', async () => {
@@ -65,8 +64,8 @@ describe('apply_coin_transaction', () => {
     expect(error).not.toBeNull()
 
     const { data: profile } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
-    // The self-grant attempt was correctly rejected, so the balance remains
-    // unchanged from the 0 starting balance (no trigger grants anything yet).
-    expect(profile?.balance).toBe(0)
+    // The self-grant attempt was correctly rejected, so the balance is unchanged
+    // from the 100 starting grant (the only transaction this profile has).
+    expect(profile?.balance).toBe(100)
   })
 })

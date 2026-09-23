@@ -51,6 +51,7 @@ describe('submit_task_completion', () => {
     await aliceClient.rpc('submit_task_completion', { p_task_id: taskId })
     const { error } = await aliceClient.rpc('submit_task_completion', { p_task_id: taskId })
     expect(error).not.toBeNull()
+    expect(error?.message).toContain('you already have a pending or approved submission for this task in the current period')
   })
 
   it('allows resubmission after the prior one was rejected', async () => {

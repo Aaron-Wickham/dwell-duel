@@ -86,4 +86,27 @@ describe('compute_period_key', () => {
     expect(start).toBe(end)
     expect(start).not.toBe(nextYear)
   })
+
+  it('is not affected by a client-supplied session timezone', async () => {
+    // A PostgREST client can set the DB session's TimeZone for a single
+    // request via `Prefer: timezone=<zone>`. If compute_period_key ever
+    // formats using that ambient session timezone again instead of a
+    // pinned UTC conversion, the same instant would produce two different
+    // period_keys depending on which zone the caller asked for -- letting
+    // a member bypass the once-per-period cap by simply varying this header.
+    const client = await clientFor(alice)
+    const fixedInstant = '2026-09-23T05:00:00Z'
+
+    const { data: underUtc, error: utcError } = await client
+      .rpc('compute_period_key', { p_period: 'daily', p_at: fixedInstant })
+      .setHeader('Prefer', 'timezone=UTC')
+    const { data: underSamoa, error: samoaError } = await client
+      .rpc('compute_period_key', { p_period: 'daily', p_at: fixedInstant })
+      .setHeader('Prefer', 'timezone=Etc/GMT+12')
+
+    expect(utcError).toBeNull()
+    expect(samoaError).toBeNull()
+    expect(underUtc).toBe('2026-09-23')
+    expect(underSamoa).toBe(underUtc)
+  })
 })

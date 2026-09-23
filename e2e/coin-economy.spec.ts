@@ -20,5 +20,5 @@ test('create a task, submit it, and approve it as admin', async ({ page }) => {
   await expect(page.getByText('Nothing pending.')).toBeVisible()
 
   await page.goto('/')
-  await expect(page.getByText(/Balance: 1\d\d DC/)).toBeVisible()
+  await expect(page.getByText('Balance: 110 DC')).toBeVisible()
 })

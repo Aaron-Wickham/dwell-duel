@@ -2,12 +2,30 @@
 
 **Status:** Foundation + Market Engine complete — Google sign-in
 (invite-only), a single admin account, a Dwell Coin (DC) ledger, and a
-pari-mutuel betting market (create, bet, resolve, admin override).
+pari-mutuel betting market (create, bet, resolve, admin override). Live at
+[dwelldule.com](https://dwelldule.com).
 
 ## Stack
 
 Next.js (App Router) + TypeScript + Tailwind, Supabase (Postgres, auth,
 storage), deployed on Vercel.
+
+## Production
+
+- **Vercel project** `dwelldule`, connected to this GitHub repo — every
+  merge to `main` auto-deploys.
+- **Supabase project** `dwelldule` (hosted, separate from local dev)
+  holds the real data. New migrations need `supabase link --project-ref
+  <ref>` once, then `supabase db push` after each merge.
+- Google's OAuth consent screen is published (not in Testing mode), so
+  inviting someone is purely an app-side action — add their email via
+  `/admin/invites`, no Google Cloud Console step needed.
+- **Gotcha:** `dwelldule.com` 308-redirects to `www.dwelldule.com`, so the
+  app actually serves from the `www` host. Supabase's Site URL and
+  Redirect URLs must reference `www.dwelldule.com`, not the bare apex —
+  a mismatch here makes Google sign-in silently bounce back to `/sign-in`
+  with no error, because the OAuth code lands on the (non-`www`) Site URL
+  fallback instead of the app's `/callback` route.
 
 ## Development
 
@@ -61,6 +79,4 @@ npm run build     # production build
 
 Every push to `main` and every pull request: lint, the Vitest suite, a
 production build, and the Playwright suite — all against an ephemeral local
-Supabase instance, never a hosted database. No Supabase project or Vercel
-deployment is wired up yet; those get added once the app has a data model
-worth deploying.
+Supabase instance, never the hosted production database.

@@ -45,6 +45,8 @@ export async function makeMember(displayName: string): Promise<Member> {
 export async function seedMembers(): Promise<[Member, Member]> {
   const db = serviceClient()
 
+  await db.from('task_completions').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+  await db.from('tasks').delete().neq('id', '00000000-0000-0000-0000-000000000000')
   await db.from('markets').delete().neq('id', '00000000-0000-0000-0000-000000000000')
   await db.from('coin_transactions').delete().gte('id', 0)
   await db.from('allowed_emails').delete().neq('email', '')
@@ -117,6 +119,36 @@ export async function sessionCookieHeader(client: SupabaseClient): Promise<strin
   if (setErr) throw setErr
 
   return [...jar.entries()].map(([name, value]) => `${name}=${value}`).join('; ')
+}
+
+export interface TestTask {
+  taskId: string
+}
+
+export async function createTestTask(
+  createdBy: Member,
+  opts?: {
+    title?: string
+    rewardAmount?: number
+    isRepeatable?: boolean
+    period?: 'daily' | 'weekly' | 'monthly' | 'yearly'
+  },
+): Promise<TestTask> {
+  const db = serviceClient()
+  const isRepeatable = opts?.isRepeatable ?? false
+  const { data, error } = await db
+    .from('tasks')
+    .insert({
+      title: opts?.title ?? 'Test task',
+      reward_amount: opts?.rewardAmount ?? 10,
+      is_repeatable: isRepeatable,
+      period: isRepeatable ? (opts?.period ?? 'weekly') : null,
+      created_by: createdBy.id,
+    })
+    .select('id')
+    .single()
+  if (error) throw error
+  return { taskId: data.id }
 }
 
 export interface TestMarket {

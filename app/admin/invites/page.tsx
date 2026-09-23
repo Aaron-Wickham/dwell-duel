@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { listInvites } from '@/lib/invites/list-invites'
@@ -15,6 +16,9 @@ export default async function AdminInvitesPage() {
   return (
     <div className="mx-auto max-w-xl p-8">
       <h1 className="text-xl font-semibold">Invites</h1>
+      <Link href="/admin/tasks" className="text-sm underline">
+        Manage tasks
+      </Link>
       <AddInviteForm />
       <ul className="mt-6 space-y-2">
         {invites.map((invite) => (

@@ -1,9 +1,14 @@
 import { test, expect } from '@playwright/test'
+import { makeMember, clientFor, sessionCookieHeader } from '../tests/db/fixtures'
 
-test('signed-in member sees their name and starting balance', async ({ page }) => {
+test('signed-in member sees their name and balance', async ({ page }) => {
+  // Every e2e spec file shares this one seeded, admin-promoted session
+  // (e2e/global-setup.ts) -- a coin-earning feature can legitimately grow
+  // this balance past its starting 100 depending on test execution order,
+  // so this only asserts a balance is shown at all, not a specific value.
   await page.goto('/')
   await expect(page.getByText('Alice', { exact: false })).toBeVisible()
-  await expect(page.getByText('100', { exact: false })).toBeVisible()
+  await expect(page.getByText(/Balance: \d+ DC/)).toBeVisible()
 })
 
 test('admin can add and revoke an invite', async ({ page }) => {
@@ -16,8 +21,28 @@ test('admin can add and revoke an invite', async ({ page }) => {
   await expect(page.getByText('newperson@example.com')).not.toBeVisible()
 })
 
-test('sign-out returns to the sign-in page', async ({ page }) => {
+test('sign-out returns to the sign-in page', async ({ browser }) => {
+  // Deliberately does NOT use the shared `page` fixture (loaded from the
+  // one session global-setup.ts injects) -- supabase.auth.signOut() revokes
+  // the session server-side, not just the local browser cookie, which
+  // would break every other e2e test still relying on that shared session
+  // (all spec files, run in any order, share one seeded admin profile).
+  // This test gets its own throwaway member and session instead, so
+  // signing it out can't affect anything else.
+  const member = await makeMember('SignOutOnly')
+  const cookieHeader = await sessionCookieHeader(await clientFor(member))
+  const cookies = cookieHeader.split('; ').map((pair) => {
+    const [name, ...rest] = pair.split('=')
+    return { name, value: rest.join('='), domain: 'localhost', path: '/' }
+  })
+
+  const context = await browser.newContext()
+  await context.addCookies(cookies)
+  const page = await context.newPage()
+
   await page.goto('/')
   await page.getByRole('button', { name: 'Sign out' }).click()
   await expect(page).toHaveURL(/\/sign-in/)
+
+  await context.close()
 })

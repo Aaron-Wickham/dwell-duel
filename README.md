@@ -27,6 +27,22 @@ storage), deployed on Vercel.
   a mismatch here makes Google sign-in silently bounce back to `/sign-in`
   with no error, because the OAuth code lands on the (non-`www`) Site URL
   fallback instead of the app's `/callback` route.
+- **No dev/staging Supabase project, and Preview deployments are
+  disabled on purpose.** There's only one hosted Supabase project — the
+  production one — and Vercel's Preview environment has zero credentials
+  for it (removed deliberately, not just unset). `commandForIgnoringBuildStep`
+  in the Vercel project settings skips every non-production build, so a
+  PR never gets a live preview URL at all. This was a deliberate choice
+  over adding a second hosted Supabase project: the account's free tier
+  caps at 2 projects org-wide, already fully used by another app, and
+  paying for Pro or sacrificing that app's own dev project wasn't worth
+  it for a live-preview convenience this small a team hasn't needed so
+  far (PRs are reviewed via the GitHub diff and CI, not a clicked-through
+  preview). Revisit if either constraint changes. Local Docker Supabase
+  remains the real dev environment for day-to-day work and every
+  automated test — `tests/db/helpers.ts`'s `assertLocal()` refuses to run
+  the destructive test suite against anything but `localhost`, so normal
+  `npm test` runs can never touch production data.
 
 ## Development
 

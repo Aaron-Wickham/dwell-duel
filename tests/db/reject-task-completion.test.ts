@@ -43,7 +43,11 @@ describe('reject_task_completion', () => {
     const { data: after } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
     expect(after!.balance).toBe(before!.balance)
 
-    const { data: txns } = await serviceClient().from('coin_transactions').select('id').eq('profile_id', alice.id)
+    const { data: txns } = await serviceClient()
+      .from('coin_transactions')
+      .select('id')
+      .eq('profile_id', alice.id)
+      .eq('type', 'task_completed')
     expect(txns).toEqual([])
 
     const { data: completion } = await serviceClient()

@@ -34,7 +34,7 @@ export interface PendingCompletion {
 export async function listPendingTaskCompletions(supabase: SupabaseClient): Promise<PendingCompletion[]> {
   const { data, error } = await supabase
     .from('task_completions')
-    .select('id, submitted_at, tasks(title), profiles(display_name)')
+    .select('id, submitted_at, tasks(title), profiles!task_completions_profile_id_fkey(display_name)')
     .eq('status', 'pending')
     .order('submitted_at', { ascending: true })
 

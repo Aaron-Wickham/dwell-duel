@@ -57,6 +57,11 @@ export async function seedMembers(): Promise<[Member, Member]> {
 
   const alice = await makeMember('Alice')
   const bob = await makeMember('Bob')
+
+  // Clean up starting_grant transactions from profile creation triggers
+  // so tests can verify no coins have moved during their operations
+  await db.from('coin_transactions').delete().gte('id', 0)
+
   return [alice, bob]
 }
 

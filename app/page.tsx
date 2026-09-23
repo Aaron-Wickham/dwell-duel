@@ -20,6 +20,9 @@ export default async function Home() {
       <Link href="/markets" className="text-sm underline">
         Markets
       </Link>
+      <Link href="/tasks" className="text-sm underline">
+        Tasks
+      </Link>
       <form action={signOut}>
         <button type="submit" className="text-sm underline">
           Sign out

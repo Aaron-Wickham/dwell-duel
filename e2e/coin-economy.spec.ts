@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test'
 
 test('create a task, submit it, and approve it as admin', async ({ page }) => {
+  await page.goto('/')
+  const balanceText = await page.getByText(/Balance: \d+ DC/).textContent()
+  const startingBalance = Number(balanceText!.match(/\d+/)![0])
+
   await page.goto('/admin/tasks')
 
   await page.getByLabel('Title').fill('Read Genesis 1-3')
@@ -20,5 +24,5 @@ test('create a task, submit it, and approve it as admin', async ({ page }) => {
   await expect(page.getByText('Nothing pending.')).toBeVisible()
 
   await page.goto('/')
-  await expect(page.getByText('Balance: 110 DC')).toBeVisible()
+  await expect(page.getByText(`Balance: ${startingBalance + 10} DC`)).toBeVisible()
 })

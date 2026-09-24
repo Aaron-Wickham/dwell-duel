@@ -19,6 +19,9 @@ export default async function AdminInvitesPage() {
       <Link href="/admin/tasks" className="text-sm underline">
         Manage tasks
       </Link>
+      <Link href="/admin/members" className="text-sm underline">
+        Manage members
+      </Link>
       <AddInviteForm />
       <ul className="mt-6 space-y-2">
         {invites.map((invite) => (

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { listTasks } from '@/lib/tasks/list-tasks'
@@ -18,6 +19,9 @@ export default async function AdminTasksPage() {
   return (
     <div className="mx-auto max-w-2xl p-8">
       <h1 className="text-xl font-semibold">Tasks</h1>
+      <Link href="/admin/members" className="text-sm underline">
+        Manage members
+      </Link>
 
       <h2 className="mt-6 text-lg font-semibold">Pending approvals</h2>
       <ul className="mt-2 space-y-3">

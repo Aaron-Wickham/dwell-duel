@@ -6,7 +6,7 @@ import { listTasks } from '@/lib/tasks/list-tasks'
 import { listPendingTaskCompletions } from '@/lib/tasks/list-task-completions'
 import { CreateTaskForm } from './create-task-form'
 import { EditTaskForm } from './edit-task-form'
-import { ReviewButtons } from './review-buttons'
+import { PendingApprovals } from './pending-approvals'
 
 export default async function AdminTasksPage() {
   const { supabase, user } = await requireUser()
@@ -27,17 +27,7 @@ export default async function AdminTasksPage() {
       </Link>
 
       <h2 className="mt-6 text-lg font-semibold">Pending approvals</h2>
-      <ul className="mt-2 space-y-3">
-        {pending.map((c) => (
-          <li key={c.id} className="border p-3">
-            <p>
-              {c.submitterName} — {c.taskTitle}
-            </p>
-            <ReviewButtons completionId={c.id} />
-          </li>
-        ))}
-        {pending.length === 0 && <p className="text-sm text-foreground/70">Nothing pending.</p>}
-      </ul>
+      <PendingApprovals pending={pending} />
 
       <h2 className="mt-8 text-lg font-semibold">Catalog</h2>
       <CreateTaskForm />

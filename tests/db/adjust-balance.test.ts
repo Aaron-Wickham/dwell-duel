@@ -1,0 +1,119 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { serviceClient } from './helpers'
+import { seedMembers, clientFor, type Member } from './fixtures'
+
+let alice: Member
+let bob: Member
+
+beforeEach(async () => {
+  ;[alice, bob] = await seedMembers()
+})
+
+describe('adjust_balance', () => {
+  it('rejects a non-admin caller', async () => {
+    const bobClient = await clientFor(bob)
+    const { error } = await bobClient.rpc('adjust_balance', {
+      p_profile_id: alice.id,
+      p_amount: 10,
+      p_reason: 'test',
+    })
+    expect(error).not.toBeNull()
+  })
+
+  it('rejects a zero amount', async () => {
+    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', bob.id)
+    const adminClient = await clientFor(bob)
+    const { error } = await adminClient.rpc('adjust_balance', {
+      p_profile_id: alice.id,
+      p_amount: 0,
+      p_reason: 'test',
+    })
+    expect(error).not.toBeNull()
+  })
+
+  it('rejects a missing reason', async () => {
+    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', bob.id)
+    const adminClient = await clientFor(bob)
+    const { error } = await adminClient.rpc('adjust_balance', {
+      p_profile_id: alice.id,
+      p_amount: 10,
+      p_reason: null,
+    })
+    expect(error).not.toBeNull()
+  })
+
+  it('rejects a blank (whitespace-only) reason', async () => {
+    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', bob.id)
+    const adminClient = await clientFor(bob)
+    const { error } = await adminClient.rpc('adjust_balance', {
+      p_profile_id: alice.id,
+      p_amount: 10,
+      p_reason: '   ',
+    })
+    expect(error).not.toBeNull()
+  })
+
+  it('credits a balance through the real ledger', async () => {
+    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', bob.id)
+    const adminClient = await clientFor(bob)
+
+    const { data: before } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
+
+    const { error } = await adminClient.rpc('adjust_balance', {
+      p_profile_id: alice.id,
+      p_amount: 25,
+      p_reason: 'Bonus for helping set up chairs',
+    })
+    expect(error).toBeNull()
+
+    const { data: after } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
+    expect(after!.balance).toBe(before!.balance + 25)
+
+    const { data: txns } = await serviceClient()
+      .from('coin_transactions')
+      .select('amount, type, meta')
+      .eq('profile_id', alice.id)
+      .eq('type', 'admin_adjustment')
+    expect(txns).toContainEqual(
+      expect.objectContaining({
+        amount: 25,
+        type: 'admin_adjustment',
+        meta: expect.objectContaining({ reason: 'Bonus for helping set up chairs', adjusted_by: bob.id }),
+      }),
+    )
+  })
+
+  it('debits a balance through the real ledger', async () => {
+    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', bob.id)
+    const adminClient = await clientFor(bob)
+
+    const { data: before } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
+
+    const { error } = await adminClient.rpc('adjust_balance', {
+      p_profile_id: alice.id,
+      p_amount: -20,
+      p_reason: 'Correcting an over-payment',
+    })
+    expect(error).toBeNull()
+
+    const { data: after } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
+    expect(after!.balance).toBe(before!.balance - 20)
+  })
+
+  it('rejects a debit that would take the balance negative', async () => {
+    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', bob.id)
+    const adminClient = await clientFor(bob)
+
+    const { data: before } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
+
+    const { error } = await adminClient.rpc('adjust_balance', {
+      p_profile_id: alice.id,
+      p_amount: -(before!.balance + 1),
+      p_reason: 'Would go negative',
+    })
+    expect(error).not.toBeNull()
+
+    const { data: after } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
+    expect(after!.balance).toBe(before!.balance)
+  })
+})

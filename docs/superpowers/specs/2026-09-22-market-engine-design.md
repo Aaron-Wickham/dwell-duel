@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-22
 **Status:** approved, not yet implemented
-**Sub-project 2 of 7** in the DwellDule build order. Builds directly on
+**Sub-project 2 of 7** in the DwellDuel build order. Builds directly on
 [Foundation](2026-09-22-foundation-design.md) — Google sign-in, the
 invite gate, `is_admin()`/`is_invited()`, and `apply_coin_transaction()`
 (the only path that can ever change a balance). Everything here routes

@@ -4,7 +4,7 @@
 
 **Goal:** Google sign-in gated to an invite-only Gmail allowlist, a single
 permanent admin account, and a coin balance per user that's provably
-accurate by construction — the foundation every later DwellDule
+accurate by construction — the foundation every later DwellDuel
 sub-project (markets, coin-earning tasks, parlays, social, admin) builds on.
 
 **Architecture:** Supabase Postgres does the heavy lifting — RLS policies

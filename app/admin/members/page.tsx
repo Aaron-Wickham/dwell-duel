@@ -22,6 +22,9 @@ export default async function AdminMembersPage() {
         <Link href="/admin/tasks" className="text-sm underline">
           Tasks
         </Link>
+        <Link href="/admin/ledger" className="text-sm underline">
+          View ledger
+        </Link>
       </div>
       <ul className="mt-6 space-y-3">
         {members.map((m) => (

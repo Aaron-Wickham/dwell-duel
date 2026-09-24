@@ -22,6 +22,9 @@ export default async function AdminTasksPage() {
       <Link href="/admin/members" className="text-sm underline">
         Manage members
       </Link>
+      <Link href="/admin/ledger" className="text-sm underline">
+        View ledger
+      </Link>
 
       <h2 className="mt-6 text-lg font-semibold">Pending approvals</h2>
       <ul className="mt-2 space-y-3">

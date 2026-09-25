@@ -18,8 +18,12 @@ storage), deployed on Vercel.
 - **Vercel project** `dwell-duel`, connected to this GitHub repo — every
   merge to `main` auto-deploys.
 - **Supabase project** `dwell-duel` (hosted, separate from local dev)
-  holds the real data. New migrations need `supabase link --project-ref
-  <ref>` once, then `supabase db push` after each merge.
+  holds the real data. Merging a change under `supabase/migrations/` to
+  `main` runs `.github/workflows/deploy-production-db.yml`, which pushes
+  it to production (needs the `SUPABASE_ACCESS_TOKEN` repo secret). It
+  runs alongside Vercel's deploy, not before it, so keep migrations
+  additive or the new code can briefly hit the old schema. Re-run it
+  manually from the Actions tab if a push fails.
 - Google's OAuth consent screen is published (not in Testing mode), so
   inviting someone is purely an app-side action — add their email via
   `/admin/invites`, no Google Cloud Console step needed.

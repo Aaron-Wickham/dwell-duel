@@ -16,9 +16,17 @@ export default async function AdminInvitesPage() {
   return (
     <div className="mx-auto max-w-xl p-8">
       <h1 className="text-xl font-semibold">Invites</h1>
-      <Link href="/admin/tasks" className="text-sm underline">
-        Manage tasks
-      </Link>
+      <div className="mt-2 flex gap-4">
+        <Link href="/admin/tasks" className="text-sm underline">
+          Tasks
+        </Link>
+        <Link href="/admin/members" className="text-sm underline">
+          Members
+        </Link>
+        <Link href="/admin/ledger" className="text-sm underline">
+          Ledger
+        </Link>
+      </div>
       <AddInviteForm />
       <ul className="mt-6 space-y-2">
         {invites.map((invite) => (

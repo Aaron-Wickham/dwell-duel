@@ -60,7 +60,7 @@ describe('tasks write policy', () => {
 })
 
 describe('task_completions select policy', () => {
-  it("shows a member only their own completions", async () => {
+  it('shows a member only their own pending completions', async () => {
     const { taskId } = await createTestTask(alice)
     const aliceClient = await clientFor(alice)
     const bobClient = await clientFor(bob)

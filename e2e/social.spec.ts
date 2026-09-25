@@ -24,3 +24,8 @@ test('a bet shows up in the feed and on the bettor\'s profile', async ({ page })
   await expect(page.getByRole('heading', { name: 'Alice' })).toBeVisible()
   await expect(page.getByRole('listitem').filter({ hasText: sentence }).first()).toBeVisible()
 })
+
+test('an unknown member id shows a 404', async ({ page }) => {
+  const response = await page.goto('/members/00000000-0000-4000-8000-000000000000')
+  expect(response?.status()).toBe(404)
+})

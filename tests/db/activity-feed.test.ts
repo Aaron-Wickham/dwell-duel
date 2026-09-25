@@ -244,4 +244,52 @@ describe('activity_feed', () => {
     const carolClient = await clientFor(carol)
     expect(await feed(carolClient)).toEqual([])
   })
+
+  it('dates each event from its source column', async () => {
+    const a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Dated A' })
+    const b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Dated B' })
+    for (const m of [a, b]) {
+      await bet(aliceClient, m, 0, 5)
+      await bet(aliceClient, m, 1, 15)
+    }
+    const { data: parlayId, error: parlayErr } = await bobClient.rpc('place_parlay', {
+      p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]],
+      p_stake: 10,
+    })
+    expect(parlayErr).toBeNull()
+    await resolve(a, 0)
+    await resolve(b, 0)
+
+    const { taskId } = await createTestTask(alice, { title: 'Dated task' })
+    const { data: completionId, error: submitErr } = await bobClient.rpc('submit_task_completion', { p_task_id: taskId })
+    expect(submitErr).toBeNull()
+    expect((await aliceClient.rpc('approve_task_completion', { p_completion_id: completionId as string })).error).toBeNull()
+
+    const { data: rows, error } = await bobClient.from('activity_feed').select('kind, market_id, occurred_at')
+    expect(error).toBeNull()
+    const at = (kind: string, marketId?: string) =>
+      Date.parse(rows!.find((r) => r.kind === kind && (marketId === undefined || r.market_id === marketId))!.occurred_at)
+
+    const db = serviceClient()
+    const { data: resolution } = await db
+      .from('markets')
+      .select('market_resolutions!markets_current_resolution_id_fkey(resolved_at)')
+      .eq('id', b.marketId)
+      .single()
+    const resolvedAt = Date.parse(
+      (resolution!.market_resolutions as unknown as { resolved_at: string }).resolved_at,
+    )
+    expect(at('market_resolved', b.marketId)).toBe(resolvedAt)
+    expect(at('bet_won', b.marketId)).toBe(resolvedAt)
+
+    const { data: parlay } = await db.from('parlays').select('settled_at').eq('id', parlayId as string).single()
+    expect(at('parlay_won')).toBe(Date.parse(parlay!.settled_at))
+
+    const { data: completion } = await db
+      .from('task_completions')
+      .select('reviewed_at')
+      .eq('id', completionId as string)
+      .single()
+    expect(at('task_completed')).toBe(Date.parse(completion!.reviewed_at))
+  })
 })

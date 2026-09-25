@@ -28,7 +28,7 @@ TypeScript, Supabase (Postgres 17, RLS), Vitest and Playwright.
 - No function is created or changed. No table gains an `insert`,
   `update` or `delete` grant for `authenticated`.
 - `bets`, `parlays` and `parlay_legs` become readable by every invited
-  member (`using (is_invited())`). Other members can read
+  member and every admin (`using (is_invited() or is_admin())`). Other members can read
   `task_completions` only when `status = 'approved'`; the owner and admins
   still read all of them. `coin_transactions` stays owner-or-admin, and
   this plan never touches it.
@@ -222,15 +222,15 @@ uninvited tests already pass.
 -- what. Pending and rejected task completions, and the coin ledger, stay private.
 drop policy select_own_or_admin_bets on public.bets;
 create policy select_invited_bets on public.bets for select to authenticated
-  using (is_invited());
+  using (is_invited() or is_admin());
 
 drop policy select_own_or_admin_parlays on public.parlays;
 create policy select_invited_parlays on public.parlays for select to authenticated
-  using (is_invited());
+  using (is_invited() or is_admin());
 
 drop policy select_own_or_admin_parlay_legs on public.parlay_legs;
 create policy select_invited_parlay_legs on public.parlay_legs for select to authenticated
-  using (is_invited());
+  using (is_invited() or is_admin());
 
 drop policy select_own_or_admin_task_completions on public.task_completions;
 create policy select_task_completions on public.task_completions for select to authenticated

@@ -109,13 +109,15 @@ describe('Message', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Insufficient balance')
   })
 
-  it('announces ok and gold messages politely', () => {
-    render(
-      <>
-        <Message tone="ok">2 approved.</Message>
-        <Message tone="gold">Awaiting resolution</Message>
-      </>,
-    )
-    expect(screen.getAllByRole('status').map((el) => el.textContent)).toEqual(['2 approved.', 'Awaiting resolution'])
+  it('announces ok messages politely', () => {
+    render(<Message tone="ok">2 approved.</Message>)
+    expect(screen.getByRole('status')).toHaveTextContent('2 approved.')
+  })
+
+  it('keeps gold messages out of live regions, since they are static notes', () => {
+    render(<Message tone="gold">Awaiting resolution</Message>)
+    expect(screen.getByText('Awaiting resolution')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

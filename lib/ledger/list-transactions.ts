@@ -18,6 +18,10 @@ const TYPE_LABELS: Record<string, string> = {
   task_completed: 'Task reward',
   admin_adjustment: 'Admin adjustment',
   starting_grant: 'Starting grant',
+  parlay_placed: 'Parlay placed',
+  parlay_won: 'Parlay won',
+  parlay_refunded: 'Parlay refunded',
+  parlay_reversed: 'Parlay reversed',
 }
 
 export async function listAllTransactions(supabase: SupabaseClient): Promise<LedgerEntry[]> {

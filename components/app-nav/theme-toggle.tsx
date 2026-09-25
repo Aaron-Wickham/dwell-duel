@@ -11,9 +11,13 @@ function currentTheme(): 'light' | 'dark' {
 
 export function ThemeToggle() {
   function toggle() {
+    const previous = document.documentElement.dataset.theme
     const next = currentTheme() === 'dark' ? 'light' : 'dark'
     document.documentElement.dataset.theme = next
-    void setThemeAction(next)
+    setThemeAction(next).catch(() => {
+      if (previous === undefined) delete document.documentElement.dataset.theme
+      else document.documentElement.dataset.theme = previous
+    })
   }
 
   return (

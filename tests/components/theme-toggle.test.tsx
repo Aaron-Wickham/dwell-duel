@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 const setThemeAction = vi.fn(async (_value: string) => {})
@@ -50,5 +50,13 @@ describe('ThemeToggle', () => {
     await userEvent.click(screen.getByRole('button'))
     expect(document.documentElement.dataset.theme).toBe('light')
     expect(setThemeAction).toHaveBeenCalledWith('light')
+  })
+
+  it('reverts the DOM if saving the theme fails', async () => {
+    stubSystemDark(false)
+    setThemeAction.mockRejectedValueOnce(new Error('network error'))
+    render(<ThemeToggle />)
+    await userEvent.click(screen.getByRole('button'))
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBeUndefined())
   })
 })

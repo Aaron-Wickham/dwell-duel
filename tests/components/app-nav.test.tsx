@@ -2,14 +2,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 
+const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }))
 let pathname = '/'
-vi.mock('next/navigation', () => ({ usePathname: () => pathname }))
+vi.mock('next/navigation', () => ({ usePathname: () => pathname, useRouter: () => ({ refresh }) }))
 vi.mock('@/lib/theme/set-theme', () => ({ setThemeAction: vi.fn() }))
 
 import { AppNav } from '@/components/app-nav/app-nav'
 
+function setVisibility(state: DocumentVisibilityState) {
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
+}
+
 beforeEach(() => {
   pathname = '/'
+  refresh.mockClear()
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
@@ -78,5 +84,24 @@ describe('AppNav', () => {
     render(<AppNav balance={120} slipCount={0} isAdmin={false} />)
     expect(screen.getAllByRole('link', { name: 'DwellDuel home' }).length).toBeGreaterThanOrEqual(2)
     expect(screen.getAllByRole('button', { name: /Switch to (dark|light) theme/ }).length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('offers a skip-to-content link as the first link on the page', () => {
+    render(<AppNav balance={120} slipCount={0} isAdmin={false} />)
+    const links = screen.getAllByRole('link')
+    expect(links[0]).toHaveAccessibleName('Skip to content')
+    expect(links[0]).toHaveAttribute('href', '#main')
+  })
+
+  it('refreshes when the tab becomes visible again, not when it hides', () => {
+    render(<AppNav balance={120} slipCount={0} isAdmin={false} />)
+
+    setVisibility('hidden')
+    document.dispatchEvent(new Event('visibilitychange'))
+    expect(refresh).not.toHaveBeenCalled()
+
+    setVisibility('visible')
+    document.dispatchEvent(new Event('visibilitychange'))
+    expect(refresh).toHaveBeenCalledOnce()
   })
 })

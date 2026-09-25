@@ -1,7 +1,8 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { MotionConfig, motion } from 'motion/react'
 import { BookOpen, ChartColumn, CircleDot, House, Layers, MessageSquareText, ShieldCheck, Trophy, type LucideIcon } from 'lucide-react'
 import { Wordmark } from '@/components/brand/wordmark'
@@ -83,9 +84,26 @@ function DesktopLink({
 
 export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipCount: number; isAdmin: boolean }) {
   const active = activeNavId(usePathname())
+  const router = useRouter()
+
+  useEffect(() => {
+    // Layouts don't re-render on client navigation, so refresh when the member returns to the tab
+    // to pick up balance/slip changes someone else made while they were away.
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') router.refresh()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange)
+  }, [router])
 
   return (
     <MotionConfig reducedMotion="user">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:flex focus:min-h-11 focus:items-center focus:rounded-control focus:bg-surface focus:px-4 focus:py-3 focus:text-ink focus:shadow-card"
+      >
+        Skip to content
+      </a>
       <header className="sticky top-0 z-30 hidden h-[72px] shrink-0 items-center gap-5 border-b border-line bg-surface px-10 md:flex">
         <Wordmark />
         <nav aria-label="Primary" className="flex items-center gap-0.5">

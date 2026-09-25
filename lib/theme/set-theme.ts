@@ -1,7 +1,6 @@
 'use server'
 
 import { cookies } from 'next/headers'
-import { revalidatePath } from 'next/cache'
 import { resolveTheme, THEME_COOKIE } from './theme'
 
 export async function setThemeAction(value: string): Promise<void> {
@@ -14,5 +13,4 @@ export async function setThemeAction(value: string): Promise<void> {
     httpOnly: true,
     maxAge: 60 * 60 * 24 * 365,
   })
-  revalidatePath('/', 'layout')
 }

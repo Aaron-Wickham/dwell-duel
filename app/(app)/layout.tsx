@@ -1,10 +1,9 @@
-import type { ReactNode } from 'react'
 import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { readSlip } from '@/lib/parlays/slip'
 import { AppNav } from '@/components/app-nav/app-nav'
 
-export default async function SignedInLayout({ children }: { children: ReactNode }) {
+export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   const { supabase, user } = await requireUser()
   if (!user) return children
 
@@ -17,7 +16,9 @@ export default async function SignedInLayout({ children }: { children: ReactNode
   return (
     <>
       <AppNav balance={profile.balance} slipCount={slip.length} isAdmin={admin} />
-      <div className="flex flex-1 flex-col pb-[calc(82px+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
+      <main id="main" className="flex flex-1 flex-col pb-[calc(82px+env(safe-area-inset-bottom))] md:pb-0">
+        {children}
+      </main>
     </>
   )
 }

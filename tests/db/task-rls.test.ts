@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, ensureInvited, createTestTask, type Member } from './fixtures'
+import { seedMembers, makeMember, clientFor, ensureInvited, createTestTask, type Member } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -87,6 +87,60 @@ describe('task_completions select policy', () => {
     const { data, error } = await adminClient.from('task_completions').select('profile_id')
     expect(error).toBeNull()
     expect(data?.some((c) => c.profile_id === alice.id)).toBe(true)
+  })
+
+  it('shows other invited members approved completions only', async () => {
+    const approvedTask = await createTestTask(alice, { title: 'Approved task' })
+    const rejectedTask = await createTestTask(alice, { title: 'Rejected task' })
+    const pendingTask = await createTestTask(alice, { title: 'Pending task' })
+
+    const bobClient = await clientFor(bob)
+    await ensureInvited(bobClient)
+    const submit = async (taskId: string): Promise<string> => {
+      const { data, error } = await bobClient.rpc('submit_task_completion', { p_task_id: taskId })
+      if (error) throw error
+      return data as string
+    }
+    const approvedId = await submit(approvedTask.taskId)
+    const rejectedId = await submit(rejectedTask.taskId)
+    await submit(pendingTask.taskId)
+
+    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+    const adminClient = await clientFor(alice)
+    await ensureInvited(adminClient)
+    expect((await adminClient.rpc('approve_task_completion', { p_completion_id: approvedId })).error).toBeNull()
+    expect(
+      (await adminClient.rpc('reject_task_completion', { p_completion_id: rejectedId, p_reason: 'Not this week' })).error,
+    ).toBeNull()
+
+    const carol = await makeMember('Carol')
+    const carolClient = await clientFor(carol)
+    await ensureInvited(carolClient)
+    const { data: seenByCarol, error } = await carolClient.from('task_completions').select('id, status')
+    expect(error).toBeNull()
+    expect(seenByCarol).toEqual([{ id: approvedId, status: 'approved' }])
+
+    const { data: seenByBob } = await bobClient.from('task_completions').select('id')
+    expect(seenByBob).toHaveLength(3)
+  })
+
+  it('shows an uninvited session no completions, even approved ones', async () => {
+    const { taskId } = await createTestTask(alice)
+    const bobClient = await clientFor(bob)
+    await ensureInvited(bobClient)
+    const { data: completionId, error: submitErr } = await bobClient.rpc('submit_task_completion', { p_task_id: taskId })
+    expect(submitErr).toBeNull()
+
+    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+    const adminClient = await clientFor(alice)
+    await ensureInvited(adminClient)
+    expect((await adminClient.rpc('approve_task_completion', { p_completion_id: completionId as string })).error).toBeNull()
+
+    const carol = await makeMember('Carol')
+    const carolClient = await clientFor(carol)
+    const { data, error } = await carolClient.from('task_completions').select('id')
+    expect(error).toBeNull()
+    expect(data).toEqual([])
   })
 })
 

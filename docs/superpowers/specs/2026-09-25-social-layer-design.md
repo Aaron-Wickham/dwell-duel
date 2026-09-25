@@ -59,24 +59,24 @@ function changes, and no new write access.
 
 | Table | Before | After |
 |---|---|---|
-| `bets` | owner or admin | every invited member |
-| `parlays` | owner or admin | every invited member |
-| `parlay_legs` | owner or admin (through its parlay) | every invited member |
+| `bets` | owner or admin | every invited member, and admins |
+| `parlays` | owner or admin | every invited member, and admins |
+| `parlay_legs` | owner or admin (through its parlay) | every invited member, and admins |
 | `task_completions` | owner or admin | owner or admin, **plus** every invited member for `approved` rows |
 | `coin_transactions` | owner or admin | unchanged |
 
 ```sql
 drop policy select_own_or_admin_bets on public.bets;
 create policy select_invited_bets on public.bets for select to authenticated
-  using (is_invited());
+  using (is_invited() or is_admin());
 
 drop policy select_own_or_admin_parlays on public.parlays;
 create policy select_invited_parlays on public.parlays for select to authenticated
-  using (is_invited());
+  using (is_invited() or is_admin());
 
 drop policy select_own_or_admin_parlay_legs on public.parlay_legs;
 create policy select_invited_parlay_legs on public.parlay_legs for select to authenticated
-  using (is_invited());
+  using (is_invited() or is_admin());
 
 drop policy select_own_or_admin_task_completions on public.task_completions;
 create policy select_task_completions on public.task_completions for select to authenticated

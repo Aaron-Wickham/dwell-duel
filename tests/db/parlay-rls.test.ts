@@ -43,16 +43,16 @@ async function seedParlays(): Promise<SeededParlays> {
 }
 
 describe('parlays / parlay_legs select policies', () => {
-  it('shows a member only their own parlays and legs', async () => {
-    const { aliceClient, aliceParlayId } = await seedParlays()
+  it('shows an invited member every parlay and leg', async () => {
+    const { aliceClient } = await seedParlays()
 
-    const { data: parlays, error } = await aliceClient.from('parlays').select('id, profile_id')
+    const { data: parlays, error } = await aliceClient.from('parlays').select('profile_id')
     expect(error).toBeNull()
-    expect(parlays).toEqual([{ id: aliceParlayId, profile_id: alice.id }])
+    expect(new Set(parlays?.map((p) => p.profile_id))).toEqual(new Set([alice.id, bob.id]))
 
-    const { data: legs, error: legsErr } = await aliceClient.from('parlay_legs').select('parlay_id')
+    const { data: legs, error: legsErr } = await aliceClient.from('parlay_legs').select('id')
     expect(legsErr).toBeNull()
-    expect(legs).toEqual([{ parlay_id: aliceParlayId }])
+    expect(legs).toHaveLength(2)
   })
 
   it('shows an admin every parlay and leg', async () => {
@@ -67,7 +67,7 @@ describe('parlays / parlay_legs select policies', () => {
     expect(legs).toHaveLength(2)
   })
 
-  it('shows a member with no parlays nothing at all', async () => {
+  it('shows an uninvited session no parlays or legs', async () => {
     await seedParlays()
     const carol = await makeMember('Carol')
     const carolClient = await clientFor(carol)

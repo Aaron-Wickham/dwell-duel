@@ -370,6 +370,10 @@ their current definitions (`0012_resolve_market_override.sql` and
 alter table public.parlays enable row level security;
 alter table public.parlay_legs enable row level security;
 
+-- Supabase's default privileges pre-grant every new public table to anon
+-- and authenticated; revoke first (the migration 0006 lesson).
+revoke all on public.parlays, public.parlay_legs from anon, authenticated;
+
 grant select on public.parlays to authenticated;
 grant select on public.parlay_legs to authenticated;
 

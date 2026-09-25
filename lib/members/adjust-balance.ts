@@ -22,6 +22,7 @@ export async function adjustBalanceAction(profileId: string, _prevState: ActionS
   })
   if (error) return { formError: error.message }
 
-  revalidatePath('/admin/members')
+  // Refreshes the shared layout too, so the nav's balance and slip count stay current.
+  revalidatePath('/', 'layout')
   return undefined
 }

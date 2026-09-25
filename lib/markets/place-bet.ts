@@ -24,6 +24,7 @@ export async function placeBetAction(marketId: string, _prevState: ActionState, 
 
   if (error) return { formError: error.message }
 
-  revalidatePath(`/markets/${marketId}`)
+  // Refreshes the shared layout too, so the nav's balance and slip count stay current.
+  revalidatePath('/', 'layout')
   return undefined
 }

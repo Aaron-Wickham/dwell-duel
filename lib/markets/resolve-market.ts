@@ -23,7 +23,7 @@ export async function resolveMarketAction(
 
   if (error) return { formError: error.message }
 
-  revalidatePath(`/markets/${marketId}`)
-  revalidatePath('/parlays')
+  // Refreshes the shared layout too, so the nav's balance and slip count stay current.
+  revalidatePath('/', 'layout')
   return undefined
 }

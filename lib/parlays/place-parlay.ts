@@ -28,8 +28,8 @@ export async function placeParlayAction(_prevState: PlaceParlayState, formData: 
 
   await writeSlip([])
 
-  revalidatePath('/parlays')
-  revalidatePath('/')
+  // Refreshes the shared layout too, so the nav's balance and slip count stay current.
+  revalidatePath('/', 'layout')
 
   const { data: legs, error: legsErr } = await supabase
     .from('parlay_legs')

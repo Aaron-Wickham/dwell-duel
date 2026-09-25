@@ -27,13 +27,13 @@ export async function addToSlipAction(outcomeId: string, _formData: FormData): P
   if (kept.length >= MAX_PICKS) return
 
   await writeSlip([...kept, outcomeId])
-  revalidatePath(`/markets/${newMarketId}`)
-  revalidatePath('/parlays')
+  // Refreshes the shared layout too, so the nav's balance and slip count stay current.
+  revalidatePath('/', 'layout')
 }
 
 export async function removeFromSlipAction(outcomeId: string, _formData: FormData): Promise<void> {
   const slip = await readSlip()
   await writeSlip(slip.filter((id) => id !== outcomeId))
-  revalidatePath('/markets/[id]', 'page')
-  revalidatePath('/parlays')
+  // Refreshes the shared layout too, so the nav's balance and slip count stay current.
+  revalidatePath('/', 'layout')
 }

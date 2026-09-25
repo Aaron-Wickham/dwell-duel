@@ -32,9 +32,6 @@ export default async function ParlaysPage() {
   return (
     <div className="mx-auto max-w-2xl p-8">
       <h1 className="text-xl font-semibold">Parlays</h1>
-      <Link href="/markets" className="text-sm underline">
-        Markets
-      </Link>
 
       <h2 className="mt-6 text-lg font-semibold">Your slip</h2>
       {slip.picks.length === 0 ? (

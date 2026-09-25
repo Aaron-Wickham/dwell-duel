@@ -12,7 +12,8 @@ export async function approveTaskCompletionAction(completionId: string, _prevSta
   const { error } = await supabase.rpc('approve_task_completion', { p_completion_id: completionId })
   if (error) return { formError: error.message }
 
-  revalidatePath('/admin/tasks')
+  // Refreshes the shared layout too, so the nav's balance and slip count stay current.
+  revalidatePath('/', 'layout')
   return undefined
 }
 
@@ -54,7 +55,8 @@ export async function bulkApproveTaskCompletionsAction(_prevState: BulkActionSta
     }
   }
 
-  revalidatePath('/admin/tasks')
+  // Refreshes the shared layout too, so the nav's balance and slip count stay current.
+  revalidatePath('/', 'layout')
   const failed = completionIds.length - succeeded
   if (failed === 0) return { summary: `${succeeded} approved.` }
   return { summary: `${succeeded} approved, ${failed} failed (${firstError}).` }

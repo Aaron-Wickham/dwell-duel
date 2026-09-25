@@ -8,8 +8,10 @@ export interface MarketDetail {
   status: 'open' | 'resolved' | 'voided'
   closeAt: string
   createdBy: string
+  creatorName: string
   currentResolutionId: string | null
   resolvedOutcomeLabel: string | null
+  resolvedAt: string | null
   outcomes: { id: string; label: string; poolTotal: number }[]
 }
 
@@ -26,7 +28,7 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
   const { data, error } = await supabase
     .from('markets')
     .select(
-      'id, title, description, kind, status, close_at, created_by, current_resolution_id, market_outcomes(id, label, pool_total)',
+      'id, title, description, kind, status, close_at, created_by, current_resolution_id, creator:profiles(display_name), market_outcomes(id, label, pool_total)',
     )
     .eq('id', marketId)
     .maybeSingle()
@@ -41,15 +43,19 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
   }))
 
   let resolvedOutcomeLabel: string | null = null
+  let resolvedAt: string | null = null
   if (data.current_resolution_id) {
     const { data: resolution, error: resolutionErr } = await supabase
       .from('market_resolutions')
-      .select('outcome_id')
+      .select('outcome_id, resolved_at')
       .eq('id', data.current_resolution_id)
       .single()
     if (resolutionErr) throw resolutionErr
     resolvedOutcomeLabel = outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null
+    resolvedAt = resolution.resolved_at
   }
+
+  const creator = data.creator as unknown as { display_name: string } | null
 
   return {
     id: data.id,
@@ -59,8 +65,10 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
     status: data.status,
     closeAt: data.close_at,
     createdBy: data.created_by,
+    creatorName: creator?.display_name ?? 'Unknown member',
     currentResolutionId: data.current_resolution_id,
     resolvedOutcomeLabel,
+    resolvedAt,
     outcomes,
   }
 }

@@ -29,6 +29,12 @@ export default async function Home() {
       <Link href="/parlays" className="text-sm underline">
         Parlays{slipCount > 0 ? ` (${slipCount})` : ''}
       </Link>
+      <Link href="/leaderboard" className="text-sm underline">
+        Leaderboard
+      </Link>
+      <Link href="/feed" className="text-sm underline">
+        Feed
+      </Link>
       <form action={signOut}>
         <button type="submit" className="text-sm underline">
           Sign out

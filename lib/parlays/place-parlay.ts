@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
+import { insufficientBalanceMessage, isBalanceCheckViolation } from '@/lib/errors/balance-error'
 import { combineOdds, lockedOddsToBp, potentialPayout } from './odds'
 import { getSlipView } from './get-slip'
 import { readSlip, writeSlip } from './slip'
@@ -24,7 +25,13 @@ export async function placeParlayAction(_prevState: PlaceParlayState, formData: 
     p_outcome_ids: picks.map((p) => p.outcomeId),
     p_stake: stake,
   })
-  if (error) return { formError: error.message }
+  if (error) {
+    if (isBalanceCheckViolation(error)) {
+      const { data: profile } = await supabase.from('profiles').select('balance').eq('id', user.id).maybeSingle()
+      if (profile) return { formError: insufficientBalanceMessage(profile.balance) }
+    }
+    return { formError: error.message }
+  }
 
   await writeSlip([])
 

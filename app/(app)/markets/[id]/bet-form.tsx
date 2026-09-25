@@ -1,6 +1,9 @@
 'use client'
 
 import { useActionState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Field, Input, Select } from '@/components/ui/field'
+import { Message } from '@/components/ui/message'
 import { placeBetAction, type ActionState } from '@/lib/markets/place-bet'
 
 export function BetForm({ marketId, outcomes }: { marketId: string; outcomes: { id: string; label: string }[] }) {
@@ -8,17 +11,40 @@ export function BetForm({ marketId, outcomes }: { marketId: string; outcomes: { 
   const [state, formAction] = useActionState<ActionState, FormData>(boundAction, undefined)
 
   return (
-    <form action={formAction} className="mt-4 flex flex-col gap-2">
-      <select name="outcome_id" required className="border px-2 py-1">
-        {outcomes.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-      <input name="amount" type="number" min="1" step="1" required placeholder="Amount (DC)" className="border px-2 py-1" />
-      <button type="submit">Place bet</button>
-      {state?.formError && <p className="text-sm text-red-600">{state.formError}</p>}
-    </form>
+    <>
+      <form action={formAction} className="flex flex-col gap-4">
+        <Field label="Outcome" htmlFor="bet-outcome">
+          <Select id="bet-outcome" name="outcome_id" required>
+            {outcomes.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Amount (DC)" htmlFor="bet-amount">
+          <Input
+            id="bet-amount"
+            name="amount"
+            type="number"
+            inputMode="numeric"
+            min="1"
+            step="1"
+            required
+            placeholder="Amount (DC)"
+            aria-invalid={Boolean(state?.formError)}
+            aria-describedby={state?.formError ? 'bet-error' : undefined}
+          />
+        </Field>
+        <Button type="submit" block>
+          Place bet
+        </Button>
+      </form>
+      {state?.formError && (
+        <Message tone="error" id="bet-error">
+          {state.formError}
+        </Message>
+      )}
+    </>
   )
 }

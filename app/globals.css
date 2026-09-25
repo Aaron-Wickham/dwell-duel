@@ -176,8 +176,13 @@
 
   a {
     color: var(--link);
+    text-decoration-line: underline;
     text-decoration-thickness: 1.5px;
     text-underline-offset: 3px;
+  }
+
+  a:hover {
+    text-decoration-thickness: 3px;
   }
 
   :focus-visible {

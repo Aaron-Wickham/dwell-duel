@@ -23,8 +23,8 @@ export type PendingRow = PendingCompletion & { submittedAge: string }
 
 export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [approveState, approveAction] = useActionState<BulkActionState | undefined, FormData>(bulkApproveTaskCompletionsAction, undefined)
-  const [rejectState, rejectAction] = useActionState<BulkActionState | undefined, FormData>(bulkRejectTaskCompletionsAction, undefined)
+  const [approveState, approveAction, isApprovePending] = useActionState<BulkActionState | undefined, FormData>(bulkApproveTaskCompletionsAction, undefined)
+  const [rejectState, rejectAction, isRejectPending] = useActionState<BulkActionState | undefined, FormData>(bulkRejectTaskCompletionsAction, undefined)
   // Only the most recently clicked bulk action's result stays visible — otherwise an
   // approve followed by a reject would leave both summaries on screen at once.
   const [lastBulk, setLastBulk] = useState<'approve' | 'reject' | null>(null)
@@ -37,18 +37,20 @@ export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
 
   return (
     <div ref={containerRef} className="flex flex-col gap-4">
-      {lastBulk === 'approve' && approveState?.formError && (
+      {/* Hidden while its own action is pending, so a stale result from an earlier click
+          doesn't flash back on screen for the moment before the new one resolves. */}
+      {lastBulk === 'approve' && !isApprovePending && approveState?.formError && (
         <Message tone="error" id={BULK_APPROVE_ERROR_ID}>
           {approveState.formError}
         </Message>
       )}
-      {lastBulk === 'approve' && approveState?.summary && <Message tone="ok">{approveState.summary}</Message>}
-      {lastBulk === 'reject' && rejectState?.formError && (
+      {lastBulk === 'approve' && !isApprovePending && approveState?.summary && <Message tone="ok">{approveState.summary}</Message>}
+      {lastBulk === 'reject' && !isRejectPending && rejectState?.formError && (
         <Message tone="error" id={BULK_REJECT_ERROR_ID}>
           {rejectState.formError}
         </Message>
       )}
-      {lastBulk === 'reject' && rejectState?.summary && <Message tone="ok">{rejectState.summary}</Message>}
+      {lastBulk === 'reject' && !isRejectPending && rejectState?.summary && <Message tone="ok">{rejectState.summary}</Message>}
 
       {pending.length === 0 ? (
         <EmptyState icon={Check} title="Nothing pending." />
@@ -99,7 +101,9 @@ export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
                   formAction={approveAction}
                   className="grow"
                   onClick={() => setLastBulk('approve')}
-                  aria-describedby={lastBulk === 'approve' && approveState?.formError ? BULK_APPROVE_ERROR_ID : undefined}
+                  aria-describedby={
+                    lastBulk === 'approve' && !isApprovePending && approveState?.formError ? BULK_APPROVE_ERROR_ID : undefined
+                  }
                 >
                   Approve selected
                 </FormSubmitButton>
@@ -109,7 +113,9 @@ export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
                   formAction={rejectAction}
                   className="grow"
                   onClick={() => setLastBulk('reject')}
-                  aria-describedby={lastBulk === 'reject' && rejectState?.formError ? BULK_REJECT_ERROR_ID : undefined}
+                  aria-describedby={
+                    lastBulk === 'reject' && !isRejectPending && rejectState?.formError ? BULK_REJECT_ERROR_ID : undefined
+                  }
                 >
                   Reject selected
                 </FormSubmitButton>

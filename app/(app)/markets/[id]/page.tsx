@@ -6,6 +6,7 @@ import { isAdmin } from '@/lib/auth/is-admin'
 import { getMarket, getMarketBets } from '@/lib/markets/get-market'
 import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
+import { rowState } from '@/lib/markets/row-state'
 import { readSlip } from '@/lib/parlays/slip'
 import { MAX_PICKS, legOddsBp } from '@/lib/parlays/odds'
 import { addToSlipAction, removeFromSlipAction } from '@/lib/parlays/slip-actions'
@@ -16,7 +17,7 @@ import { Page, h1Class } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { StatusChip } from '@/components/ui/status-chip'
 import { BetList } from '@/components/markets/bet-list'
-import { OutcomeRow, type OutcomeRowState } from '@/components/markets/outcome-row'
+import { OutcomeRow } from '@/components/markets/outcome-row'
 import { BetForm } from './bet-form'
 import { ResolveForm } from './resolve-form'
 import { VoidButton } from './void-button'
@@ -51,12 +52,6 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const slip = await readSlip()
   const marketInSlip = market.outcomes.some((o) => slip.includes(o.id))
   const slipFull = slip.length >= MAX_PICKS && !marketInSlip
-
-  function rowState(outcomeId: string, poolTotal: number): OutcomeRowState {
-    if (slip.includes(outcomeId)) return 'inslip'
-    if (!canBet || poolTotal === 0) return 'none'
-    return slipFull ? 'disabled' : 'add'
-  }
 
   const statusTone =
     market.status === 'resolved' ? 'done' : market.status === 'voided' ? 'void' : isPastClose ? 'wait' : 'open'
@@ -146,7 +141,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
                   probability={o.impliedProbability}
                   oddsBp={legOddsBp(totalPool, o.poolTotal)}
                   series={outcomeSeries(market.kind, o.label, index)}
-                  state={rowState(o.outcomeId, o.poolTotal)}
+                  state={rowState(o.outcomeId, o.poolTotal, { slip, canBet, slipFull })}
                   winner={market.status === 'resolved' && o.label === market.resolvedOutcomeLabel}
                   addAction={addToSlipAction.bind(null, o.outcomeId)}
                   removeAction={removeFromSlipAction.bind(null, o.outcomeId)}

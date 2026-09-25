@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { LedgerEntry } from '@/lib/ledger/list-transactions'
-import { ageLabel } from '@/lib/social/relative-time'
+import { ageLabel, isOldEntry } from '@/lib/social/relative-time'
+import { LocalTime } from '@/components/ui/local-time'
 import { cn } from '@/lib/utils'
 
 export function LedgerRow({ entry }: { entry: LedgerEntry }) {
@@ -15,10 +16,11 @@ export function LedgerRow({ entry }: { entry: LedgerEntry }) {
           {sign}
           {Math.abs(entry.amount)} DC
         </span>{' '}
-        — {entry.type}
-        {entry.reason && ` — “${entry.reason}”`}
+        — {entry.context}
       </p>
-      <span className="whitespace-nowrap pt-0.5 text-sm text-ink2">{ageLabel(entry.createdAt)}</span>
+      <span className="whitespace-nowrap pt-0.5 text-sm text-ink2">
+        {isOldEntry(entry.createdAt) ? <LocalTime iso={entry.createdAt} format="day" /> : ageLabel(entry.createdAt)}
+      </span>
     </li>
   )
 }

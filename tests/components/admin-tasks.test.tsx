@@ -141,6 +141,40 @@ describe('PendingApprovals', () => {
     expect(await screen.findByText('1 rejected.')).toBeInTheDocument()
     expect(screen.queryByText('2 approved.')).not.toBeInTheDocument()
   })
+
+  it('ties a bulk approve error to the Approve selected button as its accessible description', async () => {
+    bulkApproveTaskCompletionsAction.mockResolvedValue({ formError: 'Select at least one completion.' })
+    render(<PendingApprovals pending={PENDING} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Select at least one completion.')
+    expect(screen.getByRole('button', { name: 'Approve selected' })).toHaveAccessibleDescription(
+      'Select at least one completion.',
+    )
+  })
+
+  it("hides the previous bulk result while a new bulk action is pending, so approve → reject → approve doesn't flash the first result", async () => {
+    let resolveSecondApprove: (state: { summary: string }) => void = () => {}
+    bulkApproveTaskCompletionsAction
+      .mockResolvedValueOnce({ summary: '1 approved.' })
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveSecondApprove = resolve)))
+    bulkRejectTaskCompletionsAction.mockResolvedValue({ summary: '1 rejected.' })
+    render(<PendingApprovals pending={PENDING} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
+    expect(await screen.findByText('1 approved.')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }))
+    expect(await screen.findByText('1 rejected.')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
+    expect(screen.queryByText('1 approved.')).not.toBeInTheDocument()
+
+    resolveSecondApprove({ summary: '2 approved.' })
+    expect(await screen.findByText('2 approved.')).toBeInTheDocument()
+  })
 })
 
 describe('ReviewButtons', () => {
@@ -154,6 +188,19 @@ describe('ReviewButtons', () => {
     expect(alert).toHaveTextContent('Could not approve that submission.')
     expect(screen.getByRole('button', { name: 'Approve' })).toHaveAccessibleDescription('Could not approve that submission.')
     expect(screen.getByPlaceholderText('Reason (optional)')).toHaveAttribute('aria-invalid', 'false')
+  })
+
+  it('ties a reject error to the reason field, marking it invalid', async () => {
+    rejectTaskCompletionAction.mockResolvedValue({ formError: 'Could not reject that submission.' })
+    render(<ReviewButtons completionId="c1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reject' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Could not reject that submission.')
+    const reason = screen.getByPlaceholderText('Reason (optional)')
+    expect(reason).toHaveAttribute('aria-invalid', 'true')
+    expect(reason).toHaveAccessibleDescription('Could not reject that submission.')
   })
 })
 
@@ -238,6 +285,7 @@ describe('TaskCatalogItem', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByLabelText('Title')).toBeNull()
+    expect(updateTaskAction).not.toHaveBeenCalled()
   })
 
   it('saves an edit, keeping the task active, and closes the form', async () => {

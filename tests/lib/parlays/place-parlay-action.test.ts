@@ -20,8 +20,9 @@ const BALANCE_VIOLATION = {
 
 function stubBalance(balance: number) {
   const eq = vi.fn(() => ({ maybeSingle: async () => ({ data: { balance }, error: null }) }))
-  supabase.from.mockReturnValue({ select: () => ({ eq }) })
-  return eq
+  const select = vi.fn(() => ({ eq }))
+  supabase.from.mockReturnValue({ select })
+  return { select, eq }
 }
 
 function stakeForm(stake: string) {
@@ -39,13 +40,25 @@ beforeEach(() => {
 describe('placeParlayAction', () => {
   it("turns a balance-check violation into the friendly copy with the member's current balance, keeping the slip", async () => {
     supabase.rpc.mockResolvedValue({ data: null, error: BALANCE_VIOLATION })
-    const eq = stubBalance(12)
+    const { select, eq } = stubBalance(12)
 
     const state = await placeParlayAction(undefined, stakeForm('50'))
 
     expect(state).toEqual({ formError: 'Insufficient balance — you have 12 DC. Try a smaller amount.' })
     expect(supabase.from).toHaveBeenCalledWith('profiles')
+    expect(select).toHaveBeenCalledWith('balance')
     expect(eq).toHaveBeenCalledWith('id', 'member-1')
+    expect(writeSlip).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the raw error message when the balance read finds no row', async () => {
+    supabase.rpc.mockResolvedValue({ data: null, error: BALANCE_VIOLATION })
+    const eq = vi.fn(() => ({ maybeSingle: async () => ({ data: null, error: null }) }))
+    supabase.from.mockReturnValue({ select: () => ({ eq }) })
+
+    const state = await placeParlayAction(undefined, stakeForm('50'))
+
+    expect(state).toEqual({ formError: BALANCE_VIOLATION.message })
     expect(writeSlip).not.toHaveBeenCalled()
   })
 

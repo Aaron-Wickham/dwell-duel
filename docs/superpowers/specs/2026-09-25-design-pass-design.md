@@ -162,7 +162,7 @@ Covers handoff build step 4.
 - Charts are omitted from market pages and cards until PR C.
 - **Carried from PR A:**
   - **`Field` doesn't wire its own ARIA.** `Field` renders `{id}-hint` and `{id}-error` but leaves `aria-describedby` and `aria-invalid` on the control to the caller. Every `Field` call site must wire both, or a small helper can be added once real call sites exist.
-  - **The balance can disagree with itself.** The nav's balance chip refreshes only on a hard load, on the member's own money or slip actions, and when the tab becomes visible again. It does not refresh on client navigation, so a balance shown in a page body can briefly disagree with the chip after an admin's action. The home redesign shouldn't show a second balance beside the chip.
+  - **The balance can disagree with itself.** The nav's balance chip refreshes only on a hard load, on the member's own money or slip actions, and when the tab becomes visible again. It does not refresh on client navigation, so a balance shown in a page body can briefly disagree with the chip after an admin's action. The home page still shows its hero balance: the mockup and `e2e/foundation.spec.ts` both need it. The brief mismatch after someone else changes a member's balance is an accepted limitation. (This is ruled on in the PR B plan.)
   - **`Message tone="gold"` shouldn't always be a live region.** Used for static text like "Awaiting resolution", it shouldn't be `role="status"`.
   - **The phone top bar is tight at 375px.**
     - A 4-digit admin balance fits.

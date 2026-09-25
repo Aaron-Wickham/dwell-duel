@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { requireUser } from '@/lib/auth/require-user'
 import { signOut } from '@/lib/auth/sign-out'
+import { readSlip } from '@/lib/parlays/slip'
 
 export default async function Home() {
   const { supabase, user } = await requireUser()
@@ -13,6 +14,8 @@ export default async function Home() {
     .eq('id', user.id)
     .single()
 
+  const slipCount = (await readSlip()).length
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4">
       <h1 className="text-2xl font-semibold">Welcome, {profile?.display_name}</h1>
@@ -22,6 +25,9 @@ export default async function Home() {
       </Link>
       <Link href="/tasks" className="text-sm underline">
         Tasks
+      </Link>
+      <Link href="/parlays" className="text-sm underline">
+        Parlays{slipCount > 0 ? ` (${slipCount})` : ''}
       </Link>
       <form action={signOut}>
         <button type="submit" className="text-sm underline">

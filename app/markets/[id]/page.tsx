@@ -3,9 +3,12 @@ import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { getMarket, getOwnBets } from '@/lib/markets/get-market'
 import { computeOdds } from '@/lib/markets/odds'
+import { readSlip } from '@/lib/parlays/slip'
+import { MAX_PICKS } from '@/lib/parlays/odds'
 import { BetForm } from './bet-form'
 import { ResolveForm } from './resolve-form'
 import { VoidButton } from './void-button'
+import { SlipControl } from './slip-control'
 
 export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>) {
   const { id } = await props.params
@@ -32,6 +35,10 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const canOverride = market.status === 'resolved' && admin
   const canVoid = market.status === 'open' && (isCreator || admin)
 
+  const slip = await readSlip()
+  const marketInSlip = market.outcomes.some((o) => slip.includes(o.id))
+  const slipFull = slip.length >= MAX_PICKS && !marketInSlip
+
   return (
     <div className="mx-auto max-w-2xl p-8">
       <h1 className="text-xl font-semibold">{market.title}</h1>
@@ -46,9 +53,15 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           <li key={o.outcomeId}>
             {o.label} — {o.impliedProbability === null ? 'no bets yet' : `${Math.round(o.impliedProbability * 100)}%`} (
             {o.poolTotal} DC)
+            <SlipControl
+              outcomeId={o.outcomeId}
+              inSlip={slip.includes(o.outcomeId)}
+              canAdd={canBet && o.poolTotal > 0 && !slipFull}
+            />
           </li>
         ))}
       </ul>
+      {canBet && slipFull && <p className="mt-2 text-sm">Your slip is full (6 picks).</p>}
 
       {canBet && <BetForm marketId={market.id} outcomes={market.outcomes} />}
 

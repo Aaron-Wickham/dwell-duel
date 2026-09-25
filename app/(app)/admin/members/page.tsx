@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
+import { Users } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { listMembers } from '@/lib/members/list-members'
+import { cardClass } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
+import { cn } from '@/lib/utils'
 import { AdjustBalanceForm } from './adjust-balance-form'
 
 export default async function AdminMembersPage() {
@@ -13,30 +16,23 @@ export default async function AdminMembersPage() {
   const members = await listMembers(supabase)
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
-      <h1 className="text-xl font-semibold">Members</h1>
-      <div className="mt-2 flex gap-4">
-        <Link href="/admin/invites" className="text-sm underline">
-          Invites
-        </Link>
-        <Link href="/admin/tasks" className="text-sm underline">
-          Tasks
-        </Link>
-        <Link href="/admin/ledger" className="text-sm underline">
-          Ledger
-        </Link>
-      </div>
-      <ul className="mt-6 space-y-3">
-        {members.map((m) => (
-          <li key={m.id} className="border p-3">
-            <p className="font-medium">
-              {m.displayName} — {m.balance} DC {m.isAdmin && '(admin)'}
-            </p>
-            <p className="text-sm text-foreground/70">{m.email}</p>
-            <AdjustBalanceForm profileId={m.id} />
-          </li>
-        ))}
-      </ul>
-    </div>
+    <section aria-labelledby="members-title" className={cn(cardClass, 'px-[18px] py-1 md:px-6')}>
+      <h2 id="members-title" className="sr-only">
+        Members
+      </h2>
+      {members.length === 0 ? (
+        <div className="py-[18px] md:py-6">
+          <EmptyState icon={Users} title="No members yet." />
+        </div>
+      ) : (
+        <ul className="flex flex-col divide-y divide-line">
+          {members.map((m) => (
+            <li key={m.id} className="flex flex-col gap-3 py-4">
+              <AdjustBalanceForm member={m} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   )
 }

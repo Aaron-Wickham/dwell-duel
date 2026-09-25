@@ -1,8 +1,12 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
+import { NotebookText } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { listAllTransactions } from '@/lib/ledger/list-transactions'
+import { cardClass } from '@/components/ui/card'
+import { LedgerRow } from '@/components/admin/ledger-row'
+import { EmptyState } from '@/components/ui/empty-state'
+import { cn } from '@/lib/utils'
 
 export default async function AdminLedgerPage() {
   const { supabase, user } = await requireUser()
@@ -12,28 +16,21 @@ export default async function AdminLedgerPage() {
   const entries = await listAllTransactions(supabase)
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
-      <h1 className="text-xl font-semibold">Ledger</h1>
-      <div className="mt-2 flex gap-4">
-        <Link href="/admin/invites" className="text-sm underline">
-          Invites
-        </Link>
-        <Link href="/admin/tasks" className="text-sm underline">
-          Tasks
-        </Link>
-        <Link href="/admin/members" className="text-sm underline">
-          Members
-        </Link>
-      </div>
-      <ul className="mt-6 space-y-2 text-sm">
-        {entries.map((e) => (
-          <li key={e.id} className="border-b py-2">
-            {e.memberName}: {e.amount > 0 ? '+' : ''}
-            {e.amount} DC — {e.type}
-            {e.reason && ` (${e.reason})`}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <section aria-labelledby="ledger-title" className={cn(cardClass, 'px-[18px] py-1 md:px-6')}>
+      <h2 id="ledger-title" className="sr-only">
+        Every coin movement
+      </h2>
+      {entries.length === 0 ? (
+        <div className="py-[18px] md:py-6">
+          <EmptyState icon={NotebookText} title="No coin movements yet." />
+        </div>
+      ) : (
+        <ul className="flex flex-col divide-y divide-line">
+          {entries.map((e) => (
+            <LedgerRow key={e.id} entry={e} />
+          ))}
+        </ul>
+      )}
+    </section>
   )
 }

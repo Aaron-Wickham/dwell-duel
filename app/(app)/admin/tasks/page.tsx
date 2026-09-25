@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { listTasks } from '@/lib/tasks/list-tasks'
@@ -17,21 +16,8 @@ export default async function AdminTasksPage() {
   const pending = await listPendingTaskCompletions(supabase)
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
-      <h1 className="text-xl font-semibold">Tasks</h1>
-      <div className="mt-2 flex gap-4">
-        <Link href="/admin/invites" className="text-sm underline">
-          Invites
-        </Link>
-        <Link href="/admin/members" className="text-sm underline">
-          Members
-        </Link>
-        <Link href="/admin/ledger" className="text-sm underline">
-          Ledger
-        </Link>
-      </div>
-
-      <h2 className="mt-6 text-lg font-semibold">Pending approvals</h2>
+    <div>
+      <h2 className="text-lg font-semibold">Pending approvals</h2>
       <PendingApprovals pending={pending} />
 
       <h2 className="mt-8 text-lg font-semibold">Catalog</h2>

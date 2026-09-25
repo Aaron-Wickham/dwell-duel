@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export interface LedgerEntry {
   id: number
+  profileId: string
   memberName: string
   amount: number
   type: string
@@ -27,7 +28,7 @@ const TYPE_LABELS: Record<string, string> = {
 export async function listAllTransactions(supabase: SupabaseClient): Promise<LedgerEntry[]> {
   const { data, error } = await supabase
     .from('coin_transactions')
-    .select('id, amount, type, meta, created_at, profiles(display_name)')
+    .select('id, profile_id, amount, type, meta, created_at, profiles(display_name)')
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
 
@@ -38,6 +39,7 @@ export async function listAllTransactions(supabase: SupabaseClient): Promise<Led
     const meta = t.meta as { reason?: string }
     return {
       id: t.id,
+      profileId: t.profile_id,
       memberName: profile?.display_name ?? 'Unknown member',
       amount: t.amount,
       type: TYPE_LABELS[t.type] ?? t.type,

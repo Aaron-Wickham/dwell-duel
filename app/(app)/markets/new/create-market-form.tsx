@@ -11,6 +11,12 @@ import { createMarketAction, type ActionState } from '@/lib/markets/create-marke
 const MAX_OUTCOMES = 6
 const MIN_OUTCOMES = 2
 
+const toggleClass = (on: boolean) =>
+  cn(
+    'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] font-bold text-ink2',
+    on && 'bg-surface text-ink shadow-tab',
+  )
+
 export function CreateMarketForm() {
   const [kind, setKind] = useState<'binary' | 'multiple_choice'>('binary')
   const [outcomes, setOutcomes] = useState(['', ''])
@@ -51,12 +57,7 @@ export function CreateMarketForm() {
       <fieldset className="flex flex-col gap-1.5">
         <legend className="text-[15px] font-bold">Type</legend>
         <div className="grid grid-cols-2 gap-1.5 rounded-[14px] bg-sunk p-1">
-          <label
-            className={cn(
-              'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] font-bold text-ink2',
-              kind === 'binary' && 'bg-surface text-ink shadow-[0_1px_3px_rgba(3,39,45,0.12)]',
-            )}
-          >
+          <label className={toggleClass(kind === 'binary')}>
             <input
               type="radio"
               name="kind"
@@ -67,12 +68,7 @@ export function CreateMarketForm() {
             />
             Binary (Yes/No)
           </label>
-          <label
-            className={cn(
-              'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] font-bold text-ink2',
-              kind === 'multiple_choice' && 'bg-surface text-ink shadow-[0_1px_3px_rgba(3,39,45,0.12)]',
-            )}
-          >
+          <label className={toggleClass(kind === 'multiple_choice')}>
             <input
               type="radio"
               name="kind"

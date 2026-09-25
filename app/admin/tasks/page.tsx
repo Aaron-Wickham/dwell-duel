@@ -19,12 +19,17 @@ export default async function AdminTasksPage() {
   return (
     <div className="mx-auto max-w-2xl p-8">
       <h1 className="text-xl font-semibold">Tasks</h1>
-      <Link href="/admin/members" className="text-sm underline">
-        Manage members
-      </Link>
-      <Link href="/admin/ledger" className="text-sm underline">
-        View ledger
-      </Link>
+      <div className="mt-2 flex gap-4">
+        <Link href="/admin/invites" className="text-sm underline">
+          Invites
+        </Link>
+        <Link href="/admin/members" className="text-sm underline">
+          Members
+        </Link>
+        <Link href="/admin/ledger" className="text-sm underline">
+          Ledger
+        </Link>
+      </div>
 
       <h2 className="mt-6 text-lg font-semibold">Pending approvals</h2>
       <PendingApprovals pending={pending} />

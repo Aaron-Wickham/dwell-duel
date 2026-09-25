@@ -17,6 +17,7 @@ const TYPE_LABELS: Record<string, string> = {
   resolution_reversed: 'Resolution reversed',
   task_completed: 'Task reward',
   admin_adjustment: 'Admin adjustment',
+  starting_grant: 'Starting grant',
 }
 
 export async function listAllTransactions(supabase: SupabaseClient): Promise<LedgerEntry[]> {
@@ -24,6 +25,7 @@ export async function listAllTransactions(supabase: SupabaseClient): Promise<Led
     .from('coin_transactions')
     .select('id, amount, type, meta, created_at, profiles(display_name)')
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
 
   if (error) throw error
 

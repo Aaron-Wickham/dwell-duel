@@ -23,7 +23,7 @@ export default async function AdminMembersPage() {
           Tasks
         </Link>
         <Link href="/admin/ledger" className="text-sm underline">
-          View ledger
+          Ledger
         </Link>
       </div>
       <ul className="mt-6 space-y-3">

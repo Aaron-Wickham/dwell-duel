@@ -16,6 +16,7 @@ test('bulk-approve two pending task completions from the admin queue', async ({ 
   await page.getByRole('button', { name: 'I did this' }).first().click()
   await expect(page.getByText('Pending review').first()).toBeVisible()
   await page.getByRole('button', { name: 'I did this' }).first().click()
+  await expect(page.getByText('Pending review')).toHaveCount(2)
 
   await page.goto('/admin/tasks')
   await page.locator('input[name="completionIds"]').first().check()

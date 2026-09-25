@@ -16,6 +16,10 @@ export async function listMarkets(supabase: SupabaseClient): Promise<MarketSumma
     .from('markets')
     .select('id, title, kind, status, close_at, current_resolution_id, market_outcomes(id, label, pool_total)')
     .order('created_at', { ascending: false })
+    // Same tiebreak as getMarket: insertion time, then label, so outcome order (and
+    // therefore colour assignment) is stable across requests.
+    .order('created_at', { referencedTable: 'market_outcomes' })
+    .order('label', { referencedTable: 'market_outcomes' })
 
   if (error) throw error
 

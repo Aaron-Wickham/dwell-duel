@@ -31,6 +31,11 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
       'id, title, description, kind, status, close_at, created_by, current_resolution_id, creator:profiles(display_name), market_outcomes(id, label, pool_total)',
     )
     .eq('id', marketId)
+    // Rows come back with no default order, and colours are assigned by position for
+    // multiple-choice markets, so pin a stable order: insertion time, then label to
+    // break the tie (create_market inserts every outcome in one transaction).
+    .order('created_at', { referencedTable: 'market_outcomes' })
+    .order('label', { referencedTable: 'market_outcomes' })
     .maybeSingle()
 
   if (error) throw error

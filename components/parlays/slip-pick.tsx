@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { StatusChip } from '@/components/ui/status-chip'
 import type { SlipPick as SlipPickView } from '@/lib/parlays/get-slip'
 import { formatOdds } from '@/lib/parlays/odds'
@@ -25,10 +25,10 @@ export function SlipPick({
         <StatusChip tone="lost">No longer available</StatusChip>
       )}
       <form action={removeAction}>
-        <Button type="submit" variant="quiet" size="sm">
+        <FormSubmitButton variant="quiet" size="sm">
           Remove{' '}
           <span className="sr-only">{`${pick.outcomeLabel}, ${pick.marketTitle}`}</span>
-        </Button>
+        </FormSubmitButton>
       </form>
     </div>
   )

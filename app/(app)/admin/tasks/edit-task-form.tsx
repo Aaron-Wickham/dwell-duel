@@ -5,6 +5,7 @@ import { updateTaskAction, type ActionState } from '@/lib/tasks/update-task'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Textarea } from '@/components/ui/field'
+import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 
 export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSummary; onDone: () => void }) {
@@ -51,9 +52,7 @@ export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSumma
         </Message>
       )}
       <div className="flex gap-2">
-        <Button type="submit" size="sm">
-          Save
-        </Button>
+        <FormSubmitButton size="sm">Save</FormSubmitButton>
         <Button size="sm" variant="quiet" onClick={onDone}>
           Cancel
         </Button>

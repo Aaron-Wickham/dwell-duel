@@ -4,14 +4,15 @@ import { ageLabel } from '@/lib/social/relative-time'
 import { cn } from '@/lib/utils'
 
 export function LedgerRow({ entry }: { entry: LedgerEntry }) {
-  const credit = entry.amount >= 0
+  const sign = entry.amount > 0 ? '+' : entry.amount < 0 ? '−' : ''
+  const amountClass = entry.amount > 0 ? 'text-win' : entry.amount < 0 ? 'text-loss' : 'text-ink2'
 
   return (
     <li className="flex items-start gap-3 py-3.5">
       <p className="min-w-0 grow">
         <Link href={`/members/${entry.profileId}`}>{entry.memberName}</Link>:{' '}
-        <span className={cn('font-extrabold tabular-nums', credit ? 'text-win' : 'text-loss')}>
-          {credit ? '+' : '−'}
+        <span className={cn('font-extrabold tabular-nums', amountClass)}>
+          {sign}
           {Math.abs(entry.amount)} DC
         </span>{' '}
         — {entry.type}

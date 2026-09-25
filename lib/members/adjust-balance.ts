@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
+import { isBalanceCheckViolation } from '@/lib/errors/balance-error'
 
 export type ActionState = { formError?: string; field?: 'amount' | 'reason' } | undefined
 
@@ -20,7 +21,15 @@ export async function adjustBalanceAction(profileId: string, _prevState: ActionS
     p_amount: amount,
     p_reason: reason,
   })
-  if (error) return { formError: error.message }
+  if (error) {
+    if (isBalanceCheckViolation(error)) {
+      const { data: profile } = await supabase.from('profiles').select('display_name, balance').eq('id', profileId).maybeSingle()
+      if (profile) {
+        return { formError: `That would take ${profile.display_name}’s balance below zero — they have ${profile.balance} DC.`, field: 'amount' }
+      }
+    }
+    return { formError: error.message }
+  }
 
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')

@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { InviteRow } from '@/lib/invites/list-invites'
 
-const { addInviteAction } = vi.hoisted(() => ({ addInviteAction: vi.fn() }))
-vi.mock('@/lib/invites/actions', () => ({ addInviteAction, revokeInviteAction: vi.fn() }))
+const { addInviteAction, revokeInviteAction } = vi.hoisted(() => ({
+  addInviteAction: vi.fn(),
+  revokeInviteAction: vi.fn(),
+}))
+vi.mock('@/lib/invites/actions', () => ({ addInviteAction, revokeInviteAction }))
 
 import { InviteListItem } from '@/components/admin/invite-list-item'
 import { AddInviteForm } from '@/app/(app)/admin/invites/add-invite-form'
@@ -18,6 +21,10 @@ function renderItem(invite: InviteRow) {
     </ul>,
   )
 }
+
+beforeEach(() => {
+  revokeInviteAction.mockReset()
+})
 
 describe('InviteListItem', () => {
   it('marks a claimed invite and offers no revoke', () => {
@@ -32,6 +39,18 @@ describe('InviteListItem', () => {
     expect(screen.getAllByText('newfriend@example.com')).toHaveLength(1)
     expect(screen.queryByText('(claimed)')).toBeNull()
     expect(document.querySelector('input[type="hidden"][name="email"]')).toHaveValue('newfriend@example.com')
+  })
+
+  it('ties a server error to the Revoke button', async () => {
+    revokeInviteAction.mockResolvedValue({ formError: 'Could not revoke that invite.' })
+    renderItem({ email: 'newfriend@example.com', claimed: false, createdAt: '2026-09-01T00:00:00Z' })
+    await userEvent.click(screen.getByRole('button', { name: 'Revoke newfriend@example.com' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Could not revoke that invite.')
+    expect(screen.getByRole('button', { name: 'Revoke newfriend@example.com' })).toHaveAccessibleDescription(
+      'Could not revoke that invite.',
+    )
   })
 })
 

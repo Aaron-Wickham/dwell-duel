@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import { Button } from '@/components/ui/button'
+import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Field, Select } from '@/components/ui/field'
 import { Message } from '@/components/ui/message'
 import { resolveMarketAction, type ActionState } from '@/lib/markets/resolve-market'
@@ -32,9 +32,7 @@ export function ResolveForm({ marketId, outcomes }: { marketId: string; outcomes
             ))}
           </Select>
         </Field>
-        <Button type="submit" block>
-          Confirm outcome
-        </Button>
+        <FormSubmitButton block>Confirm outcome</FormSubmitButton>
       </form>
       {state?.formError && (
         <Message tone="error" id="resolve-error">

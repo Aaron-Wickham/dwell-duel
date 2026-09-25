@@ -2,8 +2,8 @@
 
 import { useActionState, useState } from 'react'
 import { createTaskAction, type ActionState } from '@/lib/tasks/create-task'
-import { Button } from '@/components/ui/button'
 import { Field, Input, Select, Textarea } from '@/components/ui/field'
+import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 
 export function CreateTaskForm() {
@@ -67,9 +67,9 @@ export function CreateTaskForm() {
           {state.formError}
         </Message>
       )}
-      <Button type="submit" block className="md:w-auto md:self-start">
+      <FormSubmitButton block className="md:w-auto md:self-start">
         Create task
-      </Button>
+      </FormSubmitButton>
     </form>
   )
 }

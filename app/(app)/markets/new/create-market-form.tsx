@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Textarea } from '@/components/ui/field'
+import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { cn } from '@/lib/utils'
 import { createMarketAction, type ActionState } from '@/lib/markets/create-market'
@@ -88,11 +89,7 @@ export function CreateMarketForm() {
           <input type="hidden" name="outcome_labels" value="No" />
         </>
       ) : (
-        <fieldset
-          className="flex flex-col gap-2"
-          aria-invalid={state?.field === 'outcomes'}
-          aria-describedby={state?.field === 'outcomes' ? 'create-market-error' : undefined}
-        >
+        <fieldset className="flex flex-col gap-2">
           <legend className="text-[15px] font-bold">Outcomes</legend>
           <span className="text-sm text-ink2">
             Up to {MAX_OUTCOMES} outcomes · {outcomes.length} of {MAX_OUTCOMES} used
@@ -105,6 +102,8 @@ export function CreateMarketForm() {
                 value={value}
                 onChange={(e) => updateOutcome(index, e.target.value)}
                 className="flex-1"
+                aria-invalid={index === 0 ? state?.field === 'outcomes' : undefined}
+                aria-describedby={index === 0 && state?.field === 'outcomes' ? 'create-market-error' : undefined}
               />
               <button
                 type="button"
@@ -150,9 +149,9 @@ export function CreateMarketForm() {
         </Message>
       )}
 
-      <Button type="submit" block className="md:w-auto md:self-start">
+      <FormSubmitButton block className="md:w-auto md:self-start">
         Create market
-      </Button>
+      </FormSubmitButton>
     </form>
   )
 }

@@ -72,4 +72,48 @@ describe('CreateMarketForm', () => {
     expect(title).toHaveAttribute('aria-invalid', 'false')
     expect(title).not.toHaveAttribute('aria-describedby')
   })
+
+  it('ties a title server error to the Title field only', async () => {
+    createMarketAction.mockResolvedValue({ formError: 'Enter a title.', field: 'title' })
+    const user = userEvent.setup()
+    render(<CreateMarketForm />)
+
+    await user.type(screen.getByLabelText('Title'), 'x')
+    await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
+    await user.click(screen.getByRole('button', { name: 'Create market' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Enter a title.')
+
+    const title = screen.getByLabelText('Title')
+    expect(title).toHaveAttribute('aria-invalid', 'true')
+    expect(title).toHaveAccessibleDescription('Enter a title.')
+
+    const closeTime = screen.getByLabelText('Close time')
+    expect(closeTime).toHaveAttribute('aria-invalid', 'false')
+  })
+
+  it('ties an outcomes server error to the first outcome input only, not the fieldset', async () => {
+    createMarketAction.mockResolvedValue({ formError: 'Enter at least two outcomes.', field: 'outcomes' })
+    const user = userEvent.setup()
+    render(<CreateMarketForm />)
+
+    await user.click(screen.getByRole('radio', { name: 'Multiple choice' }))
+    await user.type(screen.getByLabelText('Title'), 'Who wins the trivia night?')
+    await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
+    await user.click(screen.getByRole('button', { name: 'Create market' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Enter at least two outcomes.')
+
+    const firstOutcome = screen.getByLabelText('Outcome 1')
+    expect(firstOutcome).toHaveAttribute('aria-invalid', 'true')
+    expect(firstOutcome).toHaveAccessibleDescription('Enter at least two outcomes.')
+
+    const secondOutcome = screen.getByLabelText('Outcome 2')
+    expect(secondOutcome).not.toHaveAttribute('aria-invalid')
+
+    const fieldset = screen.getByRole('group', { name: 'Outcomes' })
+    expect(fieldset).not.toHaveAttribute('aria-invalid')
+  })
 })

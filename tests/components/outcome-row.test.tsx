@@ -53,6 +53,16 @@ describe('OutcomeRow', () => {
     expect(screen.getByText('1.33× payout per DC')).toBeInTheDocument()
   })
 
+  it('links the disabled Add to parlay button to the reason it is disabled', () => {
+    renderRow('disabled', { disabledReasonId: 'slip-full-note' })
+    expect(screen.getByRole('button', { name: 'Add to parlay Yes' })).toHaveAttribute('aria-describedby', 'slip-full-note')
+  })
+
+  it('has no aria-describedby on the disabled button when no reason is given', () => {
+    renderRow('disabled')
+    expect(screen.getByRole('button', { name: 'Add to parlay Yes' })).not.toHaveAttribute('aria-describedby')
+  })
+
   it('hides the payout and every action when there is nothing to do', () => {
     renderRow('none')
     expect(screen.getByText('75% (60 DC)')).toBeInTheDocument()

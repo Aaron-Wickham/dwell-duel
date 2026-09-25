@@ -129,7 +129,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           className="gap-1 lg:col-start-1 lg:row-start-1"
         >
           {canBet && slipFull && (
-            <Message tone="gold" className="mt-2">
+            <Message tone="gold" id="slip-full-note" className="mt-2">
               Your slip is full ({MAX_PICKS} picks).{' '}
               <Link href="/parlays" className="text-inherit">
                 Review slip
@@ -149,6 +149,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
                   winner={market.status === 'resolved' && o.label === market.resolvedOutcomeLabel}
                   addAction={addToSlipAction.bind(null, o.outcomeId)}
                   removeAction={removeFromSlipAction.bind(null, o.outcomeId)}
+                  disabledReasonId={slipFull ? 'slip-full-note' : undefined}
                 />
               </li>
             ))}

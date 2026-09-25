@@ -4,9 +4,10 @@ import { useActionState, useState } from 'react'
 import Link from 'next/link'
 import { Layers } from 'lucide-react'
 import { SlipPick } from '@/components/parlays/slip-pick'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Field, Input } from '@/components/ui/field'
+import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { SectionCard } from '@/components/ui/section-card'
 import type { SlipView } from '@/lib/parlays/get-slip'
@@ -96,14 +97,13 @@ export function SlipForm({ slip }: { slip: SlipView }) {
                     <strong className="tabular-nums">{`${potentialPayout(stakeNumber, slip.legBps)} DC`}</strong>
                   </p>
                 )}
-                <Button
-                  type="submit"
+                <FormSubmitButton
                   block
                   disabled={!slip.canPlace}
                   aria-describedby={hasStalePick ? 'slip-blocked' : undefined}
                 >
                   Place parlay
-                </Button>
+                </FormSubmitButton>
                 {hasStalePick && (
                   <Message tone="gold" id="slip-blocked">
                     Remove the pick that’s no longer available to place this parlay.

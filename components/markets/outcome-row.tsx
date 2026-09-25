@@ -1,5 +1,6 @@
 import { Check, Plus, Trophy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { StatusChip } from '@/components/ui/status-chip'
 import type { Series } from '@/lib/markets/outcome-series'
 import { formatOdds } from '@/lib/parlays/odds'
@@ -26,6 +27,7 @@ export function OutcomeRow({
   winner = false,
   addAction,
   removeAction,
+  disabledReasonId,
 }: {
   label: string
   poolTotal: number
@@ -36,6 +38,7 @@ export function OutcomeRow({
   winner?: boolean
   addAction: (formData: FormData) => void | Promise<void>
   removeAction: (formData: FormData) => void | Promise<void>
+  disabledReasonId?: string
 }) {
   const percent = (probability ?? 0) * 100
   const addLabel = (
@@ -75,21 +78,21 @@ export function OutcomeRow({
                 In your slip
               </StatusChip>
               <form action={removeAction}>
-                <Button type="submit" variant="quiet" size="sm">
+                <FormSubmitButton variant="quiet" size="sm">
                   Remove <span className="sr-only">{label}</span>
-                </Button>
+                </FormSubmitButton>
               </form>
             </span>
           )}
           {state === 'add' && (
             <form action={addAction}>
-              <Button type="submit" variant="secondary" size="sm">
+              <FormSubmitButton variant="secondary" size="sm">
                 {addLabel}
-              </Button>
+              </FormSubmitButton>
             </form>
           )}
           {state === 'disabled' && (
-            <Button variant="secondary" size="sm" disabled>
+            <Button variant="secondary" size="sm" disabled aria-describedby={disabledReasonId}>
               {addLabel}
             </Button>
           )}

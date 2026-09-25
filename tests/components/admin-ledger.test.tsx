@@ -36,4 +36,12 @@ describe('LedgerRow', () => {
     expect(screen.getByText('−15 DC')).toHaveClass('text-loss')
     expect(screen.getByRole('listitem')).toHaveTextContent('Mia: −15 DC — Admin adjustment — “Task was claimed twice”')
   })
+
+  it('shows a zero amount as neutral, with no sign', () => {
+    renderRow({ amount: 0, type: 'Admin adjustment', reason: 'Correcting a typo' })
+    const amount = screen.getByText('0 DC')
+    expect(amount).toHaveClass('text-ink2')
+    expect(amount).not.toHaveClass('text-win', 'text-loss')
+    expect(screen.getByRole('listitem')).toHaveTextContent('Mia: 0 DC — Admin adjustment — “Correcting a typo”')
+  })
 })

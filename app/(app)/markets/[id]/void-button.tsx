@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import { Button } from '@/components/ui/button'
+import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { voidMarketAction, type ActionState } from '@/lib/markets/void-market'
 import { cn } from '@/lib/utils'
@@ -12,14 +12,13 @@ export function VoidButton({ marketId, className }: { marketId: string; classNam
 
   return (
     <form action={formAction} className={cn('flex flex-col gap-2', className)}>
-      <Button
-        type="submit"
+      <FormSubmitButton
         variant="danger"
         block
         aria-describedby={state?.formError ? 'void-hint void-error' : 'void-hint'}
       >
         Void this market
-      </Button>
+      </FormSubmitButton>
       <p id="void-hint" className="text-sm text-ink2">
         Voiding refunds every bet and parlay leg.
       </p>

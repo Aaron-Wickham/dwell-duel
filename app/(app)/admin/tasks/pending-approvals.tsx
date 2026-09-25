@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useActionState, useRef } from 'react'
+import { useActionState, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
 import {
   bulkApproveTaskCompletionsAction,
@@ -9,13 +9,15 @@ import {
   type BulkActionState,
 } from '@/lib/tasks/review-task-completion'
 import type { PendingCompletion } from '@/lib/tasks/list-task-completions'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/field'
+import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ReviewButtons } from './review-buttons'
 
 const BULK_FORM_ID = 'bulk-review-form'
+const BULK_APPROVE_ERROR_ID = 'bulk-approve-error'
+const BULK_REJECT_ERROR_ID = 'bulk-reject-error'
 
 export type PendingRow = PendingCompletion & { submittedAge: string }
 
@@ -23,6 +25,9 @@ export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [approveState, approveAction] = useActionState<BulkActionState | undefined, FormData>(bulkApproveTaskCompletionsAction, undefined)
   const [rejectState, rejectAction] = useActionState<BulkActionState | undefined, FormData>(bulkRejectTaskCompletionsAction, undefined)
+  // Only the most recently clicked bulk action's result stays visible — otherwise an
+  // approve followed by a reject would leave both summaries on screen at once.
+  const [lastBulk, setLastBulk] = useState<'approve' | 'reject' | null>(null)
 
   function toggleAll(checked: boolean) {
     containerRef.current?.querySelectorAll<HTMLInputElement>('input[name="completionIds"]').forEach((el) => {
@@ -32,10 +37,18 @@ export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
 
   return (
     <div ref={containerRef} className="flex flex-col gap-4">
-      {approveState?.formError && <Message tone="error">{approveState.formError}</Message>}
-      {approveState?.summary && <Message tone="ok">{approveState.summary}</Message>}
-      {rejectState?.formError && <Message tone="error">{rejectState.formError}</Message>}
-      {rejectState?.summary && <Message tone="ok">{rejectState.summary}</Message>}
+      {lastBulk === 'approve' && approveState?.formError && (
+        <Message tone="error" id={BULK_APPROVE_ERROR_ID}>
+          {approveState.formError}
+        </Message>
+      )}
+      {lastBulk === 'approve' && approveState?.summary && <Message tone="ok">{approveState.summary}</Message>}
+      {lastBulk === 'reject' && rejectState?.formError && (
+        <Message tone="error" id={BULK_REJECT_ERROR_ID}>
+          {rejectState.formError}
+        </Message>
+      )}
+      {lastBulk === 'reject' && rejectState?.summary && <Message tone="ok">{rejectState.summary}</Message>}
 
       {pending.length === 0 ? (
         <EmptyState icon={Check} title="Nothing pending." />
@@ -81,12 +94,25 @@ export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
               </label>
               <Input id="bulk-reason" name="reason" placeholder="Shared reason (optional)" className="md:grow" />
               <div className="flex flex-wrap shrink-0 gap-2">
-                <Button type="submit" size="sm" formAction={approveAction} className="grow">
+                <FormSubmitButton
+                  size="sm"
+                  formAction={approveAction}
+                  className="grow"
+                  onClick={() => setLastBulk('approve')}
+                  aria-describedby={lastBulk === 'approve' && approveState?.formError ? BULK_APPROVE_ERROR_ID : undefined}
+                >
                   Approve selected
-                </Button>
-                <Button type="submit" size="sm" variant="secondary" formAction={rejectAction} className="grow">
+                </FormSubmitButton>
+                <FormSubmitButton
+                  size="sm"
+                  variant="secondary"
+                  formAction={rejectAction}
+                  className="grow"
+                  onClick={() => setLastBulk('reject')}
+                  aria-describedby={lastBulk === 'reject' && rejectState?.formError ? BULK_REJECT_ERROR_ID : undefined}
+                >
                   Reject selected
-                </Button>
+                </FormSubmitButton>
               </div>
             </form>
           </div>

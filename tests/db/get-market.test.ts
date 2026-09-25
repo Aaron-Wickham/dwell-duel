@@ -46,4 +46,26 @@ describe('getMarket', () => {
     expect(market?.resolvedOutcomeLabel).toBe('Yes')
     expect(market?.resolvedAt).toBe(resolution.resolved_at)
   })
+
+  it('orders outcomes by label when they tie on creation time, regardless of input order', async () => {
+    const { marketId } = await createTestMarket(aliceClient, ['Zebra', 'Apple', 'Mango'])
+
+    const market = await getMarket(bobClient, marketId)
+
+    expect(market?.outcomes.map((o) => o.label)).toEqual(['Apple', 'Mango', 'Zebra'])
+  })
+
+  it('orders outcomes by creation time before label, even when that disagrees with alphabetical order', async () => {
+    const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Alpha', 'Beta'])
+    // create_market() inserts every outcome in one transaction, so they normally tie on
+    // created_at. Backdating one simulates the untied case and proves created_at wins.
+    await serviceClient()
+      .from('market_outcomes')
+      .update({ created_at: new Date(Date.now() - 60_000).toISOString() })
+      .eq('id', outcomeIds[1])
+
+    const market = await getMarket(bobClient, marketId)
+
+    expect(market?.outcomes.map((o) => o.label)).toEqual(['Beta', 'Alpha'])
+  })
 })

@@ -2,8 +2,8 @@
 
 import { useActionState } from 'react'
 import { addInviteAction } from '@/lib/invites/actions'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/field'
+import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 
 export function AddInviteForm() {
@@ -25,9 +25,7 @@ export function AddInviteForm() {
           aria-invalid={Boolean(state?.formError)}
           aria-describedby={state?.formError ? 'invite-email-hint add-invite-error' : 'invite-email-hint'}
         />
-        <Button type="submit" className="shrink-0">
-          Add
-        </Button>
+        <FormSubmitButton className="shrink-0">Add</FormSubmitButton>
       </div>
       <p id="invite-email-hint" className="text-sm text-ink2">
         They can sign in with this Google account right away.

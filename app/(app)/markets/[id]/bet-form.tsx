@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import { Button } from '@/components/ui/button'
+import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Field, Input, Select } from '@/components/ui/field'
 import { Message } from '@/components/ui/message'
 import { placeBetAction, type ActionState } from '@/lib/markets/place-bet'
@@ -36,9 +36,7 @@ export function BetForm({ marketId, outcomes }: { marketId: string; outcomes: { 
             aria-describedby={state?.formError ? 'bet-error' : undefined}
           />
         </Field>
-        <Button type="submit" block>
-          Place bet
-        </Button>
+        <FormSubmitButton block>Place bet</FormSubmitButton>
       </form>
       {state?.formError && (
         <Message tone="error" id="bet-error">

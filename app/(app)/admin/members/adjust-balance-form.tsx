@@ -5,8 +5,8 @@ import { useActionState } from 'react'
 import { adjustBalanceAction, type ActionState } from '@/lib/members/adjust-balance'
 import type { MemberSummary } from '@/lib/members/list-members'
 import { Avatar } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
 import { Field, Input } from '@/components/ui/field'
+import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 
 export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
@@ -50,10 +50,10 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
             />
           </Field>
         </div>
-        <Button type="submit" block className="md:w-auto">
+        <FormSubmitButton block className="md:w-auto">
           Adjust{' '}
           <span className="sr-only">{member.displayName}</span>
-        </Button>
+        </FormSubmitButton>
       </form>
       {state?.formError && (
         <Message tone="error" id={errorId}>

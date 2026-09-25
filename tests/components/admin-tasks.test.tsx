@@ -4,21 +4,32 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
 
-const { bulkApproveTaskCompletionsAction, createTaskAction, updateTaskAction } = vi.hoisted(() => ({
+const {
+  approveTaskCompletionAction,
+  rejectTaskCompletionAction,
+  bulkApproveTaskCompletionsAction,
+  bulkRejectTaskCompletionsAction,
+  createTaskAction,
+  updateTaskAction,
+} = vi.hoisted(() => ({
+  approveTaskCompletionAction: vi.fn(),
+  rejectTaskCompletionAction: vi.fn(),
   bulkApproveTaskCompletionsAction: vi.fn(),
+  bulkRejectTaskCompletionsAction: vi.fn(),
   createTaskAction: vi.fn(),
   updateTaskAction: vi.fn(),
 }))
 vi.mock('@/lib/tasks/review-task-completion', () => ({
-  approveTaskCompletionAction: vi.fn(),
-  rejectTaskCompletionAction: vi.fn(),
+  approveTaskCompletionAction,
+  rejectTaskCompletionAction,
   bulkApproveTaskCompletionsAction,
-  bulkRejectTaskCompletionsAction: vi.fn(),
+  bulkRejectTaskCompletionsAction,
 }))
 vi.mock('@/lib/tasks/create-task', () => ({ createTaskAction }))
 vi.mock('@/lib/tasks/update-task', () => ({ updateTaskAction }))
 
 import { PendingApprovals, type PendingRow } from '@/app/(app)/admin/tasks/pending-approvals'
+import { ReviewButtons } from '@/app/(app)/admin/tasks/review-buttons'
 import { CreateTaskForm } from '@/app/(app)/admin/tasks/create-task-form'
 import { TaskCatalogItem } from '@/app/(app)/admin/tasks/task-catalog-item'
 
@@ -58,7 +69,10 @@ function rowCheckboxes() {
 }
 
 beforeEach(() => {
+  approveTaskCompletionAction.mockReset()
+  rejectTaskCompletionAction.mockReset()
   bulkApproveTaskCompletionsAction.mockReset()
+  bulkRejectTaskCompletionsAction.mockReset()
   createTaskAction.mockReset()
   updateTaskAction.mockReset()
 })
@@ -113,6 +127,33 @@ describe('PendingApprovals', () => {
     expect(screen.getByText('Nothing pending.')).toBeInTheDocument()
     expect(screen.queryByRole('checkbox')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Approve selected' })).toBeNull()
+  })
+
+  it('shows only the summary from the most recent bulk action', async () => {
+    bulkApproveTaskCompletionsAction.mockResolvedValue({ summary: '2 approved.' })
+    bulkRejectTaskCompletionsAction.mockResolvedValue({ summary: '1 rejected.' })
+    render(<PendingApprovals pending={PENDING} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
+    expect(await screen.findByText('2 approved.')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }))
+    expect(await screen.findByText('1 rejected.')).toBeInTheDocument()
+    expect(screen.queryByText('2 approved.')).not.toBeInTheDocument()
+  })
+})
+
+describe('ReviewButtons', () => {
+  it('ties an approve error to the Approve button, leaving the reject reason untouched', async () => {
+    approveTaskCompletionAction.mockResolvedValue({ formError: 'Could not approve that submission.' })
+    render(<ReviewButtons completionId="c1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Could not approve that submission.')
+    expect(screen.getByRole('button', { name: 'Approve' })).toHaveAccessibleDescription('Could not approve that submission.')
+    expect(screen.getByPlaceholderText('Reason (optional)')).toHaveAttribute('aria-invalid', 'false')
   })
 })
 
@@ -223,5 +264,17 @@ describe('TaskCatalogItem', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Enter a title.')
     expect(screen.getByLabelText('Title')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByLabelText('Title')).toHaveAttribute('aria-describedby', 'edit-task-t1-error')
+  })
+
+  it('ties a toggle error to the Deactivate button', async () => {
+    updateTaskAction.mockResolvedValue({ formError: 'Could not deactivate that task.' })
+    renderItem(GENESIS)
+    await userEvent.click(screen.getByRole('button', { name: 'Deactivate Read Genesis 1-3' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Could not deactivate that task.')
+    expect(screen.getByRole('button', { name: 'Deactivate Read Genesis 1-3' })).toHaveAccessibleDescription(
+      'Could not deactivate that task.',
+    )
   })
 })

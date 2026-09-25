@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { listFeed } from '@/lib/social/list-feed'
+import { Page, PageHeader } from '@/components/ui/page'
 import { FeedList } from './feed-list'
 
 export default async function FeedPage() {
@@ -10,9 +11,9 @@ export default async function FeedPage() {
   const events = await listFeed(supabase)
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
-      <h1 className="text-xl font-semibold">Feed</h1>
-      <FeedList events={events} />
-    </div>
+    <Page>
+      <PageHeader title="Feed" description="The 50 newest things that happened in DwellDuel." />
+      <FeedList events={events} heading={<span className="sr-only">Events</span>} headingId="feed-events" />
+    </Page>
   )
 }

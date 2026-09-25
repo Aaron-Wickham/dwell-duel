@@ -28,6 +28,17 @@ describe('AdjustBalanceForm', () => {
     expect(screen.getByRole('button', { name: 'Adjust Ben' })).toHaveAttribute('type', 'submit')
   })
 
+  it('spaces the member block from the fields at 12px on phone and 16px on desktop, keeping 12px/8px before the button', () => {
+    render(<AdjustBalanceForm member={BEN} />)
+
+    const form = screen.getByRole('link', { name: 'Ben' }).closest('form')
+    expect(form).toHaveClass('gap-3', 'md:gap-4')
+    expect(form).not.toHaveClass('gap-2')
+
+    const button = screen.getByRole('button', { name: 'Adjust Ben' })
+    expect(button.parentElement).toHaveClass('gap-3', 'md:gap-2')
+  })
+
   it('sends the amount and reason for this member', async () => {
     adjustBalanceAction.mockResolvedValue(undefined)
     render(<AdjustBalanceForm member={BEN} />)

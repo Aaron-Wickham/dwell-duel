@@ -29,7 +29,7 @@ describe('FeedList', () => {
   it('trims the card to a 4px bottom padding under a visible heading, leaving the rows to supply the rest', () => {
     render(<FeedList events={[event]} heading="Recent activity" headingId="recent-activity" />)
     const card = screen.getByRole('heading', { name: 'Recent activity' }).closest('section')
-    expect(card).toHaveClass('pb-1', 'md:pb-1')
+    expect(card).toHaveClass('pb-1', 'md:pb-1', 'md:pt-[18px]')
   })
 
   it('renders the empty state inside the card, under a visible heading', () => {

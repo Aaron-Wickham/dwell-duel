@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 
-export type ActionState = { formError?: string } | undefined
+export type ActionState = { formError?: string; field?: 'title' | 'reward_amount' } | undefined
 
 export async function updateTaskAction(taskId: string, _prevState: ActionState, formData: FormData): Promise<ActionState> {
   const { supabase, user } = await requireUser()
@@ -14,9 +14,9 @@ export async function updateTaskAction(taskId: string, _prevState: ActionState, 
   const rewardAmount = Number(formData.get('reward_amount'))
   const isActive = formData.get('is_active') === 'on'
 
-  if (!title) return { formError: 'Enter a title.' }
+  if (!title) return { formError: 'Enter a title.', field: 'title' }
   if (!Number.isInteger(rewardAmount) || rewardAmount <= 0) {
-    return { formError: 'Enter a whole number of DC greater than 0.' }
+    return { formError: 'Enter a whole number of DC greater than 0.', field: 'reward_amount' }
   }
 
   const { error } = await supabase

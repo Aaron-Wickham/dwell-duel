@@ -2,47 +2,74 @@
 
 import { useActionState, useState } from 'react'
 import { createTaskAction, type ActionState } from '@/lib/tasks/create-task'
+import { Button } from '@/components/ui/button'
+import { Field, Input, Select, Textarea } from '@/components/ui/field'
+import { Message } from '@/components/ui/message'
 
 export function CreateTaskForm() {
   const [isRepeatable, setIsRepeatable] = useState(false)
   const [state, formAction] = useActionState<ActionState, FormData>(createTaskAction, undefined)
 
   return (
-    <form action={formAction} className="mt-4 flex flex-col gap-2 border p-4">
-      <label className="flex flex-col gap-1">
-        Title
-        <input name="title" required className="border px-2 py-1" />
-      </label>
-      <label className="flex flex-col gap-1">
-        Description
-        <textarea name="description" className="border px-2 py-1" />
-      </label>
-      <label className="flex flex-col gap-1">
-        Reward (DC)
-        <input name="reward_amount" type="number" min="1" step="1" required className="border px-2 py-1" />
-      </label>
-      <label className="flex items-center gap-2">
+    <form action={formAction} className="flex flex-col gap-4">
+      <Field label="Title" htmlFor="create-task-title">
+        <Input
+          id="create-task-title"
+          name="title"
+          required
+          aria-invalid={state?.field === 'title'}
+          aria-describedby={state?.field === 'title' ? 'create-task-error' : undefined}
+        />
+      </Field>
+      <Field label="Description" htmlFor="create-task-description">
+        <Textarea id="create-task-description" name="description" />
+      </Field>
+      <Field label="Reward (DC)" htmlFor="create-task-reward">
+        <Input
+          id="create-task-reward"
+          name="reward_amount"
+          type="number"
+          min="1"
+          step="1"
+          required
+          aria-invalid={state?.field === 'reward_amount'}
+          aria-describedby={state?.field === 'reward_amount' ? 'create-task-error' : undefined}
+        />
+      </Field>
+      <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
         <input
           name="is_repeatable"
           type="checkbox"
           checked={isRepeatable}
           onChange={(e) => setIsRepeatable(e.target.checked)}
+          className="m-0 size-[22px] accent-primary"
         />
         Repeatable
       </label>
       {isRepeatable && (
-        <label className="flex flex-col gap-1">
-          Cadence
-          <select name="period" required className="border px-2 py-1">
+        <Field label="Cadence" htmlFor="create-task-period">
+          <Select
+            id="create-task-period"
+            name="period"
+            required
+            aria-invalid={state?.field === 'period'}
+            aria-describedby={state?.field === 'period' ? 'create-task-error' : undefined}
+          >
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
             <option value="yearly">Yearly</option>
-          </select>
-        </label>
+          </Select>
+        </Field>
       )}
-      <button type="submit">Create task</button>
-      {state?.formError && <p className="text-sm text-red-600">{state.formError}</p>}
+      {state?.formError && (
+        <Message tone="error" id="create-task-error">
+          {state.formError}
+        </Message>
+      )}
+      <Button type="submit" block className="md:w-auto md:self-start">
+        Create task
+      </Button>
     </form>
   )
 }

@@ -3,22 +3,61 @@
 import { useActionState } from 'react'
 import { updateTaskAction, type ActionState } from '@/lib/tasks/update-task'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
+import { Button } from '@/components/ui/button'
+import { Field, Input, Textarea } from '@/components/ui/field'
+import { Message } from '@/components/ui/message'
 
-export function EditTaskForm({ task }: { task: TaskSummary }) {
-  const boundAction = updateTaskAction.bind(null, task.id)
-  const [state, formAction] = useActionState<ActionState, FormData>(boundAction, undefined)
+export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSummary; onDone: () => void }) {
+  const [state, formAction] = useActionState<ActionState, FormData>(async (prevState, formData) => {
+    const result = await updateTaskAction(task.id, prevState, formData)
+    if (!result?.formError) onDone()
+    return result
+  }, undefined)
+  const errorId = `${id}-error`
 
   return (
-    <form action={formAction} className="mt-2 flex flex-col gap-2 text-sm">
-      <input name="title" defaultValue={task.title} className="border px-2 py-1" />
-      <textarea name="description" defaultValue={task.description ?? ''} className="border px-2 py-1" />
-      <input name="reward_amount" type="number" min="1" step="1" defaultValue={task.rewardAmount} className="border px-2 py-1" />
-      <label className="flex items-center gap-2">
-        <input name="is_active" type="checkbox" defaultChecked={task.isActive} />
-        Active
-      </label>
-      <button type="submit">Save</button>
-      {state?.formError && <p className="text-red-600">{state.formError}</p>}
+    <form id={id} action={formAction} className="flex flex-col gap-4 rounded-[14px] bg-sunk p-3.5">
+      <Field label="Title" htmlFor={`${id}-title`}>
+        <Input
+          id={`${id}-title`}
+          name="title"
+          defaultValue={task.title}
+          required
+          aria-invalid={state?.field === 'title'}
+          aria-describedby={state?.field === 'title' ? errorId : undefined}
+        />
+      </Field>
+      <Field label="Description" htmlFor={`${id}-description`}>
+        <Textarea id={`${id}-description`} name="description" defaultValue={task.description ?? ''} />
+      </Field>
+      <Field label="Reward (DC)" htmlFor={`${id}-reward`}>
+        <Input
+          id={`${id}-reward`}
+          name="reward_amount"
+          type="number"
+          min="1"
+          step="1"
+          defaultValue={task.rewardAmount}
+          required
+          aria-invalid={state?.field === 'reward_amount'}
+          aria-describedby={state?.field === 'reward_amount' ? errorId : undefined}
+        />
+      </Field>
+      {/* Deactivate/Reactivate owns this flag; saving an edit keeps it as it is. */}
+      {task.isActive && <input type="hidden" name="is_active" value="on" />}
+      {state?.formError && (
+        <Message tone="error" id={errorId}>
+          {state.formError}
+        </Message>
+      )}
+      <div className="flex gap-2">
+        <Button type="submit" size="sm">
+          Save
+        </Button>
+        <Button size="sm" variant="quiet" onClick={onDone}>
+          Cancel
+        </Button>
+      </div>
     </form>
   )
 }

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 
-export type ActionState = { formError?: string } | undefined
+export type ActionState = { formError?: string; field?: 'title' | 'reward_amount' | 'period' } | undefined
 
 const PERIODS = ['daily', 'weekly', 'monthly', 'yearly'] as const
 
@@ -17,12 +17,12 @@ export async function createTaskAction(_prevState: ActionState, formData: FormDa
   const isRepeatable = formData.get('is_repeatable') === 'on'
   const period = String(formData.get('period') ?? '')
 
-  if (!title) return { formError: 'Enter a title.' }
+  if (!title) return { formError: 'Enter a title.', field: 'title' }
   if (!Number.isInteger(rewardAmount) || rewardAmount <= 0) {
-    return { formError: 'Enter a whole number of DC greater than 0.' }
+    return { formError: 'Enter a whole number of DC greater than 0.', field: 'reward_amount' }
   }
   if (isRepeatable && !PERIODS.includes(period as (typeof PERIODS)[number])) {
-    return { formError: 'Choose a cadence for a repeatable task.' }
+    return { formError: 'Choose a cadence for a repeatable task.', field: 'period' }
   }
 
   const { error } = await supabase.from('tasks').insert({

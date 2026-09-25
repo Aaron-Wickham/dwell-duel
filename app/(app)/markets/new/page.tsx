@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
+import { Page, PageHeader } from '@/components/ui/page'
+import { BackLink } from '@/components/ui/back-link'
 import { CreateMarketForm } from './create-market-form'
 
 export default async function NewMarketPage() {
@@ -7,11 +9,10 @@ export default async function NewMarketPage() {
   if (!user) redirect('/sign-in')
 
   return (
-    <div className="mx-auto max-w-lg p-8">
-      <h1 className="text-xl font-semibold">New market</h1>
-      <div className="mt-4">
-        <CreateMarketForm />
-      </div>
-    </div>
+    <Page>
+      <BackLink href="/markets">Markets</BackLink>
+      <PageHeader title="Create market" />
+      <CreateMarketForm />
+    </Page>
   )
 }

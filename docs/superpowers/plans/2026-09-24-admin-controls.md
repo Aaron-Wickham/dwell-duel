@@ -944,7 +944,7 @@ Replace:
 sign-in (invite-only), a single admin account, a Dwell Coin (DC) ledger,
 a pari-mutuel betting market, and an admin-managed Bible-study task
 catalog with approval-gated coin rewards. Live at
-[dwelldule.com](https://dwelldule.com).
+[dwellduel.com](https://dwellduel.com).
 ```
 
 with:
@@ -956,7 +956,7 @@ Dwell Coin (DC) ledger, a pari-mutuel betting market, an admin-managed
 Bible-study task catalog with approval-gated coin rewards, and admin
 tooling for manual balance adjustment, a full transaction ledger, and
 bulk task-completion review. Live at
-[dwelldule.com](https://dwelldule.com).
+[dwellduel.com](https://dwellduel.com).
 ```
 
 - [ ] **Step 2: Verify the full chain against the exact Supabase CLI version CI pins**

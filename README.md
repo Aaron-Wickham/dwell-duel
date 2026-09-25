@@ -1,4 +1,4 @@
-# DwellDule
+# DwellDuel
 
 **Status:** Foundation + Market Engine + Coin Economy + Admin Controls
 complete — Google sign-in (invite-only), a single admin account, a
@@ -6,7 +6,7 @@ Dwell Coin (DC) ledger, a pari-mutuel betting market, an admin-managed
 Bible-study task catalog with approval-gated coin rewards, and admin
 tooling for manual balance adjustment, a full transaction ledger, and
 bulk task-completion review. Live at
-[dwelldule.com](https://dwelldule.com).
+[dwellduel.com](https://dwellduel.com).
 
 ## Stack
 
@@ -15,17 +15,17 @@ storage), deployed on Vercel.
 
 ## Production
 
-- **Vercel project** `dwelldule`, connected to this GitHub repo — every
+- **Vercel project** `dwell-duel`, connected to this GitHub repo — every
   merge to `main` auto-deploys.
-- **Supabase project** `dwelldule` (hosted, separate from local dev)
+- **Supabase project** `dwell-duel` (hosted, separate from local dev)
   holds the real data. New migrations need `supabase link --project-ref
   <ref>` once, then `supabase db push` after each merge.
 - Google's OAuth consent screen is published (not in Testing mode), so
   inviting someone is purely an app-side action — add their email via
   `/admin/invites`, no Google Cloud Console step needed.
-- **Gotcha:** `dwelldule.com` 308-redirects to `www.dwelldule.com`, so the
+- **Gotcha:** `dwellduel.com` 308-redirects to `www.dwellduel.com`, so the
   app actually serves from the `www` host. Supabase's Site URL and
-  Redirect URLs must reference `www.dwelldule.com`, not the bare apex —
+  Redirect URLs must reference `www.dwellduel.com`, not the bare apex —
   a mismatch here makes Google sign-in silently bounce back to `/sign-in`
   with no error, because the OAuth code lands on the (non-`www`) Site URL
   fallback instead of the app's `/callback` route.

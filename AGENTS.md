@@ -8,7 +8,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# DwellDule
+# DwellDuel
 
 Next.js (App Router) + TypeScript + Tailwind, Supabase (Postgres, auth,
 storage), deployed on Vercel. This is an early scaffold — no features, no

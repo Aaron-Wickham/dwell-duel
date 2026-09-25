@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-22
 **Status:** approved, not yet implemented
-**Sub-project 1 of 7** in the DwellDule build order (see decomposition in the
+**Sub-project 1 of 7** in the DwellDuel build order (see decomposition in the
 brainstorming conversation that produced this spec). Everything else —
 the market engine, the coin economy's earning side, admin controls beyond
 invites, parlays, the social layer, and the design pass — depends on this
@@ -10,7 +10,7 @@ piece and is explicitly out of scope here.
 
 ## Goal
 
-Stand up the parts of DwellDule that every later feature needs:
+Stand up the parts of DwellDuel that every later feature needs:
 
 - Google sign-in, gated to an invite-only allowlist of Gmail addresses
 - A single, permanent admin account (the app owner)

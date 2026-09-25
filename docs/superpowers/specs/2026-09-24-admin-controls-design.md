@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-24
 **Status:** approved, not yet implemented
-**Sub-project 4 of 7** in the DwellDule build order. Builds directly on
+**Sub-project 4 of 7** in the DwellDuel build order. Builds directly on
 Foundation's `apply_coin_transaction()` and `is_admin()`, and reuses
 [Coin Economy](2026-09-23-coin-economy-design.md)'s `approve_task_completion`/
 `reject_task_completion` unchanged. [Market Engine](2026-09-22-market-engine-design.md)'s

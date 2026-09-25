@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
-import { getMarket, getOwnBets } from '@/lib/markets/get-market'
+import { getMarket, getMarketBets } from '@/lib/markets/get-market'
 import { computeOdds } from '@/lib/markets/odds'
 import { readSlip } from '@/lib/parlays/slip'
 import { MAX_PICKS } from '@/lib/parlays/odds'
@@ -18,7 +18,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const market = await getMarket(supabase, id)
   if (!market) notFound()
 
-  const ownBets = await getOwnBets(supabase, id, user.id)
+  const bets = await getMarketBets(supabase, id)
   const admin = await isAdmin(supabase)
   const odds = computeOdds(market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })))
 
@@ -27,7 +27,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // reconciliation cycle for React to keep consistent across -- the
   // purity rule protects Client Components from that, which doesn't
   // apply here, and this page already does non-deterministic async DB
-  // reads (getMarket, getOwnBets, isAdmin) on every invocation regardless.
+  // reads (getMarket, getMarketBets, isAdmin) on every invocation regardless.
   // eslint-disable-next-line react-hooks/purity
   const isPastClose = new Date(market.closeAt).getTime() <= Date.now()
   const canBet = market.status === 'open' && !isPastClose
@@ -65,15 +65,16 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
 
       {canBet && <BetForm marketId={market.id} outcomes={market.outcomes} />}
 
-      {ownBets.length > 0 && (
+      {bets.length > 0 && (
         <div className="mt-4">
-          <h2 className="text-sm font-semibold">Your bets</h2>
+          <h2 className="text-sm font-semibold">Bets</h2>
           <ul className="text-sm">
-            {ownBets.map((b) => {
+            {bets.map((b) => {
               const outcome = market.outcomes.find((o) => o.id === b.outcomeId)
               return (
                 <li key={b.id}>
-                  {b.amount} DC on {outcome?.label ?? 'unknown outcome'}
+                  {b.bettorName} — {b.amount} DC on {outcome?.label ?? 'unknown outcome'}
+                  {b.profileId === user.id && ' (you)'}
                 </li>
               )
             })}

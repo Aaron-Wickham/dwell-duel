@@ -1,26 +1,14 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
+import { Layers } from 'lucide-react'
+import { PlacedParlay } from '@/components/parlays/placed-parlay'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Page, PageHeader } from '@/components/ui/page'
+import { SectionCard } from '@/components/ui/section-card'
 import { requireUser } from '@/lib/auth/require-user'
-import { readSlip } from '@/lib/parlays/slip'
 import { getSlipView } from '@/lib/parlays/get-slip'
-import { listMyParlays, type ParlayView } from '@/lib/parlays/list-parlays'
-import { removeFromSlipAction } from '@/lib/parlays/slip-actions'
-import { formatOdds } from '@/lib/parlays/odds'
+import { listMyParlays } from '@/lib/parlays/list-parlays'
+import { readSlip } from '@/lib/parlays/slip'
 import { SlipForm } from './slip-form'
-
-function describeParlay(p: ParlayView): string {
-  const odds = `${formatOdds(p.multiplierBp)}×`
-  switch (p.status) {
-    case 'pending':
-      return `Pending — ${p.stake} DC at ${odds} — pays ${p.potentialPayout} DC if every pick wins`
-    case 'won':
-      return `Won — ${p.stake} DC at ${odds} — paid ${p.credited} DC`
-    case 'lost':
-      return `Lost — ${p.stake} DC at ${odds}`
-    case 'refunded':
-      return `Refunded — ${p.stake} DC returned`
-  }
-}
 
 export default async function ParlaysPage() {
   const { supabase, user } = await requireUser()
@@ -30,64 +18,28 @@ export default async function ParlaysPage() {
   const parlays = await listMyParlays(supabase, user.id)
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
-      <h1 className="text-xl font-semibold">Parlays</h1>
-
-      <h2 className="mt-6 text-lg font-semibold">Your slip</h2>
-      {slip.picks.length === 0 ? (
-        <p className="mt-2 text-sm text-foreground/70">Your slip is empty. Add picks from any market&apos;s page.</p>
-      ) : (
-        <>
-          <ul className="mt-2 space-y-2">
-            {slip.picks.map((pick) => (
-              <li key={pick.outcomeId} className="border p-3">
-                <p>
-                  <Link href={`/markets/${pick.marketId}`} className="underline">
-                    {pick.marketTitle}
-                  </Link>
-                  : {pick.outcomeLabel} —{' '}
-                  {pick.available && pick.oddsBp !== null ? `${formatOdds(pick.oddsBp)}×` : 'No longer available'}
-                </p>
-                <form action={removeFromSlipAction.bind(null, pick.outcomeId)}>
-                  <button type="submit" className="text-sm underline">
-                    Remove
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-sm">
-            Combined: {formatOdds(slip.multiplierBp)}×{slip.capped && ' (capped at 20×)'}
-          </p>
-          {!slip.canPlace && (
-            <p className="text-sm text-foreground/70">A parlay needs at least 2 picks, all still available.</p>
+    <Page>
+      <PageHeader title="Parlays" />
+      <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
+        <SlipForm slip={slip} />
+        <SectionCard
+          title="My parlays"
+          titleId="my-parlays-title"
+          className={parlays.length > 0 ? 'gap-1' : undefined}
+        >
+          {parlays.length === 0 ? (
+            <EmptyState icon={Layers} title="No parlays yet.">
+              Parlays you place show up here.
+            </EmptyState>
+          ) : (
+            <ul className="flex flex-col divide-y divide-line">
+              {parlays.map((p) => (
+                <PlacedParlay key={p.id} parlay={p} />
+              ))}
+            </ul>
           )}
-        </>
-      )}
-      <SlipForm legBps={slip.legBps} canPlace={slip.canPlace} hasPicks={slip.picks.length > 0} />
-
-      <h2 className="mt-8 text-lg font-semibold">My parlays</h2>
-      {parlays.length === 0 ? (
-        <p className="mt-2 text-sm text-foreground/70">No parlays yet.</p>
-      ) : (
-        <ul className="mt-2 space-y-3">
-          {parlays.map((p) => (
-            <li key={p.id} className="border p-3">
-              <p className="font-medium">
-                {describeParlay(p)}
-                {p.capped && ' (capped at 20×)'}
-              </p>
-              <ul className="mt-1 text-sm">
-                {p.legs.map((l) => (
-                  <li key={l.marketId}>
-                    {l.marketTitle}: {l.outcomeLabel} @ {formatOdds(l.lockedOddsBp)}× — {l.status}
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+        </SectionCard>
+      </div>
+    </Page>
   )
 }

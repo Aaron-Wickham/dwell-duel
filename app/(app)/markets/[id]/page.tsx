@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
+import { Layers, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { getMarket, getMarketBets } from '@/lib/markets/get-market'
@@ -115,7 +116,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
         <h1 className={h1Class}>{market.title}</h1>
         {market.description && <p className="max-w-[68ch] text-ink2">{market.description}</p>}
         {market.status === 'resolved' && market.resolvedOutcomeLabel && (
-          <Message tone="ok" className="self-start">
+          <Message tone="ok" icon={Trophy} className="self-start">
             Winning outcome: {market.resolvedOutcomeLabel}
           </Message>
         )}
@@ -129,7 +130,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           className="gap-1 lg:col-start-1 lg:row-start-1"
         >
           {canBet && slipFull && (
-            <Message tone="gold" id="slip-full-note" className="mt-2">
+            <Message tone="gold" icon={Layers} id="slip-full-note" className="mt-2">
               Your slip is full ({MAX_PICKS} picks).{' '}
               <Link href="/parlays" className="text-inherit">
                 Review slip

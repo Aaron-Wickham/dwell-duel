@@ -10,6 +10,7 @@ describe('MarketCard', () => {
         id="m1"
         title="Who wins the chili cook-off?"
         status="open"
+        kind="multiple_choice"
         closeAt="2026-10-04T16:30:00.000Z"
         resolvedAt={null}
         outcomes={[
@@ -34,6 +35,7 @@ describe('MarketCard', () => {
         id="m2"
         title="Who brings the best dessert?"
         status="awaiting"
+        kind="multiple_choice"
         closeAt="2026-09-30T12:00:00.000Z"
         resolvedAt={null}
         outcomes={[
@@ -55,6 +57,7 @@ describe('MarketCard', () => {
         id="m3"
         title="Did it rain on the picnic?"
         status="resolved"
+        kind="binary"
         closeAt="2026-09-21T09:00:00.000Z"
         resolvedAt="2026-09-21T09:05:00.000Z"
         outcomes={[
@@ -68,5 +71,28 @@ describe('MarketCard', () => {
     expect(screen.getAllByText('Resolved')).toHaveLength(2)
     expect(container.querySelector('time')).toHaveAttribute('datetime', '2026-09-21T09:05:00.000Z')
     expect(screen.getByText('Winning outcome: Yes')).toBeInTheDocument()
+  })
+
+  it('draws a colour dot before each outcome, coloured by its series, and hides it from screen readers', () => {
+    const { container } = render(
+      <MarketCard
+        id="m4"
+        title="Did it rain on the picnic?"
+        status="open"
+        kind="binary"
+        closeAt="2026-09-21T09:00:00.000Z"
+        resolvedAt={null}
+        outcomes={[
+          { id: 'a', label: 'Yes', pct: 70 },
+          { id: 'b', label: 'No', pct: 30 },
+        ]}
+        resolvedOutcomeLabel={null}
+      />,
+    )
+    const dots = container.querySelectorAll('li span[aria-hidden="true"].size-2\\.5')
+    expect(dots).toHaveLength(2)
+    // Binary markets always colour Yes as series 2 and No as series 1, regardless of row order.
+    expect(dots[0]).toHaveClass('bg-s2')
+    expect(dots[1]).toHaveClass('bg-s1')
   })
 })

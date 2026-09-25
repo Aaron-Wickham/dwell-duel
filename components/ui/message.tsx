@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CircleAlert, CircleCheck, Info } from 'lucide-react'
+import { CircleAlert, CircleCheck, Info, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // Gold marks static notes like "Awaiting resolution", not news, so it is not a live region.
@@ -13,14 +13,17 @@ export function Message({
   tone,
   id,
   className,
+  icon,
   children,
 }: {
   tone: keyof typeof TONES
   id?: string
   className?: string
+  icon?: LucideIcon
   children: ReactNode
 }) {
-  const { className: toneClass, Icon, role } = TONES[tone]
+  const { className: toneClass, Icon: ToneIcon, role } = TONES[tone]
+  const Icon = icon ?? ToneIcon
   return (
     <p
       id={id}

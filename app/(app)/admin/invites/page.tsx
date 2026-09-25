@@ -24,7 +24,7 @@ export default async function AdminInvitesPage() {
       <SectionCard title="Invites" titleId="invites" className="gap-1">
         {invites.length === 0 ? (
           <EmptyState icon={Mail} title="No invites yet.">
-            Add an email above to invite someone.
+            Add an email to invite someone.
           </EmptyState>
         ) : (
           <ul className="flex flex-col divide-y divide-line">

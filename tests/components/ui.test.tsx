@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { Trophy } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Field, Input, Select, Textarea } from '@/components/ui/field'
 import { Card } from '@/components/ui/card'
@@ -119,5 +120,17 @@ describe('Message', () => {
     expect(screen.getByText('Awaiting resolution')).toBeInTheDocument()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('lets an icon override the tone default', () => {
+    const { container, rerender } = render(<Message tone="ok">Winning outcome: Yes</Message>)
+    expect(container.querySelector('svg')).toHaveClass('lucide-circle-check')
+
+    rerender(
+      <Message tone="ok" icon={Trophy}>
+        Winning outcome: Yes
+      </Message>,
+    )
+    expect(container.querySelector('svg')).toHaveClass('lucide-trophy')
   })
 })

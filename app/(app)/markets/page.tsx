@@ -31,6 +31,7 @@ export default async function MarketsPage() {
       id: market.id,
       title: market.title,
       status: marketCardStatus(market.status, market.closeAt, now),
+      kind: market.kind,
       closeAt: market.closeAt,
       resolvedAt: market.resolvedAt,
       outcomes: odds.map((o) => ({

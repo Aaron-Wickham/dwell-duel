@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 
 export type OutcomeRowState = 'add' | 'inslip' | 'disabled' | 'none'
 
-const SERIES_BG: Record<Series, string> = {
+export const SERIES_BG: Record<Series, string> = {
   1: 'bg-s1',
   2: 'bg-s2',
   3: 'bg-s3',

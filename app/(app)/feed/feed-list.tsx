@@ -38,14 +38,13 @@ export function FeedList({
       </ul>
     )
 
-  // A hidden heading with nothing to show (the Feed page, empty) renders no card at all.
   if (headingHidden && events.length === 0) return body
 
   return (
     <SectionCard
       title={headingHidden ? <span className="sr-only">{heading}</span> : heading}
       titleId={headingId}
-      className={cn('max-w-[820px]', headingHidden && 'gap-0 py-1 px-0 md:py-1 md:px-0')}
+      className={cn('max-w-[820px]', headingHidden ? 'gap-0 py-1 px-0 md:py-1 md:px-0' : 'pb-1 md:pb-1')}
     >
       {body}
     </SectionCard>

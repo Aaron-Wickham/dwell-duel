@@ -3,6 +3,8 @@ import { Trophy } from 'lucide-react'
 import { cardClass } from '@/components/ui/card'
 import { StatusChip } from '@/components/ui/status-chip'
 import { LocalTime } from '@/components/ui/local-time'
+import { SERIES_BG } from '@/components/markets/outcome-row'
+import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { cn } from '@/lib/utils'
 import type { MarketCardStatus } from '@/lib/markets/market-status'
 
@@ -30,13 +32,14 @@ export interface MarketCardProps {
   id: string
   title: string
   status: MarketCardStatus
+  kind: 'binary' | 'multiple_choice'
   closeAt: string
   resolvedAt: string | null
   outcomes: MarketCardOutcome[]
   resolvedOutcomeLabel: string | null
 }
 
-export function MarketCard({ id, title, status, closeAt, resolvedAt, outcomes, resolvedOutcomeLabel }: MarketCardProps) {
+export function MarketCard({ id, title, status, kind, closeAt, resolvedAt, outcomes, resolvedOutcomeLabel }: MarketCardProps) {
   const hasBets = outcomes.some((outcome) => outcome.pct !== null)
 
   return (
@@ -65,8 +68,9 @@ export function MarketCard({ id, title, status, closeAt, resolvedAt, outcomes, r
       </h3>
       {hasBets ? (
         <ul className="flex flex-col gap-1.5">
-          {outcomes.map((outcome) => (
+          {outcomes.map((outcome, index) => (
             <li key={outcome.id} className="flex min-h-7 items-center gap-2.5">
+              <span aria-hidden="true" className={cn('size-2.5 shrink-0 rounded-full', SERIES_BG[outcomeSeries(kind, outcome.label, index)])} />
               <span className="flex-1 font-bold">{outcome.label}</span>
               <span className="min-w-12 text-right font-extrabold tabular-nums">{outcome.pct}%</span>
             </li>

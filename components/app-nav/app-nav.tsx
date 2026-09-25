@@ -73,8 +73,8 @@ function DesktopLink({
           <span
             aria-hidden="true"
             className={cn(
-              'inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1.5 text-xs font-extrabold',
-              active ? 'bg-on-primary text-primary' : 'bg-lime text-on-lime',
+              'inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-lime px-1.5 text-xs font-extrabold text-on-lime',
+              active && 'dark:bg-on-primary dark:text-primary',
             )}
           >
             {count}

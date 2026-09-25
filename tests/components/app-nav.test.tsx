@@ -64,6 +64,20 @@ describe('AppNav', () => {
     }
   })
 
+  it('gives the desktop parlays badge the lime pill in light mode always, and swaps to primary only when active in dark mode', () => {
+    pathname = '/parlays'
+    const { rerender } = render(<AppNav balance={120} slipCount={2} isAdmin={false} />)
+    const desktop = screen.getAllByRole('navigation', { name: 'Primary' })[0]
+    const activeBadge = within(desktop).getByText('2')
+    expect(activeBadge).toHaveClass('bg-lime', 'text-on-lime', 'dark:bg-on-primary', 'dark:text-primary')
+
+    pathname = '/'
+    rerender(<AppNav balance={120} slipCount={2} isAdmin={false} />)
+    const inactiveBadge = within(desktop).getByText('2')
+    expect(inactiveBadge).toHaveClass('bg-lime', 'text-on-lime')
+    expect(inactiveBadge).not.toHaveClass('dark:bg-on-primary', 'dark:text-primary')
+  })
+
   it('shows Admin only to admins', () => {
     const { rerender } = render(<AppNav balance={120} slipCount={0} isAdmin={false} />)
     expect(screen.queryByRole('link', { name: 'Admin' })).toBeNull()

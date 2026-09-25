@@ -1,16 +1,15 @@
 import { redirect } from 'next/navigation'
+import { BookOpen } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { listTasks } from '@/lib/tasks/list-tasks'
 import { listMyTaskCompletions } from '@/lib/tasks/list-task-completions'
 import { getCurrentPeriodKeys } from '@/lib/tasks/period-keys'
+import { Page, PageHeader } from '@/components/ui/page'
+import { SectionCard } from '@/components/ui/section-card'
+import { EmptyState } from '@/components/ui/empty-state'
+import { TaskRow, type TaskRowState } from '@/components/tasks/task-row'
+import { PERIOD_LABEL } from '@/lib/tasks/period-label'
 import { SubmitButton } from './submit-button'
-
-const PERIOD_LABEL: Record<string, string> = {
-  daily: 'Daily',
-  weekly: 'Weekly',
-  monthly: 'Monthly',
-  yearly: 'Yearly',
-}
 
 export default async function TasksPage() {
   const { supabase, user } = await requireUser()
@@ -25,38 +24,40 @@ export default async function TasksPage() {
   )
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
-      <h1 className="text-xl font-semibold">Tasks</h1>
-      <ul className="mt-6 space-y-4">
-        {activeTasks.map((task) => {
-          const currentPeriodKey = currentPeriodKeys.get(task.period ?? 'once')!
-          const active = myCompletions.find(
-            (c) => c.taskId === task.id && c.periodKey === currentPeriodKey && c.status !== 'rejected',
-          )
+    <Page>
+      <PageHeader title="Tasks" description="Earn DC with Bible study. An admin reviews each one before the coins land." />
+      {activeTasks.length === 0 ? (
+        <EmptyState icon={BookOpen} title="No tasks yet.">
+          Admins add Bible-study tasks here.
+        </EmptyState>
+      ) : (
+        <SectionCard title={<span className="sr-only">Task catalog</span>} titleId="task-catalog" className="gap-0 p-0 md:p-0">
+          <ul className="flex flex-col divide-y divide-line px-[18px] md:px-6">
+            {activeTasks.map((task) => {
+              const periodKey = currentPeriodKeys.get(task.period ?? 'once')!
+              const current = myCompletions.find((c) => c.taskId === task.id && c.periodKey === periodKey)
+              const state: TaskRowState =
+                current?.status === 'pending'
+                  ? { kind: 'pending' }
+                  : current?.status === 'approved'
+                    ? { kind: 'approved' }
+                    : { kind: 'available', rejectionNote: current?.status === 'rejected' ? current.reviewNote : null }
 
-          return (
-            <li key={task.id} className="border p-4">
-              <p className="font-medium">
-                {task.title} — {task.rewardAmount} DC
-                {task.isRepeatable && ` (${PERIOD_LABEL[task.period!]})`}
-              </p>
-              {task.description && <p className="text-sm text-foreground/70">{task.description}</p>}
-              {!active && <SubmitButton taskId={task.id} />}
-              {active?.status === 'pending' && <p className="text-sm text-foreground/70">Pending review</p>}
-              {active?.status === 'approved' && <p className="text-sm text-foreground/70">Completed this period</p>}
-            </li>
-          )
-        })}
-      </ul>
-
-      <h2 className="mt-8 text-lg font-semibold">My submissions</h2>
-      <ul className="mt-2 space-y-1 text-sm">
-        {myCompletions.map((c, i) => (
-          <li key={i}>
-            {allTasks.find((t) => t.id === c.taskId)?.title ?? 'Unknown task'} — {c.status} ({c.rewardAmount} DC)
-          </li>
-        ))}
-      </ul>
-    </div>
+              return (
+                <TaskRow
+                  key={task.id}
+                  title={task.title}
+                  rewardAmount={task.rewardAmount}
+                  description={task.description}
+                  cadence={task.isRepeatable ? PERIOD_LABEL[task.period!] : null}
+                  state={state}
+                  action={<SubmitButton taskId={task.id} />}
+                />
+              )
+            })}
+          </ul>
+        </SectionCard>
+      )}
+    </Page>
   )
 }

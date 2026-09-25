@@ -5,12 +5,13 @@ export interface MyCompletion {
   status: 'pending' | 'approved' | 'rejected'
   periodKey: string
   rewardAmount: number
+  reviewNote: string | null
 }
 
 export async function listMyTaskCompletions(supabase: SupabaseClient, profileId: string): Promise<MyCompletion[]> {
   const { data, error } = await supabase
     .from('task_completions')
-    .select('task_id, status, period_key, reward_amount')
+    .select('task_id, status, period_key, reward_amount, review_note')
     .eq('profile_id', profileId)
     .order('submitted_at', { ascending: false })
 
@@ -21,6 +22,7 @@ export async function listMyTaskCompletions(supabase: SupabaseClient, profileId:
     status: c.status,
     periodKey: c.period_key,
     rewardAmount: c.reward_amount,
+    reviewNote: c.review_note,
   }))
 }
 

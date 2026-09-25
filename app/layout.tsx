@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Manrope } from 'next/font/google'
 import { cookies } from 'next/headers'
 import { Analytics } from '@vercel/analytics/next'
@@ -12,8 +12,23 @@ const manrope = Manrope({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.dwellduel.com'),
   title: 'DwellDuel',
-  description: 'DwellDuel',
+  description: 'Friendly bets. Faithful study.',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon-180.png',
+  },
+  manifest: '/site.webmanifest',
+  openGraph: { images: ['/og-image-1200x630.png'] },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#03272d',
 }
 
 export default async function RootLayout({ children }: LayoutProps<'/'>) {

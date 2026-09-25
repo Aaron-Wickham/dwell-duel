@@ -18,8 +18,6 @@ export default async function Home() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const { data: profile } = await supabase.from('profiles').select('display_name, balance').eq('id', user.id).single()
-
   const [admin, slip, markets, board, myCompletions] = await Promise.all([
     isAdmin(supabase),
     readSlip(),
@@ -61,9 +59,9 @@ export default async function Home() {
 
   return (
     <Page>
-      <PageHeader title={`Welcome, ${profile?.display_name}`} />
+      <PageHeader title={`Welcome, ${me?.displayName}`} />
       <HomeHero
-        balance={profile?.balance ?? 0}
+        balance={me?.balance ?? 0}
         rank={rank}
         memberCount={memberCount}
         pendingCount={pendingReviews.length}
@@ -71,7 +69,7 @@ export default async function Home() {
       />
       <HomeTiles tiles={tiles} />
       <form action={signOut}>
-        <button type="submit" className={cn(buttonVariants({ variant: 'secondary' }), 'self-start')}>
+        <button type="submit" className={cn(buttonVariants({ variant: 'secondary', block: true }), 'md:w-auto')}>
           <LogOut aria-hidden="true" className="size-5" />
           Sign out
         </button>

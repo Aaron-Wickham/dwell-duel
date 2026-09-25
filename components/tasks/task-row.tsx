@@ -38,7 +38,7 @@ export function TaskRow({
           </p>
         )}
       </div>
-      <div className="flex min-h-11 shrink-0 flex-col items-start gap-1.5">
+      <div className="flex min-h-11 shrink-0 flex-col items-start justify-center gap-1.5">
         {state.kind === 'pending' && (
           <StatusChip tone="wait">
             <Clock aria-hidden="true" className="size-4" />

@@ -18,7 +18,7 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
 
   return (
     <>
-      <form action={formAction} className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
+      <form action={formAction} className="flex flex-col gap-2 md:flex-row md:items-end">
         <div className="flex items-center gap-3 md:w-60 md:shrink-0 md:self-center">
           <Avatar name={member.displayName} />
           <div className="flex min-w-0 grow flex-col">

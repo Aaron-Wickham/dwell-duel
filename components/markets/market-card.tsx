@@ -40,7 +40,7 @@ export function MarketCard({ id, title, status, closeAt, resolvedAt, outcomes, r
   const hasBets = outcomes.some((outcome) => outcome.pct !== null)
 
   return (
-    <article className={cn(cardClass, 'flex flex-col gap-3 p-[18px] md:p-6')}>
+    <article className={cn(cardClass, 'flex flex-col gap-3 p-[18px]')}>
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</StatusChip>
         <span className="text-sm text-ink2">

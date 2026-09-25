@@ -13,7 +13,7 @@ export default async function FeedPage() {
   return (
     <Page>
       <PageHeader title="Feed" description="The 50 newest things that happened in DwellDuel." />
-      <FeedList events={events} heading={<span className="sr-only">Events</span>} headingId="feed-events" />
+      <FeedList events={events} heading="Events" headingId="feed-events" headingHidden />
     </Page>
   )
 }

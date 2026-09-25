@@ -3,6 +3,7 @@ import { Mail } from 'lucide-react'
 import { h1Class } from '@/components/ui/page'
 import { Card } from '@/components/ui/card'
 import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 export default function NotInvitedPage() {
   return (
@@ -15,7 +16,7 @@ export default function NotInvitedPage() {
         <p className="text-ink2">
           This Google account isn’t on the invite list yet. Ask a DwellDuel admin to add it, then sign in again.
         </p>
-        <Link href="/sign-in" className={buttonVariants({ variant: 'primary', block: true })}>
+        <Link href="/sign-in" className={cn(buttonVariants({ variant: 'primary', block: true }), 'md:w-auto')}>
           Try another account
         </Link>
       </Card>

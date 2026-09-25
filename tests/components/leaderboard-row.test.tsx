@@ -15,13 +15,14 @@ describe('LeaderboardRow', () => {
     expect(screen.getByText('90 DC')).toBeInTheDocument()
   })
 
-  it('gives rank 1 the top style, aria-labelled with the rank', () => {
+  it('gives rank 1 the top style, announced as Rank 1', () => {
     render(
       <ol>
         <LeaderboardRow rank={1} name="Sarah" balance={245} isMe={false} href="/members/sarah" />
       </ol>,
     )
-    expect(screen.getByLabelText('Rank 1')).toHaveClass('bg-lime', 'text-on-lime')
+    expect(screen.getByText('Rank 1')).toHaveClass('sr-only')
+    expect(screen.getByText('Rank 1').parentElement).toHaveClass('bg-lime', 'text-on-lime')
   })
 
   it('does not use the top style for lower ranks', () => {
@@ -30,7 +31,7 @@ describe('LeaderboardRow', () => {
         <LeaderboardRow rank={3} name="Aaron" balance={120} isMe={false} href="/members/aaron" />
       </ol>,
     )
-    expect(screen.getByLabelText('Rank 3')).not.toHaveClass('bg-lime')
+    expect(screen.getByText('Rank 3').parentElement).not.toHaveClass('bg-lime')
   })
 
   it("marks the viewer's own row with (you), outside the link's accessible name", () => {

@@ -42,7 +42,6 @@
   --wm-b: #3FAE14;
   --sym-d: #03272D;
   --shadow: 0 1px 2px rgba(3, 39, 45, 0.05), 0 6px 20px rgba(3, 39, 45, 0.05);
-  --shadow-tab: 0 1px 3px rgba(3, 39, 45, 0.12);
   --s1: #03272D;
   --s2: #2A6E0B;
   --s3: #855600;
@@ -160,7 +159,7 @@
   --radius-control: 12px;
   --radius-card: 18px;
   --shadow-card: var(--shadow);
-  --shadow-tab: var(--shadow-tab);
+  --shadow-tab: 0 1px 3px rgba(3, 39, 45, 0.12);
 }
 
 @layer base {

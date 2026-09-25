@@ -80,7 +80,7 @@ export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
                 Shared reason (optional)
               </label>
               <Input id="bulk-reason" name="reason" placeholder="Shared reason (optional)" className="md:grow" />
-              <div className="flex shrink-0 gap-2">
+              <div className="flex flex-wrap shrink-0 gap-2">
                 <Button type="submit" size="sm" formAction={approveAction} className="grow">
                   Approve selected
                 </Button>

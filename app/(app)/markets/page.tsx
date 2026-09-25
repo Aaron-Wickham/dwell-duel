@@ -79,7 +79,7 @@ export default async function MarketsPage() {
             <h2 id={`markets-${group.id}-heading`} className={h2Class}>
               {group.heading}
             </h2>
-            <div className="grid gap-5 lg:grid-cols-3">
+            <div className="grid items-start gap-5 lg:grid-cols-3">
               {group.markets.map((market) => (
                 <MarketCard key={market.id} {...market} />
               ))}

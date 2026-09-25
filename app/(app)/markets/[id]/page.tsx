@@ -105,7 +105,9 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <StatusChip tone={statusTone}>Status: {market.status}</StatusChip>
+          <StatusChip tone={statusTone}>
+            Status: {market.status === 'open' && isPastClose ? 'awaiting resolution' : market.status}
+          </StatusChip>
           <span className="text-sm text-ink2">
             {when}Created by {isCreator ? 'you' : market.creatorName}
           </span>

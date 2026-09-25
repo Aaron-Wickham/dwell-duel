@@ -38,15 +38,15 @@ export function CreateMarketForm() {
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-5 rounded-card border border-line bg-surface p-[18px] shadow-card md:p-6"
+      className="flex max-w-[720px] flex-col gap-5 rounded-card border border-line bg-surface p-[18px] shadow-card md:p-6"
     >
       <Field label="Title" htmlFor="cm-title">
         <Input
           id="cm-title"
           name="title"
           required
-          aria-invalid={Boolean(state?.formError)}
-          aria-describedby={state?.formError ? 'create-market-error' : undefined}
+          aria-invalid={state?.field === 'title'}
+          aria-describedby={state?.field === 'title' ? 'create-market-error' : undefined}
         />
       </Field>
 
@@ -88,7 +88,11 @@ export function CreateMarketForm() {
           <input type="hidden" name="outcome_labels" value="No" />
         </>
       ) : (
-        <fieldset className="flex flex-col gap-2">
+        <fieldset
+          className="flex flex-col gap-2"
+          aria-invalid={state?.field === 'outcomes'}
+          aria-describedby={state?.field === 'outcomes' ? 'create-market-error' : undefined}
+        >
           <legend className="text-[15px] font-bold">Outcomes</legend>
           <span className="text-sm text-ink2">
             Up to {MAX_OUTCOMES} outcomes · {outcomes.length} of {MAX_OUTCOMES} used
@@ -133,6 +137,8 @@ export function CreateMarketForm() {
           id="cm-close"
           type="datetime-local"
           required
+          aria-invalid={state?.field === 'close_at'}
+          aria-describedby={state?.field === 'close_at' ? 'create-market-error' : undefined}
           onChange={(e) => setCloseAtIso(e.target.value ? new Date(e.target.value).toISOString() : '')}
         />
       </Field>

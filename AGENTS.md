@@ -39,9 +39,9 @@ architectural decisions exist, document them here and in `docs/`.
   form shows a server error, wire `aria-invalid` and `aria-describedby`
   at the call site.
 - **Links are underlined by default.** The base `a` rule underlines
-  every link. A link styled as a button, tab, tile, chip or nav item
-  needs `no-underline` (departure from the mockup handoff, which doesn't
-  call this out).
+  every link, matching the mockup (its links use the browser default
+  underline). A link styled as a button, tab, tile, chip or nav item
+  carries `no-underline`.
 - **Visual source of truth:** `docs/design/app-redesign-handoff.md` and
   the design spec in `docs/superpowers/specs/`.
 

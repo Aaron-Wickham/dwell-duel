@@ -21,7 +21,11 @@ export default async function LeaderboardPage() {
           Invite friends to start the competition.
         </EmptyState>
       ) : (
-        <SectionCard title={<span className="sr-only">Rankings</span>} titleId="leaderboard-rankings" className="gap-0 py-1.5 px-2 md:py-1.5 md:px-3">
+        <SectionCard
+          title={<span className="sr-only">Rankings</span>}
+          titleId="leaderboard-rankings"
+          className="max-w-[820px] gap-0 py-1.5 px-2 md:py-1.5 md:px-3"
+        >
           <ol className="flex flex-col">
             {board.map((member) => (
               <LeaderboardRow

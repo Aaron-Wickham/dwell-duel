@@ -18,5 +18,6 @@ export async function voidMarketAction(
   if (error) return { formError: error.message }
 
   revalidatePath(`/markets/${marketId}`)
+  revalidatePath('/parlays')
   return undefined
 }

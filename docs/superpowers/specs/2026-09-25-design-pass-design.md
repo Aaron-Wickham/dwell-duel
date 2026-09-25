@@ -160,6 +160,16 @@ Covers handoff build step 4.
 - The approved copy, including the insufficient-balance mapping.
 - The e2e selector update (decision 2).
 - Charts are omitted from market pages and cards until PR C.
+- **Carried from PR A:**
+  - **`Field` doesn't wire its own ARIA.** `Field` renders `{id}-hint` and `{id}-error` but leaves `aria-describedby` and `aria-invalid` on the control to the caller. Every `Field` call site must wire both, or a small helper can be added once real call sites exist.
+  - **The balance can disagree with itself.** The nav's balance chip refreshes only on a hard load, on the member's own money or slip actions, and when the tab becomes visible again. It does not refresh on client navigation, so a balance shown in a page body can briefly disagree with the chip after an admin's action. The home redesign shouldn't show a second balance beside the chip.
+  - **`Message tone="gold"` shouldn't always be a live region.** Used for static text like "Awaiting resolution", it shouldn't be `role="status"`.
+  - **The phone top bar is tight at 375px.**
+    - A 4-digit admin balance fits.
+    - A 5-digit one overflows by about 6px.
+    - Check it in the per-screen 375px pass.
+  - **`env(safe-area-inset-bottom)` does nothing yet.** It has no effect without `viewport-fit=cover`. Either enable cover, adding top-inset padding to the top bar, or drop the `env()` calls.
+  - **The balance is fetched twice on home.** The `(app)` layout and the home page each fetch it.
 
 ### PR C — Charts and polish
 

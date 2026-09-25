@@ -13,11 +13,13 @@ export interface MarketDetail {
   outcomes: { id: string; label: string; poolTotal: number }[]
 }
 
-export interface OwnBet {
+export interface MarketBet {
   id: number
   outcomeId: string
   amount: number
   createdAt: string
+  profileId: string
+  bettorName: string
 }
 
 export async function getMarket(supabase: SupabaseClient, marketId: string): Promise<MarketDetail | null> {
@@ -63,15 +65,25 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
   }
 }
 
-export async function getOwnBets(supabase: SupabaseClient, marketId: string, userId: string): Promise<OwnBet[]> {
+export async function getMarketBets(supabase: SupabaseClient, marketId: string): Promise<MarketBet[]> {
   const { data, error } = await supabase
     .from('bets')
-    .select('id, outcome_id, amount, created_at')
+    .select('id, outcome_id, amount, created_at, profile_id, profiles(display_name)')
     .eq('market_id', marketId)
-    .eq('profile_id', userId)
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
 
   if (error) throw error
 
-  return (data ?? []).map((b) => ({ id: b.id, outcomeId: b.outcome_id, amount: b.amount, createdAt: b.created_at }))
+  return (data ?? []).map((b) => {
+    const profile = b.profiles as unknown as { display_name: string } | null
+    return {
+      id: b.id,
+      outcomeId: b.outcome_id,
+      amount: b.amount,
+      createdAt: b.created_at,
+      profileId: b.profile_id,
+      bettorName: profile?.display_name ?? 'Unknown member',
+    }
+  })
 }

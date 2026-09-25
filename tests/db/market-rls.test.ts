@@ -41,7 +41,7 @@ describe('markets/market_outcomes/market_resolutions select policy', () => {
 })
 
 describe('bets select policy', () => {
-  it("shows a member only their own bets", async () => {
+  it('shows an invited member every bet', async () => {
     const aliceClient = await clientFor(alice)
     const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'])
 
@@ -53,8 +53,20 @@ describe('bets select policy', () => {
 
     const { data, error } = await aliceClient.from('bets').select('profile_id')
     expect(error).toBeNull()
-    expect(data).toHaveLength(1)
-    expect(data?.[0].profile_id).toBe(alice.id)
+    expect(new Set(data?.map((b) => b.profile_id))).toEqual(new Set([alice.id, bob.id]))
+  })
+
+  it('shows an uninvited session no bets', async () => {
+    const aliceClient = await clientFor(alice)
+    const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'])
+    const aliceBet = await aliceClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[0], p_amount: 10 })
+    expect(aliceBet.error).toBeNull()
+
+    // Bob is a seedMembers() fixture member, never invited.
+    const bobClient = await clientFor(bob)
+    const { data, error } = await bobClient.from('bets').select('profile_id')
+    expect(error).toBeNull()
+    expect(data).toEqual([])
   })
 
   it('shows an admin every bet', async () => {

@@ -1,12 +1,14 @@
 # DwellDuel
 
 **Status:** Foundation + Market Engine + Coin Economy + Admin Controls +
-Parlays complete — Google sign-in (invite-only), a single admin account,
-a Dwell Coin (DC) ledger, a pari-mutuel betting market, an admin-managed
-Bible-study task catalog with approval-gated coin rewards, admin tooling
-for manual balance adjustment, a full transaction ledger, and bulk
-task-completion review, and app-backed parlays (2–6 picks, odds locked
-at placement, capped at 20×) built from a bet slip. Live at
+Parlays + Social Layer complete — Google sign-in (invite-only), a single
+admin account, a Dwell Coin (DC) ledger, a pari-mutuel betting market, an
+admin-managed Bible-study task catalog with approval-gated coin rewards,
+admin tooling for manual balance adjustment, a full transaction ledger,
+and bulk task-completion review, app-backed parlays (2–6 picks, odds
+locked at placement, capped at 20×) built from a bet slip, and a social
+layer: a balance leaderboard, an activity feed, member profiles, and
+every member's bets visible on each market. Live at
 [dwellduel.com](https://dwellduel.com).
 
 ## Stack

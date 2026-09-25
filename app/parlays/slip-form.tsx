@@ -2,9 +2,9 @@
 
 import { useActionState, useState } from 'react'
 import { placeParlayAction, type PlaceParlayState } from '@/lib/parlays/place-parlay'
-import { potentialPayout } from '@/lib/parlays/odds'
+import { formatOdds, potentialPayout } from '@/lib/parlays/odds'
 
-export function SlipForm({ multiplier, canPlace, hasPicks }: { multiplier: number; canPlace: boolean; hasPicks: boolean }) {
+export function SlipForm({ legBps, canPlace, hasPicks }: { legBps: number[]; canPlace: boolean; hasPicks: boolean }) {
   const [state, formAction] = useActionState<PlaceParlayState, FormData>(placeParlayAction, undefined)
   const [stake, setStake] = useState('')
   const stakeNumber = Number(stake)
@@ -27,7 +27,7 @@ export function SlipForm({ multiplier, canPlace, hasPicks }: { multiplier: numbe
               className="border px-2 py-1"
             />
           </label>
-          {showPayout && <p className="text-sm">Potential payout: {potentialPayout(stakeNumber, multiplier)} DC</p>}
+          {showPayout && <p className="text-sm">Potential payout: {potentialPayout(stakeNumber, legBps)} DC</p>}
           <button type="submit" disabled={!canPlace}>
             Place parlay
           </button>
@@ -36,7 +36,7 @@ export function SlipForm({ multiplier, canPlace, hasPicks }: { multiplier: numbe
       {state?.formError && <p className="text-sm text-red-600">{state.formError}</p>}
       {state?.placed && (
         <p className="text-sm">
-          Parlay placed at {state.placed.multiplier.toFixed(2)}× — potential payout {state.placed.potentialPayout} DC.
+          Parlay placed at {formatOdds(state.placed.multiplierBp)}× — potential payout {state.placed.potentialPayout} DC.
         </p>
       )}
     </div>

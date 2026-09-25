@@ -1,12 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { combineOdds, potentialPayout } from './odds'
+import { combineOdds, lockedOddsToBp, potentialPayout } from './odds'
 import { legStatus, type LegStatus } from './leg-status'
 
 export interface ParlayLegView {
   marketId: string
   marketTitle: string
   outcomeLabel: string
-  lockedOdds: number
+  lockedOddsBp: number
   status: LegStatus
 }
 
@@ -15,7 +15,7 @@ export interface ParlayView {
   stake: number
   status: 'pending' | 'won' | 'lost' | 'refunded'
   credited: number
-  multiplier: number
+  multiplierBp: number
   capped: boolean
   potentialPayout: number
   createdAt: string
@@ -77,21 +77,22 @@ export async function listMyParlays(supabase: SupabaseClient, userId: string): P
         marketId: l.markets.id,
         marketTitle: l.markets.title,
         outcomeLabel: l.market_outcomes.label,
-        lockedOdds: Number(l.locked_odds),
+        lockedOddsBp: lockedOddsToBp(l.locked_odds),
         status: legStatus(l.markets.status, winner, l.outcome_id),
       }
     })
 
-    const { multiplier, capped } = combineOdds(legs.filter((l) => l.status !== 'voided').map((l) => l.lockedOdds))
+    const activeBps = legs.filter((l) => l.status !== 'voided').map((l) => l.lockedOddsBp)
+    const { multiplierBp, capped } = combineOdds(activeBps)
 
     return {
       id: p.id,
       stake: p.stake,
       status: p.status,
       credited: p.credited,
-      multiplier,
+      multiplierBp,
       capped,
-      potentialPayout: potentialPayout(p.stake, multiplier),
+      potentialPayout: potentialPayout(p.stake, activeBps),
       createdAt: p.created_at,
       legs,
     }

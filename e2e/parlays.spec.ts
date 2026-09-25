@@ -37,7 +37,7 @@ test('build a two-leg parlay from market pages, place it, and win it', async ({ 
   await page.getByRole('button', { name: 'Place parlay' }).click()
 
   await expect(page.getByText('Parlay placed at 16.00× — potential payout 80 DC.')).toBeVisible()
-  await expect(page.getByText('Pending — 5 DC at 16.00× — pays 80 DC if every pick wins')).toBeVisible()
+  await expect(page.getByText('Pending — 5 DC at 16.00× — pays 80 DC if every pick wins').first()).toBeVisible()
 
   // The seeded session is an admin, so it can resolve before close_at.
   for (const url of marketUrls) {
@@ -48,5 +48,5 @@ test('build a two-leg parlay from market pages, place it, and win it', async ({ 
   }
 
   await page.goto('/parlays')
-  await expect(page.getByText('Won — 5 DC at 16.00× — paid 80 DC')).toBeVisible()
+  await expect(page.getByText('Won — 5 DC at 16.00× — paid 80 DC').first()).toBeVisible()
 })

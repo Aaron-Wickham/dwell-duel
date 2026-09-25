@@ -208,6 +208,14 @@ grant execute on function place_parlay(uuid[], integer) to service_role;
 - Requiring a non-zero pool on every pick removes the undefined-odds case
   and the most exploitable thin-market case.
 
+**Locked odds are truncated to 4 decimal places** (migration `0029`,
+added after final review): `trunc(total::numeric / pool, 4)`. The product
+`settle_parlay` multiplies is then exact, and the app computes the same
+`floor(stake × min(product, 20))` in integer basis points, so the payout
+shown before placing is exactly what settlement pays. It is never more.
+The cost is at most a fraction of a DC below what exact odds would imply,
+and displayed odds truncate (e.g. 10/3 × 3 shows 9.99×).
+
 ## `settle_parlay(p_parlay_id uuid) returns void`
 
 Internal. Members never call it; `resolve_market` and `void_market` do.

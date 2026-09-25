@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { lockedOddsToBp, potentialPayout } from '@/lib/parlays/odds'
 
 let alice: Member
 let bob: Member
@@ -20,11 +21,15 @@ beforeEach(async () => {
 
 // Every market is seeded 5 on its first outcome and 15 on its second:
 // the first locks at 20 / 5 = 4x, the second at 20 / 15 = 4/3x.
-async function seededMarket(title: string, labels: string[] = ['Yes', 'No']): Promise<TestMarket> {
+async function seededMarket(
+  title: string,
+  labels: string[] = ['Yes', 'No'],
+  pools: [number, number] = [5, 15],
+): Promise<TestMarket> {
   const market = await createTestMarket(aliceClient, labels, { title })
   for (const [index, amount] of [
-    [0, 5],
-    [1, 15],
+    [0, pools[0]],
+    [1, pools[1]],
   ] as const) {
     const { error } = await aliceClient.rpc('place_bet', {
       p_market_id: market.marketId,
@@ -261,17 +266,20 @@ describe('parlay settlement', () => {
 
     const db = serviceClient()
     const { data: before } = await db.from('markets').select('status, current_resolution_id').eq('id', a.marketId).single()
+    const { data: aliceBefore } = await db.from('profiles').select('balance').eq('id', alice.id).single()
 
     const { error } = await aliceClient.rpc('resolve_market', {
       p_market_id: a.marketId,
       p_outcome_id: a.outcomeIds[1],
     })
-    expect(error).not.toBeNull()
+    expect(error?.code).toBe('23514')
 
     const { data: after } = await db.from('markets').select('status, current_resolution_id').eq('id', a.marketId).single()
     expect(after).toEqual(before)
     expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: 160 })
     expect(await bobBalance()).toBe(50)
+    const { data: aliceAfter } = await db.from('profiles').select('balance').eq('id', alice.id).single()
+    expect(aliceAfter).toEqual(aliceBefore)
   })
 
   it('does not let a member call settle_parlay directly', async () => {
@@ -282,5 +290,35 @@ describe('parlay settlement', () => {
     // 42501 specifically: a missing function (PGRST202) must not pass this test.
     const { error } = await bobClient.rpc('settle_parlay', { p_parlay_id: id })
     expect(error?.code).toBe('42501')
+  })
+
+  it('pays exactly the payout the app displays', async () => {
+    // 10/3 locks at 3.3333 and 3/1 at 3.0000: exact odds would be 10x; the locked product is 9.9999x.
+    const a = await seededMarket('Market A', ['Yes', 'No'], [3, 7])
+    const b = await seededMarket('Market B', ['Yes', 'No'], [1, 2])
+    const id = await placeParlay([a.outcomeIds[0], b.outcomeIds[0]], 10)
+
+    const { data: legs } = await serviceClient().from('parlay_legs').select('locked_odds').eq('parlay_id', id)
+    const legBps = legs!.map((l) => lockedOddsToBp(l.locked_odds))
+    expect([...legBps].sort((x, y) => x - y)).toEqual([30_000, 33_333])
+    const displayed = potentialPayout(10, legBps)
+    expect(displayed).toBe(99)
+
+    await resolve(a, 0)
+    await resolve(b, 0)
+    expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: displayed })
+  })
+
+  it('writes no parlay transactions when a market is re-resolved to the same outcome', async () => {
+    const a = await seededMarket('Market A')
+    const b = await seededMarket('Market B')
+    const id = await placeParlay([a.outcomeIds[0], b.outcomeIds[0]], 10)
+    await resolve(a, 0)
+    await resolve(b, 0)
+    const before = await bobTransactions()
+
+    await resolve(a, 0)
+    expect(await bobTransactions()).toEqual(before)
+    expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: 160 })
   })
 })

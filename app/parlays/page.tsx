@@ -5,10 +5,11 @@ import { readSlip } from '@/lib/parlays/slip'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { listMyParlays, type ParlayView } from '@/lib/parlays/list-parlays'
 import { removeFromSlipAction } from '@/lib/parlays/slip-actions'
+import { formatOdds } from '@/lib/parlays/odds'
 import { SlipForm } from './slip-form'
 
 function describeParlay(p: ParlayView): string {
-  const odds = `${p.multiplier.toFixed(2)}×`
+  const odds = `${formatOdds(p.multiplierBp)}×`
   switch (p.status) {
     case 'pending':
       return `Pending — ${p.stake} DC at ${odds} — pays ${p.potentialPayout} DC if every pick wins`
@@ -48,7 +49,7 @@ export default async function ParlaysPage() {
                     {pick.marketTitle}
                   </Link>
                   : {pick.outcomeLabel} —{' '}
-                  {pick.available && pick.odds !== null ? `${pick.odds.toFixed(2)}×` : 'No longer available'}
+                  {pick.available && pick.oddsBp !== null ? `${formatOdds(pick.oddsBp)}×` : 'No longer available'}
                 </p>
                 <form action={removeFromSlipAction.bind(null, pick.outcomeId)}>
                   <button type="submit" className="text-sm underline">
@@ -59,14 +60,14 @@ export default async function ParlaysPage() {
             ))}
           </ul>
           <p className="mt-3 text-sm">
-            Combined: {slip.multiplier.toFixed(2)}×{slip.capped && ' (capped at 20×)'}
+            Combined: {formatOdds(slip.multiplierBp)}×{slip.capped && ' (capped at 20×)'}
           </p>
           {!slip.canPlace && (
             <p className="text-sm text-foreground/70">A parlay needs at least 2 picks, all still available.</p>
           )}
         </>
       )}
-      <SlipForm multiplier={slip.multiplier} canPlace={slip.canPlace} hasPicks={slip.picks.length > 0} />
+      <SlipForm legBps={slip.legBps} canPlace={slip.canPlace} hasPicks={slip.picks.length > 0} />
 
       <h2 className="mt-8 text-lg font-semibold">My parlays</h2>
       {parlays.length === 0 ? (
@@ -82,7 +83,7 @@ export default async function ParlaysPage() {
               <ul className="mt-1 text-sm">
                 {p.legs.map((l) => (
                   <li key={l.marketId}>
-                    {l.marketTitle}: {l.outcomeLabel} @ {l.lockedOdds.toFixed(2)}× — {l.status}
+                    {l.marketTitle}: {l.outcomeLabel} @ {formatOdds(l.lockedOddsBp)}× — {l.status}
                   </li>
                 ))}
               </ul>

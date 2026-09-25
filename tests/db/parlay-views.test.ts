@@ -38,7 +38,13 @@ async function seededMarket(title: string): Promise<TestMarket> {
 
 describe('getSlipView', () => {
   it('is empty and unplaceable for an empty slip', async () => {
-    expect(await getSlipView(bobClient, [])).toEqual({ picks: [], multiplier: 1, capped: false, canPlace: false })
+    expect(await getSlipView(bobClient, [])).toEqual({
+      picks: [],
+      legBps: [],
+      multiplierBp: 10_000,
+      capped: false,
+      canPlace: false,
+    })
   })
 
   it('shows live odds and a combined multiplier for open picks', async () => {
@@ -47,10 +53,11 @@ describe('getSlipView', () => {
 
     const view = await getSlipView(bobClient, [a.outcomeIds[0], b.outcomeIds[0]])
     expect(view.picks).toEqual([
-      { outcomeId: a.outcomeIds[0], outcomeLabel: 'Yes', marketId: a.marketId, marketTitle: 'Market A', odds: 4, available: true },
-      { outcomeId: b.outcomeIds[0], outcomeLabel: 'Yes', marketId: b.marketId, marketTitle: 'Market B', odds: 4, available: true },
+      { outcomeId: a.outcomeIds[0], outcomeLabel: 'Yes', marketId: a.marketId, marketTitle: 'Market A', oddsBp: 40_000, available: true },
+      { outcomeId: b.outcomeIds[0], outcomeLabel: 'Yes', marketId: b.marketId, marketTitle: 'Market B', oddsBp: 40_000, available: true },
     ])
-    expect(view.multiplier).toBe(16)
+    expect(view.multiplierBp).toBe(160_000)
+    expect(view.legBps).toEqual([40_000, 40_000])
     expect(view.capped).toBe(false)
     expect(view.canPlace).toBe(true)
   })
@@ -68,7 +75,7 @@ describe('getSlipView', () => {
 
     const view = await getSlipView(bobClient, [a.outcomeIds[0], b.outcomeIds[0]])
     expect(view.picks.map((p) => p.available)).toEqual([true, false])
-    expect(view.multiplier).toBe(4)
+    expect(view.multiplierBp).toBe(40_000)
     expect(view.canPlace).toBe(false)
   })
 
@@ -78,7 +85,7 @@ describe('getSlipView', () => {
     const c = await seededMarket('Market C')
 
     const view = await getSlipView(bobClient, [a.outcomeIds[0], b.outcomeIds[0], c.outcomeIds[0]])
-    expect(view.multiplier).toBe(20)
+    expect(view.multiplierBp).toBe(200_000)
     expect(view.capped).toBe(true)
   })
 
@@ -106,11 +113,11 @@ describe('listMyParlays', () => {
     expect(resolveErr).toBeNull()
 
     const [pending] = await listMyParlays(bobClient, bob.id)
-    expect(pending).toMatchObject({ stake: 10, status: 'pending', credited: 0, multiplier: 16, capped: false, potentialPayout: 160 })
+    expect(pending).toMatchObject({ stake: 10, status: 'pending', credited: 0, multiplierBp: 160_000, capped: false, potentialPayout: 160 })
     expect(pending.legs).toEqual(
       expect.arrayContaining([
-        { marketId: a.marketId, marketTitle: 'Market A', outcomeLabel: 'Yes', lockedOdds: 4, status: 'won' },
-        { marketId: b.marketId, marketTitle: 'Market B', outcomeLabel: 'Yes', lockedOdds: 4, status: 'pending' },
+        { marketId: a.marketId, marketTitle: 'Market A', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'won' },
+        { marketId: b.marketId, marketTitle: 'Market B', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'pending' },
       ]),
     )
 
@@ -118,11 +125,25 @@ describe('listMyParlays', () => {
     expect(voidErr).toBeNull()
 
     const [won] = await listMyParlays(bobClient, bob.id)
-    expect(won).toMatchObject({ status: 'won', credited: 40, multiplier: 4 })
+    expect(won).toMatchObject({ status: 'won', credited: 40, multiplierBp: 40_000 })
     expect(won.legs.find((l) => l.marketId === b.marketId)?.status).toBe('voided')
   })
 
   it('returns nothing for a member with no parlays', async () => {
     expect(await listMyParlays(bobClient, bob.id)).toEqual([])
+  })
+
+  it('reports a capped parlay at 20x', async () => {
+    const a = await seededMarket('Market A')
+    const b = await seededMarket('Market B')
+    const c = await seededMarket('Market C')
+    const { error } = await bobClient.rpc('place_parlay', {
+      p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0], c.outcomeIds[0]],
+      p_stake: 10,
+    })
+    expect(error).toBeNull()
+
+    const [capped] = await listMyParlays(bobClient, bob.id)
+    expect(capped).toMatchObject({ status: 'pending', multiplierBp: 200_000, capped: true, potentialPayout: 200 })
   })
 })

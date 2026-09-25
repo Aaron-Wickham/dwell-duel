@@ -1,18 +1,19 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { combineOdds, legOdds } from './odds'
+import { combineOdds, legOddsBp } from './odds'
 
 export interface SlipPick {
   outcomeId: string
   outcomeLabel: string
   marketId: string
   marketTitle: string
-  odds: number | null
+  oddsBp: number | null
   available: boolean
 }
 
 export interface SlipView {
   picks: SlipPick[]
-  multiplier: number
+  legBps: number[]
+  multiplierBp: number
   capped: boolean
   canPlace: boolean
 }
@@ -25,7 +26,7 @@ interface OutcomeRow {
 }
 
 export async function getSlipView(supabase: SupabaseClient, outcomeIds: string[]): Promise<SlipView> {
-  if (outcomeIds.length === 0) return { picks: [], multiplier: 1, capped: false, canPlace: false }
+  if (outcomeIds.length === 0) return { picks: [], legBps: [], ...combineOdds([]), canPlace: false }
 
   const { data, error } = await supabase
     .from('market_outcomes')
@@ -40,24 +41,23 @@ export async function getSlipView(supabase: SupabaseClient, outcomeIds: string[]
     const row = rows.find((r) => r.id === id)
     if (!row) return []
     const totalPool = row.markets.market_outcomes.reduce((sum, o) => sum + o.pool_total, 0)
-    const odds = legOdds(totalPool, row.pool_total)
-    const available = row.markets.status === 'open' && new Date(row.markets.close_at).getTime() > now && odds !== null
+    const oddsBp = legOddsBp(totalPool, row.pool_total)
+    const available = row.markets.status === 'open' && new Date(row.markets.close_at).getTime() > now && oddsBp !== null
     return [
       {
         outcomeId: row.id,
         outcomeLabel: row.label,
         marketId: row.markets.id,
         marketTitle: row.markets.title,
-        odds,
+        oddsBp,
         available,
       },
     ]
   })
 
-  const { multiplier, capped } = combineOdds(
-    picks.flatMap((p) => (p.available && p.odds !== null ? [p.odds] : [])),
-  )
+  const legBps = picks.flatMap((p) => (p.available && p.oddsBp !== null ? [p.oddsBp] : []))
+  const { multiplierBp, capped } = combineOdds(legBps)
   const canPlace = picks.length >= 2 && picks.every((p) => p.available)
 
-  return { picks, multiplier, capped, canPlace }
+  return { picks, legBps, multiplierBp, capped, canPlace }
 }

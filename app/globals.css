@@ -156,9 +156,6 @@
   --color-s4: var(--s4);
   --color-s5: var(--s5);
   --color-s6: var(--s6);
-  /* Existing pages keep these until PR B restyles them. */
-  --color-background: var(--bg);
-  --color-foreground: var(--ink);
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius-control: 12px;
   --radius-card: 18px;

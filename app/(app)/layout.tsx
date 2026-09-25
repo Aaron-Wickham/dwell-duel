@@ -16,7 +16,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   return (
     <>
       <AppNav balance={profile.balance} slipCount={slip.length} isAdmin={admin} />
-      <main id="main" className="flex flex-1 flex-col pb-[calc(82px+env(safe-area-inset-bottom))] md:pb-0">
+      <main id="main" className="flex flex-1 flex-col pb-[82px] md:pb-0">
         {children}
       </main>
     </>

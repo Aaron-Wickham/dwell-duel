@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { requireUser } from '@/lib/auth/require-user'
 import { getLeaderboard } from '@/lib/social/leaderboard'
 import { listFeed } from '@/lib/social/list-feed'
-import { FeedList } from '@/app/feed/feed-list'
+import { FeedList } from '@/app/(app)/feed/feed-list'
 
 export default async function MemberPage(props: PageProps<'/members/[id]'>) {
   const { id } = await props.params

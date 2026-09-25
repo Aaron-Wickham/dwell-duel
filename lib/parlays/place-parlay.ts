@@ -24,15 +24,16 @@ export async function placeParlayAction(_prevState: PlaceParlayState, formData: 
 
   await writeSlip([])
 
+  revalidatePath('/parlays')
+  revalidatePath('/')
+
   const { data: legs, error: legsErr } = await supabase
     .from('parlay_legs')
     .select('locked_odds')
     .eq('parlay_id', parlayId as string)
-  if (legsErr) throw legsErr
+  if (legsErr) return {}
 
   const { multiplier } = combineOdds((legs ?? []).map((l) => Number(l.locked_odds)))
 
-  revalidatePath('/parlays')
-  revalidatePath('/')
   return { placed: { multiplier, potentialPayout: potentialPayout(stake, multiplier) } }
 }

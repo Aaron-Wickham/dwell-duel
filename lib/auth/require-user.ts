@@ -1,6 +1,6 @@
 import { cache } from 'react'
 import { serverClient } from '@/lib/supabase/server'
-import { AuthUnavailableError, isAuthUnavailable } from '@/lib/auth/auth-unavailable'
+import { AuthUnavailableError, isAuthUnavailable, readClaims } from '@/lib/auth/auth-unavailable'
 
 export type SessionUser = { id: string; email?: string }
 
@@ -9,7 +9,7 @@ export const requireUser = cache(async (): Promise<{
   user: SessionUser | null
 }> => {
   const supabase = await serverClient()
-  const { data, error } = await supabase.auth.getClaims()
+  const { data, error } = await readClaims(supabase)
   if (error) {
     if (isAuthUnavailable(error)) throw new AuthUnavailableError({ cause: error })
     return { supabase, user: null }

@@ -24,7 +24,7 @@ describe('requireUser', () => {
     expect(returnedClient).toBe(supabase)
   })
 
-  it('returns a null user with no email claim', async () => {
+  it('builds a user with no email claim', async () => {
     getClaims.mockResolvedValue({ data: { claims: { sub: 'member-1' } }, error: null })
     const { user } = await requireUser()
     expect(user).toEqual({ id: 'member-1', email: undefined })
@@ -32,6 +32,18 @@ describe('requireUser', () => {
 
   it('returns a null user with no session', async () => {
     getClaims.mockResolvedValue({ data: null, error: null })
+    const { user } = await requireUser()
+    expect(user).toBeNull()
+  })
+
+  it('returns a null user when claims verify but carry no sub', async () => {
+    getClaims.mockResolvedValue({ data: { claims: {} }, error: null })
+    const { user } = await requireUser()
+    expect(user).toBeNull()
+  })
+
+  it('returns a null user rather than throwing when a malformed access-token cookie makes getClaims throw', async () => {
+    getClaims.mockRejectedValue(new SyntaxError('bad token'))
     const { user } = await requireUser()
     expect(user).toBeNull()
   })
@@ -62,6 +74,12 @@ describe('requireUser', () => {
 
   it('throws AuthUnavailableError for a 5xx auth api error', async () => {
     const cause = new AuthApiError('server error', 500, undefined)
+    getClaims.mockResolvedValue({ data: null, error: cause })
+    await expect(requireUser()).rejects.toBeInstanceOf(AuthUnavailableError)
+  })
+
+  it('throws AuthUnavailableError for a 429 auth api error (rate limited)', async () => {
+    const cause = new AuthApiError('too many requests', 429, undefined)
     getClaims.mockResolvedValue({ data: null, error: cause })
     await expect(requireUser()).rejects.toBeInstanceOf(AuthUnavailableError)
   })

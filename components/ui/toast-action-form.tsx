@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
+import { haptics } from '@/lib/haptics'
 
 // Adds a success toast to a plain server action (the slip's add and remove) without making
 // the presentational row that renders it a client component. The toast fires once the
@@ -26,6 +27,7 @@ export function ToastActionForm({
   children: ReactNode
 }) {
   async function formAction(formData: FormData) {
+    haptics.tap()
     optimistic?.()
     const result = await action(formData)
     if (result !== false) toast.success(successMessage)

@@ -1,4 +1,5 @@
 import { toast } from 'sonner'
+import { haptics } from '@/lib/haptics'
 
 // The toast fires from the action itself once it resolves, not from an effect watching the
 // form's pending state: some forms (the void card, "Add to parlay") unmount in the same render
@@ -11,7 +12,10 @@ export function withSuccessToast<State, Payload>(
 ): (state: State, payload: Payload) => Promise<State> {
   return async (state, payload) => {
     const next = await action(state, payload)
-    if (!hasError(next)) toast.success(message)
+    if (!hasError(next)) {
+      toast.success(message)
+      haptics.success()
+    }
     return next
   }
 }

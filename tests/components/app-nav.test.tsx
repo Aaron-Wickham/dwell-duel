@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { startTransition } from 'react'
-import { act, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 type NumberFlowProps = { value: number; suffix?: string; locales?: unknown; format?: { useGrouping?: boolean } }
@@ -9,6 +9,8 @@ const { numberFlowCalls } = vi.hoisted(() => ({ numberFlowCalls: [] as NumberFlo
 let pathname = '/'
 vi.mock('next/navigation', () => ({ usePathname: () => pathname }))
 vi.mock('@/lib/theme/set-theme', () => ({ setThemeAction: vi.fn() }))
+const { tap } = vi.hoisted(() => ({ tap: vi.fn() }))
+vi.mock('@/lib/haptics', () => ({ haptics: { tap, success: vi.fn(), error: vi.fn() } }))
 vi.mock('@number-flow/react', () => ({
   default: (props: NumberFlowProps) => {
     numberFlowCalls.push(props)
@@ -30,6 +32,7 @@ function Nav({ balance, slipCount, isAdmin }: { balance: number; slipCount: numb
 
 beforeEach(() => {
   pathname = '/'
+  tap.mockClear()
   numberFlowCalls.length = 0
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
@@ -207,5 +210,21 @@ describe('AppNav', () => {
 
     await act(async () => finish())
     expect(screen.getAllByRole('link', { name: 'Parlays (1)' })).toHaveLength(2)
+  })
+
+  it('taps on a phone tab press, and not on a desktop link', () => {
+    // Cancelled before React sees the click, so jsdom never attempts the real navigation.
+    const cancel = (event: Event) => event.preventDefault()
+    window.addEventListener('click', cancel, true)
+    try {
+      render(<Nav balance={120} slipCount={0} isAdmin={false} />)
+      const [desktop, phone] = screen.getAllByRole('navigation', { name: 'Primary' })
+      fireEvent.click(within(desktop).getByRole('link', { name: 'Markets' }))
+      expect(tap).not.toHaveBeenCalled()
+      fireEvent.click(within(phone).getByRole('link', { name: 'Markets' }))
+      expect(tap).toHaveBeenCalledOnce()
+    } finally {
+      window.removeEventListener('click', cancel, true)
+    }
   })
 })

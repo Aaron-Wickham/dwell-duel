@@ -8,6 +8,7 @@ import NumberFlow from '@number-flow/react'
 import { Wordmark } from '@/components/brand/wordmark'
 import { AnimatedText } from '@/components/ui/animated-text'
 import { NavPendingHint } from '@/components/nav/nav-pending-hint'
+import { haptics } from '@/lib/haptics'
 import { cn } from '@/lib/utils'
 import { ADMIN_HREF, NAV_ITEMS, activeNavId, type NavId } from './nav-items'
 import { useSlipCount } from './slip-count'
@@ -178,6 +179,7 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
               href={item.href}
               aria-current={isActive ? 'page' : undefined}
               aria-label={item.shortLabel === item.label ? undefined : item.label}
+              onClick={haptics.tap}
               className={cn(
                 'pressable relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-[14px] text-xs leading-[1.1] no-underline',
                 isActive ? 'font-extrabold text-ink' : 'font-bold text-ink2',

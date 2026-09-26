@@ -19,6 +19,8 @@ vi.mock('@/lib/parlays/place-parlay', () => ({ placeParlayAction }))
 const { removeFromSlipAction } = vi.hoisted(() => ({ removeFromSlipAction: vi.fn() }))
 vi.mock('@/lib/parlays/slip-actions', () => ({ removeFromSlipAction }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
+const { haptics } = vi.hoisted(() => ({ haptics: { tap: vi.fn(), success: vi.fn(), error: vi.fn() } }))
+vi.mock('@/lib/haptics', () => ({ haptics }))
 
 import { SlipCountProvider, useSlipCount } from '@/components/app-nav/slip-count'
 import { SlipForm } from '@/app/(app)/parlays/slip-form'
@@ -39,6 +41,8 @@ function slipView(picks: SlipPickView[]): SlipView {
 beforeEach(() => {
   placeParlayAction.mockReset()
   removeFromSlipAction.mockReset()
+  haptics.success.mockReset()
+  haptics.error.mockReset()
 })
 
 describe('SlipForm', () => {
@@ -175,5 +179,21 @@ describe('SlipForm', () => {
     expect(screen.getByRole('button', { name: 'Place parlay' })).toBeEnabled()
     expect(screen.getByText(/^Combined:/)).toBeInTheDocument()
     expect(screen.getByText(/Potential payout:/)).toBeInTheDocument()
+  })
+
+  it('buzzes success once a parlay is placed, and error (from the inline message) when it fails', async () => {
+    placeParlayAction.mockResolvedValueOnce({ formError: 'Insufficient balance — you have 3 DC. Try a smaller amount.' })
+    placeParlayAction.mockResolvedValueOnce({ placed: { multiplierBp: 160_000, potentialPayout: 80 } })
+    render(<SlipForm slip={slipView([pick(1), pick(2)])} />)
+    await userEvent.type(screen.getByLabelText('Stake (DC)'), '5')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Place parlay' }))
+    await screen.findByRole('alert')
+    expect(haptics.error).toHaveBeenCalledOnce()
+    expect(haptics.success).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Place parlay' }))
+    await screen.findByRole('status')
+    expect(haptics.success).toHaveBeenCalledOnce()
   })
 })

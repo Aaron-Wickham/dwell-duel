@@ -17,6 +17,7 @@ import type { SlipView } from '@/lib/parlays/get-slip'
 import { formatOdds, MAX_PICKS, potentialPayout } from '@/lib/parlays/odds'
 import { placeParlayAction, type PlaceParlayState } from '@/lib/parlays/place-parlay'
 import { removeFromSlipAction } from '@/lib/parlays/slip-actions'
+import { haptics } from '@/lib/haptics'
 
 function pickCount(n: number): string {
   if (n === 0) return 'Empty'
@@ -26,7 +27,11 @@ function pickCount(n: number): string {
 // Owns the success message as well as the slip card: placing empties the slip and
 // revalidates the page, and the message must outlive that re-render.
 export function SlipForm({ slip }: { slip: SlipView }) {
-  const [state, formAction] = useActionState<PlaceParlayState, FormData>(placeParlayAction, undefined)
+  const [state, formAction] = useActionState<PlaceParlayState, FormData>(async (prevState, formData) => {
+    const next = await placeParlayAction(prevState, formData)
+    if (next?.placed) haptics.success()
+    return next
+  }, undefined)
   const [stake, setStake] = useState('')
   const stakeNumber = Number(stake)
   const showPayout = Number.isInteger(stakeNumber) && stakeNumber > 0

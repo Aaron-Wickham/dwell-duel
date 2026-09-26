@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
+import { act } from 'react'
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { render, screen, within, fireEvent } from '@testing-library/react'
 import { renderToString } from 'react-dom/server'
+import { hydrateRoot } from 'react-dom/client'
 import userEvent from '@testing-library/user-event'
-import { ProbabilityChart, type ChartOutcome } from '@/components/markets/probability-chart'
+import { ProbabilityChart, spreadLabels, type ChartOutcome } from '@/components/markets/probability-chart'
+import { formatDay } from '@/lib/markets/format-date'
 import type { SeriesPoint } from '@/lib/markets/probability-series'
 
 const HOUR = 60 * 60 * 1000
@@ -105,7 +108,7 @@ describe('ProbabilityChart', () => {
   it('shows time ticks for a day, date ticks for longer, and ends on Now', async () => {
     const user = userEvent.setup()
     const { container } = render(<ProbabilityChart outcomes={yesNo} points={spread} now={NOW} />)
-    const tickRow = () => [...container.querySelectorAll('.mr-\\[76px\\] span')].map((s) => s.textContent)
+    const tickRow = () => [...container.querySelectorAll('[data-slot="ticks"] span')].map((s) => s.textContent)
     // The browser render uses the machine's time zone, so these check the label shapes rather than exact times.
     expect(tickRow()).toHaveLength(5)
     expect(tickRow().at(-1)).toBe('Now')
@@ -114,6 +117,18 @@ describe('ProbabilityChart', () => {
     await user.click(screen.getByRole('button', { name: '1D' }))
     expect(tickRow().at(-1)).toBe('Now')
     expect(tickRow()[0]).toMatch(/^\d{1,2}(:\d{2})?\s[AP]M$/)
+  })
+
+  it('never repeats a tick label when a multi-day span packs ticks less than a day apart', async () => {
+    const user = userEvent.setup()
+    // A 2-day span: at 5 evenly spaced ticks that's 12h apart, so date-only labels would repeat ("Sep 23, Sep 23, ...").
+    const twoDaySpread = [point(NOW - 2 * DAY, 0.4, 0.6), point(NOW - 20 * HOUR, 0.55, 0.45), point(NOW - 2 * HOUR, 0.75, 0.25)]
+    const { container } = render(<ProbabilityChart outcomes={yesNo} points={twoDaySpread} now={NOW} />)
+    await user.click(screen.getByRole('button', { name: 'All' }))
+    const labels = [...container.querySelectorAll('[data-slot="ticks"] span')].map((s) => s.textContent)
+    expect(labels).toHaveLength(5)
+    expect(labels.at(-1)).toBe('Now')
+    expect(new Set(labels).size).toBe(labels.length)
   })
 
   it('hides the range control when only one range applies', () => {
@@ -140,7 +155,8 @@ describe('ProbabilityChart', () => {
     const { container } = render(
       <ProbabilityChart outcomes={yesNo} points={[point(NOW - 12 * DAY, 1, 0), point(NOW - 6 * DAY, 0.4, 0.6)]} now={NOW} closedAt={closedAt} />,
     )
-    expect(screen.getByText('Closed Sep 20')).toBeInTheDocument()
+    // Computed the same way the component does, so this holds regardless of the machine's time zone.
+    expect(screen.getByText(`Closed ${formatDay(closedAt)}`)).toBeInTheDocument()
     expect(container.querySelector('.recharts-reference-area')).toBeInTheDocument()
     // A closed market opens on All, where the close sits 86% of the way across and Yes's line stops there at 40%.
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('d')).toMatch(/L51[56](\.\d+)?,180$/)
@@ -206,8 +222,55 @@ describe('ProbabilityChart', () => {
     expect(html).not.toContain('recharts-line-curve')
   })
 
+  it('hydrates cleanly from its own server-rendered HTML', () => {
+    const props = { outcomes: yesNo, points: spread, now: NOW }
+    const html = renderToString(<ProbabilityChart {...props} />)
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    // React's own `act` (unlike RTL's render) needs this flag set explicitly outside of RTL's wrapper.
+    const globalWithAct = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    const previousActEnvironment = globalWithAct.IS_REACT_ACT_ENVIRONMENT
+    globalWithAct.IS_REACT_ACT_ENVIRONMENT = true
+    try {
+      act(() => {
+        hydrateRoot(container, <ProbabilityChart {...props} />)
+      })
+      expect(consoleError).not.toHaveBeenCalled()
+    } finally {
+      globalWithAct.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment
+      consoleError.mockRestore()
+      document.body.removeChild(container)
+    }
+  })
+
   it('never puts a focusable element inside the summary image', () => {
     render(<ProbabilityChart outcomes={yesNo} points={spread} now={NOW} />)
-    expect(screen.getByRole('img').querySelector('[tabindex="0"]')).toBeNull()
+    const img = screen.getByRole('img')
+    expect(img.querySelector('[tabindex="0"]')).toBeNull()
+    expect(img.querySelector('button, a, input, [tabindex]:not([tabindex="-1"])')).toBeNull()
+  })
+})
+
+describe('spreadLabels', () => {
+  it('spreads three or more overlapping targets apart by at least the gap, keeping their order', () => {
+    const tops = spreadLabels([100, 102, 104, 106], 300, 48)
+    const sorted = [...tops].sort((a, b) => a - b)
+    for (let i = 1; i < sorted.length; i++) {
+      expect(sorted[i] - sorted[i - 1]).toBeGreaterThanOrEqual(48)
+    }
+    // The inputs were already in ascending order, so the spread-out tops keep that order too.
+    for (let i = 1; i < tops.length; i++) {
+      expect(tops[i]).toBeGreaterThan(tops[i - 1])
+    }
+  })
+
+  it('keeps every top within the plot, inset by the label padding', () => {
+    const tops = spreadLabels([0, 1, 2, 300, 299], 300, 48)
+    for (const top of tops) {
+      expect(top).toBeGreaterThanOrEqual(20)
+      expect(top).toBeLessThanOrEqual(280)
+    }
   })
 })

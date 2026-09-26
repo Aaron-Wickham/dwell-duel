@@ -32,8 +32,11 @@ const SERIES_HALO: Record<Series, string> = {
 }
 
 const HOUR_MS = 60 * 60 * 1000
+const DAY_MS = 24 * HOUR_MS
 const MIN_SPAN_MS = HOUR_MS
 const TIME_TICKS_UNDER_MS = 36 * HOUR_MS
+// Below a day of spacing between ticks, a date-only label repeats, so pack date+time instead.
+const DATE_TICKS_UNDER_MS = 4 * DAY_MS
 // The mockup gives a closed market's shaded zone 14% of the plot, however long ago it closed.
 const ZONE_SHARE = 0.14
 const TICK_FRACTIONS = [0, 0.25, 0.5, 0.75, 1]
@@ -75,7 +78,7 @@ function initialRange(ranges: RangeKey[], closed: boolean): RangeKey {
 }
 
 // Pushes end labels apart so they never overlap, keeping each as close to its line as it can.
-function spreadLabels(targets: number[], height: number, gap: number): number[] {
+export function spreadLabels(targets: number[], height: number, gap: number): number[] {
   const min = LABEL_PAD
   const max = height - LABEL_PAD
   const step = targets.length > 1 ? Math.min(gap, (max - min) / (targets.length - 1)) : 0
@@ -177,11 +180,17 @@ export function ProbabilityChart({
   const zoneLabel = resolvedLabel ? `Resolved: ${resolvedLabel}` : closedAt ? `Closed ${formatDay(closedAt, timeZone)}` : ''
 
   const span = lineEnd - start
-  const formatTick = (t: number) => (span <= TIME_TICKS_UNDER_MS ? formatTime(t, timeZone) : formatDay(new Date(t).toISOString(), timeZone))
+  const formatDateAndTime = (t: number) => `${formatDay(new Date(t).toISOString(), timeZone)}, ${formatTime(t, timeZone)}`
+  const formatTick = (t: number) => {
+    if (span <= TIME_TICKS_UNDER_MS) return formatTime(t, timeZone)
+    // Under four days, evenly spaced ticks land less than a day apart, so a date-only label would repeat.
+    if (span <= DATE_TICKS_UNDER_MS) return formatDateAndTime(t)
+    return formatDay(new Date(t).toISOString(), timeZone)
+  }
   const formatHover = (t: number) => {
     if (t === lineEnd && !closed) return 'Now'
     if (span <= TIME_TICKS_UNDER_MS) return `${formatWeekday(t, timeZone)} ${formatTime(t, timeZone)}`
-    return `${formatDay(new Date(t).toISOString(), timeZone)}, ${formatTime(t, timeZone)}`
+    return formatDateAndTime(t)
   }
   const ticks = TICK_FRACTIONS.map((fraction, index) => {
     const t = start + fraction * (lineEnd - start)
@@ -316,7 +325,7 @@ export function ProbabilityChart({
         )}
       </div>
       {!compact && (
-        <div aria-hidden="true" className="relative mr-[76px] h-5 text-xs font-bold text-ink2 md:mr-[128px]">
+        <div data-slot="ticks" aria-hidden="true" className="relative mr-[76px] h-5 text-xs font-bold text-ink2 md:mr-[128px]">
           {ticks.map((tick) => (
             <span
               key={tick.key}

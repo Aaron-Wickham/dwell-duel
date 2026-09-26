@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { BookOpen, Flag, Layers, MessageSquareText, Plus, Target, Trophy, type LucideIcon } from 'lucide-react'
 import { describeEvent, type FeedEvent, type FeedKind } from '@/lib/social/describe-event'
 import { ageLabel } from '@/lib/social/relative-time'
@@ -21,11 +22,15 @@ export function FeedList({
   heading,
   headingId,
   headingHidden,
+  aboveList,
+  belowList,
 }: {
   events: FeedEvent[]
   heading: string
   headingId: string
   headingHidden?: boolean
+  aboveList?: ReactNode
+  belowList?: ReactNode
 }) {
   const body =
     events.length === 0 ? (
@@ -38,7 +43,15 @@ export function FeedList({
       </ul>
     )
 
-  if (headingHidden && events.length === 0) return body
+  if (headingHidden && events.length === 0) {
+    return (
+      <>
+        {aboveList}
+        {body}
+        {belowList}
+      </>
+    )
+  }
 
   return (
     <SectionCard
@@ -46,7 +59,9 @@ export function FeedList({
       titleId={headingId}
       className={cn('max-w-[820px]', headingHidden ? 'gap-0 py-1 px-0 md:py-1 md:px-0' : 'pb-1 md:pt-[18px] md:pb-1')}
     >
+      {aboveList}
       {body}
+      {belowList}
     </SectionCard>
   )
 }

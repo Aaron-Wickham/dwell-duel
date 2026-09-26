@@ -1,25 +1,29 @@
 import { Suspense } from 'react'
 import { redirect, notFound } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
-import { getLeaderboard } from '@/lib/social/leaderboard'
+import { getMemberStanding } from '@/lib/social/leaderboard'
 import { listFeed } from '@/lib/social/list-feed'
+import { readPageParams, showMoreHref, newestHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
+import { isUuid } from '@/lib/uuid'
 import { Page, h1Class } from '@/components/ui/page'
 import { BackLink } from '@/components/ui/back-link'
 import { Avatar } from '@/components/ui/avatar'
 import { SkeletonScreen } from '@/components/ui/skeleton'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { FeedListSkeleton } from '@/components/feed/feed-list-skeleton'
+import { ShowMore, BackToNewest } from '@/components/ui/show-more'
 import { FeedList } from '@/app/(app)/feed/feed-list'
 
 // No loading.tsx for this route: the member must be found before anything streams, so an
 // unknown id still gets a real 404 status. Only the activity list streams in behind a skeleton.
 export default async function MemberPage(props: PageProps<'/members/[id]'>) {
   const { id } = await props.params
+  const searchParams = await props.searchParams
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
+  if (!isUuid(id)) notFound()
 
-  const board = await getLeaderboard(supabase)
-  const member = board.find((m) => m.id === id)
+  const member = await getMemberStanding(supabase, id)
   if (!member) notFound()
 
   return (
@@ -30,7 +34,7 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
         <div className="flex flex-col gap-1">
           <h1 className={h1Class}>{member.displayName}</h1>
           <p className="text-[18px] font-extrabold tabular-nums">
-            {member.balance} DC · Rank {member.rank} of {board.length}
+            {member.balance} DC · Rank {member.rank} of {member.memberCount}
           </p>
         </div>
       </section>
@@ -41,19 +45,41 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
           </SkeletonScreen>
         }
       >
-        <MemberActivity memberId={member.id} />
+        <MemberActivity memberId={member.id} page={readPageParams(searchParams, 'activity')} searchParams={searchParams} />
       </Suspense>
     </Page>
   )
 }
 
-async function MemberActivity({ memberId }: { memberId: string }) {
+async function MemberActivity({
+  memberId,
+  page,
+  searchParams,
+}: {
+  memberId: string
+  page: PageParams
+  searchParams: SearchParams
+}) {
   const { supabase } = await requireUser()
-  const events = await listFeed(supabase, { actorId: memberId })
+  const activity = await listFeed(supabase, { actorId: memberId, page })
+  const pathname = `/members/${memberId}`
 
   return (
     <ContentReveal>
-      <FeedList events={events} heading="Recent activity" headingId="recent-activity" />
+      <FeedList
+        events={activity.rows}
+        heading="Recent activity"
+        headingId="recent-activity"
+        aboveList={activity.windowed && <BackToNewest href={newestHref(pathname, searchParams, 'activity')} />}
+        belowList={
+          activity.next && (
+            <ShowMore
+              href={showMoreHref(pathname, searchParams, 'activity', activity.next)}
+              fresh={activity.next.kind === 'window'}
+            />
+          )
+        }
+      />
     </ContentReveal>
   )
 }

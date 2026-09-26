@@ -3,9 +3,9 @@ import { serviceRoleClient } from '@/lib/supabase/service-role'
 
 /**
  * Supabase pauses free-tier projects after 7 days with no database
- * activity. Triggered weekly by vercel.json's cron entry -- comfortably
- * inside that window -- to keep the hosted project alive between bursts
- * of real usage.
+ * activity. Triggered Monday and Thursday by vercel.json's cron entry, so
+ * one missed run still lands well inside that window, keeping the hosted
+ * project alive between bursts of real usage.
  *
  * Verified the same way every guide for securing a Vercel cron route
  * documents: Vercel attaches `Authorization: Bearer ${CRON_SECRET}` to a
@@ -27,6 +27,7 @@ export async function GET(request: Request) {
   const { error } = await serviceRoleClient().from('profiles').select('id').limit(1)
 
   if (error) {
+    console.error(error)
     return new NextResponse('Supabase query failed', { status: 502 })
   }
 

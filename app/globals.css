@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source not "../docs";
 
 /* Dark applies for an explicit choice, or for the system preference when no choice is saved. */
 @custom-variant dark {

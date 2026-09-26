@@ -32,14 +32,21 @@ function navigate(rerender: (ui: React.ReactElement) => void, to: string) {
   rerender(<Harness />)
 }
 
-function goBack(rerender: (ui: React.ReactElement) => void, to: string) {
+// Simulates a browser traversal: the real browser restores the landed-on entry's own state
+// before firing popstate, and the tracker reads window.history.state directly, so the test sets
+// it to whatever that entry last stored. Omitting `state` simulates an entry with nothing stored.
+function goBack(rerender: (ui: React.ReactElement) => void, to: string, state: { ddDepth: number } | null = null) {
   pathname = to
-  window.history.replaceState(null, '', to)
+  window.history.replaceState(state, '', to)
   act(() => {
     window.dispatchEvent(new PopStateEvent('popstate'))
   })
   rerender(<Harness />)
 }
+
+// A forward traversal fires the same bare popstate a back traversal does -- there's no way to
+// tell them apart -- so the same simulation covers both.
+const goForward = goBack
 
 const depth = () => screen.getByRole('status').textContent
 
@@ -62,10 +69,37 @@ describe('nav depth', () => {
     const { rerender } = render(<Harness />)
     navigate(rerender, '/markets')
     navigate(rerender, '/markets/3f2a')
-    goBack(rerender, '/markets')
+    goBack(rerender, '/markets', { ddDepth: 1 })
     expect(depth()).toBe('1')
-    goBack(rerender, '/')
+    goBack(rerender, '/', { ddDepth: 0 })
     expect(depth()).toBe('0')
+  })
+
+  it('trusts the landed-on entry\'s own stored depth on a multi-entry back traversal', () => {
+    const { rerender } = render(<Harness />)
+    navigate(rerender, '/markets')
+    navigate(rerender, '/markets/3f2a')
+    // The long-press back menu or history.go(-n) can skip straight past an intermediate entry;
+    // only one popstate fires, so subtracting 1 from a depth of 2 would wrongly give 1.
+    goBack(rerender, '/', { ddDepth: 0 })
+    expect(depth()).toBe('0')
+  })
+
+  it('resumes from a depth already stored on the history entry at mount', () => {
+    window.history.replaceState({ ddDepth: 3 }, '', '/markets/3f2a')
+    pathname = '/markets/3f2a'
+    render(<Harness />)
+    expect(depth()).toBe('3')
+  })
+
+  it('reads the stored value on a forward traversal too', () => {
+    const { rerender } = render(<Harness />)
+    navigate(rerender, '/markets')
+    navigate(rerender, '/markets/3f2a')
+    goBack(rerender, '/markets', { ddDepth: 1 })
+    expect(depth()).toBe('1')
+    goForward(rerender, '/markets/3f2a', { ddDepth: 2 })
+    expect(depth()).toBe('2')
   })
 
   it('never goes below 0', () => {

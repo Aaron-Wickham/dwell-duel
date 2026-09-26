@@ -2,6 +2,8 @@
 
 import { useSearchParams } from 'next/navigation'
 import { browserClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import { Message } from '@/components/ui/message'
 
 export function SignInButton() {
   const searchParams = useSearchParams()
@@ -16,11 +18,14 @@ export function SignInButton() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      {hasError && <p className="text-sm text-red-600">Something went wrong signing you in. Try again.</p>}
-      <button onClick={signIn} className="rounded-md bg-foreground px-4 py-2 text-background">
+    <div className="flex w-full flex-col gap-5">
+      {hasError && <Message tone="error">Something went wrong signing you in. Try again.</Message>}
+      <Button type="button" onClick={signIn} block>
+        <span aria-hidden="true" className="flex size-[26px] items-center justify-center rounded-full bg-white text-[15px] font-extrabold text-[#03272D]">
+          G
+        </span>
         Sign in with Google
-      </button>
+      </Button>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { serviceClient } from '../tests/db/helpers'
 
 test.describe('desktop', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
@@ -49,4 +50,23 @@ test('the theme toggle switches the theme and remembers it after a reload', asyn
   await page.reload()
   await expect(html).toHaveAttribute('data-theme', 'dark')
   await expect(page.getByRole('banner').getByRole('button', { name: 'Switch to light theme' })).toBeVisible()
+})
+
+test.describe('phone top bar', () => {
+  test.use({ viewport: { width: 375, height: 812 } })
+
+  test('fits at 375px with a five-digit balance', async ({ page }) => {
+    const db = serviceClient()
+    const { data: admin, error } = await db.from('profiles').select('id, balance').eq('is_admin', true).single()
+    expect(error).toBeNull()
+    try {
+      await db.from('profiles').update({ balance: 99999 }).eq('id', admin!.id)
+      await page.goto('/')
+      await expect(page.getByRole('banner').getByText('Balance 99999 DC')).toBeAttached()
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(overflow).toBe(0)
+    } finally {
+      await db.from('profiles').update({ balance: admin!.balance }).eq('id', admin!.id)
+    }
+  })
 })

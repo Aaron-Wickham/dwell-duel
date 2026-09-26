@@ -1,26 +1,52 @@
-import Link from 'next/link'
-import { describeEvent, type FeedEvent } from '@/lib/social/describe-event'
+import { BookOpen, Flag, Layers, MessageSquareText, Plus, Target, Trophy, type LucideIcon } from 'lucide-react'
+import { describeEvent, type FeedEvent, type FeedKind } from '@/lib/social/describe-event'
 import { ageLabel } from '@/lib/social/relative-time'
+import { SectionCard } from '@/components/ui/section-card'
+import { EmptyState } from '@/components/ui/empty-state'
+import { FeedItem } from '@/components/feed/feed-item'
+import { cn } from '@/lib/utils'
 
-export function FeedList({ events }: { events: FeedEvent[] }) {
-  if (events.length === 0) return <p className="mt-2 text-sm text-foreground/70">Nothing yet.</p>
+const EVENT_ICONS: Record<FeedKind, LucideIcon> = {
+  bet_placed: Target,
+  parlay_placed: Layers,
+  market_created: Plus,
+  market_resolved: Flag,
+  bet_won: Trophy,
+  parlay_won: Trophy,
+  task_completed: BookOpen,
+}
+
+export function FeedList({
+  events,
+  heading,
+  headingId,
+  headingHidden,
+}: {
+  events: FeedEvent[]
+  heading: string
+  headingId: string
+  headingHidden?: boolean
+}) {
+  const body =
+    events.length === 0 ? (
+      <EmptyState icon={MessageSquareText} title="Nothing yet." />
+    ) : (
+      <ul className={cn('flex flex-col divide-y divide-line', headingHidden && 'px-[18px] md:px-6')}>
+        {events.map((e) => (
+          <FeedItem key={e.id} icon={EVENT_ICONS[e.kind]} segments={describeEvent(e)} age={ageLabel(e.occurredAt)} />
+        ))}
+      </ul>
+    )
+
+  if (headingHidden && events.length === 0) return body
 
   return (
-    <ul className="mt-4 space-y-2 text-sm">
-      {events.map((e) => (
-        <li key={e.id}>
-          {describeEvent(e).map((segment, i) =>
-            typeof segment === 'string' ? (
-              <span key={i}>{segment}</span>
-            ) : (
-              <Link key={i} href={segment.href} className="underline">
-                {segment.text}
-              </Link>
-            ),
-          )}{' '}
-          <span className="text-foreground/60">· {ageLabel(e.occurredAt)}</span>
-        </li>
-      ))}
-    </ul>
+    <SectionCard
+      title={headingHidden ? <span className="sr-only">{heading}</span> : heading}
+      titleId={headingId}
+      className={cn('max-w-[820px]', headingHidden ? 'gap-0 py-1 px-0 md:py-1 md:px-0' : 'pb-1 md:pt-[18px] md:pb-1')}
+    >
+      {body}
+    </SectionCard>
   )
 }

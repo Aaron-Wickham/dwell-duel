@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
+import { insufficientBalanceMessage, isBalanceCheckViolation } from '@/lib/errors/balance-error'
 
 export type ActionState = { formError?: string } | undefined
 
@@ -22,7 +23,13 @@ export async function placeBetAction(marketId: string, _prevState: ActionState, 
     p_amount: amount,
   })
 
-  if (error) return { formError: error.message }
+  if (error) {
+    if (isBalanceCheckViolation(error)) {
+      const { data: profile } = await supabase.from('profiles').select('balance').eq('id', user.id).maybeSingle()
+      if (profile) return { formError: insufficientBalanceMessage(profile.balance) }
+    }
+    return { formError: error.message }
+  }
 
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')

@@ -11,3 +11,10 @@ export function relativeTime(occurredAt: string, now: number): string {
 export function ageLabel(occurredAt: string): string {
   return relativeTime(occurredAt, Date.now())
 }
+
+const OLD_ROW_MS = 7 * 24 * 60 * 60 * 1000
+
+/** Past this age, a relative label ("12d ago") stops being useful -- show a calendar date instead. */
+export function isOldEntry(occurredAt: string): boolean {
+  return Date.now() - Date.parse(occurredAt) > OLD_ROW_MS
+}

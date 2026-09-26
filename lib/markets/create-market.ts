@@ -3,7 +3,9 @@
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 
-export type ActionState = { formError?: string } | undefined
+export type ActionState = { formError?: string; field?: 'title' | 'close_at' | 'outcomes' } | undefined
+
+const MIN_OUTCOMES = 2
 
 export async function createMarketAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
   const { supabase, user } = await requireUser()
@@ -14,9 +16,13 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
   const kind = String(formData.get('kind') ?? '')
   const closeAt = String(formData.get('close_at') ?? '')
 
-  if (!title) return { formError: 'Enter a title.' }
+  if (!title) return { formError: 'Enter a title.', field: 'title' }
   if (kind !== 'binary' && kind !== 'multiple_choice') return { formError: 'Choose a market kind.' }
-  if (!closeAt) return { formError: 'Choose a close time.' }
+
+  const closeAtDate = closeAt ? new Date(closeAt) : null
+  if (!closeAtDate || Number.isNaN(closeAtDate.getTime()) || closeAtDate.getTime() <= Date.now()) {
+    return { formError: 'Choose a close time in the future.', field: 'close_at' }
+  }
 
   const outcomeLabels =
     kind === 'binary'
@@ -25,6 +31,8 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
           .split('\n')
           .map((s) => s.trim())
           .filter(Boolean)
+
+  if (outcomeLabels.length < MIN_OUTCOMES) return { formError: 'Enter at least 2 outcomes.', field: 'outcomes' }
 
   const { data: marketId, error } = await supabase.rpc('create_market', {
     p_title: title,

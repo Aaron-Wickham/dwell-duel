@@ -26,8 +26,8 @@ function SlipCount({ count }: { count: number }) {
 
 function BalanceChip({ balance }: { balance: number }) {
   return (
-    <span className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-gold-soft pr-3 pl-2 text-[15px] font-extrabold tabular-nums text-gold">
-      <CircleDot aria-hidden="true" className="size-[18px]" />
+    <span className="inline-flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-gold-soft pr-2.5 pl-1.5 text-[15px] font-extrabold tabular-nums text-gold md:gap-1.5 md:pr-3 md:pl-2">
+      <CircleDot aria-hidden="true" className="size-4 md:size-[18px]" />
       <span className="sr-only">Balance {balance} DC</span>
       <span aria-hidden="true">{balance} DC</span>
     </span>
@@ -72,7 +72,10 @@ function DesktopLink({
           <SlipCount count={count} />
           <span
             aria-hidden="true"
-            className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-lime px-1.5 text-xs font-extrabold text-on-lime"
+            className={cn(
+              'inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-lime px-1.5 text-xs font-extrabold text-on-lime',
+              active && 'dark:bg-on-primary dark:text-primary',
+            )}
           >
             {count}
           </span>
@@ -128,7 +131,7 @@ export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipC
         <ThemeToggle />
       </header>
 
-      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-1.5 border-b border-line bg-surface pr-2 pl-3 md:hidden">
+      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-1 border-b border-line bg-surface pr-2 pl-3 md:hidden">
         <Wordmark size="sm" />
         <span className="grow" />
         <BalanceChip balance={balance} />
@@ -150,7 +153,7 @@ export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipC
 
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-[max(12px,env(safe-area-inset-bottom))] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-3 md:hidden"
       >
         {NAV_ITEMS.map((item) => {
           const Icon = ICONS[item.id]

@@ -23,8 +23,9 @@ test('build a two-leg parlay from market pages, place it, and win it', async ({ 
     await expect(page.getByText('15 DC on No')).toBeVisible()
 
     await page
+      .getByRole('region', { name: 'Outcomes' })
       .getByRole('listitem')
-      .filter({ hasText: /^Yes —/ })
+      .filter({ hasText: 'Yes' })
       .getByRole('button', { name: 'Add to parlay' })
       .click()
     await expect(page.getByText('In your slip')).toBeVisible()

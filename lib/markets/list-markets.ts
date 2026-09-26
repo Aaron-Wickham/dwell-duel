@@ -7,6 +7,7 @@ export interface MarketSummary {
   status: 'open' | 'resolved' | 'voided'
   closeAt: string
   resolvedOutcomeLabel: string | null
+  resolvedAt: string | null
   outcomes: { id: string; label: string; poolTotal: number }[]
 }
 
@@ -15,6 +16,10 @@ export async function listMarkets(supabase: SupabaseClient): Promise<MarketSumma
     .from('markets')
     .select('id, title, kind, status, close_at, current_resolution_id, market_outcomes(id, label, pool_total)')
     .order('created_at', { ascending: false })
+    // Same tiebreak as getMarket: insertion time, then label, so outcome order (and
+    // therefore colour assignment) is stable across requests.
+    .order('created_at', { referencedTable: 'market_outcomes' })
+    .order('label', { referencedTable: 'market_outcomes' })
 
   if (error) throw error
 
@@ -22,14 +27,14 @@ export async function listMarkets(supabase: SupabaseClient): Promise<MarketSumma
     .map((m) => m.current_resolution_id)
     .filter((id): id is string => id !== null)
 
-  const resolutionOutcomeById = new Map<string, string>()
+  const resolutionById = new Map<string, { outcomeId: string; resolvedAt: string }>()
   if (resolutionIds.length > 0) {
     const { data: resolutions, error: resolutionsErr } = await supabase
       .from('market_resolutions')
-      .select('id, outcome_id')
+      .select('id, outcome_id, resolved_at')
       .in('id', resolutionIds)
     if (resolutionsErr) throw resolutionsErr
-    for (const r of resolutions ?? []) resolutionOutcomeById.set(r.id, r.outcome_id)
+    for (const r of resolutions ?? []) resolutionById.set(r.id, { outcomeId: r.outcome_id, resolvedAt: r.resolved_at })
   }
 
   return (data ?? []).map((m) => {
@@ -38,8 +43,8 @@ export async function listMarkets(supabase: SupabaseClient): Promise<MarketSumma
       label: o.label,
       poolTotal: o.pool_total,
     }))
-    const winningOutcomeId = m.current_resolution_id ? resolutionOutcomeById.get(m.current_resolution_id) : undefined
-    const resolvedOutcomeLabel = winningOutcomeId ? (outcomes.find((o) => o.id === winningOutcomeId)?.label ?? null) : null
+    const resolution = m.current_resolution_id ? resolutionById.get(m.current_resolution_id) : undefined
+    const resolvedOutcomeLabel = resolution ? (outcomes.find((o) => o.id === resolution.outcomeId)?.label ?? null) : null
 
     return {
       id: m.id,
@@ -48,6 +53,7 @@ export async function listMarkets(supabase: SupabaseClient): Promise<MarketSumma
       status: m.status,
       closeAt: m.close_at,
       resolvedOutcomeLabel,
+      resolvedAt: resolution?.resolvedAt ?? null,
       outcomes,
     }
   })

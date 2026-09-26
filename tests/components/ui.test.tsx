@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { Trophy } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Field, Input, Select, Textarea } from '@/components/ui/field'
 import { Card } from '@/components/ui/card'
@@ -37,6 +38,14 @@ describe('Button', () => {
   it('keeps every size at least 44px tall', () => {
     expect(buttonVariants({ size: 'md' })).toContain('min-h-12')
     expect(buttonVariants({ size: 'sm' })).toContain('min-h-11')
+  })
+
+  it('looks disabled under aria-disabled too, not just the disabled attribute', () => {
+    const classes = buttonVariants().split(' ')
+    for (const cls of ['bg-sunk', 'text-ink2', 'cursor-not-allowed', 'border-transparent']) {
+      expect(classes).toContain(`disabled:${cls}`)
+      expect(classes).toContain(`aria-disabled:${cls}`)
+    }
   })
 })
 
@@ -109,13 +118,27 @@ describe('Message', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Insufficient balance')
   })
 
-  it('announces ok and gold messages politely', () => {
-    render(
-      <>
-        <Message tone="ok">2 approved.</Message>
-        <Message tone="gold">Awaiting resolution</Message>
-      </>,
+  it('announces ok messages politely', () => {
+    render(<Message tone="ok">2 approved.</Message>)
+    expect(screen.getByRole('status')).toHaveTextContent('2 approved.')
+  })
+
+  it('keeps gold messages out of live regions, since they are static notes', () => {
+    render(<Message tone="gold">Awaiting resolution</Message>)
+    expect(screen.getByText('Awaiting resolution')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('lets an icon override the tone default', () => {
+    const { container, rerender } = render(<Message tone="ok">Winning outcome: Yes</Message>)
+    expect(container.querySelector('svg')).toHaveClass('lucide-circle-check')
+
+    rerender(
+      <Message tone="ok" icon={Trophy}>
+        Winning outcome: Yes
+      </Message>,
     )
-    expect(screen.getAllByRole('status').map((el) => el.textContent)).toEqual(['2 approved.', 'Awaiting resolution'])
+    expect(container.querySelector('svg')).toHaveClass('lucide-trophy')
   })
 })

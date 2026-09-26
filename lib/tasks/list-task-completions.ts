@@ -5,12 +5,13 @@ export interface MyCompletion {
   status: 'pending' | 'approved' | 'rejected'
   periodKey: string
   rewardAmount: number
+  reviewNote: string | null
 }
 
 export async function listMyTaskCompletions(supabase: SupabaseClient, profileId: string): Promise<MyCompletion[]> {
   const { data, error } = await supabase
     .from('task_completions')
-    .select('task_id, status, period_key, reward_amount')
+    .select('task_id, status, period_key, reward_amount, review_note')
     .eq('profile_id', profileId)
     .order('submitted_at', { ascending: false })
 
@@ -21,20 +22,23 @@ export async function listMyTaskCompletions(supabase: SupabaseClient, profileId:
     status: c.status,
     periodKey: c.period_key,
     rewardAmount: c.reward_amount,
+    reviewNote: c.review_note,
   }))
 }
 
 export interface PendingCompletion {
   id: string
   taskTitle: string
+  submitterId: string
   submitterName: string
+  rewardAmount: number
   submittedAt: string
 }
 
 export async function listPendingTaskCompletions(supabase: SupabaseClient): Promise<PendingCompletion[]> {
   const { data, error } = await supabase
     .from('task_completions')
-    .select('id, submitted_at, tasks(title), profiles!task_completions_profile_id_fkey(display_name)')
+    .select('id, profile_id, reward_amount, submitted_at, tasks(title), profiles!task_completions_profile_id_fkey(display_name)')
     .eq('status', 'pending')
     .order('submitted_at', { ascending: true })
 
@@ -46,7 +50,9 @@ export async function listPendingTaskCompletions(supabase: SupabaseClient): Prom
     return {
       id: c.id,
       taskTitle: task?.title ?? 'Unknown task',
+      submitterId: c.profile_id,
       submitterName: profile?.display_name ?? 'Unknown member',
+      rewardAmount: c.reward_amount,
       submittedAt: c.submitted_at,
     }
   })

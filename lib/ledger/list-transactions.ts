@@ -2,10 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export interface LedgerEntry {
   id: number
+  profileId: string
   memberName: string
   amount: number
   type: string
-  reason: string | null
+  context: string
   createdAt: string
 }
 
@@ -24,24 +25,108 @@ const TYPE_LABELS: Record<string, string> = {
   parlay_reversed: 'Parlay reversed',
 }
 
+export interface EntryMeta {
+  market_id?: string
+  outcome_id?: string
+  task_id?: string
+  reason?: string
+}
+
+// Three small `in (...)` lookups -- kept as literal `.select()` calls (not one
+// helper taking a column name) because supabase-js parses the select string's
+// type at compile time, so a templated column name can't be typed the same way.
+async function fetchMarketTitles(supabase: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map()
+  const { data, error } = await supabase.from('markets').select('id, title').in('id', ids)
+  if (error) throw error
+  return new Map((data ?? []).map((m) => [m.id as string, m.title as string]))
+}
+
+async function fetchOutcomeLabels(supabase: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map()
+  const { data, error } = await supabase.from('market_outcomes').select('id, label').in('id', ids)
+  if (error) throw error
+  return new Map((data ?? []).map((o) => [o.id as string, o.label as string]))
+}
+
+async function fetchTaskTitles(supabase: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map()
+  const { data, error } = await supabase.from('tasks').select('id, title').in('id', ids)
+  if (error) throw error
+  return new Map((data ?? []).map((t) => [t.id as string, t.title as string]))
+}
+
+export interface Lookups {
+  markets: Map<string, string>
+  outcomes: Map<string, string>
+  tasks: Map<string, string>
+}
+
+// Every other type's context is its label, plus ": {market title}" when the row has a
+// market_id (e.g. a voided-market refund) -- the specific movements below read differently
+// enough (different wording, or no market involved at all) that they need their own copy.
+// Exported (and kept pure -- no supabase client) so its fallback branches get direct unit
+// coverage instead of only being reachable through a DB-backed listAllTransactions test.
+export function buildContext(type: string, meta: EntryMeta, lookups: Lookups): string {
+  const label = TYPE_LABELS[type] ?? type
+  const marketTitle = meta.market_id ? lookups.markets.get(meta.market_id) : undefined
+
+  switch (type) {
+    case 'task_completed': {
+      const taskTitle = meta.task_id ? lookups.tasks.get(meta.task_id) : undefined
+      return taskTitle ? `Task approved: ${taskTitle}` : label
+    }
+    case 'parlay_won':
+      return 'Parlay won'
+    case 'parlay_placed':
+      return 'Parlay placed'
+    case 'bet_won':
+      return marketTitle ? `Bet won: ${marketTitle}` : label
+    case 'admin_adjustment':
+      return meta.reason ? `Admin adjustment — “${meta.reason}”` : label
+    case 'bet_placed': {
+      const outcomeLabel = meta.outcome_id ? lookups.outcomes.get(meta.outcome_id) : undefined
+      return marketTitle && outcomeLabel ? `Bet on ${outcomeLabel} in ${marketTitle}` : label
+    }
+    case 'starting_grant':
+      return 'Starting grant'
+    default:
+      return marketTitle ? `${label}: ${marketTitle}` : label
+  }
+}
+
 export async function listAllTransactions(supabase: SupabaseClient): Promise<LedgerEntry[]> {
   const { data, error } = await supabase
     .from('coin_transactions')
-    .select('id, amount, type, meta, created_at, profiles(display_name)')
+    .select('id, profile_id, amount, type, meta, created_at, profiles(display_name)')
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
 
   if (error) throw error
 
-  return (data ?? []).map((t) => {
+  const rows = data ?? []
+  const metas = rows.map((t) => (t.meta ?? {}) as EntryMeta)
+
+  const marketIds = [...new Set(metas.map((m) => m.market_id).filter((v): v is string => Boolean(v)))]
+  const outcomeIds = [...new Set(metas.map((m) => m.outcome_id).filter((v): v is string => Boolean(v)))]
+  const taskIds = [...new Set(metas.map((m) => m.task_id).filter((v): v is string => Boolean(v)))]
+
+  const [markets, outcomes, tasks] = await Promise.all([
+    fetchMarketTitles(supabase, marketIds),
+    fetchOutcomeLabels(supabase, outcomeIds),
+    fetchTaskTitles(supabase, taskIds),
+  ])
+  const lookups: Lookups = { markets, outcomes, tasks }
+
+  return rows.map((t, index) => {
     const profile = t.profiles as unknown as { display_name: string } | null
-    const meta = t.meta as { reason?: string }
     return {
       id: t.id,
+      profileId: t.profile_id,
       memberName: profile?.display_name ?? 'Unknown member',
       amount: t.amount,
       type: TYPE_LABELS[t.type] ?? t.type,
-      reason: t.type === 'admin_adjustment' ? (meta.reason ?? null) : null,
+      context: buildContext(t.type, metas[index], lookups),
       createdAt: t.created_at,
     }
   })

@@ -1,14 +1,26 @@
+import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
+import { Layers, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { getMarket, getMarketBets } from '@/lib/markets/get-market'
 import { computeOdds } from '@/lib/markets/odds'
+import { outcomeSeries } from '@/lib/markets/outcome-series'
+import { rowState } from '@/lib/markets/row-state'
 import { readSlip } from '@/lib/parlays/slip'
-import { MAX_PICKS } from '@/lib/parlays/odds'
+import { MAX_PICKS, legOddsBp } from '@/lib/parlays/odds'
+import { addToSlipAction, removeFromSlipAction } from '@/lib/parlays/slip-actions'
+import { BackLink } from '@/components/ui/back-link'
+import { LocalTime } from '@/components/ui/local-time'
+import { Message } from '@/components/ui/message'
+import { Page, h1Class } from '@/components/ui/page'
+import { SectionCard } from '@/components/ui/section-card'
+import { StatusChip } from '@/components/ui/status-chip'
+import { BetList } from '@/components/markets/bet-list'
+import { OutcomeRow } from '@/components/markets/outcome-row'
 import { BetForm } from './bet-form'
 import { ResolveForm } from './resolve-form'
 import { VoidButton } from './void-button'
-import { SlipControl } from './slip-control'
 
 export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>) {
   const { id } = await props.params
@@ -21,6 +33,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const bets = await getMarketBets(supabase, id)
   const admin = await isAdmin(supabase)
   const odds = computeOdds(market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })))
+  const totalPool = odds.reduce((sum, o) => sum + o.poolTotal, 0)
 
   const isCreator = market.createdBy === user.id
   // Server Components render once per request with no re-render/
@@ -34,62 +47,143 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const canResolve = market.status === 'open' && ((isCreator && isPastClose) || admin)
   const canOverride = market.status === 'resolved' && admin
   const canVoid = market.status === 'open' && (isCreator || admin)
+  const showResolve = canResolve || canOverride
 
   const slip = await readSlip()
   const marketInSlip = market.outcomes.some((o) => slip.includes(o.id))
   const slipFull = slip.length >= MAX_PICKS && !marketInSlip
 
+  const statusTone =
+    market.status === 'resolved' ? 'done' : market.status === 'voided' ? 'void' : isPastClose ? 'wait' : 'open'
+
+  const when =
+    market.status === 'resolved' && market.resolvedAt ? (
+      <>
+        Resolved <LocalTime iso={market.resolvedAt} format="day" /> ·{' '}
+      </>
+    ) : market.status === 'open' ? (
+      <>
+        {isPastClose ? 'Closed' : 'Closes'} <LocalTime iso={market.closeAt} format="dateTime" /> ·{' '}
+      </>
+    ) : null
+
+  const closedCopy =
+    market.status === 'resolved' ? (
+      <>
+        This market resolved
+        {market.resolvedAt && (
+          <>
+            {' '}
+            on <LocalTime iso={market.resolvedAt} format="day" />
+          </>
+        )}{' '}
+        and payouts have been sent.
+      </>
+    ) : market.status === 'voided' ? (
+      'This market was voided, and every bet and parlay leg was refunded.'
+    ) : (
+      <>
+        This market closed <LocalTime iso={market.closeAt} format="dateTime" /> and is awaiting resolution.
+      </>
+    )
+
+  const manageHint = canOverride
+    ? 'You’re an admin. A new outcome reverses the payouts and pays the new winners.'
+    : !isCreator
+      ? 'You’re an admin. Only admins and this market’s creator see this.'
+      : canResolve
+        ? 'You created this market. Only you and admins see this.'
+        : 'You created this market. You can resolve it once it closes.'
+
   return (
-    <div className="mx-auto max-w-2xl p-8">
-      <h1 className="text-xl font-semibold">{market.title}</h1>
-      {market.description && <p className="mt-1 text-sm text-foreground/70">{market.description}</p>}
-      <p className="mt-1 text-sm">Status: {market.status}</p>
-      {market.status === 'resolved' && market.resolvedOutcomeLabel && (
-        <p className="mt-1 text-sm font-medium">Winning outcome: {market.resolvedOutcomeLabel}</p>
-      )}
+    <Page>
+      <BackLink href="/markets">Markets</BackLink>
 
-      <ul className="mt-4 space-y-1">
-        {odds.map((o) => (
-          <li key={o.outcomeId}>
-            {o.label} — {o.impliedProbability === null ? 'no bets yet' : `${Math.round(o.impliedProbability * 100)}%`} (
-            {o.poolTotal} DC)
-            <SlipControl
-              outcomeId={o.outcomeId}
-              inSlip={slip.includes(o.outcomeId)}
-              canAdd={canBet && o.poolTotal > 0 && !slipFull}
-            />
-          </li>
-        ))}
-      </ul>
-      {canBet && slipFull && <p className="mt-2 text-sm">Your slip is full (6 picks).</p>}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusChip tone={statusTone}>
+            Status: {market.status === 'open' && isPastClose ? 'awaiting resolution' : market.status}
+          </StatusChip>
+          <span className="text-sm text-ink2">
+            {when}Created by {isCreator ? 'you' : market.creatorName}
+          </span>
+        </div>
+        <h1 className={h1Class}>{market.title}</h1>
+        {market.description && <p className="max-w-[68ch] text-ink2">{market.description}</p>}
+        {market.status === 'resolved' && market.resolvedOutcomeLabel && (
+          <Message tone="ok" icon={Trophy} className="self-start">
+            Winning outcome: {market.resolvedOutcomeLabel}
+          </Message>
+        )}
+      </div>
 
-      {canBet && <BetForm marketId={market.id} outcomes={market.outcomes} />}
-
-      {bets.length > 0 && (
-        <div className="mt-4">
-          <h2 className="text-sm font-semibold">Bets</h2>
-          <ul className="text-sm">
-            {bets.map((b) => {
-              const outcome = market.outcomes.find((o) => o.id === b.outcomeId)
-              return (
-                <li key={b.id}>
-                  {b.bettorName} — {b.amount} DC on {outcome?.label ?? 'unknown outcome'}
-                  {b.profileId === user.id && ' (you)'}
-                </li>
-              )
-            })}
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-7">
+        <SectionCard
+          title="Outcomes"
+          titleId="outcomes-title"
+          action={<span className="text-sm text-ink2 tabular-nums">{totalPool} DC in the pool</span>}
+          className="gap-1 lg:col-start-1 lg:row-start-1"
+        >
+          {canBet && slipFull && (
+            <Message tone="gold" icon={Layers} id="slip-full-note" className="mt-2">
+              Your slip is full ({MAX_PICKS} picks).{' '}
+              <Link href="/parlays" className="text-inherit">
+                Review slip
+              </Link>
+            </Message>
+          )}
+          <ul className="flex flex-col divide-y divide-line">
+            {odds.map((o, index) => (
+              <li key={o.outcomeId}>
+                <OutcomeRow
+                  label={o.label}
+                  poolTotal={o.poolTotal}
+                  probability={o.impliedProbability}
+                  oddsBp={legOddsBp(totalPool, o.poolTotal)}
+                  series={outcomeSeries(market.kind, o.label, index)}
+                  state={rowState(o.outcomeId, o.poolTotal, { slip, canBet, slipFull })}
+                  winner={market.status === 'resolved' && o.label === market.resolvedOutcomeLabel}
+                  addAction={addToSlipAction.bind(null, o.outcomeId)}
+                  removeAction={removeFromSlipAction.bind(null, o.outcomeId)}
+                  disabledReasonId={slipFull ? 'slip-full-note' : undefined}
+                />
+              </li>
+            ))}
           </ul>
-        </div>
-      )}
+        </SectionCard>
 
-      {(canResolve || canOverride) && (
-        <div className="mt-4">
-          <h2 className="text-sm font-semibold">{canOverride ? 'Override resolution' : 'Resolve market'}</h2>
-          <ResolveForm marketId={market.id} outcomes={market.outcomes} />
-        </div>
-      )}
+        <div className="flex flex-col gap-5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:gap-7">
+          {canBet ? (
+            <SectionCard title="Place a bet" titleId="bet-title" className="gap-4">
+              <BetForm marketId={market.id} outcomes={market.outcomes} />
+            </SectionCard>
+          ) : (
+            <SectionCard title="Betting closed" titleId="closed-title" className="gap-2">
+              <p className="text-ink2">{closedCopy}</p>
+            </SectionCard>
+          )}
 
-      {canVoid && <VoidButton marketId={market.id} />}
-    </div>
+          {(showResolve || canVoid) && (
+            <SectionCard
+              title={canOverride ? 'Override resolution' : 'Resolve market'}
+              titleId="manage-title"
+              className="gap-1"
+            >
+              <p className="text-sm text-ink2">{manageHint}</p>
+              <div className="mt-3 flex flex-col gap-4">
+                {showResolve && <ResolveForm marketId={market.id} outcomes={market.outcomes} />}
+                {canVoid && (
+                  <VoidButton marketId={market.id} className={showResolve ? 'border-t border-line pt-4' : undefined} />
+                )}
+              </div>
+            </SectionCard>
+          )}
+        </div>
+
+        <SectionCard title="Bets" titleId="bets-title" className="gap-1 lg:col-start-1 lg:row-start-2">
+          <BetList bets={bets} outcomes={market.outcomes} viewerId={user.id} canBet={canBet} />
+        </SectionCard>
+      </div>
+    </Page>
   )
 }

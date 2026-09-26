@@ -1,4 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { PageParams } from '@/lib/pagination/cursor'
+import { IN_CHUNK, chunk } from '@/lib/pagination/chunk'
+import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 
 export interface LedgerEntry {
   id: number
@@ -35,25 +38,38 @@ export interface EntryMeta {
 // Three small `in (...)` lookups -- kept as literal `.select()` calls (not one
 // helper taking a column name) because supabase-js parses the select string's
 // type at compile time, so a templated column name can't be typed the same way.
+// Each is split into chunks of IN_CHUNK ids, so a 500-row window never builds a
+// URL that grows with the rows shown.
 async function fetchMarketTitles(supabase: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
-  if (ids.length === 0) return new Map()
-  const { data, error } = await supabase.from('markets').select('id, title').in('id', ids)
-  if (error) throw error
-  return new Map((data ?? []).map((m) => [m.id as string, m.title as string]))
+  const titles = new Map<string, string>()
+  const results = await Promise.all(chunk(ids, IN_CHUNK).map((part) => supabase.from('markets').select('id, title').in('id', part)))
+  for (const { data, error } of results) {
+    if (error) throw error
+    for (const m of data ?? []) titles.set(m.id as string, m.title as string)
+  }
+  return titles
 }
 
 async function fetchOutcomeLabels(supabase: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
-  if (ids.length === 0) return new Map()
-  const { data, error } = await supabase.from('market_outcomes').select('id, label').in('id', ids)
-  if (error) throw error
-  return new Map((data ?? []).map((o) => [o.id as string, o.label as string]))
+  const labels = new Map<string, string>()
+  const results = await Promise.all(
+    chunk(ids, IN_CHUNK).map((part) => supabase.from('market_outcomes').select('id, label').in('id', part)),
+  )
+  for (const { data, error } of results) {
+    if (error) throw error
+    for (const o of data ?? []) labels.set(o.id as string, o.label as string)
+  }
+  return labels
 }
 
 async function fetchTaskTitles(supabase: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
-  if (ids.length === 0) return new Map()
-  const { data, error } = await supabase.from('tasks').select('id, title').in('id', ids)
-  if (error) throw error
-  return new Map((data ?? []).map((t) => [t.id as string, t.title as string]))
+  const titles = new Map<string, string>()
+  const results = await Promise.all(chunk(ids, IN_CHUNK).map((part) => supabase.from('tasks').select('id, title').in('id', part)))
+  for (const { data, error } of results) {
+    if (error) throw error
+    for (const t of data ?? []) titles.set(t.id as string, t.title as string)
+  }
+  return titles
 }
 
 export interface Lookups {
@@ -95,16 +111,26 @@ export function buildContext(type: string, meta: EntryMeta, lookups: Lookups): s
   }
 }
 
-export async function listAllTransactions(supabase: SupabaseClient): Promise<LedgerEntry[]> {
-  const { data, error } = await supabase
-    .from('coin_transactions')
-    .select('id, profile_id, amount, type, meta, created_at, profiles(display_name)')
-    .order('created_at', { ascending: false })
-    .order('id', { ascending: false })
+const LEDGER_KEYS: KeyColumns = { ts: 'created_at', id: 'id', isId: isBigintId }
 
-  if (error) throw error
+export async function listAllTransactions(supabase: SupabaseClient, page: PageParams): Promise<KeysetPage<LedgerEntry>> {
+  const result = await readKeyset(
+    page,
+    LEDGER_KEYS,
+    async (filter, limit) => {
+      let query = supabase.from('coin_transactions').select('id, profile_id, amount, type, meta, created_at, profiles(display_name)')
+      if (filter) query = query.or(filter)
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(limit)
+      if (error) throw error
+      return data ?? []
+    },
+    (t) => ({ ts: t.created_at, id: String(t.id) }),
+  )
 
-  const rows = data ?? []
+  const rows = result.rows
   const metas = rows.map((t) => (t.meta ?? {}) as EntryMeta)
 
   const marketIds = [...new Set(metas.map((m) => m.market_id).filter((v): v is string => Boolean(v)))]
@@ -118,16 +144,19 @@ export async function listAllTransactions(supabase: SupabaseClient): Promise<Led
   ])
   const lookups: Lookups = { markets, outcomes, tasks }
 
-  return rows.map((t, index) => {
-    const profile = t.profiles as unknown as { display_name: string } | null
-    return {
-      id: t.id,
-      profileId: t.profile_id,
-      memberName: profile?.display_name ?? 'Unknown member',
-      amount: t.amount,
-      type: TYPE_LABELS[t.type] ?? t.type,
-      context: buildContext(t.type, metas[index], lookups),
-      createdAt: t.created_at,
-    }
-  })
+  return {
+    ...result,
+    rows: rows.map((t, index) => {
+      const profile = t.profiles as unknown as { display_name: string } | null
+      return {
+        id: t.id,
+        profileId: t.profile_id,
+        memberName: profile?.display_name ?? 'Unknown member',
+        amount: t.amount,
+        type: TYPE_LABELS[t.type] ?? t.type,
+        context: buildContext(t.type, metas[index], lookups),
+        createdAt: t.created_at,
+      }
+    }),
+  }
 }

@@ -5,8 +5,9 @@ import { useEffect } from 'react'
 // A ?v= on the script URL is what makes a new deploy replace the worker: the browser refetches
 // and reinstalls whenever the registration URL's bytes differ, and sw.js names its cache after
 // this same query param, so an old deploy's cache is deleted on the next activate rather than
-// growing forever.
-const SW_URL = `/sw.js?v=${process.env.NEXT_PUBLIC_SW_VERSION ?? 'dev'}`
+// growing forever. next.config.ts's `env` always defines NEXT_PUBLIC_SW_VERSION, so no fallback
+// is needed here; sw.js keeps its own for a worker registered without the query param.
+const SW_URL = `/sw.js?v=${process.env.NEXT_PUBLIC_SW_VERSION}`
 
 export function ServiceWorkerRegistration() {
   useEffect(() => {

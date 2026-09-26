@@ -27,8 +27,9 @@ describe('ServiceWorkerRegistration', () => {
     vi.stubEnv('NODE_ENV', 'production')
     const { container } = render(<ServiceWorkerRegistration />)
     // NEXT_PUBLIC_SW_VERSION is inlined by next.config.ts's `env` at build time, so the module
-    // under test reads it as 'dev' here (unset in this test run), the same fallback sw.js uses.
-    await waitFor(() => expect(register).toHaveBeenCalledWith('/sw.js?v=dev', { scope: '/' }))
+    // under test reads it as undefined here (unset in this test run); sw.js has its own 'dev'
+    // fallback for a worker registered without the query param.
+    await waitFor(() => expect(register).toHaveBeenCalledWith('/sw.js?v=undefined', { scope: '/' }))
     expect(container).toBeEmptyDOMElement()
   })
 

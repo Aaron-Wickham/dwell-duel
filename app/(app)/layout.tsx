@@ -6,6 +6,7 @@ import { SlipCountProvider } from '@/components/app-nav/slip-count'
 import { LiveRefresh } from '@/components/live/live-refresh'
 import { NavDepthTracker } from '@/lib/nav/nav-depth'
 import { Toaster } from '@/components/ui/toaster'
+import { OfflineBanner } from '@/components/offline/offline-banner'
 
 export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   const { supabase, user } = await requireUser()
@@ -22,6 +23,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
       <NavDepthTracker />
       <AppNav balance={profile.balance} isAdmin={admin} />
       <main id="main" className="flex flex-1 flex-col pb-[calc(82px+var(--safe-bottom))] md:pb-0">
+        <OfflineBanner />
         {children}
       </main>
       <Toaster />

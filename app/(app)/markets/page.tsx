@@ -1,15 +1,14 @@
 import { Fragment } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { ChartColumn, Plus } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { listClosedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
 import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { marketCardStatus, type MarketCardStatus } from '@/lib/markets/market-status'
-import { listChartBets } from '@/lib/markets/chart-bets'
-import { buildProbabilitySeries, type ChartBet } from '@/lib/markets/probability-series'
+import { readCharts } from '@/lib/markets/chart-bets'
+import { buildProbabilitySeries } from '@/lib/markets/probability-series'
 import { newestHref, readPageParams, showMoreHref } from '@/lib/pagination/cursor'
 import { Page, PageHeader, h2Class } from '@/components/ui/page'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -24,16 +23,6 @@ const GROUPS: { id: MarketCardStatus; heading: string }[] = [
   { id: 'resolved', heading: 'Resolved' },
   { id: 'voided', heading: 'Voided' },
 ]
-
-// Charts are decoration on this page: if their read fails, the cards still render without them.
-async function readCharts(supabase: SupabaseClient, marketIds: string[]): Promise<Map<string, ChartBet[]>> {
-  try {
-    return await listChartBets(supabase, marketIds)
-  } catch (error) {
-    console.error('Market charts failed to load', error)
-    return new Map()
-  }
-}
 
 export default async function MarketsPage(props: PageProps<'/markets'>) {
   const searchParams = await props.searchParams

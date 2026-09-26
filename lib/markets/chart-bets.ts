@@ -49,3 +49,13 @@ export async function listChartBets(supabase: SupabaseClient, marketIds: string[
   for (const row of chunks.flat()) byMarket.get(row.market_id)?.push(toChartBet(row))
   return byMarket
 }
+
+// Charts are decoration on /markets: if their read fails, the cards still render without them.
+export async function readCharts(supabase: SupabaseClient, marketIds: string[]): Promise<Map<string, ChartBet[]>> {
+  try {
+    return await listChartBets(supabase, marketIds)
+  } catch (error) {
+    console.error('Market charts failed to load', error)
+    return new Map()
+  }
+}

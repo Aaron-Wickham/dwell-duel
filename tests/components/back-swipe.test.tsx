@@ -30,7 +30,28 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers()
+  Reflect.deleteProperty(window, 'visualViewport')
 })
+
+// visualViewport isn't a real EventTarget in jsdom, so `resize` handlers are captured and
+// invoked directly rather than dispatched.
+function mockVisualViewport(initialScale: number) {
+  const handlers: Array<() => void> = []
+  const viewport = {
+    scale: initialScale,
+    addEventListener: vi.fn((type: string, cb: () => void) => {
+      if (type === 'resize') handlers.push(cb)
+    }),
+    removeEventListener: vi.fn(),
+  }
+  Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport })
+  return {
+    setScale(scale: number) {
+      viewport.scale = scale
+      handlers.forEach((cb) => cb())
+    },
+  }
+}
 
 // jsdom's TouchEvent takes plain objects for its touch lists; timeStamp is pinned so the
 // release velocity is exact.
@@ -292,5 +313,32 @@ describe('BackSwipe', () => {
     vi.advanceTimersByTime(1000)
     expect(content.style.transform).toBe('')
     expect(push).not.toHaveBeenCalled()
+  })
+
+  it('marks the surface zoomed and blocks the swipe while the viewport is pinch-zoomed in', () => {
+    mockVisualViewport(2)
+    const { heading, content } = setup()
+
+    expect(content.parentElement).toHaveAttribute('data-zoomed')
+
+    drag(heading, [5, 400], [220, 410], 200)
+    vi.advanceTimersByTime(280)
+
+    expect(content.style.transform).toBe('')
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  it('clears the zoomed marker and lets swipes work again once the viewport is back to scale 1', () => {
+    const { setScale } = mockVisualViewport(2)
+    const { heading, content } = setup()
+    expect(content.parentElement).toHaveAttribute('data-zoomed')
+
+    setScale(1)
+    expect(content.parentElement).not.toHaveAttribute('data-zoomed')
+
+    drag(heading, [5, 400], [220, 410], 200)
+    vi.advanceTimersByTime(280)
+
+    expect(push).toHaveBeenCalledWith('/markets', { transitionTypes: ['nav-back'] })
   })
 })

@@ -11,6 +11,8 @@ const SETTLE_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 const VELOCITY_WINDOW_MS = 100
 // If the navigation never unmounts this page (a failed or offline push), give the page back.
 const STUCK_RESET_MS = 4000
+// Above 1 with slack for float rounding, the visual viewport is pinch-zoomed in.
+const ZOOM_EPSILON = 1.01
 
 type Sample = { x: number; t: number }
 type Start = { x: number; y: number; id: number }
@@ -26,11 +28,13 @@ export function BackSwipe({ children }: { children: ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const depth = useNavDepth()
+  const surfaceRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
   const latest = useRef({ router, pathname, depth })
   const resetRef = useRef<() => void>(() => {})
   const isFirstPathname = useRef(true)
+  const zoomedRef = useRef(false)
 
   useEffect(() => {
     latest.current = { router, pathname, depth }
@@ -45,6 +49,24 @@ export function BackSwipe({ children }: { children: ReactNode }) {
     }
     resetRef.current()
   }, [pathname])
+
+  useEffect(() => {
+    // A low-vision user pinch-zoomed in needs pan-x/pan-y left to the browser, or `touch-pan-y`
+    // on the surface blocks their sideways panning across the zoomed page.
+    const viewport = window.visualViewport
+    if (!viewport) return
+    function update() {
+      const zoomed = viewport!.scale > ZOOM_EPSILON
+      zoomedRef.current = zoomed
+      const surface = surfaceRef.current
+      if (!surface) return
+      if (zoomed) surface.dataset.zoomed = ''
+      else delete surface.dataset.zoomed
+    }
+    update()
+    viewport.addEventListener('resize', update)
+    return () => viewport.removeEventListener('resize', update)
+  }, [])
 
   useEffect(() => {
     const content = contentRef.current
@@ -128,6 +150,7 @@ export function BackSwipe({ children }: { children: ReactNode }) {
 
     function onTouchStart(event: TouchEvent) {
       if (busy) return
+      if (zoomedRef.current) return
       if (start) {
         // A second finger touching down mid-swipe cancels it, the same as the system cancelling.
         reset()
@@ -219,7 +242,7 @@ export function BackSwipe({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <div className="flex flex-1 touch-pan-y touch-pinch-zoom flex-col overflow-x-clip">
+    <div ref={surfaceRef} className="flex flex-1 touch-pan-y touch-pinch-zoom data-zoomed:touch-auto flex-col overflow-x-clip">
       <div
         ref={backdropRef}
         aria-hidden="true"

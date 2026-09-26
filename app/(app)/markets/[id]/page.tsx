@@ -10,6 +10,7 @@ import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt } from '@/lib/markets/market-status'
 import { rowState } from '@/lib/markets/row-state'
+import { newestHref, readPageParams, showMoreHref } from '@/lib/pagination/cursor'
 import { isUuid } from '@/lib/uuid'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { readSlip } from '@/lib/parlays/slip'
@@ -20,6 +21,7 @@ import { LocalTime } from '@/components/ui/local-time'
 import { Message } from '@/components/ui/message'
 import { Page, h1Class } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
+import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { StatusChip } from '@/components/ui/status-chip'
 import { BetList } from '@/components/markets/bet-list'
 import { MarketSlipProvider } from '@/components/markets/market-slip'
@@ -32,6 +34,7 @@ import { VoidButton } from './void-button'
 
 export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>) {
   const { id } = await props.params
+  const searchParams = await props.searchParams
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
   if (!isUuid(id)) notFound()
@@ -39,7 +42,10 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const market = await getMarket(supabase, id)
   if (!market) notFound()
 
-  const [bets, chartBets] = await Promise.all([getMarketBets(supabase, id), getChartBets(supabase, id)])
+  const [betsPage, chartBets] = await Promise.all([
+    getMarketBets(supabase, id, readPageParams(searchParams, 'bets')),
+    getChartBets(supabase, id),
+  ])
   const admin = await isAdmin(supabase)
   const odds = computeOdds(market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })))
   const totalPool = odds.reduce((sum, o) => sum + o.poolTotal, 0)
@@ -217,7 +223,20 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           </div>
 
           <SectionCard title="Bets" titleId="bets-title" className="gap-1 lg:col-start-1 lg:row-start-3">
-            <BetList bets={bets} outcomes={market.outcomes} viewerId={user.id} canBet={canBet} />
+            {betsPage.windowed && (
+              <div className="flex flex-col py-2">
+                <BackToNewest href={newestHref(`/markets/${id}`, searchParams, 'bets')} />
+              </div>
+            )}
+            <BetList bets={betsPage.rows} outcomes={market.outcomes} viewerId={user.id} canBet={canBet} />
+            {betsPage.next && (
+              <div className="flex flex-col border-t border-line pt-3">
+                <ShowMore
+                  href={showMoreHref(`/markets/${id}`, searchParams, 'bets', betsPage.next)}
+                  fresh={betsPage.next.kind === 'window'}
+                />
+              </div>
+            )}
           </SectionCard>
         </div>
 

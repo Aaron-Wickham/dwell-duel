@@ -1,13 +1,16 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
-import { listMarkets } from '@/lib/markets/list-markets'
+import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
+import { countOpenMarkets, listClosedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
+import { readPageParams, showMoreHref, type PageParams } from '@/lib/pagination/cursor'
 
 let alice: Member
 let bob: Member
 let aliceClient: SupabaseClient
 let bobClient: SupabaseClient
+
+const FIRST: PageParams = { top: null, bottom: null }
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -16,39 +19,44 @@ beforeEach(async () => {
   await ensureInvited(bobClient)
 })
 
-describe('listMarkets', () => {
-  it('has no resolution time for an open market', async () => {
-    const { marketId } = await createTestMarket(aliceClient, ['Yes', 'No'])
-    const markets = await listMarkets(bobClient)
-    expect(markets.find((m) => m.id === marketId)?.resolvedAt).toBeNull()
-  })
+async function closeNow(marketId: string): Promise<void> {
+  const { error } = await serviceClient()
+    .from('markets')
+    .update({ close_at: new Date(Date.now() - 1000).toISOString() })
+    .eq('id', marketId)
+  if (error) throw error
+}
 
-  it('dates the current resolution', async () => {
-    const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'], { closeInMs: 1000 })
-    await serviceClient()
-      .from('markets')
-      .update({ close_at: new Date(Date.now() - 1000).toISOString() })
-      .eq('id', marketId)
-    const { error } = await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
-    if (error) throw error
+async function resolve(marketId: string, outcomeId: string): Promise<void> {
+  const { error } = await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeId })
+  if (error) throw error
+}
 
-    const { data: resolution, error: resolutionErr } = await serviceClient()
-      .from('market_resolutions')
-      .select('resolved_at')
-      .eq('market_id', marketId)
-      .single()
-    if (resolutionErr) throw resolutionErr
+async function voidMarket(marketId: string): Promise<void> {
+  const { error } = await aliceClient.rpc('void_market', { p_market_id: marketId })
+  if (error) throw error
+}
 
-    const markets = await listMarkets(bobClient)
-    const market = markets.find((m) => m.id === marketId)
-    expect(market?.resolvedOutcomeLabel).toBe('Yes')
-    expect(market?.resolvedAt).toBe(resolution.resolved_at)
+describe('listOpenMarkets', () => {
+  it('lists only open markets, newest first, awaiting ones included, with no resolution time', async () => {
+    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Older' })
+    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Newer' })
+    const awaiting = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Awaiting' })
+    await closeNow(awaiting.marketId)
+    const voided = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Voided' })
+    await voidMarket(voided.marketId)
+
+    const markets = await listOpenMarkets(bobClient)
+
+    expect(markets.map((m) => m.title)).toEqual(['Awaiting', 'Newer', 'Older'])
+    expect(markets.every((m) => m.status === 'open' && m.resolvedAt === null && m.resolvedOutcomeLabel === null)).toBe(true)
+    expect(markets.map((m) => m.id)).not.toContain(voided.marketId)
   })
 
   it("orders a market's outcomes by label when they tie on creation time, regardless of input order", async () => {
     const { marketId } = await createTestMarket(aliceClient, ['Zebra', 'Apple', 'Mango'])
 
-    const markets = await listMarkets(bobClient)
+    const markets = await listOpenMarkets(bobClient)
     const market = markets.find((m) => m.id === marketId)
 
     expect(market?.outcomes.map((o) => o.label)).toEqual(['Apple', 'Mango', 'Zebra'])
@@ -63,9 +71,116 @@ describe('listMarkets', () => {
       .update({ created_at: new Date(Date.now() - 60_000).toISOString() })
       .eq('id', outcomeIds[1])
 
-    const markets = await listMarkets(bobClient)
+    const markets = await listOpenMarkets(bobClient)
     const market = markets.find((m) => m.id === marketId)
 
     expect(market?.outcomes.map((o) => o.label)).toEqual(['Beta', 'Alpha'])
+  })
+
+  it('is empty for an uninvited session', async () => {
+    await createTestMarket(aliceClient, ['Yes', 'No'])
+    const carol = await makeMember('Carol')
+    expect(await listOpenMarkets(await clientFor(carol))).toEqual([])
+  })
+})
+
+describe('listClosedMarkets', () => {
+  it('dates the current resolution, from the embedded join', async () => {
+    const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'], { closeInMs: 1000 })
+    await closeNow(marketId)
+    await resolve(marketId, outcomeIds[0])
+
+    const { data: resolution, error: resolutionErr } = await serviceClient()
+      .from('market_resolutions')
+      .select('resolved_at')
+      .eq('market_id', marketId)
+      .single()
+    if (resolutionErr) throw resolutionErr
+
+    const { rows } = await listClosedMarkets(bobClient, FIRST)
+    const market = rows.find((m) => m.id === marketId)
+    expect(market?.status).toBe('resolved')
+    expect(market?.resolvedOutcomeLabel).toBe('Yes')
+    expect(market?.resolvedAt).toBe(resolution.resolved_at)
+  })
+
+  it('shows the current resolution after an override, not the reversed one', async () => {
+    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+    const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await resolve(marketId, outcomeIds[0])
+    await resolve(marketId, outcomeIds[1])
+
+    const { rows } = await listClosedMarkets(bobClient, FIRST)
+    expect(rows.find((m) => m.id === marketId)?.resolvedOutcomeLabel).toBe('No')
+  })
+
+  it('lists resolved and voided markets as one list, newest first, and no open ones', async () => {
+    const resolved = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Resolved' })
+    await closeNow(resolved.marketId)
+    await resolve(resolved.marketId, resolved.outcomeIds[0])
+    const voided = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Voided' })
+    await voidMarket(voided.marketId)
+    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Still open' })
+
+    const page = await listClosedMarkets(bobClient, FIRST)
+
+    expect(page.rows.map((m) => [m.title, m.status, m.resolvedOutcomeLabel])).toEqual([
+      ['Voided', 'voided', null],
+      ['Resolved', 'resolved', 'Yes'],
+    ])
+    expect(page.next).toBeNull()
+  })
+
+  it('pages 50 at a time, with nothing skipped or repeated across a tie', async () => {
+    const start = Date.parse('2026-09-01T00:00:00.000Z')
+    // Inserted directly: sixty create/void round trips are slow, and the list never reads outcomes'
+    // pools. Pairs share a created_at, so the 50th/51st tie and the id breaks it.
+    const rows = Array.from({ length: 60 }, (_, i) => ({
+      created_by: alice.id,
+      title: `Closed ${String(i).padStart(2, '0')}`,
+      kind: 'binary',
+      status: 'voided',
+      close_at: new Date(start).toISOString(),
+      created_at: `${new Date(start + Math.floor(i / 2) * 60_000).toISOString().slice(0, 19)}.000456+00:00`,
+    }))
+    const { error } = await serviceClient().from('markets').insert(rows)
+    if (error) throw error
+    const { data: all, error: allErr } = await serviceClient()
+      .from('markets')
+      .select('id')
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+    if (allErr) throw allErr
+    const everything = all.map((m) => m.id as string)
+
+    const first = await listClosedMarkets(bobClient, FIRST)
+    expect(first.rows.map((m) => m.id)).toEqual(everything.slice(0, 50))
+    expect(first.next?.kind).toBe('extend')
+
+    const href = new URL(showMoreHref('/markets', {}, 'resolved', first.next!), 'http://localhost')
+    const second = await listClosedMarkets(bobClient, readPageParams(Object.fromEntries(href.searchParams), 'resolved'))
+    expect(second.rows.map((m) => m.id)).toEqual(everything)
+    expect(second.next).toBeNull()
+  })
+})
+
+describe('countOpenMarkets', () => {
+  it('counts open markets, awaiting ones included, and not resolved or voided ones', async () => {
+    await createTestMarket(aliceClient, ['Yes', 'No'])
+    const awaiting = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await closeNow(awaiting.marketId)
+    const resolved = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await closeNow(resolved.marketId)
+    await resolve(resolved.marketId, resolved.outcomeIds[0])
+    const voided = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await voidMarket(voided.marketId)
+
+    expect(await countOpenMarkets(bobClient)).toBe(2)
+  })
+
+  it('is 0 for an uninvited session', async () => {
+    await createTestMarket(aliceClient, ['Yes', 'No'])
+    const carol = await makeMember('Carol')
+    expect(await countOpenMarkets(await clientFor(carol))).toBe(0)
   })
 })

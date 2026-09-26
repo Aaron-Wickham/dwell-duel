@@ -4,7 +4,7 @@ import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { signOut } from '@/lib/auth/sign-out'
 import { readSlip } from '@/lib/parlays/slip'
-import { listMarkets } from '@/lib/markets/list-markets'
+import { countOpenMarkets } from '@/lib/markets/list-markets'
 import { getLeaderboard } from '@/lib/social/leaderboard'
 import { listMyTaskCompletions, listPendingTaskCompletions } from '@/lib/tasks/list-task-completions'
 import { Page, PageHeader } from '@/components/ui/page'
@@ -19,16 +19,15 @@ export default async function Home() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const [admin, slip, markets, board, myCompletions] = await Promise.all([
+  const [admin, slip, openMarketCount, board, myCompletions] = await Promise.all([
     isAdmin(supabase),
     readSlip(),
-    listMarkets(supabase),
+    countOpenMarkets(supabase),
     getLeaderboard(supabase),
     listMyTaskCompletions(supabase, user.id),
   ])
   const pendingApprovals = admin ? await listPendingTaskCompletions(supabase) : []
 
-  const openMarketCount = markets.filter((m) => m.status === 'open').length
   const me = board.find((m) => m.id === user.id)
   const rank = me?.rank ?? board.length
   const memberCount = board.length

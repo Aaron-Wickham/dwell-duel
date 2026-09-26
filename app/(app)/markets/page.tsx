@@ -1,16 +1,20 @@
+import { Fragment } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { ChartColumn, Plus } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
-import { listMarkets } from '@/lib/markets/list-markets'
+import { listClosedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
 import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { marketCardStatus, type MarketCardStatus } from '@/lib/markets/market-status'
 import { listChartBets } from '@/lib/markets/chart-bets'
-import { buildProbabilitySeries } from '@/lib/markets/probability-series'
+import { buildProbabilitySeries, type ChartBet } from '@/lib/markets/probability-series'
+import { newestHref, readPageParams, showMoreHref } from '@/lib/pagination/cursor'
 import { Page, PageHeader, h2Class } from '@/components/ui/page'
 import { EmptyState } from '@/components/ui/empty-state'
 import { buttonVariants } from '@/components/ui/button'
+import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { cn } from '@/lib/utils'
 import { MarketCard, type MarketCardChart } from '@/components/markets/market-card'
 
@@ -21,12 +25,27 @@ const GROUPS: { id: MarketCardStatus; heading: string }[] = [
   { id: 'voided', heading: 'Voided' },
 ]
 
-export default async function MarketsPage() {
+// Charts are decoration on this page: if their read fails, the cards still render without them.
+async function readCharts(supabase: SupabaseClient, marketIds: string[]): Promise<Map<string, ChartBet[]>> {
+  try {
+    return await listChartBets(supabase, marketIds)
+  } catch (error) {
+    console.error('Market charts failed to load', error)
+    return new Map()
+  }
+}
+
+export default async function MarketsPage(props: PageProps<'/markets'>) {
+  const searchParams = await props.searchParams
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const markets = await listMarkets(supabase)
-  const chartBetsByMarket = await listChartBets(
+  const [open, closed] = await Promise.all([
+    listOpenMarkets(supabase),
+    listClosedMarkets(supabase, readPageParams(searchParams, 'resolved')),
+  ])
+  const markets = [...open, ...closed.rows]
+  const chartBetsByMarket = await readCharts(
     supabase,
     markets.map((m) => m.id),
   )
@@ -74,6 +93,9 @@ export default async function MarketsPage() {
     markets: cards.filter((card) => card.status === group.id),
   })).filter((group) => group.markets.length > 0)
 
+  const firstClosedGroup = groups.findIndex((group) => group.id === 'resolved' || group.id === 'voided')
+  const backToNewest = closed.windowed ? <BackToNewest href={newestHref('/markets', searchParams, 'resolved')} /> : null
+
   return (
     <Page transition="tab">
       <PageHeader
@@ -106,18 +128,25 @@ export default async function MarketsPage() {
           Open the first one and get the duel started.
         </EmptyState>
       ) : (
-        groups.map((group) => (
-          <section key={group.id} aria-labelledby={`markets-${group.id}-heading`} className="flex flex-col gap-3">
-            <h2 id={`markets-${group.id}-heading`} className={h2Class}>
-              {group.heading}
-            </h2>
-            <div className="grid items-start gap-5 lg:grid-cols-3">
-              {group.markets.map((market) => (
-                <MarketCard key={market.id} {...market} />
-              ))}
-            </div>
-          </section>
+        groups.map((group, index) => (
+          <Fragment key={group.id}>
+            {index === firstClosedGroup && backToNewest}
+            <section aria-labelledby={`markets-${group.id}-heading`} className="flex flex-col gap-3">
+              <h2 id={`markets-${group.id}-heading`} className={h2Class}>
+                {group.heading}
+              </h2>
+              <div className="grid items-start gap-5 lg:grid-cols-3">
+                {group.markets.map((market) => (
+                  <MarketCard key={market.id} {...market} />
+                ))}
+              </div>
+            </section>
+          </Fragment>
         ))
+      )}
+      {firstClosedGroup === -1 && backToNewest}
+      {closed.next && (
+        <ShowMore href={showMoreHref('/markets', searchParams, 'resolved', closed.next)} fresh={closed.next.kind === 'window'} />
       )}
     </Page>
   )

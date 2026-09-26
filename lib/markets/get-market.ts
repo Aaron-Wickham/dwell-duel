@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { PageParams } from '@/lib/pagination/cursor'
+import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 
 export interface MarketDetail {
   id: string
@@ -78,25 +80,40 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
   }
 }
 
-export async function getMarketBets(supabase: SupabaseClient, marketId: string): Promise<MarketBet[]> {
-  const { data, error } = await supabase
-    .from('bets')
-    .select('id, outcome_id, amount, created_at, profile_id, profiles(display_name)')
-    .eq('market_id', marketId)
-    .order('created_at', { ascending: false })
-    .order('id', { ascending: false })
+const BET_KEYS: KeyColumns = { ts: 'created_at', id: 'id', isId: isBigintId }
 
-  if (error) throw error
+export async function getMarketBets(supabase: SupabaseClient, marketId: string, page: PageParams): Promise<KeysetPage<MarketBet>> {
+  const result = await readKeyset(
+    page,
+    BET_KEYS,
+    async (filter, limit) => {
+      let query = supabase
+        .from('bets')
+        .select('id, outcome_id, amount, created_at, profile_id, profiles(display_name)')
+        .eq('market_id', marketId)
+      if (filter) query = query.or(filter)
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(limit)
+      if (error) throw error
+      return data ?? []
+    },
+    (b) => ({ ts: b.created_at, id: String(b.id) }),
+  )
 
-  return (data ?? []).map((b) => {
-    const profile = b.profiles as unknown as { display_name: string } | null
-    return {
-      id: b.id,
-      outcomeId: b.outcome_id,
-      amount: b.amount,
-      createdAt: b.created_at,
-      profileId: b.profile_id,
-      bettorName: profile?.display_name ?? 'Unknown member',
-    }
-  })
+  return {
+    ...result,
+    rows: result.rows.map((b) => {
+      const profile = b.profiles as unknown as { display_name: string } | null
+      return {
+        id: b.id,
+        outcomeId: b.outcome_id,
+        amount: b.amount,
+        createdAt: b.created_at,
+        profileId: b.profile_id,
+        bettorName: profile?.display_name ?? 'Unknown member',
+      }
+    }),
+  }
 }

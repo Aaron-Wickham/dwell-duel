@@ -46,6 +46,7 @@ function mockVisualViewport(initialScale: number) {
   }
   Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport })
   return {
+    viewport,
     setScale(scale: number) {
       viewport.scale = scale
       handlers.forEach((cb) => cb())
@@ -334,6 +335,28 @@ describe('BackSwipe', () => {
     expect(content.parentElement).toHaveAttribute('data-zoomed')
 
     setScale(1)
+    expect(content.parentElement).not.toHaveAttribute('data-zoomed')
+
+    drag(heading, [5, 400], [220, 410], 200)
+    vi.advanceTimersByTime(280)
+
+    expect(push).toHaveBeenCalledWith('/markets', { transitionTypes: ['nav-back'] })
+  })
+
+  it('stops listening to the visual viewport when it unmounts', () => {
+    const { viewport } = mockVisualViewport(1)
+    const { unmount } = setup()
+    const handler = viewport.addEventListener.mock.calls.find(([type]) => type === 'resize')?.[1]
+    expect(handler).toBeTypeOf('function')
+
+    unmount()
+
+    expect(viewport.removeEventListener).toHaveBeenCalledWith('resize', handler)
+  })
+
+  it('never marks the surface zoomed and still swipes where visualViewport is unavailable', () => {
+    expect(window.visualViewport).toBeUndefined()
+    const { heading, content } = setup()
     expect(content.parentElement).not.toHaveAttribute('data-zoomed')
 
     drag(heading, [5, 400], [220, 410], 200)

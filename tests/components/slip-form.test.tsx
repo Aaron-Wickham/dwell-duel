@@ -152,4 +152,28 @@ describe('SlipForm', () => {
     expect(screen.getByText('2 picks · max 6')).toBeInTheDocument()
     expect(screen.getByLabelText('Slip count')).toHaveTextContent('2')
   })
+
+  it('disables Place parlay and hides Combined and the payout while a removal is pending on a fuller slip, and brings both back once the server catches up', async () => {
+    let finish!: (value: boolean) => void
+    removeFromSlipAction.mockImplementation(() => new Promise<boolean>((resolve) => (finish = resolve)))
+    const { rerender } = render(<SlipForm slip={slipView([pick(1), pick(2), pick(3)])} />)
+    await userEvent.type(screen.getByLabelText('Stake (DC)'), '5')
+    expect(screen.getByRole('button', { name: 'Place parlay' })).toBeEnabled()
+    expect(screen.getByText(/^Combined:/)).toBeInTheDocument()
+    expect(screen.getByText(/Potential payout:/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Yes, Market 1?' }))
+
+    expect(screen.getByText('2 picks · max 6')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Place parlay' })).toBeDisabled()
+    expect(screen.queryByText(/^Combined:/)).toBeNull()
+    expect(screen.queryByText(/Potential payout:/)).toBeNull()
+
+    await act(async () => finish(true))
+    rerender(<SlipForm slip={slipView([pick(2), pick(3)])} />)
+
+    expect(screen.getByRole('button', { name: 'Place parlay' })).toBeEnabled()
+    expect(screen.getByText(/^Combined:/)).toBeInTheDocument()
+    expect(screen.getByText(/Potential payout:/)).toBeInTheDocument()
+  })
 })

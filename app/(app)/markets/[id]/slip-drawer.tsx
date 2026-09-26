@@ -3,6 +3,7 @@
 import { useState, type MouseEvent } from 'react'
 import { Drawer } from '@base-ui/react/drawer'
 import { Layers, X } from 'lucide-react'
+import { useSlipCount } from '@/components/app-nav/slip-count'
 import { SlipForm } from '@/app/(app)/parlays/slip-form'
 import { buttonVariants } from '@/components/ui/button'
 import { focusPageHeading } from '@/lib/ui/focus-page-heading'
@@ -16,6 +17,10 @@ export function SlipDrawer({ slip }: { slip: SlipView }) {
   // mounted until `onOpenChangeComplete(false)` confirms the close animation has finished.
   const [closing, setClosing] = useState(false)
   const count = slip.picks.length
+  // Whether the trigger mounts at all stays tied to the server's count -- it only ever
+  // appears once the server confirms a pick is there. Its label follows the nav's optimistic
+  // count instead, so it doesn't lag behind the tab bar's badge by a request.
+  const { count: badgeCount } = useSlipCount()
   if (count === 0 && !open && !closing) return null
 
   function handleContentClick(event: MouseEvent<HTMLDivElement>) {
@@ -45,7 +50,7 @@ export function SlipDrawer({ slip }: { slip: SlipView }) {
             )}
           >
             <Layers aria-hidden="true" className="size-5" />
-            {`Slip (${count})`}
+            {`Slip (${badgeCount})`}
           </Drawer.Trigger>
         </>
       )}

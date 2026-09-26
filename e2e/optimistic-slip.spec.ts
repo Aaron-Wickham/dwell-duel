@@ -56,6 +56,12 @@ test('Add to parlay flips the row and the nav count before the server answers', 
   await expect(page.getByText('Added to your slip.')).toBeVisible()
   await expect(outcomes.getByText('In your slip')).toHaveCount(1)
   await expect(nav.getByRole('link', { name: 'Parlays (1)', exact: true })).toBeVisible()
+  // The phone slip drawer's trigger only mounts once the server's own slip has a pick (it
+  // renders nothing before that), so its mere presence -- not its label, which follows the same
+  // optimistic badge as the nav -- proves the server's props have actually landed. `getByText`,
+  // not `getByRole`, because the trigger is `md:hidden` at this viewport and role queries drop
+  // display:none elements from the accessibility tree.
+  await expect(page.getByText(/^Slip \(/)).toBeAttached()
   expect(await page.evaluate(() => (window as unknown as { flashedBack: boolean }).flashedBack)).toBe(false)
   await page.unrouteAll()
 })

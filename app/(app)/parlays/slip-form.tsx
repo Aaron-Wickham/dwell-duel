@@ -36,7 +36,11 @@ export function SlipForm({ slip }: { slip: SlipView }) {
     current.filter((p) => p.outcomeId !== outcomeId),
   )
   const { adjust } = useSlipCount()
-  const hasStalePick = picks.some((p) => !p.available)
+  // While a removal is pending, the optimistic list is shorter than the server's, but the
+  // server's Combined/payout and canPlace still describe the server's legs. Showing them
+  // together would mismatch, so both stay hidden/disabled until the counts agree again.
+  const removing = picks.length !== slip.picks.length
+  const hasStalePick = slip.picks.some((p) => !p.available)
 
   return (
     <div className="flex flex-col gap-5 md:gap-7">
@@ -88,17 +92,19 @@ export function SlipForm({ slip }: { slip: SlipView }) {
               </div>
             ) : (
               <form action={formAction} className="flex flex-col gap-4 border-t border-line pt-4">
-                <p className="font-extrabold">
-                  Combined:{' '}
-                  <AnimatedText plainText={`${formatOdds(slip.multiplierBp)}×${slip.capped ? ' (capped at 20×)' : ''}`}>
-                    <NumberFlow
-                      value={Number(formatOdds(slip.multiplierBp))}
-                      locales="en-US"
-                      format={{ minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }}
-                      suffix={slip.capped ? '× (capped at 20×)' : '×'}
-                    />
-                  </AnimatedText>
-                </p>
+                {!removing && (
+                  <p className="font-extrabold">
+                    Combined:{' '}
+                    <AnimatedText plainText={`${formatOdds(slip.multiplierBp)}×${slip.capped ? ' (capped at 20×)' : ''}`}>
+                      <NumberFlow
+                        value={Number(formatOdds(slip.multiplierBp))}
+                        locales="en-US"
+                        format={{ minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }}
+                        suffix={slip.capped ? '× (capped at 20×)' : '×'}
+                      />
+                    </AnimatedText>
+                  </p>
+                )}
                 <Field label="Stake (DC)" htmlFor="stake">
                   <Input
                     id="stake"
@@ -114,7 +120,7 @@ export function SlipForm({ slip }: { slip: SlipView }) {
                     aria-describedby={state?.formError ? 'slip-error' : undefined}
                   />
                 </Field>
-                {showPayout && (
+                {!removing && showPayout && (
                   <p className="text-lg">
                     Potential payout:{' '}
                     <strong className="tabular-nums">
@@ -131,7 +137,7 @@ export function SlipForm({ slip }: { slip: SlipView }) {
                 )}
                 <FormSubmitButton
                   block
-                  disabled={!slip.canPlace}
+                  disabled={!slip.canPlace || removing}
                   aria-describedby={hasStalePick ? 'slip-blocked' : undefined}
                 >
                   Place parlay

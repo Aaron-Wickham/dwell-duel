@@ -62,7 +62,7 @@ function drag(target: Element, from: [number, number], to: [number, number], hol
 }
 
 function setup() {
-  const { unmount } = render(
+  const { rerender, unmount } = render(
     <BackSwipe>
       <h1>Create market</h1>
     </BackSwipe>,
@@ -70,7 +70,13 @@ function setup() {
   const heading = screen.getByRole('heading', { name: 'Create market' })
   const content = heading.parentElement!
   const backdrop = content.previousElementSibling as HTMLElement
-  return { heading, content, backdrop, unmount }
+  const rerenderSameTree = () =>
+    rerender(
+      <BackSwipe>
+        <h1>Create market</h1>
+      </BackSwipe>,
+    )
+  return { heading, content, backdrop, rerenderSameTree, unmount }
 }
 
 describe('BackSwipe', () => {
@@ -223,5 +229,68 @@ describe('BackSwipe', () => {
     vi.advanceTimersByTime(1000)
     expect(push).not.toHaveBeenCalled()
     heading.remove()
+  })
+
+  it('resets a completed swipe when the route changes under it, as in the admin layout', () => {
+    const { heading, content, backdrop, rerenderSameTree } = setup()
+    drag(heading, [5, 400], [200, 410], 200)
+    vi.advanceTimersByTime(280)
+    expect(push).toHaveBeenCalledTimes(1)
+    expect(content.style.transform).toBe('translate3d(375px, 0, 0)')
+
+    // The admin layout's BackSwipe stays mounted across sections; only the pathname changes.
+    pathname = '/leaderboard'
+    rerenderSameTree()
+
+    expect(content.style.transform).toBe('')
+    expect(content).not.toHaveAttribute('data-swiping')
+    expect(backdrop).not.toHaveAttribute('data-swiping')
+
+    // `busy` must have cleared too, or this new swipe would be ignored.
+    drag(heading, [5, 400], [200, 410], 200)
+    vi.advanceTimersByTime(280)
+    expect(push).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not navigate twice under reduced motion when a second swipe completes before the stuck timer', () => {
+    reduceMotion = true
+    const { heading } = setup()
+    touch(heading, 'touchstart', 5, 400, 1000)
+    touch(heading, 'touchmove', 200, 400, 1100)
+    touch(heading, 'touchend', 200, 400, 1300)
+    expect(push).toHaveBeenCalledTimes(1)
+
+    touch(heading, 'touchstart', 5, 400, 1400)
+    touch(heading, 'touchmove', 200, 400, 1500)
+    touch(heading, 'touchend', 200, 400, 1700)
+
+    expect(push).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancels a swipe in progress when a second finger touches down', () => {
+    const { heading, content } = setup()
+    touch(heading, 'touchstart', 5, 400, 1000)
+    touch(heading, 'touchmove', 200, 400, 1100)
+    expect(content).toHaveAttribute('data-swiping')
+
+    const secondFingerDown = new TouchEvent('touchstart', {
+      bubbles: true,
+      cancelable: true,
+      touches: [
+        { identifier: 1, clientX: 200, clientY: 400 },
+        { identifier: 2, clientX: 210, clientY: 400 },
+      ] as unknown as Touch[],
+    })
+    heading.dispatchEvent(secondFingerDown)
+
+    expect(content.style.transform).toBe('')
+    expect(content).not.toHaveAttribute('data-swiping')
+
+    // The touch was let go: further moves and the eventual touchend do nothing.
+    touch(heading, 'touchmove', 300, 400, 1200)
+    touch(heading, 'touchend', 300, 400, 1300)
+    vi.advanceTimersByTime(1000)
+    expect(content.style.transform).toBe('')
+    expect(push).not.toHaveBeenCalled()
   })
 })

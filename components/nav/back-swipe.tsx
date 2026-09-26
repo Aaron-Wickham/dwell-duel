@@ -13,6 +13,14 @@ const VELOCITY_WINDOW_MS = 100
 const STUCK_RESET_MS = 4000
 
 type Sample = { x: number; t: number }
+type Start = { x: number; y: number; id: number }
+
+function touchWithId(list: TouchList, id: number): Touch | null {
+  for (let i = 0; i < list.length; i++) {
+    if (list[i].identifier === id) return list[i]
+  }
+  return null
+}
 
 export function BackSwipe({ children }: { children: ReactNode }) {
   const router = useRouter()
@@ -21,17 +29,29 @@ export function BackSwipe({ children }: { children: ReactNode }) {
   const contentRef = useRef<HTMLDivElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
   const latest = useRef({ router, pathname, depth })
+  const resetRef = useRef<() => void>(() => {})
+  const isFirstPathname = useRef(true)
 
   useEffect(() => {
     latest.current = { router, pathname, depth }
   }, [router, pathname, depth])
 
   useEffect(() => {
+    // The admin layout keeps one BackSwipe mounted across its sections: a completed swipe leaves
+    // the DOM off-screen and `busy` set until the route underneath it changes.
+    if (isFirstPathname.current) {
+      isFirstPathname.current = false
+      return
+    }
+    resetRef.current()
+  }, [pathname])
+
+  useEffect(() => {
     const content = contentRef.current
     const backdrop = backdropRef.current
     if (!content || !backdrop) return
 
-    let start: { x: number; y: number } | null = null
+    let start: Start | null = null
     let dragging = false
     let busy = false
     let reduceMotion = false
@@ -60,6 +80,7 @@ export function BackSwipe({ children }: { children: ReactNode }) {
       backdrop!.style.opacity = ''
       backdrop!.style.transition = ''
     }
+    resetRef.current = reset
 
     function settle(toX: number, then: () => void) {
       busy = true
@@ -88,7 +109,9 @@ export function BackSwipe({ children }: { children: ReactNode }) {
         return
       }
       if (reduceMotion) {
+        busy = true
         navigateBack()
+        timer = window.setTimeout(reset, STUCK_RESET_MS)
         return
       }
       settle(window.innerWidth, () => {
@@ -104,12 +127,19 @@ export function BackSwipe({ children }: { children: ReactNode }) {
     }
 
     function onTouchStart(event: TouchEvent) {
-      if (start || busy || event.touches.length !== 1) return
+      if (busy) return
+      if (start) {
+        // A second finger touching down mid-swipe cancels it, the same as the system cancelling.
+        reset()
+        stopTracking()
+        return
+      }
+      if (event.touches.length !== 1) return
       const touch = event.touches[0]
       if (touch.clientX > BACK_SWIPE_EDGE) return
       // Base UI only mounts a drawer or dialog popup while it's open.
       if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return
-      start = { x: touch.clientX, y: touch.clientY }
+      start = { x: touch.clientX, y: touch.clientY, id: touch.identifier }
       samples = [{ x: touch.clientX, t: event.timeStamp }]
       reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     }
@@ -121,7 +151,8 @@ export function BackSwipe({ children }: { children: ReactNode }) {
         stopTracking()
         return
       }
-      const touch = event.touches[0]
+      const touch = touchWithId(event.touches, start.id)
+      if (!touch) return
       const dx = touch.clientX - start.x
       const dy = touch.clientY - start.y
       if (!dragging) {
@@ -142,11 +173,12 @@ export function BackSwipe({ children }: { children: ReactNode }) {
 
     function onTouchEnd(event: TouchEvent) {
       if (!start) return
+      const touch = touchWithId(event.changedTouches, start.id)
+      if (!touch) return
       if (!dragging) {
         stopTracking()
         return
       }
-      const touch = event.changedTouches[0]
       const dx = touch.clientX - start.x
       const dy = touch.clientY - start.y
       const first = samples[0]
@@ -182,7 +214,7 @@ export function BackSwipe({ children }: { children: ReactNode }) {
       document.removeEventListener('touchend', onTouchEnd)
       document.removeEventListener('touchcancel', onTouchCancel)
       window.removeEventListener('pageshow', onPageShow)
-      window.clearTimeout(timer)
+      reset()
     }
   }, [])
 

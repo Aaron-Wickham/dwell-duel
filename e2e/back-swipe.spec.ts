@@ -29,10 +29,17 @@ test('on a phone, an edge swipe goes back, and a short or vertical drag does not
   await expect(page.locator('[data-swiping]')).toHaveCount(0)
   await expect(page).toHaveURL(/\/markets\/new$/)
 
-  await drag(page, [5, 600], [30, 300])
+  // A shorter viewport guarantees this form has content to scroll into, so the drag proves
+  // native scrolling actually happened rather than merely not triggering the swipe.
+  await page.setViewportSize({ width: 375, height: 400 })
+  const scrollBefore = await page.evaluate(() => window.scrollY)
+  await drag(page, [5, 300], [30, 50])
   await page.waitForTimeout(400)
+  const scrollAfter = await page.evaluate(() => window.scrollY)
+  expect(scrollAfter).toBeGreaterThan(scrollBefore)
   await expect(page.locator('[data-swiping]')).toHaveCount(0)
   await expect(page).toHaveURL(/\/markets\/new$/)
+  await page.setViewportSize({ width: 375, height: 812 })
 
   await drag(page, [5, 400], [220, 410], 200)
   await expect(page).toHaveURL(/\/markets$/)

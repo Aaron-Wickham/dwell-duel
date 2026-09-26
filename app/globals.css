@@ -50,6 +50,19 @@
   --s4: #3155B8;
   --s5: #7B3FA8;
   --s6: #B0306F;
+  --status-band: #03272D;
+  --safe-top: 0px;
+  --safe-bottom: 0px;
+}
+
+/* viewport-fit=cover makes env(safe-area-inset-*) non-zero in a normal Safari tab too, where
+   Safari's own bars already keep clear of the notch and home indicator. Only the installed app
+   has no browser chrome, so only there does the page reserve the insets itself. */
+@media (display-mode: standalone) {
+  :root {
+    --safe-top: env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 /* The same dark values appear twice: once for an explicit choice, once for the system fallback. */
@@ -162,6 +175,7 @@
   --color-s5: var(--s5);
   --color-s6: var(--s6);
   --color-scrim: var(--scrim);
+  --color-status-band: var(--status-band);
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius-control: 12px;
   --radius-card: 18px;
@@ -172,6 +186,8 @@
 
 @layer base {
   body {
+    /* Keeps every page's first content below the fixed status band. */
+    padding-top: var(--safe-top);
     background: var(--bg);
     color: var(--ink);
     font-family: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;

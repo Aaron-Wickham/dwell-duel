@@ -29,7 +29,7 @@ export function HomeHero({
           plainText={`${balance} DC`}
           className="text-[44px] leading-none font-extrabold tracking-[-0.03em] tabular-nums text-[#72DB2B] md:text-[60px]"
         >
-          <NumberFlow value={balance} suffix=" DC" />
+          <NumberFlow value={balance} locales="en-US" format={{ useGrouping: false }} suffix=" DC" />
         </AnimatedText>
       </p>
       <p className="text-sm text-hero-2">{heroCaption(rank, memberCount, pendingCount, pendingDc)}</p>

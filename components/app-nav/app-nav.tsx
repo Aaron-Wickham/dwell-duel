@@ -31,7 +31,7 @@ function BalanceChip({ balance }: { balance: number }) {
     <span className="inline-flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-gold-soft pr-2.5 pl-1.5 text-[15px] font-extrabold tabular-nums text-gold md:gap-1.5 md:pr-3 md:pl-2">
       <CircleDot aria-hidden="true" className="size-4 md:size-[18px]" />
       <AnimatedText plainText={`Balance ${balance} DC`}>
-        <NumberFlow value={balance} suffix=" DC" />
+        <NumberFlow value={balance} locales="en-US" format={{ useGrouping: false }} suffix=" DC" />
       </AnimatedText>
     </span>
   )

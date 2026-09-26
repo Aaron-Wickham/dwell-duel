@@ -2,10 +2,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 
-const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }))
+type NumberFlowProps = { value: number; suffix?: string; locales?: unknown; format?: { useGrouping?: boolean } }
+const { refresh, numberFlowCalls } = vi.hoisted(() => ({ refresh: vi.fn(), numberFlowCalls: [] as NumberFlowProps[] }))
 let pathname = '/'
 vi.mock('next/navigation', () => ({ usePathname: () => pathname, useRouter: () => ({ refresh }) }))
 vi.mock('@/lib/theme/set-theme', () => ({ setThemeAction: vi.fn() }))
+vi.mock('@number-flow/react', () => ({
+  default: (props: NumberFlowProps) => {
+    numberFlowCalls.push(props)
+    return `${props.value}${props.suffix ?? ''}`
+  },
+}))
 
 import { AppNav } from '@/components/app-nav/app-nav'
 
@@ -16,6 +23,7 @@ function setVisibility(state: DocumentVisibilityState) {
 beforeEach(() => {
   pathname = '/'
   refresh.mockClear()
+  numberFlowCalls.length = 0
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
@@ -92,6 +100,15 @@ describe('AppNav', () => {
     const chips = screen.getAllByText('Balance 120 DC')
     expect(chips.length).toBeGreaterThanOrEqual(2)
     expect(screen.queryByText(/Balance: \d+ DC/)).toBeNull()
+  })
+
+  it('formats the balance as plain digits, in en-US regardless of the browser locale', () => {
+    render(<AppNav balance={1250} slipCount={0} isAdmin={false} />)
+    expect(numberFlowCalls.length).toBeGreaterThanOrEqual(2)
+    for (const call of numberFlowCalls) {
+      expect(call.locales).toBe('en-US')
+      expect(call.format?.useGrouping).toBe(false)
+    }
   })
 
   it('offers the wordmark and the theme toggle', () => {

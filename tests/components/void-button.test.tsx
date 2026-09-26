@@ -111,6 +111,30 @@ describe('VoidButton', () => {
     await waitFor(() => expect(trigger).toHaveFocus())
   })
 
+  it('returns focus to the page heading, not the body, once the parent stops rendering the voided button', async () => {
+    voidMarketAction.mockResolvedValue(undefined)
+    const { rerender } = render(
+      <>
+        <h1>Will it rain on the church picnic?</h1>
+        <VoidButton marketId="m1" />
+      </>,
+    )
+
+    await confirmVoid()
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Market voided.'))
+
+    // A real void revalidates the page: the market can no longer be voided, so the parent
+    // stops rendering this button (and its trigger) once the new server data arrives. The
+    // heading stays mounted throughout, as it does on the real page -- only the button goes.
+    rerender(
+      <>
+        <h1>Will it rain on the church picnic?</h1>
+      </>,
+    )
+    // Base UI restores focus in a microtask after the popup unmounts.
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveFocus())
+  })
+
   it('toasts once voiding succeeds', async () => {
     voidMarketAction.mockResolvedValue(undefined)
     render(<VoidButton marketId="m1" />)

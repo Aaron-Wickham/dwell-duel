@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useSyncExternalStore, type CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { Line, LineChart, ReferenceArea, ReferenceLine, XAxis, YAxis } from 'recharts'
 import { Toggle } from '@base-ui/react/toggle'
 import { ToggleGroup } from '@base-ui/react/toggle-group'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
-import { SERIES_BG } from '@/components/markets/outcome-row'
+import { useTimeZone } from '@/components/ui/local-time'
+import { SERIES_BG } from '@/components/markets/series-classes'
 import { formatDay } from '@/lib/markets/format-date'
 import type { Series } from '@/lib/markets/outcome-series'
 import { RANGE_MS, availableRanges, sliceRange, type RangeKey, type SeriesPoint } from '@/lib/markets/probability-series'
@@ -33,7 +34,10 @@ const SERIES_HALO: Record<Series, string> = {
 
 const HOUR_MS = 60 * 60 * 1000
 const DAY_MS = 24 * HOUR_MS
-const MIN_SPAN_MS = HOUR_MS
+// Five minute-precise ticks need at least ~64s apart to never repeat a label, even with a
+// closed market's zone taking 14% of the width -- five minutes clears that with room to spare,
+// without crushing every recent-bets-only market against the right edge.
+const MIN_SPAN_MS = 5 * 60 * 1000
 const TIME_TICKS_UNDER_MS = 36 * HOUR_MS
 // Below a day of spacing between ticks, a date-only label repeats, so pack date+time instead.
 const DATE_TICKS_UNDER_MS = 4 * DAY_MS
@@ -48,17 +52,6 @@ const LABEL_PAD = 20
 const EMPTY_TEXT = 'No bets yet — the chart starts with the first bet.'
 
 type Row = { t: number } & Record<string, number>
-
-const subscribe = () => () => {}
-
-// The server can't know the viewer's time zone, so it formats in UTC and the browser re-renders in local time.
-function useTimeZone(): string | undefined {
-  return useSyncExternalStore(
-    subscribe,
-    () => undefined,
-    () => 'UTC',
-  )
-}
 
 function formatTime(t: number, timeZone?: string): string {
   return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone }).format(t).replace(':00', '')
@@ -306,7 +299,8 @@ export function ProbabilityChart({
                 )}
                 style={{ '--label-top': `${phoneTops[index]}px`, '--label-top-md': `${desktopTops[index]}px` } as CSSProperties}
               >
-                <div className="text-[13px] font-bold">{outcome.label}</div>
+                {/* Bounded so `truncate` has a width to cut off at -- the 76px/128px gutter minus this label's left-3.5 inset. */}
+                <div className="w-[62px] truncate text-[13px] font-bold md:w-[114px]">{outcome.label}</div>
                 <div className="text-xl font-extrabold tracking-[-0.02em] tabular-nums md:text-[26px]">
                   {percent(last.shares[outcome.id])}%
                 </div>

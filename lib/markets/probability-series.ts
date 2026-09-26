@@ -38,9 +38,12 @@ export function sliceRange(points: SeriesPoint[], range: RangeKey, now: number):
 export function availableRanges(points: SeriesPoint[], now: number): RangeKey[] {
   if (points.length === 0) return []
   const within = (ms: number) => points.some((p) => p.t >= now - ms && p.t <= now)
+  const olderThanADay = points.some((p) => p.t < now - RANGE_MS['1D'])
   const ranges: RangeKey[] = []
-  if (within(RANGE_MS['1D'])) ranges.push('1D')
-  if (within(RANGE_MS['1W']) && points.some((p) => p.t < now - RANGE_MS['1D'])) ranges.push('1W')
+  // Mirrors the 1W rule below: offering a range needs a point inside it AND one older, or a
+  // young market's only range would reintroduce the crushed-against-the-edge chart (finding C1).
+  if (within(RANGE_MS['1D']) && olderThanADay) ranges.push('1D')
+  if (within(RANGE_MS['1W']) && olderThanADay) ranges.push('1W')
   ranges.push('All')
   return ranges
 }

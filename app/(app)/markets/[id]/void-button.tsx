@@ -1,23 +1,29 @@
 'use client'
 
-import { useActionState, useState, type MouseEvent } from 'react'
+import { useActionState, useState } from 'react'
 import { AlertDialog } from '@base-ui/react/alert-dialog'
 import { buttonVariants } from '@/components/ui/button'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { h2Class } from '@/components/ui/page'
+import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { voidMarketAction, type ActionState } from '@/lib/markets/void-market'
 import { cn } from '@/lib/utils'
 
 export function VoidButton({ marketId, className }: { marketId: string; className?: string }) {
   const [open, setOpen] = useState(false)
+  // A successful void makes the parent stop rendering this button once it revalidates, taking
+  // the trigger with it -- so Base UI's default "return focus to the trigger" has nothing left
+  // to land on. Cancel, Escape and a failed void all leave the trigger in place, so they keep it.
+  const [voided, setVoided] = useState(false)
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     withSuccessToast(
       async (prev: ActionState, formData: FormData) => {
         const next = await voidMarketAction(marketId, prev, formData)
         // A failure closes the dialog so the error shows beside the trigger, where focus returns.
         if (next?.formError) setOpen(false)
+        else setVoided(true)
         return next
       },
       (s) => Boolean(s?.formError),
@@ -25,13 +31,6 @@ export function VoidButton({ marketId, className }: { marketId: string; classNam
     ),
     undefined,
   )
-
-  function handleCancelClick(event: MouseEvent<HTMLButtonElement>) {
-    // A void in flight can't be backed out of. Matches FormSubmitButton's own pending
-    // guard -- aria-disabled plus a blocked click, never the disabled attribute, so focus
-    // stays put instead of a member thinking Cancel aborted an irreversible action.
-    if (isPending) event.preventDefault()
-  }
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
@@ -51,7 +50,10 @@ export function VoidButton({ marketId, className }: { marketId: string; classNam
         </AlertDialog.Trigger>
         <AlertDialog.Portal>
           <AlertDialog.Backdrop className="fixed inset-0 z-40 bg-scrim transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 motion-reduce:transition-none" />
-          <AlertDialog.Popup className="fixed top-1/2 left-1/2 z-40 flex w-[calc(100vw-32px)] max-w-[440px] -translate-x-1/2 -translate-y-1/2 flex-col gap-5 rounded-card border border-line bg-surface p-6 text-ink shadow-overlay transition-[opacity,scale] duration-150 data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0 motion-reduce:transition-none">
+          <AlertDialog.Popup
+            finalFocus={voided ? focusPageHeading : true}
+            className="fixed top-1/2 left-1/2 z-40 flex w-[calc(100vw-32px)] max-w-[440px] -translate-x-1/2 -translate-y-1/2 flex-col gap-5 rounded-card border border-line bg-surface p-6 text-ink shadow-overlay transition-[opacity,scale] duration-150 data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0 motion-reduce:transition-none"
+          >
             <div className="flex flex-col gap-2">
               <AlertDialog.Title className={h2Class}>Void this market?</AlertDialog.Title>
               <AlertDialog.Description className="text-ink2">
@@ -61,8 +63,12 @@ export function VoidButton({ marketId, className }: { marketId: string; classNam
             <form action={formAction} className="flex flex-col gap-3 md:flex-row md:justify-end">
               <AlertDialog.Close
                 className={buttonVariants({ variant: 'secondary' })}
+                // Matches FormSubmitButton's own pending guard -- aria-disabled plus a
+                // click that doesn't close, never the disabled attribute, so focus stays put
+                // instead of a member thinking Cancel aborted an irreversible action. The
+                // actual block is the root's onOpenChange guard, since Base UI's Close ignores
+                // a handler's preventDefault(); this is only the visual/AT state to match it.
                 aria-disabled={isPending || undefined}
-                onClick={handleCancelClick}
               >
                 Cancel
               </AlertDialog.Close>

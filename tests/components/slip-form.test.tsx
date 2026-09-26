@@ -5,8 +5,13 @@ import userEvent from '@testing-library/user-event'
 import type { SlipPick as SlipPickView, SlipView } from '@/lib/parlays/get-slip'
 import { combineOdds } from '@/lib/parlays/odds'
 
+type NumberFlowProps = { value: number; suffix?: string; locales?: unknown; format?: { useGrouping?: boolean } }
+const { numberFlowCalls } = vi.hoisted(() => ({ numberFlowCalls: [] as NumberFlowProps[] }))
 vi.mock('@number-flow/react', () => ({
-  default: ({ value, suffix }: { value: number; suffix?: string }) => `${value}${suffix ?? ''}`,
+  default: (props: NumberFlowProps) => {
+    numberFlowCalls.push(props)
+    return `${props.value}${props.suffix ?? ''}`
+  },
 }))
 
 const { placeParlayAction } = vi.hoisted(() => ({ placeParlayAction: vi.fn() }))
@@ -57,6 +62,17 @@ describe('SlipForm', () => {
     await userEvent.type(screen.getByLabelText('Stake (DC)'), '5')
     expect(screen.getByText(/Potential payout:/)).toHaveTextContent('Potential payout: 80 DC')
     expect(screen.getByRole('button', { name: 'Place parlay' })).toBeEnabled()
+  })
+
+  it('formats the combined odds and the payout as plain digits, in en-US regardless of the browser locale', async () => {
+    numberFlowCalls.length = 0
+    render(<SlipForm slip={slipView([pick(1), pick(2)])} />)
+    await userEvent.type(screen.getByLabelText('Stake (DC)'), '5')
+    expect(numberFlowCalls.length).toBeGreaterThanOrEqual(2)
+    for (const call of numberFlowCalls) {
+      expect(call.locales).toBe('en-US')
+      expect(call.format?.useGrouping).toBe(false)
+    }
   })
 
   it('notes a capped multiplier and caps the payout', async () => {

@@ -27,7 +27,8 @@ export function SlipPick({
           <AnimatedText plainText={`${formatOdds(pick.oddsBp)}×`}>
             <NumberFlow
               value={Number(formatOdds(pick.oddsBp))}
-              format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+              locales="en-US"
+              format={{ minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }}
               suffix="×"
             />
           </AnimatedText>

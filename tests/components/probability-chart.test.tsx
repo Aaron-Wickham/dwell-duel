@@ -83,6 +83,16 @@ describe('ProbabilityChart', () => {
     expect(screen.getByText('No').parentElement).toHaveTextContent(/^No25%$/)
   })
 
+  it('truncates a long outcome name to one line so it cannot overlap its neighbour in the phone gutter', () => {
+    const longNames: ChartOutcome[] = [
+      { id: 'yes', label: 'A wildly verbose outcome label that would otherwise wrap', series: 2 },
+      { id: 'no', label: 'No', series: 1 },
+    ]
+    render(<ProbabilityChart outcomes={longNames} points={spread} now={NOW} />)
+    const label = screen.getByText('A wildly verbose outcome label that would otherwise wrap')
+    expect(label).toHaveClass('truncate')
+  })
+
   it('counts the bets above the chart', () => {
     render(<ProbabilityChart outcomes={yesNo} points={spread} now={NOW} />)
     expect(screen.getByText('3 bets')).toBeInTheDocument()
@@ -128,6 +138,25 @@ describe('ProbabilityChart', () => {
     const labels = [...container.querySelectorAll('[data-slot="ticks"] span')].map((s) => s.textContent)
     expect(labels).toHaveLength(5)
     expect(labels.at(-1)).toBe('Now')
+    expect(new Set(labels).size).toBe(labels.length)
+  })
+
+  it('draws to the left edge for a young market instead of crushing it against the right (C1)', () => {
+    // Every bet is inside the last day, so only 'All' is offered -- the new 1D gate also needs an older point.
+    const recent = [point(NOW - 20 * 60 * 1000, 1, 0), point(NOW - 10 * 60 * 1000, 0.5, 0.5)]
+    const { container } = render(<ProbabilityChart outcomes={yesNo} points={recent} now={NOW} />)
+    const d = container.querySelector('.recharts-line-curve')?.getAttribute('d')
+    expect(d).toMatch(/^M0,/)
+    const labels = [...container.querySelectorAll('[data-slot="ticks"] span')].map((s) => s.textContent)
+    expect(new Set(labels).size).toBe(labels.length)
+  })
+
+  it('pads a single recent bet to a five-minute minimum span rather than a full hour', () => {
+    const { container } = render(<ProbabilityChart outcomes={yesNo} points={[point(NOW - 2 * 60 * 1000, 1, 0)]} now={NOW} />)
+    const d = container.querySelector('.recharts-line-curve')?.getAttribute('d')
+    // A 5-minute minimum span puts a bet from 2 minutes ago 3/5 of the way across a 600px-wide plot.
+    expect(d).toMatch(/^M360,/)
+    const labels = [...container.querySelectorAll('[data-slot="ticks"] span')].map((s) => s.textContent)
     expect(new Set(labels).size).toBe(labels.length)
   })
 

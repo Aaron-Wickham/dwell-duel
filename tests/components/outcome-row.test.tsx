@@ -1,13 +1,22 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { OutcomeRow, type OutcomeRowState } from '@/components/markets/outcome-row'
 
+type NumberFlowProps = { value: number; suffix?: string; locales?: unknown; format?: { useGrouping?: boolean } }
+const { numberFlowCalls } = vi.hoisted(() => ({ numberFlowCalls: [] as NumberFlowProps[] }))
 vi.mock('@number-flow/react', () => ({
-  default: ({ value, suffix }: { value: number; suffix?: string }) => `${value}${suffix ?? ''}`,
+  default: (props: NumberFlowProps) => {
+    numberFlowCalls.push(props)
+    return `${props.value}${props.suffix ?? ''}`
+  },
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
+
+beforeEach(() => {
+  numberFlowCalls.length = 0
+})
 
 function renderRow(state: OutcomeRowState, overrides: Partial<Parameters<typeof OutcomeRow>[0]> = {}) {
   const addAction = vi.fn()
@@ -83,6 +92,15 @@ describe('OutcomeRow', () => {
   it('does not flag an outcome that did not win', () => {
     renderRow('none')
     expect(screen.queryByText('Winner')).not.toBeInTheDocument()
+  })
+
+  it('formats every animated number as plain digits, in en-US regardless of the browser locale', () => {
+    renderRow('add')
+    expect(numberFlowCalls.length).toBeGreaterThan(0)
+    for (const call of numberFlowCalls) {
+      expect(call.locales).toBe('en-US')
+      expect(call.format?.useGrouping).toBe(false)
+    }
   })
 
   it('reads 0% before anyone has bet', () => {

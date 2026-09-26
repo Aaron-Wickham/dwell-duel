@@ -129,8 +129,16 @@ describe('availableRanges', () => {
     expect(availableRanges([point(NOW - 8 * DAY, 1, 0), point(NOW - 9 * DAY, 0.5, 0.5)], NOW)).toEqual(['All'])
   })
 
-  it("offers '1D' and 'All' when every bet is from the last day", () => {
-    expect(availableRanges([point(NOW - 3 * HOUR, 1, 0), point(NOW - HOUR, 0.5, 0.5)], NOW)).toEqual(['1D', 'All'])
+  // A young market's every bet is inside the last day, so offering 1D would draw the same
+  // line as All -- and reintroduce the crushed-against-the-edge chart (finding C1).
+  it("offers only 'All' when every bet is from the last day", () => {
+    expect(availableRanges([point(NOW - 3 * HOUR, 1, 0), point(NOW - HOUR, 0.5, 0.5)], NOW)).toEqual(['All'])
+  })
+
+  // A point within the day window is also within the week window, so 1D's new gate can never
+  // be true without 1W's also being true -- same shape as 1W's own gate, one day narrower.
+  it("offers '1D' once a bet is older than a day, alongside one from the last day", () => {
+    expect(availableRanges([point(NOW - 2 * DAY, 1, 0), point(NOW - HOUR, 0.5, 0.5)], NOW)).toEqual(['1D', '1W', 'All'])
   })
 
   it("offers '1W' and 'All' when the latest bet is days old but inside the week", () => {

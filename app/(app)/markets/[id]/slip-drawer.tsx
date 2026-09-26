@@ -1,23 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type MouseEvent } from 'react'
 import { Drawer } from '@base-ui/react/drawer'
 import { Layers, X } from 'lucide-react'
 import { SlipForm } from '@/app/(app)/parlays/slip-form'
 import { buttonVariants } from '@/components/ui/button'
+import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import type { SlipView } from '@/lib/parlays/get-slip'
 import { cn } from '@/lib/utils'
-
-// Placing a parlay empties the slip while the drawer is open, which unmounts the trigger --
-// so Base UI's default "return focus to the trigger" behaviour has nothing left to land on.
-// The page's own <h1> is the one heading guaranteed to still be on the page once the drawer
-// (and its trigger) is gone; it isn't natively focusable, so this makes it so first.
-function focusPageHeading(): HTMLElement | null {
-  const heading = document.querySelector('h1')
-  if (!heading) return null
-  heading.tabIndex = -1
-  return heading
-}
 
 export function SlipDrawer({ slip }: { slip: SlipView }) {
   const [open, setOpen] = useState(false)
@@ -28,7 +18,7 @@ export function SlipDrawer({ slip }: { slip: SlipView }) {
   const count = slip.picks.length
   if (count === 0 && !open && !closing) return null
 
-  function handleContentClick(event: React.MouseEvent<HTMLDivElement>) {
+  function handleContentClick(event: MouseEvent<HTMLDivElement>) {
     // A link to the market already on screen doesn't navigate, so it would otherwise leave
     // the sheet stuck open. Close on any link click; navigating away closes it anyway.
     if ((event.target as HTMLElement).closest('a')) setOpen(false)

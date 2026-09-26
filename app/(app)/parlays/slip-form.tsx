@@ -80,7 +80,8 @@ export function SlipForm({ slip }: { slip: SlipView }) {
                   <AnimatedText plainText={`${formatOdds(slip.multiplierBp)}×${slip.capped ? ' (capped at 20×)' : ''}`}>
                     <NumberFlow
                       value={Number(formatOdds(slip.multiplierBp))}
-                      format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                      locales="en-US"
+                      format={{ minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }}
                       suffix={slip.capped ? '× (capped at 20×)' : '×'}
                     />
                   </AnimatedText>
@@ -105,7 +106,12 @@ export function SlipForm({ slip }: { slip: SlipView }) {
                     Potential payout:{' '}
                     <strong className="tabular-nums">
                       <AnimatedText plainText={`${potentialPayout(stakeNumber, slip.legBps)} DC`}>
-                        <NumberFlow value={potentialPayout(stakeNumber, slip.legBps)} suffix=" DC" />
+                        <NumberFlow
+                          value={potentialPayout(stakeNumber, slip.legBps)}
+                          locales="en-US"
+                          format={{ useGrouping: false }}
+                          suffix=" DC"
+                        />
                       </AnimatedText>
                     </strong>
                   </p>

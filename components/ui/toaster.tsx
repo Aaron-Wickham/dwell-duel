@@ -38,7 +38,7 @@ export function Toaster() {
       offset={isDesktop ? { bottom: 24, right: 24 } : { top: 80, left: 16, right: 16 }}
       mobileOffset={{ top: 80, left: 16, right: 16 }}
       icons={{ success: <CircleCheck aria-hidden="true" className="size-4" /> }}
-      toastOptions={{ style: { boxShadow: 'var(--shadow-card)' } }}
+      toastOptions={{ style: { boxShadow: 'var(--shadow-overlay)' } }}
       style={
         {
           fontFamily: 'var(--font-manrope), ui-sans-serif, system-ui, sans-serif',

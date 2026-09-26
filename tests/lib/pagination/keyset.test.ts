@@ -98,11 +98,11 @@ describe('filter strings', () => {
   const t: Cursor = { ts: '2026-09-26T12:00:00+00:00', id: 'bet:7' }
 
   // Every filter also carries a plain bound on the timestamp column, alongside the (ts, id)
-  // tiebreak OR: a pure-OR filter gives Postgres nothing to seek by on the (ts desc, id desc)
-  // index, so the plan comes back as an Index Scan with only a Filter, walking the whole table
-  // (proven by EXPLAIN in tests/db/data-layer-indexes.test.ts). The bound is redundant with the
-  // OR — `lt`/`eq` both imply `lte`, `gt`/`eq` both imply `gte` — but gives the planner an Index
-  // Cond it can seek by.
+  // tiebreak OR. A pure-OR filter with no such bound is known from EXPLAIN review to get only a
+  // Filter on the (ts desc, id desc) index, walking the whole table; the bounded form here is
+  // proven to get an Index Cond instead (tests/db/data-layer-indexes.test.ts). The bound is
+  // redundant with the OR itself — the `lt`/`eq` tiebreak implies `lte`, and the `gt`/`eq`
+  // tiebreak implies `gte` — but it's what gives the planner an Index Cond to seek by.
   it('builds the strictly older and strictly newer filters', () => {
     expect(olderThanFilter(COLS, c)).toBe(
       'and(created_at.lte."2026-09-26T10:15:30.123456+00:00",or(created_at.lt."2026-09-26T10:15:30.123456+00:00",and(created_at.eq."2026-09-26T10:15:30.123456+00:00",id.lt."99")))',
@@ -120,9 +120,12 @@ describe('filter strings', () => {
     expect(rangeFilter(COLS, { top: t, bottom: null })).toBe(
       'and(created_at.lte."2026-09-26T12:00:00+00:00",or(created_at.lt."2026-09-26T12:00:00+00:00",and(created_at.eq."2026-09-26T12:00:00+00:00",id.lte."bet:7")))',
     )
+    // Both bounds reuse the same-shaped single-bound filters, ANDed together — a nested
+    // and(and(...),and(...)) rather than one flat and(...) with four terms. AND is associative, so
+    // this is logically identical to the flat form; nesting just falls out of reusing the helpers.
     expect(rangeFilter(COLS, { top: t, bottom: c })).toBe(
-      'and(created_at.gte."2026-09-26T10:15:30.123456+00:00",or(created_at.gt."2026-09-26T10:15:30.123456+00:00",and(created_at.eq."2026-09-26T10:15:30.123456+00:00",id.gte."99")),' +
-        'created_at.lte."2026-09-26T12:00:00+00:00",or(created_at.lt."2026-09-26T12:00:00+00:00",and(created_at.eq."2026-09-26T12:00:00+00:00",id.lte."bet:7")))',
+      'and(and(created_at.gte."2026-09-26T10:15:30.123456+00:00",or(created_at.gt."2026-09-26T10:15:30.123456+00:00",and(created_at.eq."2026-09-26T10:15:30.123456+00:00",id.gte."99"))),' +
+        'and(created_at.lte."2026-09-26T12:00:00+00:00",or(created_at.lt."2026-09-26T12:00:00+00:00",and(created_at.eq."2026-09-26T12:00:00+00:00",id.lte."bet:7"))))',
     )
   })
 })

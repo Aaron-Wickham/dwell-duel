@@ -26,10 +26,17 @@ describe('ShowMore', () => {
     expect(link).toHaveClass('min-h-11', 'no-underline', 'border-line-s', 'bg-surface', 'self-start')
   })
 
-  it('keeps the scroll position and replaces the history entry', () => {
+  it('keeps the scroll position and replaces the history entry, by default', () => {
     render(<ShowMore href="/feed?before=abc" />)
     const link = screen.getByRole('link', { name: 'Show more' })
     expect(link).toHaveAttribute('data-scroll', 'false')
+    expect(link).toHaveAttribute('data-replace', 'true')
+  })
+
+  it('scrolls to the top like a normal navigation when it starts a fresh window', () => {
+    render(<ShowMore href="/admin/ledger?before_from=abc" fresh />)
+    const link = screen.getByRole('link', { name: 'Show more' })
+    expect(link).toHaveAttribute('data-scroll', 'true')
     expect(link).toHaveAttribute('data-replace', 'true')
   })
 })

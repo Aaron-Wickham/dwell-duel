@@ -12,10 +12,11 @@ export function isBigintId(id: string): boolean {
 }
 
 // Every leaf is a plain `<ts>.op."value"` term, plus a matching plain bound on <ts> alongside the
-// (ts, id) tiebreak OR. The OR alone gives the planner nothing to seek by on the (ts desc, id desc)
-// index — it comes back as an Index Scan with only a Filter, walking the whole table (proven by
-// EXPLAIN in tests/db/data-layer-indexes.test.ts). The added bound is redundant with the OR (`lt`
-// implies `lte`, `eq` implies `lte`) but gives Postgres an Index Cond to seek by.
+// (ts, id) tiebreak OR. A pure-OR filter with no such bound is known from EXPLAIN review to get
+// only a Filter on the (ts desc, id desc) index, walking the whole table; the bounded form here is
+// proven to get an Index Cond instead (tests/db/data-layer-indexes.test.ts). The bound is redundant
+// with the OR itself — the `lt`/`eq` tiebreak implies `lte`, and the `gt`/`eq` tiebreak implies
+// `gte` — but it's what gives Postgres something to seek by.
 function atOrOlder(cols: KeyColumns, c: Cursor): string {
   return `and(${cols.ts}.lte."${c.ts}",or(${cols.ts}.lt."${c.ts}",and(${cols.ts}.eq."${c.ts}",${cols.id}.lte."${c.id}")))`
 }
@@ -27,12 +28,7 @@ function atOrNewer(cols: KeyColumns, c: Cursor): string {
 // Every value is quoted, and a validated cursor can't contain a quote (see decodeCursor).
 export function rangeFilter(cols: KeyColumns, page: PageParams): string | null {
   const { top, bottom } = page
-  if (top && bottom) {
-    return (
-      `and(${cols.ts}.gte."${bottom.ts}",or(${cols.ts}.gt."${bottom.ts}",and(${cols.ts}.eq."${bottom.ts}",${cols.id}.gte."${bottom.id}")),` +
-      `${cols.ts}.lte."${top.ts}",or(${cols.ts}.lt."${top.ts}",and(${cols.ts}.eq."${top.ts}",${cols.id}.lte."${top.id}")))`
-    )
-  }
+  if (top && bottom) return `and(${atOrNewer(cols, bottom)},${atOrOlder(cols, top)})`
   if (bottom) return atOrNewer(cols, bottom)
   if (top) return atOrOlder(cols, top)
   return null

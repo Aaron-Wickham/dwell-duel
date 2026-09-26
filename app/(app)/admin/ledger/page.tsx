@@ -43,7 +43,10 @@ export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>)
         )}
         {ledger.next && (
           <div className="flex flex-col border-t border-line py-3.5">
-            <ShowMore href={showMoreHref('/admin/ledger', searchParams, 'before', ledger.next)} />
+            <ShowMore
+              href={showMoreHref('/admin/ledger', searchParams, 'before', ledger.next)}
+              fresh={ledger.next.kind === 'window'}
+            />
           </div>
         )}
       </section>

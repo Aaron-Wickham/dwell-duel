@@ -4,7 +4,9 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 // Every table a signed-in page reads its live numbers from. supabase/migrations/0032 adds them to
-// the realtime publication; Postgres Changes then only delivers rows the member's RLS lets them read.
+// the realtime publication; Postgres Changes then only delivers rows the member's RLS lets them
+// read -- except DELETE events, which skip RLS and carry only the primary key. LiveRefresh never
+// reads payloads either way; it just triggers a refresh, which re-reads through RLS.
 export const LIVE_TABLES = [
   'bets',
   'markets',
@@ -30,7 +32,12 @@ export function LiveRefresh(): null {
     // into a single refresh.
     function scheduleRefresh() {
       clearTimeout(timer)
-      timer = setTimeout(() => router.refresh(), DEBOUNCE_MS)
+      timer = setTimeout(() => {
+        // A hidden tab already gets caught up by the visibility handler below when it returns,
+        // so there's no need to re-render it on every change anyone makes while it's away.
+        if (document.visibilityState === 'hidden') return
+        router.refresh()
+      }, DEBOUNCE_MS)
     }
 
     // A phone that backgrounds the app suspends the socket, and the client only notices a dead one
@@ -62,6 +69,8 @@ export function LiveRefresh(): null {
       teardown = () => {
         supabase.removeChannel(channel)
       }
+    }).catch(() => {
+      // Offline or a stale deploy chunk: live updates quietly stop, and the foreground refresh still covers it.
     })
 
     return () => {

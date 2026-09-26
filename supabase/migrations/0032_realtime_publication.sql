@@ -2,7 +2,10 @@
 -- components/live/live-refresh.tsx, which refreshes whatever page is on
 -- screen. Realtime is already enabled (supabase/config.toml's [realtime]
 -- block); this is the missing piece. Postgres Changes checks each
--- subscriber's RLS, so a member only hears about rows they can already read.
+-- subscriber's RLS, so a member only hears about rows they can already
+-- read -- except DELETE events, which skip RLS and carry only the primary
+-- key. LiveRefresh never reads payloads either way; it just triggers a
+-- refresh, which re-reads through RLS.
 --
 -- Safe to run on the hosted project, where supabase_realtime already exists
 -- and a table may already have been added from the dashboard: each table is

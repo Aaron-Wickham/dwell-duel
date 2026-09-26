@@ -60,7 +60,7 @@ afterEach(() => {
 })
 
 describe('LiveRefresh', () => {
-  it('renders nothing and opens one channel on every change to each live table', async () => {
+  it('renders nothing and opens one channel bound to changes on each live table', async () => {
     const { container } = await mount()
 
     expect(container).toBeEmptyDOMElement()
@@ -84,6 +84,20 @@ describe('LiveRefresh', () => {
     expect(mocks.refresh).not.toHaveBeenCalled()
 
     vi.advanceTimersByTime(1)
+    expect(mocks.refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('skips the refresh for a change while the tab is hidden, then catches up once on return', async () => {
+    await mount()
+
+    setVisibility('hidden')
+    fireChange()
+    vi.advanceTimersByTime(400)
+    expect(mocks.refresh).not.toHaveBeenCalled()
+
+    setVisibility('visible')
+    document.dispatchEvent(new Event('visibilitychange'))
+    vi.advanceTimersByTime(400)
     expect(mocks.refresh).toHaveBeenCalledTimes(1)
   })
 

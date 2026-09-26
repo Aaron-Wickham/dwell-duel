@@ -51,9 +51,13 @@ async function run(step, sql) {
   return body
 }
 
+// Numbered by email, not id: id is a fresh random uuid every run, so ordering by it would make
+// rn (and everything random() picks by rn) different each time even with the same seed. email's
+// numeric suffix is assigned in insertion order, so ordering by it is the same permutation on
+// every run.
 const scaleTempTables = `
   create temp table scale_members on commit drop as
-    select id, email, row_number() over (order by id) as rn from public.profiles where email like ${memberEmails};
+    select id, email, row_number() over (order by email) as rn from public.profiles where email like ${memberEmails};
   create temp table scale_markets on commit drop as
     select id, created_at, row_number() over (order by created_at, id) as rn from public.markets where description = ${seedNote};
 `
@@ -118,6 +122,7 @@ await run(
 await run(
   `Bets (${BETS}) and their ledger rows`,
   `
+  select setseed(0.42);
   ${scaleTempTables}
   create temp table scale_outcomes on commit drop as
     select id, market_id,
@@ -164,6 +169,7 @@ await run(
 await run(
   `Parlays (up to ${PARLAYS})`,
   `
+  select setseed(0.42);
   do $$
   declare
     v_member record;
@@ -213,6 +219,7 @@ await run(
 await run(
   `Resolutions (${RESOLVED}, ${OVERRIDDEN} of them overridden) and voids (${VOIDED})`,
   `
+  select setseed(0.42);
   do $$
   declare
     v_admin record;
@@ -261,6 +268,7 @@ await run(
 await run(
   `Tasks (${TASKS}) and completions (up to ${COMPLETIONS})`,
   `
+  select setseed(0.42);
   ${scaleTempTables}
   insert into public.tasks (title, description, reward_amount, is_repeatable, period, created_by, created_at)
   select format('Scale task %s', n), ${seedNote}, 5 * (1 + n % 5), true, 'weekly',

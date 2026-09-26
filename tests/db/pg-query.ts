@@ -15,7 +15,6 @@ export async function pgQuery<Row>(sql: string): Promise<Row[]> {
     headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ query: sql }),
   })
-  const body = await res.json()
-  if (!res.ok) throw new Error(`postgres-meta ${res.status}: ${body.message ?? JSON.stringify(body)}`)
-  return body as Row[]
+  if (!res.ok) throw new Error(`postgres-meta ${res.status}: ${await res.text()}`)
+  return (await res.json()) as Row[]
 }

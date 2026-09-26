@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { MotionConfig, motion } from 'motion/react'
 import { BookOpen, ChartColumn, CircleDot, House, Layers, MessageSquareText, ShieldCheck, Trophy, type LucideIcon } from 'lucide-react'
 import NumberFlow from '@number-flow/react'
@@ -97,17 +96,6 @@ function DesktopLink({
 export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean }) {
   const active = activeNavId(usePathname())
   const { count: slipCount } = useSlipCount()
-  const router = useRouter()
-
-  useEffect(() => {
-    // Layouts don't re-render on client navigation, so refresh when the member returns to the tab
-    // to pick up balance/slip changes someone else made while they were away.
-    function onVisibilityChange() {
-      if (document.visibilityState === 'visible') router.refresh()
-    }
-    document.addEventListener('visibilitychange', onVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', onVisibilityChange)
-  }, [router])
 
   return (
     <MotionConfig reducedMotion="user">

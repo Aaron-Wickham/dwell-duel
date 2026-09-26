@@ -5,9 +5,9 @@ import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 type NumberFlowProps = { value: number; suffix?: string; locales?: unknown; format?: { useGrouping?: boolean } }
-const { refresh, numberFlowCalls } = vi.hoisted(() => ({ refresh: vi.fn(), numberFlowCalls: [] as NumberFlowProps[] }))
+const { numberFlowCalls } = vi.hoisted(() => ({ numberFlowCalls: [] as NumberFlowProps[] }))
 let pathname = '/'
-vi.mock('next/navigation', () => ({ usePathname: () => pathname, useRouter: () => ({ refresh }) }))
+vi.mock('next/navigation', () => ({ usePathname: () => pathname }))
 vi.mock('@/lib/theme/set-theme', () => ({ setThemeAction: vi.fn() }))
 vi.mock('@number-flow/react', () => ({
   default: (props: NumberFlowProps) => {
@@ -28,13 +28,8 @@ function Nav({ balance, slipCount, isAdmin }: { balance: number; slipCount: numb
   )
 }
 
-function setVisibility(state: DocumentVisibilityState) {
-  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
-}
-
 beforeEach(() => {
   pathname = '/'
-  refresh.mockClear()
   numberFlowCalls.length = 0
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
@@ -178,18 +173,6 @@ describe('AppNav', () => {
     const links = screen.getAllByRole('link')
     expect(links[0]).toHaveAccessibleName('Skip to content')
     expect(links[0]).toHaveAttribute('href', '#main')
-  })
-
-  it('refreshes when the tab becomes visible again, not when it hides', () => {
-    render(<Nav balance={120} slipCount={0} isAdmin={false} />)
-
-    setVisibility('hidden')
-    document.dispatchEvent(new Event('visibilitychange'))
-    expect(refresh).not.toHaveBeenCalled()
-
-    setVisibility('visible')
-    document.dispatchEvent(new Event('visibilitychange'))
-    expect(refresh).toHaveBeenCalledOnce()
   })
 
   it('moves the slip badge with an optimistic change before the layout re-renders', async () => {

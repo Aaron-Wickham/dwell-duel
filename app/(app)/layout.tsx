@@ -3,6 +3,7 @@ import { isAdmin } from '@/lib/auth/is-admin'
 import { readSlip } from '@/lib/parlays/slip'
 import { AppNav } from '@/components/app-nav/app-nav'
 import { SlipCountProvider } from '@/components/app-nav/slip-count'
+import { LiveRefresh } from '@/components/live/live-refresh'
 import { NavDepthTracker } from '@/lib/nav/nav-depth'
 import { Toaster } from '@/components/ui/toaster'
 
@@ -24,6 +25,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
         {children}
       </main>
       <Toaster />
+      <LiveRefresh />
     </SlipCountProvider>
   )
 }

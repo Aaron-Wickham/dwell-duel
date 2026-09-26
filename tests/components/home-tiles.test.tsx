@@ -20,4 +20,9 @@ describe('HomeTiles', () => {
     expect(within(markets).getByText('3 open markets')).toBeInTheDocument()
     expect(within(nav).getByRole('link', { name: /Parlays/ })).toHaveTextContent('Your slip is empty.')
   })
+
+  it('gives each tile a press state', () => {
+    render(<HomeTiles tiles={[{ id: 'markets', href: '/markets', icon: ChartColumn, title: 'Markets', subtitle: '3 open markets' }]} />)
+    expect(screen.getByRole('link', { name: /Markets/ })).toHaveClass('pressable')
+  })
 })

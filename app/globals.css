@@ -184,7 +184,44 @@
   --shadow-overlay: var(--overlay-shadow);
 }
 
+/* Chrome that is tapped, never read: a long press shouldn't select it or open iOS's callout menu.
+   Text content stays selectable. */
+@utility no-callout {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* The native press: controls give under the finger. Reduced motion swaps the scale for a dim. */
+@utility pressable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: scale 120ms ease-out;
+
+  &:active:not(:disabled, [aria-disabled="true"]) {
+    scale: 0.97;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &:active:not(:disabled, [aria-disabled="true"]) {
+      scale: none;
+      opacity: 0.7;
+    }
+  }
+}
+
 @layer base {
+  html {
+    /* iOS's rubber-band bounce can't be turned off; it shows html's background colour, so make
+       that the page colour rather than white. */
+    background-color: var(--bg);
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     /* Keeps every page's first content below the fixed status band. */
     padding-top: var(--safe-top);
@@ -192,6 +229,20 @@
     color: var(--ink);
     font-family: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
+    /* No pull-to-refresh, overscroll glow or scroll chaining; live updates keep data fresh. */
+    overscroll-behavior-y: none;
+  }
+
+  /* Drops the double-tap-to-zoom wait, so taps land at once. */
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  label,
+  summary,
+  [role="button"] {
+    touch-action: manipulation;
   }
 
   a {

@@ -15,7 +15,7 @@ export function AdminNav() {
   const pathname = usePathname()
 
   return (
-    <nav aria-label="Admin sections" className="flex gap-1 rounded-[14px] bg-sunk p-1 md:self-start">
+    <nav aria-label="Admin sections" className="no-callout flex gap-1 rounded-[14px] bg-sunk p-1 md:self-start">
       {SECTIONS.map(({ href, label }) => {
         const current = pathname === href
         return (
@@ -24,7 +24,7 @@ export function AdminNav() {
             href={href}
             aria-current={current ? 'page' : undefined}
             className={cn(
-              'inline-flex min-h-11 grow items-center justify-center rounded-[10px] px-2 text-[15px] font-bold no-underline md:grow-0 md:px-4',
+              'pressable inline-flex min-h-11 grow items-center justify-center rounded-[10px] px-2 text-[15px] font-bold no-underline md:grow-0 md:px-4',
               current ? 'bg-surface text-ink shadow-tab' : 'text-ink2 hover:text-ink',
             )}
           >

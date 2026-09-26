@@ -18,7 +18,7 @@ export function HomeTiles({ tiles }: { tiles: HomeTile[] }) {
           <Link
             key={id}
             href={href}
-            className="group flex min-h-[72px] items-center gap-3.5 px-4 py-3 text-ink no-underline lg:min-h-24 lg:rounded-card lg:border lg:border-line lg:bg-surface lg:p-5 lg:shadow-card"
+            className="pressable group flex min-h-[72px] items-center gap-3.5 px-4 py-3 text-ink no-underline lg:min-h-24 lg:rounded-card lg:border lg:border-line lg:bg-surface lg:p-5 lg:shadow-card"
           >
             <span className="flex size-11 shrink-0 items-center justify-center rounded-control bg-acc-soft text-acc-text">
               <Icon aria-hidden="true" className="size-[22px]" />

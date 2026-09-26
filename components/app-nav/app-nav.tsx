@@ -55,7 +55,7 @@ function DesktopLink({
       href={href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative isolate inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-[15px] font-bold no-underline',
+        'pressable relative isolate inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-[15px] font-bold no-underline',
         active ? 'text-on-primary' : 'text-ink2 hover:bg-sunk hover:text-ink',
       )}
     >
@@ -110,7 +110,7 @@ export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipC
       >
         Skip to content
       </a>
-      <header className="sticky top-0 z-30 hidden h-[72px] shrink-0 items-center gap-5 border-b border-line bg-surface px-10 md:flex">
+      <header className="no-callout sticky top-(--safe-top) z-30 hidden h-[72px] shrink-0 items-center gap-5 border-b border-line bg-surface px-10 md:flex">
         <Wordmark />
         <nav aria-label="Primary" className="flex items-center gap-0.5">
           {NAV_ITEMS.map((item) => (
@@ -134,7 +134,7 @@ export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipC
         <ThemeToggle />
       </header>
 
-      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-1 border-b border-line bg-surface pr-2 pl-3 md:hidden">
+      <header className="no-callout sticky top-(--safe-top) z-30 flex h-16 shrink-0 items-center gap-1 border-b border-line bg-surface pr-2 pl-3 md:hidden">
         <Wordmark size="sm" />
         <span className="grow" />
         <BalanceChip balance={balance} />
@@ -144,7 +144,7 @@ export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipC
             aria-label="Admin"
             aria-current={active === 'admin' ? 'page' : undefined}
             className={cn(
-              'inline-flex size-11 shrink-0 items-center justify-center rounded-control no-underline',
+              'pressable inline-flex size-11 shrink-0 items-center justify-center rounded-control no-underline',
               active === 'admin' ? 'bg-lime text-on-lime' : 'text-ink hover:bg-sunk',
             )}
           >
@@ -156,7 +156,7 @@ export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipC
 
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-3 md:hidden"
+        className="no-callout fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-[calc(12px+var(--safe-bottom))] md:hidden"
       >
         {NAV_ITEMS.map((item) => {
           const Icon = ICONS[item.id]
@@ -169,7 +169,7 @@ export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipC
               aria-current={isActive ? 'page' : undefined}
               aria-label={item.shortLabel === item.label ? undefined : item.label}
               className={cn(
-                'flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-[14px] text-xs leading-[1.1] no-underline',
+                'pressable flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-[14px] text-xs leading-[1.1] no-underline',
                 isActive ? 'font-extrabold text-ink' : 'font-bold text-ink2',
               )}
             >

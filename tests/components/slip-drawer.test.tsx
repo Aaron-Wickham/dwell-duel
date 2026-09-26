@@ -39,7 +39,7 @@ describe('SlipDrawer', () => {
   it('shows a phone-only "Slip (n)" trigger and mounts no slip content until it is pressed', () => {
     render(<SlipDrawer slip={slipView([pick(1), pick(2)])} />)
     const trigger = screen.getByRole('button', { name: 'Slip (2)' })
-    expect(trigger).toHaveClass('md:hidden', 'fixed', 'bottom-[94px]')
+    expect(trigger).toHaveClass('md:hidden', 'fixed', 'bottom-[calc(94px+var(--safe-bottom))]')
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Place parlay' })).toBeNull()
     expect(screen.queryByLabelText('Stake (DC)')).toBeNull()
@@ -126,6 +126,16 @@ describe('SlipDrawer', () => {
     await userEvent.click(within(sheet).getByRole('button', { name: 'Close slip' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(screen.getByRole('button', { name: 'Slip (1)' })).toBeInTheDocument()
+  })
+
+  it('keeps the open sheet clear of the status band and its last control above the home indicator', async () => {
+    render(<SlipDrawer slip={slipView([pick(1), pick(2)])} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Slip (2)' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Your slip' })
+
+    expect(sheet).toHaveClass('max-h-[calc(100dvh-48px-var(--safe-top))]')
+    const scroller = within(sheet).getByRole('button', { name: 'Place parlay' }).closest('.overflow-y-auto')
+    expect(scroller).toHaveClass('overscroll-contain', 'pb-[calc(24px+var(--safe-bottom))]')
   })
 
   it('closes the sheet when a link inside it is clicked', async () => {

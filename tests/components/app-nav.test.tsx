@@ -117,6 +117,26 @@ describe('AppNav', () => {
     expect(screen.getAllByRole('button', { name: /Switch to (dark|light) theme/ }).length).toBeGreaterThanOrEqual(2)
   })
 
+  it('keeps the phone chrome inside the installed app\'s safe area', () => {
+    render(<AppNav balance={120} slipCount={0} isAdmin />)
+    for (const header of screen.getAllByRole('banner')) expect(header).toHaveClass('sticky', 'top-(--safe-top)')
+    const phone = screen.getAllByRole('navigation', { name: 'Primary' })[1]
+    expect(phone).toHaveClass('fixed', 'bottom-0', 'pb-[calc(12px+var(--safe-bottom))]')
+  })
+
+  it('keeps the nav off the long-press menu and gives every nav control a press state', () => {
+    render(<AppNav balance={120} slipCount={0} isAdmin />)
+    for (const header of screen.getAllByRole('banner')) expect(header).toHaveClass('no-callout')
+    const [desktop, phone] = screen.getAllByRole('navigation', { name: 'Primary' })
+    expect(phone).toHaveClass('no-callout')
+    for (const link of [...within(desktop).getAllByRole('link'), ...within(phone).getAllByRole('link')]) {
+      expect(link).toHaveClass('pressable')
+    }
+    for (const toggle of screen.getAllByRole('button', { name: /Switch to (dark|light) theme/ })) {
+      expect(toggle).toHaveClass('pressable')
+    }
+  })
+
   it('offers a skip-to-content link as the first link on the page', () => {
     render(<AppNav balance={120} slipCount={0} isAdmin={false} />)
     const links = screen.getAllByRole('link')

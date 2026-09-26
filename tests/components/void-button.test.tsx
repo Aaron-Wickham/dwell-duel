@@ -41,6 +41,19 @@ describe('VoidButton', () => {
     expect(screen.getByRole('button', { name: 'Void market' })).toHaveAttribute('type', 'submit')
   })
 
+  it('centres the dialog inside the safe area and keeps its scrolling to itself', async () => {
+    render(<VoidButton marketId="m1" />)
+    await userEvent.click(screen.getByRole('button', { name: 'Void this market' }))
+
+    const dialog = await screen.findByRole('alertdialog', { name: 'Void this market?' })
+    expect(dialog).toHaveClass(
+      'top-[calc(50%+(var(--safe-top)-var(--safe-bottom))/2)]',
+      'max-h-[calc(100dvh-32px-var(--safe-top)-var(--safe-bottom))]',
+      'overflow-y-auto',
+      'overscroll-contain',
+    )
+  })
+
   it('closes on Cancel and on Escape without voiding, returning focus to the trigger', async () => {
     render(<VoidButton marketId="m1" />)
     const trigger = screen.getByRole('button', { name: 'Void this market' })

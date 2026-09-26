@@ -9,7 +9,7 @@ export default async function NewMarketPage() {
   if (!user) redirect('/sign-in')
 
   return (
-    <Page>
+    <Page reveal>
       <BackLink href="/markets">Markets</BackLink>
       <PageHeader title="Create market" />
       <CreateMarketForm />

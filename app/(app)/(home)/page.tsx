@@ -58,7 +58,7 @@ export default async function Home() {
   }
 
   return (
-    <Page>
+    <Page reveal>
       <PageHeader title={`Welcome, ${me?.displayName}`} />
       <HomeHero
         balance={me?.balance ?? 0}

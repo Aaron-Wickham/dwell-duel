@@ -1,0 +1,23 @@
+import { cardClass } from '@/components/ui/card'
+import { Skeleton, SkeletonScreen } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
+
+const ROW_WIDTHS = ['w-4/5', 'w-3/5', 'w-2/3', 'w-3/4']
+
+// Below the Admin header and section tabs: one card listing every coin movement.
+export default function Loading() {
+  return (
+    <SkeletonScreen name="admin-ledger" className={cn(cardClass, 'px-[18px] py-1 md:px-6')}>
+      <div className="flex flex-col divide-y divide-line">
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i} className="flex items-start gap-3 py-3.5">
+            <div className="grow">
+              <Skeleton className={cn('h-4', ROW_WIDTHS[i % ROW_WIDTHS.length])} />
+            </div>
+            <Skeleton className="mt-0.5 h-4 w-20 shrink-0" />
+          </div>
+        ))}
+      </div>
+    </SkeletonScreen>
+  )
+}

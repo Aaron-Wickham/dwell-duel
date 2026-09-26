@@ -75,7 +75,7 @@ export default async function MarketsPage() {
   })).filter((group) => group.markets.length > 0)
 
   return (
-    <Page>
+    <Page reveal>
       <PageHeader
         title="Markets"
         action={

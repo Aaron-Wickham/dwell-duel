@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { redirect, notFound } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { getLeaderboard } from '@/lib/social/leaderboard'
@@ -5,8 +6,13 @@ import { listFeed } from '@/lib/social/list-feed'
 import { Page, h1Class } from '@/components/ui/page'
 import { BackLink } from '@/components/ui/back-link'
 import { Avatar } from '@/components/ui/avatar'
+import { SkeletonScreen } from '@/components/ui/skeleton'
+import { ContentReveal } from '@/components/nav/page-transition'
+import { FeedListSkeleton } from '@/components/feed/feed-list-skeleton'
 import { FeedList } from '@/app/(app)/feed/feed-list'
 
+// No loading.tsx for this route: the member must be found before anything streams, so an
+// unknown id still gets a real 404 status. Only the activity list streams in behind a skeleton.
 export default async function MemberPage(props: PageProps<'/members/[id]'>) {
   const { id } = await props.params
   const { supabase, user } = await requireUser()
@@ -15,8 +21,6 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
   const board = await getLeaderboard(supabase)
   const member = board.find((m) => m.id === id)
   if (!member) notFound()
-
-  const events = await listFeed(supabase, { actorId: member.id })
 
   return (
     <Page>
@@ -30,7 +34,26 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
           </p>
         </div>
       </section>
-      <FeedList events={events} heading="Recent activity" headingId="recent-activity" />
+      <Suspense
+        fallback={
+          <SkeletonScreen name="member-activity">
+            <FeedListSkeleton />
+          </SkeletonScreen>
+        }
+      >
+        <MemberActivity memberId={member.id} />
+      </Suspense>
     </Page>
+  )
+}
+
+async function MemberActivity({ memberId }: { memberId: string }) {
+  const { supabase } = await requireUser()
+  const events = await listFeed(supabase, { actorId: memberId })
+
+  return (
+    <ContentReveal>
+      <FeedList events={events} heading="Recent activity" headingId="recent-activity" />
+    </ContentReveal>
   )
 }

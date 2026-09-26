@@ -261,3 +261,83 @@
     outline-offset: 2px;
   }
 }
+
+/* Skeleton blocks (components/ui/skeleton.tsx): a band of the surface colour sweeps across the
+   sunk fill. A component layer, so bg-* and rounded-* utilities on a Skeleton win. */
+@layer components {
+  .skeleton {
+    border-radius: var(--radius-control);
+    background-color: var(--sunk);
+    background-image: linear-gradient(
+      100deg,
+      transparent 30%,
+      color-mix(in oklab, var(--surface) 55%, transparent) 50%,
+      transparent 70%
+    );
+    background-repeat: no-repeat;
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton {
+      background-image: none;
+      animation: none;
+    }
+  }
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+/* Skeleton-to-content reveal (components/nav/page-transition.tsx). The skeleton leaves fast, sliding down;
+   the content waits for it, then fades and rises in. */
+::view-transition-old(.skeleton-exit) {
+  animation:
+    150ms ease-out both reveal-fade reverse,
+    150ms ease-out both reveal-rise reverse;
+}
+
+::view-transition-new(.content-enter) {
+  animation:
+    210ms ease-in 150ms both reveal-fade,
+    400ms ease-in both reveal-rise;
+}
+
+/* The transition overlay would otherwise swallow taps for the length of the reveal. */
+::view-transition {
+  pointer-events: none;
+}
+
+@keyframes reveal-fade {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes reveal-rise {
+  from {
+    transform: translateY(10px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(.skeleton-exit),
+  ::view-transition-new(.content-enter) {
+    animation: none;
+  }
+}

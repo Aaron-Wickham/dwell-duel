@@ -14,7 +14,7 @@ export default async function LeaderboardPage() {
   const board = await getLeaderboard(supabase)
 
   return (
-    <Page>
+    <Page reveal>
       <PageHeader title="Leaderboard" description="Ranked by balance. Ties share a rank." />
       {board.length <= 1 ? (
         <EmptyState icon={Trophy} title="No other members yet.">

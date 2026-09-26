@@ -5,6 +5,13 @@ import AppSegmentError from '@/app/(app)/error'
 import RootSegmentError from '@/app/error'
 import GlobalError from '@/app/global-error'
 
+// next/font/google is rewritten by Next's own SWC/webpack build; plain Vitest never applies that
+// transform, so the real module (an empty shim outside a Next build) is mocked here, per the
+// Next.js Jest testing docs' `nextFontMock` pattern.
+vi.mock('next/font/google', () => ({
+  Manrope: () => ({ variable: 'mock-font-manrope' }),
+}))
+
 function testError(): Error & { digest?: string } {
   const error = new Error('boom') as Error & { digest?: string }
   error.digest = 'digest-123'
@@ -56,5 +63,8 @@ describe('app/global-error.tsx', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Something went wrong' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
     expect(consoleError).toHaveBeenCalledWith(error, { digest: 'digest-123' })
+    // React 19 hoists the boundary's <html> attributes onto the real document element rather
+    // than nesting a literal <html> node in the render container.
+    expect(document.documentElement).toHaveClass('h-full')
   })
 })

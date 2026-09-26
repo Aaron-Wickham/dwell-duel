@@ -28,7 +28,7 @@ export default async function Home() {
     isAdmin(supabase).then((a) => (a ? listPendingTaskCompletions(supabase) : [])),
   ])
 
-  const rank = standing?.rank ?? standing?.memberCount ?? 0
+  const rank = standing?.rank ?? 0
   const memberCount = standing?.memberCount ?? 0
   const pendingReviews = myCompletions.filter((c) => c.status === 'pending')
   const pendingDc = pendingReviews.reduce((sum, c) => sum + c.rewardAmount, 0)

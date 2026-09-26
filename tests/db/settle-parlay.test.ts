@@ -272,7 +272,9 @@ describe('parlay settlement', () => {
       p_market_id: a.marketId,
       p_outcome_id: a.outcomeIds[1],
     })
-    expect(error?.code).toBe('23514')
+    // 0033 blocks it up front, naming who's short, rather than failing on the balance check part-way.
+    expect(error?.code).toBe('P0001')
+    expect(error?.message).toBe('clawback_short:[{"owed": 160, "balance": 50, "display_name": "Bob"}]')
 
     const { data: after } = await db.from('markets').select('status, current_resolution_id').eq('id', a.marketId).single()
     expect(after).toEqual(before)

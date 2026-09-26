@@ -69,6 +69,34 @@ describe('VoidButton', () => {
     expect(screen.getByRole('alertdialog', { name: 'Void this market?' })).toBeInTheDocument()
   })
 
+  it('ignores Cancel and Escape while the void is in flight, then resumes once it settles', async () => {
+    let resolveAction: (value: { formError: string }) => void = () => {}
+    voidMarketAction.mockImplementation(
+      () => new Promise((resolve) => { resolveAction = resolve }),
+    )
+    render(<VoidButton marketId="m1" />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Void this market' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Void market' }))
+
+    const dialog = await screen.findByRole('alertdialog')
+    const cancel = screen.getByRole('button', { name: 'Cancel' })
+    await waitFor(() => expect(cancel).toHaveAttribute('aria-disabled', 'true'))
+
+    await userEvent.click(cancel)
+    expect(dialog).toBeInTheDocument()
+
+    await userEvent.keyboard('{Escape}')
+    expect(dialog).toBeInTheDocument()
+
+    resolveAction({ formError: 'Could not void that market.' })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not void that market.')
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    const trigger = screen.getByRole('button', { name: 'Void this market' })
+    expect(trigger).toHaveAttribute('aria-describedby', 'void-hint void-error')
+  })
+
   it('adds the error id alongside the hint once voiding fails, closing the dialog', async () => {
     voidMarketAction.mockResolvedValue({ formError: 'Could not void that market.' })
     render(<VoidButton marketId="m1" />)

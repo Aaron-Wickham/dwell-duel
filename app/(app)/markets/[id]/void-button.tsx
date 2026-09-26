@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, type MouseEvent } from 'react'
 import { AlertDialog } from '@base-ui/react/alert-dialog'
 import { buttonVariants } from '@/components/ui/button'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 
 export function VoidButton({ marketId, className }: { marketId: string; className?: string }) {
   const [open, setOpen] = useState(false)
-  const [state, formAction] = useActionState<ActionState, FormData>(
+  const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     withSuccessToast(
       async (prev: ActionState, formData: FormData) => {
         const next = await voidMarketAction(marketId, prev, formData)
@@ -26,9 +26,23 @@ export function VoidButton({ marketId, className }: { marketId: string; classNam
     undefined,
   )
 
+  function handleCancelClick(event: MouseEvent<HTMLButtonElement>) {
+    // A void in flight can't be backed out of. Matches FormSubmitButton's own pending
+    // guard -- aria-disabled plus a blocked click, never the disabled attribute, so focus
+    // stays put instead of a member thinking Cancel aborted an irreversible action.
+    if (isPending) event.preventDefault()
+  }
+
   return (
     <div className={cn('flex flex-col gap-2', className)}>
-      <AlertDialog.Root open={open} onOpenChange={setOpen}>
+      <AlertDialog.Root
+        open={open}
+        onOpenChange={(nextOpen) => {
+          // Ignore Escape, Cancel and any other close request while the void is in flight.
+          if (isPending && !nextOpen) return
+          setOpen(nextOpen)
+        }}
+      >
         <AlertDialog.Trigger
           className={buttonVariants({ variant: 'danger', block: true })}
           aria-describedby={state?.formError ? 'void-hint void-error' : 'void-hint'}
@@ -45,7 +59,13 @@ export function VoidButton({ marketId, className }: { marketId: string; classNam
               </AlertDialog.Description>
             </div>
             <form action={formAction} className="flex flex-col gap-3 md:flex-row md:justify-end">
-              <AlertDialog.Close className={buttonVariants({ variant: 'secondary' })}>Cancel</AlertDialog.Close>
+              <AlertDialog.Close
+                className={buttonVariants({ variant: 'secondary' })}
+                aria-disabled={isPending || undefined}
+                onClick={handleCancelClick}
+              >
+                Cancel
+              </AlertDialog.Close>
               <FormSubmitButton variant="danger">Void market</FormSubmitButton>
             </form>
           </AlertDialog.Popup>

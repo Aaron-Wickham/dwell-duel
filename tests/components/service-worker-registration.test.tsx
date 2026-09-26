@@ -23,10 +23,12 @@ afterEach(() => {
 })
 
 describe('ServiceWorkerRegistration', () => {
-  it('registers /sw.js for the whole site in production', async () => {
+  it('registers /sw.js for the whole site in production, versioned by the build', async () => {
     vi.stubEnv('NODE_ENV', 'production')
     const { container } = render(<ServiceWorkerRegistration />)
-    await waitFor(() => expect(register).toHaveBeenCalledWith('/sw.js', { scope: '/' }))
+    // NEXT_PUBLIC_SW_VERSION is inlined by next.config.ts's `env` at build time, so the module
+    // under test reads it as 'dev' here (unset in this test run), the same fallback sw.js uses.
+    await waitFor(() => expect(register).toHaveBeenCalledWith('/sw.js?v=dev', { scope: '/' }))
     expect(container).toBeEmptyDOMElement()
   })
 

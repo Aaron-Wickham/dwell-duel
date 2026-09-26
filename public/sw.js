@@ -1,18 +1,24 @@
-// Hand-rolled on purpose: three routing rules don't need a library. Bump CACHE_VERSION whenever
-// this file's caching changes; activate deletes every other cache, which is what rolls the
-// change out to phones that already installed the old worker.
-const CACHE_VERSION = 'v1'
+// Hand-rolled on purpose: three routing rules don't need a library. The cache name comes from
+// the registration URL's ?v= query string (components/offline/service-worker-registration.tsx
+// registers "/sw.js?v=<build id>"), so every deploy gets its own cache automatically without a
+// hand-bumped version constant; activate deletes every other cache, which both rolls a caching
+// change out to installed phones and keeps old deploys' caches from accumulating.
+const CACHE_VERSION = new URL(self.location.href).searchParams.get('v') ?? 'dev'
 const CACHE_NAME = `dwellduel-${CACHE_VERSION}`
 const OFFLINE_URL = '/offline'
 const STATIC_PREFIX = '/_next/static/'
 const STATIC_ASSET_URL = /\/_next\/static\/[^"'\s\\)]+/g
 
 // The offline page is shown exactly when the network is gone, so the CSS, fonts and scripts
-// its HTML references are cached alongside it rather than left to the runtime cache.
+// its HTML references are cached alongside it rather than left to the runtime cache. The fetch
+// is anonymous and rejects a redirect: a cookied request could precache a signed-in redirect or
+// another member's response. The cached page then always renders with the default theme rather
+// than a member's saved theme cookie -- an accepted trade-off for never caching per-member bytes.
 async function precacheOfflinePage() {
   const cache = await caches.open(CACHE_NAME)
-  const response = await fetch(OFFLINE_URL, { cache: 'no-store' })
+  const response = await fetch(OFFLINE_URL, { cache: 'no-store', credentials: 'omit' })
   if (!response.ok) throw new Error(`Precaching ${OFFLINE_URL} failed with ${response.status}`)
+  if (response.redirected) throw new Error(`Precaching ${OFFLINE_URL} was redirected`)
   const html = await response.clone().text()
   await cache.put(OFFLINE_URL, response)
   const assets = [...new Set(html.match(STATIC_ASSET_URL) ?? [])]
@@ -32,11 +38,12 @@ async function cacheFirst(event) {
   return response
 }
 
-// Every page is live, per-member data, so a navigation is never answered from cache. The
-// offline page is the only fallback.
-async function networkFirstNavigation(request) {
+// Every page is live, per-member data, so a navigation is never answered from cache. Navigation
+// preload lets the browser start the real request in parallel with the worker's own startup
+// instead of waiting for it; the offline page is the only fallback when neither one answers.
+async function networkFirstNavigation(event) {
   try {
-    return await fetch(request)
+    return (await event.preloadResponse) ?? (await fetch(event.request))
   } catch {
     return (await caches.match(OFFLINE_URL)) ?? Response.error()
   }
@@ -50,10 +57,10 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
-      .then(() => self.clients.claim()),
+    Promise.all([
+      caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))),
+      self.registration.navigationPreload?.enable(),
+    ]).then(() => self.clients.claim()),
   )
 })
 
@@ -70,6 +77,6 @@ self.addEventListener('fetch', (event) => {
     return
   }
   if (request.mode === 'navigate') {
-    event.respondWith(networkFirstNavigation(request))
+    event.respondWith(networkFirstNavigation(event))
   }
 })

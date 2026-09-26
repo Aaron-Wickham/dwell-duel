@@ -2,6 +2,12 @@
 
 import { useEffect } from 'react'
 
+// A ?v= on the script URL is what makes a new deploy replace the worker: the browser refetches
+// and reinstalls whenever the registration URL's bytes differ, and sw.js names its cache after
+// this same query param, so an old deploy's cache is deleted on the next activate rather than
+// growing forever.
+const SW_URL = `/sw.js?v=${process.env.NEXT_PUBLIC_SW_VERSION ?? 'dev'}`
+
 export function ServiceWorkerRegistration() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
@@ -14,7 +20,7 @@ export function ServiceWorkerRegistration() {
         .catch(() => undefined)
       return
     }
-    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((error: unknown) => {
+    navigator.serviceWorker.register(SW_URL, { scope: '/' }).catch((error: unknown) => {
       console.error('Service worker registration failed', error)
     })
   }, [])

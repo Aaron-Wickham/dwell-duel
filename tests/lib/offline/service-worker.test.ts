@@ -17,10 +17,14 @@ type Listener = (event: unknown) => void
 
 const keyOf = (input: string | FakeRequest) => new URL(typeof input === 'string' ? input : input.url, ORIGIN).href
 
-function loadWorker(network: (url: string) => Promise<Response>) {
+function loadWorker(network: (url: string) => Promise<Response>, options: { locationHref?: string } = {}) {
   const listeners: Record<string, Listener> = {}
   const storage = new Map<string, Map<string, Response>>()
-  const fetch = vi.fn((input: string | FakeRequest) => network(keyOf(input)))
+  const fetchCalls: Array<{ url: string; init?: RequestInit }> = []
+  const fetch = vi.fn((input: string | FakeRequest, init?: RequestInit) => {
+    fetchCalls.push({ url: keyOf(input), init })
+    return network(keyOf(input))
+  })
 
   function openSync(name: string) {
     if (!storage.has(name)) storage.set(name, new Map())
@@ -49,6 +53,8 @@ function loadWorker(network: (url: string) => Promise<Response>) {
     },
   }
 
+  const navigationPreloadEnable = vi.fn(async () => undefined)
+
   const scope: Record<string, unknown> = {
     caches,
     fetch,
@@ -58,7 +64,11 @@ function loadWorker(network: (url: string) => Promise<Response>) {
     Set,
     Error,
     TypeError,
-    location: { origin: ORIGIN },
+    // The scriptURL a worker was registered with (including its ?v= query) is what self.location
+    // reflects inside the worker. Defaults to a fixed version so most tests can assert a stable
+    // cache name; tests that care about versioning pass their own locationHref.
+    location: { origin: ORIGIN, href: options.locationHref ?? `${ORIGIN}/sw.js?v=v1` },
+    registration: { navigationPreload: { enable: navigationPreloadEnable } },
     skipWaiting: vi.fn(async () => undefined),
     clients: { claim: vi.fn(async () => undefined) },
     addEventListener: (type: string, listener: Listener) => {
@@ -74,11 +84,15 @@ function loadWorker(network: (url: string) => Promise<Response>) {
     await done
   }
 
-  async function request(pathOrUrl: string, init: { method?: string; mode?: string } = {}) {
+  async function request(
+    pathOrUrl: string,
+    init: { method?: string; mode?: string; preloadResponse?: Promise<Response | undefined> } = {},
+  ) {
     const pending: Promise<unknown>[] = []
     let responded: Promise<Response> | undefined
     listeners.fetch({
       request: { url: keyOf(pathOrUrl), method: init.method ?? 'GET', mode: init.mode ?? 'cors' },
+      preloadResponse: init.preloadResponse ?? Promise.resolve(undefined),
       respondWith: (response: Promise<Response>) => (responded = response),
       waitUntil: (promise: Promise<unknown>) => pending.push(promise),
     })
@@ -89,7 +103,7 @@ function loadWorker(network: (url: string) => Promise<Response>) {
 
   const cached = (name: string) => [...(storage.get(name)?.keys() ?? [])].map((key) => key.replace(ORIGIN, ''))
 
-  return { fetch, storage, scope, lifecycle, request, cached }
+  return { fetch, fetchCalls, storage, scope, lifecycle, request, cached }
 }
 
 const ok = (body: string) => Promise.resolve(new Response(body, { status: 200 }))
@@ -116,10 +130,43 @@ describe('public/sw.js', () => {
     expect(worker.scope.skipWaiting).toHaveBeenCalledTimes(1)
   })
 
+  it('fetches the offline page anonymously, uncached, never sending a session cookie', async () => {
+    const worker = loadWorker(onlineNetwork)
+    await worker.lifecycle('install')
+
+    const offlineFetch = worker.fetchCalls.find((call) => call.url === `${ORIGIN}/offline`)
+    expect(offlineFetch?.init).toMatchObject({ cache: 'no-store', credentials: 'omit' })
+  })
+
   it('fails the install when the offline page cannot be fetched', async () => {
     const worker = loadWorker((url) => (url.endsWith('/offline') ? Promise.resolve(new Response('', { status: 500 })) : ok('')))
     await expect(worker.lifecycle('install')).rejects.toThrow('Precaching /offline failed with 500')
     expect(worker.scope.skipWaiting).not.toHaveBeenCalled()
+  })
+
+  it('fails the install when the offline page fetch was redirected', async () => {
+    const worker = loadWorker((url) => {
+      if (!url.endsWith('/offline')) return ok('')
+      const response = new Response(OFFLINE_HTML, { status: 200 })
+      Object.defineProperty(response, 'redirected', { value: true })
+      return Promise.resolve(response)
+    })
+    await expect(worker.lifecycle('install')).rejects.toThrow('Precaching /offline was redirected')
+    expect(worker.scope.skipWaiting).not.toHaveBeenCalled()
+  })
+
+  it("names its cache after the version in the worker's own registration URL", async () => {
+    const worker = loadWorker(onlineNetwork, { locationHref: `${ORIGIN}/sw.js?v=2026-09-26-abc123` })
+    await worker.lifecycle('install')
+
+    expect(worker.cached('dwellduel-2026-09-26-abc123')).toContain('/offline')
+  })
+
+  it('falls back to a dev cache name when the registration URL carries no version', async () => {
+    const worker = loadWorker(onlineNetwork, { locationHref: `${ORIGIN}/sw.js` })
+    await worker.lifecycle('install')
+
+    expect(worker.cached('dwellduel-dev')).toContain('/offline')
   })
 
   it('deletes caches from older versions on activate and claims open pages', async () => {
@@ -130,6 +177,15 @@ describe('public/sw.js', () => {
 
     expect([...worker.storage.keys()]).toEqual(['dwellduel-v1'])
     expect((worker.scope.clients as { claim: () => void }).claim).toHaveBeenCalledTimes(1)
+  })
+
+  it('enables navigation preload on activate', async () => {
+    const worker = loadWorker(onlineNetwork)
+    await worker.lifecycle('install')
+    await worker.lifecycle('activate')
+
+    const registration = worker.scope.registration as { navigationPreload: { enable: () => void } }
+    expect(registration.navigationPreload.enable).toHaveBeenCalledTimes(1)
   })
 
   it('serves static assets cache-first, fetching each once', async () => {
@@ -159,12 +215,38 @@ describe('public/sw.js', () => {
     expect(worker.cached('dwellduel-v1')).not.toContain('/markets')
   })
 
+  it('answers a navigation from the preload response without fetching the network', async () => {
+    const worker = loadWorker(onlineNetwork)
+    const preloadResponse = Promise.resolve(new Response('preloaded body'))
+    const response = await worker.request('/markets', { mode: 'navigate', preloadResponse })
+
+    expect(await response!.text()).toBe('preloaded body')
+    expect(worker.fetch).not.toHaveBeenCalled()
+  })
+
+  it('falls back to fetching the network when navigation preload resolves with nothing', async () => {
+    const worker = loadWorker(onlineNetwork)
+    const response = await worker.request('/markets', { mode: 'navigate', preloadResponse: Promise.resolve(undefined) })
+
+    expect(await response!.text()).toBe(`body of ${ORIGIN}/markets`)
+    expect(worker.fetch).toHaveBeenCalledTimes(1)
+  })
+
   it('falls back to the precached offline page when a navigation cannot reach the network', async () => {
     const worker = loadWorker(onlineNetwork)
     await worker.lifecycle('install')
     worker.fetch.mockImplementation(offlineNetwork)
 
     const response = await worker.request('/markets/3f2a', { mode: 'navigate' })
+    expect(await response!.text()).toBe(OFFLINE_HTML)
+  })
+
+  it('falls back to the precached offline page when navigation preload itself rejects', async () => {
+    const worker = loadWorker(onlineNetwork)
+    await worker.lifecycle('install')
+
+    const preloadResponse = Promise.reject(new TypeError('Failed to fetch'))
+    const response = await worker.request('/markets/3f2a', { mode: 'navigate', preloadResponse })
     expect(await response!.text()).toBe(OFFLINE_HTML)
   })
 

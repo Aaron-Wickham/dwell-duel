@@ -1,8 +1,11 @@
+import type { Metadata } from 'next'
 import { WifiOff } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { buttonVariants } from '@/components/ui/button'
 import { h1Class } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
+
+export const metadata: Metadata = { title: 'Offline', robots: { index: false } }
 
 // public/sw.js serves this page in place of any navigation that can't reach the network, so
 // it reads no data. "Try again" is a plain empty-href link, not a client button: it reloads

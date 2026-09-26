@@ -221,8 +221,8 @@ The feed's cursor is `(occurred_at, id)`. The view's text `id` works as the tieb
 
 - **Error page:** "Something went wrong" / "We couldn't load this page. Try again in a moment." / "Try again"
 - **Clawback, inline on the resolve form:**
-  - one member: "Can't override: Bob has already spent 40 of the 60 DC he won."
-  - several: "Can't override: Bob has already spent 40 of the 60 DC he won, and Carol 15 of 30."
+  - one member: "Can't override: Bob has already spent 40 of 60 DC won on this market."
+  - several: "Can't override: Bob has already spent 40 of 60 DC won on this market, and Carol 15 of 30."
   - both: "Adjust their balances first if you still want to override."
 - **Pagination:** "Show more" / "Back to newest"
 

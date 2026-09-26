@@ -186,9 +186,31 @@ Covers handoff build steps 5–6.
   from that market's `bets` rows in time order. The data comes from
   existing tables, which invited members can already read.
 - **Where the chart appears:** on market detail and, in compact form, on
-  `MarketCard`.
-- **Polish:** NumberFlow for odds, balances and payouts; `sonner` toasts;
-  and the Base UI Drawer.
+  `MarketCard`. The markets list reads bets for the listed markets in one
+  query. That's fine at today's size, and the speed/scale PR after PR C
+  adds limits.
+- **Polish:**
+  - NumberFlow for odds, balances and payouts.
+  - **`sonner` toasts** confirm successful actions that don't navigate:
+    - bet placed
+    - pick added or removed
+    - task submitted
+    - completion approved or rejected
+    - invite added
+    - balance adjusted
+    - market resolved or voided
+
+    Errors stay inline next to their form, as in PR B.
+  - **The Base UI Drawer** becomes a phone bet-slip drawer. On market
+    pages at phone width, a "Slip (n)" button opens a bottom drawer
+    holding the member's picks, the stake field and "Place parlay". This
+    lets members build and place a parlay without leaving the market.
+    Desktop keeps `/parlays`.
+  - **The Base UI Dialog** confirms "Void this market": "Void this
+    market? Every bet and parlay leg is refunded. This can't be undone."
+    with Cancel / Void market.
+  - **Base UI ToggleGroup** provides the chart's 1D / 1W / All range
+    control.
 - **Cleanup:** removing `vaul` and `@radix-ui/react-dialog`.
 
 ## Testing

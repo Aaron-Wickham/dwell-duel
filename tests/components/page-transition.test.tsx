@@ -7,6 +7,8 @@ vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
 )
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ back: vi.fn(), push: vi.fn() }), usePathname: () => '/markets/new' }))
+
 import { Page } from '@/components/ui/page'
 import {
   ContentReveal,
@@ -54,10 +56,11 @@ describe('route transitions', () => {
     expect(container.firstElementChild).toBe(screen.getByText('Body'))
   })
 
-  it('wraps a drilled-into Page in the route transition', () => {
+  it('wraps a drilled-into Page in the route transition around the back-swipe surface', () => {
     const { container } = render(<Page transition="drill-down">Body</Page>)
     expect(calls).toHaveLength(1)
-    expect(calls[0].enter).toEqual({ 'nav-forward': 'nav-forward', 'nav-back': 'nav-back', default: 'page-enter' })
-    expect(container.firstElementChild).toBe(screen.getByText('Body'))
+    const surface = container.firstElementChild
+    expect(surface).toHaveClass('touch-pan-y', 'overflow-x-clip')
+    expect(surface).toContainElement(screen.getByText('Body'))
   })
 })

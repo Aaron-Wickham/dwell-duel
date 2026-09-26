@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { BackSwipe } from '@/components/nav/back-swipe'
 import { DrillDownTransition, TabTransition } from '@/components/nav/page-transition'
 import { cn } from '@/lib/utils'
 
@@ -20,7 +21,13 @@ export function Page({
 }) {
   const page = <div className={cn(pageClass, className)}>{children}</div>
   if (transition === 'tab') return <TabTransition>{page}</TabTransition>
-  if (transition === 'drill-down') return <DrillDownTransition>{page}</DrillDownTransition>
+  if (transition === 'drill-down') {
+    return (
+      <DrillDownTransition>
+        <BackSwipe>{page}</BackSwipe>
+      </DrillDownTransition>
+    )
+  }
   return page
 }
 

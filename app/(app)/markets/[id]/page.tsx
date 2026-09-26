@@ -10,6 +10,7 @@ import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt } from '@/lib/markets/market-status'
 import { rowState } from '@/lib/markets/row-state'
+import { isUuid } from '@/lib/uuid'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { readSlip } from '@/lib/parlays/slip'
 import { MAX_PICKS, legOddsBp } from '@/lib/parlays/odds'
@@ -32,6 +33,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const { id } = await props.params
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
+  if (!isUuid(id)) notFound()
 
   const market = await getMarket(supabase, id)
   if (!market) notFound()

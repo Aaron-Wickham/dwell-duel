@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isAppPath } from '@/lib/auth/app-paths'
+import { fetchWithTimeout, SERVER_FETCH_TIMEOUT_MS } from '@/lib/supabase/timeout-fetch'
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
@@ -17,6 +18,7 @@ export async function proxy(request: NextRequest) {
           cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
         },
       },
+      global: { fetch: fetchWithTimeout(SERVER_FETCH_TIMEOUT_MS) },
     },
   )
 

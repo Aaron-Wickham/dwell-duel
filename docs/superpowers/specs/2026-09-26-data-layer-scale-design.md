@@ -195,19 +195,19 @@ The feed's cursor is `(occurred_at, id)`. The view's text `id` works as the tieb
 - **Legacy signing secret:** if the hosted project still uses the legacy JWT secret, `getClaims()` falls back to a network check, the same cost as today. The PR description tells the user how to switch the project to asymmetric signing keys in the Supabase dashboard. That's optional, and existing sessions keep working.
 
 **4c. Live updates for what's on screen.**
-- **The layout's channel.** `LiveRefresh` in the `(app)` layout keeps one channel, which always listens to `profiles` filtered `id=eq.<me>`. That keeps the top-bar balance live on every page.
-- **Per-page declarations.** Pages declare what they show with `<LiveTables tables={[...]} />`, a client component that registers its subscriptions in a context. On navigation the channel is rebuilt from the current page's declarations plus the base subscription. Each entry is `{ table, filter? }`, using Postgres Changes' single `column=eq.value` filter.
+- **The base channel.** `LiveRefresh` in the `(app)` layout keeps a base channel for its whole lifetime, listening to `profiles` filtered `id=eq.<me>`. That keeps the top-bar balance live on every page, and navigation never tears it down.
+- **Per-page declarations.** Pages declare what they show with `<LiveTables tables={[...]} />`, a client component that registers its subscriptions in a context. On navigation a separate page channel is rebuilt from the current page's declarations; the base channel stays up. Each entry is `{ table, filter? }`, using Postgres Changes' single `column=eq.value` filter.
 
 | Page | Subscriptions |
 |---|---|
 | Market detail | `bets` `market_id=eq.<id>`, `markets` `id=eq.<id>`, `market_resolutions` `market_id=eq.<id>` |
 | Markets list | `markets`, `bets` |
-| Home | `markets`, `tasks` |
+| Home | `markets`, `tasks`, `task_completions` (unfiltered for admins, `profile_id=eq.<me>` for members) |
 | Leaderboard | `profiles` |
 | Member page | `profiles` `id=eq.<id>`, `bets` `profile_id=eq.<id>`, `parlays` `profile_id=eq.<id>` |
-| Feed | `bets`, `parlays`, `task_completions`, `market_resolutions` |
+| Feed | `bets`, `parlays`, `task_completions`, `market_resolutions`, `markets` |
 | Tasks | `tasks`, `task_completions` `profile_id=eq.<me>` |
-| Parlays | `parlays` `profile_id=eq.<me>`, `parlay_legs` |
+| Parlays | `parlays` `profile_id=eq.<me>`, `parlay_legs`, `markets` |
 | Admin tasks | `task_completions` |
 | Other admin pages | base only |
 

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
+import { serverActionSettled } from './server-action'
 
 test.use({ viewport: { width: 375, height: 812 } })
 
@@ -18,6 +19,7 @@ test('on a phone, the slip drawer on a market page holds the picks and places th
       await expect(page.getByRole('region', { name: 'Bets' }).getByText(`1 DC on ${label}`)).toBeVisible()
     }
 
+    const added = serverActionSettled(page)
     await page
       .getByRole('region', { name: 'Outcomes' })
       .getByRole('listitem')
@@ -25,6 +27,7 @@ test('on a phone, the slip drawer on a market page holds the picks and places th
       .getByRole('button', { name: 'Add to parlay' })
       .click()
     await expect(page.getByRole('region', { name: 'Outcomes' }).getByText('In your slip')).toBeVisible()
+    await added
   }
   // Task 5's toasts survive their forms: "Add to parlay" has just turned into "In your slip".
   await expect(page.getByText('Bet placed.').first()).toBeVisible()

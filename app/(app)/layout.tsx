@@ -2,6 +2,7 @@ import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { readSlip } from '@/lib/parlays/slip'
 import { AppNav } from '@/components/app-nav/app-nav'
+import { SlipCountProvider } from '@/components/app-nav/slip-count'
 import { NavDepthTracker } from '@/lib/nav/nav-depth'
 import { Toaster } from '@/components/ui/toaster'
 
@@ -16,13 +17,13 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   const [admin, slip] = await Promise.all([isAdmin(supabase), readSlip()])
 
   return (
-    <>
+    <SlipCountProvider initial={slip.length}>
       <NavDepthTracker />
-      <AppNav balance={profile.balance} slipCount={slip.length} isAdmin={admin} />
+      <AppNav balance={profile.balance} isAdmin={admin} />
       <main id="main" className="flex flex-1 flex-col pb-[calc(82px+var(--safe-bottom))] md:pb-0">
         {children}
       </main>
       <Toaster />
-    </>
+    </SlipCountProvider>
   )
 }

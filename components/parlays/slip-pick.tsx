@@ -10,9 +10,11 @@ import { formatOdds } from '@/lib/parlays/odds'
 export function SlipPick({
   pick,
   removeAction,
+  optimisticRemove,
 }: {
   pick: SlipPickView
   removeAction: (formData: FormData) => void | boolean | Promise<void | boolean>
+  optimisticRemove?: () => void
 }) {
   return (
     <div className="flex items-center gap-3 py-3.5">
@@ -36,7 +38,7 @@ export function SlipPick({
       ) : (
         <StatusChip tone="lost">No longer available</StatusChip>
       )}
-      <ToastActionForm action={removeAction} successMessage="Removed from your slip.">
+      <ToastActionForm action={removeAction} successMessage="Removed from your slip." optimistic={optimisticRemove}>
         <FormSubmitButton variant="quiet" size="sm">
           Remove{' '}
           <span className="sr-only">{`${pick.outcomeLabel}, ${pick.marketTitle}`}</span>

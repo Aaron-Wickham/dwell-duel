@@ -55,4 +55,11 @@ describe('SlipPick', () => {
     await userEvent.click(button)
     await waitFor(() => expect(removeAction).toHaveBeenCalledTimes(1))
   })
+
+  it('runs the optimistic removal as the Remove button is pressed', async () => {
+    const optimisticRemove = vi.fn()
+    render(<SlipPick pick={live} removeAction={vi.fn()} optimisticRemove={optimisticRemove} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Remove No, Will it rain on the church picnic?' }))
+    expect(optimisticRemove).toHaveBeenCalledTimes(1)
+  })
 })

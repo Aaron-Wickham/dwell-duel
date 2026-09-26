@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { serverActionSettled } from './server-action'
 
 test('bulk-approve two pending task completions from the admin queue', async ({ page }) => {
   await page.goto('/admin/tasks')
@@ -13,10 +14,14 @@ test('bulk-approve two pending task completions from the admin queue', async ({ 
   await expect(page.getByText('Read Proverbs 3 — 7 DC')).toBeVisible()
 
   await page.goto('/tasks')
+  let submitted = serverActionSettled(page)
   await page.getByRole('button', { name: 'I did this' }).first().click()
   await expect(page.getByText('Pending review').first()).toBeVisible()
+  await submitted
+  submitted = serverActionSettled(page)
   await page.getByRole('button', { name: 'I did this' }).first().click()
   await expect(page.getByText('Pending review')).toHaveCount(2)
+  await submitted
 
   await page.goto('/admin/tasks')
   await page.locator('input[name="completionIds"]').first().check()

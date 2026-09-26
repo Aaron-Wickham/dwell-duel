@@ -4,6 +4,15 @@ import { StatusChip } from '@/components/ui/status-chip'
 
 const h3Class = 'text-[17px] font-extrabold leading-[1.3] tracking-[-0.01em]'
 
+export function PendingReviewChip() {
+  return (
+    <StatusChip tone="wait">
+      <Clock aria-hidden="true" className="size-4" />
+      Pending review
+    </StatusChip>
+  )
+}
+
 export type TaskRowState = { kind: 'pending' } | { kind: 'approved' } | { kind: 'available'; rejectionNote?: string | null }
 
 export function TaskRow({
@@ -39,12 +48,7 @@ export function TaskRow({
         )}
       </div>
       <div className="flex min-h-11 shrink-0 flex-col items-start justify-center gap-1.5">
-        {state.kind === 'pending' && (
-          <StatusChip tone="wait">
-            <Clock aria-hidden="true" className="size-4" />
-            Pending review
-          </StatusChip>
-        )}
+        {state.kind === 'pending' && <PendingReviewChip />}
         {state.kind === 'approved' && (
           <StatusChip tone="open">
             <Check aria-hidden="true" className="size-4" />

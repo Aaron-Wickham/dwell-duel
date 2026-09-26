@@ -22,6 +22,7 @@ import { Page, h1Class } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { StatusChip } from '@/components/ui/status-chip'
 import { BetList } from '@/components/markets/bet-list'
+import { MarketSlipProvider } from '@/components/markets/market-slip'
 import { OutcomeRow } from '@/components/markets/outcome-row'
 import { ProbabilityChart } from '@/components/markets/probability-chart'
 import { BetForm } from './bet-form'
@@ -70,7 +71,8 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
 
   const slip = await readSlip()
   const slipView = await getSlipView(supabase, slip)
-  const marketInSlip = market.outcomes.some((o) => slip.includes(o.id))
+  const marketPick = market.outcomes.find((o) => slip.includes(o.id))?.id ?? null
+  const marketInSlip = marketPick !== null
   const slipFull = slip.length >= MAX_PICKS && !marketInSlip
 
   const statusTone =
@@ -162,24 +164,27 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
               </Link>
             </Message>
           )}
-          <ul className="flex flex-col divide-y divide-line">
-            {odds.map((o, index) => (
-              <li key={o.outcomeId}>
-                <OutcomeRow
-                  label={o.label}
-                  poolTotal={o.poolTotal}
-                  probability={o.impliedProbability}
-                  oddsBp={legOddsBp(totalPool, o.poolTotal)}
-                  series={outcomeSeries(market.kind, o.label, index)}
-                  state={rowState(o.outcomeId, o.poolTotal, { slip, canBet, slipFull })}
-                  winner={market.status === 'resolved' && o.label === market.resolvedOutcomeLabel}
-                  addAction={addToSlipAction.bind(null, o.outcomeId)}
-                  removeAction={removeFromSlipAction.bind(null, o.outcomeId)}
-                  disabledReasonId={slipFull ? 'slip-full-note' : undefined}
-                />
-              </li>
-            ))}
-          </ul>
+          <MarketSlipProvider pick={marketPick}>
+            <ul className="flex flex-col divide-y divide-line">
+              {odds.map((o, index) => (
+                <li key={o.outcomeId}>
+                  <OutcomeRow
+                    outcomeId={o.outcomeId}
+                    label={o.label}
+                    poolTotal={o.poolTotal}
+                    probability={o.impliedProbability}
+                    oddsBp={legOddsBp(totalPool, o.poolTotal)}
+                    series={outcomeSeries(market.kind, o.label, index)}
+                    state={rowState(o.outcomeId, o.poolTotal, { slip, canBet, slipFull })}
+                    winner={market.status === 'resolved' && o.label === market.resolvedOutcomeLabel}
+                    addAction={addToSlipAction.bind(null, o.outcomeId)}
+                    removeAction={removeFromSlipAction.bind(null, o.outcomeId)}
+                    disabledReasonId={slipFull ? 'slip-full-note' : undefined}
+                  />
+                </li>
+              ))}
+            </ul>
+          </MarketSlipProvider>
         </SectionCard>
 
         <div className="flex flex-col gap-5 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:gap-7">

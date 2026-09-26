@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { SlipPick as SlipPickView, SlipView } from '@/lib/parlays/get-slip'
 import { combineOdds } from '@/lib/parlays/odds'
@@ -16,9 +16,16 @@ vi.mock('@number-flow/react', () => ({
 
 const { placeParlayAction } = vi.hoisted(() => ({ placeParlayAction: vi.fn() }))
 vi.mock('@/lib/parlays/place-parlay', () => ({ placeParlayAction }))
-vi.mock('@/lib/parlays/slip-actions', () => ({ removeFromSlipAction: vi.fn() }))
+const { removeFromSlipAction } = vi.hoisted(() => ({ removeFromSlipAction: vi.fn() }))
+vi.mock('@/lib/parlays/slip-actions', () => ({ removeFromSlipAction }))
+vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 
+import { SlipCountProvider, useSlipCount } from '@/components/app-nav/slip-count'
 import { SlipForm } from '@/app/(app)/parlays/slip-form'
+
+function Count() {
+  return <output aria-label="Slip count">{useSlipCount().count}</output>
+}
 
 function pick(n: number, available = true): SlipPickView {
   return { outcomeId: `o${n}`, outcomeLabel: 'Yes', marketId: `m${n}`, marketTitle: `Market ${n}?`, oddsBp: 40_000, available }
@@ -31,6 +38,7 @@ function slipView(picks: SlipPickView[]): SlipView {
 
 beforeEach(() => {
   placeParlayAction.mockReset()
+  removeFromSlipAction.mockReset()
 })
 
 describe('SlipForm', () => {
@@ -118,5 +126,30 @@ describe('SlipForm', () => {
     rerender(<SlipForm slip={slipView([])} />)
     expect(screen.getByRole('status')).toHaveTextContent('Parlay placed at 16.00× — potential payout 80 DC.')
     expect(screen.getByText('Your slip is empty.')).toBeInTheDocument()
+  })
+
+  it('drops a removed pick and the nav count at once, and brings both back when nothing changed', async () => {
+    let finish!: (value: boolean) => void
+    removeFromSlipAction.mockImplementation(() => new Promise<boolean>((resolve) => (finish = resolve)))
+    render(
+      <SlipCountProvider initial={2}>
+        <Count />
+        <SlipForm slip={slipView([pick(1), pick(2)])} />
+      </SlipCountProvider>,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Yes, Market 1?' }))
+
+    expect(removeFromSlipAction).toHaveBeenCalledWith('o1', expect.any(FormData))
+    expect(screen.queryByRole('link', { name: 'Market 1?' })).toBeNull()
+    expect(screen.getByText('1 pick · max 6')).toBeInTheDocument()
+    expect(screen.getByText('Add at least one more pick to place a parlay.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Slip count')).toHaveTextContent('1')
+
+    await act(async () => finish(false))
+
+    expect(screen.getByRole('link', { name: 'Market 1?' })).toBeInTheDocument()
+    expect(screen.getByText('2 picks · max 6')).toBeInTheDocument()
+    expect(screen.getByLabelText('Slip count')).toHaveTextContent('2')
   })
 })

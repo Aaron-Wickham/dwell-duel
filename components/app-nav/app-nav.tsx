@@ -11,6 +11,7 @@ import { AnimatedText } from '@/components/ui/animated-text'
 import { NavPendingHint } from '@/components/nav/nav-pending-hint'
 import { cn } from '@/lib/utils'
 import { ADMIN_HREF, NAV_ITEMS, activeNavId, type NavId } from './nav-items'
+import { useSlipCount } from './slip-count'
 import { ThemeToggle } from './theme-toggle'
 
 const ICONS: Record<NavId, LucideIcon> = {
@@ -93,8 +94,9 @@ function DesktopLink({
   )
 }
 
-export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipCount: number; isAdmin: boolean }) {
+export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean }) {
   const active = activeNavId(usePathname())
+  const { count: slipCount } = useSlipCount()
   const router = useRouter()
 
   useEffect(() => {

@@ -23,6 +23,7 @@ function renderRow(state: OutcomeRowState, overrides: Partial<Parameters<typeof 
   const removeAction = vi.fn()
   render(
     <OutcomeRow
+      outcomeId="o1"
       label="Yes"
       poolTotal={60}
       probability={0.75}
@@ -115,6 +116,7 @@ describe('OutcomeRow', () => {
         {['Yes', 'No'].map((label) => (
           <li key={label}>
             <OutcomeRow
+              outcomeId={label}
               label={label}
               poolTotal={10}
               probability={0.5}

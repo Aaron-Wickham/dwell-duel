@@ -1,9 +1,10 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useOptimistic, useState } from 'react'
 import Link from 'next/link'
 import { Layers } from 'lucide-react'
 import NumberFlow from '@number-flow/react'
+import { useSlipCount } from '@/components/app-nav/slip-count'
 import { SlipPick } from '@/components/parlays/slip-pick'
 import { AnimatedText } from '@/components/ui/animated-text'
 import { buttonVariants } from '@/components/ui/button'
@@ -29,7 +30,12 @@ export function SlipForm({ slip }: { slip: SlipView }) {
   const [stake, setStake] = useState('')
   const stakeNumber = Number(stake)
   const showPayout = Number.isInteger(stakeNumber) && stakeNumber > 0
-  const { picks } = slip
+  // A removed pick leaves at once. The combined odds and whether the slip can be placed stay the
+  // server's until the removal lands, since only the server prices the remaining legs.
+  const [picks, removePick] = useOptimistic(slip.picks, (current, outcomeId: string) =>
+    current.filter((p) => p.outcomeId !== outcomeId),
+  )
+  const { adjust } = useSlipCount()
   const hasStalePick = picks.some((p) => !p.available)
 
   return (
@@ -62,7 +68,14 @@ export function SlipForm({ slip }: { slip: SlipView }) {
             <ul className="flex flex-col divide-y divide-line">
               {picks.map((pick) => (
                 <li key={pick.outcomeId}>
-                  <SlipPick pick={pick} removeAction={removeFromSlipAction.bind(null, pick.outcomeId)} />
+                  <SlipPick
+                    pick={pick}
+                    removeAction={removeFromSlipAction.bind(null, pick.outcomeId)}
+                    optimisticRemove={() => {
+                      removePick(pick.outcomeId)
+                      adjust(-1)
+                    }}
+                  />
                 </li>
               ))}
             </ul>

@@ -19,21 +19,29 @@ beforeEach(async () => {
   await ensureInvited(bobClient)
 })
 
-async function submitAsBob(rewardAmount: number): Promise<string> {
+async function submitAs(client: SupabaseClient, rewardAmount: number): Promise<string> {
   const { taskId } = await createTestTask(alice, { rewardAmount })
-  const { data, error } = await bobClient.rpc('submit_task_completion', { p_task_id: taskId })
+  const { data, error } = await client.rpc('submit_task_completion', { p_task_id: taskId })
   if (error) throw error
   return data as string
 }
 
-async function bobsRewards(): Promise<{ amount: number; completion_id: string }[]> {
+async function submitAsBob(rewardAmount: number): Promise<string> {
+  return submitAs(bobClient, rewardAmount)
+}
+
+async function rewardsFor(member: Member): Promise<{ amount: number; completion_id: string }[]> {
   const { data, error } = await serviceClient()
     .from('coin_transactions')
     .select('amount, meta')
-    .eq('profile_id', bob.id)
+    .eq('profile_id', member.id)
     .eq('type', 'task_completed')
   if (error) throw error
   return data.map((t) => ({ amount: t.amount, completion_id: t.meta.completion_id }))
+}
+
+async function bobsRewards(): Promise<{ amount: number; completion_id: string }[]> {
+  return rewardsFor(bob)
 }
 
 async function statusOf(completionId: string): Promise<{ status: string; review_note: string | null }> {
@@ -78,7 +86,8 @@ describe('review_task_completions', () => {
 
     const { error } = await adminClient.rpc('review_task_completions', { p_ids: [first, second, first], p_approve: true })
     expect(error).toBeNull()
-    const { data: again } = await adminClient.rpc('review_task_completions', { p_ids: [first, second], p_approve: true })
+    const { data: again, error: againError } = await adminClient.rpc('review_task_completions', { p_ids: [first, second], p_approve: true })
+    expect(againError).toBeNull()
     expect(again.every((row: { ok: boolean }) => !row.ok)).toBe(true)
 
     expect(await bobsRewards()).toEqual(
@@ -107,6 +116,47 @@ describe('review_task_completions', () => {
     expect(await statusOf(first)).toEqual({ status: 'rejected', review_note: 'Photo is blurry' })
     expect(await statusOf(second)).toEqual({ status: 'rejected', review_note: 'Photo is blurry' })
     expect(await bobsRewards()).toEqual([])
+  })
+
+  it('credits every owner exactly once when a batch spans two members', async () => {
+    await ensureInvited(adminClient)
+    const bobsCompletion = await submitAsBob(10)
+    const alicesCompletion = await submitAs(adminClient, 6)
+    const { data: bobBefore } = await serviceClient().from('profiles').select('balance').eq('id', bob.id).single()
+    const { data: aliceBefore } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
+
+    const { data, error } = await adminClient.rpc('review_task_completions', {
+      p_ids: [alicesCompletion, bobsCompletion],
+      p_approve: true,
+    })
+
+    expect(error).toBeNull()
+    expect(data.every((row: { ok: boolean }) => row.ok)).toBe(true)
+    expect(await rewardsFor(bob)).toEqual([{ amount: 10, completion_id: bobsCompletion }])
+    expect(await rewardsFor(alice)).toEqual([{ amount: 6, completion_id: alicesCompletion }])
+    const { data: bobAfter } = await serviceClient().from('profiles').select('balance').eq('id', bob.id).single()
+    const { data: aliceAfter } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
+    expect(bobAfter!.balance).toBe(bobBefore!.balance + 10)
+    expect(aliceAfter!.balance).toBe(aliceBefore!.balance + 6)
+  })
+
+  it('refuses a batch of more than 500 ids', async () => {
+    const { data, error } = await adminClient.rpc('review_task_completions', {
+      p_ids: Array(501).fill(MISSING),
+      p_approve: true,
+    })
+
+    expect(data).toBeNull()
+    expect(error?.message).toBe('too many completions in one review')
+  })
+
+  it('locks the batch\'s completions, then on approval their owning profiles, both in id order, up front', async () => {
+    const [row] = await pgQuery<{ src: string }>(`
+      select pg_get_functiondef('public.review_task_completions(uuid[], boolean, text)'::regprocedure) as src
+    `)
+
+    expect(row.src).toMatch(/task_completions tc where tc\.id = any\(p_ids\) order by tc\.id for update/)
+    expect(row.src).toMatch(/profiles p where p\.id in[\s\S]*order by p\.id for update/)
   })
 
   it('refuses a member who is not an admin, changing nothing', async () => {

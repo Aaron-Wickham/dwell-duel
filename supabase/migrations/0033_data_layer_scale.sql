@@ -389,7 +389,15 @@ $$;
 -- Each id runs the existing single-review function in its own subtransaction,
 -- so one that fails (already reviewed, say) is rolled back and reported on its
 -- own row while the rest still go through. Ids run in ascending order, so two
--- overlapping batches lock completions in the same sequence.
+-- overlapping batches lock completions in the same sequence. Before that loop,
+-- this call also takes every lock it could need in one statement: the batch's
+-- completions in id order, then -- on approval -- their owning profiles, also
+-- in id order. That's the same order a single approve_task_completion call
+-- takes (completion, then profile) and the same order resolve_market/
+-- void_market take their up-front profile locks in, so an overlapping batch,
+-- a concurrent single review, or a concurrent resolve/void can't deadlock
+-- against this one. Reject doesn't credit, but locking its completions up
+-- front too keeps two overlapping reject batches consistent with each other.
 create function public.review_task_completions(p_ids uuid[], p_approve boolean, p_note text default null)
 returns table (id uuid, ok boolean, error text)
 language plpgsql
@@ -401,6 +409,17 @@ declare
 begin
   if not public.is_admin() then
     raise exception 'only an admin can review task completions';
+  end if;
+
+  if cardinality(p_ids) > 500 then
+    raise exception 'too many completions in one review';
+  end if;
+
+  perform 1 from public.task_completions tc where tc.id = any(p_ids) order by tc.id for update;
+  if p_approve then
+    perform 1 from public.profiles p where p.id in (
+      select tc.profile_id from public.task_completions tc where tc.id = any(p_ids)
+    ) order by p.id for update;
   end if;
 
   for v_id in select distinct u.v from unnest(p_ids) as u(v) order by u.v loop

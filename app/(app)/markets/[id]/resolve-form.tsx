@@ -4,10 +4,15 @@ import { useActionState } from 'react'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Field, Select } from '@/components/ui/field'
 import { Message } from '@/components/ui/message'
+import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { resolveMarketAction, type ActionState } from '@/lib/markets/resolve-market'
 
 export function ResolveForm({ marketId, outcomes }: { marketId: string; outcomes: { id: string; label: string }[] }) {
-  const boundAction = resolveMarketAction.bind(null, marketId)
+  const boundAction = withSuccessToast(
+    resolveMarketAction.bind(null, marketId),
+    (s) => Boolean(s?.formError),
+    'Market resolved.',
+  )
   const [state, formAction] = useActionState<ActionState, FormData>(boundAction, undefined)
 
   return (

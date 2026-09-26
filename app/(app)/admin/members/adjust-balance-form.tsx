@@ -8,9 +8,14 @@ import { Avatar } from '@/components/ui/avatar'
 import { Field, Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { withSuccessToast } from '@/lib/toast/with-success-toast'
 
 export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
-  const boundAction = adjustBalanceAction.bind(null, member.id)
+  const boundAction = withSuccessToast(
+    adjustBalanceAction.bind(null, member.id),
+    (s) => Boolean(s?.formError),
+    'Balance adjusted.',
+  )
   const [state, formAction] = useActionState<ActionState, FormData>(boundAction, undefined)
   const amountId = `adjust-${member.id}-amount`
   const reasonId = `adjust-${member.id}-reason`

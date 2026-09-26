@@ -3,6 +3,7 @@ import NumberFlow from '@number-flow/react'
 import { AnimatedText } from '@/components/ui/animated-text'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { StatusChip } from '@/components/ui/status-chip'
+import { ToastActionForm } from '@/components/ui/toast-action-form'
 import type { SlipPick as SlipPickView } from '@/lib/parlays/get-slip'
 import { formatOdds } from '@/lib/parlays/odds'
 
@@ -34,12 +35,12 @@ export function SlipPick({
       ) : (
         <StatusChip tone="lost">No longer available</StatusChip>
       )}
-      <form action={removeAction}>
+      <ToastActionForm action={removeAction} successMessage="Removed from your slip.">
         <FormSubmitButton variant="quiet" size="sm">
           Remove{' '}
           <span className="sr-only">{`${pick.outcomeLabel}, ${pick.marketTitle}`}</span>
         </FormSubmitButton>
-      </form>
+      </ToastActionForm>
     </div>
   )
 }

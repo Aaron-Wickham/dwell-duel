@@ -8,6 +8,7 @@ import type { SlipPick as SlipPickView } from '@/lib/parlays/get-slip'
 vi.mock('@number-flow/react', () => ({
   default: ({ value, suffix }: { value: number; suffix?: string }) => `${value}${suffix ?? ''}`,
 }))
+vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 
 const live: SlipPickView = {
   outcomeId: 'o1',

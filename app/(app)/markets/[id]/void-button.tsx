@@ -3,11 +3,16 @@
 import { useActionState } from 'react'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { voidMarketAction, type ActionState } from '@/lib/markets/void-market'
 import { cn } from '@/lib/utils'
 
 export function VoidButton({ marketId, className }: { marketId: string; className?: string }) {
-  const boundAction = voidMarketAction.bind(null, marketId)
+  const boundAction = withSuccessToast(
+    voidMarketAction.bind(null, marketId),
+    (s) => Boolean(s?.formError),
+    'Market voided.',
+  )
   const [state, formAction] = useActionState<ActionState, FormData>(boundAction, undefined)
 
   return (

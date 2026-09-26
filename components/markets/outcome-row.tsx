@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { AnimatedText } from '@/components/ui/animated-text'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { StatusChip } from '@/components/ui/status-chip'
+import { ToastActionForm } from '@/components/ui/toast-action-form'
 import type { Series } from '@/lib/markets/outcome-series'
 import type { OutcomeRowState } from '@/lib/markets/row-state'
 import { formatOdds } from '@/lib/parlays/odds'
@@ -95,19 +96,19 @@ export function OutcomeRow({
                 <Check aria-hidden="true" className="size-4" />
                 In your slip
               </StatusChip>
-              <form action={removeAction}>
+              <ToastActionForm action={removeAction} successMessage="Removed from your slip.">
                 <FormSubmitButton variant="quiet" size="sm">
                   Remove <span className="sr-only">{label}</span>
                 </FormSubmitButton>
-              </form>
+              </ToastActionForm>
             </span>
           )}
           {state === 'add' && (
-            <form action={addAction}>
+            <ToastActionForm action={addAction} successMessage="Added to your slip.">
               <FormSubmitButton variant="secondary" size="sm">
                 {addLabel}
               </FormSubmitButton>
-            </form>
+            </ToastActionForm>
           )}
           {state === 'disabled' && (
             <Button variant="secondary" size="sm" disabled aria-describedby={disabledReasonId}>

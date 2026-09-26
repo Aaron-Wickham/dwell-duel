@@ -5,10 +5,20 @@ import { approveTaskCompletionAction, rejectTaskCompletionAction, type ActionSta
 import { Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { withSuccessToast } from '@/lib/toast/with-success-toast'
 
 export function ReviewButtons({ completionId }: { completionId: string }) {
-  const boundApprove = approveTaskCompletionAction.bind(null, completionId)
-  const boundReject = rejectTaskCompletionAction.bind(null, completionId)
+  const hasError = (s: ActionState) => Boolean(s?.formError)
+  const boundApprove = withSuccessToast(
+    approveTaskCompletionAction.bind(null, completionId),
+    hasError,
+    'Submission approved.',
+  )
+  const boundReject = withSuccessToast(
+    rejectTaskCompletionAction.bind(null, completionId),
+    hasError,
+    'Submission rejected.',
+  )
   const [approveState, approveAction] = useActionState<ActionState, FormData>(boundApprove, undefined)
   const [rejectState, rejectAction] = useActionState<ActionState, FormData>(boundReject, undefined)
   const reasonId = `reject-reason-${completionId}`

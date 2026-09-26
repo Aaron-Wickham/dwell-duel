@@ -7,6 +7,7 @@ import { OutcomeRow, type OutcomeRowState } from '@/components/markets/outcome-r
 vi.mock('@number-flow/react', () => ({
   default: ({ value, suffix }: { value: number; suffix?: string }) => `${value}${suffix ?? ''}`,
 }))
+vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 
 function renderRow(state: OutcomeRowState, overrides: Partial<Parameters<typeof OutcomeRow>[0]> = {}) {
   const addAction = vi.fn()

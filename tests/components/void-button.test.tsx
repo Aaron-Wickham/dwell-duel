@@ -39,6 +39,7 @@ describe('VoidButton', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Void this market' }))
 
     await waitFor(() => expect(success).toHaveBeenCalledWith('Market voided.'))
+    expect(success).toHaveBeenCalledTimes(1)
   })
 
   it('does not toast when voiding fails', async () => {

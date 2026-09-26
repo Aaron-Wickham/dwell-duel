@@ -12,7 +12,7 @@ export function SlipPick({
   removeAction,
 }: {
   pick: SlipPickView
-  removeAction: (formData: FormData) => void | Promise<void>
+  removeAction: (formData: FormData) => void | boolean | Promise<void | boolean>
 }) {
   return (
     <div className="flex items-center gap-3 py-3.5">

@@ -39,6 +39,18 @@ describe('ToastActionForm', () => {
     expect(formData.get('outcomeId')).toBe('o1')
   })
 
+  it('does not toast when the action resolves false', async () => {
+    const action = vi.fn().mockResolvedValue(false)
+    render(
+      <ToastActionForm action={action} successMessage="Added.">
+        <button type="submit">Add</button>
+      </ToastActionForm>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1))
+    expect(success).not.toHaveBeenCalled()
+  })
+
   it('still toasts when the action’s success removes the form', async () => {
     function Row() {
       const [added, setAdded] = useState(false)

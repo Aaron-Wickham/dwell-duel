@@ -34,9 +34,10 @@ export function Toaster() {
     <SonnerToaster
       position={isDesktop ? 'bottom-right' : 'top-center'}
       gap={12}
+      richColors
       offset={isDesktop ? { bottom: 24, right: 24 } : { top: 80, left: 16, right: 16 }}
       mobileOffset={{ top: 80, left: 16, right: 16 }}
-      icons={{ success: <CircleCheck aria-hidden="true" className="size-5" /> }}
+      icons={{ success: <CircleCheck aria-hidden="true" className="size-4" /> }}
       toastOptions={{ style: { boxShadow: 'var(--shadow-card)' } }}
       style={
         {
@@ -48,12 +49,6 @@ export function Toaster() {
           '--success-bg': 'var(--acc-soft)',
           '--success-border': 'var(--acc-soft)',
           '--success-text': 'var(--acc-text)',
-          '--error-bg': 'var(--loss-soft)',
-          '--error-border': 'var(--loss-soft)',
-          '--error-text': 'var(--loss)',
-          '--warning-bg': 'var(--gold-soft)',
-          '--warning-border': 'var(--gold-soft)',
-          '--warning-text': 'var(--gold)',
         } as CSSProperties
       }
     />

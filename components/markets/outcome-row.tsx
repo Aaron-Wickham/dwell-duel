@@ -42,8 +42,8 @@ export function OutcomeRow({
   series: Series
   state: OutcomeRowState
   winner?: boolean
-  addAction: (formData: FormData) => void | Promise<void>
-  removeAction: (formData: FormData) => void | Promise<void>
+  addAction: (formData: FormData) => void | boolean | Promise<void | boolean>
+  removeAction: (formData: FormData) => void | boolean | Promise<void | boolean>
   disabledReasonId?: string
 }) {
   const percent = (probability ?? 0) * 100

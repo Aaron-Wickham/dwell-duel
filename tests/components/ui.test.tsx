@@ -39,6 +39,14 @@ describe('Button', () => {
     expect(buttonVariants({ size: 'md' })).toContain('min-h-12')
     expect(buttonVariants({ size: 'sm' })).toContain('min-h-11')
   })
+
+  it('looks disabled under aria-disabled too, not just the disabled attribute', () => {
+    const classes = buttonVariants().split(' ')
+    for (const cls of ['bg-sunk', 'text-ink2', 'cursor-not-allowed', 'border-transparent']) {
+      expect(classes).toContain(`disabled:${cls}`)
+      expect(classes).toContain(`aria-disabled:${cls}`)
+    }
+  })
 })
 
 describe('Field', () => {

@@ -25,7 +25,7 @@ const TYPE_LABELS: Record<string, string> = {
   parlay_reversed: 'Parlay reversed',
 }
 
-interface EntryMeta {
+export interface EntryMeta {
   market_id?: string
   outcome_id?: string
   task_id?: string
@@ -56,7 +56,7 @@ async function fetchTaskTitles(supabase: SupabaseClient, ids: string[]): Promise
   return new Map((data ?? []).map((t) => [t.id as string, t.title as string]))
 }
 
-interface Lookups {
+export interface Lookups {
   markets: Map<string, string>
   outcomes: Map<string, string>
   tasks: Map<string, string>
@@ -65,7 +65,9 @@ interface Lookups {
 // Every other type's context is its label, plus ": {market title}" when the row has a
 // market_id (e.g. a voided-market refund) -- the specific movements below read differently
 // enough (different wording, or no market involved at all) that they need their own copy.
-function buildContext(type: string, meta: EntryMeta, lookups: Lookups): string {
+// Exported (and kept pure -- no supabase client) so its fallback branches get direct unit
+// coverage instead of only being reachable through a DB-backed listAllTransactions test.
+export function buildContext(type: string, meta: EntryMeta, lookups: Lookups): string {
   const label = TYPE_LABELS[type] ?? type
   const marketTitle = meta.market_id ? lookups.markets.get(meta.market_id) : undefined
 

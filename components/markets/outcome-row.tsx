@@ -3,10 +3,13 @@ import { Button } from '@/components/ui/button'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { StatusChip } from '@/components/ui/status-chip'
 import type { Series } from '@/lib/markets/outcome-series'
+import type { OutcomeRowState } from '@/lib/markets/row-state'
 import { formatOdds } from '@/lib/parlays/odds'
 import { cn } from '@/lib/utils'
 
-export type OutcomeRowState = 'add' | 'inslip' | 'disabled' | 'none'
+// Re-exported for existing importers (e.g. this file's own test) -- the type lives in
+// lib/markets/row-state.ts now, next to the pure function that produces its values.
+export type { OutcomeRowState }
 
 export const SERIES_BG: Record<Series, string> = {
   1: 'bg-s1',

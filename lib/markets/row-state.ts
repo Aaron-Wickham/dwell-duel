@@ -1,4 +1,4 @@
-import type { OutcomeRowState } from '@/components/markets/outcome-row'
+export type OutcomeRowState = 'add' | 'inslip' | 'disabled' | 'none'
 
 export function rowState(
   outcomeId: string,

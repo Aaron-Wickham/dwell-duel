@@ -22,6 +22,27 @@ describe('FormSubmitButton', () => {
 
     await waitFor(() => expect(button).toHaveAttribute('aria-disabled', 'true'))
     expect(button).not.toBeDisabled()
+    expect(button).toHaveClass('aria-disabled:bg-sunk')
+  })
+
+  it('blocks an implicit Enter-key submission from another field while pending', async () => {
+    const action = vi.fn(neverResolves)
+    render(
+      <form action={action}>
+        <label htmlFor="title">Title</label>
+        <input id="title" name="title" />
+        <FormSubmitButton>Place bet</FormSubmitButton>
+      </form>,
+    )
+    const button = screen.getByRole('button', { name: 'Place bet' })
+
+    await userEvent.click(button)
+    await waitFor(() => expect(button).toHaveAttribute('aria-disabled', 'true'))
+    expect(action).toHaveBeenCalledOnce()
+
+    await userEvent.click(screen.getByLabelText('Title'))
+    await userEvent.keyboard('{Enter}')
+    expect(action).toHaveBeenCalledOnce()
   })
 
   it('keeps focus while pending, and blocks a second click from firing the action again', async () => {

@@ -4,8 +4,11 @@ import { Layers, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { getMarket, getMarketBets } from '@/lib/markets/get-market'
+import { getChartBets } from '@/lib/markets/chart-bets'
+import { buildProbabilitySeries } from '@/lib/markets/probability-series'
 import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
+import { chartClosedAt } from '@/lib/markets/market-status'
 import { rowState } from '@/lib/markets/row-state'
 import { readSlip } from '@/lib/parlays/slip'
 import { MAX_PICKS, legOddsBp } from '@/lib/parlays/odds'
@@ -18,6 +21,7 @@ import { SectionCard } from '@/components/ui/section-card'
 import { StatusChip } from '@/components/ui/status-chip'
 import { BetList } from '@/components/markets/bet-list'
 import { OutcomeRow } from '@/components/markets/outcome-row'
+import { ProbabilityChart } from '@/components/markets/probability-chart'
 import { BetForm } from './bet-form'
 import { ResolveForm } from './resolve-form'
 import { VoidButton } from './void-button'
@@ -30,10 +34,19 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const market = await getMarket(supabase, id)
   if (!market) notFound()
 
-  const bets = await getMarketBets(supabase, id)
+  const [bets, chartBets] = await Promise.all([getMarketBets(supabase, id), getChartBets(supabase, id)])
   const admin = await isAdmin(supabase)
   const odds = computeOdds(market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })))
   const totalPool = odds.reduce((sum, o) => sum + o.poolTotal, 0)
+  const chartOutcomes = odds.map((o, index) => ({
+    id: o.outcomeId,
+    label: o.label,
+    series: outcomeSeries(market.kind, o.label, index),
+  }))
+  const chartPoints = buildProbabilitySeries(
+    chartOutcomes.map((o) => o.id),
+    chartBets,
+  )
 
   const isCreator = market.createdBy === user.id
   // Server Components render once per request with no re-render/
@@ -42,12 +55,14 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // apply here, and this page already does non-deterministic async DB
   // reads (getMarket, getMarketBets, isAdmin) on every invocation regardless.
   // eslint-disable-next-line react-hooks/purity
-  const isPastClose = new Date(market.closeAt).getTime() <= Date.now()
+  const now = Date.now()
+  const isPastClose = new Date(market.closeAt).getTime() <= now
   const canBet = market.status === 'open' && !isPastClose
   const canResolve = market.status === 'open' && ((isCreator && isPastClose) || admin)
   const canOverride = market.status === 'resolved' && admin
   const canVoid = market.status === 'open' && (isCreator || admin)
   const showResolve = canResolve || canOverride
+  const resolvedLabel = market.status === 'resolved' ? market.resolvedOutcomeLabel : null
 
   const slip = await readSlip()
   const marketInSlip = market.outcomes.some((o) => slip.includes(o.id))
@@ -117,12 +132,22 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
         )}
       </div>
 
-      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-7">
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-7">
+        <SectionCard title="Chance over time" titleId="chart-title" className="gap-3 lg:col-start-1 lg:row-start-1">
+          <ProbabilityChart
+            outcomes={chartOutcomes}
+            points={chartPoints}
+            now={now}
+            closedAt={chartClosedAt(market.status, market.closeAt, market.resolvedAt)}
+            resolvedLabel={resolvedLabel}
+          />
+        </SectionCard>
+
         <SectionCard
           title="Outcomes"
           titleId="outcomes-title"
           action={<span className="text-sm text-ink2 tabular-nums">{totalPool} DC in the pool</span>}
-          className="gap-1 lg:col-start-1 lg:row-start-1"
+          className="gap-1 lg:col-start-1 lg:row-start-2"
         >
           {canBet && slipFull && (
             <Message tone="gold" icon={Layers} id="slip-full-note" className="mt-2">
@@ -152,7 +177,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           </ul>
         </SectionCard>
 
-        <div className="flex flex-col gap-5 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:gap-7">
+        <div className="flex flex-col gap-5 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:gap-7">
           {canBet ? (
             <SectionCard title="Place a bet" titleId="bet-title" className="gap-4">
               <BetForm marketId={market.id} outcomes={market.outcomes} />
@@ -180,7 +205,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           )}
         </div>
 
-        <SectionCard title="Bets" titleId="bets-title" className="gap-1 lg:col-start-1 lg:row-start-2">
+        <SectionCard title="Bets" titleId="bets-title" className="gap-1 lg:col-start-1 lg:row-start-3">
           <BetList bets={bets} outcomes={market.outcomes} viewerId={user.id} canBet={canBet} />
         </SectionCard>
       </div>

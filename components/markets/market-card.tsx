@@ -4,9 +4,11 @@ import { cardClass } from '@/components/ui/card'
 import { StatusChip } from '@/components/ui/status-chip'
 import { LocalTime } from '@/components/ui/local-time'
 import { SERIES_BG } from '@/components/markets/outcome-row'
+import { ProbabilityChart, type ChartOutcome } from '@/components/markets/probability-chart'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
+import type { SeriesPoint } from '@/lib/markets/probability-series'
+import { chartClosedAt, type MarketCardStatus } from '@/lib/markets/market-status'
 import { cn } from '@/lib/utils'
-import type { MarketCardStatus } from '@/lib/markets/market-status'
 
 const STATUS_LABEL: Record<MarketCardStatus, string> = {
   open: 'Open',
@@ -28,6 +30,12 @@ export interface MarketCardOutcome {
   pct: number | null
 }
 
+export interface MarketCardChart {
+  outcomes: ChartOutcome[]
+  points: SeriesPoint[]
+  now: number
+}
+
 export interface MarketCardProps {
   id: string
   title: string
@@ -37,9 +45,20 @@ export interface MarketCardProps {
   resolvedAt: string | null
   outcomes: MarketCardOutcome[]
   resolvedOutcomeLabel: string | null
+  chart?: MarketCardChart
 }
 
-export function MarketCard({ id, title, status, kind, closeAt, resolvedAt, outcomes, resolvedOutcomeLabel }: MarketCardProps) {
+export function MarketCard({
+  id,
+  title,
+  status,
+  kind,
+  closeAt,
+  resolvedAt,
+  outcomes,
+  resolvedOutcomeLabel,
+  chart,
+}: MarketCardProps) {
   const hasBets = outcomes.some((outcome) => outcome.pct !== null)
 
   return (
@@ -67,15 +86,30 @@ export function MarketCard({ id, title, status, kind, closeAt, resolvedAt, outco
         <Link href={`/markets/${id}`}>{title}</Link>
       </h3>
       {hasBets ? (
-        <ul className="flex flex-col gap-1.5">
-          {outcomes.map((outcome, index) => (
-            <li key={outcome.id} className="flex min-h-7 items-center gap-2.5">
-              <span aria-hidden="true" className={cn('size-2.5 shrink-0 rounded-full', SERIES_BG[outcomeSeries(kind, outcome.label, index)])} />
-              <span className="flex-1 font-bold">{outcome.label}</span>
-              <span className="min-w-12 text-right font-extrabold tabular-nums">{outcome.pct}%</span>
-            </li>
-          ))}
-        </ul>
+        <>
+          {chart && (
+            <ProbabilityChart
+              outcomes={chart.outcomes}
+              points={chart.points}
+              now={chart.now}
+              closedAt={chartClosedAt(status, closeAt, resolvedAt)}
+              resolvedLabel={status === 'resolved' ? resolvedOutcomeLabel : null}
+              compact
+            />
+          )}
+          <ul className="flex flex-col gap-1.5">
+            {outcomes.map((outcome, index) => (
+              <li key={outcome.id} className="flex min-h-7 items-center gap-2.5">
+                <span
+                  aria-hidden="true"
+                  className={cn('size-2.5 shrink-0 rounded-full', SERIES_BG[outcomeSeries(kind, outcome.label, index)])}
+                />
+                <span className="flex-1 font-bold">{outcome.label}</span>
+                <span className="min-w-12 text-right font-extrabold tabular-nums">{outcome.pct}%</span>
+              </li>
+            ))}
+          </ul>
+        </>
       ) : (
         <>
           <div className="flex flex-wrap gap-2">

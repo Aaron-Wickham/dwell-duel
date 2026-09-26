@@ -383,3 +383,45 @@ begin
   end loop;
 end;
 $$;
+
+-- ─── 4. Batch review ──────────────────────────────────────────────────────────
+-- Bulk approve and bulk reject make one call instead of one per completion.
+-- Each id runs the existing single-review function in its own subtransaction,
+-- so one that fails (already reviewed, say) is rolled back and reported on its
+-- own row while the rest still go through. Ids run in ascending order, so two
+-- overlapping batches lock completions in the same sequence.
+create function public.review_task_completions(p_ids uuid[], p_approve boolean, p_note text default null)
+returns table (id uuid, ok boolean, error text)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  if not public.is_admin() then
+    raise exception 'only an admin can review task completions';
+  end if;
+
+  for v_id in select distinct u.v from unnest(p_ids) as u(v) order by u.v loop
+    begin
+      if p_approve then
+        perform public.approve_task_completion(v_id);
+      else
+        perform public.reject_task_completion(v_id, p_note);
+      end if;
+      id := v_id;
+      ok := true;
+      error := null;
+    exception when others then
+      id := v_id;
+      ok := false;
+      error := sqlerrm;
+    end;
+    return next;
+  end loop;
+end;
+$$;
+
+revoke execute on function public.review_task_completions(uuid[], boolean, text) from public, anon;
+grant execute on function public.review_task_completions(uuid[], boolean, text) to authenticated, service_role;

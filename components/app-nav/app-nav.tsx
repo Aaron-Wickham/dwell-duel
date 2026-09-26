@@ -5,7 +5,9 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { MotionConfig, motion } from 'motion/react'
 import { BookOpen, ChartColumn, CircleDot, House, Layers, MessageSquareText, ShieldCheck, Trophy, type LucideIcon } from 'lucide-react'
+import NumberFlow from '@number-flow/react'
 import { Wordmark } from '@/components/brand/wordmark'
+import { AnimatedText } from '@/components/ui/animated-text'
 import { cn } from '@/lib/utils'
 import { ADMIN_HREF, NAV_ITEMS, activeNavId, type NavId } from './nav-items'
 import { ThemeToggle } from './theme-toggle'
@@ -28,8 +30,9 @@ function BalanceChip({ balance }: { balance: number }) {
   return (
     <span className="inline-flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-gold-soft pr-2.5 pl-1.5 text-[15px] font-extrabold tabular-nums text-gold md:gap-1.5 md:pr-3 md:pl-2">
       <CircleDot aria-hidden="true" className="size-4 md:size-[18px]" />
-      <span className="sr-only">Balance {balance} DC</span>
-      <span aria-hidden="true">{balance} DC</span>
+      <AnimatedText plainText={`Balance ${balance} DC`}>
+        <NumberFlow value={balance} suffix=" DC" />
+      </AnimatedText>
     </span>
   )
 }

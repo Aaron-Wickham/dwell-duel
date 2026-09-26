@@ -5,6 +5,10 @@ import userEvent from '@testing-library/user-event'
 import type { SlipPick as SlipPickView, SlipView } from '@/lib/parlays/get-slip'
 import { combineOdds } from '@/lib/parlays/odds'
 
+vi.mock('@number-flow/react', () => ({
+  default: ({ value, suffix }: { value: number; suffix?: string }) => `${value}${suffix ?? ''}`,
+}))
+
 const { placeParlayAction } = vi.hoisted(() => ({ placeParlayAction: vi.fn() }))
 vi.mock('@/lib/parlays/place-parlay', () => ({ placeParlayAction }))
 vi.mock('@/lib/parlays/slip-actions', () => ({ removeFromSlipAction: vi.fn() }))
@@ -48,7 +52,7 @@ describe('SlipForm', () => {
     render(<SlipForm slip={slipView([pick(1), pick(2)])} />)
     expect(screen.getByText('2 picks · max 6')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /^Remove Yes, Market \d\?$/ })).toHaveLength(2)
-    expect(screen.getByText('Combined: 16.00×')).toBeInTheDocument()
+    expect(screen.getByText('16.00×', { selector: '.sr-only' })).toBeInTheDocument()
     expect(screen.queryByText(/Potential payout/)).toBeNull()
     await userEvent.type(screen.getByLabelText('Stake (DC)'), '5')
     expect(screen.getByText(/Potential payout:/)).toHaveTextContent('Potential payout: 80 DC')
@@ -57,7 +61,7 @@ describe('SlipForm', () => {
 
   it('notes a capped multiplier and caps the payout', async () => {
     render(<SlipForm slip={slipView([pick(1), pick(2), pick(3)])} />)
-    expect(screen.getByText('Combined: 20.00× (capped at 20×)')).toBeInTheDocument()
+    expect(screen.getByText('20.00× (capped at 20×)', { selector: '.sr-only' })).toBeInTheDocument()
     await userEvent.type(screen.getByLabelText('Stake (DC)'), '5')
     expect(screen.getByText(/Potential payout:/)).toHaveTextContent('Potential payout: 100 DC')
   })
@@ -65,7 +69,8 @@ describe('SlipForm', () => {
   it('blocks placing while a pick is no longer available, and says why', () => {
     render(<SlipForm slip={slipView([pick(1), pick(2, false)])} />)
     expect(screen.getByText('No longer available')).toBeInTheDocument()
-    expect(screen.getByText('Combined: 4.00×')).toBeInTheDocument()
+    // The live pick's own odds are also 4.00×, so match the Combined line's text rather than a bare number.
+    expect(screen.getByText(/^Combined:/)).toHaveTextContent('Combined: 4.00×')
     const button = screen.getByRole('button', { name: 'Place parlay' })
     expect(button).toBeDisabled()
     expect(button).toHaveAccessibleDescription('Remove the pick that’s no longer available to place this parlay.')

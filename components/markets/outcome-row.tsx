@@ -1,5 +1,7 @@
 import { Check, Plus, Trophy } from 'lucide-react'
+import NumberFlow from '@number-flow/react'
 import { Button } from '@/components/ui/button'
+import { AnimatedText } from '@/components/ui/animated-text'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { StatusChip } from '@/components/ui/status-chip'
 import type { Series } from '@/lib/markets/outcome-series'
@@ -65,7 +67,10 @@ export function OutcomeRow({
           )}
         </span>
         <span className="shrink-0 font-extrabold tabular-nums">
-          {Math.round(percent)}% ({poolTotal} DC)
+          <AnimatedText plainText={`${Math.round(percent)}% (${poolTotal} DC)`}>
+            <NumberFlow value={Math.round(percent)} suffix="% (" />
+            <NumberFlow value={poolTotal} suffix=" DC)" />
+          </AnimatedText>
         </span>
       </div>
       <div aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-sunk">
@@ -73,7 +78,17 @@ export function OutcomeRow({
       </div>
       {state !== 'none' && (
         <div className="flex min-h-11 flex-wrap items-center justify-between gap-2">
-          <span className="text-sm text-ink2">{oddsBp !== null && `${formatOdds(oddsBp)}× payout per DC`}</span>
+          <span className="text-sm text-ink2">
+            {oddsBp !== null && (
+              <AnimatedText plainText={`${formatOdds(oddsBp)}× payout per DC`}>
+                <NumberFlow
+                  value={Number(formatOdds(oddsBp))}
+                  format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                  suffix="× payout per DC"
+                />
+              </AnimatedText>
+            )}
+          </span>
           {state === 'inslip' && (
             <span className="flex items-center gap-2">
               <StatusChip tone="open">

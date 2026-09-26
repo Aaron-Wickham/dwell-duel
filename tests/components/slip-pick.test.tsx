@@ -5,6 +5,10 @@ import userEvent from '@testing-library/user-event'
 import { SlipPick } from '@/components/parlays/slip-pick'
 import type { SlipPick as SlipPickView } from '@/lib/parlays/get-slip'
 
+vi.mock('@number-flow/react', () => ({
+  default: ({ value, suffix }: { value: number; suffix?: string }) => `${value}${suffix ?? ''}`,
+}))
+
 const live: SlipPickView = {
   outcomeId: 'o1',
   outcomeLabel: 'No',
@@ -19,7 +23,7 @@ describe('SlipPick', () => {
     render(<SlipPick pick={live} removeAction={vi.fn()} />)
     expect(screen.getByRole('link', { name: 'Will it rain on the church picnic?' })).toHaveAttribute('href', '/markets/m1')
     expect(screen.getByText('No')).toBeInTheDocument()
-    expect(screen.getByText('4.00×')).toBeInTheDocument()
+    expect(screen.getByText('4.00×', { selector: '.sr-only' })).toBeInTheDocument()
     expect(screen.queryByText('No longer available')).toBeNull()
   })
 

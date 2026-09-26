@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import NumberFlow from '@number-flow/react'
+import { AnimatedText } from '@/components/ui/animated-text'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { StatusChip } from '@/components/ui/status-chip'
 import type { SlipPick as SlipPickView } from '@/lib/parlays/get-slip'
@@ -20,7 +22,15 @@ export function SlipPick({
         <span className="text-[17px] font-extrabold leading-[1.3]">{pick.outcomeLabel}</span>
       </div>
       {pick.available && pick.oddsBp !== null ? (
-        <span className="whitespace-nowrap text-lg font-extrabold tabular-nums">{`${formatOdds(pick.oddsBp)}×`}</span>
+        <span className="whitespace-nowrap text-lg font-extrabold tabular-nums">
+          <AnimatedText plainText={`${formatOdds(pick.oddsBp)}×`}>
+            <NumberFlow
+              value={Number(formatOdds(pick.oddsBp))}
+              format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+              suffix="×"
+            />
+          </AnimatedText>
+        </span>
       ) : (
         <StatusChip tone="lost">No longer available</StatusChip>
       )}

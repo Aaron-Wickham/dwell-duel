@@ -24,7 +24,7 @@ export default async function TasksPage() {
   )
 
   return (
-    <Page reveal>
+    <Page transition="tab">
       <PageHeader title="Tasks" description="Earn DC with Bible study. An admin reviews each one before the coins land." />
       {activeTasks.length === 0 ? (
         <EmptyState icon={BookOpen} title="No tasks yet.">

@@ -13,7 +13,7 @@ export function FeedItem({ icon: Icon, segments, age }: { icon: LucideIcon; segm
           typeof segment === 'string' ? (
             <span key={i}>{segment}</span>
           ) : (
-            <Link key={i} href={segment.href}>
+            <Link key={i} href={segment.href} transitionTypes={['nav-forward']}>
               {segment.text}
             </Link>
           ),

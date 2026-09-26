@@ -11,7 +11,7 @@ export function LedgerRow({ entry }: { entry: LedgerEntry }) {
   return (
     <li className="flex items-start gap-3 py-3.5">
       <p className="min-w-0 grow">
-        <Link href={`/members/${entry.profileId}`}>{entry.memberName}</Link>:{' '}
+        <Link href={`/members/${entry.profileId}`} transitionTypes={['nav-forward']}>{entry.memberName}</Link>:{' '}
         <span className={cn('font-extrabold tabular-nums', amountClass)}>
           {sign}
           {Math.abs(entry.amount)} DC

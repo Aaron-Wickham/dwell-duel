@@ -11,7 +11,7 @@ export default async function FeedPage() {
   const events = await listFeed(supabase)
 
   return (
-    <Page reveal>
+    <Page transition="tab">
       <PageHeader title="Feed" description="The 50 newest things that happened in DwellDuel." />
       <FeedList events={events} heading="Events" headingId="feed-events" headingHidden />
     </Page>

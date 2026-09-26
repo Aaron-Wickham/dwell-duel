@@ -38,6 +38,30 @@ beforeEach(() => {
 
 // jsdom applies no CSS, so both the desktop and the phone navs are visible to these queries.
 describe('AppNav', () => {
+  it('names the top bars and the tab bar so page transitions leave them in place', () => {
+    render(<AppNav balance={120} slipCount={0} isAdmin={false} />)
+    const [desktopBar, phoneBar] = screen.getAllByRole('banner')
+    const [, tabs] = screen.getAllByRole('navigation', { name: 'Primary' })
+    expect(desktopBar.style.viewTransitionName).toBe('app-header')
+    expect(phoneBar.style.viewTransitionName).toBe('app-topbar')
+    expect(tabs.style.viewTransitionName).toBe('app-tabbar')
+  })
+
+  it('gives every nav link a hidden pending hint that adds nothing to its name', () => {
+    render(<AppNav balance={120} slipCount={2} isAdmin />)
+    const links = [
+      ...screen.getAllByRole('navigation', { name: 'Primary' }).flatMap((nav) => within(nav).getAllByRole('link')),
+      within(screen.getAllByRole('banner')[1]).getByRole('link', { name: 'Admin' }),
+    ]
+    expect(links).toHaveLength(14)
+    for (const link of links) {
+      const hint = link.querySelector('.nav-pending-hint')
+      expect(hint).toHaveAttribute('aria-hidden', 'true')
+      expect(hint).toBeEmptyDOMElement()
+    }
+    expect(screen.getAllByRole('link', { name: 'Parlays (2)' })).toHaveLength(2)
+  })
+
   it('links every destination in both navs', () => {
     render(<AppNav balance={120} slipCount={0} isAdmin={false} />)
     const [desktop, phone] = screen.getAllByRole('navigation', { name: 'Primary' })

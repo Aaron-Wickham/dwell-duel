@@ -2,5 +2,11 @@
 // gives them DwellDuel's teal in both themes. --safe-top is 0px outside standalone, so it
 // takes no space in a browser tab or on desktop.
 export function StatusBand() {
-  return <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-30 h-(--safe-top) bg-status-band" />
+  return (
+    <div
+      aria-hidden="true"
+      style={{ viewTransitionName: 'status-band' }}
+      className="pointer-events-none fixed inset-x-0 top-0 z-30 h-(--safe-top) bg-status-band"
+    />
+  )
 }

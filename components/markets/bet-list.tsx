@@ -31,7 +31,7 @@ export function BetList({
         <li key={b.id} className="flex min-h-[52px] items-center gap-3 py-3">
           <Avatar name={b.bettorName} size="sm" />
           <p className="min-w-0">
-            <Link href={`/members/${b.profileId}`}>{b.bettorName}</Link> — {b.amount} DC on{' '}
+            <Link href={`/members/${b.profileId}`} transitionTypes={['nav-forward']}>{b.bettorName}</Link> — {b.amount} DC on{' '}
             {outcomes.find((o) => o.id === b.outcomeId)?.label ?? 'unknown outcome'}
             {b.profileId === viewerId && <span className="text-ink2"> (you)</span>}
           </p>

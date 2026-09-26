@@ -18,7 +18,7 @@ export default async function ParlaysPage() {
   const parlays = await listMyParlays(supabase, user.id)
 
   return (
-    <Page reveal>
+    <Page transition="tab">
       <PageHeader title="Parlays" />
       <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
         <SlipForm slip={slip} />

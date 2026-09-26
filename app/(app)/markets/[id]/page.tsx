@@ -116,7 +116,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
         : 'You created this market. You can resolve it once it closes.'
 
   return (
-    <Page reveal>
+    <Page transition="drill-down">
       <BackLink href="/markets">Markets</BackLink>
 
       <div className="flex flex-col gap-3">

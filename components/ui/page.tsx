@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ContentReveal } from '@/components/nav/page-transition'
+import { DrillDownTransition, TabTransition } from '@/components/nav/page-transition'
 import { cn } from '@/lib/utils'
 
 export const h1Class = 'text-[28px] font-extrabold leading-[1.12] tracking-[-0.025em] text-balance md:text-[40px]'
@@ -11,15 +11,17 @@ export const pageClass =
 
 export function Page({
   className,
-  reveal = false,
+  transition,
   children,
 }: {
   className?: string
-  reveal?: boolean
+  transition?: 'tab' | 'drill-down'
   children: ReactNode
 }) {
   const page = <div className={cn(pageClass, className)}>{children}</div>
-  return reveal ? <ContentReveal>{page}</ContentReveal> : page
+  if (transition === 'tab') return <TabTransition>{page}</TabTransition>
+  if (transition === 'drill-down') return <DrillDownTransition>{page}</DrillDownTransition>
+  return page
 }
 
 export function PageHeader({

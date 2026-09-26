@@ -23,7 +23,7 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
   if (!member) notFound()
 
   return (
-    <Page>
+    <Page transition="drill-down">
       <BackLink href="/leaderboard">Leaderboard</BackLink>
       <section className="flex items-center gap-4 md:gap-5">
         <Avatar name={member.displayName} size="lg" />

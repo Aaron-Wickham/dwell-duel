@@ -58,7 +58,7 @@ export default async function Home() {
   }
 
   return (
-    <Page reveal>
+    <Page transition="tab">
       <PageHeader title={`Welcome, ${me?.displayName}`} />
       <HomeHero
         balance={me?.balance ?? 0}

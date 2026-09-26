@@ -8,17 +8,10 @@ vi.mock('react', async (importOriginal) =>
 )
 
 import { Skeleton, SkeletonField, SkeletonScreen } from '@/components/ui/skeleton'
-import { ContentReveal, SkeletonReveal } from '@/components/nav/page-transition'
-import { Page } from '@/components/ui/page'
 
 beforeEach(() => {
   viewTransitionCalls.length = 0
 })
-
-// The props a ViewTransition got, apart from its children.
-function transitionProps(index = 0) {
-  return Object.fromEntries(Object.entries(viewTransitionCalls[index]).filter(([key]) => key !== 'children'))
-}
 
 describe('Skeleton', () => {
   it('is a hidden block carrying the shimmer class and any overrides', () => {
@@ -43,39 +36,19 @@ describe('Skeleton', () => {
 })
 
 describe('SkeletonScreen', () => {
-  it('names the skeleton, announces loading, and hands off through the skeleton reveal', () => {
+  it('names the skeleton, announces loading, and hands off through the route transition', () => {
     const { container } = render(
       <SkeletonScreen name="feed" className="flex flex-col">
         <Skeleton className="h-6" />
       </SkeletonScreen>,
     )
     expect(viewTransitionCalls).toHaveLength(1)
-    expect(transitionProps()).toEqual({ exit: 'skeleton-exit', default: 'none' })
+    expect(viewTransitionCalls[0].exit).toEqual({ 'nav-forward': 'nav-forward', 'nav-back': 'nav-back', default: 'page-exit' })
+    expect(viewTransitionCalls[0].default).toBe('none')
     const screenEl = container.firstElementChild!
     expect(screenEl).toHaveAttribute('data-skeleton', 'feed')
     expect(screenEl).toHaveClass('flex', 'flex-col')
     expect(screen.getByRole('status')).toHaveTextContent('Loading…')
     expect(screenEl.querySelectorAll('.skeleton')).toHaveLength(1)
-  })
-})
-
-describe('reveals', () => {
-  it('slides the skeleton out on exit and nothing else', () => {
-    render(<SkeletonReveal>skeleton</SkeletonReveal>)
-    expect(transitionProps()).toEqual({ exit: 'skeleton-exit', default: 'none' })
-  })
-
-  it('brings the content in on enter and nothing else', () => {
-    render(<ContentReveal>content</ContentReveal>)
-    expect(transitionProps()).toEqual({ enter: 'content-enter', default: 'none' })
-  })
-
-  it('reveals a Page that asks for it, and leaves a plain Page alone', () => {
-    const { container, rerender } = render(<Page>Body</Page>)
-    expect(viewTransitionCalls).toHaveLength(0)
-    rerender(<Page reveal>Body</Page>)
-    expect(viewTransitionCalls).toHaveLength(1)
-    expect(transitionProps()).toEqual({ enter: 'content-enter', default: 'none' })
-    expect(container.firstElementChild).toBe(screen.getByText('Body'))
   })
 })

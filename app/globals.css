@@ -296,48 +296,118 @@
   }
 }
 
-/* Skeleton-to-content reveal (components/nav/page-transition.tsx). The skeleton leaves fast, sliding down;
-   the content waits for it, then fades and rises in. */
-::view-transition-old(.skeleton-exit) {
-  animation:
-    150ms ease-out both reveal-fade reverse,
-    150ms ease-out both reveal-rise reverse;
+/* Page transitions. React's <ViewTransition> (components/nav/page-transition.tsx) adds these
+   classes: nav-forward / nav-back from a link's transitionTypes, page-enter / page-exit for
+   everything else. */
+:root {
+  --vt-exit: 150ms;
+  --vt-enter: 210ms;
+  --vt-move: 360ms;
 }
 
-::view-transition-new(.content-enter) {
-  animation:
-    210ms ease-in 150ms both reveal-fade,
-    400ms ease-in both reveal-rise;
-}
-
-/* The transition overlay would otherwise swallow taps for the length of the reveal. */
+/* The overlay would otherwise swallow every tap made while a transition runs. */
 ::view-transition {
   pointer-events: none;
 }
 
-@keyframes reveal-fade {
-  from {
-    opacity: 0;
-    filter: blur(3px);
-  }
-  to {
-    opacity: 1;
-    filter: blur(0);
-  }
+@keyframes vt-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-@keyframes reveal-rise {
-  from {
-    transform: translateY(10px);
-  }
-  to {
-    transform: translateY(0);
-  }
+@keyframes vt-slide-x {
+  from { translate: var(--vt-offset) 0; }
+  to { translate: 0 0; }
+}
+
+@keyframes vt-rise {
+  from { translate: 0 8px; }
+  to { translate: 0 0; }
+}
+
+::view-transition-old(.nav-forward) {
+  --vt-offset: -60px;
+  animation:
+    var(--vt-exit) ease-in both vt-fade reverse,
+    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x reverse;
+}
+::view-transition-new(.nav-forward) {
+  --vt-offset: 60px;
+  animation:
+    var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
+    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x;
+}
+::view-transition-old(.nav-back) {
+  --vt-offset: 60px;
+  animation:
+    var(--vt-exit) ease-in both vt-fade reverse,
+    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x reverse;
+}
+::view-transition-new(.nav-back) {
+  --vt-offset: -60px;
+  animation:
+    var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
+    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x;
+}
+
+::view-transition-old(.page-exit) {
+  animation: var(--vt-exit) ease-in both vt-fade reverse;
+}
+::view-transition-new(.page-enter) {
+  animation:
+    var(--vt-enter) ease-out both vt-fade,
+    var(--vt-enter) ease-out both vt-rise;
+}
+
+/* The chrome stays put while the content under it moves: no animation, drawn above the
+   content, and only the new snapshot shown so the old and new bars never overlap. */
+::view-transition-group(status-band),
+::view-transition-group(app-header),
+::view-transition-group(app-topbar),
+::view-transition-group(app-tabbar) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(status-band),
+::view-transition-old(app-header),
+::view-transition-old(app-topbar),
+::view-transition-old(app-tabbar) {
+  display: none;
+}
+::view-transition-new(status-band),
+::view-transition-new(app-header),
+::view-transition-new(app-topbar),
+::view-transition-new(app-tabbar) {
+  animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(.skeleton-exit),
-  ::view-transition-new(.content-enter) {
-    animation: none;
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
+}
+
+/* The nav's pending hint (components/nav/nav-pending-hint.tsx) waits 120ms before showing, so
+   a prefetched navigation never flashes it. */
+.nav-pending-hint {
+  opacity: 0;
+}
+.nav-pending-hint[data-pending] {
+  animation:
+    vt-hint-in 150ms ease-out 120ms forwards,
+    vt-hint-pulse 1s ease-in-out 270ms infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-pending-hint[data-pending] {
+    animation: vt-hint-in 0s linear 120ms forwards;
+  }
+}
+@keyframes vt-hint-in {
+  to { opacity: 1; }
+}
+@keyframes vt-hint-pulse {
+  50% { opacity: 0.35; }
 }

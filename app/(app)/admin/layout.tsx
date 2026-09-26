@@ -13,7 +13,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   if (!(await isAdmin(supabase))) redirect('/')
 
   return (
-    <Page>
+    <Page transition="drill-down">
       <div className="flex flex-col gap-4">
         <PageHeader title="Admin" />
         <AdminNav />

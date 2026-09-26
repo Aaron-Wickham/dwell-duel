@@ -1,10 +1,8 @@
-import { Check, Plus, Trophy } from 'lucide-react'
+import { Trophy } from 'lucide-react'
 import NumberFlow from '@number-flow/react'
-import { Button } from '@/components/ui/button'
 import { AnimatedText } from '@/components/ui/animated-text'
-import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { StatusChip } from '@/components/ui/status-chip'
-import { ToastActionForm } from '@/components/ui/toast-action-form'
+import { OutcomeSlipControl } from '@/components/markets/outcome-slip-control'
 import { SERIES_BG } from '@/components/markets/series-classes'
 import type { Series } from '@/lib/markets/outcome-series'
 import type { OutcomeRowState } from '@/lib/markets/row-state'
@@ -16,6 +14,7 @@ import { cn } from '@/lib/utils'
 export type { OutcomeRowState }
 
 export function OutcomeRow({
+  outcomeId,
   label,
   poolTotal,
   probability,
@@ -27,6 +26,7 @@ export function OutcomeRow({
   removeAction,
   disabledReasonId,
 }: {
+  outcomeId: string
   label: string
   poolTotal: number
   probability: number | null
@@ -39,12 +39,6 @@ export function OutcomeRow({
   disabledReasonId?: string
 }) {
   const percent = (probability ?? 0) * 100
-  const addLabel = (
-    <>
-      <Plus aria-hidden="true" className="size-[18px]" />
-      Add to parlay <span className="sr-only">{label}</span>
-    </>
-  )
 
   return (
     <div className="flex flex-col gap-2 py-4">
@@ -83,31 +77,14 @@ export function OutcomeRow({
               </AnimatedText>
             )}
           </span>
-          {state === 'inslip' && (
-            <span className="flex items-center gap-2">
-              <StatusChip tone="open">
-                <Check aria-hidden="true" className="size-4" />
-                In your slip
-              </StatusChip>
-              <ToastActionForm action={removeAction} successMessage="Removed from your slip.">
-                <FormSubmitButton variant="quiet" size="sm">
-                  Remove <span className="sr-only">{label}</span>
-                </FormSubmitButton>
-              </ToastActionForm>
-            </span>
-          )}
-          {state === 'add' && (
-            <ToastActionForm action={addAction} successMessage="Added to your slip.">
-              <FormSubmitButton variant="secondary" size="sm">
-                {addLabel}
-              </FormSubmitButton>
-            </ToastActionForm>
-          )}
-          {state === 'disabled' && (
-            <Button variant="secondary" size="sm" disabled aria-describedby={disabledReasonId}>
-              {addLabel}
-            </Button>
-          )}
+          <OutcomeSlipControl
+            outcomeId={outcomeId}
+            label={label}
+            state={state}
+            addAction={addAction}
+            removeAction={removeAction}
+            disabledReasonId={disabledReasonId}
+          />
         </div>
       )}
     </div>

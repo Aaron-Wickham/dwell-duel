@@ -1,21 +1,34 @@
 import type { ReactNode } from 'react'
+import { BackSwipe } from '@/components/nav/back-swipe'
+import { DrillDownTransition, TabTransition } from '@/components/nav/page-transition'
 import { cn } from '@/lib/utils'
 
 export const h1Class = 'text-[28px] font-extrabold leading-[1.12] tracking-[-0.025em] text-balance md:text-[40px]'
 export const h2Class = 'text-[19px] font-extrabold leading-[1.25] tracking-[-0.01em] md:text-[21px]'
 export const eyebrowClass = 'text-xs font-extrabold uppercase tracking-[0.09em] text-ink2'
 
-export function Page({ className, children }: { className?: string; children: ReactNode }) {
-  return (
-    <div
-      className={cn(
-        'mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-5 px-4 pt-5 pb-8 md:gap-7 md:px-20 md:pt-10 md:pb-20',
-        className,
-      )}
-    >
-      {children}
-    </div>
-  )
+export const pageClass =
+  'mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-5 px-4 pt-5 pb-8 md:gap-7 md:px-20 md:pt-10 md:pb-20'
+
+export function Page({
+  className,
+  transition,
+  children,
+}: {
+  className?: string
+  transition?: 'tab' | 'drill-down'
+  children: ReactNode
+}) {
+  const page = <div className={cn(pageClass, className)}>{children}</div>
+  if (transition === 'tab') return <TabTransition>{page}</TabTransition>
+  if (transition === 'drill-down') {
+    return (
+      <DrillDownTransition>
+        <BackSwipe>{page}</BackSwipe>
+      </DrillDownTransition>
+    )
+  }
+  return page
 }
 
 export function PageHeader({

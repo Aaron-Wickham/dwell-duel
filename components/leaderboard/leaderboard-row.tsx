@@ -28,7 +28,7 @@ export function LeaderboardRow({
       </span>
       <Avatar name={name} />
       <span className="grow text-[17px] font-extrabold">
-        <Link href={href}>{name}</Link>
+        <Link href={href} transitionTypes={['nav-forward']}>{name}</Link>
         {isMe && <span className="font-semibold text-ink2"> (you)</span>}
       </span>
       <span className="text-[17px] font-extrabold tabular-nums">{balance} DC</span>

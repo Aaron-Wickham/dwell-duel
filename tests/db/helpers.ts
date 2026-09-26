@@ -5,7 +5,7 @@ config({ path: '.env.local', quiet: true })
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost'])
 
-function assertLocal(url: string): void {
+export function assertLocal(url: string): void {
   let host: string
   try {
     host = new URL(url).hostname

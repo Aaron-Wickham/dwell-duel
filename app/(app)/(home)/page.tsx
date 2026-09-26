@@ -11,6 +11,7 @@ import { Page, PageHeader } from '@/components/ui/page'
 import { buttonVariants } from '@/components/ui/button'
 import { HomeHero } from '@/components/home/home-hero'
 import { HomeTiles, type HomeTile } from '@/components/home/home-tiles'
+import { InstallCard } from '@/components/home/install-card'
 import { adminTileSubtitle, leaderboardTileSubtitle, marketsTileSubtitle, parlaysTileSubtitle } from '@/lib/home/copy'
 import { cn } from '@/lib/utils'
 
@@ -58,7 +59,7 @@ export default async function Home() {
   }
 
   return (
-    <Page>
+    <Page transition="tab">
       <PageHeader title={`Welcome, ${me?.displayName}`} />
       <HomeHero
         balance={me?.balance ?? 0}
@@ -68,6 +69,7 @@ export default async function Home() {
         pendingDc={pendingDc}
       />
       <HomeTiles tiles={tiles} />
+      <InstallCard />
       <form action={signOut}>
         <button type="submit" className={cn(buttonVariants({ variant: 'secondary', block: true }), 'md:w-auto')}>
           <LogOut aria-hidden="true" className="size-5" />

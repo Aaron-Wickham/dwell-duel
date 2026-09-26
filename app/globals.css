@@ -50,6 +50,19 @@
   --s4: #3155B8;
   --s5: #7B3FA8;
   --s6: #B0306F;
+  --status-band: #03272D;
+  --safe-top: 0px;
+  --safe-bottom: 0px;
+}
+
+/* viewport-fit=cover makes env(safe-area-inset-*) non-zero in a normal Safari tab too, where
+   Safari's own bars already keep clear of the notch and home indicator. Only the installed app
+   has no browser chrome, so only there does the page reserve the insets itself. */
+@media (display-mode: standalone) {
+  :root {
+    --safe-top: env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 /* The same dark values appear twice: once for an explicit choice, once for the system fallback. */
@@ -162,6 +175,7 @@
   --color-s5: var(--s5);
   --color-s6: var(--s6);
   --color-scrim: var(--scrim);
+  --color-status-band: var(--status-band);
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius-control: 12px;
   --radius-card: 18px;
@@ -170,12 +184,65 @@
   --shadow-overlay: var(--overlay-shadow);
 }
 
+/* Chrome that is tapped, never read: a long press shouldn't select it or open iOS's callout menu.
+   Text content stays selectable. */
+@utility no-callout {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* The native press: controls give under the finger. Reduced motion swaps the scale for a dim. */
+@utility pressable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: scale 120ms ease-out;
+
+  &:active:not(:disabled, [aria-disabled="true"]) {
+    scale: 0.97;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &:active:not(:disabled, [aria-disabled="true"]) {
+      scale: none;
+      opacity: 0.7;
+    }
+  }
+}
+
 @layer base {
+  html {
+    /* iOS's rubber-band bounce can't be turned off; it shows html's background colour, so make
+       that the page colour rather than white. */
+    background-color: var(--bg);
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
+    /* Keeps every page's first content below the fixed status band. */
+    padding-top: var(--safe-top);
     background: var(--bg);
     color: var(--ink);
     font-family: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
+    /* No pull-to-refresh, overscroll glow or scroll chaining; live updates keep data fresh. */
+    overscroll-behavior-y: none;
+  }
+
+  /* Drops the double-tap-to-zoom wait, so taps land at once. */
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  label,
+  summary,
+  [role="button"] {
+    touch-action: manipulation;
   }
 
   a {
@@ -193,4 +260,155 @@
     outline: 3px solid var(--focus);
     outline-offset: 2px;
   }
+}
+
+/* Skeleton blocks (components/ui/skeleton.tsx): a band of the surface colour sweeps across the
+   sunk fill. A component layer, so bg-* and rounded-* utilities on a Skeleton win. */
+@layer components {
+  .skeleton {
+    border-radius: var(--radius-control);
+    background-color: var(--sunk);
+    background-image: linear-gradient(
+      100deg,
+      transparent 30%,
+      color-mix(in oklab, var(--surface) 55%, transparent) 50%,
+      transparent 70%
+    );
+    background-repeat: no-repeat;
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton {
+      background-image: none;
+      animation: none;
+    }
+  }
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+/* Page transitions. React's <ViewTransition> (components/nav/page-transition.tsx) adds these
+   classes: nav-forward / nav-back from a link's transitionTypes, page-enter / page-exit for
+   everything else. */
+:root {
+  --vt-exit: 150ms;
+  --vt-enter: 210ms;
+  --vt-move: 360ms;
+}
+
+/* The overlay would otherwise swallow every tap made while a transition runs. */
+::view-transition {
+  pointer-events: none;
+}
+
+@keyframes vt-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes vt-slide-x {
+  from { translate: var(--vt-offset) 0; }
+  to { translate: 0 0; }
+}
+
+@keyframes vt-rise {
+  from { translate: 0 8px; }
+  to { translate: 0 0; }
+}
+
+::view-transition-old(.nav-forward) {
+  --vt-offset: -60px;
+  animation:
+    var(--vt-exit) ease-in both vt-fade reverse,
+    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x reverse;
+}
+::view-transition-new(.nav-forward) {
+  --vt-offset: 60px;
+  animation:
+    var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
+    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x;
+}
+::view-transition-old(.nav-back) {
+  --vt-offset: 60px;
+  animation:
+    var(--vt-exit) ease-in both vt-fade reverse,
+    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x reverse;
+}
+::view-transition-new(.nav-back) {
+  --vt-offset: -60px;
+  animation:
+    var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
+    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x;
+}
+
+::view-transition-old(.page-exit) {
+  animation: var(--vt-exit) ease-in both vt-fade reverse;
+}
+::view-transition-new(.page-enter) {
+  animation:
+    var(--vt-enter) ease-out both vt-fade,
+    var(--vt-enter) ease-out both vt-rise;
+}
+
+/* The chrome stays put while the content under it moves: no animation, drawn above the
+   content, and only the new snapshot shown so the old and new bars never overlap. */
+::view-transition-group(status-band),
+::view-transition-group(app-header),
+::view-transition-group(app-topbar),
+::view-transition-group(app-tabbar) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(status-band),
+::view-transition-old(app-header),
+::view-transition-old(app-topbar),
+::view-transition-old(app-tabbar) {
+  display: none;
+}
+::view-transition-new(status-band),
+::view-transition-new(app-header),
+::view-transition-new(app-topbar),
+::view-transition-new(app-tabbar) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
+/* The nav's pending hint (components/nav/nav-pending-hint.tsx) waits 120ms before showing, so
+   a prefetched navigation never flashes it. */
+.nav-pending-hint {
+  opacity: 0;
+}
+.nav-pending-hint[data-pending] {
+  animation:
+    vt-hint-in 150ms ease-out 120ms forwards,
+    vt-hint-pulse 1s ease-in-out 270ms infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-pending-hint[data-pending] {
+    animation: vt-hint-in 0s linear 120ms forwards;
+  }
+}
+@keyframes vt-hint-in {
+  to { opacity: 1; }
+}
+@keyframes vt-hint-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }

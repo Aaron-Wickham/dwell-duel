@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { CircleAlert, CircleCheck, Info, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ErrorHaptic } from '@/components/ui/error-haptic'
 
 // Gold marks static notes like "Awaiting resolution", not news, so it is not a live region.
 const TONES = {
@@ -32,6 +33,7 @@ export function Message({
     >
       <Icon aria-hidden="true" className="mt-px size-5 shrink-0" />
       <span>{children}</span>
+      {tone === 'error' && <ErrorHaptic />}
     </p>
   )
 }

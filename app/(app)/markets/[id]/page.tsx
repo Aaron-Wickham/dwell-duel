@@ -10,6 +10,7 @@ import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt } from '@/lib/markets/market-status'
 import { rowState } from '@/lib/markets/row-state'
+import { isUuid } from '@/lib/uuid'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { readSlip } from '@/lib/parlays/slip'
 import { MAX_PICKS, legOddsBp } from '@/lib/parlays/odds'
@@ -21,6 +22,7 @@ import { Page, h1Class } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { StatusChip } from '@/components/ui/status-chip'
 import { BetList } from '@/components/markets/bet-list'
+import { MarketSlipProvider } from '@/components/markets/market-slip'
 import { OutcomeRow } from '@/components/markets/outcome-row'
 import { ProbabilityChart } from '@/components/markets/probability-chart'
 import { BetForm } from './bet-form'
@@ -32,6 +34,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const { id } = await props.params
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
+  if (!isUuid(id)) notFound()
 
   const market = await getMarket(supabase, id)
   if (!market) notFound()
@@ -68,7 +71,8 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
 
   const slip = await readSlip()
   const slipView = await getSlipView(supabase, slip)
-  const marketInSlip = market.outcomes.some((o) => slip.includes(o.id))
+  const marketPick = market.outcomes.find((o) => slip.includes(o.id))?.id ?? null
+  const marketInSlip = marketPick !== null
   const slipFull = slip.length >= MAX_PICKS && !marketInSlip
 
   const statusTone =
@@ -114,106 +118,111 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
         : 'You created this market. You can resolve it once it closes.'
 
   return (
-    <Page>
-      <BackLink href="/markets">Markets</BackLink>
+    <Page transition="drill-down">
+      {/* Wraps the drawer too (rendered below, outside the Outcomes section) so removing this
+          market's pick from inside it flips the outcome row off in the same transition. */}
+      <MarketSlipProvider pick={marketPick}>
+        <BackLink href="/markets">Markets</BackLink>
 
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusChip tone={statusTone}>
-            Status: {market.status === 'open' && isPastClose ? 'awaiting resolution' : market.status}
-          </StatusChip>
-          <span className="text-sm text-ink2">
-            {when}Created by {isCreator ? 'you' : market.creatorName}
-          </span>
-        </div>
-        <h1 className={h1Class}>{market.title}</h1>
-        {market.description && <p className="max-w-[68ch] text-ink2">{market.description}</p>}
-        {market.status === 'resolved' && market.resolvedOutcomeLabel && (
-          <Message tone="ok" icon={Trophy} className="self-start">
-            Winning outcome: {market.resolvedOutcomeLabel}
-          </Message>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-7">
-        <SectionCard title="Chance over time" titleId="chart-title" className="gap-3 lg:col-start-1 lg:row-start-1">
-          <ProbabilityChart
-            outcomes={chartOutcomes}
-            points={chartPoints}
-            now={now}
-            closedAt={chartClosedAt(market.status, market.closeAt, market.resolvedAt)}
-            resolvedLabel={resolvedLabel}
-          />
-        </SectionCard>
-
-        <SectionCard
-          title="Outcomes"
-          titleId="outcomes-title"
-          action={<span className="text-sm text-ink2 tabular-nums">{totalPool} DC in the pool</span>}
-          className="gap-1 lg:col-start-1 lg:row-start-2"
-        >
-          {canBet && slipFull && (
-            <Message tone="gold" icon={Layers} id="slip-full-note" className="mt-2">
-              Your slip is full ({MAX_PICKS} picks).{' '}
-              <Link href="/parlays" className="text-inherit">
-                Review slip
-              </Link>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusChip tone={statusTone}>
+              Status: {market.status === 'open' && isPastClose ? 'awaiting resolution' : market.status}
+            </StatusChip>
+            <span className="text-sm text-ink2">
+              {when}Created by {isCreator ? 'you' : market.creatorName}
+            </span>
+          </div>
+          <h1 className={h1Class}>{market.title}</h1>
+          {market.description && <p className="max-w-[68ch] text-ink2">{market.description}</p>}
+          {market.status === 'resolved' && market.resolvedOutcomeLabel && (
+            <Message tone="ok" icon={Trophy} className="self-start">
+              Winning outcome: {market.resolvedOutcomeLabel}
             </Message>
           )}
-          <ul className="flex flex-col divide-y divide-line">
-            {odds.map((o, index) => (
-              <li key={o.outcomeId}>
-                <OutcomeRow
-                  label={o.label}
-                  poolTotal={o.poolTotal}
-                  probability={o.impliedProbability}
-                  oddsBp={legOddsBp(totalPool, o.poolTotal)}
-                  series={outcomeSeries(market.kind, o.label, index)}
-                  state={rowState(o.outcomeId, o.poolTotal, { slip, canBet, slipFull })}
-                  winner={market.status === 'resolved' && o.label === market.resolvedOutcomeLabel}
-                  addAction={addToSlipAction.bind(null, o.outcomeId)}
-                  removeAction={removeFromSlipAction.bind(null, o.outcomeId)}
-                  disabledReasonId={slipFull ? 'slip-full-note' : undefined}
-                />
-              </li>
-            ))}
-          </ul>
-        </SectionCard>
-
-        <div className="flex flex-col gap-5 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:gap-7">
-          {canBet ? (
-            <SectionCard title="Place a bet" titleId="bet-title" className="gap-4">
-              <BetForm marketId={market.id} outcomes={market.outcomes} />
-            </SectionCard>
-          ) : (
-            <SectionCard title="Betting closed" titleId="closed-title" className="gap-2">
-              <p className="text-ink2">{closedCopy}</p>
-            </SectionCard>
-          )}
-
-          {(showResolve || canVoid) && (
-            <SectionCard
-              title={canOverride ? 'Override resolution' : 'Resolve market'}
-              titleId="manage-title"
-              className="gap-1"
-            >
-              <p className="text-sm text-ink2">{manageHint}</p>
-              <div className="mt-3 flex flex-col gap-4">
-                {showResolve && <ResolveForm marketId={market.id} outcomes={market.outcomes} />}
-                {canVoid && (
-                  <VoidButton marketId={market.id} className={showResolve ? 'border-t border-line pt-4' : undefined} />
-                )}
-              </div>
-            </SectionCard>
-          )}
         </div>
 
-        <SectionCard title="Bets" titleId="bets-title" className="gap-1 lg:col-start-1 lg:row-start-3">
-          <BetList bets={bets} outcomes={market.outcomes} viewerId={user.id} canBet={canBet} />
-        </SectionCard>
-      </div>
+        <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-7">
+          <SectionCard title="Chance over time" titleId="chart-title" className="gap-3 lg:col-start-1 lg:row-start-1">
+            <ProbabilityChart
+              outcomes={chartOutcomes}
+              points={chartPoints}
+              now={now}
+              closedAt={chartClosedAt(market.status, market.closeAt, market.resolvedAt)}
+              resolvedLabel={resolvedLabel}
+            />
+          </SectionCard>
 
-      <SlipDrawer slip={slipView} />
+          <SectionCard
+            title="Outcomes"
+            titleId="outcomes-title"
+            action={<span className="text-sm text-ink2 tabular-nums">{totalPool} DC in the pool</span>}
+            className="gap-1 lg:col-start-1 lg:row-start-2"
+          >
+            {canBet && slipFull && (
+              <Message tone="gold" icon={Layers} id="slip-full-note" className="mt-2">
+                Your slip is full ({MAX_PICKS} picks).{' '}
+                <Link href="/parlays" className="text-inherit">
+                  Review slip
+                </Link>
+              </Message>
+            )}
+            <ul className="flex flex-col divide-y divide-line">
+              {odds.map((o, index) => (
+                <li key={o.outcomeId}>
+                  <OutcomeRow
+                    outcomeId={o.outcomeId}
+                    label={o.label}
+                    poolTotal={o.poolTotal}
+                    probability={o.impliedProbability}
+                    oddsBp={legOddsBp(totalPool, o.poolTotal)}
+                    series={outcomeSeries(market.kind, o.label, index)}
+                    state={rowState(o.outcomeId, o.poolTotal, { slip, canBet, slipFull })}
+                    winner={market.status === 'resolved' && o.label === market.resolvedOutcomeLabel}
+                    addAction={addToSlipAction.bind(null, o.outcomeId)}
+                    removeAction={removeFromSlipAction.bind(null, o.outcomeId)}
+                    disabledReasonId={slipFull ? 'slip-full-note' : undefined}
+                  />
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
+
+          <div className="flex flex-col gap-5 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:gap-7">
+            {canBet ? (
+              <SectionCard title="Place a bet" titleId="bet-title" className="gap-4">
+                <BetForm marketId={market.id} outcomes={market.outcomes} />
+              </SectionCard>
+            ) : (
+              <SectionCard title="Betting closed" titleId="closed-title" className="gap-2">
+                <p className="text-ink2">{closedCopy}</p>
+              </SectionCard>
+            )}
+
+            {(showResolve || canVoid) && (
+              <SectionCard
+                title={canOverride ? 'Override resolution' : 'Resolve market'}
+                titleId="manage-title"
+                className="gap-1"
+              >
+                <p className="text-sm text-ink2">{manageHint}</p>
+                <div className="mt-3 flex flex-col gap-4">
+                  {showResolve && <ResolveForm marketId={market.id} outcomes={market.outcomes} />}
+                  {canVoid && (
+                    <VoidButton marketId={market.id} className={showResolve ? 'border-t border-line pt-4' : undefined} />
+                  )}
+                </div>
+              </SectionCard>
+            )}
+          </div>
+
+          <SectionCard title="Bets" titleId="bets-title" className="gap-1 lg:col-start-1 lg:row-start-3">
+            <BetList bets={bets} outcomes={market.outcomes} viewerId={user.id} canBet={canBet} />
+          </SectionCard>
+        </div>
+
+        <SlipDrawer slip={slipView} />
+      </MarketSlipProvider>
     </Page>
   )
 }

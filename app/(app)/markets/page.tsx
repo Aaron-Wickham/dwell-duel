@@ -75,12 +75,13 @@ export default async function MarketsPage() {
   })).filter((group) => group.markets.length > 0)
 
   return (
-    <Page>
+    <Page transition="tab">
       <PageHeader
         title="Markets"
         action={
           <Link
             href="/markets/new"
+            transitionTypes={['nav-forward']}
             className={cn(buttonVariants({ variant: 'primary', size: 'sm' }), 'md:min-h-12 md:px-5 md:text-base')}
           >
             <Plus aria-hidden="true" className="size-5" />
@@ -93,7 +94,11 @@ export default async function MarketsPage() {
           icon={ChartColumn}
           title="No markets yet."
           action={
-            <Link href="/markets/new" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+            <Link
+              href="/markets/new"
+              transitionTypes={['nav-forward']}
+              className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+            >
               Create market
             </Link>
           }

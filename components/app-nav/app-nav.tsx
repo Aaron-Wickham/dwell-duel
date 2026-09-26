@@ -1,15 +1,17 @@
 'use client'
 
-import { useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { MotionConfig, motion } from 'motion/react'
 import { BookOpen, ChartColumn, CircleDot, House, Layers, MessageSquareText, ShieldCheck, Trophy, type LucideIcon } from 'lucide-react'
 import NumberFlow from '@number-flow/react'
 import { Wordmark } from '@/components/brand/wordmark'
 import { AnimatedText } from '@/components/ui/animated-text'
+import { NavPendingHint } from '@/components/nav/nav-pending-hint'
+import { haptics } from '@/lib/haptics'
 import { cn } from '@/lib/utils'
 import { ADMIN_HREF, NAV_ITEMS, activeNavId, type NavId } from './nav-items'
+import { useSlipCount } from './slip-count'
 import { ThemeToggle } from './theme-toggle'
 
 const ICONS: Record<NavId, LucideIcon> = {
@@ -43,19 +45,22 @@ function DesktopLink({
   active,
   count = 0,
   icon: Icon,
+  transitionTypes,
 }: {
   href: string
   label: string
   active: boolean
   count?: number
   icon?: LucideIcon
+  transitionTypes?: string[]
 }) {
   return (
     <Link
       href={href}
+      transitionTypes={transitionTypes}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative isolate inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-[15px] font-bold no-underline',
+        'pressable relative isolate inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-[15px] font-bold no-underline',
         active ? 'text-on-primary' : 'text-ink2 hover:bg-sunk hover:text-ink',
       )}
     >
@@ -84,23 +89,14 @@ function DesktopLink({
           </span>
         </>
       )}
+      <NavPendingHint className="inset-x-3.5 bottom-1 h-0.5" />
     </Link>
   )
 }
 
-export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipCount: number; isAdmin: boolean }) {
+export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean }) {
   const active = activeNavId(usePathname())
-  const router = useRouter()
-
-  useEffect(() => {
-    // Layouts don't re-render on client navigation, so refresh when the member returns to the tab
-    // to pick up balance/slip changes someone else made while they were away.
-    function onVisibilityChange() {
-      if (document.visibilityState === 'visible') router.refresh()
-    }
-    document.addEventListener('visibilitychange', onVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', onVisibilityChange)
-  }, [router])
+  const { count: slipCount } = useSlipCount()
 
   return (
     <MotionConfig reducedMotion="user">
@@ -110,7 +106,10 @@ export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipC
       >
         Skip to content
       </a>
-      <header className="sticky top-0 z-30 hidden h-[72px] shrink-0 items-center gap-5 border-b border-line bg-surface px-10 md:flex">
+      <header
+        style={{ viewTransitionName: 'app-header' }}
+        className="no-callout sticky top-(--safe-top) z-30 hidden h-[72px] shrink-0 items-center gap-5 border-b border-line bg-surface px-10 md:flex"
+      >
         <Wordmark />
         <nav aria-label="Primary" className="flex items-center gap-0.5">
           {NAV_ITEMS.map((item) => (
@@ -125,7 +124,13 @@ export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipC
           {isAdmin && (
             <>
               <span aria-hidden="true" className="mx-1.5 h-6 w-px bg-line" />
-              <DesktopLink href={ADMIN_HREF} label="Admin" active={active === 'admin'} icon={ShieldCheck} />
+              <DesktopLink
+                href={ADMIN_HREF}
+                label="Admin"
+                active={active === 'admin'}
+                icon={ShieldCheck}
+                transitionTypes={['nav-forward']}
+              />
             </>
           )}
         </nav>
@@ -134,21 +139,26 @@ export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipC
         <ThemeToggle />
       </header>
 
-      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-1 border-b border-line bg-surface pr-2 pl-3 md:hidden">
+      <header
+        style={{ viewTransitionName: 'app-topbar' }}
+        className="no-callout sticky top-(--safe-top) z-30 flex h-16 shrink-0 items-center gap-1 border-b border-line bg-surface pr-2 pl-3 md:hidden"
+      >
         <Wordmark size="sm" />
         <span className="grow" />
         <BalanceChip balance={balance} />
         {isAdmin && (
           <Link
             href={ADMIN_HREF}
+            transitionTypes={['nav-forward']}
             aria-label="Admin"
             aria-current={active === 'admin' ? 'page' : undefined}
             className={cn(
-              'inline-flex size-11 shrink-0 items-center justify-center rounded-control no-underline',
+              'pressable relative inline-flex size-11 shrink-0 items-center justify-center rounded-control no-underline',
               active === 'admin' ? 'bg-lime text-on-lime' : 'text-ink hover:bg-sunk',
             )}
           >
             <ShieldCheck aria-hidden="true" className="size-[22px]" />
+            <NavPendingHint className="inset-x-3 bottom-1 h-0.5" />
           </Link>
         )}
         <ThemeToggle />
@@ -156,7 +166,8 @@ export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipC
 
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-3 md:hidden"
+        style={{ viewTransitionName: 'app-tabbar' }}
+        className="no-callout fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-[calc(12px+var(--safe-bottom))] md:hidden"
       >
         {NAV_ITEMS.map((item) => {
           const Icon = ICONS[item.id]
@@ -168,8 +179,9 @@ export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipC
               href={item.href}
               aria-current={isActive ? 'page' : undefined}
               aria-label={item.shortLabel === item.label ? undefined : item.label}
+              onClick={haptics.tap}
               className={cn(
-                'flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-[14px] text-xs leading-[1.1] no-underline',
+                'pressable relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-[14px] text-xs leading-[1.1] no-underline',
                 isActive ? 'font-extrabold text-ink' : 'font-bold text-ink2',
               )}
             >
@@ -198,6 +210,7 @@ export function AppNav({ balance, slipCount, isAdmin }: { balance: number; slipC
                   </>
                 )}
               </span>
+              <NavPendingHint className="bottom-0.5 left-1/2 h-0.5 w-5 -translate-x-1/2" />
             </Link>
           )
         })}

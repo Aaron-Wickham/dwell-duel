@@ -223,7 +223,7 @@ export function ProbabilityChart({
                 <Toggle
                   key={key}
                   value={key}
-                  className="min-h-11 min-w-[52px] cursor-pointer rounded-[9px] px-3 text-sm font-extrabold text-ink2 data-pressed:bg-surface data-pressed:text-ink data-pressed:shadow-tab"
+                  className="pressable min-h-11 min-w-[52px] cursor-pointer rounded-[9px] px-3 text-sm font-extrabold text-ink2 data-pressed:bg-surface data-pressed:text-ink data-pressed:shadow-tab"
                 >
                   {key}
                 </Toggle>

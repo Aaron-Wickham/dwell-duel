@@ -22,6 +22,13 @@ describe('AdminNav', () => {
     expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual(SECTIONS)
   })
 
+  it('behaves like a native segmented control: no long-press menu, a press state on each tab', () => {
+    render(<AdminNav />)
+    const nav = screen.getByRole('navigation', { name: 'Admin sections' })
+    expect(nav).toHaveClass('no-callout')
+    for (const link of within(nav).getAllByRole('link')) expect(link).toHaveClass('pressable')
+  })
+
   it.each(SECTIONS)('marks only %s as the current page at %s', (label, href) => {
     pathname = href
     render(<AdminNav />)

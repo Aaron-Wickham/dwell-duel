@@ -8,9 +8,10 @@ import { Toaster as SonnerToaster } from 'sonner'
 // Sonner's own "mobile" layout switches at a fixed 600px baked into its stylesheet. This
 // app's nav switches at Tailwind's md (768px) instead, so the toaster's position is
 // driven from JS against that same breakpoint rather than sonner's built-in one. Phone
-// keeps the toast at the TOP, below the 64px top bar: Task 7 adds a floating "Slip (n)"
-// button just above the bottom tab bar, and a bottom toast would cover it right after a
-// pick is added.
+// keeps the toast at the TOP, below the 64px top bar: a floating "Slip (n)" button sits
+// just above the bottom tab bar, and a bottom toast would cover it right after a pick is
+// added. In the installed app the top bar sits below the status band, so the phone offset
+// grows by --safe-top.
 const DESKTOP_QUERY = '(min-width: 768px)'
 
 function subscribeToDesktop(onChange: () => void): () => void {
@@ -28,6 +29,8 @@ function useIsDesktop(): boolean {
   )
 }
 
+const PHONE_OFFSET = { top: 'calc(80px + var(--safe-top))', left: 16, right: 16 }
+
 export function Toaster() {
   const isDesktop = useIsDesktop()
   return (
@@ -35,8 +38,8 @@ export function Toaster() {
       position={isDesktop ? 'bottom-right' : 'top-center'}
       gap={12}
       richColors
-      offset={isDesktop ? { bottom: 24, right: 24 } : { top: 80, left: 16, right: 16 }}
-      mobileOffset={{ top: 80, left: 16, right: 16 }}
+      offset={isDesktop ? { bottom: 24, right: 24 } : PHONE_OFFSET}
+      mobileOffset={PHONE_OFFSET}
       icons={{ success: <CircleCheck aria-hidden="true" className="size-4" /> }}
       toastOptions={{ style: { boxShadow: 'var(--shadow-overlay)' } }}
       style={

@@ -40,6 +40,12 @@ describe('Button', () => {
     expect(buttonVariants({ size: 'sm' })).toContain('min-h-11')
   })
 
+  it('gives every variant the shared press state', () => {
+    for (const variant of ['primary', 'secondary', 'danger', 'quiet'] as const) {
+      expect(buttonVariants({ variant }).split(' ')).toContain('pressable')
+    }
+  })
+
   it('looks disabled under aria-disabled too, not just the disabled attribute', () => {
     const classes = buttonVariants().split(' ')
     for (const cls of ['bg-sunk', 'text-ink2', 'cursor-not-allowed', 'border-transparent']) {
@@ -106,6 +112,11 @@ describe('Card', () => {
 })
 
 describe('StatusChip', () => {
+  it('keeps chips off the long-press menu', () => {
+    render(<StatusChip tone="open">Open</StatusChip>)
+    expect(screen.getByText('Open')).toHaveClass('no-callout')
+  })
+
   it('colours itself by tone', () => {
     render(<StatusChip tone="lost">Lost</StatusChip>)
     expect(screen.getByText('Lost')).toHaveClass('bg-loss-soft', 'text-loss')

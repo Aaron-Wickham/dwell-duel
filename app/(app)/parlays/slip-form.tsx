@@ -1,9 +1,11 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useOptimistic, useState } from 'react'
 import Link from 'next/link'
 import { Layers } from 'lucide-react'
 import NumberFlow from '@number-flow/react'
+import { useSlipCount } from '@/components/app-nav/slip-count'
+import { useMarketSlip } from '@/components/markets/market-slip'
 import { SlipPick } from '@/components/parlays/slip-pick'
 import { AnimatedText } from '@/components/ui/animated-text'
 import { buttonVariants } from '@/components/ui/button'
@@ -16,6 +18,7 @@ import type { SlipView } from '@/lib/parlays/get-slip'
 import { formatOdds, MAX_PICKS, potentialPayout } from '@/lib/parlays/odds'
 import { placeParlayAction, type PlaceParlayState } from '@/lib/parlays/place-parlay'
 import { removeFromSlipAction } from '@/lib/parlays/slip-actions'
+import { haptics } from '@/lib/haptics'
 
 function pickCount(n: number): string {
   if (n === 0) return 'Empty'
@@ -25,12 +28,28 @@ function pickCount(n: number): string {
 // Owns the success message as well as the slip card: placing empties the slip and
 // revalidates the page, and the message must outlive that re-render.
 export function SlipForm({ slip }: { slip: SlipView }) {
-  const [state, formAction] = useActionState<PlaceParlayState, FormData>(placeParlayAction, undefined)
+  const [state, formAction] = useActionState<PlaceParlayState, FormData>(async (prevState, formData) => {
+    const next = await placeParlayAction(prevState, formData)
+    if (next?.placed) haptics.success()
+    return next
+  }, undefined)
   const [stake, setStake] = useState('')
   const stakeNumber = Number(stake)
   const showPayout = Number.isInteger(stakeNumber) && stakeNumber > 0
-  const { picks } = slip
-  const hasStalePick = picks.some((p) => !p.available)
+  // A removed pick leaves at once. The combined odds and whether the slip can be placed stay the
+  // server's until the removal lands, since only the server prices the remaining legs.
+  const [picks, removePick] = useOptimistic(slip.picks, (current, outcomeId: string) =>
+    current.filter((p) => p.outcomeId !== outcomeId),
+  )
+  const { adjust } = useSlipCount()
+  // Set only on a market page (SlipForm also renders bare on /parlays, with no provider), and
+  // only holds this page's own market's pick, so a match means the removed pick is that one.
+  const marketSlip = useMarketSlip()
+  // While a removal is pending, the optimistic list is shorter than the server's, but the
+  // server's Combined/payout and canPlace still describe the server's legs. Showing them
+  // together would mismatch, so both stay hidden/disabled until the counts agree again.
+  const removing = picks.length !== slip.picks.length
+  const hasStalePick = slip.picks.some((p) => !p.available)
 
   return (
     <div className="flex flex-col gap-5 md:gap-7">
@@ -62,7 +81,15 @@ export function SlipForm({ slip }: { slip: SlipView }) {
             <ul className="flex flex-col divide-y divide-line">
               {picks.map((pick) => (
                 <li key={pick.outcomeId}>
-                  <SlipPick pick={pick} removeAction={removeFromSlipAction.bind(null, pick.outcomeId)} />
+                  <SlipPick
+                    pick={pick}
+                    removeAction={removeFromSlipAction.bind(null, pick.outcomeId)}
+                    optimisticRemove={() => {
+                      removePick(pick.outcomeId)
+                      adjust(-1)
+                      if (marketSlip?.pick === pick.outcomeId) marketSlip.choose(null)
+                    }}
+                  />
                 </li>
               ))}
             </ul>
@@ -75,17 +102,19 @@ export function SlipForm({ slip }: { slip: SlipView }) {
               </div>
             ) : (
               <form action={formAction} className="flex flex-col gap-4 border-t border-line pt-4">
-                <p className="font-extrabold">
-                  Combined:{' '}
-                  <AnimatedText plainText={`${formatOdds(slip.multiplierBp)}×${slip.capped ? ' (capped at 20×)' : ''}`}>
-                    <NumberFlow
-                      value={Number(formatOdds(slip.multiplierBp))}
-                      locales="en-US"
-                      format={{ minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }}
-                      suffix={slip.capped ? '× (capped at 20×)' : '×'}
-                    />
-                  </AnimatedText>
-                </p>
+                {!removing && (
+                  <p className="font-extrabold">
+                    Combined:{' '}
+                    <AnimatedText plainText={`${formatOdds(slip.multiplierBp)}×${slip.capped ? ' (capped at 20×)' : ''}`}>
+                      <NumberFlow
+                        value={Number(formatOdds(slip.multiplierBp))}
+                        locales="en-US"
+                        format={{ minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }}
+                        suffix={slip.capped ? '× (capped at 20×)' : '×'}
+                      />
+                    </AnimatedText>
+                  </p>
+                )}
                 <Field label="Stake (DC)" htmlFor="stake">
                   <Input
                     id="stake"
@@ -101,7 +130,7 @@ export function SlipForm({ slip }: { slip: SlipView }) {
                     aria-describedby={state?.formError ? 'slip-error' : undefined}
                   />
                 </Field>
-                {showPayout && (
+                {!removing && showPayout && (
                   <p className="text-lg">
                     Potential payout:{' '}
                     <strong className="tabular-nums">
@@ -118,7 +147,7 @@ export function SlipForm({ slip }: { slip: SlipView }) {
                 )}
                 <FormSubmitButton
                   block
-                  disabled={!slip.canPlace}
+                  disabled={!slip.canPlace || removing}
                   aria-describedby={hasStalePick ? 'slip-blocked' : undefined}
                 >
                   Place parlay

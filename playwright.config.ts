@@ -22,6 +22,7 @@ export default defineConfig({
     baseURL: 'http://localhost:3000',
     storageState: STORAGE_STATE_PATH,
     trace: 'on-first-retry',
+    serviceWorkers: 'block',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {

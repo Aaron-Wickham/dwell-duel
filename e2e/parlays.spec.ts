@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
+import { serverActionSettled } from './server-action'
 
 test('build a two-leg parlay from market pages, place it, and win it', async ({ page }) => {
   const marketUrls: string[] = []
@@ -22,6 +23,7 @@ test('build a two-leg parlay from market pages, place it, and win it', async ({ 
     await page.getByRole('button', { name: 'Place bet' }).click()
     await expect(page.getByText('15 DC on No')).toBeVisible()
 
+    const added = serverActionSettled(page)
     await page
       .getByRole('region', { name: 'Outcomes' })
       .getByRole('listitem')
@@ -29,6 +31,7 @@ test('build a two-leg parlay from market pages, place it, and win it', async ({ 
       .getByRole('button', { name: 'Add to parlay' })
       .click()
     await expect(page.getByText('In your slip')).toBeVisible()
+    await added
   }
 
   await page.goto('/parlays')

@@ -73,7 +73,7 @@ export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
                   </label>
                   <div className="flex min-w-0 grow flex-col pt-[9px]">
                     <p>
-                      <Link href={`/members/${c.submitterId}`}>{c.submitterName}</Link> — <strong>{c.taskTitle}</strong>{' '}
+                      <Link href={`/members/${c.submitterId}`} transitionTypes={['nav-forward']}>{c.submitterName}</Link> — <strong>{c.taskTitle}</strong>{' '}
                       <span className="font-extrabold text-gold">({c.rewardAmount} DC)</span>
                     </p>
                     <p className="text-sm text-ink2">Submitted {c.submittedAge}</p>

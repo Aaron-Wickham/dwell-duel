@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useState } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { useOptimistic, useState } from 'react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ToastActionForm } from '@/components/ui/toast-action-form'
 
@@ -68,5 +68,28 @@ describe('ToastActionForm', () => {
     expect(await screen.findByText('In the slip')).toBeInTheDocument()
     await waitFor(() => expect(success).toHaveBeenCalledWith('Added.'))
     expect(success).toHaveBeenCalledTimes(1)
+  })
+
+  it('runs the optimistic update inside the action, so it shows until the action settles', async () => {
+    let finish!: (value: boolean) => void
+    const action = vi.fn(() => new Promise<boolean>((resolve) => (finish = resolve)))
+    function Row() {
+      const [label, setLabel] = useOptimistic('Idle')
+      return (
+        <ToastActionForm action={action} successMessage="Added." optimistic={() => setLabel('Adding')}>
+          <p>{label}</p>
+          <button type="submit">Add</button>
+        </ToastActionForm>
+      )
+    }
+
+    render(<Row />)
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(screen.getByText('Adding')).toBeInTheDocument()
+    expect(action).toHaveBeenCalledTimes(1)
+
+    await act(async () => finish(false))
+    expect(screen.getByText('Idle')).toBeInTheDocument()
+    expect(success).not.toHaveBeenCalled()
   })
 })

@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { subscriptionKey, useLiveSubscriptions } from './live-tables'
+import { subscriptionKey, useLiveBaseSubscription, usePageSubscriptions } from './live-tables'
 
 // Every table a signed-in page reads its live numbers from. supabase/migrations/0032 adds them to
 // the realtime publication; Postgres Changes then only delivers rows the member's RLS lets them
@@ -29,16 +29,43 @@ export const DEBOUNCE_MS = 400
 // However busy the stream, a refresh fires no later than this long after the first unflushed change.
 export const MAX_WAIT_MS = 2000
 
-// A fresh topic per build: RealtimeClient.channel(topic) hands back the still-closing channel of a
-// reused topic, so rebuilding a channel on the same topic after a page's declarations change would
-// reuse a channel that's mid-teardown instead of opening a new one.
+// A fresh topic per channel: RealtimeClient.channel(topic) hands back the still-closing channel of
+// a reused topic, so rebuilding the page channel on the same topic after a page's declarations
+// change would reuse a channel that's mid-teardown instead of opening a new one. One counter
+// shared by both channels keeps every topic this component ever opens unique.
 let generation = 0
+
+// Loaded on mount rather than imported, so the Supabase client stays off every page's critical
+// path.
+function loadSupabaseClient() {
+  return import('@/lib/supabase/client')
+}
 
 export function LiveRefresh(): null {
   const router = useRouter()
-  const subscriptions = useLiveSubscriptions()
-  const key = subscriptionKey(subscriptions)
+  const base = useLiveBaseSubscription()
+  const pageSubscriptions = usePageSubscriptions()
+  const pageKey = subscriptionKey(pageSubscriptions)
 
+  // Both channels schedule through the same debounce/maxWait pair, reached via a ref so the page
+  // effect (which rebuilds on every navigation) can call the scheduler the base effect (which
+  // never rebuilds) owns, without adding it as a dependency of either effect.
+  const scheduleRefreshRef = useRef<() => void>(() => {})
+
+  // Both channel effects can fire in the same commit (base on mount, page as soon as a
+  // <LiveTables> registers), so they share one dynamic import instead of each starting their own:
+  // besides the wasted duplicate fetch, two independent first-time `import()` calls for the same
+  // specifier in the same tick is exactly the shape a bundler's module cache is least prepared for.
+  const clientImportRef = useRef<ReturnType<typeof loadSupabaseClient> | null>(null)
+  function loadClient() {
+    clientImportRef.current ??= loadSupabaseClient()
+    return clientImportRef.current
+  }
+
+  // The scheduler, the visibility listener, and the base `profiles` channel: set up once for the
+  // whole mount. The member's own balance must stay live through a navigation that tears the page
+  // channel down and rebuilds it, so this effect deliberately never depends on the page's
+  // declarations -- only on `base`, which is fixed for the registry's lifetime.
   useEffect(() => {
     let cancelled = false
     let debounceTimer: ReturnType<typeof setTimeout> | undefined
@@ -66,6 +93,7 @@ export function LiveRefresh(): null {
         maxWaitTimer = setTimeout(flush, MAX_WAIT_MS)
       }
     }
+    scheduleRefreshRef.current = scheduleRefresh
 
     // A phone that backgrounds the app suspends the socket, and the client only notices a dead one
     // at its next heartbeat, so returning to the app catches up straight away.
@@ -74,25 +102,70 @@ export function LiveRefresh(): null {
     }
     document.addEventListener('visibilitychange', onVisibilityChange)
 
-    // Loaded on mount rather than imported, so the Supabase client stays off every page's
-    // critical path.
-    import('@/lib/supabase/client')
+    if (base) {
+      loadClient()
+        .then(({ browserClient }) => {
+          if (cancelled) return
+          const supabase = browserClient()
+          const channel = supabase.channel(`live-base:${++generation}`)
+          channel.on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: base.table, filter: base.filter },
+            () => scheduleRefreshRef.current(),
+          )
+
+          // Postgres Changes has no replay: whatever changed while the socket was down is gone
+          // once it rejoins. The first SUBSCRIBED is the initial join, and every later one
+          // follows a reconnect.
+          let joined = false
+          channel.subscribe((status) => {
+            if (status !== 'SUBSCRIBED') return
+            if (joined) scheduleRefreshRef.current()
+            joined = true
+          })
+
+          teardown = () => {
+            supabase.removeChannel(channel)
+          }
+        })
+        .catch(() => {
+          // Offline or a stale deploy chunk: live updates quietly stop, and the foreground refresh still covers it.
+        })
+    }
+
+    return () => {
+      cancelled = true
+      clearTimeout(debounceTimer)
+      clearTimeout(maxWaitTimer)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      teardown?.()
+    }
+  }, [router, base])
+
+  // The page channel: built from the registered declarations only, and rebuilt whenever they
+  // change. Absent entirely when no page has registered anything.
+  useEffect(() => {
+    if (pageSubscriptions.length === 0) return
+
+    let cancelled = false
+    let teardown: (() => void) | undefined
+
+    loadClient()
       .then(({ browserClient }) => {
         if (cancelled) return
         const supabase = browserClient()
         const channel = supabase.channel(`live-refresh:${++generation}`)
-        for (const { table, filter } of subscriptions) {
-          channel.on('postgres_changes', { event: '*', schema: 'public', table, filter }, scheduleRefresh)
+        for (const { table, filter } of pageSubscriptions) {
+          channel.on('postgres_changes', { event: '*', schema: 'public', table, filter }, () => scheduleRefreshRef.current())
         }
 
-        // Postgres Changes has no replay: whatever changed while the socket was down is gone once
-        // it rejoins. The first SUBSCRIBED is the initial join, and every later one follows a
-        // reconnect -- and a channel rebuilt for new declarations is a fresh join too, since it's
-        // a new channel object with its own `joined` flag.
+        // A channel rebuilt for new declarations is a fresh join too, since it's a new channel
+        // object with its own `joined` flag -- its first SUBSCRIBED is never treated as a
+        // reconnect.
         let joined = false
         channel.subscribe((status) => {
           if (status !== 'SUBSCRIBED') return
-          if (joined) scheduleRefresh()
+          if (joined) scheduleRefreshRef.current()
           joined = true
         })
 
@@ -106,15 +179,12 @@ export function LiveRefresh(): null {
 
     return () => {
       cancelled = true
-      clearTimeout(debounceTimer)
-      clearTimeout(maxWaitTimer)
-      document.removeEventListener('visibilitychange', onVisibilityChange)
       teardown?.()
     }
-    // The key, not `subscriptions` itself, decides when to rebuild the channel: the registry hands
-    // back a fresh array on every registration change even when its tables and filters repeat.
+    // The key, not `pageSubscriptions` itself, decides when to rebuild: the registry hands back a
+    // fresh array on every registration change even when its tables and filters repeat.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, key])
+  }, [pageKey])
 
   return null
 }

@@ -61,7 +61,7 @@ export default async function Home() {
   return (
     <Page transition="tab">
       <PageHeader title={`Welcome, ${standing?.displayName}`} />
-      <LiveTables subscriptions={pageSubscriptions.home()} />
+      <LiveTables subscriptions={pageSubscriptions.home({ me: user.id, admin })} />
       <HomeHero
         balance={standing?.balance ?? 0}
         rank={rank}

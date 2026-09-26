@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useId, useMemo, useSyncExternalStore, type ReactNode } from 'react'
 import type { LiveSubscription } from './live-refresh'
 
 function entryId(subscription: LiveSubscription): string {
@@ -22,13 +22,16 @@ export function subscriptionKey(subscriptions: LiveSubscription[]): string {
 }
 
 // A plain external store, not React state: every page's <LiveTables> registers into it from an
-// effect, and LiveRefresh (and any other reader) subscribes with useSyncExternalStore. That keeps
-// registration out of the render path entirely -- no setState-in-effect, no extra render per page.
+// effect, and readers subscribe with useSyncExternalStore. That keeps registration out of the
+// render path entirely -- no setState-in-effect, no extra render per page.
 class LiveTableRegistry {
-  private readonly base: LiveSubscription
+  readonly base: LiveSubscription
   private readonly registered = new Map<string, LiveSubscription[]>()
   private readonly listeners = new Set<() => void>()
   private snapshot: LiveSubscription[]
+  // Just the registered page declarations, without the base -- what LiveRefresh's page channel
+  // is built from, kept separate so the base's own channel never has to be recomputed for it.
+  private pageSnapshot: LiveSubscription[] = []
 
   constructor(userId: string) {
     this.base = { table: 'profiles', filter: `id=eq.${userId}` }
@@ -46,7 +49,9 @@ class LiveTableRegistry {
   }
 
   private recompute(): void {
-    this.snapshot = dedupeSorted([this.base, ...this.registered.values()].flat())
+    const registered = [...this.registered.values()].flat()
+    this.pageSnapshot = dedupeSorted(registered)
+    this.snapshot = dedupeSorted([this.base, ...registered])
     for (const listener of this.listeners) listener()
   }
 
@@ -58,6 +63,7 @@ class LiveTableRegistry {
   }
 
   getSnapshot = (): LiveSubscription[] => this.snapshot
+  getPageSnapshot = (): LiveSubscription[] => this.pageSnapshot
 }
 
 const LiveTablesContext = createContext<LiveTableRegistry | null>(null)
@@ -80,23 +86,40 @@ export function useLiveSubscriptions(): LiveSubscription[] {
   )
 }
 
-let nextRegistrationId = 0
+// Just the registered page declarations, without the base profile subscription -- what
+// LiveRefresh's page channel is built from. The base gets its own permanent channel instead (see
+// useLiveBaseSubscription), so a navigation that swaps a page's declarations never tears that
+// one down.
+export function usePageSubscriptions(): LiveSubscription[] {
+  const registry = useContext(LiveTablesContext)
+  return useSyncExternalStore(
+    registry ? registry.subscribe : subscribeToNothing,
+    registry ? registry.getPageSnapshot : getNoSubscriptions,
+    registry ? registry.getPageSnapshot : getNoSubscriptions,
+  )
+}
+
+// The base subscription is fixed for the registry's whole lifetime (set once from the signed-in
+// user's id), so unlike the page declarations it needs no external-store subscription of its
+// own -- reading it straight through context is enough.
+export function useLiveBaseSubscription(): LiveSubscription | null {
+  const registry = useContext(LiveTablesContext)
+  return registry ? registry.base : null
+}
 
 export function LiveTables({ subscriptions }: { subscriptions: LiveSubscription[] }): null {
   const registry = useContext(LiveTablesContext)
   const key = subscriptionKey(subscriptions)
-  const idRef = useRef<string | undefined>(undefined)
-  if (idRef.current === undefined) idRef.current = `live-tables:${++nextRegistrationId}`
+  const id = useId()
 
   useEffect(() => {
     if (!registry) return
-    const id = idRef.current!
     registry.register(id, subscriptions)
     return () => registry.unregister(id)
     // The key, not the subscriptions array, is the real dependency: a server component hands this
     // component a new array every render even when its tables and filters haven't changed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [registry, key])
+  }, [registry, id, key])
 
   return null
 }

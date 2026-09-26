@@ -14,8 +14,8 @@ export default async function ParlaysPage() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const slip = await getSlipView(supabase, await readSlip())
-  const parlays = await listMyParlays(supabase, user.id)
+  const [outcomeIds, parlays] = await Promise.all([readSlip(), listMyParlays(supabase, user.id)])
+  const slip = await getSlipView(supabase, outcomeIds)
 
   return (
     <Page transition="tab">

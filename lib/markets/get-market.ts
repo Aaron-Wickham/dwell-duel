@@ -30,7 +30,7 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
   const { data, error } = await supabase
     .from('markets')
     .select(
-      'id, title, description, kind, status, close_at, created_by, current_resolution_id, creator:profiles(display_name), market_outcomes(id, label, pool_total)',
+      'id, title, description, kind, status, close_at, created_by, current_resolution_id, creator:profiles(display_name), market_outcomes(id, label, pool_total), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at)',
     )
     .eq('id', marketId)
     // Rows come back with no default order, and colours are assigned by position for
@@ -49,18 +49,12 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
     poolTotal: o.pool_total,
   }))
 
-  let resolvedOutcomeLabel: string | null = null
-  let resolvedAt: string | null = null
-  if (data.current_resolution_id) {
-    const { data: resolution, error: resolutionErr } = await supabase
-      .from('market_resolutions')
-      .select('outcome_id, resolved_at')
-      .eq('id', data.current_resolution_id)
-      .single()
-    if (resolutionErr) throw resolutionErr
-    resolvedOutcomeLabel = outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null
-    resolvedAt = resolution.resolved_at
-  }
+  // The embed above replaces a second round trip to market_resolutions: current_resolution_id
+  // is a to-one foreign key on markets itself, so PostgREST hands back one object (or null),
+  // never an array.
+  const resolution = data.current_resolution as unknown as { outcome_id: string; resolved_at: string } | null
+  const resolvedOutcomeLabel = resolution ? (outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null) : null
+  const resolvedAt = resolution?.resolved_at ?? null
 
   const creator = data.creator as unknown as { display_name: string } | null
 

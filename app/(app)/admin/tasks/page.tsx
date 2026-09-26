@@ -17,9 +17,9 @@ export default async function AdminTasksPage() {
   if (!user) redirect('/sign-in')
   if (!(await isAdmin(supabase))) redirect('/')
 
-  const tasks = await listTasks(supabase)
+  const [tasks, pendingRaw] = await Promise.all([listTasks(supabase), listPendingTaskCompletions(supabase)])
   // Ages are worked out here, on the server, so the client-rendered list hydrates with the same text.
-  const pending = (await listPendingTaskCompletions(supabase)).map((c) => ({ ...c, submittedAge: ageLabel(c.submittedAt) }))
+  const pending = pendingRaw.map((c) => ({ ...c, submittedAge: ageLabel(c.submittedAt) }))
 
   return (
     <ContentReveal>

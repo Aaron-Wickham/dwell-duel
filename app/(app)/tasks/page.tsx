@@ -15,9 +15,8 @@ export default async function TasksPage() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const allTasks = await listTasks(supabase)
+  const [allTasks, myCompletions] = await Promise.all([listTasks(supabase), listMyTaskCompletions(supabase, user.id)])
   const activeTasks = allTasks.filter((t) => t.isActive)
-  const myCompletions = await listMyTaskCompletions(supabase, user.id)
   const currentPeriodKeys = await getCurrentPeriodKeys(
     supabase,
     activeTasks.map((t) => t.period),

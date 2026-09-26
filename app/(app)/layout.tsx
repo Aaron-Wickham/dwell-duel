@@ -12,11 +12,13 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   const { supabase, user } = await requireUser()
   if (!user) return children
 
-  const { data: profile, error } = await supabase.from('profiles').select('balance').eq('id', user.id).maybeSingle()
+  const [{ data: profile, error }, admin, slip] = await Promise.all([
+    supabase.from('profiles').select('balance').eq('id', user.id).maybeSingle(),
+    isAdmin(supabase),
+    readSlip(),
+  ])
   if (error) throw error
   if (!profile) return children
-
-  const [admin, slip] = await Promise.all([isAdmin(supabase), readSlip()])
 
   return (
     <SlipCountProvider initial={slip.length}>

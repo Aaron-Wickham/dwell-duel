@@ -5,7 +5,7 @@ import { isAdmin } from '@/lib/auth/is-admin'
 import { signOut } from '@/lib/auth/sign-out'
 import { readSlip } from '@/lib/parlays/slip'
 import { countOpenMarkets } from '@/lib/markets/list-markets'
-import { getLeaderboard } from '@/lib/social/leaderboard'
+import { getMemberStanding } from '@/lib/social/leaderboard'
 import { listMyTaskCompletions, listPendingTaskCompletions } from '@/lib/tasks/list-task-completions'
 import { Page, PageHeader } from '@/components/ui/page'
 import { buttonVariants } from '@/components/ui/button'
@@ -19,18 +19,17 @@ export default async function Home() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const [admin, slip, openMarketCount, board, myCompletions] = await Promise.all([
+  const [admin, slip, openMarketCount, standing, myCompletions, pendingApprovals] = await Promise.all([
     isAdmin(supabase),
     readSlip(),
     countOpenMarkets(supabase),
-    getLeaderboard(supabase),
+    getMemberStanding(supabase, user.id),
     listMyTaskCompletions(supabase, user.id),
+    isAdmin(supabase).then((a) => (a ? listPendingTaskCompletions(supabase) : [])),
   ])
-  const pendingApprovals = admin ? await listPendingTaskCompletions(supabase) : []
 
-  const me = board.find((m) => m.id === user.id)
-  const rank = me?.rank ?? board.length
-  const memberCount = board.length
+  const rank = standing?.rank ?? standing?.memberCount ?? 0
+  const memberCount = standing?.memberCount ?? 0
   const pendingReviews = myCompletions.filter((c) => c.status === 'pending')
   const pendingDc = pendingReviews.reduce((sum, c) => sum + c.rewardAmount, 0)
 
@@ -59,9 +58,9 @@ export default async function Home() {
 
   return (
     <Page transition="tab">
-      <PageHeader title={`Welcome, ${me?.displayName}`} />
+      <PageHeader title={`Welcome, ${standing?.displayName}`} />
       <HomeHero
-        balance={me?.balance ?? 0}
+        balance={standing?.balance ?? 0}
         rank={rank}
         memberCount={memberCount}
         pendingCount={pendingReviews.length}

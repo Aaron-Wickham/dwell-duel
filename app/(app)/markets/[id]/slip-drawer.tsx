@@ -8,15 +8,43 @@ import { buttonVariants } from '@/components/ui/button'
 import type { SlipView } from '@/lib/parlays/get-slip'
 import { cn } from '@/lib/utils'
 
+// Placing a parlay empties the slip while the drawer is open, which unmounts the trigger --
+// so Base UI's default "return focus to the trigger" behaviour has nothing left to land on.
+// The page's own <h1> is the one heading guaranteed to still be on the page once the drawer
+// (and its trigger) is gone; it isn't natively focusable, so this makes it so first.
+function focusPageHeading(): HTMLElement | null {
+  const heading = document.querySelector('h1')
+  if (!heading) return null
+  heading.tabIndex = -1
+  return heading
+}
+
 export function SlipDrawer({ slip }: { slip: SlipView }) {
   const [open, setOpen] = useState(false)
+  // Tearing this component down the instant `open` flips to false would unmount the popup
+  // before Base UI's `data-ending-style` exit transition gets to play. `closing` keeps it
+  // mounted until `onOpenChangeComplete(false)` confirms the close animation has finished.
+  const [closing, setClosing] = useState(false)
   const count = slip.picks.length
-  // Placing a parlay empties the slip while the drawer is open. SlipForm's success message lives
-  // inside the drawer, so the drawer stays mounted until the member closes it.
-  if (count === 0 && !open) return null
+  if (count === 0 && !open && !closing) return null
+
+  function handleContentClick(event: React.MouseEvent<HTMLDivElement>) {
+    // A link to the market already on screen doesn't navigate, so it would otherwise leave
+    // the sheet stuck open. Close on any link click; navigating away closes it anyway.
+    if ((event.target as HTMLElement).closest('a')) setOpen(false)
+  }
 
   return (
-    <Drawer.Root open={open} onOpenChange={setOpen}>
+    <Drawer.Root
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (!next) setClosing(true)
+      }}
+      onOpenChangeComplete={(next) => {
+        if (!next) setClosing(false)
+      }}
+    >
       {count > 0 && (
         <>
           <div aria-hidden="true" className="h-8 md:hidden" />
@@ -37,6 +65,7 @@ export function SlipDrawer({ slip }: { slip: SlipView }) {
           <Drawer.Viewport className="fixed inset-0 z-40 flex items-end justify-center">
             <Drawer.Popup
               aria-labelledby="slip-title"
+              finalFocus={count === 0 ? focusPageHeading : true}
               className="flex max-h-[calc(100dvh-48px)] w-full flex-col rounded-t-card border border-b-0 border-line bg-bg text-ink shadow-overlay outline-none [transform:translateY(var(--drawer-swipe-movement-y))] transition-transform duration-[450ms] ease-[cubic-bezier(0.32,0.72,0,1)] data-swiping:select-none data-swiping:duration-0 data-starting-style:[transform:translateY(100%)] data-ending-style:[transform:translateY(100%)] data-ending-style:duration-[calc(var(--drawer-swipe-strength)*400ms)] motion-reduce:transition-none"
             >
               <div className="relative flex shrink-0 justify-end px-2 pt-2">
@@ -48,7 +77,10 @@ export function SlipDrawer({ slip }: { slip: SlipView }) {
                   <X aria-hidden="true" className="size-[22px]" />
                 </Drawer.Close>
               </div>
-              <Drawer.Content className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
+              <Drawer.Content
+                onClick={handleContentClick}
+                className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6"
+              >
                 <SlipForm slip={slip} />
               </Drawer.Content>
             </Drawer.Popup>

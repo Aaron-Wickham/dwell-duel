@@ -88,4 +88,52 @@ describe('SlipDrawer', () => {
     expect(within(sheet).getByText('Your slip is empty.')).toBeInTheDocument()
     expect(screen.queryByText(/^Slip \(/)).toBeNull()
   })
+
+  it('returns focus to the page heading, not the page, when closed after placing empties the slip', async () => {
+    placeParlayAction.mockResolvedValue({ placed: { multiplierBp: 160_000, potentialPayout: 80 } })
+    const { rerender } = render(
+      <>
+        <h1>Will it rain on the church picnic?</h1>
+        <SlipDrawer slip={slipView([pick(1), pick(2)])} />
+      </>,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Slip (2)' }))
+    await userEvent.type(await screen.findByLabelText('Stake (DC)'), '5')
+    await userEvent.click(screen.getByRole('button', { name: 'Place parlay' }))
+    await screen.findByText('Parlay placed at 16.00× — potential payout 80 DC.')
+
+    rerender(
+      <>
+        <h1>Will it rain on the church picnic?</h1>
+        <SlipDrawer slip={slipView([])} />
+      </>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Close slip' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
+  })
+
+  it('removes a pick from inside the sheet and updates the trigger count and hint', async () => {
+    const { rerender } = render(<SlipDrawer slip={slipView([pick(1), pick(2)])} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Slip (2)' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Your slip' })
+
+    await userEvent.click(within(sheet).getAllByRole('button', { name: /^Remove/ })[0])
+    rerender(<SlipDrawer slip={slipView([pick(2)])} />)
+    expect(within(sheet).getByText('Add at least one more pick to place a parlay.')).toBeInTheDocument()
+
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Close slip' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(screen.getByRole('button', { name: 'Slip (1)' })).toBeInTheDocument()
+  })
+
+  it('closes the sheet when a link inside it is clicked', async () => {
+    render(<SlipDrawer slip={slipView([pick(1), pick(2)])} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Slip (2)' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Your slip' })
+
+    await userEvent.click(within(sheet).getByRole('link', { name: 'Market 1?' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
 })

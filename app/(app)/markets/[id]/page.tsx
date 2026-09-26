@@ -10,6 +10,7 @@ import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt } from '@/lib/markets/market-status'
 import { rowState } from '@/lib/markets/row-state'
+import { getSlipView } from '@/lib/parlays/get-slip'
 import { readSlip } from '@/lib/parlays/slip'
 import { MAX_PICKS, legOddsBp } from '@/lib/parlays/odds'
 import { addToSlipAction, removeFromSlipAction } from '@/lib/parlays/slip-actions'
@@ -24,6 +25,7 @@ import { OutcomeRow } from '@/components/markets/outcome-row'
 import { ProbabilityChart } from '@/components/markets/probability-chart'
 import { BetForm } from './bet-form'
 import { ResolveForm } from './resolve-form'
+import { SlipDrawer } from './slip-drawer'
 import { VoidButton } from './void-button'
 
 export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>) {
@@ -65,6 +67,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const resolvedLabel = market.status === 'resolved' ? market.resolvedOutcomeLabel : null
 
   const slip = await readSlip()
+  const slipView = await getSlipView(supabase, slip)
   const marketInSlip = market.outcomes.some((o) => slip.includes(o.id))
   const slipFull = slip.length >= MAX_PICKS && !marketInSlip
 
@@ -209,6 +212,8 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           <BetList bets={bets} outcomes={market.outcomes} viewerId={user.id} canBet={canBet} />
         </SectionCard>
       </div>
+
+      <SlipDrawer slip={slipView} />
     </Page>
   )
 }

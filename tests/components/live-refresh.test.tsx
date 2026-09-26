@@ -57,10 +57,32 @@ const mocks = vi.hoisted(() => {
   // (the natural way to stub it) would make the base effect's [router, base] deps look changed on
   // every render regardless of base, which the app never sees in practice.
   const router = { refresh }
-  return { channels, client, browserClient: vi.fn(() => client), refresh, router }
+
+  // A one-shot switch to simulate a transient failure of the shared dynamic import (offline, a
+  // stale deploy chunk): set before a render, it fails the very next `import('@/lib/supabase/client')`
+  // and then clears itself, so the following attempt succeeds normally.
+  let failNextImport = false
+  return {
+    channels,
+    client,
+    browserClient: vi.fn(() => client),
+    refresh,
+    router,
+    failNextImport: () => {
+      failNextImport = true
+    },
+    consumeImportFailure: () => {
+      const shouldFail = failNextImport
+      failNextImport = false
+      return shouldFail
+    },
+  }
 })
 
-vi.mock('@/lib/supabase/client', () => ({ browserClient: mocks.browserClient }))
+vi.mock('@/lib/supabase/client', () => {
+  if (mocks.consumeImportFailure()) throw new Error('stale deploy chunk')
+  return { browserClient: mocks.browserClient }
+})
 vi.mock('next/navigation', () => ({ useRouter: () => mocks.router }))
 
 import { LIVE_TABLES, LiveRefresh } from '@/components/live/live-refresh'
@@ -129,6 +151,7 @@ beforeEach(() => {
   mocks.client.removeChannel.mockClear()
   mocks.browserClient.mockClear()
   mocks.refresh.mockClear()
+  mocks.consumeImportFailure() // clears a leftover flag from a test that failed before using it
   setVisibility('visible')
 })
 
@@ -137,6 +160,30 @@ afterEach(() => {
 })
 
 describe('LiveRefresh', () => {
+  // Declared first deliberately: a dynamically-imported module that resolves successfully stays
+  // cached for the rest of this file, exactly like a real dynamic import, so only the very first
+  // import attempt in the whole suite can still be made to fail. Every later test benefits from
+  // that same cached, already-succeeded client the way production code would.
+  it('retries the shared import after a transient failure, and builds the page channel once it succeeds', async () => {
+    // The base effect is the first to call the shared loadClient(), so it's the one that eats
+    // the one-shot failure: no channel exists yet afterwards.
+    mocks.failNextImport()
+    const view = render(<Harness />)
+    await act(() => vi.dynamicImportSettled())
+
+    expect(mocks.channels).toHaveLength(0)
+
+    // A page registering next -- exactly like PR B retrying on the next navigation -- makes a
+    // fresh attempt rather than replaying the same rejected promise, and this one succeeds.
+    await act(async () => {
+      view.rerender(<Harness subscriptions={[{ table: 'bets', filter: 'market_id=eq.market-1' }]} />)
+    })
+    await act(() => vi.dynamicImportSettled())
+
+    const pageChannels = mocks.channels.filter((c) => c.topic.startsWith('live-refresh:'))
+    expect(pageChannels).toHaveLength(1)
+  })
+
   it('renders nothing and opens a channel bound to only the base profile subscription with no page registered', async () => {
     const { container, base, page } = await mount()
 
@@ -414,4 +461,5 @@ describe('LiveRefresh', () => {
     expect(baseChannels).toHaveLength(1)
     expect(pageChannels).toHaveLength(1)
   })
+
 })

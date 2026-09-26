@@ -58,7 +58,15 @@ export function LiveRefresh(): null {
   // specifier in the same tick is exactly the shape a bundler's module cache is least prepared for.
   const clientImportRef = useRef<ReturnType<typeof loadSupabaseClient> | null>(null)
   function loadClient() {
-    clientImportRef.current ??= loadSupabaseClient()
+    // A rejection clears the cached promise instead of sticking around for the rest of the
+    // mount: offline or a stale chunk is often transient, and PR B retried on every navigation,
+    // so a memoized-forever rejection would regress that -- one bad load would otherwise mean no
+    // live channel ever gets built again this session. Each caller keeps its own `.catch` too, so
+    // this rethrow still ends up handled quietly.
+    clientImportRef.current ??= loadSupabaseClient().catch((error: unknown) => {
+      clientImportRef.current = null
+      throw error
+    })
     return clientImportRef.current
   }
 

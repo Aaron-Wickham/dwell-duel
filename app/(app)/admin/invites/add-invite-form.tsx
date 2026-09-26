@@ -5,9 +5,13 @@ import { addInviteAction } from '@/lib/invites/actions'
 import { Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { withSuccessToast } from '@/lib/toast/with-success-toast'
 
 export function AddInviteForm() {
-  const [state, formAction] = useActionState(addInviteAction, undefined)
+  const [state, formAction] = useActionState(
+    withSuccessToast(addInviteAction, (s) => Boolean(s?.formError), 'Invite added.'),
+    undefined,
+  )
 
   return (
     <form action={formAction} className="flex flex-col gap-2">

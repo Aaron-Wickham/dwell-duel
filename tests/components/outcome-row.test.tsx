@@ -1,8 +1,22 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { OutcomeRow, type OutcomeRowState } from '@/components/markets/outcome-row'
+
+type NumberFlowProps = { value: number; suffix?: string; locales?: unknown; format?: { useGrouping?: boolean } }
+const { numberFlowCalls } = vi.hoisted(() => ({ numberFlowCalls: [] as NumberFlowProps[] }))
+vi.mock('@number-flow/react', () => ({
+  default: (props: NumberFlowProps) => {
+    numberFlowCalls.push(props)
+    return `${props.value}${props.suffix ?? ''}`
+  },
+}))
+vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
+
+beforeEach(() => {
+  numberFlowCalls.length = 0
+})
 
 function renderRow(state: OutcomeRowState, overrides: Partial<Parameters<typeof OutcomeRow>[0]> = {}) {
   const addAction = vi.fn()
@@ -26,8 +40,8 @@ function renderRow(state: OutcomeRowState, overrides: Partial<Parameters<typeof 
 describe('OutcomeRow', () => {
   it('shows the chance, the pool and the payout multiplier', () => {
     renderRow('add')
-    expect(screen.getByText('75% (60 DC)')).toBeInTheDocument()
-    expect(screen.getByText('1.33× payout per DC')).toBeInTheDocument()
+    expect(screen.getByText('75% (60 DC)', { selector: '.sr-only' })).toBeInTheDocument()
+    expect(screen.getByText('1.33× payout per DC', { selector: '.sr-only' })).toBeInTheDocument()
   })
 
   it('adds the outcome to the slip, naming the outcome for screen readers', async () => {
@@ -50,7 +64,7 @@ describe('OutcomeRow', () => {
   it('shows Add to parlay disabled when the slip is full', () => {
     renderRow('disabled')
     expect(screen.getByRole('button', { name: 'Add to parlay Yes' })).toBeDisabled()
-    expect(screen.getByText('1.33× payout per DC')).toBeInTheDocument()
+    expect(screen.getByText('1.33× payout per DC', { selector: '.sr-only' })).toBeInTheDocument()
   })
 
   it('links the disabled Add to parlay button to the reason it is disabled', () => {
@@ -65,7 +79,7 @@ describe('OutcomeRow', () => {
 
   it('hides the payout and every action when there is nothing to do', () => {
     renderRow('none')
-    expect(screen.getByText('75% (60 DC)')).toBeInTheDocument()
+    expect(screen.getByText('75% (60 DC)', { selector: '.sr-only' })).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
     expect(screen.queryByText(/payout per DC/)).not.toBeInTheDocument()
   })
@@ -80,9 +94,18 @@ describe('OutcomeRow', () => {
     expect(screen.queryByText('Winner')).not.toBeInTheDocument()
   })
 
+  it('formats every animated number as plain digits, in en-US regardless of the browser locale', () => {
+    renderRow('add')
+    expect(numberFlowCalls.length).toBeGreaterThan(0)
+    for (const call of numberFlowCalls) {
+      expect(call.locales).toBe('en-US')
+      expect(call.format?.useGrouping).toBe(false)
+    }
+  })
+
   it('reads 0% before anyone has bet', () => {
     renderRow('none', { poolTotal: 0, probability: null, oddsBp: null })
-    expect(screen.getByText('0% (0 DC)')).toBeInTheDocument()
+    expect(screen.getByText('0% (0 DC)', { selector: '.sr-only' })).toBeInTheDocument()
   })
 
   it('gives every row its own button name', () => {

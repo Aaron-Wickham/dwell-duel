@@ -4,12 +4,15 @@ import { ChartColumn, Plus } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { listMarkets } from '@/lib/markets/list-markets'
 import { computeOdds } from '@/lib/markets/odds'
+import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { marketCardStatus, type MarketCardStatus } from '@/lib/markets/market-status'
+import { listChartBets } from '@/lib/markets/chart-bets'
+import { buildProbabilitySeries } from '@/lib/markets/probability-series'
 import { Page, PageHeader, h2Class } from '@/components/ui/page'
 import { EmptyState } from '@/components/ui/empty-state'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { MarketCard } from '@/components/markets/market-card'
+import { MarketCard, type MarketCardChart } from '@/components/markets/market-card'
 
 const GROUPS: { id: MarketCardStatus; heading: string }[] = [
   { id: 'open', heading: 'Open' },
@@ -23,10 +26,32 @@ export default async function MarketsPage() {
   if (!user) redirect('/sign-in')
 
   const markets = await listMarkets(supabase)
-  const now = new Date()
+  const chartBetsByMarket = await listChartBets(
+    supabase,
+    markets.map((m) => m.id),
+  )
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now()
+  const now = new Date(nowMs)
 
   const cards = markets.map((market) => {
     const odds = computeOdds(market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })))
+    const chartBets = chartBetsByMarket.get(market.id) ?? []
+    const chart: MarketCardChart | undefined =
+      chartBets.length > 0
+        ? {
+            outcomes: odds.map((o, index) => ({
+              id: o.outcomeId,
+              label: o.label,
+              series: outcomeSeries(market.kind, o.label, index),
+            })),
+            points: buildProbabilitySeries(
+              odds.map((o) => o.outcomeId),
+              chartBets,
+            ),
+            now: nowMs,
+          }
+        : undefined
     return {
       id: market.id,
       title: market.title,
@@ -40,6 +65,7 @@ export default async function MarketsPage() {
         pct: o.impliedProbability === null ? null : Math.round(o.impliedProbability * 100),
       })),
       resolvedOutcomeLabel: market.resolvedOutcomeLabel,
+      chart,
     }
   })
 

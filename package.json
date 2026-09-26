@@ -14,7 +14,8 @@
     "db:reset": "supabase db reset"
   },
   "dependencies": {
-    "@radix-ui/react-dialog": "^1.1.23",
+    "@base-ui/react": "^1.8.0",
+    "@number-flow/react": "^0.6.2",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
     "@vercel/analytics": "^2.0.1",
@@ -26,9 +27,9 @@
     "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "recharts": "^3.10.1",
     "sonner": "^2.0.8",
-    "tailwind-merge": "^3.7.0",
-    "vaul": "^1.1.2"
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

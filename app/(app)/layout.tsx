@@ -2,6 +2,7 @@ import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { readSlip } from '@/lib/parlays/slip'
 import { AppNav } from '@/components/app-nav/app-nav'
+import { Toaster } from '@/components/ui/toaster'
 
 export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   const { supabase, user } = await requireUser()
@@ -19,6 +20,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
       <main id="main" className="flex flex-1 flex-col pb-[82px] md:pb-0">
         {children}
       </main>
+      <Toaster />
     </>
   )
 }

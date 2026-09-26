@@ -1,7 +1,11 @@
 import { Check, Plus, Trophy } from 'lucide-react'
+import NumberFlow from '@number-flow/react'
 import { Button } from '@/components/ui/button'
+import { AnimatedText } from '@/components/ui/animated-text'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { StatusChip } from '@/components/ui/status-chip'
+import { ToastActionForm } from '@/components/ui/toast-action-form'
+import { SERIES_BG } from '@/components/markets/series-classes'
 import type { Series } from '@/lib/markets/outcome-series'
 import type { OutcomeRowState } from '@/lib/markets/row-state'
 import { formatOdds } from '@/lib/parlays/odds'
@@ -10,15 +14,6 @@ import { cn } from '@/lib/utils'
 // Re-exported for existing importers (e.g. this file's own test) -- the type lives in
 // lib/markets/row-state.ts now, next to the pure function that produces its values.
 export type { OutcomeRowState }
-
-export const SERIES_BG: Record<Series, string> = {
-  1: 'bg-s1',
-  2: 'bg-s2',
-  3: 'bg-s3',
-  4: 'bg-s4',
-  5: 'bg-s5',
-  6: 'bg-s6',
-}
 
 export function OutcomeRow({
   label,
@@ -39,8 +34,8 @@ export function OutcomeRow({
   series: Series
   state: OutcomeRowState
   winner?: boolean
-  addAction: (formData: FormData) => void | Promise<void>
-  removeAction: (formData: FormData) => void | Promise<void>
+  addAction: (formData: FormData) => void | boolean | Promise<void | boolean>
+  removeAction: (formData: FormData) => void | boolean | Promise<void | boolean>
   disabledReasonId?: string
 }) {
   const percent = (probability ?? 0) * 100
@@ -65,7 +60,10 @@ export function OutcomeRow({
           )}
         </span>
         <span className="shrink-0 font-extrabold tabular-nums">
-          {Math.round(percent)}% ({poolTotal} DC)
+          <AnimatedText plainText={`${Math.round(percent)}% (${poolTotal} DC)`}>
+            <NumberFlow value={Math.round(percent)} locales="en-US" format={{ useGrouping: false }} suffix="% (" />
+            <NumberFlow value={poolTotal} locales="en-US" format={{ useGrouping: false }} suffix=" DC)" />
+          </AnimatedText>
         </span>
       </div>
       <div aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-sunk">
@@ -73,26 +71,37 @@ export function OutcomeRow({
       </div>
       {state !== 'none' && (
         <div className="flex min-h-11 flex-wrap items-center justify-between gap-2">
-          <span className="text-sm text-ink2">{oddsBp !== null && `${formatOdds(oddsBp)}× payout per DC`}</span>
+          <span className="text-sm text-ink2">
+            {oddsBp !== null && (
+              <AnimatedText plainText={`${formatOdds(oddsBp)}× payout per DC`}>
+                <NumberFlow
+                  value={Number(formatOdds(oddsBp))}
+                  locales="en-US"
+                  format={{ minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }}
+                  suffix="× payout per DC"
+                />
+              </AnimatedText>
+            )}
+          </span>
           {state === 'inslip' && (
             <span className="flex items-center gap-2">
               <StatusChip tone="open">
                 <Check aria-hidden="true" className="size-4" />
                 In your slip
               </StatusChip>
-              <form action={removeAction}>
+              <ToastActionForm action={removeAction} successMessage="Removed from your slip.">
                 <FormSubmitButton variant="quiet" size="sm">
                   Remove <span className="sr-only">{label}</span>
                 </FormSubmitButton>
-              </form>
+              </ToastActionForm>
             </span>
           )}
           {state === 'add' && (
-            <form action={addAction}>
+            <ToastActionForm action={addAction} successMessage="Added to your slip.">
               <FormSubmitButton variant="secondary" size="sm">
                 {addLabel}
               </FormSubmitButton>
-            </form>
+            </ToastActionForm>
           )}
           {state === 'disabled' && (
             <Button variant="secondary" size="sm" disabled aria-describedby={disabledReasonId}>

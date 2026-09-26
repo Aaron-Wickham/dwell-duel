@@ -3,7 +3,9 @@
 import { useActionState, useState } from 'react'
 import Link from 'next/link'
 import { Layers } from 'lucide-react'
+import NumberFlow from '@number-flow/react'
 import { SlipPick } from '@/components/parlays/slip-pick'
+import { AnimatedText } from '@/components/ui/animated-text'
 import { buttonVariants } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Field, Input } from '@/components/ui/field'
@@ -74,7 +76,15 @@ export function SlipForm({ slip }: { slip: SlipView }) {
             ) : (
               <form action={formAction} className="flex flex-col gap-4 border-t border-line pt-4">
                 <p className="font-extrabold">
-                  {`Combined: ${formatOdds(slip.multiplierBp)}×${slip.capped ? ' (capped at 20×)' : ''}`}
+                  Combined:{' '}
+                  <AnimatedText plainText={`${formatOdds(slip.multiplierBp)}×${slip.capped ? ' (capped at 20×)' : ''}`}>
+                    <NumberFlow
+                      value={Number(formatOdds(slip.multiplierBp))}
+                      locales="en-US"
+                      format={{ minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }}
+                      suffix={slip.capped ? '× (capped at 20×)' : '×'}
+                    />
+                  </AnimatedText>
                 </p>
                 <Field label="Stake (DC)" htmlFor="stake">
                   <Input
@@ -94,7 +104,16 @@ export function SlipForm({ slip }: { slip: SlipView }) {
                 {showPayout && (
                   <p className="text-lg">
                     Potential payout:{' '}
-                    <strong className="tabular-nums">{`${potentialPayout(stakeNumber, slip.legBps)} DC`}</strong>
+                    <strong className="tabular-nums">
+                      <AnimatedText plainText={`${potentialPayout(stakeNumber, slip.legBps)} DC`}>
+                        <NumberFlow
+                          value={potentialPayout(stakeNumber, slip.legBps)}
+                          locales="en-US"
+                          format={{ useGrouping: false }}
+                          suffix=" DC"
+                        />
+                      </AnimatedText>
+                    </strong>
                   </p>
                 )}
                 <FormSubmitButton

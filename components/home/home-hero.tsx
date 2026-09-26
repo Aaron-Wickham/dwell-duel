@@ -1,4 +1,6 @@
+import NumberFlow from '@number-flow/react'
 import { cn } from '@/lib/utils'
+import { AnimatedText } from '@/components/ui/animated-text'
 import { eyebrowClass } from '@/components/ui/page'
 import { heroCaption } from '@/lib/home/copy'
 
@@ -23,9 +25,12 @@ export function HomeHero({
       <p className={cn(eyebrowClass, 'text-hero-2')}>Dwell Coin</p>
       <p className="text-xl font-bold md:text-2xl">
         Balance:{' '}
-        <span className="text-[44px] leading-none font-extrabold tracking-[-0.03em] tabular-nums text-[#72DB2B] md:text-[60px]">
-          {balance} DC
-        </span>
+        <AnimatedText
+          plainText={`${balance} DC`}
+          className="text-[44px] leading-none font-extrabold tracking-[-0.03em] tabular-nums text-[#72DB2B] md:text-[60px]"
+        >
+          <NumberFlow value={balance} locales="en-US" format={{ useGrouping: false }} suffix=" DC" />
+        </AnimatedText>
       </p>
       <p className="text-sm text-hero-2">{heroCaption(rank, memberCount, pendingCount, pendingDc)}</p>
     </section>

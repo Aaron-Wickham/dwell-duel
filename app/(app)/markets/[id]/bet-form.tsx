@@ -4,10 +4,15 @@ import { useActionState } from 'react'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Field, Input, Select } from '@/components/ui/field'
 import { Message } from '@/components/ui/message'
+import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { placeBetAction, type ActionState } from '@/lib/markets/place-bet'
 
 export function BetForm({ marketId, outcomes }: { marketId: string; outcomes: { id: string; label: string }[] }) {
-  const boundAction = placeBetAction.bind(null, marketId)
+  const boundAction = withSuccessToast(
+    placeBetAction.bind(null, marketId),
+    (s) => Boolean(s?.formError),
+    'Bet placed.',
+  )
   const [state, formAction] = useActionState<ActionState, FormData>(boundAction, undefined)
 
   return (

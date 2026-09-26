@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Layers } from 'lucide-react'
 import NumberFlow from '@number-flow/react'
 import { useSlipCount } from '@/components/app-nav/slip-count'
+import { useMarketSlip } from '@/components/markets/market-slip'
 import { SlipPick } from '@/components/parlays/slip-pick'
 import { AnimatedText } from '@/components/ui/animated-text'
 import { buttonVariants } from '@/components/ui/button'
@@ -41,6 +42,9 @@ export function SlipForm({ slip }: { slip: SlipView }) {
     current.filter((p) => p.outcomeId !== outcomeId),
   )
   const { adjust } = useSlipCount()
+  // Set only on a market page (SlipForm also renders bare on /parlays, with no provider), and
+  // only holds this page's own market's pick, so a match means the removed pick is that one.
+  const marketSlip = useMarketSlip()
   // While a removal is pending, the optimistic list is shorter than the server's, but the
   // server's Combined/payout and canPlace still describe the server's legs. Showing them
   // together would mismatch, so both stay hidden/disabled until the counts agree again.
@@ -83,6 +87,7 @@ export function SlipForm({ slip }: { slip: SlipView }) {
                     optimisticRemove={() => {
                       removePick(pick.outcomeId)
                       adjust(-1)
+                      if (marketSlip?.pick === pick.outcomeId) marketSlip.choose(null)
                     }}
                   />
                 </li>

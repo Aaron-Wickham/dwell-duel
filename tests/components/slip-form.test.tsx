@@ -23,6 +23,8 @@ const { haptics } = vi.hoisted(() => ({ haptics: { tap: vi.fn(), success: vi.fn(
 vi.mock('@/lib/haptics', () => ({ haptics }))
 
 import { SlipCountProvider, useSlipCount } from '@/components/app-nav/slip-count'
+import { MarketSlipProvider } from '@/components/markets/market-slip'
+import { OutcomeSlipControl } from '@/components/markets/outcome-slip-control'
 import { SlipForm } from '@/app/(app)/parlays/slip-form'
 
 function Count() {
@@ -195,5 +197,24 @@ describe('SlipForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Place parlay' }))
     await screen.findByRole('status')
     expect(haptics.success).toHaveBeenCalledOnce()
+  })
+
+  it('flips a market’s own outcome row off when its pick is removed from here, before the server answers', async () => {
+    let finish!: (value: boolean) => void
+    removeFromSlipAction.mockImplementation(() => new Promise<boolean>((resolve) => (finish = resolve)))
+    render(
+      <MarketSlipProvider pick="o1">
+        <OutcomeSlipControl outcomeId="o1" label="Yes" state="inslip" addAction={vi.fn()} removeAction={vi.fn()} />
+        <SlipForm slip={slipView([pick(1)])} />
+      </MarketSlipProvider>,
+    )
+    expect(screen.getByText('In your slip')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Yes, Market 1?' }))
+
+    expect(screen.queryByText('In your slip')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Add to parlay Yes' })).toBeInTheDocument()
+
+    await act(async () => finish(true))
   })
 })

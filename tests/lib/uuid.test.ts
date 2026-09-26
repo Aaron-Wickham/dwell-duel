@@ -8,7 +8,7 @@ describe('isUuid', () => {
     expect(isUuid('3F2B8C1E-9D4A-4E6B-8A7C-1B2D3E4F5A6B')).toBe(true)
   })
 
-  it('rejects anything Postgres would refuse to compare with a uuid column', () => {
+  it('rejects anything but the canonical hyphenated form', () => {
     expect(isUuid('not-a-uuid')).toBe(false)
     expect(isUuid('')).toBe(false)
     expect(isUuid('new')).toBe(false)

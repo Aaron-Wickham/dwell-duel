@@ -3,6 +3,21 @@ import { readdirSync } from 'node:fs'
 import path from 'node:path'
 import { isAppPath } from '@/lib/auth/app-paths'
 
+// A route group's own folder never becomes a URL segment, so it's never a section — but a
+// section can live inside one (app/(app)/(home)/profile/), so the guard has to look inside.
+function collectSections(dir: string): string[] {
+  const sections: string[] = []
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    if (entry.name.startsWith('(')) {
+      sections.push(...collectSections(path.join(dir, entry.name)))
+    } else if (!entry.name.startsWith('_') && !entry.name.startsWith('[')) {
+      sections.push(entry.name)
+    }
+  }
+  return sections
+}
+
 describe('isAppPath', () => {
   it('covers Home and every signed-in section, at any depth', () => {
     for (const p of [
@@ -40,10 +55,8 @@ describe('isAppPath', () => {
 
   it('knows every top-level folder in app/(app)', () => {
     const dir = path.resolve(import.meta.dirname, '../../../app/(app)')
-    const sections = readdirSync(dir, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && !entry.name.startsWith('('))
-      .map((entry) => entry.name)
-    expect(sections.length).toBeGreaterThan(0)
+    const sections = collectSections(dir)
+    expect(sections.length).toBe(7)
     for (const section of sections) {
       expect(isAppPath(`/${section}`), section).toBe(true)
     }

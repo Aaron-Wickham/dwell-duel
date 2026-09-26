@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChartColumn, Plus } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
+import { LiveTables } from '@/components/live/live-tables'
+import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { listClosedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
 import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
@@ -100,6 +102,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
           </Link>
         }
       />
+      <LiveTables subscriptions={pageSubscriptions.markets()} />
       {groups.length === 0 ? (
         <EmptyState
           icon={ChartColumn}

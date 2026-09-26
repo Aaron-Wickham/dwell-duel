@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { ChartColumn, Layers, BookOpen, MessageSquareText, Trophy, ShieldCheck, LogOut } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
+import { LiveTables } from '@/components/live/live-tables'
+import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { signOut } from '@/lib/auth/sign-out'
 import { readSlip } from '@/lib/parlays/slip'
@@ -59,6 +61,7 @@ export default async function Home() {
   return (
     <Page transition="tab">
       <PageHeader title={`Welcome, ${standing?.displayName}`} />
+      <LiveTables subscriptions={pageSubscriptions.home()} />
       <HomeHero
         balance={standing?.balance ?? 0}
         rank={rank}

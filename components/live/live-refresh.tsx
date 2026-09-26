@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { subscriptionKey, useLiveSubscriptions } from './live-tables'
 
 // Every table a signed-in page reads its live numbers from. supabase/migrations/0032 adds them to
 // the realtime publication; Postgres Changes then only delivers rows the member's RLS lets them
@@ -18,26 +19,52 @@ export const LIVE_TABLES = [
   'profiles',
 ] as const
 
-const DEBOUNCE_MS = 400
+export type LiveTable = (typeof LIVE_TABLES)[number]
+
+// `filter` is Postgres Changes' single `column=eq.value` form -- the only shape the pages in this
+// app need.
+export type LiveSubscription = { table: LiveTable; filter?: string }
+
+export const DEBOUNCE_MS = 400
+// However busy the stream, a refresh fires no later than this long after the first unflushed change.
+export const MAX_WAIT_MS = 2000
+
+// A fresh topic per build: RealtimeClient.channel(topic) hands back the still-closing channel of a
+// reused topic, so rebuilding a channel on the same topic after a page's declarations change would
+// reuse a channel that's mid-teardown instead of opening a new one.
+let generation = 0
 
 export function LiveRefresh(): null {
   const router = useRouter()
+  const subscriptions = useLiveSubscriptions()
+  const key = subscriptionKey(subscriptions)
 
   useEffect(() => {
     let cancelled = false
-    let timer: ReturnType<typeof setTimeout> | undefined
+    let debounceTimer: ReturnType<typeof setTimeout> | undefined
+    let maxWaitTimer: ReturnType<typeof setTimeout> | undefined
     let teardown: (() => void) | undefined
 
+    function flush() {
+      clearTimeout(debounceTimer)
+      clearTimeout(maxWaitTimer)
+      debounceTimer = undefined
+      maxWaitTimer = undefined
+      // A hidden tab already gets caught up by the visibility handler below when it returns,
+      // so there's no need to re-render it on every change anyone makes while it's away.
+      if (document.visibilityState === 'hidden') return
+      router.refresh()
+    }
+
     // One action touches several tables (a bet writes bets and profiles), so bursts coalesce
-    // into a single refresh.
+    // into a single refresh -- but under a steady stream the trailing debounce alone would never
+    // fire, so a refresh is also forced at MAX_WAIT_MS after the first change in the burst.
     function scheduleRefresh() {
-      clearTimeout(timer)
-      timer = setTimeout(() => {
-        // A hidden tab already gets caught up by the visibility handler below when it returns,
-        // so there's no need to re-render it on every change anyone makes while it's away.
-        if (document.visibilityState === 'hidden') return
-        router.refresh()
-      }, DEBOUNCE_MS)
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(flush, DEBOUNCE_MS)
+      if (maxWaitTimer === undefined) {
+        maxWaitTimer = setTimeout(flush, MAX_WAIT_MS)
+      }
     }
 
     // A phone that backgrounds the app suspends the socket, and the client only notices a dead one
@@ -49,37 +76,45 @@ export function LiveRefresh(): null {
 
     // Loaded on mount rather than imported, so the Supabase client stays off every page's
     // critical path.
-    import('@/lib/supabase/client').then(({ browserClient }) => {
-      if (cancelled) return
-      const supabase = browserClient()
-      const channel = supabase.channel('live-refresh')
-      for (const table of LIVE_TABLES) {
-        channel.on('postgres_changes', { event: '*', schema: 'public', table }, scheduleRefresh)
-      }
+    import('@/lib/supabase/client')
+      .then(({ browserClient }) => {
+        if (cancelled) return
+        const supabase = browserClient()
+        const channel = supabase.channel(`live-refresh:${++generation}`)
+        for (const { table, filter } of subscriptions) {
+          channel.on('postgres_changes', { event: '*', schema: 'public', table, filter }, scheduleRefresh)
+        }
 
-      // Postgres Changes has no replay: whatever changed while the socket was down is gone once it
-      // rejoins. The first SUBSCRIBED is the initial join, and every later one follows a reconnect.
-      let joined = false
-      channel.subscribe((status) => {
-        if (status !== 'SUBSCRIBED') return
-        if (joined) scheduleRefresh()
-        joined = true
+        // Postgres Changes has no replay: whatever changed while the socket was down is gone once
+        // it rejoins. The first SUBSCRIBED is the initial join, and every later one follows a
+        // reconnect -- and a channel rebuilt for new declarations is a fresh join too, since it's
+        // a new channel object with its own `joined` flag.
+        let joined = false
+        channel.subscribe((status) => {
+          if (status !== 'SUBSCRIBED') return
+          if (joined) scheduleRefresh()
+          joined = true
+        })
+
+        teardown = () => {
+          supabase.removeChannel(channel)
+        }
       })
-
-      teardown = () => {
-        supabase.removeChannel(channel)
-      }
-    }).catch(() => {
-      // Offline or a stale deploy chunk: live updates quietly stop, and the foreground refresh still covers it.
-    })
+      .catch(() => {
+        // Offline or a stale deploy chunk: live updates quietly stop, and the foreground refresh still covers it.
+      })
 
     return () => {
       cancelled = true
-      clearTimeout(timer)
+      clearTimeout(debounceTimer)
+      clearTimeout(maxWaitTimer)
       document.removeEventListener('visibilitychange', onVisibilityChange)
       teardown?.()
     }
-  }, [router])
+    // The key, not `subscriptions` itself, decides when to rebuild the channel: the registry hands
+    // back a fresh array on every registration change even when its tables and filters repeat.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, key])
 
   return null
 }

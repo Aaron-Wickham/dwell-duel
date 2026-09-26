@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
+import { LiveTables } from '@/components/live/live-tables'
+import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { getLeaderboard } from '@/lib/social/leaderboard'
 import { Page, PageHeader } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
@@ -16,6 +18,7 @@ export default async function LeaderboardPage() {
   return (
     <Page transition="tab">
       <PageHeader title="Leaderboard" description="Ranked by balance. Ties share a rank." />
+      <LiveTables subscriptions={pageSubscriptions.leaderboard()} />
       {board.length <= 1 ? (
         <EmptyState icon={Trophy} title="No other members yet.">
           Invite friends to start the competition.

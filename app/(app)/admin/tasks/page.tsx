@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { BookOpen } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
+import { LiveTables } from '@/components/live/live-tables'
+import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { listTasks } from '@/lib/tasks/list-tasks'
 import { listPendingTaskCompletions } from '@/lib/tasks/list-task-completions'
@@ -24,6 +26,7 @@ export default async function AdminTasksPage() {
   return (
     <ContentReveal>
       <div className="flex flex-col gap-5 md:gap-7">
+        <LiveTables subscriptions={pageSubscriptions.adminTasks()} />
         <SectionCard
           title="Pending approvals"
           titleId="pending-approvals"

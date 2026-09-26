@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
 import { Layers, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
+import { LiveTables } from '@/components/live/live-tables'
+import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { getMarket, getMarketBets } from '@/lib/markets/get-market'
 import { getChartBets } from '@/lib/markets/chart-bets'
@@ -127,6 +129,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
       {/* Wraps the drawer too (rendered below, outside the Outcomes section) so removing this
           market's pick from inside it flips the outcome row off in the same transition. */}
       <MarketSlipProvider pick={marketPick}>
+        <LiveTables subscriptions={pageSubscriptions.marketDetail(market.id)} />
         <BackLink href="/markets">Markets</BackLink>
 
         <div className="flex flex-col gap-3">

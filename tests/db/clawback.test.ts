@@ -123,6 +123,23 @@ describe('resolve_market override: resolution payouts', () => {
       ]),
     )
   })
+
+  it('sums two winning bets on the same outcome for one member', async () => {
+    // Pool 50: Bob 10 and 10 on Yes (two separate bets), Alice 30 on No. Yes pays
+    // each of Bob's bets floor(10 * 50/20) = 25, so he owes 50 in total.
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await bet(bobClient, market, 0, 10)
+    await bet(bobClient, market, 0, 10)
+    await bet(aliceClient, market, 1, 30)
+    const { error: resolveErr } = await resolve(market, 0)
+    if (resolveErr) throw resolveErr
+    await spendDownTo(bob, 30)
+
+    const { error } = await resolve(market, 1)
+
+    expect(error?.code).toBe('P0001')
+    expect(shortList(error?.message)).toEqual([{ display_name: 'Bob', owed: 50, balance: 30 }])
+  })
 })
 
 describe('resolve_market override: won parlays', () => {
@@ -200,5 +217,29 @@ describe('resolve_market and void_market lock order', () => {
     expect(resolveLoops).toHaveLength(3)
     expect(voidLoops).toHaveLength(1)
     for (const loop of [...resolveLoops, ...voidLoops]) expect(loop).toContain('order by profile_id, id')
+  })
+
+  // Per-loop ordering alone isn't enough across phases (the clawback block,
+  // the reversal, the payout/refund loop, settle_parlay's own locking): each
+  // function locks every profile it could touch in one statement, ordered by
+  // id, before the clawback block or any write. That up-front lock is what
+  // actually rules out a cross-phase deadlock.
+  const upfrontLock = /perform 1 from public\.profiles where id in \(\s*[\s\S]*?\) order by id for update;/
+
+  it('locks every profile it could touch, in id order, in one statement before any write', async () => {
+    const resolveDef = await definition('resolve_market(uuid,uuid)')
+    const voidDef = await definition('void_market(uuid)')
+
+    expect(resolveDef).toMatch(upfrontLock)
+    expect(voidDef).toMatch(upfrontLock)
+
+    // Neither function writes (update/insert into a real table) before that lock.
+    const firstWriteIndex = (def: string) => def.search(/\n\s*(?:update|insert into)\s+public\./i)
+    const lockIndex = (def: string) => def.search(upfrontLock)
+
+    expect(lockIndex(resolveDef)).toBeGreaterThan(-1)
+    expect(lockIndex(resolveDef)).toBeLessThan(firstWriteIndex(resolveDef))
+    expect(lockIndex(voidDef)).toBeGreaterThan(-1)
+    expect(lockIndex(voidDef)).toBeLessThan(firstWriteIndex(voidDef))
   })
 })

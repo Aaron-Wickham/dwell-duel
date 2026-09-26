@@ -120,11 +120,19 @@ create index markets_current_resolution_id_idx on public.markets (current_resolu
 -- anything changes, that every earlier winner can pay back what it would claw
 -- back, and otherwise raises 'clawback_short:' plus a JSON list of who's short
 -- (lib/markets/clawback.ts turns that into the resolve form's message). Second,
--- every loop that credits or debits a member runs in profile order, so two
--- concurrent resolutions with overlapping bettors lock profiles in the same
--- sequence and can't deadlock. The reversal also finds its ledger rows by the
--- text resolution_id, which section 2's index serves, rather than a ::uuid
--- cast. create or replace keeps both functions' grants.
+-- right after the auth and outcome checks, each function takes every profile
+-- lock it will need in one statement, ordered by id, before the clawback block
+-- or any write. Sorting each phase on its own -- the clawback block, the
+-- reversal, the payout/refund loop, settle_parlay's own locking -- isn't
+-- enough: two concurrent calls whose bettors or parlay owners cross, in
+-- different per-phase orders, could still deadlock. With the market row
+-- locked first, this up-front lock gives every call the same global order:
+-- market row, then profiles by id, then (via settle_parlay) parlays. The
+-- per-loop `order by profile_id, id` stays, for determinism, but re-locks
+-- rows this call already holds -- it's the up-front lock that rules out the
+-- deadlock. The reversal also finds its ledger rows by the text
+-- resolution_id, which section 2's index serves, rather than a ::uuid cast.
+-- create or replace keeps both functions' grants.
 
 create or replace function public.resolve_market(p_market_id uuid, p_outcome_id uuid)
 returns void
@@ -187,6 +195,19 @@ begin
   if v_outcome_market_id is null or v_outcome_market_id <> p_market_id then
     raise exception 'outcome does not belong to this market';
   end if;
+
+  -- Every profile this call could touch, locked once up front in id order,
+  -- before the clawback block or any write: the current resolution's payout
+  -- recipients (also the reversal's), this market's bettors, and the owners
+  -- of parlays with a leg here. See the note above the two functions for why
+  -- this -- not the per-phase ordering below -- is what rules out a
+  -- cross-phase deadlock. When there's no current resolution, the first
+  -- branch of the union matches no rows.
+  perform 1 from public.profiles where id in (
+    select profile_id from public.coin_transactions where meta ->> 'resolution_id' = v_current_resolution_id::text
+    union select profile_id from public.bets where market_id = p_market_id
+    union select pa.profile_id from public.parlays pa join public.parlay_legs l on l.parlay_id = pa.id where l.market_id = p_market_id
+  ) order by id for update;
 
   -- An override claws back every payout of the current resolution, and
   -- settle_parlay reverses every won parlay whose leg here picked the old
@@ -332,6 +353,17 @@ begin
   if not (auth.uid() = v_created_by or public.is_admin()) then
     raise exception 'only the market creator or an admin can void this market';
   end if;
+
+  -- Every profile this call could touch, locked once up front in id order,
+  -- before any write: this market's bettors and the owners of parlays with a
+  -- leg here. A voided market only ever had status 'open' (checked above),
+  -- so it never has a current resolution to reverse -- see the note above
+  -- resolve_market and void_market for why this, not the per-loop ordering
+  -- below, is what rules out a cross-phase deadlock.
+  perform 1 from public.profiles where id in (
+    select profile_id from public.bets where market_id = p_market_id
+    union select pa.profile_id from public.parlays pa join public.parlay_legs l on l.parlay_id = pa.id where l.market_id = p_market_id
+  ) order by id for update;
 
   update public.markets set status = 'voided' where id = p_market_id;
 

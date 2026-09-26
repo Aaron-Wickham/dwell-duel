@@ -23,7 +23,8 @@ export function parseClawbackError(message: string | undefined | null): Clawback
   return parsed.map(({ display_name, owed, balance }) => ({ display_name, owed, balance }))
 }
 
-export function clawbackMessage(short: ClawbackShort[]): string {
+export function clawbackMessage(short: ClawbackShort[]): string | null {
+  if (short.length === 0) return null
   const [first, ...rest] = short.map(({ display_name, owed, balance }) => ({ name: display_name, spent: owed - balance, won: owed }))
   const lead = `${first.name} has already spent ${first.spent} of ${first.won} DC won on this market`
   const others = rest.map(({ name, spent, won }) => `${name} ${spent} of ${won}`)

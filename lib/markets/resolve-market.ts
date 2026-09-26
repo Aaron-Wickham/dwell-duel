@@ -24,7 +24,7 @@ export async function resolveMarketAction(
 
   if (error) {
     const short = parseClawbackError(error.message)
-    return { formError: short ? clawbackMessage(short) : error.message }
+    return { formError: (short && clawbackMessage(short)) ?? error.message }
   }
 
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.

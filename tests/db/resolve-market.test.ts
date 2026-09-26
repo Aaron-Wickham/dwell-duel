@@ -183,8 +183,9 @@ describe('resolve_market (admin override)', () => {
     await db.from('profiles').update({ is_admin: true }).eq('id', bob.id)
     const adminClient = await clientFor(bob)
     const { error } = await adminClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[1] })
-    expect(error).not.toBeNull()
-    expect(error?.message).toMatch(/balance/)
+    expect(error?.code).toBe('P0001')
+    // 0033's clawback block: Alice owes her whole 50 DC win, and has only 5 left.
+    expect(error?.message).toBe('clawback_short:[{"owed": 50, "balance": 5, "display_name": "Alice"}]')
 
     // Nothing changed: original resolution still active, nobody's balance moved.
     const { data: market } = await db.from('markets').select('current_resolution_id').eq('id', marketId).single()

@@ -55,4 +55,8 @@ describe('clawbackMessage', () => {
   it('keeps the order it was given', () => {
     expect(clawbackMessage([carol, bob])).toMatch(/^Can’t override: Carol has already spent 15 of 30 DC won on this market, and Bob 40 of 60\./)
   })
+
+  it('returns null for an empty list, rather than throwing', () => {
+    expect(clawbackMessage([])).toBeNull()
+  })
 })

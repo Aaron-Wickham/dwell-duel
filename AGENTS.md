@@ -45,6 +45,27 @@ architectural decisions exist, document them here and in `docs/`.
 - **Visual source of truth:** `docs/design/app-redesign-handoff.md` and
   the design spec in `docs/superpowers/specs/`.
 
+## Native feel and speed
+
+- **Skeletons, or a streamed Suspense.** Every signed-in route gets a
+  `loading.tsx` skeleton (`SkeletonScreen`), unless a real 404 must
+  survive the initial load, in which case it streams behind `<Suspense>`
+  instead, as the member page does.
+- **Drill-down pages** pass `Page`'s `transition="drill-down"`, which
+  also enables the back-swipe; its logical parents live in
+  `lib/nav/back-swipe.ts`.
+- **Signed-out redirects** live in `proxy.ts`, and a new `(app)` section
+  must be added to `lib/auth/app-paths.ts` (a test guards the drift).
+- **The `pressable` and `no-callout` utilities,** plus the `--safe-top` /
+  `--safe-bottom` tokens, which are non-zero only in standalone mode.
+- **Never optimistic:** bet, parlay, resolve, void and balance actions.
+- **The service worker never caches** per-member HTML, RSC payloads,
+  server actions or Supabase responses.
+- **A new live table** goes in both `LIVE_TABLES` and a
+  realtime-publication migration.
+- **E2e specs await `serverActionSettled`** after an optimistic action,
+  before navigating away.
+
 ## Testing
 
 - `npm test` runs the Vitest suite; `npm run test:e2e` runs Playwright

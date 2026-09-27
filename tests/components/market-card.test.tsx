@@ -67,7 +67,7 @@ describe('MarketCard', () => {
         resolvedOutcomeLabel={null}
       />,
     )
-    expect(screen.getByRole('link', { name: 'Who wins the chili cook-off?' })).toHaveClass('min-h-11')
+    expect(screen.getByRole('link', { name: 'Who wins the chili cook-off?' })).toHaveClass('hit-area')
   })
 
   it('shows outcome pills and "no bets yet" when nothing has been staked', () => {

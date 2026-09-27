@@ -88,6 +88,6 @@ describe('PlacedParlay', () => {
 
   it('gives each leg link a 44px tap target', () => {
     renderParlay(parlay({}))
-    for (const link of screen.getAllByRole('link')) expect(link).toHaveClass('min-h-11')
+    for (const link of screen.getAllByRole('link')) expect(link).toHaveClass('hit-area')
   })
 })

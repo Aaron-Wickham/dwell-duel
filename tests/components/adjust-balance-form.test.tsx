@@ -17,7 +17,7 @@ describe('AdjustBalanceForm', () => {
     render(<AdjustBalanceForm member={member} />)
     const link = screen.getByRole('link', { name: 'Bob' })
     expect(link).toHaveAttribute('href', '/members/member-1')
-    expect(link).toHaveClass('min-h-11')
+    expect(link).toHaveClass('hit-area')
   })
 
   it('keeps the name bold and shows the balance beside it', () => {

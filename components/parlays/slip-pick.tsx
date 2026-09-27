@@ -22,7 +22,7 @@ export function SlipPick({
         <Link
           href={`/markets/${pick.marketId}`}
           transitionTypes={['nav-forward']}
-          className="inline-flex min-h-11 items-center text-sm"
+          className="hit-area text-sm"
         >
           {pick.marketTitle}
         </Link>

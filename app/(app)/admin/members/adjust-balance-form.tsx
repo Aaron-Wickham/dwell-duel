@@ -31,7 +31,7 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
             <Link
               href={`/members/${member.id}`}
               transitionTypes={['nav-forward']}
-              className="inline-flex min-h-11 items-center font-extrabold"
+              className="hit-area font-extrabold"
             >
               {member.displayName}
             </Link>

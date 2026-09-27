@@ -50,6 +50,6 @@ describe('LeaderboardRow', () => {
         <LeaderboardRow rank={2} name="Bob" balance={90} isMe={false} href="/members/bob" />
       </ol>,
     )
-    expect(screen.getByRole('link', { name: 'Bob' })).toHaveClass('min-h-11')
+    expect(screen.getByRole('link', { name: 'Bob' })).toHaveClass('hit-area')
   })
 })

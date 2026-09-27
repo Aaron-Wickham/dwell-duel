@@ -214,6 +214,19 @@
   }
 }
 
+/* 44px tap target for inline text links, without growing the row. */
+@utility hit-area {
+  position: relative;
+  &::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 50%;
+    height: max(100%, 2.75rem);
+    transform: translateY(-50%);
+  }
+}
+
 @layer base {
   html {
     /* iOS's rubber-band bounce can't be turned off; it shows html's background colour, so make

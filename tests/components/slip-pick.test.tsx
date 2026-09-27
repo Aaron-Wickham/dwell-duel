@@ -35,7 +35,7 @@ describe('SlipPick', () => {
 
   it('gives the market title link a 44px tap target', () => {
     render(<SlipPick pick={live} removeAction={vi.fn()} />)
-    expect(screen.getByRole('link', { name: 'Will it rain on the church picnic?' })).toHaveClass('min-h-11')
+    expect(screen.getByRole('link', { name: 'Will it rain on the church picnic?' })).toHaveClass('hit-area')
   })
 
   it('formats the odds as plain digits, in en-US regardless of the browser locale', () => {

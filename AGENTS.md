@@ -103,6 +103,15 @@ architectural decisions exist, document them here and in `docs/`.
 - **A new required env var** goes in `lib/env/required.ts`. A
   production-only one must be set in Vercel before merging, or
   production won't boot.
+- **The feed and member activity read `activity_events`,** not
+  `activity_feed`. Triggers in 0035 keep it equal to what `activity_feed`
+  would show. A new feed kind, or a new way of writing a source table,
+  needs a trigger change plus a step in `tests/db/activity-events.test.ts`'s
+  equivalence scenario. No trigger watches `market_resolutions`.
+- **A build that depends on a new migration needs the migration applied
+  first.** Merging to `main` runs the migration and the deploy in
+  parallel, so run the Deploy Production Database workflow on the branch
+  before merging, or ship the migration in its own PR ahead of the build.
 
 ## Testing
 

@@ -2,8 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
+import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 
-export type ActionState = { formError?: string } | undefined
+export type ActionState = { formError?: string; field?: 'reason' } | undefined
 
 export async function approveTaskCompletionAction(completionId: string, _prevState: ActionState, _formData: FormData): Promise<ActionState> {
   const { supabase, user } = await requireUser()
@@ -22,6 +23,8 @@ export async function rejectTaskCompletionAction(completionId: string, _prevStat
   if (!user) return { formError: 'Not signed in.' }
 
   const reason = String(formData.get('reason') ?? '').trim()
+  if (reason.length > TEXT_LIMITS.reviewNote) return { formError: tooLong('Reason', TEXT_LIMITS.reviewNote), field: 'reason' }
+
   const { error } = await supabase.rpc('reject_task_completion', {
     p_completion_id: completionId,
     p_reason: reason || null,
@@ -34,6 +37,7 @@ export async function rejectTaskCompletionAction(completionId: string, _prevStat
 
 export interface BulkActionState {
   formError?: string
+  field?: 'reason'
   summary?: string
 }
 
@@ -71,6 +75,7 @@ export async function bulkRejectTaskCompletionsAction(_prevState: BulkActionStat
   if (completionIds.length === 0) return { formError: 'Select at least one completion.' }
 
   const reason = String(formData.get('reason') ?? '').trim()
+  if (reason.length > TEXT_LIMITS.reviewNote) return { formError: tooLong('Reason', TEXT_LIMITS.reviewNote), field: 'reason' }
 
   const { data, error } = await supabase.rpc('review_task_completions', {
     p_ids: completionIds,

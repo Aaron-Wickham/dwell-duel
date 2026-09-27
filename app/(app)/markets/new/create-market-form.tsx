@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Field, Input, Textarea } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { cn } from '@/lib/utils'
 import { createMarketAction, type ActionState } from '@/lib/markets/create-market'
 
@@ -36,6 +37,10 @@ export function CreateMarketForm() {
     setOutcomes((prev) => (prev.length <= MIN_OUTCOMES ? prev : prev.filter((_, i) => i !== index)))
   }
 
+  // Too few outcomes points at the first input; a too-long label points at its own.
+  const outcomeInvalid = (index: number) =>
+    state?.field === `outcome_${index + 1}` || (index === 0 && state?.field === 'outcomes')
+
   return (
     <form
       action={formAction}
@@ -46,13 +51,20 @@ export function CreateMarketForm() {
           id="cm-title"
           name="title"
           required
+          maxLength={TEXT_LIMITS.marketTitle}
           aria-invalid={state?.field === 'title'}
           aria-describedby={state?.field === 'title' ? 'create-market-error' : undefined}
         />
       </Field>
 
       <Field label="Description" htmlFor="cm-desc">
-        <Textarea id="cm-desc" name="description" />
+        <Textarea
+          id="cm-desc"
+          name="description"
+          maxLength={TEXT_LIMITS.marketDescription}
+          aria-invalid={state?.field === 'description'}
+          aria-describedby={state?.field === 'description' ? 'create-market-error' : undefined}
+        />
       </Field>
 
       <fieldset className="flex flex-col gap-1.5">
@@ -101,9 +113,10 @@ export function CreateMarketForm() {
                 id={`cm-outcome-${index}`}
                 value={value}
                 onChange={(e) => updateOutcome(index, e.target.value)}
+                maxLength={TEXT_LIMITS.outcomeLabel}
                 className="flex-1"
-                aria-invalid={index === 0 ? state?.field === 'outcomes' : undefined}
-                aria-describedby={index === 0 && state?.field === 'outcomes' ? 'create-market-error' : undefined}
+                aria-invalid={outcomeInvalid(index) || undefined}
+                aria-describedby={outcomeInvalid(index) ? 'create-market-error' : undefined}
               />
               <button
                 type="button"

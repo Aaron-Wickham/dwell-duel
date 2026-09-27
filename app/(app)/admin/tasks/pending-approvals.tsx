@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { EmptyState } from '@/components/ui/empty-state'
+import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { ReviewButtons } from './review-buttons'
 
 const BULK_FORM_ID = 'bulk-review-form'
@@ -28,6 +29,7 @@ export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
   // Only the most recently clicked bulk action's result stays visible — otherwise an
   // approve followed by a reject would leave both summaries on screen at once.
   const [lastBulk, setLastBulk] = useState<'approve' | 'reject' | null>(null)
+  const bulkReasonInvalid = lastBulk === 'reject' && !isRejectPending && rejectState?.field === 'reason'
 
   function toggleAll(checked: boolean) {
     containerRef.current?.querySelectorAll<HTMLInputElement>('input[name="completionIds"]').forEach((el) => {
@@ -94,7 +96,15 @@ export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
               <label htmlFor="bulk-reason" className="sr-only">
                 Shared reason (optional)
               </label>
-              <Input id="bulk-reason" name="reason" placeholder="Shared reason (optional)" className="md:grow" />
+              <Input
+                id="bulk-reason"
+                name="reason"
+                placeholder="Shared reason (optional)"
+                maxLength={TEXT_LIMITS.reviewNote}
+                className="md:grow"
+                aria-invalid={bulkReasonInvalid}
+                aria-describedby={bulkReasonInvalid ? BULK_REJECT_ERROR_ID : undefined}
+              />
               <div className="flex flex-wrap shrink-0 gap-2">
                 <FormSubmitButton
                   size="sm"

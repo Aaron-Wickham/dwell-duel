@@ -60,3 +60,21 @@ describe('adjustBalanceAction', () => {
     expect(supabase.from).not.toHaveBeenCalled()
   })
 })
+
+describe('adjustBalanceAction reason limit', () => {
+  it('refuses a reason over 200 characters without adjusting anything', async () => {
+    const state = await adjustBalanceAction('p-mia', undefined, adjustForm('10', 'r'.repeat(201)))
+
+    expect(state).toEqual({ formError: 'Reason can be at most 200 characters.', field: 'reason' })
+    expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+
+  it('adjusts with a reason of exactly 200 characters, measured after trimming', async () => {
+    supabase.rpc.mockResolvedValue({ data: null, error: null })
+
+    const state = await adjustBalanceAction('p-mia', undefined, adjustForm('10', ` ${'r'.repeat(200)} `))
+
+    expect(state).toBeUndefined()
+    expect(supabase.rpc).toHaveBeenCalledWith('adjust_balance', { p_profile_id: 'p-mia', p_amount: 10, p_reason: 'r'.repeat(200) })
+  })
+})

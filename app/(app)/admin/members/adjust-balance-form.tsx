@@ -8,6 +8,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { Field, Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 
 export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
@@ -51,6 +52,7 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
               <Input
                 id={reasonId}
                 name="reason"
+                maxLength={TEXT_LIMITS.adjustReason}
                 aria-invalid={state?.field === 'reason'}
                 aria-describedby={state?.field === 'reason' ? errorId : undefined}
               />

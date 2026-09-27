@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { isBalanceCheckViolation } from '@/lib/errors/balance-error'
+import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 
 export type ActionState = { formError?: string; field?: 'amount' | 'reason' } | undefined
 
@@ -15,6 +16,7 @@ export async function adjustBalanceAction(profileId: string, _prevState: ActionS
 
   if (!Number.isInteger(amount) || amount === 0) return { formError: 'Enter a non-zero whole number of DC.', field: 'amount' }
   if (!reason) return { formError: 'Add a reason — it’s shown in the ledger next to this adjustment.', field: 'reason' }
+  if (reason.length > TEXT_LIMITS.adjustReason) return { formError: tooLong('Reason', TEXT_LIMITS.adjustReason), field: 'reason' }
 
   const { error } = await supabase.rpc('adjust_balance', {
     p_profile_id: profileId,

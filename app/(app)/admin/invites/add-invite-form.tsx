@@ -5,6 +5,7 @@ import { addInviteAction } from '@/lib/invites/actions'
 import { Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 
 export function AddInviteForm() {
@@ -24,6 +25,7 @@ export function AddInviteForm() {
           name="email"
           type="email"
           required
+          maxLength={TEXT_LIMITS.inviteEmail}
           placeholder="friend@gmail.com"
           className="min-w-0"
           aria-invalid={Boolean(state?.formError)}

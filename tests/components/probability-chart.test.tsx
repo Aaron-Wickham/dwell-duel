@@ -151,12 +151,25 @@ describe('ProbabilityChart', () => {
     expect(new Set(labels).size).toBe(labels.length)
   })
 
-  it('pads a single recent bet to a five-minute minimum span rather than a full hour', () => {
+  it('draws a single bet from minutes ago from the left edge, not padded out to a minimum span', () => {
     const { container } = render(<ProbabilityChart outcomes={yesNo} points={[point(NOW - 2 * 60 * 1000, 1, 0)]} now={NOW} />)
     const d = container.querySelector('.recharts-line-curve')?.getAttribute('d')
-    // A 5-minute minimum span puts a bet from 2 minutes ago 3/5 of the way across a 600px-wide plot.
-    expect(d).toMatch(/^M360,/)
+    expect(d).toMatch(/^M0,/)
     const labels = [...container.querySelectorAll('[data-slot="ticks"] span')].map((s) => s.textContent)
+    expect(new Set(labels).size).toBe(labels.length)
+  })
+
+  it('spreads bets placed seconds apart across the whole plot, keeping only ticks with distinct labels', () => {
+    // Every bet is under a minute old: minute-precision ticks would all read the same time.
+    const seconds = [point(NOW - 40 * 1000, 1, 0), point(NOW - 20 * 1000, 0.5, 0.5), point(NOW - 5 * 1000, 0.25, 0.75)]
+    const { container } = render(<ProbabilityChart outcomes={yesNo} points={seconds} now={NOW} />)
+    const d = container.querySelector('.recharts-line-curve')?.getAttribute('d')
+    // The first bet sits at x=0 and the second, 20s into a 40s span, halfway across the 600px plot.
+    expect(d).toMatch(/^M0,/)
+    expect(d).toMatch(/L300,/)
+    const labels = [...container.querySelectorAll('[data-slot="ticks"] span')].map((s) => s.textContent)
+    expect(labels.at(-1)).toBe('Now')
+    expect(labels.length).toBeGreaterThanOrEqual(2)
     expect(new Set(labels).size).toBe(labels.length)
   })
 

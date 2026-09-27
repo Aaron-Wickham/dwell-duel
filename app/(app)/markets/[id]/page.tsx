@@ -60,7 +60,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // reconciliation cycle for React to keep consistent across -- the
   // purity rule protects Client Components from that, which doesn't
   // apply here, and this page already does non-deterministic async DB
-  // reads (getMarket, getMarketBets, isAdmin) on every invocation regardless.
+  // reads (getMarket, readSlip) on every invocation regardless.
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now()
   const isPastClose = new Date(market.closeAt).getTime() <= now

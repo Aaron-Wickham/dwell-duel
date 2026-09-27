@@ -1,3 +1,45 @@
+-- Preflight: NOT VALID only skips validating existing rows at migration time --
+-- it still binds every later UPDATE, so a row already over a new limit would
+-- start failing on its very next update in production, on whichever column
+-- that update touches, with no warning until it happened. This counts rows
+-- over each new limit before any constraint exists below, and raises if it
+-- finds any; the whole migration is one transaction, so a raise here leaves
+-- the database untouched instead of applying half the limits.
+do $$
+declare
+  parts text[] := '{}';
+  n integer;
+begin
+  select count(*) into n from public.markets where char_length(title) > 120;
+  if n > 0 then parts := parts || format('markets.title: %s', n); end if;
+
+  select count(*) into n from public.markets where char_length(description) > 1000;
+  if n > 0 then parts := parts || format('markets.description: %s', n); end if;
+
+  select count(*) into n from public.market_outcomes where char_length(label) > 60;
+  if n > 0 then parts := parts || format('market_outcomes.label: %s', n); end if;
+
+  select count(*) into n from public.tasks where char_length(title) > 120;
+  if n > 0 then parts := parts || format('tasks.title: %s', n); end if;
+
+  select count(*) into n from public.tasks where char_length(description) > 1000;
+  if n > 0 then parts := parts || format('tasks.description: %s', n); end if;
+
+  select count(*) into n from public.task_completions where char_length(review_note) > 500;
+  if n > 0 then parts := parts || format('task_completions.review_note: %s', n); end if;
+
+  select count(*) into n from public.allowed_emails where char_length(email) > 254;
+  if n > 0 then parts := parts || format('allowed_emails.email: %s', n); end if;
+
+  select count(*) into n from public.profiles where char_length(display_name) > 80;
+  if n > 0 then parts := parts || format('profiles.display_name: %s', n); end if;
+
+  if array_length(parts, 1) > 0 then
+    raise exception '0034: rows already over the new length limits — %. Shorten them before applying.', array_to_string(parts, ', ');
+  end if;
+end;
+$$;
+
 -- Length limits on member-entered text. lib/forms/limits.ts holds the same
 -- numbers, so the forms explain a limit before the database has to refuse it.
 --

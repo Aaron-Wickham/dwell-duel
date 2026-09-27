@@ -1,8 +1,23 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
 import { seedMembers, clientFor, createTestMarket, createTestTask, type Member, type TestMarket } from './fixtures'
 import { pgQuery } from './pg-query'
+
+// Reads the preflight guard out of the migration itself, so the test can't drift
+// from what actually runs: the do $$ ... $$; block at the top of the file, before
+// any constraint. It's the only such block in 0034, and it doesn't nest $$ tags.
+function readGuardBlock(): string {
+  const sql = readFileSync(
+    path.resolve(import.meta.dirname, '../../supabase/migrations/0034_text_length_limits.sql'),
+    'utf8',
+  )
+  const match = sql.match(/do \$\$[\s\S]*?\$\$;/)
+  if (!match) throw new Error('could not find the preflight do $$ block in 0034_text_length_limits.sql')
+  return match[0]
+}
 
 let alice: Member
 let bob: Member
@@ -117,6 +132,21 @@ describe('text length limits', () => {
     expect(shortenErr).toBeNull()
     const { data: after } = await db.from('tasks').select('title').eq('id', older!.id).single()
     expect(after?.title).toBe('Read Genesis 1-3')
+  })
+
+  it('the preflight guard raises when a row already exceeds a new limit, naming the column and count', async () => {
+    const longTitle = 't'.repeat(121)
+    await pgQuery(`
+      alter table public.tasks drop constraint tasks_title_length;
+      insert into public.tasks (title, reward_amount, created_by) values ('${longTitle}', 5, '${alice.id}');
+    `)
+
+    await expect(pgQuery(readGuardBlock())).rejects.toThrow(/tasks\.title: 1/)
+
+    await pgQuery(`
+      delete from public.tasks where title = '${longTitle}';
+      alter table public.tasks add constraint tasks_title_length check (char_length(title) <= 120) not valid;
+    `)
   })
 })
 

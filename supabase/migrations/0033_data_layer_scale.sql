@@ -128,12 +128,13 @@ create index markets_current_resolution_id_idx on public.markets (current_resolu
 -- different per-phase orders, could still deadlock. With the market row
 -- locked first, this up-front lock gives every call the same global order:
 -- market row, then profiles by id, then (via settle_parlay) parlays. It
--- takes that profile lock FOR NO KEY UPDATE, not FOR UPDATE:
--- market_resolutions.resolved_by and .reversed_by reference profiles, so
--- writing them takes FOR KEY SHARE on the acting admin's own profile row,
--- and FOR KEY SHARE conflicts with FOR UPDATE but not with FOR NO KEY
--- UPDATE -- FOR UPDATE here would deadlock a concurrent resolve against a
--- concurrent approval the moment their profile locks crossed. FOR NO KEY
+-- takes that profile lock FOR NO KEY UPDATE, not FOR UPDATE: every foreign
+-- key to profiles (resolved_by, reversed_by, reviewed_by, and each ledger,
+-- bet and parlay row's profile_id) takes FOR KEY SHARE on the referenced
+-- profile, which conflicts with FOR UPDATE but not with FOR NO KEY UPDATE.
+-- Held FOR UPDATE, these locks would block other transactions' key checks
+-- and let a resolve/void deadlock a batch approval, or two resolve/voids
+-- whose admins bet on each other's markets. FOR NO KEY
 -- UPDATE still serialises every balance write, since
 -- apply_coin_transaction's own UPDATE takes that same lock. The per-loop
 -- `order by profile_id, id` stays, for determinism, but re-locks rows this
@@ -373,8 +374,8 @@ begin
   -- so it never has a current resolution to reverse -- see the note above
   -- resolve_market and void_market for why this, not the per-loop ordering
   -- below, is what rules out a cross-phase deadlock. NO KEY UPDATE, not
-  -- UPDATE -- see that same note for why FOR UPDATE here would deadlock
-  -- against the FK check's FOR KEY SHARE on resolved_by/reversed_by.
+  -- UPDATE -- see that same note: FOR UPDATE here would block other
+  -- transactions' foreign-key checks (FOR KEY SHARE) on these profiles.
   perform 1 from public.profiles where id in (
     select profile_id from public.bets where market_id = p_market_id
     union select pa.profile_id from public.parlays pa join public.parlay_legs l on l.parlay_id = pa.id where l.market_id = p_market_id
@@ -406,8 +407,8 @@ $$;
 -- own row while the rest still go through. Ids run in ascending order, so two
 -- overlapping batches lock completions in the same sequence. Before that loop,
 -- this call also takes every lock it could need in one statement: the batch's
--- completions in id order (FOR UPDATE -- nothing else takes a conflicting
--- lock on task_completions), then -- on approval -- their owning profiles,
+-- completions in id order (FOR UPDATE is safe here: no foreign key
+-- references task_completions), then -- on approval -- their owning profiles,
 -- also in id order but FOR NO KEY UPDATE, not FOR UPDATE:
 -- task_completions.reviewed_by references profiles, so approving takes FOR
 -- KEY SHARE on the acting admin's own profile row, and FOR UPDATE here would

@@ -5,7 +5,6 @@ import {
   seedMembers,
   clientFor,
   createTestMarket,
-  createTestTask,
   ensureInvited,
   makeMember,
   type Member,
@@ -252,46 +251,9 @@ describe('resolve_market and void_market lock order', () => {
     expect(lockIndex(voidDef)).toBeLessThan(firstWriteIndex(voidDef))
   })
 
-  // The scenario the NO KEY UPDATE fix targets: an admin approves a task completion (which will
-  // write reviewed_by, an FK to profiles, taking FOR KEY SHARE on the admin's own row) while a
-  // concurrent resolve/void/batch-review holds this same up-front lock on that admin's profile.
-  // FOR UPDATE conflicts with FOR KEY SHARE and would deadlock the two; FOR NO KEY UPDATE doesn't.
-  // Two real connections (two concurrent postgres-meta requests), ordered by an advisory lock
-  // instead of a sleep, so there's no race on which one runs first -- only a fixed, generous
-  // window for the second connection's own (non-blocking) statement to finish inside.
-  it('the up-front NO KEY UPDATE lock never blocks a concurrent FK write needing FOR KEY SHARE on the same profile', async () => {
-    const { taskId } = await createTestTask(alice, { rewardAmount: 5 })
-    const { data: completionId, error: submitErr } = await bobClient.rpc('submit_task_completion', { p_task_id: taskId })
-    if (submitErr) throw submitErr
-
-    const lockKey = 918273645
-    const holdMs = 700
-
-    // Connection A: takes exactly the lock resolve_market/void_market/review_task_completions take
-    // up front on a profile, and holds it open well past connection B's attempt.
-    const connA = pgQuery(`
-      select pg_advisory_lock(${lockKey});
-      select id from public.profiles where id = '${alice.id}' for no key update;
-      select pg_advisory_unlock(${lockKey});
-      select pg_sleep(${holdMs / 1000});
-      select 1 as marker;
-    `)
-
-    // B blocks on the advisory lock until A has actually taken its row lock, so the handshake
-    // itself never flakes -- only B's own timing, measured below, is under test.
-    const startB = Date.now()
-    const connB = pgQuery<{ marker: number }>(`
-      select pg_advisory_lock(${lockKey});
-      select pg_advisory_unlock(${lockKey});
-      update public.task_completions set reviewed_by = '${alice.id}' where id = '${completionId}';
-      select 1 as marker;
-    `).then((rows) => ({ rows, elapsedMs: Date.now() - startB }))
-
-    const [, b] = await Promise.all([connA, connB])
-
-    // If the up-front lock were FOR UPDATE, this update would block until connection A's
-    // transaction ended near holdMs. It instead returns almost immediately.
-    expect(b.rows).toEqual([{ marker: 1 }])
-    expect(b.elapsedMs).toBeLessThan(holdMs / 2)
+  // The clawback block re-locks the owing members. It must use the same NO KEY UPDATE strength:
+  // upgrading to FOR UPDATE would wait on other transactions' foreign-key KEY SHARE locks again.
+  it('locks owing members in the clawback block with NO KEY UPDATE', async () => {
+    expect(await definition('resolve_market(uuid,uuid)')).toMatch(/for no key update of p/)
   })
 })

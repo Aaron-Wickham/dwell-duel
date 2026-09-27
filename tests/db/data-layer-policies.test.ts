@@ -13,9 +13,9 @@ interface Policy {
 
 type Expression = Pick<Policy, 'tablename' | 'policyname' | 'cmd' | 'qual' | 'with_check'>
 
-// pg_policies as migration 0032 left them, plus 0035's policy on the new activity_events table.
-// 0033 may only wrap the helper calls.
-const BEFORE_0033: Expression[] = [
+// pg_policies as migration 0035 leaves them: 0032's policies, unchanged apart from 0033's
+// (select …) wraps, plus 0035's new policy on activity_events.
+const POLICIES_AFTER_0035: Expression[] = [
   { tablename: 'activity_events', policyname: 'select_activity_events', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   { tablename: 'allowed_emails', policyname: 'admin_delete_invites', cmd: 'DELETE', qual: 'is_admin()', with_check: null },
   { tablename: 'allowed_emails', policyname: 'admin_insert_invites', cmd: 'INSERT', qual: null, with_check: 'is_admin()' },
@@ -88,7 +88,7 @@ describe('access rules after 0033', () => {
         qual: unwrap(p.qual),
         with_check: unwrap(p.with_check),
       })),
-    ).toEqual([...BEFORE_0033].sort(byName))
+    ).toEqual([...POLICIES_AFTER_0035].sort(byName))
     for (const p of policies) {
       expect(p.permissive).toBe('PERMISSIVE')
       expect(p.roles).toEqual(['authenticated'])

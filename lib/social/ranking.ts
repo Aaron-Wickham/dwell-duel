@@ -5,8 +5,8 @@ export interface LeaderboardEntry {
   rank: number
 }
 
-// Input is already sorted by balance desc (SQL does the ordering now); this only assigns
-// tied ranks, so it's reused by both a fully in-memory sort (rankMembers) and a SQL-ordered read.
+// Input is already sorted by balance desc (SQL does the ordering now); this only assigns tied
+// ranks to that SQL-ordered read.
 export function assignRanks<T extends { balance: number }>(sorted: T[]): (T & { rank: number })[] {
   const ranked: (T & { rank: number })[] = []
   sorted.forEach((m, index) => {
@@ -15,9 +15,4 @@ export function assignRanks<T extends { balance: number }>(sorted: T[]): (T & { 
     ranked.push({ ...m, rank })
   })
   return ranked
-}
-
-export function rankMembers(members: { id: string; displayName: string; balance: number }[]): LeaderboardEntry[] {
-  const sorted = [...members].sort((a, b) => b.balance - a.balance || a.displayName.localeCompare(b.displayName))
-  return assignRanks(sorted)
 }

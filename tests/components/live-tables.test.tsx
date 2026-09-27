@@ -2,19 +2,20 @@
 import { describe, it, expect } from 'vitest'
 import { memo, useEffect } from 'react'
 import { render, screen } from '@testing-library/react'
-import { LiveTables, LiveTablesProvider, subscriptionKey, useLiveSubscriptions } from '@/components/live/live-tables'
+import { LiveTables, LiveTablesProvider, subscriptionKey, usePageSubscriptions, useLiveBaseSubscription } from '@/components/live/live-tables'
 
 function Probe() {
-  const subscriptions = useLiveSubscriptions()
-  return <output aria-label="Subscriptions">{JSON.stringify(subscriptions)}</output>
+  const subscriptions = usePageSubscriptions()
+  const base = useLiveBaseSubscription()
+  return <output aria-label="Subscriptions">{JSON.stringify({ base, subscriptions })}</output>
 }
 
-function readSubscriptions() {
+function readProbe() {
   return JSON.parse(screen.getByLabelText('Subscriptions').textContent!)
 }
 
-describe('LiveTablesProvider / LiveTables / useLiveSubscriptions', () => {
-  it('starts with just the base profile subscription, and registers a page on mount', () => {
+describe('LiveTablesProvider / LiveTables / usePageSubscriptions / useLiveBaseSubscription', () => {
+  it('starts with no page subscriptions and a fixed base, and registers a page on mount', () => {
     function Wrapper({ active }: { active: boolean }) {
       return (
         <LiveTablesProvider userId="member-1">
@@ -25,13 +26,13 @@ describe('LiveTablesProvider / LiveTables / useLiveSubscriptions', () => {
     }
 
     const { rerender } = render(<Wrapper active={false} />)
-    expect(readSubscriptions()).toEqual([{ table: 'profiles', filter: 'id=eq.member-1' }])
+    expect(readProbe()).toEqual({ base: { table: 'profiles', filter: 'id=eq.member-1' }, subscriptions: [] })
 
     rerender(<Wrapper active={true} />)
-    expect(readSubscriptions()).toEqual([
-      { table: 'bets', filter: 'market_id=eq.market-1' },
-      { table: 'profiles', filter: 'id=eq.member-1' },
-    ])
+    expect(readProbe()).toEqual({
+      base: { table: 'profiles', filter: 'id=eq.member-1' },
+      subscriptions: [{ table: 'bets', filter: 'market_id=eq.market-1' }],
+    })
   })
 
   it('unregisters on unmount', () => {
@@ -45,10 +46,10 @@ describe('LiveTablesProvider / LiveTables / useLiveSubscriptions', () => {
     }
 
     const { rerender } = render(<Wrapper active={true} />)
-    expect(readSubscriptions()).toHaveLength(2)
+    expect(readProbe().subscriptions).toHaveLength(1)
 
     rerender(<Wrapper active={false} />)
-    expect(readSubscriptions()).toEqual([{ table: 'profiles', filter: 'id=eq.member-1' }])
+    expect(readProbe().subscriptions).toEqual([])
   })
 
   it('dedupes an identical table and filter registered by more than one page component', () => {
@@ -60,18 +61,17 @@ describe('LiveTablesProvider / LiveTables / useLiveSubscriptions', () => {
       </LiveTablesProvider>,
     )
 
-    expect(readSubscriptions()).toEqual([
+    expect(readProbe().subscriptions).toEqual([
       { table: 'bets', filter: 'market_id=eq.market-1' },
       { table: 'markets' },
-      { table: 'profiles', filter: 'id=eq.member-1' },
     ])
   })
 
-  it('is a no-op outside a provider: nothing throws, and useLiveSubscriptions reads []', () => {
+  it('is a no-op outside a provider: nothing throws, page subscriptions read [], and base reads null', () => {
     expect(() => render(<LiveTables subscriptions={[{ table: 'bets' }]} />)).not.toThrow()
 
     render(<Probe />)
-    expect(readSubscriptions()).toEqual([])
+    expect(readProbe()).toEqual({ base: null, subscriptions: [] })
   })
 
   it('keeps a stable key across re-renders, so an equal-content array never re-notifies subscribers', () => {
@@ -80,7 +80,7 @@ describe('LiveTablesProvider / LiveTables / useLiveSubscriptions', () => {
     // CountingProbe (mount, plus one per genuine store notification).
     const renderCount = { current: 0 }
     const CountingProbe = memo(function CountingProbe() {
-      useLiveSubscriptions()
+      usePageSubscriptions()
       useEffect(() => {
         renderCount.current += 1
       })
@@ -97,7 +97,7 @@ describe('LiveTablesProvider / LiveTables / useLiveSubscriptions', () => {
     }
 
     const { rerender } = render(<Wrapper />)
-    // The first render shows just the base subscription; <LiveTables> then registers 'bets' from
+    // The first render shows no page subscriptions yet; <LiveTables> then registers 'bets' from
     // its mount effect, which is one genuine change and so one further, expected notification.
     const rendersAfterMount = renderCount.current
     expect(rendersAfterMount).toBeGreaterThan(0)

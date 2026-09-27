@@ -28,14 +28,12 @@ class LiveTableRegistry {
   readonly base: LiveSubscription
   private readonly registered = new Map<string, LiveSubscription[]>()
   private readonly listeners = new Set<() => void>()
-  private snapshot: LiveSubscription[]
   // Just the registered page declarations, without the base -- what LiveRefresh's page channel
   // is built from, kept separate so the base's own channel never has to be recomputed for it.
   private pageSnapshot: LiveSubscription[] = []
 
   constructor(userId: string) {
     this.base = { table: 'profiles', filter: `id=eq.${userId}` }
-    this.snapshot = dedupeSorted([this.base])
   }
 
   register(key: string, subscriptions: LiveSubscription[]): void {
@@ -49,9 +47,7 @@ class LiveTableRegistry {
   }
 
   private recompute(): void {
-    const registered = [...this.registered.values()].flat()
-    this.pageSnapshot = dedupeSorted(registered)
-    this.snapshot = dedupeSorted([this.base, ...registered])
+    this.pageSnapshot = dedupeSorted([...this.registered.values()].flat())
     for (const listener of this.listeners) listener()
   }
 
@@ -62,7 +58,6 @@ class LiveTableRegistry {
     }
   }
 
-  getSnapshot = (): LiveSubscription[] => this.snapshot
   getPageSnapshot = (): LiveSubscription[] => this.pageSnapshot
 }
 
@@ -76,15 +71,6 @@ export function LiveTablesProvider({ userId, children }: { userId: string; child
 const NO_SUBSCRIPTIONS: LiveSubscription[] = []
 const subscribeToNothing = () => () => {}
 const getNoSubscriptions = () => NO_SUBSCRIPTIONS
-
-export function useLiveSubscriptions(): LiveSubscription[] {
-  const registry = useContext(LiveTablesContext)
-  return useSyncExternalStore(
-    registry ? registry.subscribe : subscribeToNothing,
-    registry ? registry.getSnapshot : getNoSubscriptions,
-    registry ? registry.getSnapshot : getNoSubscriptions,
-  )
-}
 
 // Just the registered page declarations, without the base profile subscription -- what
 // LiveRefresh's page channel is built from. The base gets its own permanent channel instead (see

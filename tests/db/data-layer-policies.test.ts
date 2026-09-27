@@ -13,8 +13,10 @@ interface Policy {
 
 type Expression = Pick<Policy, 'tablename' | 'policyname' | 'cmd' | 'qual' | 'with_check'>
 
-// pg_policies as migration 0032 left them. 0033 may only wrap the helper calls.
+// pg_policies as migration 0032 left them, plus 0035's policy on the new activity_events table.
+// 0033 may only wrap the helper calls.
 const BEFORE_0033: Expression[] = [
+  { tablename: 'activity_events', policyname: 'select_activity_events', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   { tablename: 'allowed_emails', policyname: 'admin_delete_invites', cmd: 'DELETE', qual: 'is_admin()', with_check: null },
   { tablename: 'allowed_emails', policyname: 'admin_insert_invites', cmd: 'INSERT', qual: null, with_check: 'is_admin()' },
   { tablename: 'allowed_emails', policyname: 'admin_select_invites', cmd: 'SELECT', qual: 'is_admin()', with_check: null },

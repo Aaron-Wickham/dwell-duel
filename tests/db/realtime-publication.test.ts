@@ -13,6 +13,7 @@ describe('supabase_realtime publication', () => {
   it('contains every table the live updates watch', async () => {
     expect(await publishedTables()).toEqual(
       expect.arrayContaining([
+        'activity_events',
         'bets',
         'markets',
         'market_resolutions',

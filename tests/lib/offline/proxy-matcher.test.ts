@@ -12,6 +12,8 @@ describe('proxy matcher', () => {
     ['/markets/3f2a', true],
     ['/sign-in', true],
     ['/offline-report', true],
+    ['/api/cron/keep-alive', false],
+    ['/api/cronjobs', true],
     ['/sw.js', false],
     ['/offline', false],
     ['/manifest.webmanifest', false],

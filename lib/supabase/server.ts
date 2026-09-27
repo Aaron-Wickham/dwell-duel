@@ -1,6 +1,7 @@
 import { cache } from 'react'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { fetchWithTimeout, SERVER_FETCH_TIMEOUT_MS } from '@/lib/supabase/timeout-fetch'
 
 /**
  * `cache()`-wrapped so every Server Component/Action in a single request
@@ -26,6 +27,7 @@ export const serverClient = cache(async () => {
           }
         },
       },
+      global: { fetch: fetchWithTimeout(SERVER_FETCH_TIMEOUT_MS) },
     },
   )
 })

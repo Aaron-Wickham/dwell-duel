@@ -79,6 +79,23 @@ describe('getChartBets', () => {
     expect(bets.at(-1)?.amount).toBe(1001)
   })
 
+  it('reads across a page boundary that falls inside a timestamp tie, in id order', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    // 520 bets at one instant: only the id orders them, and the 500-row page boundary falls inside the tie.
+    const rows = Array.from({ length: 520 }, (_, i) => ({
+      market_id: market.marketId,
+      outcome_id: market.outcomeIds[i % 2],
+      profile_id: alice.id,
+      amount: i + 1,
+      created_at: '2026-09-20T09:00:00.654321+00:00',
+    }))
+    const { error } = await serviceClient().from('bets').insert(rows)
+    if (error) throw error
+
+    const bets = await getChartBets(bobClient, market.marketId)
+    expect(bets.map((b) => b.amount)).toEqual(Array.from({ length: 520 }, (_, i) => i + 1))
+  })
+
   it('is empty for an uninvited session', async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await placeBet(aliceClient, market.marketId, market.outcomeIds[0], 10)
@@ -113,6 +130,34 @@ describe('listChartBets', () => {
     ])
     expect(byMarket.get(quiet.marketId)).toEqual([])
     expect(byMarket.has(unlisted.marketId)).toBe(false)
+  })
+
+  it('reads more than 50 markets, in chunks, with every market keeping its own bets', async () => {
+    const db = serviceClient()
+    const closeAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+    // Inserted directly: sixty create_market calls are slow, and the reader never looks at pools.
+    const { data: markets, error } = await db
+      .from('markets')
+      .insert(Array.from({ length: 60 }, (_, i) => ({ created_by: alice.id, title: `Chart ${i}`, kind: 'binary', close_at: closeAt })))
+      .select('id')
+    if (error) throw error
+    const { data: outcomes, error: outcomesErr } = await db
+      .from('market_outcomes')
+      .insert(markets.map((m) => ({ market_id: m.id, label: 'Yes' })))
+      .select('id, market_id')
+    if (outcomesErr) throw outcomesErr
+    const { error: betsErr } = await db
+      .from('bets')
+      .insert(outcomes.map((o, i) => ({ market_id: o.market_id, outcome_id: o.id, profile_id: alice.id, amount: i + 1 })))
+    if (betsErr) throw betsErr
+
+    const ids = markets.map((m) => m.id as string)
+    const byMarket = await listChartBets(bobClient, ids)
+
+    expect([...byMarket.keys()]).toEqual(ids)
+    outcomes.forEach((o, i) => {
+      expect(byMarket.get(o.market_id)?.map((b) => [b.outcomeId, b.amount])).toEqual([[o.id, i + 1]])
+    })
   })
 
   it('returns an empty map for no markets', async () => {

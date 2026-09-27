@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { PageParams } from '@/lib/pagination/cursor'
+import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 
 export interface MarketDetail {
   id: string
@@ -28,7 +30,7 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
   const { data, error } = await supabase
     .from('markets')
     .select(
-      'id, title, description, kind, status, close_at, created_by, current_resolution_id, creator:profiles(display_name), market_outcomes(id, label, pool_total)',
+      'id, title, description, kind, status, close_at, created_by, current_resolution_id, creator:profiles(display_name), market_outcomes(id, label, pool_total), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at)',
     )
     .eq('id', marketId)
     // Rows come back with no default order, and colours are assigned by position for
@@ -47,18 +49,12 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
     poolTotal: o.pool_total,
   }))
 
-  let resolvedOutcomeLabel: string | null = null
-  let resolvedAt: string | null = null
-  if (data.current_resolution_id) {
-    const { data: resolution, error: resolutionErr } = await supabase
-      .from('market_resolutions')
-      .select('outcome_id, resolved_at')
-      .eq('id', data.current_resolution_id)
-      .single()
-    if (resolutionErr) throw resolutionErr
-    resolvedOutcomeLabel = outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null
-    resolvedAt = resolution.resolved_at
-  }
+  // The embed above replaces a second round trip to market_resolutions: current_resolution_id
+  // is a to-one foreign key on markets itself, so PostgREST hands back one object (or null),
+  // never an array.
+  const resolution = data.current_resolution as unknown as { outcome_id: string; resolved_at: string } | null
+  const resolvedOutcomeLabel = resolution ? (outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null) : null
+  const resolvedAt = resolution?.resolved_at ?? null
 
   const creator = data.creator as unknown as { display_name: string } | null
 
@@ -78,25 +74,40 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
   }
 }
 
-export async function getMarketBets(supabase: SupabaseClient, marketId: string): Promise<MarketBet[]> {
-  const { data, error } = await supabase
-    .from('bets')
-    .select('id, outcome_id, amount, created_at, profile_id, profiles(display_name)')
-    .eq('market_id', marketId)
-    .order('created_at', { ascending: false })
-    .order('id', { ascending: false })
+const BET_KEYS: KeyColumns = { ts: 'created_at', id: 'id', isId: isBigintId }
 
-  if (error) throw error
+export async function getMarketBets(supabase: SupabaseClient, marketId: string, page: PageParams): Promise<KeysetPage<MarketBet>> {
+  const result = await readKeyset(
+    page,
+    BET_KEYS,
+    async (filter, limit) => {
+      let query = supabase
+        .from('bets')
+        .select('id, outcome_id, amount, created_at, profile_id, profiles(display_name)')
+        .eq('market_id', marketId)
+      if (filter) query = query.or(filter)
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(limit)
+      if (error) throw error
+      return data ?? []
+    },
+    (b) => ({ ts: b.created_at, id: String(b.id) }),
+  )
 
-  return (data ?? []).map((b) => {
-    const profile = b.profiles as unknown as { display_name: string } | null
-    return {
-      id: b.id,
-      outcomeId: b.outcome_id,
-      amount: b.amount,
-      createdAt: b.created_at,
-      profileId: b.profile_id,
-      bettorName: profile?.display_name ?? 'Unknown member',
-    }
-  })
+  return {
+    ...result,
+    rows: result.rows.map((b) => {
+      const profile = b.profiles as unknown as { display_name: string } | null
+      return {
+        id: b.id,
+        outcomeId: b.outcome_id,
+        amount: b.amount,
+        createdAt: b.created_at,
+        profileId: b.profile_id,
+        bettorName: profile?.display_name ?? 'Unknown member',
+      }
+    }),
+  }
 }

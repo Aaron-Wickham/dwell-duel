@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
+import { clawbackMessage, parseClawbackError } from '@/lib/markets/clawback'
 
 export type ActionState = { formError?: string } | undefined
 
@@ -21,7 +22,10 @@ export async function resolveMarketAction(
     p_outcome_id: outcomeId,
   })
 
-  if (error) return { formError: error.message }
+  if (error) {
+    const short = parseClawbackError(error.message)
+    return { formError: (short && clawbackMessage(short)) ?? error.message }
+  }
 
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')

@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
 import { Layers, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
+import { LiveTables } from '@/components/live/live-tables'
+import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { getMarket, getMarketBets } from '@/lib/markets/get-market'
 import { getChartBets } from '@/lib/markets/chart-bets'
@@ -10,6 +12,7 @@ import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt } from '@/lib/markets/market-status'
 import { rowState } from '@/lib/markets/row-state'
+import { newestHref, readPageParams, showMoreHref } from '@/lib/pagination/cursor'
 import { isUuid } from '@/lib/uuid'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { readSlip } from '@/lib/parlays/slip'
@@ -20,6 +23,7 @@ import { LocalTime } from '@/components/ui/local-time'
 import { Message } from '@/components/ui/message'
 import { Page, h1Class } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
+import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { StatusChip } from '@/components/ui/status-chip'
 import { BetList } from '@/components/markets/bet-list'
 import { MarketSlipProvider } from '@/components/markets/market-slip'
@@ -32,6 +36,7 @@ import { VoidButton } from './void-button'
 
 export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>) {
   const { id } = await props.params
+  const searchParams = await props.searchParams
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
   if (!isUuid(id)) notFound()
@@ -39,8 +44,12 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const market = await getMarket(supabase, id)
   if (!market) notFound()
 
-  const [bets, chartBets] = await Promise.all([getMarketBets(supabase, id), getChartBets(supabase, id)])
-  const admin = await isAdmin(supabase)
+  const [betsPage, chartBets, admin, { slip, slipView }] = await Promise.all([
+    getMarketBets(supabase, id, readPageParams(searchParams, 'bets')),
+    getChartBets(supabase, id),
+    isAdmin(supabase),
+    readSlip().then(async (slip) => ({ slip, slipView: await getSlipView(supabase, slip) })),
+  ])
   const odds = computeOdds(market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })))
   const totalPool = odds.reduce((sum, o) => sum + o.poolTotal, 0)
   const chartOutcomes = odds.map((o, index) => ({
@@ -69,8 +78,6 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const showResolve = canResolve || canOverride
   const resolvedLabel = market.status === 'resolved' ? market.resolvedOutcomeLabel : null
 
-  const slip = await readSlip()
-  const slipView = await getSlipView(supabase, slip)
   const marketPick = market.outcomes.find((o) => slip.includes(o.id))?.id ?? null
   const marketInSlip = marketPick !== null
   const slipFull = slip.length >= MAX_PICKS && !marketInSlip
@@ -122,6 +129,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
       {/* Wraps the drawer too (rendered below, outside the Outcomes section) so removing this
           market's pick from inside it flips the outcome row off in the same transition. */}
       <MarketSlipProvider pick={marketPick}>
+        <LiveTables subscriptions={pageSubscriptions.marketDetail(market.id)} />
         <BackLink href="/markets">Markets</BackLink>
 
         <div className="flex flex-col gap-3">
@@ -217,7 +225,20 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           </div>
 
           <SectionCard title="Bets" titleId="bets-title" className="gap-1 lg:col-start-1 lg:row-start-3">
-            <BetList bets={bets} outcomes={market.outcomes} viewerId={user.id} canBet={canBet} />
+            {betsPage.windowed && (
+              <div className="flex flex-col py-2">
+                <BackToNewest href={newestHref(`/markets/${id}`, searchParams, 'bets')} />
+              </div>
+            )}
+            <BetList bets={betsPage.rows} outcomes={market.outcomes} viewerId={user.id} canBet={canBet} />
+            {betsPage.next && (
+              <div className="flex flex-col border-t border-line pt-3">
+                <ShowMore
+                  href={showMoreHref(`/markets/${id}`, searchParams, 'bets', betsPage.next)}
+                  fresh={betsPage.next.kind === 'window'}
+                />
+              </div>
+            )}
           </SectionCard>
         </div>
 

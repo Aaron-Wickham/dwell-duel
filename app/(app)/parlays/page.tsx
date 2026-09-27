@@ -5,6 +5,8 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Page, PageHeader } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { requireUser } from '@/lib/auth/require-user'
+import { LiveTables } from '@/components/live/live-tables'
+import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { listMyParlays } from '@/lib/parlays/list-parlays'
 import { readSlip } from '@/lib/parlays/slip'
@@ -14,12 +16,13 @@ export default async function ParlaysPage() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const slip = await getSlipView(supabase, await readSlip())
-  const parlays = await listMyParlays(supabase, user.id)
+  const [outcomeIds, parlays] = await Promise.all([readSlip(), listMyParlays(supabase, user.id)])
+  const slip = await getSlipView(supabase, outcomeIds)
 
   return (
     <Page transition="tab">
       <PageHeader title="Parlays" />
+      <LiveTables subscriptions={pageSubscriptions.parlays(user.id)} />
       <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
         <SlipForm slip={slip} />
         <SectionCard

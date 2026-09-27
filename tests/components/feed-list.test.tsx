@@ -49,4 +49,45 @@ describe('FeedList', () => {
     expect(screen.getByRole('listitem')).toHaveTextContent('Alice bet 5 DC on Yes in Social layer market')
     expect(screen.getByRole('list')).toHaveClass('px-[18px]')
   })
+
+  it('renders aboveList before the list and belowList after it, inside the visible-heading card', () => {
+    render(
+      <FeedList
+        events={[event]}
+        heading="Recent activity"
+        headingId="recent-activity"
+        aboveList={<a href="/x">Back to newest</a>}
+        belowList={<a href="/y">Show more</a>}
+      />,
+    )
+    const card = screen.getByRole('heading', { name: 'Recent activity' }).closest('section')!
+    expect(screen.getByRole('link', { name: 'Back to newest' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Show more' })).toBeInTheDocument()
+    // aboveList precedes the list content, belowList follows it, inside the same card.
+    const html = card.innerHTML
+    expect(html.indexOf('Back to newest')).toBeLessThan(html.indexOf('Alice'))
+    expect(html.indexOf('Alice')).toBeLessThan(html.indexOf('Show more'))
+  })
+
+  it('renders aboveList and belowList around a hidden-heading empty state', () => {
+    render(
+      <FeedList
+        events={[]}
+        heading="Events"
+        headingId="feed-events"
+        headingHidden
+        aboveList={<a href="/x">Back to newest</a>}
+        belowList={<a href="/y">Show more</a>}
+      />,
+    )
+    expect(screen.getByText('Nothing yet.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to newest' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Show more' })).toBeInTheDocument()
+  })
+
+  it('omits the slots entirely when neither is passed', () => {
+    render(<FeedList events={[event]} heading="Recent activity" headingId="recent-activity" />)
+    expect(screen.queryByRole('link', { name: 'Back to newest' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Show more' })).toBeNull()
+  })
 })

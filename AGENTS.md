@@ -66,6 +66,33 @@ architectural decisions exist, document them here and in `docs/`.
 - **E2e specs await `serverActionSettled`** after an optimistic action,
   before navigating away.
 
+## Data and reliability
+
+- **Long lists page with "Show more".** `lib/pagination` plus
+  `components/ui/show-more.tsx`'s `ShowMore`, which takes `href` and an
+  optional `fresh` prop — pass `fresh` when `next.kind === 'window'`, so a
+  fresh window scrolls to the top.
+- **Keyset filters AND a plain timestamp bound** onto the cursor's
+  tiebreak OR, so the query plans an Index Cond instead of scanning the
+  whole table.
+- **Every `.in(col, ids)` lookup that grows with rows is chunked** with
+  `lib/pagination/chunk.ts`'s `chunk()`.
+- **A page declares what it shows live** with
+  `<LiveTables subscriptions={pageSubscriptions.x(…)}>`, from
+  `lib/live/page-subscriptions.ts` and `components/live/live-tables.tsx`.
+- **`LiveRefresh` keeps two channels:** a long-lived base channel for the
+  member's own profile, and a page channel rebuilt on every navigation. A
+  new live table goes in `LIVE_TABLES`, a realtime-publication migration
+  and `page-subscriptions`.
+- **An Auth failure isn't "signed out."** `requireUser` reads claims
+  through `readClaims` (`lib/auth/auth-unavailable.ts`) and throws
+  `AuthUnavailableError` when Auth itself is unavailable; `isAdmin`
+  throws on an RPC error the same way.
+- **Every level has an error page** — `app/(app)/error.tsx`,
+  `app/error.tsx` and `app/global-error.tsx` — rendering
+  `components/ui/error-card.tsx`'s `ErrorCard`, whose "Try again" calls
+  Next 16's `retry()`.
+
 ## Testing
 
 - `npm test` runs the Vitest suite; `npm run test:e2e` runs Playwright

@@ -37,6 +37,16 @@ export interface BulkActionState {
   summary?: string
 }
 
+type ReviewRow = { id: string; ok: boolean; error: string | null }
+
+// review_task_completions answers one row per id, in ascending id order, so the first failure
+// is the lowest id's. A call that fails outright (not an admin, a network error) fails them all.
+function tally(requested: number, rows: ReviewRow[] | null, error: { message: string } | null) {
+  if (error) return { succeeded: 0, failed: requested, firstError: error.message }
+  const failures = (rows ?? []).filter((row) => !row.ok)
+  return { succeeded: (rows ?? []).length - failures.length, failed: failures.length, firstError: failures[0]?.error }
+}
+
 export async function bulkApproveTaskCompletionsAction(_prevState: BulkActionState | undefined, formData: FormData): Promise<BulkActionState> {
   const { supabase, user } = await requireUser()
   if (!user) return { formError: 'Not signed in.' }
@@ -44,20 +54,11 @@ export async function bulkApproveTaskCompletionsAction(_prevState: BulkActionSta
   const completionIds = formData.getAll('completionIds').map(String)
   if (completionIds.length === 0) return { formError: 'Select at least one completion.' }
 
-  let succeeded = 0
-  let firstError: string | undefined
-  for (const id of completionIds) {
-    const { error } = await supabase.rpc('approve_task_completion', { p_completion_id: id })
-    if (error) {
-      firstError ??= error.message
-    } else {
-      succeeded++
-    }
-  }
+  const { data, error } = await supabase.rpc('review_task_completions', { p_ids: completionIds, p_approve: true })
+  const { succeeded, failed, firstError } = tally(completionIds.length, data, error)
 
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')
-  const failed = completionIds.length - succeeded
   if (failed === 0) return { summary: `${succeeded} approved.` }
   return { summary: `${succeeded} approved, ${failed} failed (${firstError}).` }
 }
@@ -71,22 +72,14 @@ export async function bulkRejectTaskCompletionsAction(_prevState: BulkActionStat
 
   const reason = String(formData.get('reason') ?? '').trim()
 
-  let succeeded = 0
-  let firstError: string | undefined
-  for (const id of completionIds) {
-    const { error } = await supabase.rpc('reject_task_completion', {
-      p_completion_id: id,
-      p_reason: reason || null,
-    })
-    if (error) {
-      firstError ??= error.message
-    } else {
-      succeeded++
-    }
-  }
+  const { data, error } = await supabase.rpc('review_task_completions', {
+    p_ids: completionIds,
+    p_approve: false,
+    p_note: reason || null,
+  })
+  const { succeeded, failed, firstError } = tally(completionIds.length, data, error)
 
   revalidatePath('/admin/tasks')
-  const failed = completionIds.length - succeeded
   if (failed === 0) return { summary: `${succeeded} rejected.` }
   return { summary: `${succeeded} rejected, ${failed} failed (${firstError}).` }
 }

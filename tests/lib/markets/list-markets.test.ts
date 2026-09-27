@@ -1,0 +1,93 @@
+import { describe, it, expect } from 'vitest'
+import { countOpenMarkets, listClosedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
+import { fakeSupabase } from '../fake-supabase'
+
+const RESOLUTION_EMBED = 'current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at)'
+
+function marketRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: '0b9c3f5e-8a1d-4c2b-9e7f-1a2b3c4d5e6f',
+    title: 'Will it rain?',
+    kind: 'binary',
+    status: 'resolved',
+    close_at: '2026-09-20T09:00:00+00:00',
+    created_at: '2026-09-19T09:00:00.123456+00:00',
+    current_resolution: { outcome_id: 'o-yes', resolved_at: '2026-09-21T09:00:00+00:00' },
+    market_outcomes: [
+      { id: 'o-no', label: 'No', pool_total: 5 },
+      { id: 'o-yes', label: 'Yes', pool_total: 15 },
+    ],
+    ...overrides,
+  }
+}
+
+describe('listOpenMarkets', () => {
+  it('reads only open markets, newest first, with the resolution embedded in the same request', async () => {
+    const { client, queries } = fakeSupabase(() => ({ data: [marketRow({ status: 'open', current_resolution: null })] }))
+
+    const markets = await listOpenMarkets(client)
+
+    expect(queries).toHaveLength(1)
+    expect(queries[0].select).toContain(RESOLUTION_EMBED)
+    expect(queries[0].eq).toEqual([['status', 'open']])
+    expect(queries[0].order.slice(0, 2)).toEqual([
+      ['created_at', { ascending: false }],
+      ['id', { ascending: false }],
+    ])
+    expect(markets).toEqual([
+      {
+        id: '0b9c3f5e-8a1d-4c2b-9e7f-1a2b3c4d5e6f',
+        title: 'Will it rain?',
+        kind: 'binary',
+        status: 'open',
+        closeAt: '2026-09-20T09:00:00+00:00',
+        resolvedOutcomeLabel: null,
+        resolvedAt: null,
+        outcomes: [
+          { id: 'o-no', label: 'No', poolTotal: 5 },
+          { id: 'o-yes', label: 'Yes', poolTotal: 15 },
+        ],
+      },
+    ])
+  })
+})
+
+describe('listClosedMarkets', () => {
+  it('reads resolved and voided markets as one list of 50, labelling each resolution from the embed', async () => {
+    const { client, queries } = fakeSupabase(() => ({
+      data: [marketRow(), marketRow({ id: '1b9c3f5e-8a1d-4c2b-9e7f-1a2b3c4d5e6f', status: 'voided', current_resolution: null })],
+    }))
+
+    const page = await listClosedMarkets(client, { top: null, bottom: null })
+
+    expect(queries).toHaveLength(1)
+    expect(queries[0].in).toEqual([['status', ['resolved', 'voided']]])
+    expect(queries[0].limit).toBe(50)
+    expect(page.rows.map((m) => [m.status, m.resolvedOutcomeLabel, m.resolvedAt])).toEqual([
+      ['resolved', 'Yes', '2026-09-21T09:00:00+00:00'],
+      ['voided', null, null],
+    ])
+    expect(page.next).toBeNull()
+  })
+
+  it('ignores a cursor whose id is not a market id', async () => {
+    const { client, queries } = fakeSupabase(() => ({ data: [] }))
+    await listClosedMarkets(client, { top: null, bottom: { ts: '2026-09-19T09:00:00Z', id: '42' } })
+    expect(queries[0].or).toEqual([])
+    expect(queries[0].limit).toBe(50)
+  })
+})
+
+describe('countOpenMarkets', () => {
+  it('counts open markets without reading any rows', async () => {
+    const { client, queries } = fakeSupabase(() => ({ count: 7 }))
+    expect(await countOpenMarkets(client)).toBe(7)
+    expect(queries[0].selectOptions).toEqual({ count: 'exact', head: true })
+    expect(queries[0].eq).toEqual([['status', 'open']])
+  })
+
+  it('throws when the count fails', async () => {
+    const { client } = fakeSupabase(() => ({ error: new Error('count failed') }))
+    await expect(countOpenMarkets(client)).rejects.toThrow('count failed')
+  })
+})

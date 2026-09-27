@@ -43,4 +43,13 @@ describe('LeaderboardRow', () => {
     expect(screen.getByRole('link', { name: 'Aaron' })).toBeInTheDocument()
     expect(screen.getByText('(you)', { exact: false })).toBeInTheDocument()
   })
+
+  it('gives the name link a 44px tap target', () => {
+    render(
+      <ol>
+        <LeaderboardRow rank={2} name="Bob" balance={90} isMe={false} href="/members/bob" />
+      </ol>,
+    )
+    expect(screen.getByRole('link', { name: 'Bob' })).toHaveClass('min-h-11')
+  })
 })

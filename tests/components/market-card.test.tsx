@@ -51,6 +51,25 @@ describe('MarketCard', () => {
     expect(screen.queryByText('no bets yet')).not.toBeInTheDocument()
   })
 
+  it('gives the title link a 44px tap target', () => {
+    render(
+      <MarketCard
+        id="m1"
+        title="Who wins the chili cook-off?"
+        status="open"
+        kind="multiple_choice"
+        closeAt="2026-10-04T16:30:00.000Z"
+        resolvedAt={null}
+        outcomes={[
+          { id: 'a', label: 'Tom', pct: 60 },
+          { id: 'b', label: 'Sarah', pct: 40 },
+        ]}
+        resolvedOutcomeLabel={null}
+      />,
+    )
+    expect(screen.getByRole('link', { name: 'Who wins the chili cook-off?' })).toHaveClass('min-h-11')
+  })
+
   it('shows outcome pills and "no bets yet" when nothing has been staked', () => {
     render(
       <MarketCard

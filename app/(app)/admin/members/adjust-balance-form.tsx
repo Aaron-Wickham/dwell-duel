@@ -28,7 +28,11 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
         <div className="flex items-center gap-3 md:w-60 md:shrink-0 md:self-center">
           <Avatar name={member.displayName} />
           <div className="flex min-w-0 grow flex-col">
-            <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="font-extrabold">
+            <Link
+              href={`/members/${member.id}`}
+              transitionTypes={['nav-forward']}
+              className="inline-flex min-h-11 items-center font-extrabold"
+            >
               {member.displayName}
             </Link>
             <span className="text-sm text-ink2 tabular-nums">{member.balance} DC</span>

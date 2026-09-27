@@ -19,7 +19,11 @@ export function SlipPick({
   return (
     <div className="flex items-center gap-3 py-3.5">
       <div className="flex min-w-0 grow flex-col gap-1">
-        <Link href={`/markets/${pick.marketId}`} transitionTypes={['nav-forward']} className="text-sm">
+        <Link
+          href={`/markets/${pick.marketId}`}
+          transitionTypes={['nav-forward']}
+          className="inline-flex min-h-11 items-center text-sm"
+        >
           {pick.marketTitle}
         </Link>
         <span className="text-[17px] font-extrabold leading-[1.3]">{pick.outcomeLabel}</span>

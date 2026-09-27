@@ -46,18 +46,20 @@ describe('pageSubscriptions', () => {
     expect(pageSubscriptions.markets()).toEqual([{ table: 'markets' }, { table: 'bets' }])
   })
 
-  it('home, for a member, filters task_completions to their own submissions', () => {
+  it('home, for a member, filters task_completions to their own submissions and watches every profile for live ranks', () => {
     expect(pageSubscriptions.home({ me: MEMBER_ID, admin: false })).toEqual([
       { table: 'markets' },
       { table: 'tasks' },
+      { table: 'profiles' },
       { table: 'task_completions', filter: `profile_id=eq.${MEMBER_ID}` },
     ])
   })
 
-  it('home, for an admin, watches every submission so the pending-approvals tile stays live', () => {
+  it('home, for an admin, watches every submission and every profile so ranks and pending-approvals stay live', () => {
     expect(pageSubscriptions.home({ me: MEMBER_ID, admin: true })).toEqual([
       { table: 'markets' },
       { table: 'tasks' },
+      { table: 'profiles' },
       { table: 'task_completions' },
     ])
   })
@@ -66,9 +68,9 @@ describe('pageSubscriptions', () => {
     expect(pageSubscriptions.leaderboard()).toEqual([{ table: 'profiles' }])
   })
 
-  it('member carries the member id through profiles, bets and parlays', () => {
+  it('member watches every profile for live ranks, and carries the member id through bets and parlays', () => {
     expect(pageSubscriptions.member(MEMBER_ID)).toEqual([
-      { table: 'profiles', filter: `id=eq.${MEMBER_ID}` },
+      { table: 'profiles' },
       { table: 'bets', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'parlays', filter: `profile_id=eq.${MEMBER_ID}` },
     ])

@@ -28,23 +28,17 @@ export const pageSubscriptions = {
     return [{ table: 'profiles' }]
   },
   // profiles is unfiltered, not id=eq.<memberId>: this page also shows the member's live rank
-  // (getMemberStanding), which moves whenever any other member's balance does.
+  // (getMemberStanding), which moves whenever any other member's balance does. activity_events
+  // carries every kind this page shows, task approvals and resolutions included.
   member(memberId: string): LiveSubscription[] {
     return [
+      { table: 'activity_events', filter: `actor_id=eq.${memberId}` },
       { table: 'profiles' },
-      { table: 'bets', filter: `profile_id=eq.${memberId}` },
-      { table: 'parlays', filter: `profile_id=eq.${memberId}` },
     ]
   },
-  // market_created feed rows come from markets, not bets.
+  // Every feed kind is a row in activity_events now, so it's the only table to watch.
   feed(): LiveSubscription[] {
-    return [
-      { table: 'bets' },
-      { table: 'parlays' },
-      { table: 'task_completions' },
-      { table: 'market_resolutions' },
-      { table: 'markets' },
-    ]
+    return [{ table: 'activity_events' }]
   },
   tasks(userId: string): LiveSubscription[] {
     return [{ table: 'tasks' }, { table: 'task_completions', filter: `profile_id=eq.${userId}` }]

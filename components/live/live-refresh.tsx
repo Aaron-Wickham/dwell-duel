@@ -17,6 +17,7 @@ export const LIVE_TABLES = [
   'tasks',
   'task_completions',
   'profiles',
+  'activity_events',
 ] as const
 
 export type LiveTable = (typeof LIVE_TABLES)[number]

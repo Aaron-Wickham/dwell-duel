@@ -127,9 +127,17 @@ create index markets_current_resolution_id_idx on public.markets (current_resolu
 -- enough: two concurrent calls whose bettors or parlay owners cross, in
 -- different per-phase orders, could still deadlock. With the market row
 -- locked first, this up-front lock gives every call the same global order:
--- market row, then profiles by id, then (via settle_parlay) parlays. The
--- per-loop `order by profile_id, id` stays, for determinism, but re-locks
--- rows this call already holds -- it's the up-front lock that rules out the
+-- market row, then profiles by id, then (via settle_parlay) parlays. It
+-- takes that profile lock FOR NO KEY UPDATE, not FOR UPDATE:
+-- market_resolutions.resolved_by and .reversed_by reference profiles, so
+-- writing them takes FOR KEY SHARE on the acting admin's own profile row,
+-- and FOR KEY SHARE conflicts with FOR UPDATE but not with FOR NO KEY
+-- UPDATE -- FOR UPDATE here would deadlock a concurrent resolve against a
+-- concurrent approval the moment their profile locks crossed. FOR NO KEY
+-- UPDATE still serialises every balance write, since
+-- apply_coin_transaction's own UPDATE takes that same lock. The per-loop
+-- `order by profile_id, id` stays, for determinism, but re-locks rows this
+-- call already holds -- it's the up-front lock that rules out the
 -- deadlock. The reversal also finds its ledger rows by the text
 -- resolution_id, which section 2's index serves, rather than a ::uuid cast.
 -- create or replace keeps both functions' grants.
@@ -202,12 +210,14 @@ begin
   -- of parlays with a leg here. See the note above the two functions for why
   -- this -- not the per-phase ordering below -- is what rules out a
   -- cross-phase deadlock. When there's no current resolution, the first
-  -- branch of the union matches no rows.
+  -- branch of the union matches no rows. NO KEY UPDATE, not UPDATE -- see
+  -- the note above this function for why FOR UPDATE here would deadlock
+  -- against the FK check's FOR KEY SHARE on resolved_by/reversed_by.
   perform 1 from public.profiles where id in (
     select profile_id from public.coin_transactions where meta ->> 'resolution_id' = v_current_resolution_id::text
     union select profile_id from public.bets where market_id = p_market_id
     union select pa.profile_id from public.parlays pa join public.parlay_legs l on l.parlay_id = pa.id where l.market_id = p_market_id
-  ) order by id for update;
+  ) order by id for no key update;
 
   -- An override claws back every payout of the current resolution, and
   -- settle_parlay reverses every won parlay whose leg here picked the old
@@ -247,7 +257,10 @@ begin
         group by c.profile_id
       ) o on o.profile_id = p.id
       order by p.id
-      for update of p
+      -- NO KEY UPDATE, not UPDATE: same FK-conflict reason as the up-front
+      -- lock above -- FOR UPDATE would deadlock against resolved_by/
+      -- reversed_by's FOR KEY SHARE.
+      for no key update of p
     ) m;
 
     if v_short is not null then
@@ -359,11 +372,13 @@ begin
   -- leg here. A voided market only ever had status 'open' (checked above),
   -- so it never has a current resolution to reverse -- see the note above
   -- resolve_market and void_market for why this, not the per-loop ordering
-  -- below, is what rules out a cross-phase deadlock.
+  -- below, is what rules out a cross-phase deadlock. NO KEY UPDATE, not
+  -- UPDATE -- see that same note for why FOR UPDATE here would deadlock
+  -- against the FK check's FOR KEY SHARE on resolved_by/reversed_by.
   perform 1 from public.profiles where id in (
     select profile_id from public.bets where market_id = p_market_id
     union select pa.profile_id from public.parlays pa join public.parlay_legs l on l.parlay_id = pa.id where l.market_id = p_market_id
-  ) order by id for update;
+  ) order by id for no key update;
 
   update public.markets set status = 'voided' where id = p_market_id;
 
@@ -391,9 +406,16 @@ $$;
 -- own row while the rest still go through. Ids run in ascending order, so two
 -- overlapping batches lock completions in the same sequence. Before that loop,
 -- this call also takes every lock it could need in one statement: the batch's
--- completions in id order, then -- on approval -- their owning profiles, also
--- in id order. That's the same order a single approve_task_completion call
--- takes (completion, then profile) and the same order resolve_market/
+-- completions in id order (FOR UPDATE -- nothing else takes a conflicting
+-- lock on task_completions), then -- on approval -- their owning profiles,
+-- also in id order but FOR NO KEY UPDATE, not FOR UPDATE:
+-- task_completions.reviewed_by references profiles, so approving takes FOR
+-- KEY SHARE on the acting admin's own profile row, and FOR UPDATE here would
+-- deadlock against that the moment a concurrent approval and a concurrent
+-- resolve/void's up-front lock crossed. That's the same order and lock
+-- strength a single approve_task_completion call takes (completion FOR
+-- UPDATE, then profile implicitly FOR NO KEY UPDATE via
+-- apply_coin_transaction's own UPDATE) and the same order resolve_market/
 -- void_market take their up-front profile locks in, so an overlapping batch,
 -- a concurrent single review, or a concurrent resolve/void can't deadlock
 -- against this one. Reject doesn't credit, but locking its completions up
@@ -417,9 +439,11 @@ begin
 
   perform 1 from public.task_completions tc where tc.id = any(p_ids) order by tc.id for update;
   if p_approve then
+    -- NO KEY UPDATE, not UPDATE: see the note above this function for why
+    -- FOR UPDATE here would deadlock against reviewed_by's FOR KEY SHARE.
     perform 1 from public.profiles p where p.id in (
       select tc.profile_id from public.task_completions tc where tc.id = any(p_ids)
-    ) order by p.id for update;
+    ) order by p.id for no key update;
   end if;
 
   for v_id in select distinct u.v from unnest(p_ids) as u(v) order by u.v loop

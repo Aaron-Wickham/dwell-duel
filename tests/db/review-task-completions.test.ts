@@ -156,7 +156,7 @@ describe('review_task_completions', () => {
     `)
 
     expect(row.src).toMatch(/task_completions tc where tc\.id = any\(p_ids\) order by tc\.id for update/)
-    expect(row.src).toMatch(/profiles p where p\.id in[\s\S]*order by p\.id for update/)
+    expect(row.src).toMatch(/profiles p where p\.id in[\s\S]*order by p\.id for no key update/)
   })
 
   it('refuses a member who is not an admin, changing nothing', async () => {

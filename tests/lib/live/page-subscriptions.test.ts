@@ -68,22 +68,15 @@ describe('pageSubscriptions', () => {
     expect(pageSubscriptions.leaderboard()).toEqual([{ table: 'profiles' }])
   })
 
-  it('member watches every profile for live ranks, and carries the member id through bets and parlays', () => {
+  it('member watches every profile for live ranks, and carries the member id through activity_events', () => {
     expect(pageSubscriptions.member(MEMBER_ID)).toEqual([
+      { table: 'activity_events', filter: `actor_id=eq.${MEMBER_ID}` },
       { table: 'profiles' },
-      { table: 'bets', filter: `profile_id=eq.${MEMBER_ID}` },
-      { table: 'parlays', filter: `profile_id=eq.${MEMBER_ID}` },
     ])
   })
 
-  it('feed watches every table its event kinds come from, including markets for market_created', () => {
-    expect(pageSubscriptions.feed()).toEqual([
-      { table: 'bets' },
-      { table: 'parlays' },
-      { table: 'task_completions' },
-      { table: 'market_resolutions' },
-      { table: 'markets' },
-    ])
+  it('feed watches only activity_events, now that every event kind is a row in it', () => {
+    expect(pageSubscriptions.feed()).toEqual([{ table: 'activity_events' }])
   })
 
   it('tasks filters task_completions to the signed-in member', () => {

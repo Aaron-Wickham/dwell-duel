@@ -4,10 +4,10 @@ import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { subscriptionKey, useLiveBaseSubscription, usePageSubscriptions } from './live-tables'
 
-// Every table a signed-in page reads its live numbers from. supabase/migrations/0032 adds them to
-// the realtime publication; Postgres Changes then only delivers rows the member's RLS lets them
-// read -- except DELETE events, which skip RLS and carry only the primary key. LiveRefresh never
-// reads payloads either way; it just triggers a refresh, which re-reads through RLS.
+// Every table a signed-in page reads its live numbers from. supabase/migrations/0032 and 0035
+// publish them to the realtime publication; Postgres Changes then only delivers rows the member's
+// RLS lets them read -- except DELETE events, which skip RLS and carry only the primary key.
+// LiveRefresh never reads payloads either way; it just triggers a refresh, which re-reads through RLS.
 export const LIVE_TABLES = [
   'bets',
   'markets',
@@ -17,6 +17,7 @@ export const LIVE_TABLES = [
   'tasks',
   'task_completions',
   'profiles',
+  'activity_events',
 ] as const
 
 export type LiveTable = (typeof LIVE_TABLES)[number]

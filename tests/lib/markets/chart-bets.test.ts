@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { getChartBets, listChartBets, readCharts } from '@/lib/markets/chart-bets'
+import { describe, it, expect } from 'vitest'
+import { getChartBets } from '@/lib/markets/chart-bets'
 import { newerThanFilter } from '@/lib/pagination/keyset'
 import { fakeSupabase } from '../fake-supabase'
 
@@ -49,55 +49,5 @@ describe('getChartBets', () => {
   it('throws when a read fails', async () => {
     const { client } = fakeSupabase(() => ({ error: new Error('read failed') }))
     await expect(getChartBets(client, 'm1')).rejects.toThrow('read failed')
-  })
-})
-
-describe('listChartBets', () => {
-  it('reads the listed markets in chunks of at most 50 ids, and groups each one’s bets', async () => {
-    const ids = Array.from({ length: 120 }, (_, i) => `m${i}`)
-    const { client, queries } = fakeSupabase((query) => {
-      const part = query.in[0][1] as string[]
-      return { data: part.map((id, i) => betRow(i + 1, id)) }
-    })
-
-    const byMarket = await listChartBets(client, ids)
-
-    expect(queries.map((q) => (q.in[0][1] as string[]).length)).toEqual([50, 50, 20])
-    expect(queries.flatMap((q) => q.in[0][1] as string[])).toEqual(ids)
-    expect([...byMarket.keys()]).toEqual(ids)
-    expect(byMarket.get('m119')).toEqual([{ outcomeId: 'o-m119', amount: 20, createdAt: betRow(20).created_at }])
-  })
-
-  it('makes no request for no markets', async () => {
-    const { client, queries } = fakeSupabase(() => ({ data: [] }))
-    expect(await listChartBets(client, [])).toEqual(new Map())
-    expect(queries).toHaveLength(0)
-  })
-})
-
-describe('readCharts', () => {
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
-  it('logs and resolves to an empty map when the chart read fails', async () => {
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const { client } = fakeSupabase(() => ({ error: new Error('read failed') }))
-
-    const byMarket = await readCharts(client, ['m1'])
-
-    expect(byMarket).toEqual(new Map())
-    expect(spy).toHaveBeenCalledTimes(1)
-    expect(spy.mock.calls[0][0]).toBe('Market charts failed to load')
-  })
-
-  it('returns the grouped points when the read succeeds', async () => {
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const { client } = fakeSupabase(() => ({ data: [betRow(1, 'm1')] }))
-
-    const byMarket = await readCharts(client, ['m1'])
-
-    expect(byMarket).toEqual(new Map([['m1', [{ outcomeId: 'o-m1', amount: 1, createdAt: betRow(1, 'm1').created_at }]]]))
-    expect(spy).not.toHaveBeenCalled()
   })
 })

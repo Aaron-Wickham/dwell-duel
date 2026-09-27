@@ -9,8 +9,7 @@ import { listClosedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
 import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { marketCardStatus, type MarketCardStatus } from '@/lib/markets/market-status'
-import { readCharts } from '@/lib/markets/chart-bets'
-import { buildProbabilitySeries } from '@/lib/markets/probability-series'
+import { readSparklines } from '@/lib/markets/sparklines'
 import { newestHref, readPageParams, showMoreHref } from '@/lib/pagination/cursor'
 import { Page, PageHeader, h2Class } from '@/components/ui/page'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -36,7 +35,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     listClosedMarkets(supabase, readPageParams(searchParams, 'resolved')),
   ])
   const markets = [...open, ...closed.rows]
-  const chartBetsByMarket = await readCharts(
+  const sparklinesByMarket = await readSparklines(
     supabase,
     markets.map((m) => m.id),
   )
@@ -46,19 +45,16 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
 
   const cards = markets.map((market) => {
     const odds = computeOdds(market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })))
-    const chartBets = chartBetsByMarket.get(market.id) ?? []
+    const points = sparklinesByMarket.get(market.id) ?? []
     const chart: MarketCardChart | undefined =
-      chartBets.length > 0
+      points.length > 0
         ? {
             outcomes: odds.map((o, index) => ({
               id: o.outcomeId,
               label: o.label,
               series: outcomeSeries(market.kind, o.label, index),
             })),
-            points: buildProbabilitySeries(
-              odds.map((o) => o.outcomeId),
-              chartBets,
-            ),
+            points,
             now: nowMs,
           }
         : undefined

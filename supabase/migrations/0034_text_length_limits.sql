@@ -5,6 +5,15 @@
 -- over each new limit before any constraint exists below, and raises if it
 -- finds any; the whole migration is one transaction, so a raise here leaves
 -- the database untouched instead of applying half the limits.
+
+-- The lock holds until commit, so no row can slip in between the guard's
+-- check and the constraints being added. The migration runner applies each
+-- statement on its own, autocommitting by default, so the lock needs an
+-- explicit transaction (closed by the commit at the end of this file) to
+-- outlive the statement that takes it.
+begin;
+lock table public.markets, public.market_outcomes, public.tasks, public.task_completions, public.allowed_emails, public.profiles in share row exclusive mode;
+
 do $$
 declare
   parts text[] := '{}';
@@ -43,9 +52,9 @@ $$;
 -- Length limits on member-entered text. lib/forms/limits.ts holds the same
 -- numbers, so the forms explain a limit before the database has to refuse it.
 --
--- NOT VALID: every insert and update from now on is checked, but existing rows
--- aren't, so this migration can't fail on production data nobody has
--- inspected. A null in a nullable column passes.
+-- NOT VALID: the guard above already refused any row already over the limit,
+-- so this only skips a second full scan of the table while the lock is held.
+-- It still binds every later insert and update. A null in a nullable column passes.
 alter table public.markets
   add constraint markets_title_length check (char_length(title) <= 120) not valid;
 alter table public.markets
@@ -95,3 +104,5 @@ begin
   );
 end;
 $$;
+
+commit;

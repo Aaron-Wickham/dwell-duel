@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { TEXT_LIMITS } from '@/lib/forms/limits'
 
 export type CreateOwnProfileResult = { ok: true } | { ok: false; reason: 'not_invited' | 'error' }
 
@@ -16,9 +17,12 @@ export async function createOwnProfile(
   displayName: string,
   avatarUrl: string | null,
 ): Promise<CreateOwnProfileResult> {
+  // A Google name can be longer than profiles_display_name_length allows; sign-up must not fail on it.
+  // Cut by code point, which is what char_length counts, so no emoji is split in half.
+  const name = Array.from(displayName).slice(0, TEXT_LIMITS.displayName).join('')
   const { error } = await supabase
     .from('profiles')
-    .insert({ id: userId, email, display_name: displayName, avatar_url: avatarUrl })
+    .insert({ id: userId, email, display_name: name, avatar_url: avatarUrl })
 
   if (!error) return { ok: true }
 

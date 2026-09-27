@@ -13,20 +13,25 @@ export const pageSubscriptions = {
   },
   // The HomeHero's pending-review count and the admin tile's pending-approvals count both only
   // change via task_completions -- a rejection moves no balance, so bets/profiles don't cover it.
-  // An admin needs every submission; a member only needs their own.
+  // An admin needs every submission; a member only needs their own. profiles is unfiltered so the
+  // rank and member count (getMemberStanding) refresh when any member's balance changes, not just
+  // this member's own.
   home({ me, admin }: { me: string; admin: boolean }): LiveSubscription[] {
     return [
       { table: 'markets' },
       { table: 'tasks' },
+      { table: 'profiles' },
       admin ? { table: 'task_completions' } : { table: 'task_completions', filter: `profile_id=eq.${me}` },
     ]
   },
   leaderboard(): LiveSubscription[] {
     return [{ table: 'profiles' }]
   },
+  // profiles is unfiltered, not id=eq.<memberId>: this page also shows the member's live rank
+  // (getMemberStanding), which moves whenever any other member's balance does.
   member(memberId: string): LiveSubscription[] {
     return [
-      { table: 'profiles', filter: `id=eq.${memberId}` },
+      { table: 'profiles' },
       { table: 'bets', filter: `profile_id=eq.${memberId}` },
       { table: 'parlays', filter: `profile_id=eq.${memberId}` },
     ]

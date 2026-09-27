@@ -44,7 +44,7 @@ export function PlacedParlay({ parlay }: { parlay: ParlayView }) {
         {parlay.legs.map((leg) => (
           <li key={leg.marketId} className="flex items-center justify-between gap-3 py-2 text-[15px]">
             <span className="min-w-0 grow">
-              <Link href={`/markets/${leg.marketId}`} transitionTypes={['nav-forward']}>
+              <Link href={`/markets/${leg.marketId}`} transitionTypes={['nav-forward']} className="hit-area">
                 {leg.marketTitle}
               </Link>
               {' — '}

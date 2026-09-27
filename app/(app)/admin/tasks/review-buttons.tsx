@@ -5,6 +5,7 @@ import { approveTaskCompletionAction, rejectTaskCompletionAction, type ActionSta
 import { Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 
 export function ReviewButtons({ completionId }: { completionId: string }) {
@@ -45,6 +46,7 @@ export function ReviewButtons({ completionId }: { completionId: string }) {
             id={reasonId}
             name="reason"
             placeholder="Reason (optional)"
+            maxLength={TEXT_LIMITS.reviewNote}
             className="min-h-11 md:grow"
             aria-invalid={Boolean(rejectState?.formError)}
             aria-describedby={rejectState?.formError ? rejectErrorId : undefined}

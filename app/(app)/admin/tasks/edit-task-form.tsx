@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Field, Input, Textarea } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { TEXT_LIMITS } from '@/lib/forms/limits'
 
 export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSummary; onDone: () => void }) {
   const [state, formAction] = useActionState<ActionState, FormData>(async (prevState, formData) => {
@@ -24,12 +25,20 @@ export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSumma
           name="title"
           defaultValue={task.title}
           required
+          maxLength={TEXT_LIMITS.taskTitle}
           aria-invalid={state?.field === 'title'}
           aria-describedby={state?.field === 'title' ? errorId : undefined}
         />
       </Field>
       <Field label="Description" htmlFor={`${id}-description`}>
-        <Textarea id={`${id}-description`} name="description" defaultValue={task.description ?? ''} />
+        <Textarea
+          id={`${id}-description`}
+          name="description"
+          defaultValue={task.description ?? ''}
+          maxLength={TEXT_LIMITS.taskDescription}
+          aria-invalid={state?.field === 'description'}
+          aria-describedby={state?.field === 'description' ? errorId : undefined}
+        />
       </Field>
       <Field label="Reward (DC)" htmlFor={`${id}-reward`}>
         <Input

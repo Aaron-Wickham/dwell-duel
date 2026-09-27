@@ -8,6 +8,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { Field, Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 
 export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
@@ -27,7 +28,11 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
         <div className="flex items-center gap-3 md:w-60 md:shrink-0 md:self-center">
           <Avatar name={member.displayName} />
           <div className="flex min-w-0 grow flex-col">
-            <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="font-extrabold">
+            <Link
+              href={`/members/${member.id}`}
+              transitionTypes={['nav-forward']}
+              className="hit-area font-extrabold"
+            >
               {member.displayName}
             </Link>
             <span className="text-sm text-ink2 tabular-nums">{member.balance} DC</span>
@@ -51,6 +56,7 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
               <Input
                 id={reasonId}
                 name="reason"
+                maxLength={TEXT_LIMITS.adjustReason}
                 aria-invalid={state?.field === 'reason'}
                 aria-describedby={state?.field === 'reason' ? errorId : undefined}
               />

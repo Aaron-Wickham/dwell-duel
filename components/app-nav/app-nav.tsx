@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { MotionConfig, motion } from 'motion/react'
 import { BookOpen, ChartColumn, CircleDot, House, Layers, MessageSquareText, ShieldCheck, Trophy, type LucideIcon } from 'lucide-react'
 import NumberFlow from '@number-flow/react'
+import { BetaBadge } from '@/components/brand/beta-badge'
 import { Wordmark } from '@/components/brand/wordmark'
 import { AnimatedText } from '@/components/ui/animated-text'
 import { NavPendingHint } from '@/components/nav/nav-pending-hint'
@@ -110,7 +111,10 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
         style={{ viewTransitionName: 'app-header' }}
         className="no-callout sticky top-(--safe-top) z-30 hidden h-[72px] shrink-0 items-center gap-5 border-b border-line bg-surface px-10 md:flex"
       >
-        <Wordmark />
+        <div className="flex items-center gap-2">
+          <Wordmark />
+          <BetaBadge />
+        </div>
         <nav aria-label="Primary" className="flex items-center gap-0.5">
           {NAV_ITEMS.map((item) => (
             <DesktopLink
@@ -143,7 +147,12 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
         style={{ viewTransitionName: 'app-topbar' }}
         className="no-callout sticky top-(--safe-top) z-30 flex h-16 shrink-0 items-center gap-1 border-b border-line bg-surface pr-2 pl-3 md:hidden"
       >
-        <Wordmark size="sm" />
+        {/* At 375px with a five-digit balance there's no width to spare beside the wordmark, so the
+            badge tucks under its right end instead. It's decorative, so taps pass through to the link. */}
+        <div className="relative shrink-0">
+          <Wordmark size="sm" />
+          <BetaBadge className="pointer-events-none absolute right-1 -bottom-1.5 h-3.5 px-1.5 text-[9px]" />
+        </div>
         <span className="grow" />
         <BalanceChip balance={balance} />
         {isAdmin && (

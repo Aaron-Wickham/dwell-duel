@@ -212,6 +212,14 @@ describe('AppNav', () => {
     expect(screen.getAllByRole('link', { name: 'Parlays (1)' })).toHaveLength(2)
   })
 
+  it('shows the Beta badge beside the wordmark in both headers, without changing the home link name', () => {
+    render(<Nav balance={120} slipCount={0} isAdmin={false} />)
+    const homeLinks = screen.getAllByRole('link', { name: 'DwellDuel home' })
+    expect(homeLinks).toHaveLength(2)
+    for (const link of homeLinks) expect(link).not.toHaveTextContent('Beta')
+    expect(screen.getAllByText('Beta')).toHaveLength(2)
+  })
+
   it('taps on a phone tab press, and not on a desktop link', () => {
     // Cancelled before React sees the click, so jsdom never attempts the real navigation.
     const cancel = (event: Event) => event.preventDefault()

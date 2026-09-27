@@ -1,0 +1,61 @@
+import { describe, it, expect } from 'vitest'
+import { ALWAYS_REQUIRED, PRODUCTION_REQUIRED, assertRequiredEnv, missingEnv } from '@/lib/env/required'
+
+const BASE = {
+  NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+}
+
+const PRODUCTION = {
+  ...BASE,
+  SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+  CRON_SECRET: 'cron-secret',
+  VERCEL_ENV: 'production',
+}
+
+describe('missingEnv', () => {
+  it('is empty when every always-required var is set, outside production', () => {
+    expect(missingEnv(BASE)).toEqual([])
+  })
+
+  it('names every missing always-required var', () => {
+    expect(missingEnv({})).toEqual([...ALWAYS_REQUIRED])
+    expect(missingEnv({ NEXT_PUBLIC_SUPABASE_URL: 'https://x.supabase.co' })).toEqual(['NEXT_PUBLIC_SUPABASE_ANON_KEY'])
+  })
+
+  it('also requires the production vars, but only when VERCEL_ENV is production', () => {
+    expect(missingEnv({ ...BASE, VERCEL_ENV: 'preview' })).toEqual([])
+    expect(missingEnv({ ...BASE, VERCEL_ENV: 'development' })).toEqual([])
+    expect(missingEnv({ ...BASE, VERCEL_ENV: 'production' })).toEqual([...PRODUCTION_REQUIRED])
+  })
+
+  it('is empty in production once every var is set', () => {
+    expect(missingEnv(PRODUCTION)).toEqual([])
+  })
+
+  it('treats an empty string the same as unset', () => {
+    expect(missingEnv({ ...BASE, NEXT_PUBLIC_SUPABASE_ANON_KEY: '' })).toEqual(['NEXT_PUBLIC_SUPABASE_ANON_KEY'])
+  })
+})
+
+describe('assertRequiredEnv', () => {
+  it('does not throw when nothing is missing', () => {
+    expect(() => assertRequiredEnv(BASE)).not.toThrow()
+    expect(() => assertRequiredEnv(PRODUCTION)).not.toThrow()
+  })
+
+  it('throws naming every missing var', () => {
+    expect(() => assertRequiredEnv({ ...BASE, VERCEL_ENV: 'production', SUPABASE_SERVICE_ROLE_KEY: 'x' })).toThrow(
+      'Missing required environment variables: CRON_SECRET',
+    )
+  })
+
+  it("never includes a variable's value in the message", () => {
+    expect.assertions(1)
+    try {
+      assertRequiredEnv({ ...BASE, VERCEL_ENV: 'production', SUPABASE_SERVICE_ROLE_KEY: 'super-secret-value' })
+    } catch (error) {
+      expect((error as Error).message).not.toContain('super-secret-value')
+    }
+  })
+})

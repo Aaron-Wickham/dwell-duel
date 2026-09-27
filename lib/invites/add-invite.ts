@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 
 export interface AddInviteResult {
   ok: boolean
@@ -19,6 +20,9 @@ export async function addInvite(
   rawEmail: string,
 ): Promise<AddInviteResult> {
   const email = rawEmail.trim().toLowerCase()
+  if (email.length > TEXT_LIMITS.inviteEmail) {
+    return { ok: false, formError: tooLong('Email', TEXT_LIMITS.inviteEmail) }
+  }
   if (!EMAIL_PATTERN.test(email)) {
     return { ok: false, formError: 'Enter a valid email address.' }
   }

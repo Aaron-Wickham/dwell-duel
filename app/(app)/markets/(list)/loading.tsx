@@ -3,6 +3,8 @@ import { Skeleton, SkeletonCard, SkeletonPageHeader, SkeletonScreen } from '@/co
 
 // Mirrors the markets list: header with Create market, then one status group of market cards,
 // three across from lg.
+// It sits in the (list) group because a loading.tsx also wraps every segment below it, and market
+// detail's real 404 needs nothing above it that streams.
 export default function Loading() {
   return (
     <SkeletonScreen name="markets" className={pageClass}>

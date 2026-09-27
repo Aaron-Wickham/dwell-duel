@@ -13,4 +13,9 @@ describe('SignInPage', () => {
     expect(screen.getByRole('heading', { name: /Friendly bets/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument()
   })
+
+  it('shows the Beta badge under the symbol', () => {
+    render(<SignInPage />)
+    expect(screen.getByText('Beta')).toBeInTheDocument()
+  })
 })

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { ChartColumn, Layers, BookOpen, MessageSquareText, Trophy, ShieldCheck, LogOut } from 'lucide-react'
+import { ChartColumn, Layers, BookOpen, MessageSquareText, Trophy, ShieldCheck, LogOut, Mail } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
@@ -15,6 +15,7 @@ import { HomeHero } from '@/components/home/home-hero'
 import { HomeTiles, type HomeTile } from '@/components/home/home-tiles'
 import { InstallCard } from '@/components/home/install-card'
 import { adminTileSubtitle, leaderboardTileSubtitle, marketsTileSubtitle, parlaysTileSubtitle } from '@/lib/home/copy'
+import { feedbackHref } from '@/lib/app-shell/feedback'
 import { cn } from '@/lib/utils'
 
 export default async function Home() {
@@ -57,6 +58,13 @@ export default async function Home() {
       subtitle: adminTileSubtitle(pendingApprovals.length),
     })
   }
+  tiles.push({
+    id: 'feedback',
+    href: feedbackHref(),
+    icon: Mail,
+    title: 'Send feedback',
+    subtitle: 'Tell Aaron what’s working and what isn’t',
+  })
 
   return (
     <Page transition="tab">

@@ -83,7 +83,9 @@ export function MarketCard({
         </span>
       </div>
       <h3 className="text-[18px] font-extrabold leading-[1.3] tracking-[-0.01em]">
-        <Link href={`/markets/${id}`} transitionTypes={['nav-forward']}>{title}</Link>
+        <Link href={`/markets/${id}`} transitionTypes={['nav-forward']} className="hit-area">
+          {title}
+        </Link>
       </h3>
       {hasBets ? (
         <>

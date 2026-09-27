@@ -85,4 +85,9 @@ describe('PlacedParlay', () => {
     expect(screen.getByText('voided')).toHaveClass('bg-sunk', 'text-ink2')
     expect(screen.getByText('pending')).toHaveClass('bg-gold-soft', 'text-gold')
   })
+
+  it('gives each leg link a 44px tap target', () => {
+    renderParlay(parlay({}))
+    for (const link of screen.getAllByRole('link')) expect(link).toHaveClass('hit-area')
+  })
 })

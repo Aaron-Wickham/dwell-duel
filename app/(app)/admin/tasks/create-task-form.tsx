@@ -5,6 +5,7 @@ import { createTaskAction, type ActionState } from '@/lib/tasks/create-task'
 import { Field, Input, Select, Textarea } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { TEXT_LIMITS } from '@/lib/forms/limits'
 
 export function CreateTaskForm() {
   const [isRepeatable, setIsRepeatable] = useState(false)
@@ -17,12 +18,19 @@ export function CreateTaskForm() {
           id="create-task-title"
           name="title"
           required
+          maxLength={TEXT_LIMITS.taskTitle}
           aria-invalid={state?.field === 'title'}
           aria-describedby={state?.field === 'title' ? 'create-task-error' : undefined}
         />
       </Field>
       <Field label="Description" htmlFor="create-task-description">
-        <Textarea id="create-task-description" name="description" />
+        <Textarea
+          id="create-task-description"
+          name="description"
+          maxLength={TEXT_LIMITS.taskDescription}
+          aria-invalid={state?.field === 'description'}
+          aria-describedby={state?.field === 'description' ? 'create-task-error' : undefined}
+        />
       </Field>
       <Field label="Reward (DC)" htmlFor="create-task-reward">
         <Input

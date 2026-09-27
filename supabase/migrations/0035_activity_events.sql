@@ -328,4 +328,78 @@ begin
 end
 $$;
 
+-- A small chart series per market card on /markets, so the list no longer
+-- reads every bet ever placed on every card it shows. Same maths as
+-- buildProbabilitySeries (lib/markets/probability-series.ts): bets in
+-- (created_at, id) order, each outcome's running pool over the running total,
+-- over that market's own outcomes. Only the shares at up to p_points evenly
+-- spaced bets come back, always the first and the last, so the line spans the
+-- same time as the full chart and ends at today's split. A market with no bets
+-- returns no row.
+--
+-- One row per market, its points a JSON array in bet order, so a call of 50
+-- ids is at most 50 rows: one row per point would reach 2,000 at the default
+-- and be cut short by PostgREST's max_rows without an error.
+--
+-- Security invoker, so the caller's access rules on bets and market_outcomes
+-- apply, as they do to the reads it replaces: an uninvited caller gets
+-- nothing. No set search_path: Postgres only inlines a SQL function that has
+-- no SET clause, which lets the planner see the bet reads (and EXPLAIN show
+-- them). Every relation is schema-qualified, the functions it calls resolve
+-- from pg_catalog, and an invoker function runs with the caller's own rights,
+-- so the caller's search_path can only affect them.
+--
+-- The caps are silent: ids past the 50th are ignored, and p_points is clamped
+-- to 1..200. lib/markets/sparklines.ts sends at most 50 ids per call.
+create function public.market_sparklines(p_market_ids uuid[], p_points integer default 40)
+returns table (market_id uuid, points jsonb)
+language sql
+stable
+as $$
+  with ids as (
+    select distinct u.id
+    from unnest(p_market_ids[1:50]) as u(id)
+  ),
+  ordered as (
+    select b.market_id, b.outcome_id, b.amount, b.created_at,
+      row_number() over (partition by b.market_id order by b.created_at, b.id) as n
+    from public.bets b
+    where b.market_id in (select ids.id from ids)
+  ),
+  sized as (
+    select o.market_id, count(*) as bets,
+      least(count(*), greatest(1, least(coalesce(p_points, 40), 200))) as points
+    from ordered o
+    group by o.market_id
+  ),
+  picked as (
+    select s.market_id,
+      case when s.points = 1 then s.bets else 1 + (g.i - 1) * (s.bets - 1) / (s.points - 1) end as n
+    from sized s
+    cross join lateral generate_series(1, s.points) as g(i)
+  ),
+  running as (
+    select o.market_id, o.n, o.created_at, mo.id as outcome_id,
+      sum(case when o.outcome_id = mo.id then o.amount else 0 end) over w as pool,
+      sum(o.amount) over w as total
+    from ordered o
+    join public.market_outcomes mo on mo.market_id = o.market_id
+    window w as (partition by o.market_id, mo.id order by o.n)
+  ),
+  chosen as (
+    select r.market_id, r.n, r.created_at,
+      jsonb_object_agg(r.outcome_id, r.pool::double precision / r.total::double precision) as shares
+    from running r
+    join picked p on p.market_id = r.market_id and p.n = r.n
+    group by r.market_id, r.n, r.created_at
+  )
+  select c.market_id, jsonb_agg(jsonb_build_object('t', c.created_at, 'shares', c.shares) order by c.n)
+  from chosen c
+  group by c.market_id
+  order by c.market_id
+$$;
+
+revoke execute on function public.market_sparklines(uuid[], integer) from public, anon;
+grant execute on function public.market_sparklines(uuid[], integer) to authenticated, service_role;
+
 commit;

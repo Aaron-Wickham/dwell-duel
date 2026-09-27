@@ -171,7 +171,7 @@ The feed's cursor is `(occurred_at, id)`. The view's text `id` works as the tieb
 - The database's existing 8-second `statement_timeout` on `authenticated` stays.
 
 **3d. Keep-alive job.**
-- `vercel.json` runs it at `0 0 * * 1,4`, Monday and Thursday. Supabase pauses a free project after 7 days idle, so one missed run no longer pauses it.
+- `vercel.json` runs it daily at `0 0 * * *`. Supabase pauses a free project after 7 days idle, so even a missed run leaves six days of margin.
 - The route (`app/api/cron/keep-alive/route.ts:27-31`) logs the error with `console.error` before returning 502.
 - The comment claiming the weekly schedule had margin is corrected.
 
@@ -196,7 +196,7 @@ The feed's cursor is `(occurred_at, id)`. The view's text `id` works as the tieb
 
 **4c. Live updates for what's on screen.**
 - **The base channel.** `LiveRefresh` in the `(app)` layout keeps a base channel for its whole lifetime, listening to `profiles` filtered `id=eq.<me>`. That keeps the top-bar balance live on every page, and navigation never tears it down.
-- **Per-page declarations.** Pages declare what they show with `<LiveTables tables={[...]} />`, a client component that registers its subscriptions in a context. On navigation a separate page channel is rebuilt from the current page's declarations; the base channel stays up. Each entry is `{ table, filter? }`, using Postgres Changes' single `column=eq.value` filter.
+- **Per-page declarations.** Pages declare what they show with `<LiveTables subscriptions={pageSubscriptions.<page>(...)} />`, a client component that registers its subscriptions in a context. On navigation a separate page channel is rebuilt from the current page's declarations; the base channel stays up. Each entry is `{ table, filter? }`, using Postgres Changes' single `column=eq.value` filter.
 
 | Page | Subscriptions |
 |---|---|

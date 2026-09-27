@@ -120,6 +120,24 @@ describe('market_sparklines', () => {
     expect(points.at(-1)!.shares[market.outcomeIds[0]]).toBeCloseTo(17 / 24, 12)
   })
 
+  it('breaks same-instant ties by id, the same order fullSeries reads and buildProbabilitySeries keeps', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    const tie = new Date('2026-09-01T00:00:00.000Z').toISOString()
+    const { error } = await serviceClient()
+      .from('bets')
+      .insert([
+        { market_id: market.marketId, outcome_id: market.outcomeIds[1], profile_id: bob.id, amount: 9, created_at: tie },
+        { market_id: market.marketId, outcome_id: market.outcomeIds[0], profile_id: alice.id, amount: 3, created_at: tie },
+        { market_id: market.marketId, outcome_id: market.outcomeIds[0], profile_id: alice.id, amount: 5, created_at: tie },
+      ])
+    if (error) throw error
+
+    const points = await pointsOf(bobClient, market)
+    const series = await fullSeries(market)
+    expect(series).toHaveLength(3)
+    expectSameSeries(points, series)
+  })
+
   it('picks at most p_points evenly spaced bets, always the first and the last', async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await insertBets(market, 25)
@@ -132,6 +150,26 @@ describe('market_sparklines', () => {
 
     // The default is 40 points, more than this market's 25 bets, so every bet comes back.
     expectSameSeries(await pointsOf(bobClient, market), series)
+  })
+
+  it('returns every bet when a market has exactly p_points bets', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await insertBets(market, 40)
+    const series = await fullSeries(market)
+    expect(series).toHaveLength(40)
+    expectSameSeries(await pointsOf(bobClient, market), series)
+  })
+
+  it('treats a null p_points as the default of 40', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await insertBets(market, 45)
+    const series = await fullSeries(market)
+
+    const { data, error } = await bobClient.rpc('market_sparklines', { p_market_ids: [market.marketId], p_points: null })
+    if (error) throw error
+    const rows = data as SparklineRow[]
+    expect(rows.map((r) => r.market_id)).toEqual([market.marketId])
+    expectSameSeries(rows[0].points, picked(series, 40))
   })
 
   it('caps p_points at 200, and keeps the last bet when asked for fewer than one', async () => {
@@ -161,6 +199,15 @@ describe('market_sparklines', () => {
     expectSameSeries(rows.find((r) => r.market_id === first.marketId)!.points, await fullSeries(first))
     expectSameSeries(rows.find((r) => r.market_id === second.marketId)!.points, await fullSeries(second))
     expect(await sparklines(bobClient, [empty.marketId])).toEqual([])
+  })
+
+  it('returns one row even when the same market id is sent twice', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await placeBet(aliceClient, market, 0, 5)
+
+    const rows = await sparklines(bobClient, [market.marketId, market.marketId])
+    expect(rows).toHaveLength(1)
+    expect(rows[0].market_id).toBe(market.marketId)
   })
 
   it('reads at most 50 market ids per call, and returns every point of all 50 in one response', async () => {
@@ -213,6 +260,51 @@ describe('market_sparklines', () => {
     expect(within.find((r) => r.market_id === market.marketId)?.points).toHaveLength(1)
   })
 
+  it('caps by flattened element count, so a nested array cannot smuggle more than 50 ids past the cap', async () => {
+    // p_market_ids[1:50] slices only the array's first dimension: a single "row" holding every id
+    // would pass that slice whole, and unnest() flattens all dimensions anyway, so the cap would
+    // never bite. 59 real markets, each with a bet, sent as one nested array: only the first 50
+    // flattened elements may come back.
+    const db = serviceClient()
+    const { data: markets, error } = await db
+      .from('markets')
+      .insert(
+        Array.from({ length: 59 }, (_, i) => ({
+          created_by: alice.id,
+          title: `Nested ${i}`,
+          kind: 'binary',
+          close_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        })),
+      )
+      .select('id')
+    if (error) throw error
+    const marketIds = markets.map((m) => m.id as string)
+    const { data: outcomes, error: outcomesErr } = await db
+      .from('market_outcomes')
+      .insert(marketIds.flatMap((id) => [{ market_id: id, label: 'Yes' }, { market_id: id, label: 'No' }]))
+      .select('id, market_id')
+    if (outcomesErr) throw outcomesErr
+    const outcomesOf = new Map<string, string[]>()
+    for (const o of outcomes) outcomesOf.set(o.market_id as string, [...(outcomesOf.get(o.market_id as string) ?? []), o.id as string])
+    const { error: betsErr } = await db.from('bets').insert(
+      marketIds.map((id) => ({
+        market_id: id,
+        outcome_id: outcomesOf.get(id)![0],
+        profile_id: alice.id,
+        amount: 5,
+        created_at: new Date().toISOString(),
+      })),
+    )
+    if (betsErr) throw betsErr
+
+    const { data, error: rpcErr } = await bobClient.rpc('market_sparklines', { p_market_ids: [marketIds] })
+    if (rpcErr) throw rpcErr
+    const rows = data as SparklineRow[]
+    expect(rows).toHaveLength(50)
+    expect(rows.map((r) => r.market_id).sort()).toEqual(marketIds.slice(0, 50).sort())
+    for (const id of marketIds.slice(50)) expect(rows.some((r) => r.market_id === id)).toBe(false)
+  })
+
   it('returns nothing to an uninvited member, and is closed to anon', async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await placeBet(aliceClient, market, 0, 5)
@@ -250,12 +342,18 @@ describe('market_sparklines', () => {
       'Node Type': string
       'Relation Name'?: string
       'Index Name'?: string
+      'Index Cond'?: string
+      'Recheck Cond'?: string
       Plans?: PlanNode[]
     }
     // The function is plain SQL with no SET clause, so Postgres inlines it and EXPLAIN shows the
     // bet reads inside it; a scan of bets in the plan proves the inlining. The fixture is two bets,
     // where a sequential scan is cheapest whatever the indexes, so seq scans are priced out for the
-    // one statement.
+    // one statement. Each market's bets come from an `offset 0`-fenced lateral subquery keyed on the
+    // market id, which Postgres can't flatten into a plain join, so the lookup is planned per market
+    // and keyed on market_id — either a plain Index Scan (an Index Cond of its own) or a Bitmap Heap
+    // Scan (a Recheck Cond, with the Index Cond one level down on its Bitmap Index Scan child) —
+    // rather than one scan of every matched bet filtered by a Join Filter.
     const [row] = await pgQuery<{ 'QUERY PLAN': [{ Plan: PlanNode }] }>(
       `set local enable_seqscan = off; explain (format json) select * from public.market_sparklines(array['${market.marketId}']::uuid[], 40)`,
     )
@@ -268,7 +366,11 @@ describe('market_sparklines', () => {
 
     const betScans = nodes.filter((n) => n['Relation Name'] === 'bets')
     expect(betScans.length).toBeGreaterThan(0)
-    for (const scan of betScans) expect(scan['Node Type']).not.toBe('Seq Scan')
+    for (const scan of betScans) {
+      expect(scan['Node Type']).not.toBe('Seq Scan')
+      const cond = scan['Index Cond'] ?? scan['Recheck Cond'] ?? scan.Plans?.find((p) => p['Index Cond'])?.['Index Cond']
+      expect(cond).toMatch(/market_id/)
+    }
     const indexNames = nodes.flatMap((n) => (n['Index Name'] ? [n['Index Name']] : []))
     expect(indexNames).toContain('bets_market_created_idx')
   })

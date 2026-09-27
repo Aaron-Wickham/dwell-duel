@@ -351,6 +351,27 @@ $$;
 --
 -- The caps are silent: ids past the 50th are ignored, and p_points is clamped
 -- to 1..200. lib/markets/sparklines.ts sends at most 50 ids per call.
+--
+-- p_market_ids[1:50] would slice only the array's first dimension: a caller
+-- who sends one "row" holding 59 ids (a nested array, however that shape
+-- reaches Postgres from PostgREST's JSON decoding) would have that single
+-- row pass the slice whole, and unnest then flattens every dimension anyway,
+-- so the cap would never bite. Numbering the flattened elements with
+-- ordinality and filtering on that number caps by element count instead, so
+-- it holds regardless of how the input array is shaped.
+--
+-- Each market's bets are fetched through a lateral subquery keyed on
+-- ids.id, rather than bets.market_id in (select id from ids): a plain
+-- correlated subquery with no limit or offset is one Postgres is free to
+-- flatten back into an ordinary join, which is exactly the shape that let
+-- the planner pick a single unparameterised scan of the whole table and a
+-- Join Filter instead of a per-market lookup. `offset 0` is a no-op change
+-- to the rows it returns, but it is also the standard fence that stops
+-- Postgres from flattening this subquery, so each market's lookup is
+-- planned and keyed on market_id on its own — a plain Index Scan on
+-- bets_market_created_idx with its own Index Cond, or, once there are
+-- enough rows, a Bitmap Heap Scan of it with a matching Recheck Cond, fed
+-- by a Bitmap Index Scan with the Index Cond one level down.
 create function public.market_sparklines(p_market_ids uuid[], p_points integer default 40)
 returns table (market_id uuid, points jsonb)
 language sql
@@ -358,13 +379,19 @@ stable
 as $$
   with ids as (
     select distinct u.id
-    from unnest(p_market_ids[1:50]) as u(id)
+    from unnest(p_market_ids) with ordinality as u(id, ord)
+    where u.ord <= 50
   ),
   ordered as (
-    select b.market_id, b.outcome_id, b.amount, b.created_at,
-      row_number() over (partition by b.market_id order by b.created_at, b.id) as n
-    from public.bets b
-    where b.market_id in (select ids.id from ids)
+    select bet.market_id, bet.outcome_id, bet.amount, bet.created_at,
+      row_number() over (partition by bet.market_id order by bet.created_at, bet.id) as n
+    from ids
+    cross join lateral (
+      select b.id, b.market_id, b.outcome_id, b.amount, b.created_at
+      from public.bets b
+      where b.market_id = ids.id
+      offset 0
+    ) bet
   ),
   sized as (
     select o.market_id, count(*) as bets,

@@ -34,10 +34,10 @@ const SERIES_HALO: Record<Series, string> = {
 
 const HOUR_MS = 60 * 60 * 1000
 const DAY_MS = 24 * HOUR_MS
-// Five minute-precise ticks need at least ~64s apart to never repeat a label, even with a
-// closed market's zone taking 14% of the width -- five minutes clears that with room to spare,
-// without crushing every recent-bets-only market against the right edge.
-const MIN_SPAN_MS = 5 * 60 * 1000
+// Only guards a zero or negative span (a bet stamped at, or a clock tick after, `now`). A young
+// market's chart starts at its first bet, however recent; ticks that would repeat a
+// minute-precise label are dropped instead of padding the span out with empty time.
+const MIN_SPAN_MS = 1000
 const TIME_TICKS_UNDER_MS = 36 * HOUR_MS
 // Below a day of spacing between ticks, a date-only label repeats, so pack date+time instead.
 const DATE_TICKS_UNDER_MS = 4 * DAY_MS
@@ -185,7 +185,7 @@ export function ProbabilityChart({
     if (span <= TIME_TICKS_UNDER_MS) return `${formatWeekday(t, timeZone)} ${formatTime(t, timeZone)}`
     return formatDateAndTime(t)
   }
-  const ticks = TICK_FRACTIONS.map((fraction, index) => {
+  const allTicks = TICK_FRACTIONS.map((fraction, index) => {
     const t = start + fraction * (lineEnd - start)
     const left = xPercent(t)
     return {
@@ -197,6 +197,13 @@ export function ProbabilityChart({
       phone: index % 2 === 0,
     }
   })
+  // Over a span of a few minutes, evenly spaced minute-precise ticks land on the same label. Keep
+  // the end tick, and each earlier one only where its label is new.
+  const endLabel = allTicks[allTicks.length - 1].label
+  const ticks = allTicks.filter(
+    (tick, index) =>
+      index === allTicks.length - 1 || (tick.label !== endLabel && (index === 0 || tick.label !== allTicks[index - 1].label)),
+  )
 
   const phoneTops = spreadLabels(outcomes.map((o) => (1 - (last.shares[o.id] ?? 0)) * PHONE.height), PHONE.height, PHONE.gap)
   const desktopTops = spreadLabels(

@@ -37,7 +37,10 @@ architectural decisions exist, document them here and in `docs/`.
 - **Controls.** Every control is a real `<button>`, `<a>` or `<label>`ed
   input, at least 44px tall. Selects and checkboxes stay native. When a
   form shows a server error, wire `aria-invalid` and `aria-describedby`
-  at the call site.
+  at the call site. A standalone inline text link that acts as a primary
+  tap target — a title link in a row, say — gets the `hit-area` utility:
+  a 44px invisible tap area without growing the row. A link inside a
+  sentence doesn't need it.
 - **Links are underlined by default.** The base `a` rule underlines
   every link, matching the mockup (its links use the browser default
   underline). A link styled as a button, tab, tile, chip or nav item
@@ -50,7 +53,9 @@ architectural decisions exist, document them here and in `docs/`.
 - **Skeletons, or a streamed Suspense.** Every signed-in route gets a
   `loading.tsx` skeleton (`SkeletonScreen`), unless a real 404 must
   survive the initial load, in which case it streams behind `<Suspense>`
-  instead, as the member page does.
+  instead, as the member page does. A `loading.tsx` also wraps every
+  route below it — that's why the markets list lives in
+  `markets/(list)/`, so the market page can return a real 404.
 - **Drill-down pages** pass `Page`'s `transition="drill-down"`, which
   also enables the back-swipe; its logical parents live in
   `lib/nav/back-swipe.ts`.
@@ -92,6 +97,12 @@ architectural decisions exist, document them here and in `docs/`.
   `app/error.tsx` and `app/global-error.tsx` — rendering
   `components/ui/error-card.tsx`'s `ErrorCard`, whose "Try again" calls
   Next 16's `retry()`.
+- **A new member-entered text column** gets a length CHECK in a
+  migration, a `TEXT_LIMITS` entry in `lib/forms/limits.ts`, `maxLength`
+  on its input, and a `tooLong` check in its server action.
+- **A new required env var** goes in `lib/env/required.ts`. A
+  production-only one must be set in Vercel before merging, or
+  production won't boot.
 
 ## Testing
 

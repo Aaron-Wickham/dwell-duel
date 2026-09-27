@@ -9,16 +9,22 @@
 -- would deadlock, Postgres aborts this one with nothing applied, and the
 -- Deploy Production Database workflow can simply be re-run.
 --
--- The lock table statement takes every lock this migration needs up front,
--- in one call: not just the tables the triggers watch (markets and
--- completions, then bets and the ledger, then parlays, following 0033's
--- order), but also profiles, market_outcomes and market_resolutions, which
--- create table's own foreign keys would otherwise lock one at a time,
--- part-way through the transaction — the real cause of a deadlock a
--- place_bet-shaped transaction (coin_transactions, then bets) can hit
--- against this statement if those three are missing. Taking them all first
--- means create table's later requests for the same locks are free: this
--- session already holds them.
+-- The lock table statement names all eight locks in one call, but Postgres
+-- still takes them one at a time, in the order listed: markets and
+-- completions, then bets and the ledger, then parlays (0033's order), then
+-- profiles, market_outcomes and market_resolutions, which create table's
+-- own foreign keys would otherwise lock one at a time, part-way through the
+-- transaction. Taking them here instead means create table's later
+-- requests for the same locks are free: this session already holds them.
+--
+-- Taking them in list order doesn't rule out a deadlock against a
+-- concurrent write that takes the same locks in a different order —
+-- place_bet, for example, writes coin_transactions before bets, the
+-- reverse of the order above. When that happens, Postgres aborts one side,
+-- almost always this migration, because it's the one that started waiting
+-- first. lock_timeout applies to each of the eight waits separately, not
+-- to the statement as a whole. Either way, an abort here applies nothing,
+-- and the Deploy Production Database workflow can simply be re-run.
 begin;
 set local lock_timeout = '5s';
 lock table public.markets, public.task_completions, public.bets, public.coin_transactions, public.parlays, public.profiles, public.market_outcomes, public.market_resolutions in share row exclusive mode;
@@ -41,6 +47,11 @@ lock table public.markets, public.task_completions, public.bets, public.coin_tra
 -- settle's parlay), so the triggers add no new lock waits there either.
 -- Nothing takes FOR UPDATE on profiles (0033), and no trigger takes a row
 -- lock of its own on a profile or a market.
+--
+-- activity_events.task_completion_id now references task_completions.
+-- 0033's review lock (FOR UPDATE on completions) is still safe, because the
+-- only KEY SHARE taken on a completion comes from this trigger, inside that
+-- completion's own locked update.
 create table public.activity_events (
   id text primary key,
   kind text not null check (kind in ('bet_placed','parlay_placed','market_created','market_resolved','bet_won','parlay_won','task_completed')),
@@ -84,6 +95,16 @@ grant select on public.activity_events to authenticated, service_role;
 -- writer, and a direct edit of resolved_at, resolved_by or outcome_id on an
 -- existing resolution would drift this table from the view, same as hand-
 -- editing any other source row the triggers don't expect.
+--
+-- A direct-SQL status change needs the same not-null occurred_at the
+-- triggers above assume: reviewed_at for a task_completions row moved to
+-- 'approved', parlays.settled_at for one moved to 'won'. Leaving either
+-- null makes the trigger's insert fail, since occurred_at is not null.
+--
+-- Hand-editing a bet's outcome_id or an outcome's pool_total after its
+-- market resolves, or inserting a bet_won ledger row by hand, drifts this
+-- table from the view the same way a direct market_resolutions edit does.
+-- No app path does any of these.
 
 create function public.activity_events_from_bet()
 returns trigger

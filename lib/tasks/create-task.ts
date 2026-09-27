@@ -13,7 +13,11 @@ export async function createTaskAction(_prevState: ActionState, formData: FormDa
   if (!user) return { formError: 'Not signed in.' }
 
   const title = String(formData.get('title') ?? '').trim()
-  const description = String(formData.get('description') ?? '').trim()
+  // A textarea's newlines arrive as CRLF once the browser serialises the form, doubling up
+  // against maxLength, which counts one character per line break.
+  const description = String(formData.get('description') ?? '')
+    .replace(/\r\n/g, '\n')
+    .trim()
   const rewardAmount = Number(formData.get('reward_amount'))
   const isRepeatable = formData.get('is_repeatable') === 'on'
   const period = String(formData.get('period') ?? '')

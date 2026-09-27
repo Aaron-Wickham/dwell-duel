@@ -51,4 +51,15 @@ describe('updateTaskAction length limits', () => {
     expect(update).toHaveBeenCalledWith(expect.objectContaining({ title, description }))
     expect(eq).toHaveBeenCalledWith('id', 't1')
   })
+
+  it('accepts a description of exactly 1000 characters once its CRLF line breaks are normalised', async () => {
+    // A submitted textarea turns each newline into CRLF, so this is 1001 raw characters —
+    // over the limit unless the pair is counted as the one line break it represents.
+    const description = `${'d'.repeat(998)}\r\n${'d'}`
+
+    const state = await updateTaskAction('t1', undefined, taskForm('Read Genesis 1-3', description))
+
+    expect(state).toBeUndefined()
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ description: `${'d'.repeat(998)}\n${'d'}` }))
+  })
 })

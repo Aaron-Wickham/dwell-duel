@@ -64,6 +64,19 @@ describe('createMarketAction length limits', () => {
     expect(supabase.rpc).toHaveBeenCalledWith('create_market', expect.objectContaining({ p_description: 'd'.repeat(1000) }))
   })
 
+  it('accepts a description of exactly 1000 characters once its CRLF line breaks are normalised', async () => {
+    // A submitted textarea turns each newline into CRLF, so this is 1001 raw characters —
+    // over the limit unless the pair is counted as the one line break it represents.
+    const description = `${'d'.repeat(998)}\r\n${'d'}`
+
+    await createMarketAction(undefined, binaryForm('Will it rain?', description))
+
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'create_market',
+      expect.objectContaining({ p_description: `${'d'.repeat(998)}\n${'d'}` }),
+    )
+  })
+
   it('names the outcome that is too long by its place in the form, blanks included', async () => {
     const state = await createMarketAction(undefined, multipleChoiceForm(['Red', '', 'x'.repeat(61), 'Blue']))
 

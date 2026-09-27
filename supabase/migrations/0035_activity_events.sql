@@ -4,14 +4,24 @@
 -- page is one index range. The view stays until no deployed build reads it.
 --
 -- One explicit transaction, like 0034, because the migration runner
--- autocommits each statement. The lock makes every table a trigger below
--- watches read-only until commit, so no event can be written between the
--- backfill and the triggers taking over. create trigger takes this same lock
--- on each table anyway, one at a time; taking them together first fixes the
--- order, which follows 0033's: markets and completions, then bets and the
--- ledger, then parlays.
+-- autocommits each statement. lock_timeout bounds every wait this migration
+-- can incur: if a lock below can't be taken in time, or two transactions
+-- would deadlock, Postgres aborts this one with nothing applied, and the
+-- Deploy Production Database workflow can simply be re-run.
+--
+-- The lock table statement takes every lock this migration needs up front,
+-- in one call: not just the tables the triggers watch (markets and
+-- completions, then bets and the ledger, then parlays, following 0033's
+-- order), but also profiles, market_outcomes and market_resolutions, which
+-- create table's own foreign keys would otherwise lock one at a time,
+-- part-way through the transaction — the real cause of a deadlock a
+-- place_bet-shaped transaction (coin_transactions, then bets) can hit
+-- against this statement if those three are missing. Taking them all first
+-- means create table's later requests for the same locks are free: this
+-- session already holds them.
 begin;
-lock table public.markets, public.task_completions, public.bets, public.coin_transactions, public.parlays in share row exclusive mode;
+set local lock_timeout = '5s';
+lock table public.markets, public.task_completions, public.bets, public.coin_transactions, public.parlays, public.profiles, public.market_outcomes, public.market_resolutions in share row exclusive mode;
 
 -- Ids, kinds, times, actors and amounts are the view's, so feed cursors
 -- (occurred_at, id) from before this migration still point at the same rows.
@@ -21,11 +31,16 @@ lock table public.markets, public.task_completions, public.bets, public.coin_tra
 --
 -- The foreign keys clean events up with their source rows (tests/db/
 -- fixtures.ts deletes parlays, completions and markets before profiles).
--- Their checks take FOR KEY SHARE on the rows they name, which each source
--- row's own foreign keys already hold in the same transaction, or which that
--- transaction already locks itself (a resolve's market, a settle's parlay), so
--- the triggers add no new lock waits. Nothing takes FOR UPDATE on profiles
--- (0033), and no trigger takes a row lock of its own on a profile or a market.
+-- Creating each one takes a share row exclusive lock on the table it
+-- references — profiles, markets, market_outcomes, bets, market_resolutions,
+-- parlays and task_completions — but the lock table statement above already
+-- holds every one of those, so none of these seven waits or can deadlock.
+-- At runtime, each FK's check takes FOR KEY SHARE on the row it names, which
+-- each source row's own foreign keys already hold in the same transaction,
+-- or which that transaction already locks itself (a resolve's market, a
+-- settle's parlay), so the triggers add no new lock waits there either.
+-- Nothing takes FOR UPDATE on profiles (0033), and no trigger takes a row
+-- lock of its own on a profile or a market.
 create table public.activity_events (
   id text primary key,
   kind text not null check (kind in ('bet_placed','parlay_placed','market_created','market_resolved','bet_won','parlay_won','task_completed')),
@@ -64,6 +79,11 @@ grant select on public.activity_events to authenticated, service_role;
 -- directly (the scale seed inserts approved completions and moves parlays'
 -- created_at) still matches the view. Re-writing an existing event updates it
 -- in place and un-hides it; on conflict keeps every write idempotent.
+--
+-- No trigger watches market_resolutions itself: resolve_market is its only
+-- writer, and a direct edit of resolved_at, resolved_by or outcome_id on an
+-- existing resolution would drift this table from the view, same as hand-
+-- editing any other source row the triggers don't expect.
 
 create function public.activity_events_from_bet()
 returns trigger

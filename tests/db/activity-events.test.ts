@@ -138,7 +138,9 @@ async function fullScenario(): Promise<void> {
   const b = await createTestMarket(aliceClient, ['Red', 'Blue', 'Green'], { title: 'Scenario B' })
   expect(await mismatches()).toEqual([])
 
-  await bet(bobClient, a, 0, 10)
+  // Bob's stake makes A's winning-outcome payout floor a fraction: pool 46,
+  // winning pool 16, floor(11 × 46 / 16) = floor(31.625) = 31.
+  await bet(bobClient, a, 0, 11)
   await bet(carolClient, a, 1, 30)
   await bet(aliceClient, a, 0, 5)
   await bet(bobClient, b, 0, 4)
@@ -168,6 +170,18 @@ async function fullScenario(): Promise<void> {
   const { error: approveErr } = await aliceClient.rpc('approve_task_completion', { p_completion_id: completionId as string })
   if (approveErr) throw approveErr
   expect(await mismatches()).toEqual([])
+
+  // A second completion, approved through the batch path instead of the single one.
+  const { taskId: taskId2 } = await createTestTask(alice, { title: 'Read Psalm 2', rewardAmount: 8 })
+  const { data: completionId2, error: submitErr2 } = await carolClient.rpc('submit_task_completion', { p_task_id: taskId2 })
+  if (submitErr2) throw submitErr2
+  const { data: reviewRows, error: reviewErr } = await aliceClient.rpc('review_task_completions', {
+    p_ids: [completionId2],
+    p_approve: true,
+  })
+  if (reviewErr) throw reviewErr
+  expect(reviewRows).toEqual([{ id: completionId2, ok: true, error: null }])
+  expect(await mismatches()).toEqual([])
 }
 
 describe('activity_events', () => {
@@ -186,9 +200,9 @@ describe('activity_events', () => {
       { kind: 'market_resolved', visible: 1, hidden: 1 },
       { kind: 'parlay_placed', visible: 2, hidden: 0 },
       { kind: 'parlay_won', visible: 1, hidden: 1 },
-      { kind: 'task_completed', visible: 1, hidden: 0 },
+      { kind: 'task_completed', visible: 2, hidden: 0 },
     ])
-    expect(await feedCount()).toBe(14)
+    expect(await feedCount()).toBe(15)
   })
 
   it("backfills, from activity_feed, the same rows the triggers wrote", async () => {
@@ -211,7 +225,7 @@ describe('activity_events', () => {
         ) d) as differing,
         (select count(*)::integer from pg_temp.backfill) as backfilled
     `)
-    expect(result).toEqual({ differing: 0, backfilled: 14 })
+    expect(result).toEqual({ differing: 0, backfilled: 15 })
   })
 
   it("hides exactly the old resolution's rows on an override, and shows a new resolution's rows when it goes back", async () => {

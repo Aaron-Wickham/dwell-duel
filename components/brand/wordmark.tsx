@@ -22,7 +22,17 @@ export function DwellDuelSymbol({ size }: { size: number }) {
   )
 }
 
-export function Wordmark({ size = 'md', href = '/' }: { size?: 'sm' | 'md'; href?: string }) {
+// `symbolBelowLg` drops the name below lg, where the desktop header has no room for it; the
+// link keeps its accessible name either way.
+export function Wordmark({
+  size = 'md',
+  href = '/',
+  symbolBelowLg = false,
+}: {
+  size?: 'sm' | 'md'
+  href?: string
+  symbolBelowLg?: boolean
+}) {
   return (
     <Link
       href={href}
@@ -34,6 +44,7 @@ export function Wordmark({ size = 'md', href = '/' }: { size?: 'sm' | 'md'; href
         className={cn(
           'whitespace-nowrap font-extrabold uppercase leading-none tracking-[-0.03em]',
           size === 'sm' ? 'text-[18px]' : 'text-[21px]',
+          symbolBelowLg && 'max-lg:hidden',
         )}
       >
         <span className="text-wm-a">Dwell</span>

@@ -81,6 +81,11 @@ architectural decisions exist, document them here and in `docs/`.
   them with `toProofViews` (signed URLs made with the viewer's own client)
   and `ProofList`. `resolve_market` needs a note; its logic is
   `resolve_market_core`, which members can't call.
+- **Market kinds** are `MarketKind` in `lib/markets/kind.ts`. An
+  over/under's outcomes are made by `create_market` from its line, and it
+  resolves through `resolve_over_under` with the actual number. Title and
+  description change only through `update_market` (0043), which logs every
+  change to `market_edits`; outcomes, close time and line never change.
 - **Every bet goes through the slip.** `SlipProvider` (in the signed-in
   layout) holds the cookie's picks, each Solo or Parlay, with optimistic
   add, remove and mode switches; the floating `SlipSheet` places them all

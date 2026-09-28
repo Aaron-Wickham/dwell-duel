@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
 import {
   seedMembers,
   makeMember,
   clientFor,
+  anonClient,
   createTestMarket,
   createTestTask,
   ensureInvited,
@@ -250,11 +251,8 @@ describe('activity_feed', () => {
 
     const carol = await makeMember('Carol')
     const carolClient = await clientFor(carol)
-    const anonClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-      auth: { persistSession: false },
-    })
     // An invited admin, an invited member, an uninvited member and a signed-out session alike.
-    for (const client of [aliceClient, bobClient, carolClient, anonClient]) {
+    for (const client of [aliceClient, bobClient, carolClient, anonClient()]) {
       const { data, error } = await client.from('activity_feed').select('id')
       expect(error?.code).toBe('42501')
       expect(data).toBeNull()

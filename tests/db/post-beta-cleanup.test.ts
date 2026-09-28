@@ -113,6 +113,26 @@ describe('timestamp invariants', () => {
   })
 
   it('the preflight guard passes clean rows and raises on rows that break either invariant, naming each count', async () => {
+    // A guard with a wrong predicate (say, missing `and reviewed_at is null`) would still pass on
+    // an empty table. Seeding one row that satisfies each invariant makes sure the clean-pass
+    // check is actually exercising the guard's condition, not just running it on nothing.
+    const db = serviceClient()
+    const { taskId: cleanTaskId } = await createTestTask(alice)
+    const cleanCompletion = await db.from('task_completions').insert({
+      task_id: cleanTaskId,
+      profile_id: bob.id,
+      status: 'approved',
+      reward_amount: 10,
+      period_key: 'once',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: alice.id,
+    })
+    expect(cleanCompletion.error).toBeNull()
+    const cleanParlay = await db
+      .from('parlays')
+      .insert({ profile_id: bob.id, stake: 10, status: 'won', credited: 20, settled_at: new Date().toISOString() })
+    expect(cleanParlay.error).toBeNull()
+
     await expect(pgQuery(readGuardBlock())).resolves.toBeDefined()
 
     // The violating rows can only be made with the constraints gone, and with the events triggers
@@ -144,6 +164,8 @@ describe('timestamp invariants', () => {
         (select count(*)::integer from public.task_completions) as completions,
         (select count(*)::integer from public.parlays) as parlays
     `)
-    expect(after).toEqual({ constraints: 2, triggers: 2, completions: 0, parlays: 0 })
+    // The seeded clean completion and parlay from the top of this test are untouched by the
+    // rolled-back violating insert, so they're still the only rows left.
+    expect(after).toEqual({ constraints: 2, triggers: 2, completions: 1, parlays: 1 })
   })
 })

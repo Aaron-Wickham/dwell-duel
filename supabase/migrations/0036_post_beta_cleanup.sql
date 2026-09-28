@@ -4,22 +4,37 @@
 --
 -- One explicit transaction, like 0034 and 0035, because the migration runner
 -- autocommits each statement. lock_timeout bounds each lock wait below
--- separately; if one can't be taken in time, or Postgres picks this
--- transaction to break a deadlock, nothing is applied and the Deploy
--- Production Database workflow can simply be re-run.
+-- separately; if a lock can't be taken in time, or a conflicting
+-- transaction is already in flight and this migration would deadlock
+-- against it, nothing is applied and the Deploy Production Database
+-- workflow can simply be re-run.
 --
 -- The locks hold until commit, so no completion or parlay can change between
--- the guard's count and the constraints being added. They're taken in the
--- order the app's own writers take them: task_completions before parlays
--- (0033's order), and activity_events last, since every writer reaches it
--- through a trigger after writing its source row. Each alter table ... add
--- constraint below still upgrades its table to access exclusive while it
--- validates; lock_timeout covers that wait too. activity_feed isn't in the
--- list: locking a view locks every table it reads, and a revoke needs no
--- lock of its own.
+-- the guard's count and the constraints being added. task_completions and
+-- parlays are taken in access exclusive mode up front -- the mode their
+-- own `add constraint ... check` needs to validate -- so neither lock is
+-- ever upgraded mid-transaction. Locking at a weaker mode first (say share
+-- row exclusive) and upgrading later would deadlock against any read that
+-- already holds that weaker mode and is itself waiting on this
+-- transaction's own later statement: an in-flight approve_task_completion's
+-- `select ... for update`, for instance, or resolve_market/void_market
+-- reaching settle_parlay's update. activity_events only needs share row
+-- exclusive: `create index` (not concurrently) takes a plain share lock,
+-- which share row exclusive already covers, and nothing here writes rows
+-- into it. The three are locked in the app's own global write order --
+-- task_completions, then parlays, then activity_events, since every writer
+-- reaches activity_events through a trigger after writing its source row --
+-- so a transaction already holding an earlier table's lock and waiting on a
+-- later one can still finish instead of deadlocking against this one. If a
+-- conflicting transaction is already in progress regardless, this migration
+-- is the one that waits, up to lock_timeout, and then aborts cleanly -- the
+-- app's own transaction completes, and the migration is simply re-run.
+-- activity_feed isn't in the list: locking a view locks every table it
+-- reads, and a revoke needs no lock of its own.
 begin;
 set local lock_timeout = '5s';
-lock table public.task_completions, public.parlays, public.activity_events in share row exclusive mode;
+lock table public.task_completions, public.parlays in access exclusive mode;
+lock table public.activity_events in share row exclusive mode;
 
 -- Preflight: the constraints below are added validated, so a row already
 -- breaking either invariant would fail the whole migration at the alter

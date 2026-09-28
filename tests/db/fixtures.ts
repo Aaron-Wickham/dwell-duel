@@ -88,6 +88,13 @@ export async function clientFor(member: Member): Promise<SupabaseClient> {
   return clientForEmail(member.email)
 }
 
+/** A signed-out client, subject to RLS as `anon`. */
+export function anonClient(): SupabaseClient {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    auth: { persistSession: false },
+  })
+}
+
 /**
  * Turns an authenticated test client's session into a real `Cookie`
  * header string, using `@supabase/ssr`'s own cookie adapter — needed by

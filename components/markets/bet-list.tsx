@@ -34,14 +34,13 @@ export function BetList({
       {bets.map((b) => {
         const outcomeLabel = outcomes.find((o) => o.id === b.outcomeId)?.label ?? 'unknown outcome'
         const mine = b.profileId === viewerId
+        const domId = rowIdPrefix && rowDomId(rowIdPrefix, b.id)
+        // Named from the sentence alone, so the Cancel button's label stays out of the row's name.
+        const sentenceId = domId ? `${domId}-sentence` : undefined
         return (
-          <li
-            key={b.id}
-            {...focusTarget(rowIdPrefix && rowDomId(rowIdPrefix, b.id))}
-            className="flex min-h-[52px] items-center gap-3 py-3"
-          >
-            <Avatar name={b.bettorName} size="sm" />
-            <p className="min-w-0 flex-1">
+          <li key={b.id} {...focusTarget(domId, sentenceId)} className="flex min-h-[52px] items-center gap-3 py-3">
+            <Avatar name={b.bettorName} src={b.bettorAvatarSrc} size="sm" />
+            <p id={sentenceId} className="min-w-0 flex-1">
               <Link href={`/members/${b.profileId}`} transitionTypes={['nav-forward']}>{b.bettorName}</Link> — {b.amount} DC on{' '}
               {outcomeLabel}
               {mine && <span className="text-ink2"> (you)</span>}

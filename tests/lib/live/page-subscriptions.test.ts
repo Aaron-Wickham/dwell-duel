@@ -16,7 +16,6 @@ const declarations: Record<string, () => LiveSubscription[]> = {
   member: () => pageSubscriptions.member(MEMBER_ID),
   feed: () => pageSubscriptions.feed(),
   tasks: () => pageSubscriptions.tasks(MEMBER_ID),
-  parlays: () => pageSubscriptions.parlays(MEMBER_ID),
   myBets: () => pageSubscriptions.myBets(MEMBER_ID),
   adminTasks: () => pageSubscriptions.adminTasks(),
 }
@@ -78,10 +77,12 @@ describe('pageSubscriptions', () => {
     ])
   })
 
-  it("myBets watches the member's own bets and cancellations, and every market for results", () => {
+  it("myBets watches the member's own bets, cancellations and parlays, and every market for results", () => {
     expect(pageSubscriptions.myBets(MEMBER_ID)).toEqual([
       { table: 'bets', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'cancelled_bets', filter: `profile_id=eq.${MEMBER_ID}` },
+      { table: 'parlays', filter: `profile_id=eq.${MEMBER_ID}` },
+      { table: 'parlay_legs' },
       { table: 'markets' },
     ])
   })
@@ -94,14 +95,6 @@ describe('pageSubscriptions', () => {
     expect(pageSubscriptions.tasks(MEMBER_ID)).toEqual([
       { table: 'tasks' },
       { table: 'task_completions', filter: `profile_id=eq.${MEMBER_ID}` },
-    ])
-  })
-
-  it('parlays carries the member id and watches markets for leg status changes', () => {
-    expect(pageSubscriptions.parlays(MEMBER_ID)).toEqual([
-      { table: 'parlays', filter: `profile_id=eq.${MEMBER_ID}` },
-      { table: 'parlay_legs' },
-      { table: 'markets' },
     ])
   })
 

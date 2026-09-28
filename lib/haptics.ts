@@ -1,5 +1,6 @@
 // Android only in practice: iOS Safari has no Vibration API, even for a home-screen app.
 function vibrate(pattern: number | number[]) {
+  if (typeof document !== 'undefined' && document.documentElement.dataset.haptics === 'off') return
   if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(pattern)
 }
 

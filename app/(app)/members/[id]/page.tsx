@@ -7,6 +7,7 @@ import { getMemberStanding } from '@/lib/social/leaderboard'
 import { readPageParams } from '@/lib/pagination/cursor'
 import { isUuid } from '@/lib/uuid'
 import Link from 'next/link'
+import { Settings, UserRound } from 'lucide-react'
 import { Page, h1Class } from '@/components/ui/page'
 import { buttonVariants } from '@/components/ui/button'
 import { BackLink } from '@/components/ui/back-link'
@@ -43,13 +44,16 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
         </div>
         {member.bio && <p className="max-w-[640px] whitespace-pre-line break-words">{member.bio}</p>}
         {member.id === user.id && (
-          <Link
-            href="/profile"
-            transitionTypes={['nav-forward']}
-            className={`${buttonVariants({ variant: 'secondary', size: 'sm' })} self-start`}
-          >
-            Edit profile
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/profile" transitionTypes={['nav-forward']} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+              <UserRound aria-hidden="true" className="size-[18px]" />
+              Edit profile
+            </Link>
+            <Link href="/settings" transitionTypes={['nav-forward']} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+              <Settings aria-hidden="true" className="size-[18px]" />
+              Settings
+            </Link>
+          </div>
         )}
       </section>
       <Suspense

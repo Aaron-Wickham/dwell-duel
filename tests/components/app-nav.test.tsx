@@ -6,7 +6,6 @@ type NumberFlowProps = { value: number; suffix?: string; locales?: unknown; form
 const { numberFlowCalls } = vi.hoisted(() => ({ numberFlowCalls: [] as NumberFlowProps[] }))
 let pathname = '/'
 vi.mock('next/navigation', () => ({ usePathname: () => pathname }))
-vi.mock('@/lib/theme/set-theme', () => ({ setThemeAction: vi.fn() }))
 const { tap } = vi.hoisted(() => ({ tap: vi.fn() }))
 vi.mock('@/lib/haptics', () => ({ haptics: { tap, success: vi.fn(), error: vi.fn() } }))
 vi.mock('@number-flow/react', () => ({
@@ -18,8 +17,10 @@ vi.mock('@number-flow/react', () => ({
 
 import { AppNav } from '@/components/app-nav/app-nav'
 
-function Nav({ balance, isAdmin }: { balance: number; isAdmin: boolean }) {
-  return <AppNav balance={balance} adminHref={isAdmin ? '/admin/invites' : null} />
+const ME = { id: 'me-1', name: 'Grace', avatarSrc: null }
+
+function Nav({ balance, isAdmin, avatarSrc = null }: { balance: number; isAdmin: boolean; avatarSrc?: string | null }) {
+  return <AppNav balance={balance} adminHref={isAdmin ? '/admin/invites' : null} me={{ ...ME, avatarSrc }} />
 }
 
 beforeEach(() => {
@@ -55,7 +56,7 @@ describe('AppNav', () => {
       ...screen.getAllByRole('navigation', { name: 'Primary' }).flatMap((nav) => within(nav).getAllByRole('link')),
       within(screen.getAllByRole('banner')[1]).getByRole('link', { name: 'Admin' }),
     ]
-    expect(links).toHaveLength(16)
+    expect(links).toHaveLength(12)
     for (const link of links) {
       const hint = link.querySelector('.nav-pending-hint')
       expect(hint).toHaveAttribute('aria-hidden', 'true')
@@ -66,10 +67,16 @@ describe('AppNav', () => {
   it('links every destination in both navs', () => {
     render(<Nav balance={120} isAdmin={false} />)
     const [desktop, phone] = screen.getAllByRole('navigation', { name: 'Primary' })
-    for (const name of ['Home', 'Markets', 'My bets', 'Parlays', 'Tasks', 'Feed', 'Leaderboard']) {
+    for (const name of ['Markets', 'My bets', 'Tasks', 'Feed', 'Leaderboard']) {
       expect(within(desktop).getByRole('link', { name })).toBeInTheDocument()
       expect(within(phone).getByRole('link', { name })).toBeInTheDocument()
     }
+    // Home is the wordmark's job; parlays live on My bets.
+    for (const nav of [desktop, phone]) {
+      expect(within(nav).queryByRole('link', { name: 'Home' })).toBeNull()
+      expect(within(nav).queryByRole('link', { name: 'Parlays' })).toBeNull()
+    }
+    expect(phone).toHaveClass('grid-cols-5')
   })
 
   // jsdom applies no CSS, so these pin the classes that make the desktop row fit from 768px: an
@@ -77,7 +84,7 @@ describe('AppNav', () => {
   it('keeps every desktop link a 44px icon until xl, still named by its label', () => {
     render(<Nav balance={120} isAdmin />)
     const desktop = screen.getAllByRole('navigation', { name: 'Primary' })[0]
-    for (const name of ['Home', 'Markets', 'My bets', 'Parlays', 'Tasks', 'Feed', 'Leaderboard', 'Admin']) {
+    for (const name of ['Markets', 'My bets', 'Tasks', 'Feed', 'Leaderboard', 'Admin']) {
       const link = within(desktop).getByRole('link', { name })
       expect(link).toHaveClass('min-h-11', 'min-w-11')
       expect(link).toHaveAttribute('title', name)
@@ -110,8 +117,19 @@ describe('AppNav', () => {
     for (const link of screen.getAllByRole('link', { name: 'Markets' })) {
       expect(link).toHaveAttribute('aria-current', 'page')
     }
-    for (const link of screen.getAllByRole('link', { name: 'Home' })) {
+    for (const link of screen.getAllByRole('link', { name: 'DwellDuel home' })) {
       expect(link).not.toHaveAttribute('aria-current')
+    }
+  })
+
+  it('marks the wordmark current on Home, where no tab is', () => {
+    pathname = '/'
+    render(<Nav balance={120} isAdmin={false} />)
+    for (const link of screen.getAllByRole('link', { name: 'DwellDuel home' })) {
+      expect(link).toHaveAttribute('aria-current', 'page')
+    }
+    for (const nav of screen.getAllByRole('navigation', { name: 'Primary' })) {
+      expect(within(nav).queryAllByRole('link').filter((l) => l.hasAttribute('aria-current'))).toEqual([])
     }
   })
 
@@ -125,11 +143,49 @@ describe('AppNav', () => {
     for (const link of adminLinks) expect(link).toHaveAttribute('href', '/admin/invites')
   })
 
-  it('shows the balance without the home page\'s "Balance:" wording', () => {
+  it('makes the balance a link to My bets in both top bars, marked current there', () => {
+    const { unmount } = render(<Nav balance={120} isAdmin={false} />)
+    const chips = screen.getAllByRole('link', { name: 'Balance 120 DC, view my bets' })
+    expect(chips).toHaveLength(2)
+    for (const chip of chips) {
+      expect(chip).toHaveAttribute('href', '/bets')
+      expect(chip).toHaveClass('min-h-11', 'pressable', 'no-underline')
+      expect(chip).not.toHaveAttribute('aria-current')
+    }
+    unmount()
+    pathname = '/bets'
     render(<Nav balance={120} isAdmin={false} />)
-    const chips = screen.getAllByText('Balance 120 DC')
-    expect(chips.length).toBeGreaterThanOrEqual(2)
-    expect(screen.queryByText(/Balance: \d+ DC/)).toBeNull()
+    for (const chip of screen.getAllByRole('link', { name: 'Balance 120 DC, view my bets' })) {
+      expect(chip).toHaveAttribute('aria-current', 'page')
+    }
+  })
+
+  it('links your photo, or your initial, to your profile in both top bars', () => {
+    const { unmount } = render(<Nav balance={120} isAdmin={false} />)
+    const links = screen.getAllByRole('link', { name: 'Your profile' })
+    expect(links).toHaveLength(2)
+    for (const link of links) {
+      expect(link).toHaveAttribute('href', '/members/me-1')
+      expect(link).toHaveClass('size-11')
+      expect(link).toHaveTextContent('G')
+    }
+    unmount()
+    render(<Nav balance={120} isAdmin={false} avatarSrc="https://example.com/grace.jpg" />)
+    for (const link of screen.getAllByRole('link', { name: 'Your profile' })) {
+      expect(link.querySelector('img')).toHaveAttribute('src', 'https://example.com/grace.jpg')
+    }
+  })
+
+  it('marks the avatar, not the Leaderboard tab, on your own profile', () => {
+    pathname = '/members/me-1'
+    const { unmount } = render(<Nav balance={120} isAdmin={false} />)
+    for (const link of screen.getAllByRole('link', { name: 'Your profile' })) expect(link).toHaveAttribute('aria-current', 'page')
+    for (const link of screen.getAllByRole('link', { name: 'Leaderboard' })) expect(link).not.toHaveAttribute('aria-current')
+    unmount()
+    pathname = '/members/someone-else'
+    render(<Nav balance={120} isAdmin={false} />)
+    for (const link of screen.getAllByRole('link', { name: 'Your profile' })) expect(link).not.toHaveAttribute('aria-current')
+    for (const link of screen.getAllByRole('link', { name: 'Leaderboard' })) expect(link).toHaveAttribute('aria-current', 'page')
   })
 
   it('formats the balance as plain digits, in en-US regardless of the browser locale', () => {
@@ -141,10 +197,10 @@ describe('AppNav', () => {
     }
   })
 
-  it('offers the wordmark and the theme toggle', () => {
+  it('offers the wordmark, and leaves the theme to Settings', () => {
     render(<Nav balance={120} isAdmin={false} />)
     expect(screen.getAllByRole('link', { name: 'DwellDuel home' }).length).toBeGreaterThanOrEqual(2)
-    expect(screen.getAllByRole('button', { name: /Switch to (dark|light) theme/ }).length).toBeGreaterThanOrEqual(2)
+    expect(screen.queryByRole('button', { name: /theme/ })).toBeNull()
   })
 
   it('keeps the phone chrome inside the installed app\'s safe area', () => {
@@ -162,9 +218,7 @@ describe('AppNav', () => {
     for (const link of [...within(desktop).getAllByRole('link'), ...within(phone).getAllByRole('link')]) {
       expect(link).toHaveClass('pressable')
     }
-    for (const toggle of screen.getAllByRole('button', { name: /Switch to (dark|light) theme/ })) {
-      expect(toggle).toHaveClass('pressable')
-    }
+    for (const link of screen.getAllByRole('link', { name: 'Your profile' })) expect(link).toHaveClass('pressable')
   })
 
   it('offers a skip-to-content link as the first link on the page', () => {

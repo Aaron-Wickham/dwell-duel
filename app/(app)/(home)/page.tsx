@@ -1,21 +1,18 @@
 import { redirect } from 'next/navigation'
-import { ChartColumn, Layers, BookOpen, MessageSquareText, Trophy, ShieldCheck, LogOut, Mail, Ticket, UserRound } from 'lucide-react'
+import { ChartColumn, BookOpen, MessageSquareText, Trophy, ShieldCheck, Mail, Ticket } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { adminHref, atLeast, getRole } from '@/lib/auth/roles'
-import { signOut } from '@/lib/auth/sign-out'
 import { countOpenMarkets } from '@/lib/markets/list-markets'
 import { getMemberStanding } from '@/lib/social/leaderboard'
 import { listMyTaskCompletions, listPendingTaskCompletions } from '@/lib/tasks/list-task-completions'
 import { Page, PageHeader } from '@/components/ui/page'
-import { buttonVariants } from '@/components/ui/button'
 import { HomeHero } from '@/components/home/home-hero'
 import { HomeTiles, type HomeTile } from '@/components/home/home-tiles'
 import { InstallCard } from '@/components/home/install-card'
 import { adminTileSubtitle, leaderboardTileSubtitle, marketsTileSubtitle } from '@/lib/home/copy'
 import { feedbackHref } from '@/lib/app-shell/feedback'
-import { cn } from '@/lib/utils'
 
 export default async function Home() {
   const { supabase, user } = await requireUser()
@@ -37,8 +34,7 @@ export default async function Home() {
 
   const tiles: HomeTile[] = [
     { id: 'markets', href: '/markets', icon: ChartColumn, title: 'Markets', subtitle: marketsTileSubtitle(openMarketCount) },
-    { id: 'bets', href: '/bets', icon: Ticket, title: 'My bets', subtitle: 'Open, settled and cancelled' },
-    { id: 'parlays', href: '/parlays', icon: Layers, title: 'Parlays', subtitle: 'Parlays you’ve placed, win or lose' },
+    { id: 'bets', href: '/bets', icon: Ticket, title: 'My bets', subtitle: 'Solo bets and parlays, open and settled' },
     { id: 'tasks', href: '/tasks', icon: BookOpen, title: 'Tasks', subtitle: 'Earn DC with Bible study' },
     { id: 'feed', href: '/feed', icon: MessageSquareText, title: 'Feed', subtitle: 'What everyone’s been up to' },
     {
@@ -49,7 +45,6 @@ export default async function Home() {
       subtitle: leaderboardTileSubtitle(rank, memberCount),
     },
   ]
-  tiles.push({ id: 'profile', href: '/profile', icon: UserRound, title: 'Edit profile', subtitle: 'Your name, photo and bio' })
   if (adminLink) {
     tiles.push({
       id: 'admin',
@@ -80,12 +75,6 @@ export default async function Home() {
       />
       <HomeTiles tiles={tiles} />
       <InstallCard />
-      <form action={signOut}>
-        <button type="submit" className={cn(buttonVariants({ variant: 'secondary', block: true }), 'md:w-auto')}>
-          <LogOut aria-hidden="true" className="size-5" />
-          Sign out
-        </button>
-      </form>
     </Page>
   )
 }

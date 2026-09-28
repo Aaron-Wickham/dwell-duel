@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useNavDepth } from '@/lib/nav/nav-depth'
 import { BACK_SWIPE_EDGE, BACK_SWIPE_SLOP, backSwipeDecision, logicalParent } from '@/lib/nav/back-swipe'
+import { reducedMotion } from '@/lib/ui/reduced-motion'
 
 const SETTLE_MS = 280
 const SETTLE_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
@@ -164,7 +165,7 @@ export function BackSwipe({ children }: { children: ReactNode }) {
       if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return
       start = { x: touch.clientX, y: touch.clientY, id: touch.identifier }
       samples = [{ x: touch.clientX, t: event.timeStamp }]
-      reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      reduceMotion = reducedMotion()
     }
 
     function onTouchMove(event: TouchEvent) {

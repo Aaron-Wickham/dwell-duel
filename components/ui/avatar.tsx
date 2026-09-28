@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 const SIZES = {
   sm: 'size-8 bg-acc-soft text-sm text-acc-text',
   md: 'size-10 bg-acc-soft text-acc-text',
+  nav: 'size-9 bg-acc-soft text-[15px] text-acc-text',
   lg: 'size-16 bg-lime text-[26px] text-on-lime md:size-20 md:text-[32px]',
 } as const
 

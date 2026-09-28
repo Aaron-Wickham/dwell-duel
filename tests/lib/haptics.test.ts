@@ -17,6 +17,15 @@ describe('haptics', () => {
     expect(vibrate).toHaveBeenCalledExactlyOnceWith(pattern)
   })
 
+  it('stays still when Vibrate on taps is turned off in Settings', () => {
+    const vibrate = vi.fn(() => true)
+    vi.stubGlobal('navigator', { vibrate })
+    vi.stubGlobal('document', { documentElement: { dataset: { haptics: 'off' } } })
+    haptics.tap()
+    haptics.success()
+    expect(vibrate).not.toHaveBeenCalled()
+  })
+
   it('is a silent no-op where the Vibration API is missing, as on iOS', () => {
     vi.stubGlobal('navigator', { userAgent: 'iPhone' })
     expect(() => {

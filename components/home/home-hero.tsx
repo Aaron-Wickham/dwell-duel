@@ -1,4 +1,4 @@
-import NumberFlow from '@number-flow/react'
+import { AnimatedNumber } from '@/components/ui/animated-number'
 import { cn } from '@/lib/utils'
 import { AnimatedText } from '@/components/ui/animated-text'
 import { eyebrowClass } from '@/components/ui/page'
@@ -29,7 +29,7 @@ export function HomeHero({
           plainText={`${balance} DC`}
           className="text-[44px] leading-none font-extrabold tracking-[-0.03em] tabular-nums text-hero-num md:text-[60px]"
         >
-          <NumberFlow value={balance} locales="en-US" format={{ useGrouping: false }} suffix=" DC" />
+          <AnimatedNumber value={balance} locales="en-US" format={{ useGrouping: false }} suffix=" DC" />
         </AnimatedText>
       </p>
       <p className="text-sm text-hero-2">{heroCaption(rank, memberCount, pendingCount, pendingDc)}</p>

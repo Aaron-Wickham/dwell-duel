@@ -1,4 +1,3 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { combineOdds, lockedOddsToBp, potentialPayout } from './odds'
 import { legStatus, type LegStatus } from './leg-status'
 
@@ -34,7 +33,7 @@ interface LegRow {
   }
 }
 
-interface ParlayRow {
+export interface ParlayRow {
   id: string
   stake: number
   status: ParlayView['status']
@@ -43,43 +42,33 @@ interface ParlayRow {
   parlay_legs: LegRow[]
 }
 
-export async function listMyParlays(supabase: SupabaseClient, userId: string): Promise<ParlayView[]> {
-  const { data, error } = await supabase
-    .from('parlays')
-    .select(
-      'id, stake, status, credited, created_at, parlay_legs(outcome_id, locked_odds, market_outcomes(label), markets(id, title, status, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id)))',
-    )
-    .eq('profile_id', userId)
-    .order('created_at', { ascending: false })
-  if (error) throw error
+export const PARLAY_COLUMNS =
+  'id, stake, status, credited, created_at, parlay_legs(outcome_id, locked_odds, market_outcomes(label), markets(id, title, status, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id)))'
 
-  const rows = (data ?? []) as unknown as ParlayRow[]
-
-  return rows.map((p) => {
-    const legs = p.parlay_legs.map((l): ParlayLegView => {
-      const winner = l.markets.current_resolution?.outcome_id ?? null
-      return {
-        marketId: l.markets.id,
-        marketTitle: l.markets.title,
-        outcomeLabel: l.market_outcomes.label,
-        lockedOddsBp: lockedOddsToBp(l.locked_odds),
-        status: legStatus(l.markets.status, winner, l.outcome_id),
-      }
-    })
-
-    const activeBps = legs.filter((l) => l.status !== 'voided').map((l) => l.lockedOddsBp)
-    const { multiplierBp, capped } = combineOdds(activeBps)
-
+export function toParlayView(p: ParlayRow): ParlayView {
+  const legs = p.parlay_legs.map((l): ParlayLegView => {
+    const winner = l.markets.current_resolution?.outcome_id ?? null
     return {
-      id: p.id,
-      stake: p.stake,
-      status: p.status,
-      credited: p.credited,
-      multiplierBp,
-      capped,
-      potentialPayout: potentialPayout(p.stake, activeBps),
-      createdAt: p.created_at,
-      legs,
+      marketId: l.markets.id,
+      marketTitle: l.markets.title,
+      outcomeLabel: l.market_outcomes.label,
+      lockedOddsBp: lockedOddsToBp(l.locked_odds),
+      status: legStatus(l.markets.status, winner, l.outcome_id),
     }
   })
+
+  const activeBps = legs.filter((l) => l.status !== 'voided').map((l) => l.lockedOddsBp)
+  const { multiplierBp, capped } = combineOdds(activeBps)
+
+  return {
+    id: p.id,
+    stake: p.stake,
+    status: p.status,
+    credited: p.credited,
+    multiplierBp,
+    capped,
+    potentialPayout: potentialPayout(p.stake, activeBps),
+    createdAt: p.created_at,
+    legs,
+  }
 }

@@ -112,33 +112,35 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
         </div>
 
         {/* Each section's fallback carries the same grid placement as the section itself. The
-            four fallbacks announce nothing themselves (SkeletonScreen announce={false}); this is
-            the page's one combined status for as long as any of them is still showing. */}
-        <LoadingStatus />
-        <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-7">
-          <Suspense fallback={<MarketChartSkeleton />}>
-            <MarketChart market={market} odds={odds} now={now} />
-          </Suspense>
-          <Suspense fallback={<MarketActionsSkeleton outcomes={market.outcomes.length} />}>
-            <MarketActions
-              market={market}
-              odds={odds}
-              slip={slip}
-              isCreator={isCreator}
-              isPastClose={isPastClose}
-              canBet={canBet}
-            />
-          </Suspense>
-          <Suspense fallback={<MarketBetsSkeleton />}>
-            <MarketBets
-              market={market}
-              viewerId={user.id}
-              canBet={canBet}
-              page={readPageParams(searchParams, 'bets')}
-              searchParams={searchParams}
-            />
-          </Suspense>
-        </div>
+            four fallbacks announce nothing themselves (SkeletonScreen announce={false});
+            LoadingStatus wraps them in one combined status, scoped to just these four, for as
+            long as any of them is still showing. */}
+        <LoadingStatus>
+          <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-7">
+            <Suspense fallback={<MarketChartSkeleton />}>
+              <MarketChart market={market} odds={odds} now={now} />
+            </Suspense>
+            <Suspense fallback={<MarketActionsSkeleton outcomes={market.outcomes.length} />}>
+              <MarketActions
+                market={market}
+                odds={odds}
+                slip={slip}
+                isCreator={isCreator}
+                isPastClose={isPastClose}
+                canBet={canBet}
+              />
+            </Suspense>
+            <Suspense fallback={<MarketBetsSkeleton />}>
+              <MarketBets
+                market={market}
+                viewerId={user.id}
+                canBet={canBet}
+                page={readPageParams(searchParams, 'bets')}
+                searchParams={searchParams}
+              />
+            </Suspense>
+          </div>
+        </LoadingStatus>
 
         <Suspense fallback={null}>
           <MarketSlipDrawer slip={slip} />

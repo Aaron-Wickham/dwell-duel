@@ -74,9 +74,15 @@ architectural decisions exist, document them here and in `docs/`.
 ## Data and reliability
 
 - **Long lists page with "Show more".** `lib/pagination` plus
-  `components/ui/show-more.tsx`'s `ShowMore`, which takes `href` and an
+  `components/ui/show-more.tsx`'s `ShowMore`, which takes `href`, an
   optional `fresh` prop — pass `fresh` when `next.kind === 'window'`, so a
-  fresh window scrolls to the top.
+  fresh window scrolls to the top — and `focusId`,
+  `rowDomId(prefix, next.firstId)`. Each row spreads
+  `focusTarget(rowDomId(prefix, row.id))` (`lib/pagination/row-id.ts`),
+  the page renders one `<ShowMoreFocus />`, and a window that comes back
+  empty renders `NothingOlder` instead of the list's empty state. A reader
+  whose row select carries embeds passes `readKeyset` a keys-only
+  `fetchKeys` for its probe.
 - **Keyset filters AND a plain timestamp bound** onto the cursor's
   tiebreak OR, so the query plans an Index Cond instead of scanning the
   whole table.

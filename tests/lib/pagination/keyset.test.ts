@@ -65,11 +65,18 @@ function fakeTable(rows: Row[]) {
     a.created_at === b.created_at ? (a.id < b.id ? 1 : -1) : a.created_at < b.created_at ? 1 : -1,
   )
   const calls: { filter: string | null; limit: number }[] = []
+  const keyCalls: { filter: string; limit: number }[] = []
+  const select = (filter: string | null, limit: number) =>
+    sorted.filter((row) => filter === null || splitTerms(filter).some((t) => matches(t, row))).slice(0, limit)
   async function fetchRows(filter: string | null, limit: number): Promise<Row[]> {
     calls.push({ filter, limit })
-    return sorted.filter((row) => filter === null || splitTerms(filter).some((t) => matches(t, row))).slice(0, limit)
+    return select(filter, limit)
   }
-  return { sorted, calls, fetchRows }
+  async function fetchKeys(filter: string, limit: number): Promise<Cursor[]> {
+    keyCalls.push({ filter, limit })
+    return select(filter, limit).map(keyOf)
+  }
+  return { sorted, calls, keyCalls, fetchRows, fetchKeys }
 }
 
 const keyOf = (row: Row): Cursor => ({ ts: row.created_at, id: row.id })
@@ -141,6 +148,7 @@ describe('readKeyset', () => {
     expect(page.windowed).toBe(false)
     expect(page.next?.kind).toBe('extend')
     expect(decodeCursor(page.next?.cursor)).toEqual(keyOf(table.sorted[99]))
+    expect(page.next?.firstId).toBe(table.sorted[50].id)
     expect(table.calls).toEqual([
       { filter: null, limit: 50 },
       { filter: olderThanFilter(COLS, keyOf(table.sorted[49])), limit: 50 },
@@ -216,7 +224,49 @@ describe('readKeyset', () => {
     const page = await readKeyset({ top: null, bottom: keyOf(table.sorted[519]) }, COLS, table.fetchRows, keyOf)
 
     expect(page.rows).toEqual(table.sorted.slice(0, 500))
-    expect(page.next).toEqual({ kind: 'window', cursor: encodeCursor(keyOf(table.sorted[500])) })
+    expect(page.next).toEqual({
+      kind: 'window',
+      cursor: encodeCursor(keyOf(table.sorted[500])),
+      firstId: table.sorted[500].id,
+    })
+  })
+
+  it('probes with fetchKeys when one is given, so the full row read runs once', async () => {
+    const table = fakeTable(makeRows(120))
+    const page = await readKeyset(FIRST, COLS, table.fetchRows, keyOf, table.fetchKeys)
+
+    expect(page.rows).toEqual(table.sorted.slice(0, 50))
+    expect(page.next).toEqual({
+      kind: 'extend',
+      cursor: encodeCursor(keyOf(table.sorted[99])),
+      firstId: table.sorted[50].id,
+    })
+    expect(table.calls).toEqual([{ filter: null, limit: 50 }])
+    expect(table.keyCalls).toEqual([{ filter: olderThanFilter(COLS, keyOf(table.sorted[49])), limit: 50 }])
+  })
+
+  it('starts a fresh window from the keys probe too, at the first row past the cap', async () => {
+    const table = fakeTable(makeRows(600))
+    const page = await readKeyset({ top: null, bottom: keyOf(table.sorted[479]) }, COLS, table.fetchRows, keyOf, table.fetchKeys)
+
+    expect(page.rows).toEqual(table.sorted.slice(0, 480))
+    expect(page.next).toEqual({ kind: 'window', cursor: encodeCursor(keyOf(table.sorted[480])), firstId: table.sorted[480].id })
+    expect(table.calls).toHaveLength(1)
+    expect(table.keyCalls).toHaveLength(1)
+  })
+
+  it('skips the keys probe when the first page is short', async () => {
+    const table = fakeTable(makeRows(30))
+    await readKeyset(FIRST, COLS, table.fetchRows, keyOf, table.fetchKeys)
+    expect(table.keyCalls).toHaveLength(0)
+  })
+
+  it('reads a fresh window that starts past the last row as empty and windowed, with no probe', async () => {
+    const table = fakeTable(makeRows(120))
+    const pastTheEnd: Cursor = { ts: '2026-09-25T00:00:00.000000+00:00', id: '000000' }
+    const page = await readKeyset({ top: pastTheEnd, bottom: null }, COLS, table.fetchRows, keyOf, table.fetchKeys)
+    expect(page).toEqual({ rows: [], next: null, windowed: true })
+    expect(table.keyCalls).toHaveLength(0)
   })
 
   it('treats a cursor whose id the column cannot hold as absent', async () => {

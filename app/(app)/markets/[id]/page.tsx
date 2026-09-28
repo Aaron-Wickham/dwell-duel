@@ -14,6 +14,7 @@ import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt } from '@/lib/markets/market-status'
 import { rowState } from '@/lib/markets/row-state'
 import { newestHref, readPageParams, showMoreHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
+import { rowDomId } from '@/lib/pagination/row-id'
 import { isUuid } from '@/lib/uuid'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { readSlip } from '@/lib/parlays/slip'
@@ -24,7 +25,9 @@ import { LocalTime } from '@/components/ui/local-time'
 import { Message } from '@/components/ui/message'
 import { Page, h1Class } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
+import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
+import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { StatusChip } from '@/components/ui/status-chip'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { BetList } from '@/components/markets/bet-list'
@@ -292,6 +295,8 @@ async function MarketActions({
   )
 }
 
+const BET_ROW_ID_PREFIX = 'bet'
+
 async function MarketBets({
   market,
   viewerId,
@@ -308,21 +313,34 @@ async function MarketBets({
   const { supabase } = await requireUser()
   const betsPage = await getMarketBets(supabase, market.id, page)
   const pathname = `/markets/${market.id}`
+  const backToNewestHref = newestHref(pathname, searchParams, 'bets')
 
   return (
     <ContentReveal>
       <SectionCard title="Bets" titleId="bets-title" className="gap-1 lg:col-start-1 lg:row-start-3">
-        {betsPage.windowed && (
+        <ShowMoreFocus />
+        {betsPage.windowed && betsPage.rows.length > 0 && (
           <div className="flex flex-col py-2">
-            <BackToNewest href={newestHref(pathname, searchParams, 'bets')} />
+            <BackToNewest href={backToNewestHref} />
           </div>
         )}
-        <BetList bets={betsPage.rows} outcomes={market.outcomes} viewerId={viewerId} canBet={canBet} />
+        {betsPage.windowed && betsPage.rows.length === 0 ? (
+          <NothingOlder href={backToNewestHref} />
+        ) : (
+          <BetList
+            bets={betsPage.rows}
+            outcomes={market.outcomes}
+            viewerId={viewerId}
+            canBet={canBet}
+            rowIdPrefix={BET_ROW_ID_PREFIX}
+          />
+        )}
         {betsPage.next && (
           <div className="flex flex-col border-t border-line pt-3">
             <ShowMore
               href={showMoreHref(pathname, searchParams, 'bets', betsPage.next)}
               fresh={betsPage.next.kind === 'window'}
+              focusId={rowDomId(BET_ROW_ID_PREFIX, betsPage.next.firstId)}
             />
           </div>
         )}

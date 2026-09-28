@@ -42,11 +42,15 @@ export function newerThanFilter(cols: KeyColumns, cursor: Cursor): string {
   return `and(${cols.ts}.gte."${cursor.ts}",or(${cols.ts}.gt."${cursor.ts}",and(${cols.ts}.eq."${cursor.ts}",${cols.id}.gt."${cursor.id}")))`
 }
 
+// fetchKeys, when given, answers the probe below with only the key columns: the probe needs
+// nothing else, and the full row select can carry embeds that cost a join per row. Without it
+// the probe falls back to fetchRows.
 export async function readKeyset<Row>(
   rawPage: PageParams,
   cols: KeyColumns,
   fetchRows: (filter: string | null, limit: number) => Promise<Row[]>,
   keyOf: (row: Row) => Cursor,
+  fetchKeys?: (filter: string, limit: number) => Promise<Cursor[]>,
 ): Promise<KeysetPage<Row>> {
   const valid = (c: Cursor | null) => (c && (!cols.isId || cols.isId(c.id)) ? c : null)
   const page: PageParams = { top: valid(rawPage.top), bottom: valid(rawPage.bottom) }
@@ -58,10 +62,12 @@ export async function readKeyset<Row>(
   // "Show more" points at the 50th row past the last one shown, so the read needs those rows'
   // keys. Probing from the last row returned, not from the cursor, means rows that arrived at the
   // top and pushed the range past the cap are picked up here instead of skipped.
-  const probe = await fetchRows(olderThanFilter(cols, keyOf(rows[rows.length - 1])), PAGE_SIZE)
+  const after = olderThanFilter(cols, keyOf(rows[rows.length - 1]))
+  const probe = fetchKeys ? await fetchKeys(after, PAGE_SIZE) : (await fetchRows(after, PAGE_SIZE)).map(keyOf)
   if (probe.length === 0) return { rows, next: null, windowed }
+  const firstId = probe[0].id
   if (rows.length + probe.length > WINDOW_CAP) {
-    return { rows, next: { kind: 'window', cursor: encodeCursor(keyOf(probe[0])) }, windowed }
+    return { rows, next: { kind: 'window', cursor: encodeCursor(probe[0]), firstId }, windowed }
   }
-  return { rows, next: { kind: 'extend', cursor: encodeCursor(keyOf(probe[probe.length - 1])) }, windowed }
+  return { rows, next: { kind: 'extend', cursor: encodeCursor(probe[probe.length - 1]), firstId }, windowed }
 }

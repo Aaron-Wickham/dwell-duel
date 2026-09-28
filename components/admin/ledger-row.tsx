@@ -2,14 +2,15 @@ import Link from 'next/link'
 import type { LedgerEntry } from '@/lib/ledger/list-transactions'
 import { ageLabel, isOldEntry } from '@/lib/social/relative-time'
 import { LocalTime } from '@/components/ui/local-time'
+import { focusTarget } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
 
-export function LedgerRow({ entry }: { entry: LedgerEntry }) {
+export function LedgerRow({ entry, domId }: { entry: LedgerEntry; domId?: string }) {
   const sign = entry.amount > 0 ? '+' : entry.amount < 0 ? '−' : ''
   const amountClass = entry.amount > 0 ? 'text-win' : entry.amount < 0 ? 'text-loss' : 'text-ink2'
 
   return (
-    <li className="flex items-start gap-3 py-3.5">
+    <li {...focusTarget(domId)} className="flex items-start gap-3 py-3.5">
       <p className="min-w-0 grow">
         <Link href={`/members/${entry.profileId}`} transitionTypes={['nav-forward']}>{entry.memberName}</Link>:{' '}
         <span className={cn('font-extrabold tabular-nums', amountClass)}>

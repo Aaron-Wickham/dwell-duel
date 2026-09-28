@@ -6,6 +6,7 @@ import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { getMemberStanding } from '@/lib/social/leaderboard'
 import { listFeed } from '@/lib/social/list-feed'
 import { readPageParams, showMoreHref, newestHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
+import { rowDomId } from '@/lib/pagination/row-id'
 import { isUuid } from '@/lib/uuid'
 import { Page, h1Class } from '@/components/ui/page'
 import { BackLink } from '@/components/ui/back-link'
@@ -13,7 +14,9 @@ import { Avatar } from '@/components/ui/avatar'
 import { SkeletonScreen } from '@/components/ui/skeleton'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { FeedListSkeleton } from '@/components/feed/feed-list-skeleton'
+import { NothingOlder } from '@/components/ui/nothing-older'
 import { ShowMore, BackToNewest } from '@/components/ui/show-more'
+import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { FeedList } from '@/app/(app)/feed/feed-list'
 
 // No loading.tsx for this route: the member must be found before anything streams, so an
@@ -54,6 +57,8 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
   )
 }
 
+const ROW_ID_PREFIX = 'activity'
+
 async function MemberActivity({
   memberId,
   page,
@@ -66,19 +71,24 @@ async function MemberActivity({
   const { supabase } = await requireUser()
   const activity = await listFeed(supabase, { actorId: memberId, page })
   const pathname = `/members/${memberId}`
+  const backToNewestHref = newestHref(pathname, searchParams, 'activity')
 
   return (
     <ContentReveal>
+      <ShowMoreFocus />
       <FeedList
         events={activity.rows}
         heading="Recent activity"
         headingId="recent-activity"
-        aboveList={activity.windowed && <BackToNewest href={newestHref(pathname, searchParams, 'activity')} />}
+        rowIdPrefix={ROW_ID_PREFIX}
+        emptyState={activity.windowed ? <NothingOlder href={backToNewestHref} /> : undefined}
+        aboveList={activity.windowed && activity.rows.length > 0 && <BackToNewest href={backToNewestHref} />}
         belowList={
           activity.next && (
             <ShowMore
               href={showMoreHref(pathname, searchParams, 'activity', activity.next)}
               fresh={activity.next.kind === 'window'}
+              focusId={rowDomId(ROW_ID_PREFIX, activity.next.firstId)}
             />
           )
         }

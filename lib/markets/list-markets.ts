@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { PageParams } from '@/lib/pagination/cursor'
+import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 import { isUuid } from '@/lib/uuid'
 
@@ -64,24 +64,33 @@ export async function listOpenMarkets(supabase: SupabaseClient): Promise<MarketS
 
 const MARKET_KEYS: KeyColumns = { ts: 'created_at', id: 'id', isId: isUuid }
 
+const marketKey = (m: { id: string; created_at: string }): Cursor => ({ ts: m.created_at, id: m.id })
+
+// The range read and its key probe share one builder, so the two can't drift apart on filters.
+function closedQuery(supabase: SupabaseClient, columns: string, filter: string | null, limit: number) {
+  let query = supabase.from('markets').select(columns).in('status', ['resolved', 'voided'])
+  if (filter) query = query.or(filter)
+  return query.order('created_at', { ascending: false }).order('id', { ascending: false }).limit(limit)
+}
+
 // Resolved and voided markets are one list, one "Show more", shown in their two groups.
 export async function listClosedMarkets(supabase: SupabaseClient, page: PageParams): Promise<KeysetPage<MarketSummary>> {
   const result = await readKeyset(
     page,
     MARKET_KEYS,
     async (filter, limit) => {
-      let query = supabase.from('markets').select(SUMMARY_SELECT).in('status', ['resolved', 'voided'])
-      if (filter) query = query.or(filter)
-      const { data, error } = await query
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
+      const { data, error } = await closedQuery(supabase, SUMMARY_SELECT, filter, limit)
         .order('created_at', { referencedTable: 'market_outcomes' })
         .order('label', { referencedTable: 'market_outcomes' })
-        .limit(limit)
       if (error) throw error
       return (data ?? []) as unknown as SummaryRow[]
     },
-    (m) => ({ ts: m.created_at, id: m.id }),
+    marketKey,
+    async (filter, limit) => {
+      const { data, error } = await closedQuery(supabase, 'id, created_at', filter, limit)
+      if (error) throw error
+      return ((data ?? []) as unknown as { id: string; created_at: string }[]).map(marketKey)
+    },
   )
   return { ...result, rows: result.rows.map(toSummary) }
 }

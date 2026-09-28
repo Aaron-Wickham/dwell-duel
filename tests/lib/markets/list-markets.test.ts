@@ -70,6 +70,31 @@ describe('listClosedMarkets', () => {
     expect(page.next).toBeNull()
   })
 
+  it('probes only the keys of the next closed markets, with the same filter and order, and no embeds', async () => {
+    const rows = Array.from({ length: 50 }, (_, i) =>
+      marketRow({ id: `0b9c3f5e-8a1d-4c2b-9e7f-${String(1000 - i).padStart(12, '0')}` }),
+    )
+    const probed = [marketRow({ id: '0b9c3f5e-8a1d-4c2b-9e7f-000000000001', created_at: '2026-09-18T09:00:00+00:00' })]
+    const { client, queries } = fakeSupabase((_query, index) => ({ data: index === 0 ? rows : probed }))
+
+    const page = await listClosedMarkets(client, { top: null, bottom: null })
+
+    const [read, probe] = queries
+    expect(read.select).toContain(RESOLUTION_EMBED)
+    expect(probe.select).toBe('id, created_at')
+    expect(probe.in).toEqual(read.in)
+    expect(probe.order).toEqual([
+      ['created_at', { ascending: false }],
+      ['id', { ascending: false }],
+    ])
+    expect(read.order).toEqual([
+      ...probe.order,
+      ['created_at', { referencedTable: 'market_outcomes' }],
+      ['label', { referencedTable: 'market_outcomes' }],
+    ])
+    expect(page.next).toMatchObject({ kind: 'extend', firstId: '0b9c3f5e-8a1d-4c2b-9e7f-000000000001' })
+  })
+
   it('ignores a cursor whose id is not a market id', async () => {
     const { client, queries } = fakeSupabase(() => ({ data: [] }))
     await listClosedMarkets(client, { top: null, bottom: { ts: '2026-09-19T09:00:00Z', id: '42' } })

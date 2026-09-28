@@ -4,12 +4,17 @@ import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { listAllTransactions } from '@/lib/ledger/list-transactions'
 import { newestHref, readPageParams, showMoreHref } from '@/lib/pagination/cursor'
+import { rowDomId } from '@/lib/pagination/row-id'
 import { cardClass } from '@/components/ui/card'
 import { LedgerRow } from '@/components/admin/ledger-row'
 import { EmptyState } from '@/components/ui/empty-state'
+import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
+import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { cn } from '@/lib/utils'
+
+const ROW_ID_PREFIX = 'ledger'
 
 export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>) {
   const searchParams = await props.searchParams
@@ -18,6 +23,7 @@ export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>)
   if (!(await isAdmin(supabase))) redirect('/')
 
   const ledger = await listAllTransactions(supabase, readPageParams(searchParams, 'before'))
+  const backToNewestHref = newestHref('/admin/ledger', searchParams, 'before')
 
   return (
     <ContentReveal>
@@ -25,19 +31,24 @@ export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>)
         <h2 id="ledger-title" className="sr-only">
           Every coin movement
         </h2>
-        {ledger.windowed && (
+        <ShowMoreFocus />
+        {ledger.windowed && ledger.rows.length > 0 && (
           <div className="flex flex-col border-b border-line py-3.5">
-            <BackToNewest href={newestHref('/admin/ledger', searchParams, 'before')} />
+            <BackToNewest href={backToNewestHref} />
           </div>
         )}
         {ledger.rows.length === 0 ? (
           <div className="py-[18px] md:py-6">
-            <EmptyState icon={NotebookText} title="No coin movements yet." />
+            {ledger.windowed ? (
+              <NothingOlder href={backToNewestHref} />
+            ) : (
+              <EmptyState icon={NotebookText} title="No coin movements yet." />
+            )}
           </div>
         ) : (
           <ul className="flex flex-col divide-y divide-line">
             {ledger.rows.map((e) => (
-              <LedgerRow key={e.id} entry={e} />
+              <LedgerRow key={e.id} entry={e} domId={rowDomId(ROW_ID_PREFIX, e.id)} />
             ))}
           </ul>
         )}
@@ -46,6 +57,7 @@ export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>)
             <ShowMore
               href={showMoreHref('/admin/ledger', searchParams, 'before', ledger.next)}
               fresh={ledger.next.kind === 'window'}
+              focusId={rowDomId(ROW_ID_PREFIX, ledger.next.firstId)}
             />
           </div>
         )}

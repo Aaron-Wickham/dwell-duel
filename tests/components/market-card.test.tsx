@@ -251,4 +251,43 @@ describe('MarketCard', () => {
     )
     expect(screen.queryByTestId('chart')).not.toBeInTheDocument()
   })
+
+  it('becomes a focus target named from its content when given a DOM id', () => {
+    render(
+      <MarketCard
+        id="m7"
+        title="Will the choir sing?"
+        status="resolved"
+        kind="binary"
+        closeAt="2026-10-04T16:30:00.000Z"
+        resolvedAt="2026-10-05T16:30:00.000Z"
+        outcomes={[
+          { id: 'a', label: 'Yes', pct: 70 },
+          { id: 'b', label: 'No', pct: 30 },
+        ]}
+        resolvedOutcomeLabel="Yes"
+        domId="market-closed-m7"
+      />,
+    )
+    const card = screen.getByRole('article', { name: /Will the choir sing\?/ })
+    expect(card).toHaveAttribute('id', 'market-closed-m7')
+    expect(card).toHaveAttribute('tabindex', '-1')
+  })
+
+  it('is not focusable without a DOM id', () => {
+    render(
+      <MarketCard
+        id="m8"
+        title="Will the choir sing?"
+        status="open"
+        kind="binary"
+        closeAt="2026-10-04T16:30:00.000Z"
+        resolvedAt={null}
+        outcomes={[]}
+        resolvedOutcomeLabel={null}
+      />,
+    )
+    expect(screen.getByRole('article')).not.toHaveAttribute('tabindex')
+    expect(screen.getByRole('article')).not.toHaveAttribute('id')
+  })
 })

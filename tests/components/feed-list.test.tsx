@@ -90,4 +90,25 @@ describe('FeedList', () => {
     expect(screen.queryByRole('link', { name: 'Back to newest' })).toBeNull()
     expect(screen.queryByRole('link', { name: 'Show more' })).toBeNull()
   })
+
+  it('gives each event a focus target named from its content, from the row id prefix', () => {
+    render(<FeedList events={[{ ...event, id: 'bet:9' }]} heading="Events" headingId="feed-events" headingHidden rowIdPrefix="feed" />)
+    // jsdom's name computation drops the spaces between inline elements that a browser keeps.
+    const row = screen.getByRole('listitem', { name: /Social layer market/ })
+    expect(row).toHaveAttribute('id', 'feed-bet_003a9')
+    expect(row).toHaveAttribute('tabindex', '-1')
+  })
+
+  it('shows the given empty state instead of its own when there are no events', () => {
+    render(
+      <FeedList
+        events={[]}
+        heading="Recent activity"
+        headingId="recent-activity"
+        emptyState={<p>Nothing older here.</p>}
+      />,
+    )
+    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.queryByText('Nothing yet.')).toBeNull()
+  })
 })

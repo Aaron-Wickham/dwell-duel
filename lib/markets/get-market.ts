@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { PageParams } from '@/lib/pagination/cursor'
+import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 
 export interface MarketDetail {
@@ -75,39 +75,52 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
 }
 
 const BET_KEYS: KeyColumns = { ts: 'created_at', id: 'id', isId: isBigintId }
+const BET_COLUMNS = 'id, outcome_id, amount, created_at, profile_id, profiles(display_name)'
+
+type BetRow = {
+  id: number
+  outcome_id: string
+  amount: number
+  created_at: string
+  profile_id: string
+  profiles: { display_name: string } | null
+}
+
+const betKey = (b: { id: number; created_at: string }): Cursor => ({ ts: b.created_at, id: String(b.id) })
+
+// The range read and its key probe share one builder, so the two can't drift apart on filters.
+function betsQuery(supabase: SupabaseClient, marketId: string, columns: string, filter: string | null, limit: number) {
+  let query = supabase.from('bets').select(columns).eq('market_id', marketId)
+  if (filter) query = query.or(filter)
+  return query.order('created_at', { ascending: false }).order('id', { ascending: false }).limit(limit)
+}
 
 export async function getMarketBets(supabase: SupabaseClient, marketId: string, page: PageParams): Promise<KeysetPage<MarketBet>> {
   const result = await readKeyset(
     page,
     BET_KEYS,
     async (filter, limit) => {
-      let query = supabase
-        .from('bets')
-        .select('id, outcome_id, amount, created_at, profile_id, profiles(display_name)')
-        .eq('market_id', marketId)
-      if (filter) query = query.or(filter)
-      const { data, error } = await query
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(limit)
+      const { data, error } = await betsQuery(supabase, marketId, BET_COLUMNS, filter, limit)
       if (error) throw error
-      return data ?? []
+      return (data ?? []) as unknown as BetRow[]
     },
-    (b) => ({ ts: b.created_at, id: String(b.id) }),
+    betKey,
+    async (filter, limit) => {
+      const { data, error } = await betsQuery(supabase, marketId, 'id, created_at', filter, limit)
+      if (error) throw error
+      return ((data ?? []) as unknown as { id: number; created_at: string }[]).map(betKey)
+    },
   )
 
   return {
     ...result,
-    rows: result.rows.map((b) => {
-      const profile = b.profiles as unknown as { display_name: string } | null
-      return {
-        id: b.id,
-        outcomeId: b.outcome_id,
-        amount: b.amount,
-        createdAt: b.created_at,
-        profileId: b.profile_id,
-        bettorName: profile?.display_name ?? 'Unknown member',
-      }
-    }),
+    rows: result.rows.map((b) => ({
+      id: b.id,
+      outcomeId: b.outcome_id,
+      amount: b.amount,
+      createdAt: b.created_at,
+      profileId: b.profile_id,
+      bettorName: b.profiles?.display_name ?? 'Unknown member',
+    })),
   }
 }

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { PageParams } from '@/lib/pagination/cursor'
+import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { IN_CHUNK, chunk } from '@/lib/pagination/chunk'
 import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 
@@ -112,26 +112,46 @@ export function buildContext(type: string, meta: EntryMeta, lookups: Lookups): s
 }
 
 const LEDGER_KEYS: KeyColumns = { ts: 'created_at', id: 'id', isId: isBigintId }
+const LEDGER_COLUMNS = 'id, profile_id, amount, type, meta, created_at, profiles(display_name)'
+
+type LedgerRow = {
+  id: number
+  profile_id: string
+  amount: number
+  type: string
+  meta: EntryMeta | null
+  created_at: string
+  profiles: { display_name: string } | null
+}
+
+const ledgerKey = (t: { id: number; created_at: string }): Cursor => ({ ts: t.created_at, id: String(t.id) })
+
+// The range read and its key probe share one builder, so the two can't drift apart on order.
+function ledgerQuery(supabase: SupabaseClient, columns: string, filter: string | null, limit: number) {
+  let query = supabase.from('coin_transactions').select(columns)
+  if (filter) query = query.or(filter)
+  return query.order('created_at', { ascending: false }).order('id', { ascending: false }).limit(limit)
+}
 
 export async function listAllTransactions(supabase: SupabaseClient, page: PageParams): Promise<KeysetPage<LedgerEntry>> {
   const result = await readKeyset(
     page,
     LEDGER_KEYS,
     async (filter, limit) => {
-      let query = supabase.from('coin_transactions').select('id, profile_id, amount, type, meta, created_at, profiles(display_name)')
-      if (filter) query = query.or(filter)
-      const { data, error } = await query
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(limit)
+      const { data, error } = await ledgerQuery(supabase, LEDGER_COLUMNS, filter, limit)
       if (error) throw error
-      return data ?? []
+      return (data ?? []) as unknown as LedgerRow[]
     },
-    (t) => ({ ts: t.created_at, id: String(t.id) }),
+    ledgerKey,
+    async (filter, limit) => {
+      const { data, error } = await ledgerQuery(supabase, 'id, created_at', filter, limit)
+      if (error) throw error
+      return ((data ?? []) as unknown as { id: number; created_at: string }[]).map(ledgerKey)
+    },
   )
 
   const rows = result.rows
-  const metas = rows.map((t) => (t.meta ?? {}) as EntryMeta)
+  const metas = rows.map((t) => t.meta ?? {})
 
   const marketIds = [...new Set(metas.map((m) => m.market_id).filter((v): v is string => Boolean(v)))]
   const outcomeIds = [...new Set(metas.map((m) => m.outcome_id).filter((v): v is string => Boolean(v)))]
@@ -146,17 +166,14 @@ export async function listAllTransactions(supabase: SupabaseClient, page: PagePa
 
   return {
     ...result,
-    rows: rows.map((t, index) => {
-      const profile = t.profiles as unknown as { display_name: string } | null
-      return {
-        id: t.id,
-        profileId: t.profile_id,
-        memberName: profile?.display_name ?? 'Unknown member',
-        amount: t.amount,
-        type: TYPE_LABELS[t.type] ?? t.type,
-        context: buildContext(t.type, metas[index], lookups),
-        createdAt: t.created_at,
-      }
-    }),
+    rows: rows.map((t, index) => ({
+      id: t.id,
+      profileId: t.profile_id,
+      memberName: t.profiles?.display_name ?? 'Unknown member',
+      amount: t.amount,
+      type: TYPE_LABELS[t.type] ?? t.type,
+      context: buildContext(t.type, metas[index], lookups),
+      createdAt: t.created_at,
+    })),
   }
 }

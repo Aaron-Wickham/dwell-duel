@@ -22,10 +22,11 @@ describe('getMarketBets', () => {
 
     const page = await getMarketBets(client, 'm1', { top: null, bottom: null })
 
-    expect(queries.map((q) => [q.table, q.eq, q.limit])).toEqual([
-      ['bets', [['market_id', 'm1']], 50],
-      ['bets', [['market_id', 'm1']], 50],
+    expect(queries.map((q) => [q.table, q.select, q.eq, q.limit])).toEqual([
+      ['bets', 'id, outcome_id, amount, created_at, profile_id, profiles(display_name)', [['market_id', 'm1']], 50],
+      ['bets', 'id, created_at', [['market_id', 'm1']], 50],
     ])
+    expect(queries[1].order).toEqual(queries[0].order)
     expect(page.rows[0]).toEqual({
       id: 200,
       outcomeId: 'o-yes',
@@ -36,6 +37,7 @@ describe('getMarketBets', () => {
     })
     expect(page.rows).toHaveLength(50)
     expect(decodeCursor(page.next?.cursor)).toEqual({ ts: betRow(101).created_at, id: '101' })
+    expect(page.next?.firstId).toBe('150')
   })
 
   it('ignores a cursor whose id is not a bet id', async () => {

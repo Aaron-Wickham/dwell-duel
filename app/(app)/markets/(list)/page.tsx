@@ -11,10 +11,13 @@ import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { marketCardStatus, type MarketCardStatus } from '@/lib/markets/market-status'
 import { readSparklines } from '@/lib/markets/sparklines'
 import { newestHref, readPageParams, showMoreHref } from '@/lib/pagination/cursor'
+import { rowDomId } from '@/lib/pagination/row-id'
 import { Page, PageHeader, h2Class } from '@/components/ui/page'
 import { EmptyState } from '@/components/ui/empty-state'
 import { buttonVariants } from '@/components/ui/button'
+import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
+import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { cn } from '@/lib/utils'
 import { MarketCard, type MarketCardChart } from '@/components/markets/market-card'
 
@@ -25,6 +28,8 @@ const GROUPS: { id: MarketCardStatus; heading: string }[] = [
   { id: 'voided', heading: 'Voided' },
 ]
 
+const CLOSED_ROW_ID_PREFIX = 'market-closed'
+
 export default async function MarketsPage(props: PageProps<'/markets'>) {
   const searchParams = await props.searchParams
   const { supabase, user } = await requireUser()
@@ -34,6 +39,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     listOpenMarkets(supabase),
     listClosedMarkets(supabase, readPageParams(searchParams, 'resolved')),
   ])
+  const closedIds = new Set(closed.rows.map((m) => m.id))
   const markets = [...open, ...closed.rows]
   const sparklinesByMarket = await readSparklines(
     supabase,
@@ -72,6 +78,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       })),
       resolvedOutcomeLabel: market.resolvedOutcomeLabel,
       chart,
+      domId: closedIds.has(market.id) ? rowDomId(CLOSED_ROW_ID_PREFIX, market.id) : undefined,
     }
   })
 
@@ -81,7 +88,14 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
   })).filter((group) => group.markets.length > 0)
 
   const firstClosedGroup = groups.findIndex((group) => group.id === 'resolved' || group.id === 'voided')
-  const backToNewest = closed.windowed ? <BackToNewest href={newestHref('/markets', searchParams, 'resolved')} /> : null
+  const closedNewestHref = newestHref('/markets', searchParams, 'resolved')
+  const backToNewest = closed.windowed ? (
+    closed.rows.length > 0 ? (
+      <BackToNewest href={closedNewestHref} />
+    ) : (
+      <NothingOlder href={closedNewestHref} />
+    )
+  ) : null
 
   return (
     <Page transition="tab">
@@ -99,7 +113,8 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
         }
       />
       <LiveTables subscriptions={pageSubscriptions.markets()} />
-      {groups.length === 0 ? (
+      <ShowMoreFocus />
+      {groups.length === 0 && !closed.windowed ? (
         <EmptyState
           icon={ChartColumn}
           title="No markets yet."
@@ -134,7 +149,11 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       )}
       {firstClosedGroup === -1 && backToNewest}
       {closed.next && (
-        <ShowMore href={showMoreHref('/markets', searchParams, 'resolved', closed.next)} fresh={closed.next.kind === 'window'} />
+        <ShowMore
+          href={showMoreHref('/markets', searchParams, 'resolved', closed.next)}
+          fresh={closed.next.kind === 'window'}
+          focusId={rowDomId(CLOSED_ROW_ID_PREFIX, closed.next.firstId)}
+        />
       )}
     </Page>
   )

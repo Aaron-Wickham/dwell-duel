@@ -84,6 +84,8 @@ model, the key flows and the migrations.
 | [CHANGELOG.md](CHANGELOG.md) | What shipped in each release |
 | [docs/design/app-redesign-handoff.md](docs/design/app-redesign-handoff.md) | The visual source of truth and the design canvas |
 | [docs/README.md](docs/README.md) | An index of every doc, including the dated specs and plans |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How changes get in: branches, pull requests and required review |
+| [SECURITY.md](SECURITY.md) | How to report a vulnerability privately |
 
 ## Development
 

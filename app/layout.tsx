@@ -5,6 +5,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { StatusBand } from '@/components/app-shell/status-band'
 import { siteMetadata, siteViewport } from '@/lib/app-shell/site-metadata'
 import { resolveTheme, THEME_COOKIE } from '@/lib/theme/theme'
+import { preferenceAttributes, resolvePreferences } from '@/lib/preferences/preferences'
 import { ServiceWorkerRegistration } from '@/components/offline/service-worker-registration'
 import './globals.css'
 
@@ -18,10 +19,17 @@ export const metadata = siteMetadata
 export const viewport = siteViewport
 
 export default async function RootLayout({ children }: LayoutProps<'/'>) {
-  const theme = resolveTheme((await cookies()).get(THEME_COOKIE)?.value)
+  const jar = await cookies()
+  const theme = resolveTheme(jar.get(THEME_COOKIE)?.value)
+  const prefs = resolvePreferences((name) => jar.get(name)?.value)
 
   return (
-    <html lang="en" data-theme={theme ?? undefined} className={`${manrope.variable} h-full`}>
+    <html
+      lang="en"
+      data-theme={theme ?? undefined}
+      {...preferenceAttributes(prefs)}
+      className={`${manrope.variable} h-full`}
+    >
       <body className="flex min-h-full flex-col">
         <StatusBand />
         {children}

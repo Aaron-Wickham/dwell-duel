@@ -1,5 +1,6 @@
 import { requireUser } from '@/lib/auth/require-user'
 import { adminHref, getRole } from '@/lib/auth/roles'
+import { avatarUrl } from '@/lib/profile/avatar'
 import { readSlip } from '@/lib/parlays/slip'
 import { AppNav } from '@/components/app-nav/app-nav'
 import { SlipProvider } from '@/components/slip/slip-provider'
@@ -16,7 +17,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   if (!user) return children
 
   const [{ data: profile, error }, role, slip] = await Promise.all([
-    supabase.from('profiles').select('balance').eq('id', user.id).maybeSingle(),
+    supabase.from('profiles').select('balance, display_name, avatar_path').eq('id', user.id).maybeSingle(),
     getRole(supabase),
     readSlip(),
   ])
@@ -28,7 +29,11 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
     <LiveTablesProvider userId={user.id}>
       <SlipProvider view={slipView}>
         <NavDepthTracker />
-        <AppNav balance={profile.balance} adminHref={adminHref(role)} />
+        <AppNav
+          balance={profile.balance}
+          adminHref={adminHref(role)}
+          me={{ id: user.id, name: profile.display_name, avatarSrc: avatarUrl(profile.avatar_path) }}
+        />
         <main id="main" className="flex flex-1 flex-col pb-[calc(82px+var(--safe-bottom))] md:pb-0">
           <OfflineBanner />
           {children}

@@ -71,6 +71,15 @@ architectural decisions exist, document them here and in `docs/`.
 - **The `pressable` and `no-callout` utilities,** plus the `--safe-top` /
   `--safe-bottom` tokens, which are non-zero only in standalone mode.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.
+- **Settings are cookies on `<html>`.** Theme (`data-theme`), haptics
+  (`data-haptics="off"`) and reduced motion (`data-motion="reduce"`) are
+  set by the root layout before any JS runs. `motion-reduce:` covers both
+  the device setting and Settings' choice; plain CSS repeats each
+  `prefers-reduced-motion` rule under `:root[data-motion="reduce"]`; an
+  animated number uses `AnimatedNumber`, never `NumberFlow` directly, and
+  script checks `reducedMotion()` from `lib/ui/reduced-motion.ts`.
+- **Segmented tabs are `SubNav`** (`components/ui/sub-nav.tsx`), with tab
+  state in the URL, as My bets' `?tab=` and the admin sections do.
 - **Odds are seeded** (0041): every outcome's pool counts
   `markets.seed_per_outcome` virtual DC. Odds, chance, payout estimates and
   charts go through `effectivePools` (`lib/markets/odds.ts`), the same maths
@@ -146,6 +155,9 @@ architectural decisions exist, document them here and in `docs/`.
 - **A new required env var** goes in `lib/env/required.ts`. A
   production-only one must be set in Vercel before merging, or
   production won't boot.
+- **My bets pages `my_wagers`** (0044), a keys-only view of solo bets and
+  parlays together (`bet:<id>`, `parlay:<uuid>`), then fetches the rows it
+  names (`listMyWagers`). Cancelled bets page on their own.
 - **The feed and member activity read `activity_events`,** not
   `activity_feed`. Triggers in 0035 keep it equal to what `activity_feed`
   would show. A new feed kind, or a new way of writing a source table,

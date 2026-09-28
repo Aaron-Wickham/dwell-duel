@@ -1,4 +1,4 @@
-export type NavId = 'home' | 'markets' | 'bets' | 'parlays' | 'tasks' | 'feed' | 'leaderboard' | 'admin'
+export type NavId = 'markets' | 'bets' | 'tasks' | 'feed' | 'leaderboard' | 'admin'
 
 export interface NavItem {
   id: NavId
@@ -7,25 +7,21 @@ export interface NavItem {
   shortLabel: string
 }
 
+// Home has no tab: the wordmark is the way home. Parlays live on My bets beside solo bets.
 export const NAV_ITEMS: NavItem[] = [
-  { id: 'home', href: '/', label: 'Home', shortLabel: 'Home' },
   { id: 'markets', href: '/markets', label: 'Markets', shortLabel: 'Markets' },
   { id: 'bets', href: '/bets', label: 'My bets', shortLabel: 'Bets' },
-  { id: 'parlays', href: '/parlays', label: 'Parlays', shortLabel: 'Parlays' },
   { id: 'tasks', href: '/tasks', label: 'Tasks', shortLabel: 'Tasks' },
   { id: 'feed', href: '/feed', label: 'Feed', shortLabel: 'Feed' },
   { id: 'leaderboard', href: '/leaderboard', label: 'Leaderboard', shortLabel: 'Leaders' },
 ]
 
 export function activeNavId(pathname: string): NavId | null {
-  if (pathname === '/') return 'home'
   switch (pathname.split('/')[1]) {
     case 'markets':
       return 'markets'
     case 'bets':
       return 'bets'
-    case 'parlays':
-      return 'parlays'
     case 'tasks':
       return 'tasks'
     case 'feed':

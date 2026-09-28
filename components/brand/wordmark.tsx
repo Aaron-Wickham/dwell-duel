@@ -28,15 +28,18 @@ export function Wordmark({
   size = 'md',
   href = '/',
   symbolBelowLg = false,
+  current = false,
 }: {
   size?: 'sm' | 'md'
   href?: string
   symbolBelowLg?: boolean
+  current?: boolean
 }) {
   return (
     <Link
       href={href}
       aria-label="DwellDuel home"
+      aria-current={current ? 'page' : undefined}
       className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[10px] pr-1 no-underline"
     >
       <DwellDuelSymbol size={size === 'sm' ? 28 : 32} />

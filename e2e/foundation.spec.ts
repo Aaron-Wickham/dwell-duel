@@ -40,7 +40,7 @@ test('sign-out returns to the sign-in page', async ({ browser }) => {
   await context.addCookies(cookies)
   const page = await context.newPage()
 
-  await page.goto('/')
+  await page.goto('/settings')
   await page.getByRole('button', { name: 'Sign out' }).click()
   await expect(page).toHaveURL(/\/sign-in/)
 

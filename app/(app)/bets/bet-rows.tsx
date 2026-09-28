@@ -3,7 +3,9 @@ import Link from 'next/link'
 import { CancelBetButton } from '@/components/markets/cancel-bet-button'
 import { LocalTime } from '@/components/ui/local-time'
 import { StatusChip } from '@/components/ui/status-chip'
+import { PlacedParlay } from '@/components/parlays/placed-parlay'
 import type { MyBet, MyCancelledBet } from '@/lib/bets/list-my-bets'
+import type { Wager } from '@/lib/bets/list-my-wagers'
 import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
 
 function ResultChip({ result }: { result: MyBet['result'] }) {
@@ -53,31 +55,36 @@ function Row({
   )
 }
 
-export function MyBetRows({ bets, rowIdPrefix }: { bets: MyBet[]; rowIdPrefix: string }) {
+export function WagerRows({ wagers, rowIdPrefix }: { wagers: Wager[]; rowIdPrefix: string }) {
   return (
     <ul className="flex flex-col divide-y divide-line">
-      {bets.map((b) => (
-        <Row
-          key={b.id}
-          domId={rowDomId(rowIdPrefix, b.id)}
-          marketId={b.marketId}
-          marketTitle={b.marketTitle}
-          detail={
-            <>
-              {b.amount} DC on {b.outcomeLabel} · {b.result.kind === 'open' ? 'Closes' : 'Placed'}{' '}
-              <LocalTime iso={b.result.kind === 'open' ? b.closeAt : b.placedAt} format="dateTime" />
-            </>
-          }
-          aside={
-            <>
-              <ResultChip result={b.result} />
-              {b.result.kind === 'open' && (
-                <CancelBetButton betId={b.id} amount={b.amount} outcomeLabel={b.outcomeLabel} />
-              )}
-            </>
-          }
-        />
-      ))}
+      {wagers.map((w) => {
+        const domId = rowDomId(rowIdPrefix, w.key)
+        if (w.kind === 'parlay') return <PlacedParlay key={w.key} parlay={w.parlay} domId={domId} />
+        const b = w.bet
+        return (
+          <Row
+            key={w.key}
+            domId={domId}
+            marketId={b.marketId}
+            marketTitle={b.marketTitle}
+            detail={
+              <>
+                {b.amount} DC on {b.outcomeLabel} · {b.result.kind === 'open' ? 'Closes' : 'Placed'}{' '}
+                <LocalTime iso={b.result.kind === 'open' ? b.closeAt : b.placedAt} format="dateTime" />
+              </>
+            }
+            aside={
+              <>
+                <ResultChip result={b.result} />
+                {b.result.kind === 'open' && (
+                  <CancelBetButton betId={b.id} amount={b.amount} outcomeLabel={b.outcomeLabel} />
+                )}
+              </>
+            }
+          />
+        )
+      })}
     </ul>
   )
 }

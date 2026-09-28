@@ -36,8 +36,12 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   await sheet.getByRole('button', { name: 'Place 1 bet · 5 DC' }).click()
   await expect(page.getByText('Placed a 2-leg parlay at 5.76×.').first()).toBeVisible()
 
+  // The old Parlays page lands on My bets, where the parlay sits beside solo bets.
   await page.goto('/parlays')
-  await expect(page.getByText('Pending — 5 DC at 5.76× — pays 28 DC if every pick wins').first()).toBeVisible()
+  await expect(page).toHaveURL(/\/bets$/)
+  const placed = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: 'Parlay leg one?' }).first()
+  await expect(placed.getByText(/5 DC at 5\.76× · pays 28 DC if every pick wins/)).toBeVisible()
+  await expect(placed.getByText('Pending', { exact: true })).toBeVisible()
 
   // The seeded session is an admin, so it can resolve before close_at.
   for (const url of marketUrls) {
@@ -48,6 +52,9 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
     await expect(page.getByText('Status: resolved')).toBeVisible()
   }
 
-  await page.goto('/parlays')
-  await expect(page.getByText('Won — 5 DC at 5.76× — paid 28 DC').first()).toBeVisible()
+  await page.goto('/bets')
+  await page.getByRole('navigation', { name: 'Bet status' }).getByRole('link', { name: 'Settled' }).click()
+  await expect(page).toHaveURL(/\/bets\?tab=settled$/)
+  const won = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: 'Parlay leg one?' }).first()
+  await expect(won.getByText('Won 28 DC')).toBeVisible()
 })

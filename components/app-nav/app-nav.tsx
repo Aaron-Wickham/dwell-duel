@@ -3,36 +3,65 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MotionConfig, motion } from 'motion/react'
-import { BookOpen, ChartColumn, CircleDot, House, Layers, MessageSquareText, ShieldCheck, Ticket, Trophy, type LucideIcon } from 'lucide-react'
-import NumberFlow from '@number-flow/react'
+import { BookOpen, ChartColumn, CircleDot, MessageSquareText, ShieldCheck, Ticket, Trophy, type LucideIcon } from 'lucide-react'
+import { AnimatedNumber } from '@/components/ui/animated-number'
 import { BetaBadge } from '@/components/brand/beta-badge'
 import { Wordmark } from '@/components/brand/wordmark'
 import { AnimatedText } from '@/components/ui/animated-text'
+import { Avatar } from '@/components/ui/avatar'
 import { NavPendingHint } from '@/components/nav/nav-pending-hint'
 import { haptics } from '@/lib/haptics'
+import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS, activeNavId, type NavId } from './nav-items'
-import { ThemeToggle } from './theme-toggle'
 
 const ICONS: Record<NavId, LucideIcon> = {
-  home: House,
   markets: ChartColumn,
   bets: Ticket,
-  parlays: Layers,
   tasks: BookOpen,
   feed: MessageSquareText,
   leaderboard: Trophy,
   admin: ShieldCheck,
 }
 
-function BalanceChip({ balance }: { balance: number }) {
+// Tapping your balance shows where your coins are. The chip keeps its 36px look inside a 44px link.
+function BalanceChip({ balance, active }: { balance: number; active: boolean }) {
   return (
-    <span className="inline-flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-gold-soft pr-2.5 pl-1.5 text-[15px] font-extrabold tabular-nums text-gold md:gap-1.5 md:pr-3 md:pl-2">
-      <CircleDot aria-hidden="true" className="size-4 md:size-[18px]" />
-      <AnimatedText plainText={`Balance ${balance} DC`}>
-        <NumberFlow value={balance} locales="en-US" format={{ useGrouping: false }} suffix=" DC" />
-      </AnimatedText>
-    </span>
+    <Link
+      href="/bets"
+      aria-current={active ? 'page' : undefined}
+      className="pressable inline-flex min-h-11 shrink-0 items-center rounded-full no-underline"
+    >
+      <span className="inline-flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-gold-soft pr-2.5 pl-1.5 text-[15px] font-extrabold tabular-nums text-gold md:gap-1.5 md:pr-3 md:pl-2">
+        <CircleDot aria-hidden="true" className="size-4 md:size-[18px]" />
+        <AnimatedText plainText={`Balance ${balance} DC, view my bets`}>
+          <AnimatedNumber value={balance} locales="en-US" format={{ useGrouping: false }} suffix=" DC" />
+        </AnimatedText>
+      </span>
+    </Link>
+  )
+}
+
+export type NavMember = { id: string; name: string; avatarSrc: string | null }
+
+function ProfileLink({ me, active }: { me: NavMember; active: boolean }) {
+  return (
+    <Link
+      href={`/members/${me.id}`}
+      aria-label="Your profile"
+      aria-current={active ? 'page' : undefined}
+      className="pressable relative inline-flex size-11 shrink-0 items-center justify-center rounded-full no-underline"
+    >
+      <span
+        className={cn(
+          'flex size-9 items-center justify-center rounded-full',
+          active && 'ring-2 ring-lime ring-offset-2 ring-offset-surface md:ring-primary',
+        )}
+      >
+        <Avatar name={me.name} src={me.avatarSrc} size="nav" />
+      </span>
+      <NavPendingHint className="inset-x-3 bottom-0 h-0.5" />
+    </Link>
   )
 }
 
@@ -81,11 +110,15 @@ function DesktopLink({
 }
 
 // adminHref is null for members; reviewers land on the approval queue, admins on invites.
-export function AppNav({ balance, adminHref }: { balance: number; adminHref: string | null }) {
-  const active = activeNavId(usePathname())
+export function AppNav({ balance, adminHref, me }: { balance: number; adminHref: string | null; me: NavMember }) {
+  const pathname = usePathname()
+  const motionReduced = useMotionSettingReduced()
+  // Your own profile belongs to the avatar, not the Leaderboard tab.
+  const onMyProfile = pathname === `/members/${me.id}`
+  const active = onMyProfile ? null : activeNavId(pathname)
 
   return (
-    <MotionConfig reducedMotion="user">
+    <MotionConfig reducedMotion={motionReduced ? 'always' : 'user'}>
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:flex focus:min-h-11 focus:items-center focus:rounded-control focus:bg-surface focus:px-4 focus:py-3 focus:text-ink focus:shadow-card"
@@ -97,7 +130,7 @@ export function AppNav({ balance, adminHref }: { balance: number; adminHref: str
         className="no-callout sticky top-(--safe-top) z-30 hidden h-[72px] shrink-0 items-center gap-3 border-b border-line bg-surface px-6 md:flex xl:gap-5 xl:px-10"
       >
         <div className="flex shrink-0 items-center gap-2">
-          <Wordmark symbolBelowLg />
+          <Wordmark symbolBelowLg current={pathname === '/'} />
           <BetaBadge />
         </div>
         <nav aria-label="Primary" className="flex items-center gap-0.5">
@@ -125,8 +158,8 @@ export function AppNav({ balance, adminHref }: { balance: number; adminHref: str
           )}
         </nav>
         <span className="grow" />
-        <BalanceChip balance={balance} />
-        <ThemeToggle />
+        <BalanceChip balance={balance} active={active === 'bets'} />
+        <ProfileLink me={me} active={onMyProfile} />
       </header>
 
       <header
@@ -136,11 +169,11 @@ export function AppNav({ balance, adminHref }: { balance: number; adminHref: str
         {/* At 375px with a five-digit balance there's no width to spare beside the wordmark, so the
             badge tucks under its right end instead. It's decorative, so taps pass through to the link. */}
         <div className="relative shrink-0">
-          <Wordmark size="sm" />
+          <Wordmark size="sm" current={pathname === '/'} />
           <BetaBadge className="pointer-events-none absolute right-1 -bottom-1.5 h-3.5 px-1.5 text-[9px]" />
         </div>
         <span className="grow" />
-        <BalanceChip balance={balance} />
+        <BalanceChip balance={balance} active={active === 'bets'} />
         {adminHref && (
           <Link
             href={adminHref}
@@ -156,13 +189,13 @@ export function AppNav({ balance, adminHref }: { balance: number; adminHref: str
             <NavPendingHint className="inset-x-3 bottom-1 h-0.5" />
           </Link>
         )}
-        <ThemeToggle />
+        <ProfileLink me={me} active={onMyProfile} />
       </header>
 
       <nav
         aria-label="Primary"
         style={{ viewTransitionName: 'app-tabbar' }}
-        className="no-callout fixed inset-x-0 bottom-0 z-30 grid grid-cols-7 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-[calc(12px+var(--safe-bottom))] md:hidden"
+        className="no-callout fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-[calc(12px+var(--safe-bottom))] md:hidden"
       >
         {NAV_ITEMS.map((item) => {
           const Icon = ICONS[item.id]
@@ -181,7 +214,7 @@ export function AppNav({ balance, adminHref }: { balance: number; adminHref: str
             >
               <span
                 className={cn(
-                  'relative flex h-[30px] w-11 items-center justify-center rounded-full',
+                  'relative flex h-[30px] w-[52px] items-center justify-center rounded-full',
                   isActive && 'bg-lime text-on-lime',
                 )}
               >

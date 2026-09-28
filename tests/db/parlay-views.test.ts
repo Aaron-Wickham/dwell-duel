@@ -4,7 +4,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
 import { getSlipView } from '@/lib/parlays/get-slip'
-import { listMyParlays } from '@/lib/parlays/list-parlays'
+import { listMyWagers, type WagerBucket } from '@/lib/bets/list-my-wagers'
+import type { ParlayView } from '@/lib/parlays/list-parlays'
 
 let bob: Member
 let aliceClient: SupabaseClient
@@ -89,7 +90,13 @@ describe('getSlipView', () => {
   })
 })
 
-describe('listMyParlays', () => {
+// Bob's parlays on one My bets tab, through the same reader the page uses.
+async function myParlays(bucket: WagerBucket): Promise<ParlayView[]> {
+  const page = await listMyWagers(bobClient, bob.id, bucket, { top: null, bottom: null })
+  return page.rows.flatMap((w) => (w.kind === 'parlay' ? [w.parlay] : []))
+}
+
+describe('parlays on My bets', () => {
   it("lists the member's parlays with derived leg statuses and payouts", async () => {
     const a = await seededMarket('Market A')
     const b = await seededMarket('Market B')
@@ -106,7 +113,7 @@ describe('listMyParlays', () => {
     })
     expect(resolveErr).toBeNull()
 
-    const [pending] = await listMyParlays(bobClient, bob.id)
+    const [pending] = await myParlays('open')
     expect(pending).toMatchObject({ stake: 10, status: 'pending', credited: 0, multiplierBp: 160_000, capped: false, potentialPayout: 160 })
     expect(pending.legs).toEqual(
       expect.arrayContaining([
@@ -118,13 +125,15 @@ describe('listMyParlays', () => {
     const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: b.marketId })
     expect(voidErr).toBeNull()
 
-    const [won] = await listMyParlays(bobClient, bob.id)
+    expect(await myParlays('open')).toEqual([])
+    const [won] = await myParlays('settled')
     expect(won).toMatchObject({ status: 'won', credited: 40, multiplierBp: 40_000 })
     expect(won.legs.find((l) => l.marketId === b.marketId)?.status).toBe('voided')
   })
 
   it('returns nothing for a member with no parlays', async () => {
-    expect(await listMyParlays(bobClient, bob.id)).toEqual([])
+    expect(await myParlays('open')).toEqual([])
+    expect(await myParlays('settled')).toEqual([])
   })
 
   it('reports a capped parlay at 100x', async () => {
@@ -135,7 +144,7 @@ describe('listMyParlays', () => {
     })
     expect(error).toBeNull()
 
-    const [capped] = await listMyParlays(bobClient, bob.id)
+    const [capped] = await myParlays('open')
     expect(capped).toMatchObject({ status: 'pending', multiplierBp: 1_000_000, capped: true, potentialPayout: 1000 })
   })
 })

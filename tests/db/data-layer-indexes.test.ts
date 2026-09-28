@@ -218,11 +218,11 @@ describe('0033 indexes', () => {
     // of market_resolutions_pkey with the actor id only as a Filter.
     expectActorSelective(nodes, 'market_resolutions', bob.id, ['market_resolutions_resolved_by_idx', 'market_resolutions_pkey'])
 
-    // parlay_placed narrows by profile_id through parlays_profile_id_idx (0025). parlay_won does
+    // parlay_placed narrows by profile_id through parlays_profile_created_idx (0044). parlay_won does
     // not, and never will regardless of scale: parlays_won_settled_idx (its cheaper match, since
     // it also satisfies `status = 'won'`) has no profile_id column at all, so that branch can only
     // ever apply the actor id as a Filter, never an Index Cond.
-    expectActorSelective(nodes, 'parlays', bob.id, ['parlays_profile_id_idx', 'parlays_won_settled_idx'])
+    expectActorSelective(nodes, 'parlays', bob.id, ['parlays_profile_created_idx', 'parlays_won_settled_idx'])
 
     // task_completed narrows by profile_id, but at this fixture's near-empty scale Postgres
     // prefers the pre-existing (task_id, profile_id, period_key) unique index (0017) over the new

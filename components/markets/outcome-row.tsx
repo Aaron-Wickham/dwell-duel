@@ -1,5 +1,5 @@
 import { Trophy } from 'lucide-react'
-import NumberFlow from '@number-flow/react'
+import { AnimatedNumber } from '@/components/ui/animated-number'
 import { AnimatedText } from '@/components/ui/animated-text'
 import { StatusChip } from '@/components/ui/status-chip'
 import { OutcomeSlipControl } from '@/components/markets/outcome-slip-control'
@@ -56,8 +56,8 @@ export function OutcomeRow({
         </span>
         <span className="shrink-0 font-extrabold tabular-nums">
           <AnimatedText plainText={`${Math.round(percent)}% (${poolTotal} DC)`}>
-            <NumberFlow value={Math.round(percent)} locales="en-US" format={{ useGrouping: false }} suffix="% (" />
-            <NumberFlow value={poolTotal} locales="en-US" format={{ useGrouping: false }} suffix=" DC)" />
+            <AnimatedNumber value={Math.round(percent)} locales="en-US" format={{ useGrouping: false }} suffix="% (" />
+            <AnimatedNumber value={poolTotal} locales="en-US" format={{ useGrouping: false }} suffix=" DC)" />
           </AnimatedText>
         </span>
       </div>
@@ -69,7 +69,7 @@ export function OutcomeRow({
           <span className="text-sm text-ink2">
             {oddsBp !== null && (
               <AnimatedText plainText={`${formatOdds(oddsBp)}× payout per DC`}>
-                <NumberFlow
+                <AnimatedNumber
                   value={Number(formatOdds(oddsBp))}
                   locales="en-US"
                   format={{ minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }}

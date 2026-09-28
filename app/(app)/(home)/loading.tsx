@@ -1,7 +1,7 @@
 import { pageClass } from '@/components/ui/page'
 import { Skeleton, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
 
-// Mirrors Home: greeting, balance hero, the tile list (a grid from lg) and Sign out.
+// Mirrors Home: greeting, balance hero, and the tile list (a grid from lg).
 export default function Loading() {
   return (
     <SkeletonScreen name="home" className={pageClass}>
@@ -25,7 +25,6 @@ export default function Loading() {
           </div>
         ))}
       </div>
-      <Skeleton className="h-12 w-full md:w-36" />
     </SkeletonScreen>
   )
 }

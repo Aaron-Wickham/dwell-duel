@@ -30,39 +30,46 @@ function renderParlay(p: ParlayView) {
   )
 }
 
-// The status word is its own <span>, so the whole sentence is only the <p>'s combined text.
-function statusLine(text: string) {
-  return screen.getByText((_, element) => element?.tagName === 'P' && element.textContent === text)
-}
-
 describe('PlacedParlay', () => {
-  it('describes a pending parlay and colours its status gold', () => {
+  it('describes a pending parlay, with what it pays if every pick wins', () => {
     renderParlay(parlay({}))
-    expect(statusLine('Pending — 5 DC at 16.00× — pays 80 DC if every pick wins')).toBeInTheDocument()
-    expect(screen.getByText('Pending')).toHaveClass('font-extrabold', 'text-gold')
+    expect(screen.getByText('Parlay · 2 picks')).toBeInTheDocument()
+    expect(screen.getByText(/^5 DC at 16\.00× · pays 80 DC if every pick wins · Placed/)).toBeInTheDocument()
+    expect(screen.getByText('Pending')).toHaveClass('bg-gold-soft', 'text-gold')
   })
 
   it('describes a won parlay with what it paid', () => {
     renderParlay(parlay({ status: 'won', credited: 80 }))
-    expect(statusLine('Won — 5 DC at 16.00× — paid 80 DC')).toBeInTheDocument()
-    expect(screen.getByText('Won')).toHaveClass('text-win')
+    expect(screen.getByText(/^5 DC at 16\.00× · Placed/)).toBeInTheDocument()
+    expect(screen.getByText('Won 80 DC')).toBeInTheDocument()
   })
 
   it('describes a lost parlay', () => {
     renderParlay(parlay({ status: 'lost' }))
-    expect(statusLine('Lost — 5 DC at 16.00×')).toBeInTheDocument()
-    expect(screen.getByText('Lost')).toHaveClass('text-loss')
+    expect(screen.getByText(/^5 DC at 16\.00× · Placed/)).toBeInTheDocument()
+    expect(screen.getByText('Lost')).toHaveClass('bg-loss-soft', 'text-loss')
   })
 
   it('describes a refunded parlay', () => {
     renderParlay(parlay({ status: 'refunded', credited: 5, multiplierBp: 10_000, potentialPayout: 5 }))
-    expect(statusLine('Refunded — 5 DC returned')).toBeInTheDocument()
-    expect(screen.getByText('Refunded')).toHaveClass('text-ink2')
+    expect(screen.getByText(/^5 DC returned · Placed/)).toBeInTheDocument()
+    expect(screen.getByText('Refunded')).toHaveClass('bg-sunk', 'text-ink2')
   })
 
   it('notes when the multiplier was capped', () => {
     renderParlay(parlay({ multiplierBp: 1_000_000, capped: true, potentialPayout: 500 }))
-    expect(statusLine('Pending — 5 DC at 100.00× — pays 500 DC if every pick wins (capped at 100×)')).toBeInTheDocument()
+    expect(screen.getByText(/^5 DC at 100\.00× \(capped at 100×\) · pays 500 DC if every pick wins/)).toBeInTheDocument()
+  })
+
+  it('is a Show more focus target named by its heading when given a row id', () => {
+    render(
+      <ul>
+        <PlacedParlay parlay={parlay({})} domId="open-parlay_003ap1" />
+      </ul>,
+    )
+    const row = screen.getByRole('listitem', { name: 'Parlay · 2 picks' })
+    expect(row).toHaveAttribute('id', 'open-parlay_003ap1')
+    expect(row).toHaveAttribute('tabindex', '-1')
   })
 
   it('lists each leg with a link to its market, the picked outcome and a status pill', () => {

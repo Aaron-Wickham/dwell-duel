@@ -1,0 +1,69 @@
+import Link from 'next/link'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { LogOut, UserRound } from 'lucide-react'
+import { requireUser } from '@/lib/auth/require-user'
+import { signOut } from '@/lib/auth/sign-out'
+import { resolvePreferences } from '@/lib/preferences/preferences'
+import { avatarUrl } from '@/lib/profile/avatar'
+import { resolveTheme, THEME_COOKIE } from '@/lib/theme/theme'
+import { Avatar } from '@/components/ui/avatar'
+import { BackLink } from '@/components/ui/back-link'
+import { buttonVariants } from '@/components/ui/button'
+import { Page, PageHeader } from '@/components/ui/page'
+import { SectionCard } from '@/components/ui/section-card'
+import { cn } from '@/lib/utils'
+import { MotionSettings, ThemeSetting } from './settings-controls'
+
+export default async function SettingsPage() {
+  const { supabase, user } = await requireUser()
+  if (!user) redirect('/sign-in')
+
+  const [{ data: profile, error }, jar] = await Promise.all([
+    supabase.from('profiles').select('display_name, avatar_path').eq('id', user.id).maybeSingle(),
+    cookies(),
+  ])
+  if (error) throw error
+  const theme = resolveTheme(jar.get(THEME_COOKIE)?.value) ?? 'system'
+  const prefs = resolvePreferences((name) => jar.get(name)?.value)
+
+  return (
+    <Page transition="drill-down">
+      <BackLink href={`/members/${user.id}`}>Your profile</BackLink>
+      <PageHeader title="Settings" description="These apply on this device." />
+      <div className="flex max-w-[720px] flex-col gap-5 md:gap-7">
+        <SectionCard title="Appearance" titleId="settings-appearance">
+          <ThemeSetting initial={theme} />
+        </SectionCard>
+        {/* A member still being set up has no profile yet, but can always change the rest and sign out. */}
+        {profile && (
+          <SectionCard title="Profile" titleId="settings-profile">
+            <div className="flex flex-wrap items-center gap-4">
+              <Avatar name={profile.display_name as string} src={avatarUrl(profile.avatar_path as string | null)} />
+              <p className="min-w-0 grow font-bold break-words">{profile.display_name as string}</p>
+              <Link
+                href="/profile"
+                transitionTypes={['nav-forward']}
+                className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
+              >
+                <UserRound aria-hidden="true" className="size-[18px]" />
+                Edit profile
+              </Link>
+            </div>
+          </SectionCard>
+        )}
+        <SectionCard title="Haptics & motion" titleId="settings-motion">
+          <MotionSettings haptics={prefs.haptics} reduceMotion={prefs.reduceMotion} />
+        </SectionCard>
+        <SectionCard title="Account" titleId="settings-account">
+          <form action={signOut}>
+            <button type="submit" className={cn(buttonVariants({ variant: 'secondary', block: true }), 'md:w-auto')}>
+              <LogOut aria-hidden="true" className="size-5" />
+              Sign out
+            </button>
+          </form>
+        </SectionCard>
+      </div>
+    </Page>
+  )
+}

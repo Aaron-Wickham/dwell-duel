@@ -48,17 +48,15 @@ export const pageSubscriptions = {
   tasks(userId: string): LiveSubscription[] {
     return [{ table: 'tasks' }, { table: 'task_completions', filter: `profile_id=eq.${userId}` }]
   },
-  // Leg badges come from market status and resolution: settle_parlay writes nothing to
-  // parlays/parlay_legs when a leg wins while others in the same parlay are still open.
-  parlays(userId: string): LiveSubscription[] {
-    return [{ table: 'parlays', filter: `profile_id=eq.${userId}` }, { table: 'parlay_legs' }, { table: 'markets' }]
-  },
   // markets, unfiltered, carries every status change and resolution that moves a bet between
-  // sections or changes its result.
+  // tabs or changes its result. It also carries parlay leg badges: settle_parlay writes nothing to
+  // parlays/parlay_legs when a leg wins while others in the same parlay are still open.
   myBets(userId: string): LiveSubscription[] {
     return [
       { table: 'bets', filter: `profile_id=eq.${userId}` },
       { table: 'cancelled_bets', filter: `profile_id=eq.${userId}` },
+      { table: 'parlays', filter: `profile_id=eq.${userId}` },
+      { table: 'parlay_legs' },
       { table: 'markets' },
     ]
   },

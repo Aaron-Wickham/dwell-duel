@@ -5,7 +5,8 @@ import type { LucideIcon } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { listMyBets, listMyCancelledBets } from '@/lib/bets/list-my-bets'
+import { listMyCancelledBets } from '@/lib/bets/list-my-bets'
+import { listMyWagers } from '@/lib/bets/list-my-wagers'
 import { newestHref, readPageParams, showMoreHref, type SearchParams } from '@/lib/pagination/cursor'
 import type { KeysetPage } from '@/lib/pagination/keyset'
 import { rowDomId } from '@/lib/pagination/row-id'
@@ -15,28 +16,55 @@ import { Page, PageHeader } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
-import { CancelledBetRows, MyBetRows } from './bet-rows'
+import { SubNav } from '@/components/ui/sub-nav'
+import { CancelledBetRows, WagerRows } from './bet-rows'
 
 const PATH = '/bets'
 
-function BetSection<Row>({
-  param,
-  title,
+type Tab = 'open' | 'settled' | 'cancelled'
+
+const TABS: Record<Tab, { label: string; empty: { icon: LucideIcon; title: string; body: string } }> = {
+  open: {
+    label: 'Open',
+    empty: { icon: CircleDot, title: 'No open bets.', body: 'Solo bets and parlays waiting on a result show up here.' },
+  },
+  settled: {
+    label: 'Settled',
+    empty: {
+      icon: History,
+      title: 'Nothing settled yet.',
+      body: 'Solo bets and parlays show up here once their markets resolve or are voided.',
+    },
+  },
+  cancelled: {
+    label: 'Cancelled',
+    empty: { icon: Ban, title: 'No cancelled bets.', body: 'Bets you cancel before a market closes show up here.' },
+  },
+}
+
+function readTab(value: SearchParams[string]): Tab {
+  return value === 'settled' || value === 'cancelled' ? value : 'open'
+}
+
+function TabSection<Row>({
+  tab,
   page,
   searchParams,
-  empty,
   children,
 }: {
-  param: 'open' | 'settled' | 'cancelled'
-  title: string
+  tab: Tab
   page: KeysetPage<Row>
   searchParams: SearchParams
-  empty: { icon: LucideIcon; title: string; body: string }
   children: ReactNode
 }) {
-  const backToNewestHref = newestHref(PATH, searchParams, param)
+  const { label, empty } = TABS[tab]
+  const backToNewestHref = newestHref(PATH, searchParams, tab)
   return (
-    <SectionCard title={title} titleId={`${param}-bets-title`} className={page.rows.length > 0 ? 'gap-1' : undefined}>
+    <SectionCard
+      title={label}
+      titleId={`${tab}-bets-title`}
+      className={page.rows.length > 0 ? 'max-w-[820px] gap-1' : 'max-w-[820px]'}
+    >
       {page.windowed && page.rows.length > 0 && (
         <div className="flex flex-col py-2">
           <BackToNewest href={backToNewestHref} />
@@ -54,10 +82,9 @@ function BetSection<Row>({
       {page.next && (
         <div className="flex flex-col border-t border-line pt-3">
           <ShowMore
-            href={showMoreHref(PATH, searchParams, param, page.next)}
+            href={showMoreHref(PATH, searchParams, tab, page.next)}
             fresh={page.next.kind === 'window'}
-            focusId={rowDomId(param, page.next.firstId)}
-            description={title}
+            focusId={rowDomId(tab, page.next.firstId)}
           />
         </div>
       )}
@@ -65,53 +92,47 @@ function BetSection<Row>({
   )
 }
 
+// Each tab pages on its own param, named after the tab, and a tab link carries no cursor, so
+// switching tabs always starts from the newest.
 export default async function MyBetsPage(props: PageProps<'/bets'>) {
   const searchParams = await props.searchParams
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const [open, settled, cancelled] = await Promise.all([
-    listMyBets(supabase, user.id, 'open', readPageParams(searchParams, 'open')),
-    listMyBets(supabase, user.id, 'settled', readPageParams(searchParams, 'settled')),
-    listMyCancelledBets(supabase, user.id, readPageParams(searchParams, 'cancelled')),
-  ])
+  const tab = readTab(searchParams.tab)
+  const pageParams = readPageParams(searchParams, tab)
+
+  let section: ReactNode
+  if (tab === 'cancelled') {
+    const page = await listMyCancelledBets(supabase, user.id, pageParams)
+    section = (
+      <TabSection tab={tab} page={page} searchParams={searchParams}>
+        <CancelledBetRows bets={page.rows} rowIdPrefix={tab} />
+      </TabSection>
+    )
+  } else {
+    const page = await listMyWagers(supabase, user.id, tab, pageParams)
+    section = (
+      <TabSection tab={tab} page={page} searchParams={searchParams}>
+        <WagerRows wagers={page.rows} rowIdPrefix={tab} />
+      </TabSection>
+    )
+  }
 
   return (
     <Page transition="tab">
-      <PageHeader title="My bets" description="Only you can see this page. Parlays are on the Parlays page." />
+      <PageHeader title="My bets" description="Your solo bets and parlays. Only you can see this page." />
       <LiveTables subscriptions={pageSubscriptions.myBets(user.id)} />
       <ShowMoreFocus />
-      <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-2 lg:items-start">
-        <BetSection
-          param="open"
-          title="Open"
-          page={open}
-          searchParams={searchParams}
-          empty={{ icon: CircleDot, title: 'No open bets.', body: 'Bets on markets that haven’t resolved show up here.' }}
-        >
-          <MyBetRows bets={open.rows} rowIdPrefix="open" />
-        </BetSection>
-        <div className="flex flex-col gap-5 md:gap-7">
-          <BetSection
-            param="settled"
-            title="Settled"
-            page={settled}
-            searchParams={searchParams}
-            empty={{ icon: History, title: 'Nothing settled yet.', body: 'Bets on resolved and voided markets show up here.' }}
-          >
-            <MyBetRows bets={settled.rows} rowIdPrefix="settled" />
-          </BetSection>
-          <BetSection
-            param="cancelled"
-            title="Cancelled"
-            page={cancelled}
-            searchParams={searchParams}
-            empty={{ icon: Ban, title: 'No cancelled bets.', body: 'Bets you cancel before a market closes show up here.' }}
-          >
-            <CancelledBetRows bets={cancelled.rows} rowIdPrefix="cancelled" />
-          </BetSection>
-        </div>
-      </div>
+      <SubNav
+        label="Bet status"
+        items={(Object.keys(TABS) as Tab[]).map((t) => ({
+          href: t === 'open' ? PATH : `${PATH}?tab=${t}`,
+          label: TABS[t].label,
+          current: t === tab,
+        }))}
+      />
+      {section}
     </Page>
   )
 }

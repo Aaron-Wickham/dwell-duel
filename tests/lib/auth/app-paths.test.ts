@@ -32,6 +32,7 @@ describe('isAppPath', () => {
       '/leaderboard',
       '/members/3f2b8c1e-9d4a-4e6b-8a7c-1b2d3e4f5a6b',
       '/profile',
+      '/settings',
       '/admin/invites',
       '/admin/ledger',
     ]) {
@@ -58,7 +59,7 @@ describe('isAppPath', () => {
   it('knows every top-level folder in app/(app)', () => {
     const dir = path.resolve(import.meta.dirname, '../../../app/(app)')
     const sections = collectSections(dir)
-    expect(sections.length).toBe(9)
+    expect(sections.length).toBe(10)
     for (const section of sections) {
       expect(isAppPath(`/${section}`), section).toBe(true)
     }

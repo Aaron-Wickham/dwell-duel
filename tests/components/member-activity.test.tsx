@@ -56,6 +56,7 @@ const event = (id: string): FeedEvent => ({
   legCount: null,
   taskTitle: null,
   resolutionNote: null,
+  creatorStake: null,
 })
 
 async function renderActivity(activity: KeysetPage<FeedEvent>, searchParams: Record<string, string> = {}) {

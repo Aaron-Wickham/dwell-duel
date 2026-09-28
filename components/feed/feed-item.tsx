@@ -8,6 +8,7 @@ export function FeedItem({
   segments,
   age,
   detail,
+  note,
   domId,
 }: {
   icon: LucideIcon
@@ -15,6 +16,8 @@ export function FeedItem({
   age: string
   // A quieter second line, like a resolution's reason.
   detail?: string | null
+  // A plain fact under it, like what a market's creator had riding on it.
+  note?: string | null
   domId?: string
 }) {
   return (
@@ -35,6 +38,7 @@ export function FeedItem({
           )}
         </p>
         {detail && <p className="line-clamp-2 text-sm break-words text-ink2">“{detail}”</p>}
+        {note && <p className="text-sm font-bold text-ink2">{note}</p>}
       </div>
       <span className="shrink-0 pt-[7px] text-sm whitespace-nowrap text-ink2">{age}</span>
     </li>

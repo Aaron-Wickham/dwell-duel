@@ -45,8 +45,8 @@ export async function getLeaderboardPage(supabase: SupabaseClient, page: RankPag
   // between them can briefly show an off-by-some rank; the page's live refresh on profile changes
   // corrects it on the next read.
   const [above, ahead] = await Promise.all([
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).gt('balance', first.balance),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).or(aheadOfRankFilter(rankKey(first))),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).gt('balance', first.balance),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).or(aheadOfRankFilter(rankKey(first))),
   ])
   if (above.error) throw above.error
   if (ahead.error) throw ahead.error
@@ -73,8 +73,8 @@ export async function getMemberStanding(supabase: SupabaseClient, memberId: stri
   if (!member) return null
 
   const [above, everyone] = await Promise.all([
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).gt('balance', member.balance),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).gt('balance', member.balance),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }),
   ])
   if (above.error) throw above.error
   if (everyone.error) throw everyone.error

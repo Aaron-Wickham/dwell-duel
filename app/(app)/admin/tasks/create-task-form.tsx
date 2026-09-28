@@ -1,5 +1,6 @@
 'use client'
 
+import { MAX_TASK_REWARD } from '@/lib/tasks/limits'
 import { useActionState, useState } from 'react'
 import { createTaskAction, type ActionState } from '@/lib/tasks/create-task'
 import { Field, Input, Select, Textarea } from '@/components/ui/field'
@@ -38,6 +39,7 @@ export function CreateTaskForm() {
           name="reward_amount"
           type="number"
           min="1"
+          max={MAX_TASK_REWARD}
           step="1"
           required
           aria-invalid={state?.field === 'reward_amount'}

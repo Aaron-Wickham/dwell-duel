@@ -21,6 +21,8 @@ export interface FeedEvent {
   taskTitle: string | null
   // Why a market resolved the way it did (0042), for market_resolved events.
   resolutionNote: string | null
+  // For a result: what the market's creator had riding on it (#84).
+  creatorStake: string | null
 }
 
 export type Segment = string | { text: string; href: string }

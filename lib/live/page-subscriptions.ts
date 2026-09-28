@@ -9,6 +9,8 @@ export const pageSubscriptions = {
       { table: 'cancelled_bets', filter: `market_id=eq.${marketId}` },
       { table: 'markets', filter: `id=eq.${marketId}` },
       { table: 'market_resolutions', filter: `market_id=eq.${marketId}` },
+      // The creator's parlay legs show in the creator-stake line (#84).
+      { table: 'parlay_legs', filter: `market_id=eq.${marketId}` },
     ]
   },
   markets(): LiveSubscription[] {

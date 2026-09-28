@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { rewardError } from './limits'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 
@@ -28,9 +29,8 @@ export async function createTaskAction(_prevState: ActionState, formData: FormDa
   if (description.length > TEXT_LIMITS.taskDescription) {
     return { formError: tooLong('Description', TEXT_LIMITS.taskDescription), field: 'description' }
   }
-  if (!Number.isInteger(rewardAmount) || rewardAmount <= 0) {
-    return { formError: 'Enter a whole number of DC greater than 0.', field: 'reward_amount' }
-  }
+  const rewardProblem = rewardError(rewardAmount)
+  if (rewardProblem) return { formError: rewardProblem, field: 'reward_amount' }
   if (isRepeatable && !PERIODS.includes(period as (typeof PERIODS)[number])) {
     return { formError: 'Choose a cadence for a repeatable task.', field: 'period' }
   }

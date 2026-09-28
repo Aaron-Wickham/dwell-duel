@@ -4,6 +4,21 @@ Releases are tagged on GitHub; each one lists its pull requests. DwellDuel
 is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 `main` deploys, so a release marks a milestone, not a deploy.
 
+## v0.3.0-beta — unreleased
+
+### Security
+- **Parlay odds can't be pumped:** a leg's odds are locked without your own bets on that market, so betting against yourself and cancelling no longer inflates a parlay (#57).
+- **No resolving with a stake:** once a market closes, its creator or any reviewer can resolve it, but nobody except an admin can resolve a market they have a bet or parlay leg on (#58).
+- **The creator's stake is shown** on every market and on its result in the feed (#84).
+- **No self-review,** and task rewards are capped at 500 DC (#59).
+- **Emails are private:** members can no longer read each other's email addresses, including through live updates. Admins still see them on Members (#60).
+- **Hardening** (#62):
+  - betting and cancelling check the invite list;
+  - a market's title is fixed once others have bet;
+  - unattached proof files are cleaned up daily;
+  - security headers and a Content Security Policy;
+  - the secret-key client is server-only.
+
 ## v0.2.0-beta — 2026-09-28
 
 The first round of beta feedback: 20 issues, from roles to a new Home.

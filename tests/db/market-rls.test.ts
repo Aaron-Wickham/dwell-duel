@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, type Member } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -46,6 +46,7 @@ describe('bets select policy', () => {
     const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'])
 
     const bobClient = await clientFor(bob)
+    for (const client of [aliceClient, bobClient]) await ensureInvited(client)
     const aliceBet = await aliceClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[0], p_amount: 10 })
     expect(aliceBet.error).toBeNull()
     const bobBet = await bobClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[1], p_amount: 10 })
@@ -59,6 +60,7 @@ describe('bets select policy', () => {
   it('shows an uninvited session no bets', async () => {
     const aliceClient = await clientFor(alice)
     const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await ensureInvited(aliceClient)
     const aliceBet = await aliceClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[0], p_amount: 10 })
     expect(aliceBet.error).toBeNull()
 
@@ -74,6 +76,7 @@ describe('bets select policy', () => {
     const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'])
 
     const bobClient = await clientFor(bob)
+    for (const client of [aliceClient, bobClient]) await ensureInvited(client)
     await aliceClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[0], p_amount: 10 })
     await bobClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[1], p_amount: 10 })
 

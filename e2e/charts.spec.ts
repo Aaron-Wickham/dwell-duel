@@ -10,7 +10,7 @@ test('a market with a bet shows its chart, on the market page and its list card'
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)
 
   await placeSolo(page, 'Yes', 10)
-  await expect(page.getByText('10 DC on Yes')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Bets' }).getByText('10 DC on Yes')).toBeVisible()
 
   await expect(page.getByRole('img', { name: /^Chance over time\. Now: No 40%, Yes 60%\.$/ })).toBeVisible()
 

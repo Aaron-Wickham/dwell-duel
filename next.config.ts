@@ -1,5 +1,29 @@
 import type { NextConfig } from 'next'
 
+// Scripts and connections only to DwellDuel itself and its Supabase project; nothing frames the app
+// (clickjacking on admin actions). Next's own inline scripts and the launch screen's cold-start
+// script need 'unsafe-inline' without a per-request nonce, and dev mode needs 'unsafe-eval'.
+function contentSecurityPolicy(): string {
+  const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+  const realtime = supabase.replace(/^http/, 'ws')
+  const dev = process.env.NODE_ENV === 'development'
+  return [
+    "default-src 'self'",
+    // Vercel Analytics and Speed Insights: same-origin in production, va.vercel-scripts.com otherwise.
+    `script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com${dev ? " 'unsafe-eval'" : ''}`,
+    "style-src 'self' 'unsafe-inline'",
+    `img-src 'self' data: blob: ${supabase}`,
+    "font-src 'self' data:",
+    `connect-src 'self' ${supabase} ${realtime}`,
+    "worker-src 'self'",
+    "manifest-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join('; ')
+}
+
 const nextConfig: NextConfig = {
   experimental: {
     useOffline: true,
@@ -17,6 +41,15 @@ const nextConfig: NextConfig = {
   // browser nor Vercel's CDN may keep a copy.
   async headers() {
     return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: contentSecurityPolicy() },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
       {
         source: '/sw.js',
         headers: [{ key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }],

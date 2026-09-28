@@ -147,15 +147,18 @@ the task catalogue and invite list, which are allowed by policy.
 | `place_slip` | member | Places every solo bet and the parlay in the slip, all or nothing |
 | `place_bet` / `place_parlay` | member | The single-bet and single-parlay versions `place_slip` builds on |
 | `cancel_bet` | bettor | Refunds a bet before its market closes |
-| `resolve_market` | creator after close, or admin | Needs a note; may take proof; pays winners from the seeded pool; an admin override reverses the old payouts first and is blocked if a past winner has already spent them |
+| `resolve_market` | after close, the creator or a reviewer with no stake; an admin any time | Needs a note; may take proof; pays winners from the seeded pool; an admin override reverses the old payouts first and is blocked if a past winner has already spent them. Nobody but an admin resolves a market they have a stake in (`has_stake_in_market`, 0046); `can_resolve_market` answers the same question for the page |
 | `resolve_over_under` | same | Picks Over or Under from the actual number, then resolves |
 | `void_market` | creator or admin | Refunds every bet; parlays drop the voided leg |
 | `settle_parlay` | trigger | Runs when a leg's market resolves or voids |
 | `submit_task_completion` | member | Submits a task with an optional note and proof |
-| `approve_task_completion`, `reject_task_completion`, `review_task_completions` | reviewer+ | Pays or rejects submissions, one at a time or in bulk |
+| `approve_task_completion`, `reject_task_completion`, `review_task_completions` | reviewer+, never on their own submission | Pays or rejects submissions, one at a time or in bulk |
 | `adjust_balance` | owner | A manual correction, with a required reason |
 
-Also: `create_market`, `update_market` (creator or admin, before close),
+Also: `create_market`, `update_market` (creator or admin, before close; the
+title is fixed once anyone else has bet), `member_emails` (admin only:
+members can't select `profiles.email`), `stray_proof_objects` (service role:
+the daily cron deletes proof files nothing attached),
 `set_member_role`, `delete_market`, `delete_task` and `remove_bet` (owner
 only), `update_my_profile`, `record_proof`, `market_sparklines`,
 `my_at_stake` and `parlay_limits`.
@@ -174,6 +177,7 @@ after it ships. They roughly follow the project's history:
 | 0030–0036 | The social layer, realtime, scale work and the `activity_events` feed |
 | 0037–0039 | Cancelling bets, profile editing, the unified slip |
 | 0040–0045 | Roles, seeded odds, proof, Over/Under and market edits, My bets, At stake |
+| 0046 | Security: parlay odds without your own stakes, no resolving with a stake, no self-review, a 500 DC task cap, hidden emails |
 
 Merging a migration to `main` runs the **Deploy Production Database**
 workflow. It runs in parallel with Vercel's deploy, so a build that needs
@@ -195,7 +199,9 @@ and mode switches. Stakes live only in client state. The floating
 `SlipSheet` sends everything to `place_slip` in one call; it either all
 succeeds or nothing is placed. Bets are never optimistic.
 
-**Odds.** Pari-mutuel with a seed. Each outcome's pool counts
+**Odds.** Pari-mutuel with a seed. A parlay leg locks its odds from
+everyone's money but the bettor's own (0046), and the slip previews the
+same number. Each outcome's pool counts
 `seed_per_outcome` virtual DC on top of real stakes, so a new market
 already shows even odds, and one-sided betting never pays 1.00×.
 `effectivePools` in `lib/markets/odds.ts` is the one place the app does
@@ -246,6 +252,11 @@ layout renders them as attributes on `<html>` (`data-theme`,
 - **CI** (`.github/workflows/ci.yml`): lint, Vitest, a production build
   and Playwright on every push and PR, all against a throwaway local
   Supabase.
+- **Security headers** (`next.config.ts`): a Content Security Policy that
+  only allows scripts and connections to the app itself and its Supabase
+  project, plus `X-Frame-Options: DENY`, `nosniff` and a referrer policy. A
+  new third-party origin (analytics, an image host) has to be added to the
+  CSP there.
 - **Required env vars** are checked at boot (`lib/env/required.ts`):
   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` always;
   `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET` in production.

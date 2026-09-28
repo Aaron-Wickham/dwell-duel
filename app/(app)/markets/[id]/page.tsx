@@ -33,6 +33,7 @@ import { OutcomeRow } from '@/components/markets/outcome-row'
 import { ProbabilityChart } from '@/components/markets/probability-chart'
 import { MarketBets } from './market-bets'
 import { ResolveForm } from './resolve-form'
+import { describeCreatorStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
 import { DeleteMarketButton } from './delete-market-button'
 import { EditMarketDialog } from './edit-market-dialog'
 import { listMarketEdits } from '@/lib/markets/market-edits'
@@ -53,11 +54,13 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // The slip is only a cookie, so reading it here costs nothing.
   const [market, slipEntries] = await Promise.all([getMarket(supabase, id), readSlip()])
   if (!market) notFound()
-  const [resolution, edits, role] = await Promise.all([
+  const [resolution, edits, role, creatorStakes] = await Promise.all([
     market.status === 'resolved' ? getResolutionProof(supabase, market.id) : null,
     market.editedAt ? listMarketEdits(supabase, market.id) : [],
     getRole(supabase),
+    getCreatorStakes(supabase, [{ id: market.id, createdBy: market.createdBy }]),
   ])
+  const creatorStake = describeCreatorStake(creatorStakes.get(market.id), market.status === 'open' ? 'has' : 'had')
 
   const odds = computeOdds(
     market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })),
@@ -110,6 +113,11 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           </span>
         </div>
         <h1 className={h1Class}>{market.title}</h1>
+        {creatorStake && (
+          <p className="text-sm font-bold text-ink2">
+            {isCreator ? creatorStake.replace('Creator has', 'You have').replace('Creator had', 'You had') : creatorStake}
+          </p>
+        )}
         {market.description && <p className="max-w-[68ch] whitespace-pre-line text-ink2">{market.description}</p>}
         {edits.length > 0 && (
           <details className="max-w-[68ch] text-sm text-ink2">
@@ -176,7 +184,6 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
               odds={odds}
               slip={slip}
               isCreator={isCreator}
-              isPastClose={isPastClose}
               canBet={canBet}
             />
           </Suspense>
@@ -230,22 +237,29 @@ async function MarketActions({
   odds,
   slip,
   isCreator,
-  isPastClose,
   canBet,
 }: {
   market: MarketDetail
   odds: OutcomeOdds[]
   slip: string[]
   isCreator: boolean
-  isPastClose: boolean
   canBet: boolean
 }) {
-  const { supabase } = await requireUser()
-  const role = await getRole(supabase)
+  const { supabase, user } = await requireUser()
+  const [role, resolvable, stake] = await Promise.all([
+    getRole(supabase),
+    supabase.rpc('can_resolve_market', { p_market_id: market.id }),
+    supabase.rpc('has_stake_in_market', { p_market_id: market.id, p_profile_id: user!.id }),
+  ])
+  if (resolvable.error) throw resolvable.error
+  if (stake.error) throw stake.error
   const admin = atLeast(role, 'admin')
+  const hasStake = stake.data === true
 
   const totalPool = odds.reduce((sum, o) => sum + o.poolTotal, 0)
-  const canResolve = market.status === 'open' && ((isCreator && isPastClose) || admin)
+  // can_resolve_market (0046) is the same rule resolve_market enforces: after close, the creator or
+  // a reviewer with no stake in the market; an admin at any time.
+  const canResolve = market.status === 'open' && resolvable.data === true
   const canOverride = market.status === 'resolved' && admin
   const canVoid = market.status === 'open' && (isCreator || admin)
   // delete_market (0040) refuses a market with bets; an empty pool is the cheap signal for the button.
@@ -275,14 +289,21 @@ async function MarketActions({
       </>
     )
 
-  const youAre = role === 'owner' ? 'You’re the owner.' : 'You’re an admin.'
+  // Explains why this card shows, and anything it can't do yet.
+  const youAre = role === 'owner' ? 'You’re the owner.' : admin ? 'You’re an admin.' : 'You’re a reviewer.'
   const manageHint = canOverride
     ? `${youAre} A new outcome reverses the payouts and pays the new winners.`
-    : !isCreator
-      ? `${youAre} Only admins and this market’s creator see this.`
+    : market.status !== 'open'
+      ? `${youAre} This market can only be deleted now.`
       : canResolve
-        ? 'You created this market. Only you and admins see this.'
-        : 'You created this market. You can resolve it once it closes.'
+        ? isCreator
+          ? 'You created this market, and it has closed. Reviewers and admins can resolve it too.'
+          : `${youAre} This market has closed and is waiting for a result.`
+        : isCreator && hasStake
+          ? 'You bet on this market, so a reviewer or an admin resolves it.'
+          : isCreator
+            ? 'You created this market. You can resolve it once it closes.'
+            : `${youAre} You can resolve it once it closes.`
 
   return (
     <ContentReveal>
@@ -348,7 +369,7 @@ async function MarketActions({
 
         {(showResolve || canVoid || canDelete) && (
           <SectionCard
-            title={canOverride ? 'Override resolution' : 'Resolve market'}
+            title={canOverride ? 'Override resolution' : showResolve ? 'Resolve market' : 'Manage market'}
             titleId="manage-title"
             className="gap-1"
           >

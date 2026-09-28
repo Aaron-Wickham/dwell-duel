@@ -15,7 +15,7 @@ test('create a market, place a bet, and resolve it as admin', async ({ page }) =
 
   await placeSolo(page, 'Yes', 20)
 
-  await expect(page.getByText('20 DC on Yes')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Bets' }).getByText('20 DC on Yes')).toBeVisible()
 
   // The seeded session is promoted to admin (e2e/global-setup.ts), so it
   // can resolve immediately without waiting for close_at.

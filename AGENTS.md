@@ -189,6 +189,13 @@ a line to `CHANGELOG.md` under the next release.
   never need a cancelled filter. A page that shows a market's bets live
   also subscribes to `cancelled_bets`: a filtered channel never receives
   the `bets` delete.
+- **Members can't read `profiles.email`** (0046). Select profile columns
+  by name, never `*`; admins read emails through `member_emails()`.
+- **Nobody but an admin resolves a market they have a stake in**, and
+  nobody reviews their own task submission (0046). Ask the database
+  (`can_resolve_market`) rather than re-deriving who may resolve.
+- **The CSP lives in `next.config.ts`.** A new external origin for scripts,
+  images or connections must be added there, or the browser blocks it.
 - **Profile photos** are `profiles.avatar_path`, a path in the public
   `avatars` bucket; render them with `avatarUrl()` from
   `lib/profile/avatar.ts` through `<Avatar src>`. Profile edits go through

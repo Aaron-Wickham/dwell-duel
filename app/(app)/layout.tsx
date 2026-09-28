@@ -23,7 +23,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   ])
   if (error) throw error
   if (!profile) return children
-  const slipView = await getSlipView(supabase, slip)
+  const slipView = await getSlipView(supabase, slip, user.id)
 
   return (
     <LiveTablesProvider userId={user.id}>

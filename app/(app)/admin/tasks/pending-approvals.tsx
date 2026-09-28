@@ -23,7 +23,8 @@ const BULK_REJECT_ERROR_ID = 'bulk-reject-error'
 
 export type PendingRow = PendingCompletion & { submittedAge: string }
 
-export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
+// viewerId: a reviewer never reviews their own submission (0046), so those rows show why instead.
+export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[]; viewerId: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [approveState, approveAction, isApprovePending] = useActionState<BulkActionState | undefined, FormData>(bulkApproveTaskCompletionsAction, undefined)
   const [rejectState, rejectAction, isRejectPending] = useActionState<BulkActionState | undefined, FormData>(bulkRejectTaskCompletionsAction, undefined)
@@ -60,9 +61,14 @@ export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
       ) : (
         <>
           <ul className="flex flex-col divide-y divide-line">
-            {pending.map((c) => (
+            {pending.map((c) => {
+              const own = c.submitterId === viewerId
+              return (
               <li key={c.id} className="flex flex-col gap-3 py-4">
                 <div className="flex items-start gap-2">
+                  {own ? (
+                    <span aria-hidden="true" className="min-w-11 shrink-0" />
+                  ) : (
                   <label className="inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center">
                     {/* Outside the bulk form (row forms can't nest inside it), so the form attribute joins it. */}
                     <input
@@ -74,6 +80,7 @@ export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
                     />
                     <span className="sr-only">Select {c.submitterName}’s submission</span>
                   </label>
+                  )}
                   <div className="flex min-w-0 grow flex-col pt-[9px]">
                     <p>
                       <Link href={`/members/${c.submitterId}`} transitionTypes={['nav-forward']}>{c.submitterName}</Link> — <strong>{c.taskTitle}</strong>{' '}
@@ -88,9 +95,14 @@ export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
                     )}
                   </div>
                 </div>
-                <ReviewButtons completionId={c.id} />
+                {own ? (
+                  <p className="text-sm font-bold text-ink2">This is your submission, so another reviewer reviews it.</p>
+                ) : (
+                  <ReviewButtons completionId={c.id} />
+                )}
               </li>
-            ))}
+              )
+            })}
           </ul>
 
           {/* After the rows, not above them as drawn: the e2e suite clicks the first button named "Approve", which must be a row's. */}

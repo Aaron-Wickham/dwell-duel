@@ -40,6 +40,7 @@ describe('pageSubscriptions', () => {
       { table: 'cancelled_bets', filter: `market_id=eq.${MARKET_ID}` },
       { table: 'markets', filter: `id=eq.${MARKET_ID}` },
       { table: 'market_resolutions', filter: `market_id=eq.${MARKET_ID}` },
+      { table: 'parlay_legs', filter: `market_id=eq.${MARKET_ID}` },
     ])
   })
 

@@ -135,12 +135,13 @@ const hiddenIds = (events: StoredEvent[]) => events.filter((e) => e.hidden_at !=
 
 // The spec's scenario, checking the table against the view after every step.
 async function fullScenario(): Promise<void> {
-  const a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Scenario A' })
-  const b = await createTestMarket(aliceClient, ['Red', 'Blue', 'Green'], { title: 'Scenario B' })
+  const a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Scenario A', seed: 20 })
+  const b = await createTestMarket(aliceClient, ['Red', 'Blue', 'Green'], { title: 'Scenario B', seed: 20 })
   expect(await mismatches()).toEqual([])
 
-  // Bob's stake makes A's winning-outcome payout floor a fraction: pool 46,
-  // winning pool 16, floor(11 × 46 / 16) = floor(31.625) = 31.
+  // Seeded like every real market, so no outcome is ever empty (a parlay leg's odds leave out the
+  // bettor's own stake, 0046). Bob's stake makes A's payout floor a fraction: effective pool
+  // 46 + 40 = 86, winning pool 16 + 20 = 36, floor(11 × 86 / 36) = floor(26.27) = 26.
   await bet(bobClient, a, 0, 11)
   await bet(carolClient, a, 1, 30)
   await bet(aliceClient, a, 0, 5)

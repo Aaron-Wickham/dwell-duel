@@ -28,6 +28,7 @@ beforeEach(async () => {
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   carolClient = await clientFor(carol)
+  for (const client of [aliceClient, bobClient, carolClient]) await ensureInvited(client)
   await ensureInvited(bobClient)
 })
 

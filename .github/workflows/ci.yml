@@ -32,7 +32,7 @@ jobs:
       - run: npm run typecheck
 
       # The same CLI version as deploy-production-db.yml, so migrations are tested with the tool that ships them.
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           version: 2.117.0
 

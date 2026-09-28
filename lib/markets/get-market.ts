@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
+import { avatarUrl } from '@/lib/profile/avatar'
 import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 
 export interface MarketDetail {
@@ -24,6 +25,7 @@ export interface MarketBet {
   createdAt: string
   profileId: string
   bettorName: string
+  bettorAvatarSrc: string | null
 }
 
 export async function getMarket(supabase: SupabaseClient, marketId: string): Promise<MarketDetail | null> {
@@ -75,7 +77,7 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
 }
 
 const BET_KEYS: KeyColumns = { ts: 'created_at', id: 'id', isId: isBigintId }
-const BET_COLUMNS = 'id, outcome_id, amount, created_at, profile_id, profiles(display_name)'
+const BET_COLUMNS = 'id, outcome_id, amount, created_at, profile_id, profiles(display_name, avatar_path)'
 
 type BetRow = {
   id: number
@@ -83,7 +85,7 @@ type BetRow = {
   amount: number
   created_at: string
   profile_id: string
-  profiles: { display_name: string } | null
+  profiles: { display_name: string; avatar_path: string | null } | null
 }
 
 const betKey = (b: { id: number; created_at: string }): Cursor => ({ ts: b.created_at, id: String(b.id) })
@@ -121,6 +123,7 @@ export async function getMarketBets(supabase: SupabaseClient, marketId: string, 
       createdAt: b.created_at,
       profileId: b.profile_id,
       bettorName: b.profiles?.display_name ?? 'Unknown member',
+      bettorAvatarSrc: avatarUrl(b.profiles?.avatar_path),
     })),
   }
 }

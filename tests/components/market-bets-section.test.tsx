@@ -71,6 +71,7 @@ const bet = (id: number): MarketBet => ({
   createdAt: '2026-09-25T09:00:00Z',
   profileId: 'p-alice',
   bettorName: 'Alice',
+  bettorAvatarSrc: null,
 })
 
 async function renderBets(betsPage: KeysetPage<MarketBet>, searchParams: Record<string, string> = {}) {

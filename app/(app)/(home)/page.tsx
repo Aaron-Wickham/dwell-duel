@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { ChartColumn, Layers, BookOpen, MessageSquareText, Trophy, ShieldCheck, LogOut, Mail, Ticket } from 'lucide-react'
+import { ChartColumn, Layers, BookOpen, MessageSquareText, Trophy, ShieldCheck, LogOut, Mail, Ticket, UserRound } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
@@ -50,6 +50,7 @@ export default async function Home() {
       subtitle: leaderboardTileSubtitle(rank, memberCount),
     },
   ]
+  tiles.push({ id: 'profile', href: '/profile', icon: UserRound, title: 'Edit profile', subtitle: 'Your name, photo and bio' })
   if (admin) {
     tiles.push({
       id: 'admin',

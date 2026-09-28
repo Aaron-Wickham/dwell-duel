@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 export function LeaderboardRow({
   rank,
   name,
+  avatarSrc = null,
   balance,
   isMe,
   href,
@@ -13,6 +14,7 @@ export function LeaderboardRow({
 }: {
   rank: number
   name: string
+  avatarSrc?: string | null
   balance: number
   isMe: boolean
   href: string
@@ -32,7 +34,7 @@ export function LeaderboardRow({
         <span aria-hidden="true">{rank}</span>
         <span className="sr-only">Rank {rank}</span>
       </span>
-      <Avatar name={name} />
+      <Avatar name={name} src={avatarSrc} />
       <span className="grow text-[17px] font-extrabold">
         <Link href={href} transitionTypes={['nav-forward']} className="hit-area">
           {name}

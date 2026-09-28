@@ -115,6 +115,18 @@ describe('Avatar', () => {
     expect(container.firstChild).toHaveClass('size-16', 'md:size-20', 'bg-lime', 'text-on-lime')
   })
 
+  it('shows a photo instead of the letter when given one, still hidden from assistive tech', () => {
+    const { container, rerender } = render(<Avatar name="Sarah" src="https://example.test/a.jpg" size="lg" />)
+    const img = container.querySelector('img')
+    expect(img).toHaveAttribute('src', 'https://example.test/a.jpg')
+    expect(img).toHaveAttribute('alt', '')
+    expect(img).toHaveAttribute('aria-hidden', 'true')
+    expect(img).toHaveClass('size-16', 'object-cover')
+    rerender(<Avatar name="Sarah" src={null} />)
+    expect(container.querySelector('img')).toBeNull()
+    expect(container.firstChild).toHaveTextContent(/^S$/)
+  })
+
   it('falls back to a question mark for a blank name', () => {
     const { container } = render(<Avatar name=" " />)
     expect(container.firstChild).toHaveTextContent('?')

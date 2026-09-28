@@ -53,6 +53,7 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
                 key={member.id}
                 rank={member.rank}
                 name={member.displayName}
+                avatarSrc={member.avatarSrc}
                 balance={member.balance}
                 isMe={member.id === user.id}
                 href={`/members/${member.id}`}

@@ -1,6 +1,7 @@
 export interface LeaderboardEntry {
   id: string
   displayName: string
+  avatarSrc: string | null
   balance: number
   rank: number
 }

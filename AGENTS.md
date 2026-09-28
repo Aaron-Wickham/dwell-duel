@@ -130,6 +130,15 @@ architectural decisions exist, document them here and in `docs/`.
 - **Members can't select `activity_feed`** since 0036. It stays only as
   the DB tests' equivalence oracle, and tests read it through the service
   client or `pgQuery`, never a member client.
+- **`bets` holds only live stakes.** `cancel_bet` (0037) moves a
+  cancelled bet into `cancelled_bets`, so resolve, void, odds and the feed
+  never need a cancelled filter. A page that shows a market's bets live
+  also subscribes to `cancelled_bets`: a filtered channel never receives
+  the `bets` delete.
+- **Profile photos** are `profiles.avatar_path`, a path in the public
+  `avatars` bucket; render them with `avatarUrl()` from
+  `lib/profile/avatar.ts` through `<Avatar src>`. Profile edits go through
+  `update_my_profile`; members have no direct update on `profiles`.
 - **A build that depends on a new migration needs the migration applied
   first.** Merging to `main` runs the migration and the deploy in
   parallel, so run the Deploy Production Database workflow on the branch

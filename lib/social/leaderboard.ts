@@ -1,16 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { readOrdered, type KeysetPage } from '@/lib/pagination/keyset'
 import { RANK_ORDER, aheadOfRankFilter, type RankCursor, type RankPageParams } from '@/lib/pagination/rank-cursor'
+import { avatarUrl } from '@/lib/profile/avatar'
 import { assignRanks, type LeaderboardEntry } from './ranking'
 
-export type MemberStanding = LeaderboardEntry & { memberCount: number }
+export type MemberStanding = LeaderboardEntry & { memberCount: number; bio: string | null }
 
-type ProfileRow = { id: string; display_name: string; balance: number }
+type ProfileRow = { id: string; display_name: string; balance: number; avatar_path: string | null }
 
 const rankKey = (p: ProfileRow): RankCursor => ({ balance: p.balance, name: p.display_name, id: p.id })
 
 function boardQuery(supabase: SupabaseClient, filter: string | null, limit: number) {
-  let query = supabase.from('profiles').select('id, display_name, balance')
+  let query = supabase.from('profiles').select('id, display_name, balance, avatar_path')
   if (filter) query = query.or(filter)
   return query
     .order('balance', { ascending: false })
@@ -36,7 +37,7 @@ export async function getLeaderboardPage(supabase: SupabaseClient, page: RankPag
     rankKey,
   )
 
-  const ranked = assignRanks(result.rows.map((p) => ({ id: p.id, displayName: p.display_name, balance: p.balance })))
+  const ranked = assignRanks(result.rows.map((p) => ({ id: p.id, displayName: p.display_name, avatarSrc: avatarUrl(p.avatar_path), balance: p.balance })))
   if (!result.windowed || result.rows.length === 0) return { ...result, rows: ranked }
 
   const first = result.rows[0]
@@ -65,7 +66,7 @@ export async function getLeaderboardPage(supabase: SupabaseClient, page: RankPag
 export async function getMemberStanding(supabase: SupabaseClient, memberId: string): Promise<MemberStanding | null> {
   const { data: member, error } = await supabase
     .from('profiles')
-    .select('id, display_name, balance')
+    .select('id, display_name, balance, avatar_path, bio')
     .eq('id', memberId)
     .maybeSingle()
   if (error) throw error
@@ -81,6 +82,8 @@ export async function getMemberStanding(supabase: SupabaseClient, memberId: stri
   return {
     id: member.id as string,
     displayName: member.display_name as string,
+    avatarSrc: avatarUrl(member.avatar_path as string | null),
+    bio: member.bio as string | null,
     balance: member.balance as number,
     rank: (above.count ?? 0) + 1,
     memberCount: everyone.count ?? 0,

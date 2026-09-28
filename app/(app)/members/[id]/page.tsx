@@ -6,7 +6,9 @@ import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { getMemberStanding } from '@/lib/social/leaderboard'
 import { readPageParams } from '@/lib/pagination/cursor'
 import { isUuid } from '@/lib/uuid'
+import Link from 'next/link'
 import { Page, h1Class } from '@/components/ui/page'
+import { buttonVariants } from '@/components/ui/button'
 import { BackLink } from '@/components/ui/back-link'
 import { Avatar } from '@/components/ui/avatar'
 import { SkeletonScreen } from '@/components/ui/skeleton'
@@ -29,14 +31,26 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
     <Page transition="drill-down">
       <BackLink href="/leaderboard">Leaderboard</BackLink>
       <LiveTables subscriptions={pageSubscriptions.member(member.id)} />
-      <section className="flex items-center gap-4 md:gap-5">
-        <Avatar name={member.displayName} size="lg" />
-        <div className="flex flex-col gap-1">
-          <h1 className={h1Class}>{member.displayName}</h1>
-          <p className="text-[18px] font-extrabold tabular-nums">
-            {member.balance} DC · Rank {member.rank} of {member.memberCount}
-          </p>
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center gap-4 md:gap-5">
+          <Avatar name={member.displayName} src={member.avatarSrc} size="lg" />
+          <div className="flex min-w-0 flex-col gap-1">
+            <h1 className={`${h1Class} break-words`}>{member.displayName}</h1>
+            <p className="text-[18px] font-extrabold tabular-nums">
+              {member.balance} DC · Rank {member.rank} of {member.memberCount}
+            </p>
+          </div>
         </div>
+        {member.bio && <p className="max-w-[640px] whitespace-pre-line break-words">{member.bio}</p>}
+        {member.id === user.id && (
+          <Link
+            href="/profile"
+            transitionTypes={['nav-forward']}
+            className={`${buttonVariants({ variant: 'secondary', size: 'sm' })} self-start`}
+          >
+            Edit profile
+          </Link>
+        )}
       </section>
       <Suspense
         fallback={

@@ -1,5 +1,6 @@
 'use client'
 
+import { MAX_TASK_REWARD } from '@/lib/tasks/limits'
 import { useActionState } from 'react'
 import { updateTaskAction, type ActionState } from '@/lib/tasks/update-task'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
@@ -46,6 +47,7 @@ export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSumma
           name="reward_amount"
           type="number"
           min="1"
+          max={MAX_TASK_REWARD}
           step="1"
           defaultValue={task.rewardAmount}
           required

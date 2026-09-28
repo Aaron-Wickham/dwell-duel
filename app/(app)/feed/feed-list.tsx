@@ -49,6 +49,7 @@ export function FeedList({
             segments={describeEvent(e)}
             age={ageLabel(e.occurredAt)}
             detail={e.kind === 'market_resolved' ? e.resolutionNote : null}
+            note={e.kind === 'market_resolved' ? e.creatorStake : null}
             domId={rowIdPrefix && rowDomId(rowIdPrefix, e.id)}
           />
         ))}

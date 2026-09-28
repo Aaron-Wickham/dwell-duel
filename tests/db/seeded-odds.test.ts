@@ -124,7 +124,7 @@ describe('seeded markets (0041)', () => {
     const view = await getSlipView(bobClient, [
       { outcomeId: a.outcomeIds[0], parlay: true },
       { outcomeId: b.outcomeIds[1], parlay: true },
-    ])
+    ], bob.id)
     expect(view.picks.map((p) => p.oddsBp)).toEqual([20_000, 20_000])
     expect(view.multiplierBp).toBe(40_000)
 

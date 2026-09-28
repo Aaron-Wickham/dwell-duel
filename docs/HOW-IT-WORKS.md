@@ -11,6 +11,7 @@ This page explains the rules. For how the code implements them, see
 ## Getting in
 
 - **Invites only.** An admin adds your Google email under Admin → Invites.
+  Only admins can see members' email addresses.
   Sign in with that Google account; any other account lands on a "not
   invited" page.
 - **Everyone starts with 100 DC.** Every coin you gain or spend is a line
@@ -79,7 +80,9 @@ either:
 of them are.
 
 **How parlays pay.** Each leg's odds are **locked when you place it**:
-that outcome's payout multiplier at that moment, seed included.
+that outcome's payout multiplier at that moment, seed included, **counting
+everyone's money except your own** on that market. So you can't raise your
+own parlay's odds by betting against it.
 Multiplying the legs gives the parlay's multiplier, and the payout is the
 stake × the multiplier, rounded down.
 
@@ -100,8 +103,11 @@ bet what on each market, and bets and parlays also appear in the feed.
 
 ## Results
 
-- **Who resolves:** the market's creator, once it has closed, or an admin
-  at any time. The resolver picks the winner (or, for an Over/Under,
+- **Who resolves:** once a market has closed, its creator or any
+  reviewer, or an admin at any time. **Nobody but an admin resolves a
+  market they have money on** (a bet or a parlay leg), so a creator who bet
+  leaves it to a reviewer. Every market shows what its creator has riding
+  on it ("Creator has 40 DC on Yes"), and so does its result in the feed. The resolver picks the winner (or, for an Over/Under,
   types the actual number) and **must say why**. They can attach photos,
   files or links as proof. The reason and proof show on the market page
   and in the feed.
@@ -121,7 +127,8 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
 - You submit a task once per period, with an optional note. Some tasks
   **require proof**: a photo, file or link.
 - A **reviewer** approves it, which pays the reward, or rejects it with a
-  reason. After a rejection you can submit again.
+  reason. After a rejection you can submit again. Nobody reviews their own
+  submission, and a task can reward at most 500 DC.
 - Your Home screen shows DC that's **Pending** review.
 
 ## Roles
@@ -129,7 +136,7 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
 | Role | Can also… |
 |---|---|
 | **Member** | Bet, create and resolve their own markets, submit tasks |
-| **Reviewer** | Approve and reject task submissions |
+| **Reviewer** | Approve and reject task submissions (not their own), and resolve closed markets they have no stake in |
 | **Admin** | Invite people, manage tasks, resolve, override or void any market, view members and the full ledger |
 | **Owner** (exactly one) | Adjust balances, grant and remove roles, and delete a market or task that hasn't been used |
 

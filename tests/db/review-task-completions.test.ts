@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, ensureInvited, createTestTask, type Member } from './fixtures'
+import { seedMembers, makeMember, clientFor, ensureInvited, createTestTask, type Member } from './fixtures'
 import { pgQuery } from './pg-query'
 
 let alice: Member
@@ -119,25 +119,46 @@ describe('review_task_completions', () => {
   })
 
   it('credits every owner exactly once when a batch spans two members', async () => {
-    await ensureInvited(adminClient)
+    const carol = await makeMember('Carol')
+    const carolClient = await clientFor(carol)
+    await ensureInvited(carolClient)
     const bobsCompletion = await submitAsBob(10)
-    const alicesCompletion = await submitAs(adminClient, 6)
+    const carolsCompletion = await submitAs(carolClient, 6)
     const { data: bobBefore } = await serviceClient().from('profiles').select('balance').eq('id', bob.id).single()
-    const { data: aliceBefore } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
+    const { data: carolBefore } = await serviceClient().from('profiles').select('balance').eq('id', carol.id).single()
 
     const { data, error } = await adminClient.rpc('review_task_completions', {
-      p_ids: [alicesCompletion, bobsCompletion],
+      p_ids: [carolsCompletion, bobsCompletion],
       p_approve: true,
     })
 
     expect(error).toBeNull()
     expect(data.every((row: { ok: boolean }) => row.ok)).toBe(true)
     expect(await rewardsFor(bob)).toEqual([{ amount: 10, completion_id: bobsCompletion }])
-    expect(await rewardsFor(alice)).toEqual([{ amount: 6, completion_id: alicesCompletion }])
+    expect(await rewardsFor(carol)).toEqual([{ amount: 6, completion_id: carolsCompletion }])
     const { data: bobAfter } = await serviceClient().from('profiles').select('balance').eq('id', bob.id).single()
-    const { data: aliceAfter } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
+    const { data: carolAfter } = await serviceClient().from('profiles').select('balance').eq('id', carol.id).single()
     expect(bobAfter!.balance).toBe(bobBefore!.balance + 10)
-    expect(aliceAfter!.balance).toBe(aliceBefore!.balance + 6)
+    expect(carolAfter!.balance).toBe(carolBefore!.balance + 6)
+  })
+
+  it("never lets a reviewer review their own submission, alone or in a batch, but reviews the rest (#59)", async () => {
+    await ensureInvited(adminClient)
+    const own = await submitAs(adminClient, 6)
+    const bobs = await submitAsBob(10)
+
+    const single = await adminClient.rpc('approve_task_completion', { p_completion_id: own })
+    expect(single.error?.message).toBe("you can't review your own submission")
+    const reject = await adminClient.rpc('reject_task_completion', { p_completion_id: own, p_reason: 'x' })
+    expect(reject.error?.message).toBe("you can't review your own submission")
+
+    const { data, error } = await adminClient.rpc('review_task_completions', { p_ids: [own, bobs], p_approve: true })
+    expect(error).toBeNull()
+    const byId = Object.fromEntries(data.map((r: { id: string; ok: boolean; error: string | null }) => [r.id, r]))
+    expect(byId[own]).toMatchObject({ ok: false, error: "you can't review your own submission" })
+    expect(byId[bobs]).toMatchObject({ ok: true })
+    expect(await statusOf(own)).toEqual({ status: 'pending', review_note: null })
+    expect(await rewardsFor(alice)).toEqual([])
   })
 
   it('refuses a batch of more than 500 ids', async () => {

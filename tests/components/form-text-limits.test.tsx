@@ -91,7 +91,7 @@ describe('text limits on form inputs', () => {
   })
 
   it('caps the single and shared rejection reasons', () => {
-    render(<PendingApprovals pending={PENDING} />)
+    render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
     expect(screen.getByLabelText('Reason for rejecting (optional)')).toHaveAttribute('maxlength', '500')
     expect(screen.getByLabelText('Shared reason (optional)')).toHaveAttribute('maxlength', '500')
   })
@@ -188,7 +188,7 @@ describe('too-long errors point at their field', () => {
 
   it('ties a shared-reason error to the shared reason field', async () => {
     actions.bulkRejectTaskCompletionsAction.mockResolvedValue({ formError: 'Reason can be at most 500 characters.', field: 'reason' })
-    render(<PendingApprovals pending={PENDING} />)
+    render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Alice’s submission' }))
     await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }))

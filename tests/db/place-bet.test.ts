@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, type Member } from './fixtures'
+import { ensureInvited, seedMembers, clientFor, createTestMarket, type Member } from './fixtures'
 
 let alice: Member
 let bob: Member
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
+  for (const m of [alice, bob]) await ensureInvited(await clientFor(m))
 })
 
 describe('place_bet', () => {

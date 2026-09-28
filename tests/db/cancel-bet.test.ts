@@ -13,6 +13,7 @@ beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
+  for (const client of [aliceClient, bobClient]) await ensureInvited(client)
   market = await createTestMarket(aliceClient, ['Yes', 'No'])
 })
 
@@ -134,7 +135,8 @@ describe('cancel_bet', () => {
     const { error: cancelErr } = await bobClient.rpc('cancel_bet', { p_bet_id: cancelledId })
     if (cancelErr) throw cancelErr
 
-    // Alice, the creator, can resolve once close_at has passed.
+    // Alice created the market and bet on it, so only as an admin can she resolve it (0046).
+    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
     await serviceClient()
       .from('markets')
       .update({ close_at: new Date(Date.now() - 1000).toISOString() })

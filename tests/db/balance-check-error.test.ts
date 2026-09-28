@@ -12,6 +12,7 @@ beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
+  for (const client of [aliceClient, bobClient]) await ensureInvited(client)
 })
 
 // The server actions map this exact error shape to the friendly insufficient-balance copy.

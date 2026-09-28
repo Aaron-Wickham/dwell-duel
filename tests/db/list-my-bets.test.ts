@@ -24,6 +24,8 @@ beforeEach(async () => {
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   for (const client of [aliceClient, bobClient]) await ensureInvited(client)
+  // Alice bets and resolves in these tests; only an admin may resolve a market they've bet on (0046).
+  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
 })
 
 async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<number> {

@@ -58,13 +58,14 @@ function legacyToFeedEvent(r: LegacyFeedRow): FeedEvent {
     legCount: r.leg_count,
     taskTitle: r.task_title,
     resolutionNote: null,
+    creatorStake: null,
   }
 }
 
 // The legacy view predates resolution notes (0042), so the comparison is of everything else;
 // the note itself is checked on its own below.
 function withoutNotes<T extends { rows: FeedEvent[] }>(page: T): T {
-  return { ...page, rows: page.rows.map((e) => ({ ...e, resolutionNote: null })) }
+  return { ...page, rows: page.rows.map((e) => ({ ...e, resolutionNote: null, creatorStake: null })) }
 }
 
 async function legacyListFeed(
@@ -139,8 +140,8 @@ describe('listFeed vs the pre-activity_events view', () => {
     // approved task -- the same shape tests/db/activity-events.test.ts's fullScenario proves
     // activity_events keeps in step with activity_feed for, so listFeed's own read of each table
     // is what's compared here.
-    const a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Equivalence A' })
-    const b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Equivalence B' })
+    const a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Equivalence A', seed: 20 })
+    const b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Equivalence B', seed: 20 })
     await bet(bobClient, a, 0, 11)
     await bet(carolClient, a, 1, 30)
     await bet(bobClient, b, 0, 4)

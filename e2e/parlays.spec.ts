@@ -1,8 +1,18 @@
 import { test, expect } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
-import { addToSlip, openSlip, placeSolo } from './slip'
+import { addToSlip, openSlip } from './slip'
+import { clientForEmail } from '../tests/db/fixtures'
+import { serviceClient } from '../tests/db/helpers'
 
 test('build a two-leg parlay in the slip, place it, and win it', async ({ page }) => {
+  const bob = await clientForEmail('bob@example.com')
+  // Other specs spend Bob's balance (clawback leaves him at 20 DC); these two markets take 40.
+  const { data: bobProfile, error: bobErr } = await serviceClient().from('profiles').select('id, balance').eq('email', 'bob@example.com').single()
+  if (bobErr) throw bobErr
+  if (bobProfile.balance < 40) {
+    const { error } = await serviceClient().rpc('apply_coin_transaction', { p_profile_id: bobProfile.id, p_amount: 40 - bobProfile.balance, p_type: 'test_top_up' })
+    if (error) throw error
+  }
   const marketUrls: string[] = []
 
   for (const title of ['Parlay leg one?', 'Parlay leg two?']) {
@@ -13,11 +23,17 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
     await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)
     marketUrls.push(page.url())
 
-    // 5 on Yes and 15 on No, on top of each market's 20 DC seed per outcome: Yes pays 60 / 25 = 2.40×.
-    await placeSolo(page, 'Yes', 5)
-    await expect(page.getByText('5 DC on Yes')).toBeVisible()
-    await placeSolo(page, 'No', 15)
-    await expect(page.getByText('15 DC on No')).toBeVisible()
+    // Bob bets 5 on Yes and 15 on No, on top of each market's 20 DC seed per outcome: Yes pays
+    // 60 / 25 = 2.40×. It's his money, not the parlay-builder's, because a leg's odds leave out
+    // the bettor's own stakes (0046).
+    const marketId = new URL(page.url()).pathname.split('/').at(-1)!
+    const { data: outcomes } = await serviceClient().from('market_outcomes').select('id, label').eq('market_id', marketId)
+    for (const [label, amount] of [['Yes', 5], ['No', 15]] as const) {
+      const { error } = await bob.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomes!.find((o) => o.label === label)!.id, p_amount: amount })
+      if (error) throw error
+    }
+    await page.reload()
+    await expect(page.getByRole('region', { name: 'Bets' }).getByText('15 DC on No')).toBeVisible()
   }
 
   for (const url of marketUrls) {

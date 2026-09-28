@@ -84,7 +84,7 @@ beforeEach(() => {
 
 describe('PendingApprovals', () => {
   it('ties every row checkbox to the bulk form through its form attribute', () => {
-    render(<PendingApprovals pending={PENDING} />)
+    render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
     const bulkForm = screen.getByRole('button', { name: 'Approve selected' }).closest('form')!
     const boxes = rowCheckboxes()
     expect(boxes.map((box) => box.value)).toEqual(['c1', 'c2'])
@@ -96,7 +96,7 @@ describe('PendingApprovals', () => {
   })
 
   it('names each checkbox for its submitter and shows what they did', () => {
-    render(<PendingApprovals pending={PENDING} />)
+    render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
     expect(screen.getByRole('checkbox', { name: 'Select Alice’s submission' })).toHaveAttribute('value', 'c1')
     expect(screen.getByRole('link', { name: 'Alice' })).toHaveAttribute('href', '/members/p-alice')
     expect(screen.getByText('Submitted 1h ago')).toBeInTheDocument()
@@ -105,20 +105,27 @@ describe('PendingApprovals', () => {
   })
 
   it('puts the row buttons before the bulk ones, so the first "Approve" approves a row', () => {
-    render(<PendingApprovals pending={PENDING} />)
+    render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
     const approves = screen.getAllByRole('button', { name: /Approve/ })
     expect(approves.map((button) => button.textContent)).toEqual(['Approve', 'Approve', 'Approve selected'])
   })
 
+  it("gives the reviewer's own submission no checkbox or buttons, and says why (#59)", () => {
+    render(<PendingApprovals viewerId="p-alice" pending={PENDING} />)
+    expect(rowCheckboxes().map((box) => box.value)).toEqual(['c2'])
+    expect(screen.getByText('This is your submission, so another reviewer reviews it.')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Approve' })).toHaveLength(1)
+  })
+
   it('checks every row with Select all', async () => {
-    render(<PendingApprovals pending={PENDING} />)
+    render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select all' }))
     for (const box of rowCheckboxes()) expect(box).toBeChecked()
   })
 
   it('sends only the checked ids with Approve selected, then shows the summary', async () => {
     bulkApproveTaskCompletionsAction.mockResolvedValue({ summary: '1 approved.' })
-    render(<PendingApprovals pending={PENDING} />)
+    render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Ben’s submission' }))
     await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
 
@@ -128,7 +135,7 @@ describe('PendingApprovals', () => {
   })
 
   it('shows the empty state, and no bulk controls, when nothing is pending', () => {
-    render(<PendingApprovals pending={[]} />)
+    render(<PendingApprovals viewerId="viewer-1" pending={[]} />)
     expect(screen.getByText('Nothing pending.')).toBeInTheDocument()
     expect(screen.queryByRole('checkbox')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Approve selected' })).toBeNull()
@@ -137,7 +144,7 @@ describe('PendingApprovals', () => {
   it('shows only the summary from the most recent bulk action', async () => {
     bulkApproveTaskCompletionsAction.mockResolvedValue({ summary: '2 approved.' })
     bulkRejectTaskCompletionsAction.mockResolvedValue({ summary: '1 rejected.' })
-    render(<PendingApprovals pending={PENDING} />)
+    render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
     expect(await screen.findByText('2 approved.')).toBeInTheDocument()
@@ -149,7 +156,7 @@ describe('PendingApprovals', () => {
 
   it('ties a bulk approve error to the Approve selected button as its accessible description', async () => {
     bulkApproveTaskCompletionsAction.mockResolvedValue({ formError: 'Select at least one completion.' })
-    render(<PendingApprovals pending={PENDING} />)
+    render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
 
@@ -166,7 +173,7 @@ describe('PendingApprovals', () => {
       .mockResolvedValueOnce({ summary: '1 approved.' })
       .mockImplementationOnce(() => new Promise((resolve) => (resolveSecondApprove = resolve)))
     bulkRejectTaskCompletionsAction.mockResolvedValue({ summary: '1 rejected.' })
-    render(<PendingApprovals pending={PENDING} />)
+    render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
     expect(await screen.findByText('1 approved.')).toBeInTheDocument()

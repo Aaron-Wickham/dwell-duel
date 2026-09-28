@@ -1,13 +1,25 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, type Member } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 let alice: Member
 let bob: Member
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
+  for (const m of [alice, bob]) await ensureInvited(await clientFor(m))
 })
+
+// A reviewer with no stake in the market. Since 0046 nobody but an admin resolves a market
+// they've bet on, so the tests where Alice bets have this referee resolve instead.
+async function referee(): Promise<SupabaseClient> {
+  const carol = await makeMember('Carol')
+  await serviceClient().from('profiles').update({ role: 'reviewer' }).eq('id', carol.id)
+  const client = await clientFor(carol)
+  await ensureInvited(client)
+  return client
+}
 
 describe('resolve_market (first resolution)', () => {
   it('pays winners in proportion to their stake', async () => {
@@ -23,7 +35,7 @@ describe('resolve_market (first resolution)', () => {
       .update({ close_at: new Date(Date.now() - 1000).toISOString() })
       .eq('id', marketId)
 
-    const { error } = await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    const { error } = await (await referee()).rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
     expect(error).toBeNull()
 
     const db = serviceClient()
@@ -109,7 +121,7 @@ describe('resolve_market (admin override)', () => {
       .eq('id', marketId)
 
     // First resolution: "Yes" wins, Alice gets the whole pool.
-    await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    await (await referee()).rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
 
     const db = serviceClient()
     const { data: aliceAfterFirst } = await db.from('profiles').select('balance').eq('id', alice.id).single()
@@ -168,7 +180,7 @@ describe('resolve_market (admin override)', () => {
       .update({ close_at: new Date(Date.now() - 1000).toISOString() })
       .eq('id', marketId)
 
-    await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    await (await referee()).rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
 
     const db = serviceClient()
     // Alice won 50 DC and immediately spends nearly all of it elsewhere,
@@ -214,7 +226,7 @@ describe('resolve_market (admin override)', () => {
       .update({ close_at: new Date(Date.now() - 1000).toISOString() })
       .eq('id', marketId)
 
-    await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    await (await referee()).rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
 
     const db = serviceClient()
     await db.from('profiles').update({ role: 'admin' }).eq('id', bob.id)

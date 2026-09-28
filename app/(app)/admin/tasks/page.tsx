@@ -38,7 +38,7 @@ export default async function AdminTasksPage() {
           className="gap-4"
           action={pending.length > 0 ? <span className="text-sm text-ink2">{pending.length} waiting</span> : undefined}
         >
-          <PendingApprovals pending={pending} />
+          <PendingApprovals pending={pending} viewerId={user.id} />
         </SectionCard>
         {/* Reviewers only review; creating and editing tasks is for admins. */}
         {canManage && (

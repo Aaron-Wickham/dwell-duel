@@ -24,12 +24,29 @@ export async function GET(request: Request) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 
-  const { error } = await serviceRoleClient().from('profiles').select('id').limit(1)
+  const db = serviceRoleClient()
+  const { error } = await db.from('profiles').select('id').limit(1)
 
   if (error) {
     console.error(error)
     return new NextResponse('Supabase query failed', { status: 502 })
   }
 
-  return NextResponse.json({ ok: true })
+  // Proof files uploaded but never attached (an abandoned form) are removed a day later (0046).
+  // Storage objects can only be deleted through the Storage API, not SQL.
+  const { data: stray, error: strayErr } = await db.rpc('stray_proof_objects', { p_limit: 500 })
+  const names = ((stray ?? []) as { name: string }[]).map((r) => r.name)
+  if (!strayErr && names.length > 0) {
+    const { error: removeErr } = await db.storage.from('proof').remove(names)
+    if (removeErr) {
+      console.error(removeErr)
+      return new NextResponse('Proof cleanup failed', { status: 502 })
+    }
+  }
+  if (strayErr) {
+    console.error(strayErr)
+    return new NextResponse('Proof cleanup failed', { status: 502 })
+  }
+
+  return NextResponse.json({ ok: true, strayProofRemoved: names.length })
 }

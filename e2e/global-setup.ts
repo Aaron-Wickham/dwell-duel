@@ -6,6 +6,9 @@ import { serviceClient } from '../tests/db/helpers'
 loadEnv({ path: '.env.local', quiet: true })
 
 export const STORAGE_STATE_PATH = 'e2e/.auth/session.json'
+// Bob, an invited plain member: for specs that need a second person, like a task submission the
+// owner reviews (nobody reviews their own, 0046), or pages a member must not reach.
+export const MEMBER_STORAGE_STATE_PATH = 'e2e/.auth/member.json'
 
 /**
  * Real Google OAuth can't run in CI, so this seeds a real session for a
@@ -15,7 +18,7 @@ export const STORAGE_STATE_PATH = 'e2e/.auth/session.json'
  * the resulting cookies directly into a fresh browser context.
  */
 export default async function globalSetup(): Promise<void> {
-  const [alice] = await seedMembers()
+  const [alice, bob] = await seedMembers()
   await serviceClient().from('profiles').update({ role: 'owner' }).eq('id', alice.id)
 
   // seedMembers()/makeMember() create alice's profile directly via the
@@ -24,19 +27,27 @@ export default async function globalSetup(): Promise<void> {
   // migration 0006 tightened select_all_profiles to require is_invited(),
   // alice needs a matching allowed_emails row to read her own profile on
   // the home page, same as any real invited member would have.
-  await serviceClient().from('allowed_emails').insert({ email: alice.email, claimed_by: alice.id })
-
-  const client = await clientFor(alice)
-  const cookieHeader = await sessionCookieHeader(client)
-
-  const cookies = cookieHeader.split('; ').map((pair) => {
-    const [name, ...rest] = pair.split('=')
-    return { name, value: rest.join('='), domain: 'localhost', path: '/' }
-  })
+  await serviceClient()
+    .from('allowed_emails')
+    .insert([
+      { email: alice.email, claimed_by: alice.id },
+      { email: bob.email, claimed_by: bob.id },
+    ])
 
   const browser = await chromium.launch()
-  const context = await browser.newContext()
-  await context.addCookies(cookies)
-  await context.storageState({ path: STORAGE_STATE_PATH })
+  for (const [member, path] of [
+    [alice, STORAGE_STATE_PATH],
+    [bob, MEMBER_STORAGE_STATE_PATH],
+  ] as const) {
+    const cookieHeader = await sessionCookieHeader(await clientFor(member))
+    const cookies = cookieHeader.split('; ').map((pair) => {
+      const [name, ...rest] = pair.split('=')
+      return { name, value: rest.join('='), domain: 'localhost', path: '/' }
+    })
+    const context = await browser.newContext()
+    await context.addCookies(cookies)
+    await context.storageState({ path })
+    await context.close()
+  }
   await browser.close()
 }

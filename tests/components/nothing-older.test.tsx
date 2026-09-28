@@ -20,5 +20,4 @@ describe('NothingOlder', () => {
     expect(back).toHaveAttribute('data-replace', 'true')
     expect(back).toHaveClass('min-h-11', 'no-underline')
   })
-
 })

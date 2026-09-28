@@ -7,9 +7,11 @@ export function rowDomId(prefix: string, id: string | number): string {
 }
 
 // The attributes of a row "Show more" can move focus to. tabIndex -1 makes it focusable by script
-// only, never a tab stop. A list item or an article has no accessible name of its own, so the row
-// is labelled by itself, which names it from its content, and a screen reader announces the row
-// that focus lands on.
-export function focusTarget(domId: string | undefined) {
-  return domId ? ({ id: domId, tabIndex: -1, 'aria-labelledby': domId } as const) : {}
+// only, never a tab stop. A list item or an article has no accessible name of its own, so by
+// default the row is labelled by itself, which names it from its content, and a screen reader
+// announces the row that focus lands on. `labelId` overrides that for a row (MarketCard) whose
+// full content would otherwise make a verbose name, pointing aria-labelledby at a narrower element
+// (its title) instead.
+export function focusTarget(domId: string | undefined, labelId?: string) {
+  return domId ? ({ id: domId, tabIndex: -1, 'aria-labelledby': labelId ?? domId } as const) : {}
 }

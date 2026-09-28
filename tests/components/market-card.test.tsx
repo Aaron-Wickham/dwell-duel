@@ -252,7 +252,7 @@ describe('MarketCard', () => {
     expect(screen.queryByTestId('chart')).not.toBeInTheDocument()
   })
 
-  it('becomes a focus target named from its content when given a DOM id', () => {
+  it('becomes a focus target named from its title alone when given a DOM id', () => {
     render(
       <MarketCard
         id="m7"
@@ -269,9 +269,13 @@ describe('MarketCard', () => {
         domId="market-closed-m7"
       />,
     )
-    const card = screen.getByRole('article', { name: /Will the choir sing\?/ })
+    // An exact match: a self-label (the old, wrong behaviour) would also pick up the odds list
+    // and the winning-outcome line, so this fails if the card is ever named from its full content.
+    const card = screen.getByRole('article', { name: 'Will the choir sing?' })
     expect(card).toHaveAttribute('id', 'market-closed-m7')
     expect(card).toHaveAttribute('tabindex', '-1')
+    expect(card).toHaveAttribute('aria-labelledby', 'market-closed-m7-title')
+    expect(screen.getByText('Will the choir sing?').closest('h3')).toHaveAttribute('id', 'market-closed-m7-title')
   })
 
   it('is not focusable without a DOM id', () => {

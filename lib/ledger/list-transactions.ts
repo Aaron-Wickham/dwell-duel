@@ -114,7 +114,7 @@ export function buildContext(type: string, meta: EntryMeta, lookups: Lookups): s
 const LEDGER_KEYS: KeyColumns = { ts: 'created_at', id: 'id', isId: isBigintId }
 const LEDGER_COLUMNS = 'id, profile_id, amount, type, meta, created_at, profiles(display_name)'
 
-type LedgerRow = {
+type TransactionRecord = {
   id: number
   profile_id: string
   amount: number
@@ -140,7 +140,7 @@ export async function listAllTransactions(supabase: SupabaseClient, page: PagePa
     async (filter, limit) => {
       const { data, error } = await ledgerQuery(supabase, LEDGER_COLUMNS, filter, limit)
       if (error) throw error
-      return (data ?? []) as unknown as LedgerRow[]
+      return (data ?? []) as unknown as TransactionRecord[]
     },
     ledgerKey,
     async (filter, limit) => {

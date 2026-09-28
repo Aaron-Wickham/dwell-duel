@@ -26,8 +26,17 @@ describe('focusTarget', () => {
     expect(focusTarget('ledger-7')).toEqual({ id: 'ledger-7', tabIndex: -1, 'aria-labelledby': 'ledger-7' })
   })
 
-  it('adds nothing for a row with no id', () => {
+  it('names the row from a given label id instead, when its own content would be too verbose', () => {
+    expect(focusTarget('market-closed-m7', 'market-closed-m7-title')).toEqual({
+      id: 'market-closed-m7',
+      tabIndex: -1,
+      'aria-labelledby': 'market-closed-m7-title',
+    })
+  })
+
+  it('adds nothing for a row with no id, even with a label id given', () => {
     expect(focusTarget(undefined)).toEqual({})
     expect(focusTarget('')).toEqual({})
+    expect(focusTarget(undefined, 'some-title')).toEqual({})
   })
 })

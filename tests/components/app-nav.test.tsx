@@ -63,7 +63,7 @@ describe('AppNav', () => {
       ...screen.getAllByRole('navigation', { name: 'Primary' }).flatMap((nav) => within(nav).getAllByRole('link')),
       within(screen.getAllByRole('banner')[1]).getByRole('link', { name: 'Admin' }),
     ]
-    expect(links).toHaveLength(14)
+    expect(links).toHaveLength(16)
     for (const link of links) {
       const hint = link.querySelector('.nav-pending-hint')
       expect(hint).toHaveAttribute('aria-hidden', 'true')

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { ChartColumn, Layers, BookOpen, MessageSquareText, Trophy, ShieldCheck, LogOut, Mail } from 'lucide-react'
+import { ChartColumn, Layers, BookOpen, MessageSquareText, Trophy, ShieldCheck, LogOut, Mail, Ticket } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
@@ -38,6 +38,7 @@ export default async function Home() {
 
   const tiles: HomeTile[] = [
     { id: 'markets', href: '/markets', icon: ChartColumn, title: 'Markets', subtitle: marketsTileSubtitle(openMarketCount) },
+    { id: 'bets', href: '/bets', icon: Ticket, title: 'My bets', subtitle: 'Open, settled and cancelled' },
     { id: 'parlays', href: '/parlays', icon: Layers, title: 'Parlays', subtitle: parlaysTileSubtitle(slip.length) },
     { id: 'tasks', href: '/tasks', icon: BookOpen, title: 'Tasks', subtitle: 'Earn DC with Bible study' },
     { id: 'feed', href: '/feed', icon: MessageSquareText, title: 'Feed', subtitle: 'What everyone’s been up to' },

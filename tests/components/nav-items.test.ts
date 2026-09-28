@@ -10,6 +10,7 @@ describe('activeNavId', () => {
     expect(activeNavId('/markets')).toBe('markets')
     expect(activeNavId('/markets/new')).toBe('markets')
     expect(activeNavId('/markets/3f2a')).toBe('markets')
+    expect(activeNavId('/bets')).toBe('bets')
     expect(activeNavId('/parlays')).toBe('parlays')
     expect(activeNavId('/tasks')).toBe('tasks')
     expect(activeNavId('/feed')).toBe('feed')
@@ -28,10 +29,11 @@ describe('activeNavId', () => {
 })
 
 describe('NAV_ITEMS', () => {
-  it('lists the six destinations in order, with the short Leaderboard label', () => {
+  it('lists the seven destinations in order, with the short Leaderboard label', () => {
     expect(NAV_ITEMS.map((i) => [i.label, i.shortLabel, i.href])).toEqual([
       ['Home', 'Home', '/'],
       ['Markets', 'Markets', '/markets'],
+      ['My bets', 'Bets', '/bets'],
       ['Parlays', 'Parlays', '/parlays'],
       ['Tasks', 'Tasks', '/tasks'],
       ['Feed', 'Feed', '/feed'],

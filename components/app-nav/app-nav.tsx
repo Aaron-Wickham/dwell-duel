@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MotionConfig, motion } from 'motion/react'
-import { BookOpen, ChartColumn, CircleDot, House, Layers, MessageSquareText, ShieldCheck, Trophy, type LucideIcon } from 'lucide-react'
+import { BookOpen, ChartColumn, CircleDot, House, Layers, MessageSquareText, ShieldCheck, Ticket, Trophy, type LucideIcon } from 'lucide-react'
 import NumberFlow from '@number-flow/react'
 import { BetaBadge } from '@/components/brand/beta-badge'
 import { Wordmark } from '@/components/brand/wordmark'
@@ -18,6 +18,7 @@ import { ThemeToggle } from './theme-toggle'
 const ICONS: Record<NavId, LucideIcon> = {
   home: House,
   markets: ChartColumn,
+  bets: Ticket,
   parlays: Layers,
   tasks: BookOpen,
   feed: MessageSquareText,
@@ -176,7 +177,7 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
       <nav
         aria-label="Primary"
         style={{ viewTransitionName: 'app-tabbar' }}
-        className="no-callout fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-[calc(12px+var(--safe-bottom))] md:hidden"
+        className="no-callout fixed inset-x-0 bottom-0 z-30 grid grid-cols-7 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-[calc(12px+var(--safe-bottom))] md:hidden"
       >
         {NAV_ITEMS.map((item) => {
           const Icon = ICONS[item.id]
@@ -196,7 +197,7 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
             >
               <span
                 className={cn(
-                  'relative flex h-[30px] w-[52px] items-center justify-center rounded-full',
+                  'relative flex h-[30px] w-11 items-center justify-center rounded-full',
                   isActive && 'bg-lime text-on-lime',
                 )}
               >

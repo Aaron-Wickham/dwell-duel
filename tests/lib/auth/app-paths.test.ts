@@ -25,6 +25,7 @@ describe('isAppPath', () => {
       '/markets',
       '/markets/new',
       '/markets/3f2b8c1e-9d4a-4e6b-8a7c-1b2d3e4f5a6b',
+      '/bets',
       '/parlays',
       '/tasks',
       '/feed',
@@ -56,7 +57,7 @@ describe('isAppPath', () => {
   it('knows every top-level folder in app/(app)', () => {
     const dir = path.resolve(import.meta.dirname, '../../../app/(app)')
     const sections = collectSections(dir)
-    expect(sections.length).toBe(7)
+    expect(sections.length).toBe(8)
     for (const section of sections) {
       expect(isAppPath(`/${section}`), section).toBe(true)
     }

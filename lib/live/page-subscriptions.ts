@@ -53,6 +53,15 @@ export const pageSubscriptions = {
   parlays(userId: string): LiveSubscription[] {
     return [{ table: 'parlays', filter: `profile_id=eq.${userId}` }, { table: 'parlay_legs' }, { table: 'markets' }]
   },
+  // markets, unfiltered, carries every status change and resolution that moves a bet between
+  // sections or changes its result.
+  myBets(userId: string): LiveSubscription[] {
+    return [
+      { table: 'bets', filter: `profile_id=eq.${userId}` },
+      { table: 'cancelled_bets', filter: `profile_id=eq.${userId}` },
+      { table: 'markets' },
+    ]
+  },
   adminTasks(): LiveSubscription[] {
     return [{ table: 'task_completions' }]
   },

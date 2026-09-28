@@ -17,6 +17,7 @@ const declarations: Record<string, () => LiveSubscription[]> = {
   feed: () => pageSubscriptions.feed(),
   tasks: () => pageSubscriptions.tasks(MEMBER_ID),
   parlays: () => pageSubscriptions.parlays(MEMBER_ID),
+  myBets: () => pageSubscriptions.myBets(MEMBER_ID),
   adminTasks: () => pageSubscriptions.adminTasks(),
 }
 
@@ -74,6 +75,14 @@ describe('pageSubscriptions', () => {
       { table: 'activity_events', filter: `actor_id=eq.${MEMBER_ID}` },
       { table: 'cancelled_bets', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'profiles' },
+    ])
+  })
+
+  it("myBets watches the member's own bets and cancellations, and every market for results", () => {
+    expect(pageSubscriptions.myBets(MEMBER_ID)).toEqual([
+      { table: 'bets', filter: `profile_id=eq.${MEMBER_ID}` },
+      { table: 'cancelled_bets', filter: `profile_id=eq.${MEMBER_ID}` },
+      { table: 'markets' },
     ])
   })
 

@@ -53,6 +53,10 @@ export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSumma
           aria-describedby={state?.field === 'reward_amount' ? errorId : undefined}
         />
       </Field>
+      <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
+        <input name="proof_required" type="checkbox" defaultChecked={task.proofRequired} className="m-0 size-[22px] accent-primary" />
+        Require proof
+      </label>
       {/* Deactivate/Reactivate owns this flag; saving an edit keeps it as it is. */}
       {task.isActive && <input type="hidden" name="is_active" value="on" />}
       {state?.formError && (

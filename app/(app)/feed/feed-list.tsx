@@ -48,6 +48,7 @@ export function FeedList({
             icon={EVENT_ICONS[e.kind]}
             segments={describeEvent(e)}
             age={ageLabel(e.occurredAt)}
+            detail={e.kind === 'market_resolved' ? e.resolutionNote : null}
             domId={rowIdPrefix && rowDomId(rowIdPrefix, e.id)}
           />
         ))}

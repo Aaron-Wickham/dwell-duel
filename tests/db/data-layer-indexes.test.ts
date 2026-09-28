@@ -129,7 +129,7 @@ beforeAll(async () => {
     const { error } = await client.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeId, p_amount: amount })
     if (error) throw error
   }
-  const { error: resolveErr } = await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: market.outcomeIds[0] })
+  const { error: resolveErr } = await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: market.outcomeIds[0] })
   if (resolveErr) throw resolveErr
 
   const { data: resolved, error: marketErr } = await db.from('markets').select('current_resolution_id').eq('id', marketId).single()

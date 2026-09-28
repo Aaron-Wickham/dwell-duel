@@ -49,6 +49,7 @@ async function placeParlay(outcomeIds: string[], stake: number): Promise<string>
 
 async function resolve(market: TestMarket, outcomeIndex: number): Promise<void> {
   const { error } = await aliceClient.rpc('resolve_market', {
+    p_note: 'Resolved in a test',
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcomeIndex],
   })
@@ -265,6 +266,7 @@ describe('parlay settlement', () => {
     const { data: aliceBefore } = await db.from('profiles').select('balance').eq('id', alice.id).single()
 
     const { error } = await aliceClient.rpc('resolve_market', {
+      p_note: 'Resolved in a test',
       p_market_id: a.marketId,
       p_outcome_id: a.outcomeIds[1],
     })

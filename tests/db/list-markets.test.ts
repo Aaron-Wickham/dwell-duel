@@ -28,7 +28,7 @@ async function closeNow(marketId: string): Promise<void> {
 }
 
 async function resolve(marketId: string, outcomeId: string): Promise<void> {
-  const { error } = await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeId })
+  const { error } = await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeId })
   if (error) throw error
 }
 

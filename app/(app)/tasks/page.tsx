@@ -11,7 +11,7 @@ import { SectionCard } from '@/components/ui/section-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { TaskRow, type TaskRowState } from '@/components/tasks/task-row'
 import { PERIOD_LABEL } from '@/lib/tasks/period-label'
-import { SubmitButton } from './submit-button'
+import { SubmitTaskDialog } from './submit-task-dialog'
 
 export default async function TasksPage() {
   const { supabase, user } = await requireUser()
@@ -40,7 +40,7 @@ export default async function TasksPage() {
               const current = myCompletions.find((c) => c.taskId === task.id && c.periodKey === periodKey)
               const state: TaskRowState =
                 current?.status === 'pending'
-                  ? { kind: 'pending' }
+                  ? { kind: 'pending', proofCount: current.proofCount }
                   : current?.status === 'approved'
                     ? { kind: 'approved' }
                     : { kind: 'available', rejectionNote: current?.status === 'rejected' ? current.reviewNote : null }
@@ -53,7 +53,8 @@ export default async function TasksPage() {
                   description={task.description}
                   cadence={task.isRepeatable ? PERIOD_LABEL[task.period!] : null}
                   state={state}
-                  action={<SubmitButton taskId={task.id} />}
+                  proofRequired={task.proofRequired}
+                  action={<SubmitTaskDialog taskId={task.id} taskTitle={task.title} memberId={user.id} proofRequired={task.proofRequired} />}
                 />
               )
             })}

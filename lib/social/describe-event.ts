@@ -19,6 +19,8 @@ export interface FeedEvent {
   amount: number | null
   legCount: number | null
   taskTitle: string | null
+  // Why a market resolved the way it did (0042), for market_resolved events.
+  resolutionNote: string | null
 }
 
 export type Segment = string | { text: string; href: string }

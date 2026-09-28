@@ -23,7 +23,7 @@ describe('resolve_market (first resolution)', () => {
       .update({ close_at: new Date(Date.now() - 1000).toISOString() })
       .eq('id', marketId)
 
-    const { error } = await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    const { error } = await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
     expect(error).toBeNull()
 
     const db = serviceClient()
@@ -52,7 +52,7 @@ describe('resolve_market (first resolution)', () => {
       .eq('id', marketId)
 
     // outcomeIds[0] ("Yes") wins, but nobody bet it.
-    const { error } = await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    const { error } = await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
     expect(error).toBeNull()
 
     const db = serviceClient()
@@ -70,7 +70,7 @@ describe('resolve_market (first resolution)', () => {
       .eq('id', marketId)
 
     const bobClient = await clientFor(bob)
-    const { error } = await bobClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    const { error } = await bobClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
     expect(error).not.toBeNull()
   })
 
@@ -78,7 +78,7 @@ describe('resolve_market (first resolution)', () => {
     const aliceClient = await clientFor(alice)
     const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'], { closeInMs: 60_000 })
 
-    const { error } = await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    const { error } = await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
     expect(error).not.toBeNull()
   })
 
@@ -89,7 +89,7 @@ describe('resolve_market (first resolution)', () => {
     await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
     const bobClient = await clientFor(bob)
 
-    const { error } = await bobClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    const { error } = await bobClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
     expect(error).toBeNull()
   })
 })
@@ -109,7 +109,7 @@ describe('resolve_market (admin override)', () => {
       .eq('id', marketId)
 
     // First resolution: "Yes" wins, Alice gets the whole pool.
-    await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
 
     const db = serviceClient()
     const { data: aliceAfterFirst } = await db.from('profiles').select('balance').eq('id', alice.id).single()
@@ -118,7 +118,7 @@ describe('resolve_market (admin override)', () => {
     // Admin override: it was actually "No" that won.
     await db.from('profiles').update({ role: 'admin' }).eq('id', bob.id)
     const adminClient = await clientFor(bob)
-    const { error } = await adminClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[1] })
+    const { error } = await adminClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[1] })
     expect(error).toBeNull()
 
     const { data: aliceAfterOverride } = await db.from('profiles').select('balance').eq('id', alice.id).single()
@@ -148,10 +148,10 @@ describe('resolve_market (admin override)', () => {
       .update({ close_at: new Date(Date.now() - 1000).toISOString() })
       .eq('id', marketId)
 
-    await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
 
     // Alice is the creator, not an admin -- can't change it once resolved.
-    const { error } = await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[1] })
+    const { error } = await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[1] })
     expect(error).not.toBeNull()
   })
 
@@ -168,7 +168,7 @@ describe('resolve_market (admin override)', () => {
       .update({ close_at: new Date(Date.now() - 1000).toISOString() })
       .eq('id', marketId)
 
-    await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
 
     const db = serviceClient()
     // Alice won 50 DC and immediately spends nearly all of it elsewhere,
@@ -182,7 +182,7 @@ describe('resolve_market (admin override)', () => {
 
     await db.from('profiles').update({ role: 'admin' }).eq('id', bob.id)
     const adminClient = await clientFor(bob)
-    const { error } = await adminClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[1] })
+    const { error } = await adminClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[1] })
     expect(error?.code).toBe('P0001')
     // 0033's clawback block: Alice owes her whole 50 DC win, and has only 5 left.
     expect(error?.message).toBe('clawback_short:[{"owed": 50, "balance": 5, "display_name": "Alice"}]')
@@ -214,7 +214,7 @@ describe('resolve_market (admin override)', () => {
       .update({ close_at: new Date(Date.now() - 1000).toISOString() })
       .eq('id', marketId)
 
-    await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
 
     const db = serviceClient()
     await db.from('profiles').update({ role: 'admin' }).eq('id', bob.id)
@@ -223,12 +223,12 @@ describe('resolve_market (admin override)', () => {
     // First override: Red -> Blue. Pool is 30 (10 + 20); Red's reversal
     // takes back Alice's win of floor(10*30/10)=30, then Blue's only
     // bettor (Bob, 20) wins floor(20*30/20)=30.
-    await adminClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[1] })
+    await adminClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[1] })
     const { data: afterFirstOverride } = await db.from('profiles').select('balance').eq('id', bob.id).single()
     expect(afterFirstOverride?.balance).toBe(100 - 20 + 30) // Bob now winner of the 30-total pool
 
     // Second override: Blue -> Green (nobody bet Green, so this refunds everyone).
-    const { error } = await adminClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[2] })
+    const { error } = await adminClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[2] })
     expect(error).toBeNull()
 
     const { data: aliceFinal } = await db.from('profiles').select('balance').eq('id', alice.id).single()

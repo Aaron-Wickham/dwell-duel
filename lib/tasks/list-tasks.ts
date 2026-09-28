@@ -8,12 +8,13 @@ export interface TaskSummary {
   isRepeatable: boolean
   period: 'daily' | 'weekly' | 'monthly' | 'yearly' | null
   isActive: boolean
+  proofRequired: boolean
 }
 
 export async function listTasks(supabase: SupabaseClient): Promise<TaskSummary[]> {
   const { data, error } = await supabase
     .from('tasks')
-    .select('id, title, description, reward_amount, is_repeatable, period, is_active')
+    .select('id, title, description, reward_amount, is_repeatable, period, is_active, proof_required')
     .order('created_at', { ascending: false })
 
   if (error) throw error
@@ -26,5 +27,6 @@ export async function listTasks(supabase: SupabaseClient): Promise<TaskSummary[]
     isRepeatable: t.is_repeatable,
     period: t.period,
     isActive: t.is_active,
+    proofRequired: t.proof_required,
   }))
 }

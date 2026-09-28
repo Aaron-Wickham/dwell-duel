@@ -76,6 +76,11 @@ architectural decisions exist, document them here and in `docs/`.
   charts go through `effectivePools` (`lib/markets/odds.ts`), the same maths
   `resolve_market` pays on. Parlay limits live in SQL `parlay_limits()`,
   mirrored by `MAX_PICKS` / `MAX_MULTIPLIER`; a DB test keeps them equal.
+- **Proof files** (0042) live in the private `proof` bucket and upload from
+  the browser (`lib/proof/upload.ts`), never through a server action. Show
+  them with `toProofViews` (signed URLs made with the viewer's own client)
+  and `ProofList`. `resolve_market` needs a note; its logic is
+  `resolve_market_core`, which members can't call.
 - **Every bet goes through the slip.** `SlipProvider` (in the signed-in
   layout) holds the cookie's picks, each Solo or Parlay, with optimistic
   add, remove and mode switches; the floating `SlipSheet` places them all

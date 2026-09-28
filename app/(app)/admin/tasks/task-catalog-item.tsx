@@ -30,6 +30,7 @@ export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary
         </p>
         <span className="flex shrink-0 gap-1.5">
           {task.isRepeatable && task.period && <span className={cn(pillClass, 'bg-sunk text-ink2')}>{PERIOD_LABEL[task.period]}</span>}
+          {task.proofRequired && <span className={cn(pillClass, 'bg-sunk text-ink2')}>Proof required</span>}
           {!task.isActive && <span className={cn(pillClass, 'bg-gold-soft text-gold')}>Inactive</span>}
         </span>
       </div>
@@ -50,6 +51,7 @@ export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary
           <input type="hidden" name="description" value={task.description ?? ''} />
           <input type="hidden" name="reward_amount" value={task.rewardAmount} />
           {!task.isActive && <input type="hidden" name="is_active" value="on" />}
+          {task.proofRequired && <input type="hidden" name="proof_required" value="on" />}
           <FormSubmitButton
             variant={task.isActive ? 'quiet' : 'secondary'}
             size="sm"

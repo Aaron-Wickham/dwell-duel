@@ -42,6 +42,7 @@ async function closeAndResolve(market: TestMarket, outcomeIndex: number): Promis
     .update({ close_at: new Date(Date.now() - 1000).toISOString() })
     .eq('id', market.marketId)
   const { error } = await aliceClient.rpc('resolve_market', {
+    p_note: 'Resolved in a test',
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcomeIndex],
   })

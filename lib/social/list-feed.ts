@@ -15,6 +15,7 @@ interface FeedRow {
   outcome: { label: string } | null
   task_completion: { task: { title: string } | null } | null
   parlay: { parlay_legs: { id: string }[] } | null
+  resolution: { note: string | null } | null
 }
 
 // Names, labels, the task title and the parlay leg count are joined at read time through
@@ -23,12 +24,12 @@ interface FeedRow {
 // through, so no `!fkey` disambiguation is needed. actor_id is not null, but the actor embed is
 // still `!inner`, matching activity_feed's plain join on profiles: a row whose actor a viewer
 // can't see (RLS) is dropped, the same as the view never having a row to join in the first place,
-// instead of surfacing with an empty actorName. parlay_legs is capped at 6 rows per parlay
+// instead of surfacing with an empty actorName. parlay_legs is capped at 10 rows per parlay
 // (MAX_PICKS, lib/parlays/odds.ts), so this never grows with the size of the table.
 const FEED_COLUMNS =
   'id, kind, occurred_at, actor_id, market_id, amount, ' +
   'actor:profiles!inner(display_name), market:markets(title), outcome:market_outcomes(label), ' +
-  'task_completion:task_completions(task:tasks(title)), parlay:parlays(parlay_legs(id))'
+  'task_completion:task_completions(task:tasks(title)), parlay:parlays(parlay_legs(id)), resolution:market_resolutions(note)'
 const FEED_KEY_COLUMNS = { ts: 'occurred_at', id: 'id' }
 
 const feedKey = (r: { id: string; occurred_at: string }): Cursor => ({ ts: r.occurred_at, id: r.id })
@@ -46,6 +47,7 @@ function toFeedEvent(r: FeedRow): FeedEvent {
     amount: r.amount,
     legCount: r.parlay ? r.parlay.parlay_legs.length : null,
     taskTitle: r.task_completion?.task?.title ?? null,
+    resolutionNote: r.resolution?.note ?? null,
   }
 }
 

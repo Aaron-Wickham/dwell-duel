@@ -46,6 +46,7 @@ const GENESIS: TaskSummary = {
   isRepeatable: false,
   period: null,
   isActive: true,
+  proofRequired: false,
 }
 
 const PENDING: PendingRow[] = [
@@ -57,6 +58,8 @@ const PENDING: PendingRow[] = [
     rewardAmount: 10,
     submittedAt: '2026-09-25T09:00:00Z',
     submittedAge: '1h ago',
+    note: null,
+    proof: [],
   },
 ]
 

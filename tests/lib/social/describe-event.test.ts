@@ -13,6 +13,7 @@ const base: FeedEvent = {
   amount: 20,
   legCount: null,
   taskTitle: null,
+  resolutionNote: null,
 }
 const sarah = { text: 'Sarah', href: '/members/u1' }
 const market = { text: 'Will it rain?', href: '/markets/m1' }

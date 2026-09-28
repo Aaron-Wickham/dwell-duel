@@ -53,8 +53,18 @@ export async function seedMembers(): Promise<[Member, Member]> {
   await db.from('allowed_emails').delete().neq('email', '')
   await db.from('profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000')
 
-  const { data: existing } = await db.auth.admin.listUsers()
-  for (const u of existing.users) await db.auth.admin.deleteUser(u.id)
+  // listUsers returns one page of 50, and a DB test that adds more and is killed before its own
+  // cleanup leaves the rest behind. Every page is read until none is left; deleting shifts the
+  // pages, so it's always page 1.
+  for (;;) {
+    const { data, error } = await db.auth.admin.listUsers()
+    if (error) throw error
+    if (data.users.length === 0) break
+    for (const u of data.users) {
+      const { error: deleteErr } = await db.auth.admin.deleteUser(u.id)
+      if (deleteErr) throw deleteErr
+    }
+  }
 
   const alice = await makeMember('Alice')
   const bob = await makeMember('Bob')

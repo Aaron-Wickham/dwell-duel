@@ -4,7 +4,7 @@ import { serviceClient } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, type Member } from './fixtures'
 import { pgQuery } from './pg-query'
 import { listFeed } from '@/lib/social/list-feed'
-import { getLeaderboard, getMemberStanding } from '@/lib/social/leaderboard'
+import { getLeaderboardPage, getMemberStanding } from '@/lib/social/leaderboard'
 import { readPageParams, showMoreHref, type PageParams } from '@/lib/pagination/cursor'
 
 const NO_PAGE: PageParams = { top: null, bottom: null }
@@ -120,7 +120,7 @@ describe('listFeed', () => {
   })
 })
 
-describe('getLeaderboard', () => {
+describe('getLeaderboardPage', () => {
   it('ranks every member by balance, sharing ranks on ties', async () => {
     const carol = await makeMember('Carol')
     const db = serviceClient()
@@ -128,18 +128,19 @@ describe('getLeaderboard', () => {
     await db.from('profiles').update({ balance: 150 }).eq('id', bob.id)
     await db.from('profiles').update({ balance: 90 }).eq('id', carol.id)
 
-    const board = await getLeaderboard(bobClient)
-    expect(board.map((m) => [m.displayName, m.balance, m.rank])).toEqual([
+    const board = await getLeaderboardPage(bobClient, { top: null, bottom: null })
+    expect(board.rows.map((m) => [m.displayName, m.balance, m.rank])).toEqual([
       ['Alice', 150, 1],
       ['Bob', 150, 1],
       ['Carol', 90, 3],
     ])
+    expect(board.next).toBeNull()
   })
 
   it('is empty for an uninvited session', async () => {
     const carol = await makeMember('Carol')
     const carolClient = await clientFor(carol)
-    expect(await getLeaderboard(carolClient)).toEqual([])
+    expect(await getLeaderboardPage(carolClient, { top: null, bottom: null })).toEqual({ rows: [], next: null, windowed: false })
   })
 })
 

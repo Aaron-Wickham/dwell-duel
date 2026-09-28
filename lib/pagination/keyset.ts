@@ -42,9 +42,43 @@ export function newerThanFilter(cols: KeyColumns, cursor: Cursor): string {
   return `and(${cols.ts}.gte."${cursor.ts}",or(${cols.ts}.gt."${cursor.ts}",and(${cols.ts}.eq."${cursor.ts}",${cols.id}.gt."${cursor.id}")))`
 }
 
+// How a list's keys become PostgREST filters. `range` is every row from `bottom` (where an
+// extended range ends) up to `top` (where a fresh window starts), both inclusive and either
+// optional; `after` is every row strictly after a key in the list's order.
+export type KeysetOrder<Key> = {
+  range: (page: { top: Key | null; bottom: Key | null }) => string | null
+  after: (key: Key) => string
+  encode: (key: Key) => string
+}
+
 // fetchKeys, when given, answers the probe below with only the key columns: the probe needs
 // nothing else, and the full row select can carry embeds that cost a join per row. Without it
 // the probe falls back to fetchRows.
+export async function readOrdered<Row, Key extends { id: string }>(
+  page: { top: Key | null; bottom: Key | null },
+  order: KeysetOrder<Key>,
+  fetchRows: (filter: string | null, limit: number) => Promise<Row[]>,
+  keyOf: (row: Row) => Key,
+  fetchKeys?: (filter: string, limit: number) => Promise<Key[]>,
+): Promise<KeysetPage<Row>> {
+  const windowed = page.top !== null
+
+  const rows = await fetchRows(order.range(page), page.bottom ? WINDOW_CAP : PAGE_SIZE)
+  if (rows.length === 0 || (page.bottom === null && rows.length < PAGE_SIZE)) return { rows, next: null, windowed }
+
+  // "Show more" points at the 50th row past the last one shown, so the read needs those rows'
+  // keys. Probing from the last row returned, not from the cursor, means rows that arrived at the
+  // top and pushed the range past the cap are picked up here instead of skipped.
+  const after = order.after(keyOf(rows[rows.length - 1]))
+  const probe = fetchKeys ? await fetchKeys(after, PAGE_SIZE) : (await fetchRows(after, PAGE_SIZE)).map(keyOf)
+  if (probe.length === 0) return { rows, next: null, windowed }
+  const firstId = probe[0].id
+  if (rows.length + probe.length > WINDOW_CAP) {
+    return { rows, next: { kind: 'window', cursor: order.encode(probe[0]), firstId }, windowed }
+  }
+  return { rows, next: { kind: 'extend', cursor: order.encode(probe[probe.length - 1]), firstId }, windowed }
+}
+
 export async function readKeyset<Row>(
   rawPage: PageParams,
   cols: KeyColumns,
@@ -53,21 +87,10 @@ export async function readKeyset<Row>(
   fetchKeys?: (filter: string, limit: number) => Promise<Cursor[]>,
 ): Promise<KeysetPage<Row>> {
   const valid = (c: Cursor | null) => (c && (!cols.isId || cols.isId(c.id)) ? c : null)
-  const page: PageParams = { top: valid(rawPage.top), bottom: valid(rawPage.bottom) }
-  const windowed = page.top !== null
-
-  const rows = await fetchRows(rangeFilter(cols, page), page.bottom ? WINDOW_CAP : PAGE_SIZE)
-  if (rows.length === 0 || (page.bottom === null && rows.length < PAGE_SIZE)) return { rows, next: null, windowed }
-
-  // "Show more" points at the 50th row past the last one shown, so the read needs those rows'
-  // keys. Probing from the last row returned, not from the cursor, means rows that arrived at the
-  // top and pushed the range past the cap are picked up here instead of skipped.
-  const after = olderThanFilter(cols, keyOf(rows[rows.length - 1]))
-  const probe = fetchKeys ? await fetchKeys(after, PAGE_SIZE) : (await fetchRows(after, PAGE_SIZE)).map(keyOf)
-  if (probe.length === 0) return { rows, next: null, windowed }
-  const firstId = probe[0].id
-  if (rows.length + probe.length > WINDOW_CAP) {
-    return { rows, next: { kind: 'window', cursor: encodeCursor(probe[0]), firstId }, windowed }
+  const order: KeysetOrder<Cursor> = {
+    range: (page) => rangeFilter(cols, page),
+    after: (key) => olderThanFilter(cols, key),
+    encode: encodeCursor,
   }
-  return { rows, next: { kind: 'extend', cursor: encodeCursor(probe[probe.length - 1]), firstId }, windowed }
+  return readOrdered({ top: valid(rawPage.top), bottom: valid(rawPage.bottom) }, order, fetchRows, keyOf, fetchKeys)
 }

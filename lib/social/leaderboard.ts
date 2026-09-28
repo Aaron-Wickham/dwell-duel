@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import { readOrdered, type KeysetPage } from '@/lib/pagination/keyset'
 import { RANK_ORDER, aheadOfRankFilter, type RankCursor, type RankPageParams } from '@/lib/pagination/rank-cursor'
 import { avatarUrl } from '@/lib/profile/avatar'
@@ -10,7 +10,7 @@ type ProfileRow = { id: string; display_name: string; balance: number; avatar_pa
 
 const rankKey = (p: ProfileRow): RankCursor => ({ balance: p.balance, name: p.display_name, id: p.id })
 
-function boardQuery(supabase: SupabaseClient, filter: string | null, limit: number) {
+function boardQuery(supabase: DbClient, filter: string | null, limit: number) {
   let query = supabase.from('profiles').select('id, display_name, balance, avatar_path')
   if (filter) query = query.or(filter)
   return query
@@ -25,7 +25,7 @@ function boardQuery(supabase: SupabaseClient, filter: string | null, limit: numb
 // count fixes the rank of the first row's whole tie group, and every member ahead of it in the
 // order, which includes the start of a tie that straddles the boundary and so fixes where the
 // window's later groups rank. The key columns are the whole row, so the probe needs no fetchKeys.
-export async function getLeaderboardPage(supabase: SupabaseClient, page: RankPageParams): Promise<KeysetPage<LeaderboardEntry>> {
+export async function getLeaderboardPage(supabase: DbClient, page: RankPageParams): Promise<KeysetPage<LeaderboardEntry>> {
   const result = await readOrdered(
     page,
     RANK_ORDER,
@@ -63,7 +63,7 @@ export async function getLeaderboardPage(supabase: SupabaseClient, page: RankPag
 // Reads one profile, then counts rather than loading every member, so the member page's cost
 // doesn't grow with the membership. `isUuid(memberId)` must be checked by the caller first:
 // a malformed id reaches `.eq('id', …)` here, which errors instead of matching no rows.
-export async function getMemberStanding(supabase: SupabaseClient, memberId: string): Promise<MemberStanding | null> {
+export async function getMemberStanding(supabase: DbClient, memberId: string): Promise<MemberStanding | null> {
   const { data: member, error } = await supabase
     .from('profiles')
     .select('id, display_name, balance, avatar_path, bio')

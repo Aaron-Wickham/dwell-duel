@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import type { ProofView } from './types'
 
 export interface ProofRow {
@@ -13,7 +13,7 @@ export const PROOF_COLUMNS = 'id, kind, storage_path, url, file_name'
 
 // Files are private; each gets a signed URL good for an hour, made with the viewer's own client so
 // the bucket's policies (0042) still decide who may see it. A file the viewer can't sign is dropped.
-export async function toProofViews(supabase: SupabaseClient, rows: ProofRow[]): Promise<ProofView[]> {
+export async function toProofViews(supabase: DbClient, rows: ProofRow[]): Promise<ProofView[]> {
   const paths = rows.flatMap((r) => (r.storage_path ? [r.storage_path] : []))
   const signed = new Map<string, string>()
   if (paths.length) {

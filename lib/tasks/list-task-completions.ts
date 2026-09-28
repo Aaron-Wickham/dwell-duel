@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import { PROOF_COLUMNS, toProofViews, type ProofRow } from '@/lib/proof/signed'
 import type { ProofView } from '@/lib/proof/types'
 
@@ -11,7 +11,7 @@ export interface MyCompletion {
   proofCount: number
 }
 
-export async function listMyTaskCompletions(supabase: SupabaseClient, profileId: string): Promise<MyCompletion[]> {
+export async function listMyTaskCompletions(supabase: DbClient, profileId: string): Promise<MyCompletion[]> {
   const { data, error } = await supabase
     .from('task_completions')
     .select('task_id, status, period_key, reward_amount, review_note, proof_attachments(id)')
@@ -22,12 +22,12 @@ export async function listMyTaskCompletions(supabase: SupabaseClient, profileId:
 
   return (data ?? []).map((c) => ({
     taskId: c.task_id,
-    status: c.status,
+    status: c.status as MyCompletion['status'], // a CHECK-constrained text column
     periodKey: c.period_key,
     rewardAmount: c.reward_amount,
     reviewNote: c.review_note,
     // Ids, not a (count) aggregate: Supabase ships with PostgREST's aggregates turned off.
-    proofCount: (c.proof_attachments as unknown as { id: string }[] | null)?.length ?? 0,
+    proofCount: c.proof_attachments.length,
   }))
 }
 
@@ -44,7 +44,7 @@ export interface PendingCompletion {
 
 // `withProof` signs the attachments' URLs for the review queue; Home only needs the count.
 export async function listPendingTaskCompletions(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   { withProof = false }: { withProof?: boolean } = {},
 ): Promise<PendingCompletion[]> {
   const { data, error } = await supabase
@@ -57,6 +57,7 @@ export async function listPendingTaskCompletions(
 
   if (error) throw error
 
+  // The proof embed is optional, so the select is a runtime string the generated types can't follow.
   const rows = (data ?? []) as unknown as {
     id: string
     profile_id: string

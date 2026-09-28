@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import { chunk, IN_CHUNK } from '@/lib/pagination/chunk'
 
 // What a market's creator has riding on it: solo bets per outcome, and the outcomes they picked in
@@ -6,11 +6,8 @@ import { chunk, IN_CHUNK } from '@/lib/pagination/chunk'
 // matters more than anything (#84). Bets and parlays are already visible to every invited member.
 export type CreatorStake = { solo: { label: string; amount: number }[]; parlayLabels: string[] }
 
-type BetRow = { market_id: string; profile_id: string; amount: number; market_outcomes: { label: string } | null }
-type LegRow = { market_id: string; market_outcomes: { label: string } | null; parlays: { profile_id: string } | null }
-
 export async function getCreatorStakes(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   markets: { id: string; createdBy: string }[],
 ): Promise<Map<string, CreatorStake>> {
   const stakes = new Map<string, CreatorStake>()
@@ -35,7 +32,7 @@ export async function getCreatorStakes(
     if (bets.error) throw bets.error
     if (legs.error) throw legs.error
 
-    for (const b of (bets.data ?? []) as unknown as BetRow[]) {
+    for (const b of bets.data ?? []) {
       if (creatorOf.get(b.market_id) !== b.profile_id) continue
       const label = b.market_outcomes?.label ?? 'an outcome'
       const solo = stakeFor(b.market_id).solo
@@ -43,7 +40,7 @@ export async function getCreatorStakes(
       if (existing) existing.amount += b.amount
       else solo.push({ label, amount: b.amount })
     }
-    for (const l of (legs.data ?? []) as unknown as LegRow[]) {
+    for (const l of legs.data ?? []) {
       if (creatorOf.get(l.market_id) !== l.parlays?.profile_id) continue
       const labels = stakeFor(l.market_id).parlayLabels
       const label = l.market_outcomes?.label ?? 'an outcome'

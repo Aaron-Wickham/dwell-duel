@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import type { FeedEvent, FeedKind } from './describe-event'
 import { readKeyset, type KeysetPage } from '@/lib/pagination/keyset'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
@@ -54,10 +54,11 @@ function toFeedEvent(r: FeedRow): FeedEvent {
 }
 
 export async function listFeed(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   opts: { actorId?: string; page: PageParams },
 ): Promise<KeysetPage<FeedEvent>> {
-  // The range read and its key probe share one builder, so the two can't drift apart on filters.
+  // The range read and its key probe share one builder, so the two can't drift apart on filters. Its column
+  // list is a runtime string, so the generated types can't follow it, and each reader casts its rows.
   const feedQuery = (columns: string, filter: string | null, limit: number) => {
     let query = supabase
       .from('activity_events')

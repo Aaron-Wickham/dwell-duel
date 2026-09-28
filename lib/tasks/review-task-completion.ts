@@ -27,7 +27,7 @@ export async function rejectTaskCompletionAction(completionId: string, _prevStat
 
   const { error } = await supabase.rpc('reject_task_completion', {
     p_completion_id: completionId,
-    p_reason: reason || null,
+    p_reason: reason || undefined,
   })
   if (error) return { formError: error.message }
 
@@ -80,7 +80,7 @@ export async function bulkRejectTaskCompletionsAction(_prevState: BulkActionStat
   const { data, error } = await supabase.rpc('review_task_completions', {
     p_ids: completionIds,
     p_approve: false,
-    p_note: reason || null,
+    p_note: reason || undefined,
   })
   const { succeeded, failed, firstError } = tally(completionIds.length, data, error)
 

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import { effectivePools } from '@/lib/markets/odds'
 import { combineOdds, legOddsBp } from './odds'
 import type { SlipEntry } from './parse-slip'
@@ -30,14 +30,7 @@ export interface SlipView {
 
 export const EMPTY_SLIP: SlipView = { picks: [], legBps: [], ...combineOdds([]) }
 
-interface OutcomeRow {
-  id: string
-  label: string
-  pool_total: number
-  markets: { id: string; title: string; status: string; close_at: string; seed_per_outcome: number; market_outcomes: { pool_total: number }[] }
-}
-
-export async function getSlipView(supabase: SupabaseClient, entries: SlipEntry[], userId: string): Promise<SlipView> {
+export async function getSlipView(supabase: DbClient, entries: SlipEntry[], userId: string): Promise<SlipView> {
   if (entries.length === 0) return EMPTY_SLIP
 
   const { data, error } = await supabase
@@ -49,7 +42,7 @@ export async function getSlipView(supabase: SupabaseClient, entries: SlipEntry[]
     )
   if (error) throw error
 
-  const rows = (data ?? []) as unknown as OutcomeRow[]
+  const rows = data ?? []
   const now = Date.now()
 
   // Your own stakes on these markets, per market and per outcome, left out of the parlay odds.

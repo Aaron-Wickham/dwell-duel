@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 
 export interface TaskSummary {
   id: string
@@ -11,7 +11,7 @@ export interface TaskSummary {
   proofRequired: boolean
 }
 
-export async function listTasks(supabase: SupabaseClient): Promise<TaskSummary[]> {
+export async function listTasks(supabase: DbClient): Promise<TaskSummary[]> {
   const { data, error } = await supabase
     .from('tasks')
     .select('id, title, description, reward_amount, is_repeatable, period, is_active, proof_required')
@@ -25,7 +25,7 @@ export async function listTasks(supabase: SupabaseClient): Promise<TaskSummary[]
     description: t.description,
     rewardAmount: t.reward_amount,
     isRepeatable: t.is_repeatable,
-    period: t.period,
+    period: t.period as TaskSummary['period'], // a CHECK-constrained text column
     isActive: t.is_active,
     proofRequired: t.proof_required,
   }))

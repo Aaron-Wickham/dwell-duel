@@ -1,0 +1,26 @@
+# Weekly version-update PRs. Security updates are enabled separately in the repo settings.
+# Every PR still needs a passing CI run and the owner's review (the main ruleset).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # These must move together.
+      next:
+        patterns: ['next', 'eslint-config-next', '@next/*']
+      react:
+        patterns: ['react', 'react-dom', '@types/react', '@types/react-dom']
+      supabase:
+        patterns: ['@supabase/*']
+      # Everything else that's a patch or minor, in one PR.
+      minor-and-patch:
+        update-types: ['minor', 'patch']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday

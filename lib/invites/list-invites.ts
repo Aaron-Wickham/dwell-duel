@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 
 export interface InviteRow {
   email: string
@@ -6,7 +6,7 @@ export interface InviteRow {
   createdAt: string
 }
 
-export async function listInvites(supabase: SupabaseClient): Promise<InviteRow[]> {
+export async function listInvites(supabase: DbClient): Promise<InviteRow[]> {
   const { data, error } = await supabase
     .from('allowed_emails')
     .select('email, claimed_by, created_at')

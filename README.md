@@ -99,18 +99,25 @@ npm run dev       # start the dev server on http://localhost:3000
 ```
 
 Copy `.env.local.example` to `.env.local` and fill in
-`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and
-`SUPABASE_SERVICE_ROLE_KEY` from `npx supabase status`. Required variables
-are checked when the server boots (`lib/env/required.ts`).
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and
+`SUPABASE_SECRET_KEY` from `npx supabase status` (its `API_URL`,
+`PUBLISHABLE_KEY` and `SECRET_KEY`). Required variables are checked when
+the server boots (`lib/env/required.ts`).
 
 ### Tests
 
 ```bash
 npm test          # Vitest: unit, component and DB tests (DB tests need local Supabase)
 npm run test:e2e  # Playwright: builds and serves the app on :3000, so free that port first
-npm run lint      # ESLint
+npm run lint      # ESLint, with no warnings allowed
+npm run typecheck # TypeScript
 npm run build     # production build
 ```
+
+`npx vitest run --project unit` runs only the tests that don't need the
+database. After a migration, regenerate the database types with
+`npx supabase gen types typescript --local > lib/supabase/database.types.ts`;
+CI fails if they're stale.
 
 Run `npm run db:reset` before tests that hit the database. The DB tests
 refuse to run against anything but `localhost`, so they can never touch
@@ -125,15 +132,27 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
 ## Production
 
 - **Vercel project** `dwell-duel`, connected to this repo: every merge to
-  `main` deploys. A daily Vercel cron calls `/api/cron/keep-alive` so the
+  `main` deploys. Functions run in `cle1` (`vercel.json`), next to the
+  Supabase project in us-east-2. A daily Vercel cron calls `/api/cron/keep-alive` so the
   free-tier Supabase project never pauses (it needs `CRON_SECRET`).
 - **Supabase project** `dwell-duel` holds the real data. Merging a change
   under `supabase/migrations/` to `main` runs
   `.github/workflows/deploy-production-db.yml`, which pushes it to
-  production (it needs the `SUPABASE_ACCESS_TOKEN` repo secret). That runs
-  alongside Vercel's deploy, not before it, so when a build depends on a
-  new migration, run the workflow on the branch before merging. Re-run it
-  from the Actions tab if a push fails.
+  production (it needs the `SUPABASE_ACCESS_TOKEN` repo secret). It shows a
+  dry run first, then waits for the owner's approval on the `production-db`
+  environment, and never runs two at once. It runs alongside Vercel's
+  deploy, not before it, so when a build depends on a new migration, run
+  the workflow on the branch before merging. Re-run it from the Actions tab
+  if a push fails.
+- **Supabase keys.** Sessions are signed with an ECC (ES256) key, so the
+  app verifies them locally with no Auth round trip; the legacy HS256
+  secret is revoked and the legacy `anon` / `service_role` JWT API keys are
+  disabled. Vercel holds the publishable key
+  (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) and, in Production only, the
+  secret key (`SUPABASE_SECRET_KEY`). To rotate the secret key: create a
+  new one under Supabase → Settings → API Keys, update the Vercel variable,
+  redeploy, run the keep-alive cron from Vercel → Settings → Cron Jobs to
+  check it, then delete the old key.
 - **Inviting someone** is purely in the app: add their email under Admin →
   Invites. Google's OAuth consent screen is published, so there's no
   Google Cloud step.
@@ -156,7 +175,7 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
   Auth → Providers → Google.
 - **Required:** in Supabase → Auth → Providers, disable every provider
   except Google, and disable email sign-ups. Otherwise anyone could get a
-  session from the public anon key without going through the invite gate.
+  session from the public publishable key without going through the invite gate.
 - Add the app's redirect URLs (`http://localhost:3000/callback`, and the
   production one) to Supabase → Auth → URL Configuration.
 - **Before your first sign-in,** invite yourself in the SQL editor:
@@ -169,9 +188,12 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
 
 ## CI
 
-Every push to `main` and every pull request runs lint, the Vitest suite, a
-production build and the Playwright suite (`.github/workflows/ci.yml`),
-against a throwaway local Supabase, never the production database.
+Every push to `main` and every pull request runs lint, the type check, a
+check that the generated database types match the migrations, the Vitest
+suite, a production build and the Playwright suite
+(`.github/workflows/ci.yml`), against a throwaway local Supabase, never the
+production database. Dependabot opens weekly update PRs for npm packages and
+GitHub Actions (`.github/dependabot.yml`).
 
 ## Releases
 

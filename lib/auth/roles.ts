@@ -1,5 +1,5 @@
 import { cache } from 'react'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 
 // supabase/migrations/0040_roles.sql: owner > admin > reviewer > member.
 export const ROLES = ['owner', 'admin', 'reviewer', 'member'] as const
@@ -26,7 +26,7 @@ export function adminHref(role: Role): string | null {
 
 // Throws on an RPC error rather than reporting 'member': an Auth or database outage isn't a
 // demotion, and treating it as one would hide the error page behind a quiet redirect.
-export const getRole = cache(async (supabase: SupabaseClient): Promise<Role> => {
+export const getRole = cache(async (supabase: DbClient): Promise<Role> => {
   const { data, error } = await supabase.rpc('my_role')
   if (error) throw error
   return isRole(data) ? data : 'member'

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { chunk, IN_CHUNK } from '@/lib/pagination/chunk'
 import { readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
@@ -17,22 +17,22 @@ const WAGER_KEYS: KeyColumns = { ts: 'created_at', id: 'id', isId: (id) => WAGER
 type KeyRow = { id: string; created_at: string }
 const keyOf = (w: KeyRow): Cursor => ({ ts: w.created_at, id: w.id })
 
-async function fetchBets(supabase: SupabaseClient, ids: number[]): Promise<Map<number, BetRow>> {
+async function fetchBets(supabase: DbClient, ids: number[]): Promise<Map<number, BetRow>> {
   const rows = new Map<number, BetRow>()
   for (const part of chunk(ids, IN_CHUNK)) {
     const { data, error } = await supabase.from('bets').select(BET_COLUMNS).in('id', part)
     if (error) throw error
-    for (const row of (data ?? []) as unknown as BetRow[]) rows.set(row.id, row)
+    for (const row of (data ?? []) as BetRow[]) rows.set(row.id, row)
   }
   return rows
 }
 
-async function fetchParlays(supabase: SupabaseClient, ids: string[]): Promise<Map<string, ParlayRow>> {
+async function fetchParlays(supabase: DbClient, ids: string[]): Promise<Map<string, ParlayRow>> {
   const rows = new Map<string, ParlayRow>()
   for (const part of chunk(ids, IN_CHUNK)) {
     const { data, error } = await supabase.from('parlays').select(PARLAY_COLUMNS).in('id', part)
     if (error) throw error
-    for (const row of (data ?? []) as unknown as ParlayRow[]) rows.set(row.id, row)
+    for (const row of (data ?? []) as ParlayRow[]) rows.set(row.id, row)
   }
   return rows
 }
@@ -41,7 +41,7 @@ async function fetchParlays(supabase: SupabaseClient, ids: string[]): Promise<Ma
 // my_wagers (0044) as keys only, then the bets and parlays it names are fetched by id. A bet
 // cancelled between the two reads is simply left out.
 export async function listMyWagers(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   userId: string,
   bucket: WagerBucket,
   page: PageParams,

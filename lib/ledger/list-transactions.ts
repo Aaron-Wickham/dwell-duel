@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { IN_CHUNK, chunk } from '@/lib/pagination/chunk'
 import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
@@ -41,7 +41,7 @@ export interface EntryMeta {
 // type at compile time, so a templated column name can't be typed the same way.
 // Each is split into chunks of IN_CHUNK ids, so a 500-row window never builds a
 // URL that grows with the rows shown.
-async function fetchMarketTitles(supabase: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
+async function fetchMarketTitles(supabase: DbClient, ids: string[]): Promise<Map<string, string>> {
   const titles = new Map<string, string>()
   const results = await Promise.all(chunk(ids, IN_CHUNK).map((part) => supabase.from('markets').select('id, title').in('id', part)))
   for (const { data, error } of results) {
@@ -51,7 +51,7 @@ async function fetchMarketTitles(supabase: SupabaseClient, ids: string[]): Promi
   return titles
 }
 
-async function fetchOutcomeLabels(supabase: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
+async function fetchOutcomeLabels(supabase: DbClient, ids: string[]): Promise<Map<string, string>> {
   const labels = new Map<string, string>()
   const results = await Promise.all(
     chunk(ids, IN_CHUNK).map((part) => supabase.from('market_outcomes').select('id, label').in('id', part)),
@@ -63,7 +63,7 @@ async function fetchOutcomeLabels(supabase: SupabaseClient, ids: string[]): Prom
   return labels
 }
 
-async function fetchTaskTitles(supabase: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
+async function fetchTaskTitles(supabase: DbClient, ids: string[]): Promise<Map<string, string>> {
   const titles = new Map<string, string>()
   const results = await Promise.all(chunk(ids, IN_CHUNK).map((part) => supabase.from('tasks').select('id, title').in('id', part)))
   for (const { data, error } of results) {
@@ -127,14 +127,15 @@ type TransactionRecord = {
 
 const ledgerKey = (t: { id: number; created_at: string }): Cursor => ({ ts: t.created_at, id: String(t.id) })
 
-// The range read and its key probe share one builder, so the two can't drift apart on order.
-function ledgerQuery(supabase: SupabaseClient, columns: string, filter: string | null, limit: number) {
+// The range read and its key probe share one builder, so the two can't drift apart on order. Its column list is a runtime string, so
+// the generated types can't follow it, and each reader casts its rows.
+function ledgerQuery(supabase: DbClient, columns: string, filter: string | null, limit: number) {
   let query = supabase.from('coin_transactions').select(columns)
   if (filter) query = query.or(filter)
   return query.order('created_at', { ascending: false }).order('id', { ascending: false }).limit(limit)
 }
 
-export async function listAllTransactions(supabase: SupabaseClient, page: PageParams): Promise<KeysetPage<LedgerEntry>> {
+export async function listAllTransactions(supabase: DbClient, page: PageParams): Promise<KeysetPage<LedgerEntry>> {
   const result = await readKeyset(
     page,
     LEDGER_KEYS,

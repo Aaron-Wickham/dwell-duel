@@ -1,5 +1,5 @@
 import type { MarketKind } from '@/lib/markets/kind'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { avatarUrl } from '@/lib/profile/avatar'
 import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
@@ -35,7 +35,7 @@ export interface MarketBet {
   bettorAvatarSrc: string | null
 }
 
-export async function getMarket(supabase: SupabaseClient, marketId: string): Promise<MarketDetail | null> {
+export async function getMarket(supabase: DbClient, marketId: string): Promise<MarketDetail | null> {
   const { data, error } = await supabase
     .from('markets')
     .select(
@@ -61,18 +61,19 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
   // The embed above replaces a second round trip to market_resolutions: current_resolution_id
   // is a to-one foreign key on markets itself, so PostgREST hands back one object (or null),
   // never an array.
-  const resolution = data.current_resolution as unknown as { outcome_id: string; resolved_at: string; actual_value: number | null } | null
+  const resolution = data.current_resolution
   const resolvedOutcomeLabel = resolution ? (outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null) : null
   const resolvedAt = resolution?.resolved_at ?? null
 
-  const creator = data.creator as unknown as { display_name: string } | null
+  const creator = data.creator
 
   return {
     id: data.id,
     title: data.title,
     description: data.description,
-    kind: data.kind,
-    status: data.status,
+    // Text columns with CHECK constraints (0043, 0001), so the generated types say only string.
+    kind: data.kind as MarketDetail['kind'],
+    status: data.status as MarketDetail['status'],
     closeAt: data.close_at,
     createdAt: data.created_at,
     seedPerOutcome: data.seed_per_outcome,
@@ -102,14 +103,15 @@ type BetRow = {
 
 const betKey = (b: { id: number; created_at: string }): Cursor => ({ ts: b.created_at, id: String(b.id) })
 
-// The range read and its key probe share one builder, so the two can't drift apart on filters.
-function betsQuery(supabase: SupabaseClient, marketId: string, columns: string, filter: string | null, limit: number) {
+// The range read and its key probe share one builder, so the two can't drift apart on filters. Its column list is a runtime string, so
+// the generated types can't follow it, and each reader casts its rows.
+function betsQuery(supabase: DbClient, marketId: string, columns: string, filter: string | null, limit: number) {
   let query = supabase.from('bets').select(columns).eq('market_id', marketId)
   if (filter) query = query.or(filter)
   return query.order('created_at', { ascending: false }).order('id', { ascending: false }).limit(limit)
 }
 
-export async function getMarketBets(supabase: SupabaseClient, marketId: string, page: PageParams): Promise<KeysetPage<MarketBet>> {
+export async function getMarketBets(supabase: DbClient, marketId: string, page: PageParams): Promise<KeysetPage<MarketBet>> {
   const result = await readKeyset(
     page,
     BET_KEYS,

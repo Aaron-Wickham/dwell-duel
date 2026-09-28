@@ -22,7 +22,7 @@ const COMPLETIONS = 3_000
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost'])
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+const key = process.env.SUPABASE_SECRET_KEY
 if (!url || !key) throw new Error('Missing Supabase env vars — is .env.local present?')
 const host = new URL(url).hostname
 if (!LOCAL_HOSTS.has(host)) {

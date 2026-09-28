@@ -1,5 +1,5 @@
 import type { MarketKind } from '@/lib/markets/kind'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 import { isUuid } from '@/lib/uuid'
@@ -60,9 +60,10 @@ const MARKET_KEYS: KeyColumns = { ts: 'created_at', id: 'id', isId: isUuid }
 
 const marketKey = (m: { id: string; created_at: string }): Cursor => ({ ts: m.created_at, id: m.id })
 
-// The range read and its key probe share one builder, so the two can't drift apart on filters.
+// The range read and its key probe share one builder, so the two can't drift apart on filters. Its column list is a runtime string, so
+// the generated types can't follow it, and each reader casts its rows.
 function marketsQuery(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   statuses: MarketSummary['status'][],
   columns: string,
   filter: string | null,
@@ -74,7 +75,7 @@ function marketsQuery(
 }
 
 async function listMarkets(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   statuses: MarketSummary['status'][],
   page: PageParams,
 ): Promise<KeysetPage<MarketSummary>> {
@@ -101,16 +102,16 @@ async function listMarkets(
 }
 
 // Open markets include those past their close time and awaiting resolution; the page splits them.
-export async function listOpenMarkets(supabase: SupabaseClient, page: PageParams): Promise<KeysetPage<MarketSummary>> {
+export async function listOpenMarkets(supabase: DbClient, page: PageParams): Promise<KeysetPage<MarketSummary>> {
   return listMarkets(supabase, ['open'], page)
 }
 
 // Resolved and voided markets are one list, one "Show more", shown in their two groups.
-export async function listClosedMarkets(supabase: SupabaseClient, page: PageParams): Promise<KeysetPage<MarketSummary>> {
+export async function listClosedMarkets(supabase: DbClient, page: PageParams): Promise<KeysetPage<MarketSummary>> {
   return listMarkets(supabase, ['resolved', 'voided'], page)
 }
 
-export async function countOpenMarkets(supabase: SupabaseClient): Promise<number> {
+export async function countOpenMarkets(supabase: DbClient): Promise<number> {
   const { count, error } = await supabase.from('markets').select('id', { count: 'exact', head: true }).eq('status', 'open')
   if (error) throw error
   return count ?? 0

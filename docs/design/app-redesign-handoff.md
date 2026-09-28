@@ -16,7 +16,9 @@ The approved mockup is a Design canvas:
 | Markets | `app/markets` |
 | CreateMarket | `app/markets/new` |
 | Market (open, creator), MarketFull (slip full), MarketResolved (admin override) | `app/markets/[id]` |
-| Parlays, ParlaysStale, ParlaysOnePick, ParlaysPlaced | `app/parlays` |
+| MyBets (solo bets and parlays, Open · Settled · Cancelled) | `app/(app)/bets` (`/parlays` redirects here) |
+| Settings | `app/(app)/settings` |
+| Launch (System page: launch animation frames) | `components/brand/launch-screen.tsx` |
 | Tasks | `app/tasks` |
 | Feed | `app/feed` |
 | Leaderboard | `app/leaderboard` |
@@ -36,7 +38,7 @@ The approved mockup is a Design canvas:
 
 ## Tokens (Tailwind v4, `app/globals.css`)
 
-Theme is `data-theme` on `<html>`. It follows `prefers-color-scheme` until the user picks a theme with the toggle, then persists that choice (for example in a cookie, to avoid a flash on load).
+Theme is `data-theme` on `<html>`. It follows `prefers-color-scheme` until the member picks Light or Dark in Settings, which persists the choice in a cookie read by the root layout, so there's no flash on load. Choosing System clears it.
 
 ```css
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
@@ -87,17 +89,18 @@ Every text pairing above passes WCAG AA; I checked them with a script.
 
 ## Navigation (one `<AppNav>` in the signed-in layout)
 
-- **Desktop:** a 72px top bar with the wordmark, then Home, Markets, Parlays, Tasks, Feed and Leaderboard, a divider, then Admin (admins only). On the right: the balance chip and the theme toggle. The active item is a filled pill.
+- **There's no Home tab.** The wordmark links home and is marked current there.
+- **Desktop:** a 72px top bar with the wordmark, then Markets, My bets, Tasks, Feed and Leaderboard, a divider, then Admin (admins only). On the right: the balance chip (a link to My bets) and your avatar (a link to your profile). The active item is a filled pill.
 - **Phone:**
-  - Top bar (64px): wordmark, balance chip, an Admin shield icon (admins only), theme toggle.
-  - Bottom tab bar with 6 tabs: Home, Markets, Parlays, Tasks, Feed, Leaders. The Leaders tab has `aria-label="Leaderboard"`.
-- **Slip count:** the Parlays badge shows just the number. A visually hidden `" (2)"` inside the link keeps its accessible text exactly **"Parlays (2)"**, which the e2e tests look for. Hide the count when the slip is empty.
+  - Top bar (64px): wordmark, balance chip, an Admin shield icon (admins only), avatar.
+  - Bottom tab bar with 5 tabs: Markets, Bets, Tasks, Feed, Leaders. Bets has `aria-label="My bets"`; Leaders has `aria-label="Leaderboard"`.
+- **The slip** is its own floating button (`SlipSheet`), not a tab badge.
 
 ## Components (Components page on the canvas)
 
 | Component | Props (see each artboard's `renderVals`) | Build with |
 |---|---|---|
-| `AppNav` (TopBar + TabBar) | size, theme, current tab, slip count | lucide-react icons, motion `layoutId` for the active pill |
+| `AppNav` (TopBar + TabBar) | size, theme, current tab | lucide-react icons, motion `layoutId` for the active pill |
 | `ProbabilityChart` | per range: series `{label, color, values[]}`, times; `compact` flag | Recharts v3 via the shadcn/ui Chart wrapper: one `<Line type="stepAfter">` per outcome, a crosshair tooltip, and end-of-line labels showing name and % |
 | `MarketCard` | market, compact chart, outcomes with % and weekly change | reuses `ProbabilityChart` with `compact` |
 | `OutcomeRow` | label, % and pool, bar, payout multiplier, state `add` / `inslip` / `disabled` / `none`, winner | Button variants with cva |

@@ -5,7 +5,8 @@ import { cardClass } from '@/components/ui/card'
 import { StatusChip } from '@/components/ui/status-chip'
 import { LocalTime } from '@/components/ui/local-time'
 import { SERIES_BG } from '@/components/markets/series-classes'
-import { ProbabilityChart, type ChartOutcome } from '@/components/markets/probability-chart'
+import { MarketSparkline } from '@/components/markets/market-sparkline'
+import type { ChartOutcome } from '@/components/markets/probability-chart'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import type { SeriesPoint } from '@/lib/markets/probability-series'
 import { chartClosedAt, type MarketCardStatus } from '@/lib/markets/market-status'
@@ -107,13 +108,12 @@ export function MarketCard({
       {hasBets ? (
         <>
           {chart && (
-            <ProbabilityChart
+            <MarketSparkline
               outcomes={chart.outcomes}
               points={chart.points}
               now={chart.now}
               closedAt={chartClosedAt(status, closeAt, resolvedAt)}
               resolvedLabel={status === 'resolved' ? resolvedOutcomeLabel : null}
-              compact
             />
           )}
           <ul className="flex flex-col gap-1.5">

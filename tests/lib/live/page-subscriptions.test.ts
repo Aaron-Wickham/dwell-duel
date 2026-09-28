@@ -48,11 +48,10 @@ describe('pageSubscriptions', () => {
     expect(pageSubscriptions.markets()).toEqual([{ table: 'markets' }, { table: 'bets' }, { table: 'cancelled_bets' }])
   })
 
-  it('home, for a member, filters task_completions to their own submissions and watches every profile for live ranks', () => {
+  it('home, for a member, filters task_completions to their own submissions', () => {
     expect(pageSubscriptions.home({ me: MEMBER_ID, admin: false })).toEqual([
       { table: 'markets' },
       { table: 'tasks' },
-      { table: 'profiles' },
       { table: 'bets', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'cancelled_bets', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'parlays', filter: `profile_id=eq.${MEMBER_ID}` },
@@ -60,11 +59,10 @@ describe('pageSubscriptions', () => {
     ])
   })
 
-  it('home, for an admin, watches every submission and every profile so ranks and pending-approvals stay live', () => {
+  it('home, for an admin, watches every submission so pending-approvals stay live', () => {
     expect(pageSubscriptions.home({ me: MEMBER_ID, admin: true })).toEqual([
       { table: 'markets' },
       { table: 'tasks' },
-      { table: 'profiles' },
       { table: 'bets', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'cancelled_bets', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'parlays', filter: `profile_id=eq.${MEMBER_ID}` },
@@ -76,12 +74,27 @@ describe('pageSubscriptions', () => {
     expect(pageSubscriptions.leaderboard()).toEqual([{ table: 'profiles' }])
   })
 
-  it('member watches every profile for live ranks, and carries the member id through activity_events', () => {
+  it('member watches only that member, carrying their id through activity_events', () => {
     expect(pageSubscriptions.member(MEMBER_ID)).toEqual([
       { table: 'activity_events', filter: `actor_id=eq.${MEMBER_ID}` },
       { table: 'cancelled_bets', filter: `profile_id=eq.${MEMBER_ID}` },
-      { table: 'profiles' },
+      { table: 'profiles', filter: `id=eq.${MEMBER_ID}` },
     ])
+  })
+
+  // place_bet writes bets, the bettor's profile balance, their coin transaction and an
+  // activity_events row, and nothing on markets (#68).
+  it("doesn't refresh a member's Home or member page when someone else bets", () => {
+    const betWrites = new Set(['bets', 'profiles', 'activity_events', 'parlays', 'parlay_legs'])
+    const OTHER = '99999999-9999-4999-8999-999999999999'
+    for (const subs of [
+      pageSubscriptions.home({ me: MEMBER_ID, admin: false }),
+      pageSubscriptions.home({ me: MEMBER_ID, admin: true }),
+      pageSubscriptions.member(MEMBER_ID),
+    ]) {
+      const hears = subs.filter((s) => betWrites.has(s.table) && (!s.filter || s.filter.endsWith(OTHER)))
+      expect(hears).toEqual([])
+    }
   })
 
   it("myBets watches the member's own bets, cancellations and parlays, and every market for results", () => {

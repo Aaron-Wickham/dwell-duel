@@ -17,13 +17,12 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   const { supabase, user } = await requireUser()
   if (!user) return children
 
-  const [{ data: profile, error }, role, slip] = await Promise.all([
+  const [{ data: profile, error }, role, slipView] = await Promise.all([
     supabase.from('profiles').select('balance, display_name, avatar_path').eq('id', user.id).maybeSingle(),
     getRole(supabase),
-    readSlip(),
+    readSlip().then((slip) => getSlipView(supabase, slip, user.id)),
   ])
   if (error) throw error
-  const slipView = await getSlipView(supabase, slip, user.id)
 
   return (
     <LiveTablesProvider userId={user.id}>

@@ -23,7 +23,7 @@ export default async function AdminTasksPage() {
 
   const [tasks, pendingRaw] = await Promise.all([
     canManage ? listTasks(supabase) : Promise.resolve([]),
-    listPendingTaskCompletions(supabase, { withProof: true }),
+    listPendingTaskCompletions(supabase),
   ])
   // Ages are worked out here, on the server, so the client-rendered list hydrates with the same text.
   const pending = pendingRaw.map((c) => ({ ...c, submittedAge: ageLabel(c.submittedAt) }))

@@ -190,7 +190,9 @@ describe('0033 indexes', () => {
     const nodes = await planNodes(
       `select id, profile_id, amount, type, meta, created_at from public.coin_transactions where created_at >= '${ts}' and (created_at > '${ts}' or (created_at = '${ts}' and id >= ${oldestLedgerRow.id})) order by created_at desc, id desc limit 500`,
     )
-    const scan = nodes.find((n) => n['Index Name'] === 'coin_transactions_created_idx')
+    // At this fixture's few rows, (profile_id, created_at desc, id desc) (0048) ties with the
+    // created_at index for the bound, as its second column; at real scale created_at's own index wins.
+    const scan = nodes.find((n) => ['coin_transactions_created_idx', 'coin_transactions_profile_created_idx'].includes(n['Index Name'] ?? ''))
     expect(scan?.['Index Cond']).toMatch(/created_at/)
     expect(seqScanned(nodes)).toEqual([])
   })
@@ -216,7 +218,13 @@ describe('0033 indexes', () => {
     // market_resolved: same tie, over the one resolved market (resolved by alice, never bob) —
     // Postgres doesn't reliably prefer market_resolutions_resolved_by_idx over a plain Index Scan
     // of market_resolutions_pkey with the actor id only as a Filter.
-    expectActorSelective(nodes, 'market_resolutions', bob.id, ['market_resolutions_resolved_by_idx', 'market_resolutions_pkey'])
+    // 0048's market and outcome indexes join the tie.
+    expectActorSelective(nodes, 'market_resolutions', bob.id, [
+      'market_resolutions_resolved_by_idx',
+      'market_resolutions_pkey',
+      'market_resolutions_market_resolved_idx',
+      'market_resolutions_outcome_id_idx',
+    ])
 
     // parlay_placed narrows by profile_id through parlays_profile_created_idx (0044). parlay_won does
     // not, and never will regardless of scale: parlays_won_settled_idx (its cheaper match, since
@@ -234,8 +242,48 @@ describe('0033 indexes', () => {
     ])
 
     expect(indexesUsed(nodes)).toContain('markets_current_resolution_id_idx')
-    // The one exception, as the spec intends: market_created filters markets by created_by, which
-    // has no index.
-    expect(seqScanned(nodes)).toEqual(['markets'])
+    // market_created filters markets by created_by, indexed since 0048.
+    expect(seqScanned(nodes)).toEqual([])
+  })
+})
+
+describe('0048 indexes (#67)', () => {
+  it('lists open markets newest first from the status index', async () => {
+    const nodes = await planNodes(
+      `select id, created_at from public.markets where status in ('open') order by created_at desc, id desc limit 51`,
+    )
+    expect(indexesUsed(nodes)).toContain('markets_status_created_idx')
+    expect(seqScanned(nodes)).toEqual([])
+  })
+
+  it('counts open markets from the status index', async () => {
+    const nodes = await planNodes(`select count(*) from public.markets where status = 'open'`)
+    expect(indexesUsed(nodes)).toContain('markets_status_created_idx')
+    expect(seqScanned(nodes)).toEqual([])
+  })
+
+  it("finds a market's resolutions from the market index", async () => {
+    const nodes = await planNodes(
+      `select id, resolved_at from public.market_resolutions where market_id = '${marketId}' order by resolved_at desc`,
+    )
+    expect(indexesUsed(nodes)).toContain('market_resolutions_market_resolved_idx')
+    expect(seqScanned(nodes)).toEqual([])
+  })
+
+  it("reads a member's coin history from the profile index", async () => {
+    const nodes = await planNodes(
+      `select id, amount, created_at from public.coin_transactions where profile_id = '${bob.id}' order by created_at desc, id desc limit 51`,
+    )
+    expect(indexesUsed(nodes)).toContain('coin_transactions_profile_created_idx')
+    expect(seqScanned(nodes)).toEqual([])
+  })
+
+  it('indexes the foreign keys that had none', async () => {
+    const rows = await pgQuery<{ indexname: string }>(
+      `select indexname from pg_indexes where schemaname = 'public' and indexname in ('parlay_legs_outcome_id_idx', 'markets_created_by_idx', 'market_resolutions_outcome_id_idx', 'idempotency_keys_profile_id_idx')`,
+    )
+    expect(rows.map((r) => r.indexname).sort()).toEqual(
+      ['idempotency_keys_profile_id_idx', 'market_resolutions_outcome_id_idx', 'markets_created_by_idx', 'parlay_legs_outcome_id_idx'],
+    )
   })
 })

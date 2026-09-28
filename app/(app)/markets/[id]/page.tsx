@@ -8,8 +8,7 @@ import { atLeast, getRole } from '@/lib/auth/roles'
 import { getMarket, type MarketDetail } from '@/lib/markets/get-market'
 import { getResolutionProof } from '@/lib/markets/resolution-proof'
 import { ProofList } from '@/components/proof/proof-list'
-import { getChartBets } from '@/lib/markets/chart-bets'
-import { buildProbabilitySeries } from '@/lib/markets/probability-series'
+import { getChartSeries } from '@/lib/markets/chart-series'
 import { computeOdds, effectivePools, type OutcomeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt } from '@/lib/markets/market-status'
@@ -204,25 +203,25 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
 
 async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: OutcomeOdds[]; now: number }) {
   const { supabase } = await requireUser()
-  const chartBets = await getChartBets(supabase, market.id)
   const chartOutcomes = odds.map((o, index) => ({
     id: o.outcomeId,
     label: o.label,
     series: outcomeSeries(market.kind, o.label, index),
   }))
-  const chartPoints = buildProbabilitySeries(
-    chartOutcomes.map((o) => o.id),
-    chartBets,
-    { seed: market.seedPerOutcome, startAt: market.createdAt },
-  )
+  const chart = await getChartSeries(supabase, {
+    id: market.id,
+    seedPerOutcome: market.seedPerOutcome,
+    createdAt: market.createdAt,
+    outcomeIds: chartOutcomes.map((o) => o.id),
+  })
 
   return (
     <ContentReveal>
       <SectionCard title="Chance over time" titleId="chart-title" className="gap-3 lg:col-start-1 lg:row-start-1">
         <ProbabilityChart
           outcomes={chartOutcomes}
-          points={chartPoints}
-          betCount={chartBets.length}
+          points={chart.points}
+          betCount={chart.betCount}
           now={now}
           closedAt={chartClosedAt(market.status, market.closeAt, market.resolvedAt)}
           resolvedLabel={market.status === 'resolved' ? market.resolvedOutcomeLabel : null}

@@ -43,6 +43,19 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Admin confirmations and toasts:** revoking an invite, changing a role and adjusting a balance ask first; revoking, and creating, saving, deactivating or reactivating a task, confirm with a toast (#65).
 - **Select all stays in step** with the pending approvals it covers, showing checked or partly checked as rows are ticked or leave the list (#65).
 
+### Speed
+- **Lighter pages** (#69): every signed-in page loads at least a fifth less JavaScript, and the markets list almost half as much:
+  - market cards draw their sparklines as plain SVG, server-rendered, instead of loading the charting library;
+  - the nav's sliding pill loads its animation code after the page is up;
+  - the slip's drawer loads the first time you open it;
+  - the Supabase client loads only when you upload proof or sign in.
+- **Faster lists and history** (#67): indexes for the markets list, a market's resolutions, your coin history and a few foreign keys the database was scanning without.
+- **Fewer live refreshes and lighter reads** (#68):
+  - Home and member pages no longer refresh whenever anyone bets;
+  - the market chart is sampled to 200 points in the database instead of reading every bet;
+  - Home counts pending tasks instead of reading your whole task history;
+  - the signed-in layout reads your slip alongside everything else.
+
 ## v0.2.0-beta — 2026-09-28
 
 The first round of beta feedback: 20 issues, from roles to a new Home.

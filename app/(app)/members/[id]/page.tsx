@@ -4,20 +4,14 @@ import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { getMemberStanding } from '@/lib/social/leaderboard'
-import { listFeed } from '@/lib/social/list-feed'
-import { readPageParams, showMoreHref, newestHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
-import { rowDomId } from '@/lib/pagination/row-id'
+import { readPageParams } from '@/lib/pagination/cursor'
 import { isUuid } from '@/lib/uuid'
 import { Page, h1Class } from '@/components/ui/page'
 import { BackLink } from '@/components/ui/back-link'
 import { Avatar } from '@/components/ui/avatar'
 import { SkeletonScreen } from '@/components/ui/skeleton'
-import { ContentReveal } from '@/components/nav/page-transition'
 import { FeedListSkeleton } from '@/components/feed/feed-list-skeleton'
-import { NothingOlder } from '@/components/ui/nothing-older'
-import { ShowMore, BackToNewest } from '@/components/ui/show-more'
-import { ShowMoreFocus } from '@/components/ui/show-more-focus'
-import { FeedList } from '@/app/(app)/feed/feed-list'
+import { MemberActivity } from './member-activity'
 
 // No loading.tsx for this route: the member must be found before anything streams, so an
 // unknown id still gets a real 404 status. Only the activity list streams in behind a skeleton.
@@ -54,47 +48,5 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
         <MemberActivity memberId={member.id} page={readPageParams(searchParams, 'activity')} searchParams={searchParams} />
       </Suspense>
     </Page>
-  )
-}
-
-const ROW_ID_PREFIX = 'activity'
-
-// Exported so the page-level paging tests (windowed-empty, focusId) can render this section
-// directly: it's an async Server Component inside a <Suspense>, which jsdom can't render in place.
-export async function MemberActivity({
-  memberId,
-  page,
-  searchParams,
-}: {
-  memberId: string
-  page: PageParams
-  searchParams: SearchParams
-}) {
-  const { supabase } = await requireUser()
-  const activity = await listFeed(supabase, { actorId: memberId, page })
-  const pathname = `/members/${memberId}`
-  const backToNewestHref = newestHref(pathname, searchParams, 'activity')
-
-  return (
-    <ContentReveal>
-      <ShowMoreFocus />
-      <FeedList
-        events={activity.rows}
-        heading="Recent activity"
-        headingId="recent-activity"
-        rowIdPrefix={ROW_ID_PREFIX}
-        emptyState={activity.windowed ? <NothingOlder href={backToNewestHref} /> : undefined}
-        aboveList={activity.windowed && activity.rows.length > 0 && <BackToNewest href={backToNewestHref} />}
-        belowList={
-          activity.next && (
-            <ShowMore
-              href={showMoreHref(pathname, searchParams, 'activity', activity.next)}
-              fresh={activity.next.kind === 'window'}
-              focusId={rowDomId(ROW_ID_PREFIX, activity.next.firstId)}
-            />
-          )
-        }
-      />
-    </ContentReveal>
   )
 }

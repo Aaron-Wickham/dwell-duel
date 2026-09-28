@@ -6,15 +6,14 @@ import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { isAdmin } from '@/lib/auth/is-admin'
-import { getMarket, getMarketBets, type MarketDetail } from '@/lib/markets/get-market'
+import { getMarket, type MarketDetail } from '@/lib/markets/get-market'
 import { getChartBets } from '@/lib/markets/chart-bets'
 import { buildProbabilitySeries } from '@/lib/markets/probability-series'
 import { computeOdds, type OutcomeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt } from '@/lib/markets/market-status'
 import { rowState } from '@/lib/markets/row-state'
-import { newestHref, readPageParams, showMoreHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
-import { rowDomId } from '@/lib/pagination/row-id'
+import { readPageParams } from '@/lib/pagination/cursor'
 import { isUuid } from '@/lib/uuid'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { readSlip } from '@/lib/parlays/slip'
@@ -26,17 +25,14 @@ import { LocalTime } from '@/components/ui/local-time'
 import { Message } from '@/components/ui/message'
 import { Page, h1Class } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
-import { NothingOlder } from '@/components/ui/nothing-older'
-import { BackToNewest, ShowMore } from '@/components/ui/show-more'
-import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { StatusChip } from '@/components/ui/status-chip'
 import { ContentReveal } from '@/components/nav/page-transition'
-import { BetList } from '@/components/markets/bet-list'
 import { MarketActionsSkeleton, MarketBetsSkeleton, MarketChartSkeleton } from '@/components/markets/market-detail-skeletons'
 import { MarketSlipProvider } from '@/components/markets/market-slip'
 import { OutcomeRow } from '@/components/markets/outcome-row'
 import { ProbabilityChart } from '@/components/markets/probability-chart'
 import { BetForm } from './bet-form'
+import { MarketBets } from './market-bets'
 import { ResolveForm } from './resolve-form'
 import { SlipDrawer } from './slip-drawer'
 import { VoidButton } from './void-button'
@@ -297,62 +293,6 @@ async function MarketActions({
           </SectionCard>
         )}
       </div>
-    </ContentReveal>
-  )
-}
-
-const BET_ROW_ID_PREFIX = 'bet'
-
-// Exported so the page-level paging tests (windowed-empty, focusId) can render this section
-// directly: it's an async Server Component inside a <Suspense>, which jsdom can't render in place.
-export async function MarketBets({
-  market,
-  viewerId,
-  canBet,
-  page,
-  searchParams,
-}: {
-  market: MarketDetail
-  viewerId: string
-  canBet: boolean
-  page: PageParams
-  searchParams: SearchParams
-}) {
-  const { supabase } = await requireUser()
-  const betsPage = await getMarketBets(supabase, market.id, page)
-  const pathname = `/markets/${market.id}`
-  const backToNewestHref = newestHref(pathname, searchParams, 'bets')
-
-  return (
-    <ContentReveal>
-      <SectionCard title="Bets" titleId="bets-title" className="gap-1 lg:col-start-1 lg:row-start-3">
-        <ShowMoreFocus />
-        {betsPage.windowed && betsPage.rows.length > 0 && (
-          <div className="flex flex-col py-2">
-            <BackToNewest href={backToNewestHref} />
-          </div>
-        )}
-        {betsPage.windowed && betsPage.rows.length === 0 ? (
-          <NothingOlder href={backToNewestHref} />
-        ) : (
-          <BetList
-            bets={betsPage.rows}
-            outcomes={market.outcomes}
-            viewerId={viewerId}
-            canBet={canBet}
-            rowIdPrefix={BET_ROW_ID_PREFIX}
-          />
-        )}
-        {betsPage.next && (
-          <div className="flex flex-col border-t border-line pt-3">
-            <ShowMore
-              href={showMoreHref(pathname, searchParams, 'bets', betsPage.next)}
-              fresh={betsPage.next.kind === 'window'}
-              focusId={rowDomId(BET_ROW_ID_PREFIX, betsPage.next.firstId)}
-            />
-          </div>
-        )}
-      </SectionCard>
     </ContentReveal>
   )
 }

@@ -44,7 +44,7 @@ vi.mock('next/link', () => ({
 // MarketBets is the async Server Component the market page streams behind a <Suspense>; jsdom
 // can't render an async component in place there, so it's exercised directly, the same way the
 // market page renders it once its own promise resolves.
-import { MarketBets } from '@/app/(app)/markets/[id]/page'
+import { MarketBets } from '@/app/(app)/markets/[id]/market-bets'
 
 const market: MarketDetail = {
   id: 'm-1',

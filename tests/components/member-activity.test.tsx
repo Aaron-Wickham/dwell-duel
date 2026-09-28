@@ -41,7 +41,7 @@ vi.mock('next/link', () => ({
 // MemberActivity is the async Server Component the member page streams behind a <Suspense>;
 // jsdom can't render an async component in place there, so it's exercised directly, the same way
 // the member page renders it once its own promise resolves.
-import { MemberActivity } from '@/app/(app)/members/[id]/page'
+import { MemberActivity } from '@/app/(app)/members/[id]/member-activity'
 
 const event = (id: string): FeedEvent => ({
   id,

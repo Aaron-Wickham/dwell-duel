@@ -106,4 +106,85 @@ alter table public.task_completions
 alter table public.parlays
   add constraint parlays_won_has_settled_at check (status <> 'won' or settled_at is not null);
 
+-- market_sparklines (0035), recreated with the same signature, return shape,
+-- caps and output, bit for bit. 0035 joined every bet to every outcome of its
+-- market to keep a running pool per outcome, so the work grew with bets ×
+-- outcomes. Here each outcome's running pool runs over that outcome's own
+-- bets, and the market's running total over its bets, both in the one
+-- (created_at, id) order that numbers them. Only the picked positions need
+-- every outcome's share: each position is added to each outcome's own run as
+-- a zero-amount marker, sorted just after the bet at that position, so the
+-- marker's running sum is that outcome's pool at or before it, and 0 for an
+-- outcome with no bet yet. The sums are the same integers 0035 added, divided
+-- the same way, so every share is the same double.
+--
+-- Everything else is as 0035 explains it: security invoker, so the caller's
+-- access rules on bets and market_outcomes apply; no set search_path, so
+-- Postgres can inline it and plan each market's bets through
+-- bets_market_created_idx (every relation is schema-qualified, and the
+-- functions it calls resolve from pg_catalog); ids capped at the first 50
+-- flattened elements; p_points clamped to 1..200; each market's bets read
+-- through an offset 0 fenced lateral subquery, so the lookup stays keyed on
+-- market_id. create or replace keeps the grants 0035 gave it.
+create or replace function public.market_sparklines(p_market_ids uuid[], p_points integer default 40)
+returns table (market_id uuid, points jsonb)
+language sql
+stable
+as $$
+  with ids as (
+    select distinct u.id
+    from unnest(p_market_ids) with ordinality as u(id, ord)
+    where u.ord <= 50
+  ),
+  ordered as (
+    select bet.market_id, bet.outcome_id, bet.amount, bet.created_at,
+      row_number() over w as n,
+      sum(bet.amount) over w as total
+    from ids
+    cross join lateral (
+      select b.id, b.market_id, b.outcome_id, b.amount, b.created_at
+      from public.bets b
+      where b.market_id = ids.id
+      offset 0
+    ) bet
+    window w as (partition by bet.market_id order by bet.created_at, bet.id)
+  ),
+  sized as (
+    select o.market_id, count(*) as bets,
+      least(count(*), greatest(1, least(coalesce(p_points, 40), 200))) as points
+    from ordered o
+    group by o.market_id
+  ),
+  picked as (
+    select s.market_id,
+      case when s.points = 1 then s.bets else 1 + (g.i - 1) * (s.bets - 1) / (s.points - 1) end as n
+    from sized s
+    cross join lateral generate_series(1, s.points) as g(i)
+  ),
+  pooled as (
+    select e.market_id, e.n, e.outcome_id, e.mark,
+      sum(e.amount) over (partition by e.market_id, e.outcome_id order by e.n, e.mark) as pool
+    from (
+      select o.market_id, o.n, o.outcome_id, o.amount, false as mark
+      from ordered o
+      union all
+      select p.market_id, p.n, mo.id, 0, true
+      from picked p
+      join public.market_outcomes mo on mo.market_id = p.market_id
+    ) e
+  ),
+  chosen as (
+    select o.market_id, o.n, o.created_at,
+      jsonb_object_agg(pl.outcome_id, pl.pool::double precision / o.total::double precision) as shares
+    from pooled pl
+    join ordered o on o.market_id = pl.market_id and o.n = pl.n
+    where pl.mark
+    group by o.market_id, o.n, o.created_at
+  )
+  select c.market_id, jsonb_agg(jsonb_build_object('t', c.created_at, 'shares', c.shares) order by c.n)
+  from chosen c
+  group by c.market_id
+  order by c.market_id
+$$;
+
 commit;

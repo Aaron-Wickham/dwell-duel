@@ -186,6 +186,34 @@ describe('market_sparklines', () => {
     }
   })
 
+  it('keeps its running sums to the bets plus one marker per picked bet and outcome, never bets × outcomes', async () => {
+    const market = await createTestMarket(aliceClient, ['Red', 'Blue', 'Green'])
+    await insertBets(market, 100)
+
+    interface PlanNode {
+      'Node Type': string
+      'Actual Rows': number
+      Plans?: PlanNode[]
+    }
+    // Each WindowAgg's row count is set by the data, not by the planner's choices: 0035's running
+    // pools windowed over every bet joined to every outcome, 100 × 3 = 300 rows here. Now the
+    // widest window is the bets themselves plus a marker for each of the 5 picked bets in each of
+    // the 3 outcomes' runs.
+    const [row] = await pgQuery<{ 'QUERY PLAN': [{ Plan: PlanNode }] }>(
+      `explain (analyze, format json) select * from public.market_sparklines(array['${market.marketId}']::uuid[], 5)`,
+    )
+    const windows: number[] = []
+    const walk = (node: PlanNode) => {
+      if (node['Node Type'] === 'WindowAgg') windows.push(node['Actual Rows'])
+      node.Plans?.forEach(walk)
+    }
+    walk(row['QUERY PLAN'][0].Plan)
+
+    expect(windows.length).toBeGreaterThan(0)
+    expect(Math.max(...windows)).toBeLessThanOrEqual(100 + 5 * 3)
+    expectSameSeries(await pointsOf(bobClient, market, 5), picked(await fullSeries(market), 5))
+  })
+
   it('returns one row for each market that has bets, with its points in bet order', async () => {
     const empty = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'No bets' })
     const first = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'First' })

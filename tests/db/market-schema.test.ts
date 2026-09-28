@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { serviceClient } from './helpers'
+import { deleteAllAuthUsers, serviceClient } from './helpers'
 import { makeMember, type Member } from './fixtures'
 
 let creator: Member
@@ -13,8 +13,7 @@ beforeAll(async () => {
   await db.from('coin_transactions').delete().gte('id', 0)
   await db.from('allowed_emails').delete().neq('email', '')
   await db.from('profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  const { data: existing } = await db.auth.admin.listUsers()
-  for (const u of existing.users) await db.auth.admin.deleteUser(u.id)
+  await deleteAllAuthUsers(db)
 
   creator = await makeMember('Carla')
 })

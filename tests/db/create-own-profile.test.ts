@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient } from './helpers'
+import { deleteAllAuthUsers, serviceClient } from './helpers'
 import { clientForEmail, makeAuthUserWithoutProfile } from './fixtures'
 import { createOwnProfile } from '@/lib/auth/create-own-profile'
 
@@ -9,8 +9,7 @@ beforeEach(async () => {
   await db.from('coin_transactions').delete().gte('id', 0)
   await db.from('allowed_emails').delete().neq('email', '')
   await db.from('profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  const { data: existing } = await db.auth.admin.listUsers()
-  for (const u of existing.users) await db.auth.admin.deleteUser(u.id)
+  await deleteAllAuthUsers(db)
 })
 
 describe('createOwnProfile', () => {

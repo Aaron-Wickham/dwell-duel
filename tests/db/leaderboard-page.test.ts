@@ -65,8 +65,14 @@ beforeAll(async () => {
 afterAll(async () => {
   const db = serviceClient()
   // Each profile's starting grant goes with it: coin_transactions.profile_id cascades (0001).
-  if (extras.length > 0) await db.from('profiles').delete().in('id', extras)
-  for (const id of extras) await db.auth.admin.deleteUser(id)
+  if (extras.length > 0) {
+    const { error } = await db.from('profiles').delete().in('id', extras)
+    if (error) throw error
+  }
+  for (const id of extras) {
+    const { error } = await db.auth.admin.deleteUser(id)
+    if (error) throw error
+  }
 }, 60_000)
 
 describe('getLeaderboardPage', () => {
@@ -115,5 +121,19 @@ describe('getLeaderboardPage', () => {
     const garbage = await getLeaderboardPage(bobClient, readRankPageParams({ before: 'garbage', before_from: '!!' }, 'before'))
     expect(garbage.windowed).toBe(false)
     expect(summary(garbage.rows)).toEqual(summary(board.slice(0, 50)))
+  })
+
+  // profiles.balance is `integer` (int4). A tampered cursor with a balance past its range must be
+  // rejected by decodeRankCursor, the same as any other malformed cursor -- otherwise it would
+  // reach the range filter and PostgREST would answer 22003 "out of range for type integer",
+  // throwing instead of falling back to the first page.
+  it('reads a raw cursor with a balance past int4 range as the first page, not an error', async () => {
+    // ASCII-only JSON, so plain btoa (rather than rank-cursor.ts's UTF-8 path) is enough here.
+    const encodeRaw = (json: string) => btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    const overflow = encodeRaw(`[2147483648,"A","${board[0].id}"]`)
+
+    const page = await getLeaderboardPage(bobClient, readRankPageParams({ before_from: overflow }, 'before'))
+    expect(page.windowed).toBe(false)
+    expect(summary(page.rows)).toEqual(summary(board.slice(0, 50)))
   })
 })

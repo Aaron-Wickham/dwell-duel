@@ -40,6 +40,9 @@ export async function getLeaderboardPage(supabase: SupabaseClient, page: RankPag
   if (!result.windowed || result.rows.length === 0) return { ...result, rows: ranked }
 
   const first = result.rows[0]
+  // The row read and these counts are separate requests, not a snapshot, so a balance changing
+  // between them can briefly show an off-by-some rank; the page's live refresh on profile changes
+  // corrects it on the next read.
   const [above, ahead] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }).gt('balance', first.balance),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).or(aheadOfRankFilter(rankKey(first))),

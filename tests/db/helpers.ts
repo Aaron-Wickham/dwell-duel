@@ -29,3 +29,21 @@ export function serviceClient(): SupabaseClient {
   assertLocal(url)
   return createClient(url, key, { auth: { persistSession: false } })
 }
+
+/**
+ * Deletes every auth user, a page at a time. `listUsers()` returns only the first page of 50, so
+ * a suite that adds more than that and is killed before its own cleanup would otherwise leave the
+ * rest behind for the next file's own delete-everything setup to trip over. Deleting shifts the
+ * pages, so re-listing after each batch is always page 1 again.
+ */
+export async function deleteAllAuthUsers(db: SupabaseClient): Promise<void> {
+  for (;;) {
+    const { data, error } = await db.auth.admin.listUsers()
+    if (error) throw error
+    if (data.users.length === 0) break
+    for (const u of data.users) {
+      const { error: deleteErr } = await db.auth.admin.deleteUser(u.id)
+      if (deleteErr) throw deleteErr
+    }
+  }
+}

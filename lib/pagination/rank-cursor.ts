@@ -10,6 +10,12 @@ export type RankPageParams = { top: RankCursor | null; bottom: RankCursor | null
 // Long enough for the longest valid cursor: 80 code points of JSON-escaped name plus the rest.
 const BASE64URL = /^[A-Za-z0-9_-]{1,1000}$/
 
+// profiles.balance is `integer` (int4). A balance outside this range would make the range filter
+// reach PostgREST as a literal Postgres can't store, which answers 22003 "out of range for type
+// integer" instead of matching no rows -- so it's rejected here, like any other bad cursor, and a
+// tampered link falls back to the first page rather than the error page.
+const INT4_MAX = 2_147_483_647
+
 // A display name can be any text, so the JSON goes through UTF-8 before btoa, which only takes
 // single-byte characters. TextDecoder's fatal mode turns a tampered byte sequence into an error.
 function toBase64Url(text: string): string {
@@ -38,7 +44,7 @@ export function decodeRankCursor(raw: string | string[] | undefined | null): Ran
   }
   if (!Array.isArray(parsed) || parsed.length !== 3) return null
   const [balance, name, id] = parsed
-  if (typeof balance !== 'number' || !Number.isSafeInteger(balance) || balance < 0) return null
+  if (typeof balance !== 'number' || !Number.isSafeInteger(balance) || balance < 0 || balance > INT4_MAX) return null
   if (typeof name !== 'string' || [...name].length > TEXT_LIMITS.displayName) return null
   if (typeof id !== 'string' || !isUuid(id)) return null
   return { balance, name, id }

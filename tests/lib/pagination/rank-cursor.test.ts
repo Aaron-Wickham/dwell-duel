@@ -112,6 +112,8 @@ describe('encodeRankCursor / decodeRankCursor', () => {
     ['a negative balance', `[-1,"A","${ID}"]`],
     ['a fractional balance', `[1.5,"A","${ID}"]`],
     ['an unsafe integer balance', `[9007199254740993,"A","${ID}"]`],
+    ['a balance just past int4 max', `[2147483648,"A","${ID}"]`],
+    ['a balance just past int4 min', `[-2147483649,"A","${ID}"]`],
     ['a numeric name', `[1,7,"${ID}"]`],
     ['a name past 80 characters', `[1,"${'a'.repeat(81)}","${ID}"]`],
     ['an id that is not a uuid', `[1,"A","42"]`],

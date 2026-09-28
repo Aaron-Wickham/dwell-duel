@@ -14,7 +14,7 @@ const FIRST: PageParams = { top: null, bottom: null }
 
 beforeEach(async () => {
   ;[admin, bob] = await seedMembers()
-  await serviceClient().from('profiles').update({ is_admin: true }).eq('id', admin.id)
+  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', admin.id)
 })
 
 // `count` adjustments on Bob, straight into the ledger (paging never reads a balance), a minute

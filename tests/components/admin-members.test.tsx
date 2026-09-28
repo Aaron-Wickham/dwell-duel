@@ -8,7 +8,7 @@ vi.mock('@/lib/members/adjust-balance', () => ({ adjustBalanceAction }))
 
 import { AdjustBalanceForm } from '@/app/(app)/admin/members/adjust-balance-form'
 
-const BEN = { id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, isAdmin: false }
+const BEN = { id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, role: 'member' as const }
 
 beforeEach(() => {
   adjustBalanceAction.mockReset()

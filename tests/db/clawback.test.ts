@@ -24,7 +24,7 @@ beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
   carol = await makeMember('Carol')
   // Alice creates, resolves and overrides every market; as an admin she can resolve before close_at.
-  await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   carolClient = await clientFor(carol)

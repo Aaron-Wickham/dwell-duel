@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { Mail } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
-import { isAdmin } from '@/lib/auth/is-admin'
+import { atLeast, getRole } from '@/lib/auth/roles'
 import { listInvites } from '@/lib/invites/list-invites'
 import { SectionCard } from '@/components/ui/section-card'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -13,7 +13,7 @@ import { RevokeInviteButton } from './revoke-invite-button'
 export default async function AdminInvitesPage() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
-  if (!(await isAdmin(supabase))) redirect('/')
+  if (!atLeast(await getRole(supabase), 'admin')) redirect('/admin/tasks')
 
   const invites = await listInvites(supabase)
 

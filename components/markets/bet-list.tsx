@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { CircleDot } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { CancelBetButton } from '@/components/markets/cancel-bet-button'
+import { RemoveBetButton } from '@/components/markets/remove-bet-button'
 import { EmptyState } from '@/components/ui/empty-state'
 import type { MarketBet } from '@/lib/markets/get-market'
 import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
@@ -11,12 +12,15 @@ export function BetList({
   outcomes,
   viewerId,
   canBet,
+  canRemove = false,
   rowIdPrefix,
 }: {
   bets: MarketBet[]
   outcomes: { id: string; label: string }[]
   viewerId: string
   canBet: boolean
+  // The owner can remove anyone else's open bet with a refund (remove_bet, 0040).
+  canRemove?: boolean
   rowIdPrefix?: string
 }) {
   if (bets.length === 0) {
@@ -46,6 +50,9 @@ export function BetList({
               {mine && <span className="text-ink2"> (you)</span>}
             </p>
             {mine && canBet && <CancelBetButton betId={b.id} amount={b.amount} outcomeLabel={outcomeLabel} />}
+            {!mine && canRemove && (
+              <RemoveBetButton betId={b.id} amount={b.amount} outcomeLabel={outcomeLabel} bettorName={b.bettorName} />
+            )}
           </li>
         )
       })}

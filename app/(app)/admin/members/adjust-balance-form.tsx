@@ -1,15 +1,14 @@
 'use client'
 
-import Link from 'next/link'
 import { useActionState } from 'react'
 import { adjustBalanceAction, type ActionState } from '@/lib/members/adjust-balance'
 import type { MemberSummary } from '@/lib/members/list-members'
-import { Avatar } from '@/components/ui/avatar'
 import { Field, Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
+import { MemberIdentity } from './member-identity'
 
 export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
   const boundAction = withSuccessToast(
@@ -25,19 +24,7 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
   return (
     <>
       <form action={formAction} className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
-        <div className="flex items-center gap-3 md:w-60 md:shrink-0 md:self-center">
-          <Avatar name={member.displayName} src={member.avatarSrc} />
-          <div className="flex min-w-0 grow flex-col">
-            <Link
-              href={`/members/${member.id}`}
-              transitionTypes={['nav-forward']}
-              className="hit-area font-extrabold"
-            >
-              {member.displayName}
-            </Link>
-            <span className="text-sm text-ink2 tabular-nums">{member.balance} DC</span>
-          </div>
-        </div>
+        <MemberIdentity member={member} />
         <div className="flex min-w-0 grow flex-col gap-3 md:flex-row md:items-end md:gap-2">
           <div className="flex min-w-0 grow items-end gap-2">
             <Field label="Amount" htmlFor={amountId} className="w-[108px] shrink-0 md:w-[150px]">

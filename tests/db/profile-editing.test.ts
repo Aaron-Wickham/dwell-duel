@@ -29,7 +29,7 @@ afterEach(async () => {
 async function profileOf(member: Member) {
   const { data, error } = await serviceClient()
     .from('profiles')
-    .select('display_name, bio, avatar_path, balance, is_admin')
+    .select('display_name, bio, avatar_path, balance, role')
     .eq('id', member.id)
     .single()
   if (error) throw error
@@ -62,7 +62,7 @@ describe('update_my_profile', () => {
     if (error) throw error
     const after = await profileOf(alice)
     expect(after.balance).toBe(before.balance)
-    expect(after.is_admin).toBe(before.is_admin)
+    expect(after.role).toBe(before.role)
     expect((await profileOf(bob)).display_name).toBe('Bob')
   })
 

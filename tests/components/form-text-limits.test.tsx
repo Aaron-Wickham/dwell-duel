@@ -96,7 +96,7 @@ describe('text limits on form inputs', () => {
   it('caps the balance-adjust reason and the invite email', () => {
     render(
       <>
-        <AdjustBalanceForm member={{ id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, isAdmin: false }} />
+        <AdjustBalanceForm member={{ id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, role: 'member' }} />
         <AddInviteForm />
       </>,
     )

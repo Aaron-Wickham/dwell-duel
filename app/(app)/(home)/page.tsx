@@ -3,7 +3,7 @@ import { ChartColumn, Layers, BookOpen, MessageSquareText, Trophy, ShieldCheck, 
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { isAdmin } from '@/lib/auth/is-admin'
+import { adminHref, atLeast, getRole } from '@/lib/auth/roles'
 import { signOut } from '@/lib/auth/sign-out'
 import { countOpenMarkets } from '@/lib/markets/list-markets'
 import { getMemberStanding } from '@/lib/social/leaderboard'
@@ -21,13 +21,14 @@ export default async function Home() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const [admin, openMarketCount, standing, myCompletions, pendingApprovals] = await Promise.all([
-    isAdmin(supabase),
+  const [role, openMarketCount, standing, myCompletions, pendingApprovals] = await Promise.all([
+    getRole(supabase),
     countOpenMarkets(supabase),
     getMemberStanding(supabase, user.id),
     listMyTaskCompletions(supabase, user.id),
-    isAdmin(supabase).then((a) => (a ? listPendingTaskCompletions(supabase) : [])),
+    getRole(supabase).then((r) => (atLeast(r, 'reviewer') ? listPendingTaskCompletions(supabase) : [])),
   ])
+  const adminLink = adminHref(role)
 
   const rank = standing?.rank ?? 0
   const memberCount = standing?.memberCount ?? 0
@@ -49,10 +50,10 @@ export default async function Home() {
     },
   ]
   tiles.push({ id: 'profile', href: '/profile', icon: UserRound, title: 'Edit profile', subtitle: 'Your name, photo and bio' })
-  if (admin) {
+  if (adminLink) {
     tiles.push({
       id: 'admin',
-      href: '/admin/invites',
+      href: adminLink,
       icon: ShieldCheck,
       title: 'Admin',
       subtitle: adminTileSubtitle(pendingApprovals.length),
@@ -69,7 +70,7 @@ export default async function Home() {
   return (
     <Page transition="tab">
       <PageHeader title={`Welcome, ${standing?.displayName}`} />
-      <LiveTables subscriptions={pageSubscriptions.home({ me: user.id, admin })} />
+      <LiveTables subscriptions={pageSubscriptions.home({ me: user.id, admin: atLeast(role, 'reviewer') })} />
       <HomeHero
         balance={standing?.balance ?? 0}
         rank={rank}

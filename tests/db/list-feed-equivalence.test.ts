@@ -104,7 +104,7 @@ beforeEach(async () => {
   carolClient = await clientFor(carol)
   for (const client of [aliceClient, bobClient, carolClient]) await ensureInvited(client)
   // Alice is an admin so she can resolve before close_at, override and void.
-  const { error } = await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+  const { error } = await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
   if (error) throw error
 })
 

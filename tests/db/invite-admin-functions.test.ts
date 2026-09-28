@@ -37,7 +37,7 @@ describe('is_admin', () => {
   })
 
   it('is true once the profile row is promoted', async () => {
-    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', bob.id)
+    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
     const client = await clientFor(bob)
 
     const { data } = await client.rpc('is_admin')

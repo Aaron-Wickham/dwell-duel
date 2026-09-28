@@ -16,14 +16,19 @@ const SECTIONS = [
 
 describe('AdminNav', () => {
   it('links every admin section, in order', () => {
-    render(<AdminNav />)
+    render(<AdminNav role="admin" />)
     const nav = screen.getByRole('navigation', { name: 'Admin sections' })
     const links = within(nav).getAllByRole('link')
     expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual(SECTIONS)
   })
 
+  it('shows no switcher to a reviewer, whose only section is the approval queue', () => {
+    render(<AdminNav role="reviewer" />)
+    expect(screen.queryByRole('navigation', { name: 'Admin sections' })).not.toBeInTheDocument()
+  })
+
   it('behaves like a native segmented control: no long-press menu, a press state on each tab', () => {
-    render(<AdminNav />)
+    render(<AdminNav role="admin" />)
     const nav = screen.getByRole('navigation', { name: 'Admin sections' })
     expect(nav).toHaveClass('no-callout')
     for (const link of within(nav).getAllByRole('link')) expect(link).toHaveClass('pressable')
@@ -31,7 +36,7 @@ describe('AdminNav', () => {
 
   it.each(SECTIONS)('marks only %s as the current page at %s', (label, href) => {
     pathname = href
-    render(<AdminNav />)
+    render(<AdminNav role="admin" />)
     for (const link of screen.getAllByRole('link')) {
       if (link.textContent === label) expect(link).toHaveAttribute('aria-current', 'page')
       else expect(link).not.toHaveAttribute('aria-current')

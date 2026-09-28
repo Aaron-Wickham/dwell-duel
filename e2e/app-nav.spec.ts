@@ -57,7 +57,7 @@ test.describe('phone top bar', () => {
 
   test('fits at 375px with a five-digit balance', async ({ page }) => {
     const db = serviceClient()
-    const { data: admin, error } = await db.from('profiles').select('id, balance').eq('is_admin', true).single()
+    const { data: admin, error } = await db.from('profiles').select('id, balance').eq('role', 'owner').single()
     expect(error).toBeNull()
     try {
       await db.from('profiles').update({ balance: 99999 }).eq('id', admin!.id)

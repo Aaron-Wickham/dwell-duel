@@ -17,8 +17,6 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'leaderboard', href: '/leaderboard', label: 'Leaderboard', shortLabel: 'Leaders' },
 ]
 
-export const ADMIN_HREF = '/admin/invites'
-
 export function activeNavId(pathname: string): NavId | null {
   if (pathname === '/') return 'home'
   switch (pathname.split('/')[1]) {

@@ -32,7 +32,7 @@ describe('listMyTaskCompletions', () => {
     const { taskId } = await createTestTask(alice)
     const completionId = await submitAsAlice(taskId)
 
-    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', bob.id)
+    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
     const adminClient = await clientFor(bob)
     const { error } = await adminClient.rpc('reject_task_completion', {
       p_completion_id: completionId,

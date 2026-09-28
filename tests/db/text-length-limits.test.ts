@@ -29,7 +29,7 @@ let completionId: string
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
   const db = serviceClient()
-  const { error: adminErr } = await db.from('profiles').update({ is_admin: true }).eq('id', alice.id)
+  const { error: adminErr } = await db.from('profiles').update({ role: 'owner' }).eq('id', alice.id)
   if (adminErr) throw adminErr
   adminClient = await clientFor(alice)
   market = await createTestMarket(adminClient, ['Yes', 'No'])

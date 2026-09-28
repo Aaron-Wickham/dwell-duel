@@ -8,7 +8,7 @@ let member: Member
 
 beforeEach(async () => {
   ;[admin, member] = await seedMembers()
-  const { error } = await serviceClient().from('profiles').update({ is_admin: true }).eq('id', admin.id)
+  const { error } = await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', admin.id)
   if (error) throw error
 })
 

@@ -1,0 +1,24 @@
+import Link from 'next/link'
+import type { MemberSummary } from '@/lib/members/list-members'
+import { ROLE_LABELS } from '@/lib/auth/roles'
+import { Avatar } from '@/components/ui/avatar'
+import { StatusChip } from '@/components/ui/status-chip'
+
+const ROLE_TONE = { owner: 'done', admin: 'open', reviewer: 'wait' } as const
+
+export function MemberIdentity({ member }: { member: MemberSummary }) {
+  return (
+    <div className="flex items-center gap-3 md:w-60 md:shrink-0 md:self-center">
+      <Avatar name={member.displayName} src={member.avatarSrc} />
+      <div className="flex min-w-0 grow flex-col">
+        <span className="flex flex-wrap items-center gap-2">
+          <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="hit-area font-extrabold">
+            {member.displayName}
+          </Link>
+          {member.role !== 'member' && <StatusChip tone={ROLE_TONE[member.role]}>{ROLE_LABELS[member.role]}</StatusChip>}
+        </span>
+        <span className="text-sm text-ink2 tabular-nums">{member.balance} DC</span>
+      </div>
+    </div>
+  )
+}

@@ -19,7 +19,7 @@ vi.mock('@number-flow/react', () => ({
 import { AppNav } from '@/components/app-nav/app-nav'
 
 function Nav({ balance, isAdmin }: { balance: number; isAdmin: boolean }) {
-  return <AppNav balance={balance} isAdmin={isAdmin} />
+  return <AppNav balance={balance} adminHref={isAdmin ? '/admin/invites' : null} />
 }
 
 beforeEach(() => {

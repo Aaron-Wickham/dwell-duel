@@ -95,11 +95,13 @@ npm run build     # production build
   invite-gated from the first request, so there's no admin yet to add you
   through the app itself:
   `insert into public.allowed_emails (email) values ('you@gmail.com');`
-- After your own first sign-in, flip your profile row's `is_admin` to
-  `true` once, by hand, via the Supabase dashboard's SQL editor, keyed off
-  the verified `auth.users` record rather than the app-writable
-  `profiles.email` column:
-  `update public.profiles set is_admin = true where id = (select id from auth.users where email = 'you@gmail.com');`
+- After your own first sign-in, make yourself the owner once, by hand, via
+  the Supabase dashboard's SQL editor, keyed off the verified `auth.users`
+  record rather than the app-writable `profiles.email` column:
+  `update public.profiles set role = 'owner' where id = (select id from auth.users where email = 'you@gmail.com');`
+  From then on you grant Admin and Reviewer from `/admin/members`. Roles are
+  owner › admin › reviewer › member (see `supabase/migrations/0040_roles.sql`
+  for what each can do); there is only ever one owner.
 
 ## CI (`.github/workflows/ci.yml`)
 

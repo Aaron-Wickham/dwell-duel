@@ -3,7 +3,7 @@ import { BookOpen } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { isAdmin } from '@/lib/auth/is-admin'
+import { atLeast, getRole } from '@/lib/auth/roles'
 import { listTasks } from '@/lib/tasks/list-tasks'
 import { listPendingTaskCompletions } from '@/lib/tasks/list-task-completions'
 import { ageLabel } from '@/lib/social/relative-time'
@@ -17,9 +17,14 @@ import { TaskCatalogItem } from './task-catalog-item'
 export default async function AdminTasksPage() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
-  if (!(await isAdmin(supabase))) redirect('/')
+  const role = await getRole(supabase)
+  if (!atLeast(role, 'reviewer')) redirect('/')
+  const canManage = atLeast(role, 'admin')
 
-  const [tasks, pendingRaw] = await Promise.all([listTasks(supabase), listPendingTaskCompletions(supabase)])
+  const [tasks, pendingRaw] = await Promise.all([
+    canManage ? listTasks(supabase) : Promise.resolve([]),
+    listPendingTaskCompletions(supabase),
+  ])
   // Ages are worked out here, on the server, so the client-rendered list hydrates with the same text.
   const pending = pendingRaw.map((c) => ({ ...c, submittedAge: ageLabel(c.submittedAt) }))
 
@@ -35,22 +40,25 @@ export default async function AdminTasksPage() {
         >
           <PendingApprovals pending={pending} />
         </SectionCard>
-        <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-7">
-          <SectionCard title="Create task" titleId="create-task" className="gap-4">
-            <CreateTaskForm />
-          </SectionCard>
-          <SectionCard title="Task catalog" titleId="task-catalog" className="gap-1">
-            {tasks.length === 0 ? (
-              <EmptyState icon={BookOpen} title="No tasks yet." />
-            ) : (
-              <ul className="flex flex-col divide-y divide-line">
-                {tasks.map((task) => (
-                  <TaskCatalogItem key={task.id} task={task} />
-                ))}
-              </ul>
-            )}
-          </SectionCard>
-        </div>
+        {/* Reviewers only review; creating and editing tasks is for admins. */}
+        {canManage && (
+          <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-7">
+            <SectionCard title="Create task" titleId="create-task" className="gap-4">
+              <CreateTaskForm />
+            </SectionCard>
+            <SectionCard title="Task catalog" titleId="task-catalog" className="gap-1">
+              {tasks.length === 0 ? (
+                <EmptyState icon={BookOpen} title="No tasks yet." />
+              ) : (
+                <ul className="flex flex-col divide-y divide-line">
+                  {tasks.map((task) => (
+                    <TaskCatalogItem key={task.id} task={task} canDelete={role === 'owner'} />
+                  ))}
+                </ul>
+              )}
+            </SectionCard>
+          </div>
+        )}
       </div>
     </ContentReveal>
   )

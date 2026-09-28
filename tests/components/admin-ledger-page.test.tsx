@@ -16,8 +16,9 @@ vi.mock('@/lib/auth/require-user', () => ({
   requireUser: async () => ({ supabase: {}, user: { id: 'admin1' } }),
 }))
 
-vi.mock('@/lib/auth/is-admin', () => ({
-  isAdmin: async () => true,
+vi.mock('@/lib/auth/roles', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/auth/roles')>()),
+  getRole: async () => 'admin',
 }))
 
 const { listAllTransactions } = vi.hoisted(() => ({ listAllTransactions: vi.fn() }))

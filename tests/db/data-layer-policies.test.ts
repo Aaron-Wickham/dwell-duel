@@ -14,7 +14,8 @@ interface Policy {
 type Expression = Pick<Policy, 'tablename' | 'policyname' | 'cmd' | 'qual' | 'with_check'>
 
 // pg_policies as the latest migration leaves them: 0032's policies, unchanged apart from 0033's
-// (select …) wraps, plus 0035's new policy on activity_events and 0037's on cancelled_bets.
+// (select …) wraps, plus 0035's new policy on activity_events, 0037's on cancelled_bets, and
+// 0040's role changes (new profiles start as members; reviewers read every completion).
 const POLICIES_NOW: Expression[] = [
   { tablename: 'activity_events', policyname: 'select_activity_events', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   { tablename: 'allowed_emails', policyname: 'admin_delete_invites', cmd: 'DELETE', qual: 'is_admin()', with_check: null },
@@ -40,14 +41,14 @@ const POLICIES_NOW: Expression[] = [
     cmd: 'INSERT',
     qual: null,
     with_check:
-      "((id = ( SELECT auth.uid() AS uid)) AND is_invited() AND (balance = 0) AND (is_admin = false) AND (lower(email) = lower((( SELECT auth.jwt() AS jwt) ->> 'email'::text))))",
+      "((id = ( SELECT auth.uid() AS uid)) AND is_invited() AND (balance = 0) AND (role = 'member'::text) AND (lower(email) = lower((( SELECT auth.jwt() AS jwt) ->> 'email'::text))))",
   },
   { tablename: 'profiles', policyname: 'select_all_profiles', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   {
     tablename: 'task_completions',
     policyname: 'select_task_completions',
     cmd: 'SELECT',
-    qual: "((profile_id = ( SELECT auth.uid() AS uid)) OR is_admin() OR ((status = 'approved'::text) AND is_invited()))",
+    qual: "((profile_id = ( SELECT auth.uid() AS uid)) OR has_role('reviewer'::text) OR ((status = 'approved'::text) AND is_invited()))",
     with_check: null,
   },
   { tablename: 'tasks', policyname: 'admin_insert_tasks', cmd: 'INSERT', qual: null, with_check: 'is_admin()' },
@@ -55,13 +56,12 @@ const POLICIES_NOW: Expression[] = [
   { tablename: 'tasks', policyname: 'select_tasks', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
 ]
 
-// How Postgres prints `(select is_invited())`. `is_admin = false` in insert_own_profile is the
-// column, so only a call with parentheses counts.
-const WRAPPED_CALL = /\( SELECT (is_invited|is_admin)\(\) AS \1\)/g
-const BARE_CALL = /\bis_(invited|admin)\(\)/
+// How Postgres prints `(select is_invited())` or `(select has_role('reviewer'))`.
+const WRAPPED_CALL = /\( SELECT ((is_invited|is_admin)\(\)|has_role\('[a-z]+'::text\)) AS (is_invited|is_admin|has_role)\)/g
+const BARE_CALL = /\b(is_invited|is_admin|has_role)\(/
 
 function unwrap(expression: string | null): string | null {
-  return expression === null ? null : expression.replace(WRAPPED_CALL, '$1()')
+  return expression === null ? null : expression.replace(WRAPPED_CALL, '$1')
 }
 
 function byName(a: { tablename: string; policyname: string }, b: { tablename: string; policyname: string }) {
@@ -96,7 +96,7 @@ describe('access rules after 0033', () => {
     }
   })
 
-  it('calls is_invited() and is_admin() only inside a (select …), so each runs once per statement', async () => {
+  it('calls is_invited(), is_admin() and has_role() only inside a (select …), so each runs once per statement', async () => {
     const bare = (await publicPolicies()).flatMap((p) =>
       [p.qual, p.with_check]
         .filter((expression): expression is string => expression !== null)

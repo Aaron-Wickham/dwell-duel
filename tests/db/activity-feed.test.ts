@@ -26,7 +26,7 @@ beforeEach(async () => {
   await ensureInvited(aliceClient)
   await ensureInvited(bobClient)
   // Alice is an admin so she can resolve before close_at, override, and review tasks.
-  await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
 })
 
 interface FeedRow {

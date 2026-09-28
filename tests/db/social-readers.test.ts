@@ -87,7 +87,7 @@ describe('listFeed', () => {
       (await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]], p_stake: 10 })).error,
     ).toBeNull()
 
-    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
     const { taskId } = await createTestTask(alice, { title: 'Read Psalm 23', rewardAmount: 9 })
     const { data: completionId, error: submitErr } = await bobClient.rpc('submit_task_completion', { p_task_id: taskId })
     expect(submitErr).toBeNull()

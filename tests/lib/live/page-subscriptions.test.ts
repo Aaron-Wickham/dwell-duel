@@ -52,6 +52,9 @@ describe('pageSubscriptions', () => {
       { table: 'markets' },
       { table: 'tasks' },
       { table: 'profiles' },
+      { table: 'bets', filter: `profile_id=eq.${MEMBER_ID}` },
+      { table: 'cancelled_bets', filter: `profile_id=eq.${MEMBER_ID}` },
+      { table: 'parlays', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'task_completions', filter: `profile_id=eq.${MEMBER_ID}` },
     ])
   })
@@ -61,6 +64,9 @@ describe('pageSubscriptions', () => {
       { table: 'markets' },
       { table: 'tasks' },
       { table: 'profiles' },
+      { table: 'bets', filter: `profile_id=eq.${MEMBER_ID}` },
+      { table: 'cancelled_bets', filter: `profile_id=eq.${MEMBER_ID}` },
+      { table: 'parlays', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'task_completions' },
     ])
   })

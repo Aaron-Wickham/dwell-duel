@@ -1,8 +1,10 @@
-export function heroCaption(rank: number, memberCount: number, pendingCount: number, pendingDc: number): string {
-  const rankPart = `Rank ${rank} of ${memberCount}`
-  if (pendingCount === 0) return rankPart
-  const reviewWord = pendingCount === 1 ? 'task review' : 'task reviews'
-  return `${rankPart} · ${pendingDc} DC pending in ${pendingCount} ${reviewWord}`
+export function atStakeDetail(wagers: number): string {
+  if (wagers === 0) return 'Nothing riding'
+  return wagers === 1 ? 'on 1 bet' : `on ${wagers} bets`
+}
+
+export function pendingDetail(reviews: number): string {
+  return reviews === 1 ? 'in 1 review' : `in ${reviews} reviews`
 }
 
 export function marketsTileSubtitle(openCount: number): string {

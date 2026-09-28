@@ -12,30 +12,50 @@ vi.mock('@number-flow/react', () => ({
   },
 }))
 
+const BASE = { balance: 120, rank: 3, memberCount: 8, atStakeDc: 85, atStakeWagers: 4, pendingCount: 1, pendingDc: 25 }
+
 beforeEach(() => {
   numberFlowCalls.length = 0
 })
 
 describe('HomeHero', () => {
-  it('shows exactly one "Balance: n DC" element, plus the rank and pending caption', () => {
-    render(<HomeHero balance={120} rank={3} memberCount={8} pendingCount={1} pendingDc={25} />)
-    // The number is its own <span>, so the sentence is only the <p>'s combined text (Testing Library's
-    // string/regex matchers read an element's own text nodes only; Playwright reads descendants too).
-    expect(
-      screen.getAllByText((_, element) => element?.tagName === 'P' && /Balance: \d+ DC/.test(element.textContent ?? '')),
-    ).toHaveLength(1)
-    expect(screen.getByText('Rank 3 of 8 · 25 DC pending in 1 task review')).toBeInTheDocument()
+  it('shows the balance without a "Balance:" label, with the rank as a chip beside it', () => {
+    render(<HomeHero {...BASE} />)
+    const hero = screen.getByRole('region', { name: 'Your balance' })
+    expect(hero).toHaveTextContent('Dwell Coin')
+    expect(screen.getByText('120 DC', { selector: '.sr-only' })).toBeInTheDocument()
+    expect(hero).not.toHaveTextContent(/Balance:/)
+    expect(screen.getByText('Rank 3 of 8')).toHaveClass('rounded-full')
   })
 
-  it('drops the pending clause when nothing is pending', () => {
-    render(<HomeHero balance={50} rank={1} memberCount={1} pendingCount={0} pendingDc={0} />)
-    expect(screen.getByText('Rank 1 of 1')).toBeInTheDocument()
+  it('links what is at stake to My bets and what is pending to Tasks', () => {
+    render(<HomeHero {...BASE} />)
+    expect(screen.getByRole('link', { name: 'At stake: 85 DC on 4 bets' })).toHaveAttribute('href', '/bets')
+    expect(screen.getByRole('link', { name: 'Pending: 25 DC in 1 review' })).toHaveAttribute('href', '/tasks')
   })
 
-  it('formats the balance as plain digits, in en-US regardless of the browser locale', () => {
-    render(<HomeHero balance={1250} rank={3} memberCount={8} pendingCount={1} pendingDc={25} />)
-    expect(numberFlowCalls).toHaveLength(1)
-    expect(numberFlowCalls[0].locales).toBe('en-US')
-    expect(numberFlowCalls[0].format?.useGrouping).toBe(false)
+  it('hides Pending when nothing is waiting, and says when nothing is riding', () => {
+    render(<HomeHero {...BASE} atStakeDc={0} atStakeWagers={0} pendingCount={0} pendingDc={0} />)
+    expect(screen.getByRole('link', { name: 'At stake: 0 DC Nothing riding' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Pending/ })).toBeNull()
+  })
+
+  it('leaves out the rank chip when there is no standing yet', () => {
+    render(<HomeHero {...BASE} rank={0} memberCount={0} />)
+    expect(screen.queryByText(/^Rank/)).toBeNull()
+  })
+
+  it('formats every number as plain digits, in en-US regardless of the browser locale', () => {
+    render(<HomeHero {...BASE} balance={1250} />)
+    expect(numberFlowCalls).toHaveLength(3)
+    for (const call of numberFlowCalls) {
+      expect(call.locales).toBe('en-US')
+      expect(call.format?.useGrouping).toBe(false)
+    }
+  })
+
+  it('keeps each stat a 44px tap target with a press state', () => {
+    render(<HomeHero {...BASE} />)
+    for (const link of screen.getAllByRole('link')) expect(link).toHaveClass('min-h-11', 'pressable', 'no-underline')
   })
 })

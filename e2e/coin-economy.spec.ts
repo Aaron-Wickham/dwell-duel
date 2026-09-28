@@ -3,7 +3,9 @@ import { serverActionSettled } from './server-action'
 
 test('create a proof-required task, submit it with proof, and approve it as admin', async ({ page }) => {
   await page.goto('/')
-  const balanceText = await page.getByText(/Balance: \d+ DC/).textContent()
+  // The hero's first "N DC" is the balance; its stat tiles come after it.
+  const balance = page.getByRole('region', { name: 'Your balance' }).getByText(/^\d+ DC$/).first()
+  const balanceText = await balance.textContent()
   const startingBalance = Number(balanceText!.match(/\d+/)![0])
 
   await page.goto('/admin/tasks')
@@ -41,5 +43,5 @@ test('create a proof-required task, submit it with proof, and approve it as admi
   await expect(page.getByText('Nothing pending.')).toBeVisible()
 
   await page.goto('/')
-  await expect(page.getByText(`Balance: ${startingBalance + 10} DC`)).toBeVisible()
+  await expect(balance).toHaveText(`${startingBalance + 10} DC`)
 })

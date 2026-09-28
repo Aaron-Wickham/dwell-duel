@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
+import { placeSolo } from './slip'
 
 test('a bet shows up in the feed and on the bettor\'s profile', async ({ page }) => {
   await page.goto('/markets/new')
@@ -8,9 +9,7 @@ test('a bet shows up in the feed and on the bettor\'s profile', async ({ page })
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)
 
-  await page.getByRole('combobox').first().selectOption({ label: 'Yes' })
-  await page.getByPlaceholder('Amount (DC)').fill('5')
-  await page.getByRole('button', { name: 'Place bet' }).click()
+  await placeSolo(page, 'Yes', 5)
   await expect(page.getByText('Alice — 5 DC on Yes (you)')).toBeVisible()
 
   const sentence = 'Alice bet 5 DC on Yes in Social layer market'

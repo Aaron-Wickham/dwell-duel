@@ -1,18 +1,17 @@
 import { cookies } from 'next/headers'
-import { MAX_PICKS } from './odds'
-import { parseSlip, SLIP_COOKIE } from './parse-slip'
+import { parseSlip, serializeSlip, SLIP_COOKIE, type SlipEntry } from './parse-slip'
 
-export async function readSlip(): Promise<string[]> {
+export async function readSlip(): Promise<SlipEntry[]> {
   return parseSlip((await cookies()).get(SLIP_COOKIE)?.value)
 }
 
-export async function writeSlip(outcomeIds: string[]): Promise<void> {
+export async function writeSlip(entries: SlipEntry[]): Promise<void> {
   const store = await cookies()
-  if (outcomeIds.length === 0) {
+  if (entries.length === 0) {
     store.delete(SLIP_COOKIE)
     return
   }
-  store.set(SLIP_COOKIE, JSON.stringify(outcomeIds.slice(0, MAX_PICKS)), {
+  store.set(SLIP_COOKIE, serializeSlip(entries), {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',

@@ -71,6 +71,11 @@ architectural decisions exist, document them here and in `docs/`.
 - **The `pressable` and `no-callout` utilities,** plus the `--safe-top` /
   `--safe-bottom` tokens, which are non-zero only in standalone mode.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.
+- **Every bet goes through the slip.** `SlipProvider` (in the signed-in
+  layout) holds the cookie's picks, each Solo or Parlay, with optimistic
+  add, remove and mode switches; the floating `SlipSheet` places them all
+  at once through `place_slip` (0039), which is all or nothing. Stakes live
+  only in the provider's state, never in the cookie.
 - **The service worker never caches** per-member HTML, RSC payloads,
   server actions or Supabase responses.
 - **A new live table** goes in both `LIVE_TABLES` and a

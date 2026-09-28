@@ -31,10 +31,10 @@ describe('manifest', () => {
     }
   })
 
-  it('offers the Markets and My slip shortcuts', () => {
+  it('offers the Markets and My bets shortcuts', () => {
     expect(manifest().shortcuts).toEqual([
       { name: 'Markets', url: '/markets' },
-      { name: 'My slip', url: '/parlays' },
+      { name: 'My bets', url: '/bets' },
     ])
   })
 })

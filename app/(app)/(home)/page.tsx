@@ -5,7 +5,6 @@ import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { signOut } from '@/lib/auth/sign-out'
-import { readSlip } from '@/lib/parlays/slip'
 import { countOpenMarkets } from '@/lib/markets/list-markets'
 import { getMemberStanding } from '@/lib/social/leaderboard'
 import { listMyTaskCompletions, listPendingTaskCompletions } from '@/lib/tasks/list-task-completions'
@@ -14,7 +13,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { HomeHero } from '@/components/home/home-hero'
 import { HomeTiles, type HomeTile } from '@/components/home/home-tiles'
 import { InstallCard } from '@/components/home/install-card'
-import { adminTileSubtitle, leaderboardTileSubtitle, marketsTileSubtitle, parlaysTileSubtitle } from '@/lib/home/copy'
+import { adminTileSubtitle, leaderboardTileSubtitle, marketsTileSubtitle } from '@/lib/home/copy'
 import { feedbackHref } from '@/lib/app-shell/feedback'
 import { cn } from '@/lib/utils'
 
@@ -22,9 +21,8 @@ export default async function Home() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const [admin, slip, openMarketCount, standing, myCompletions, pendingApprovals] = await Promise.all([
+  const [admin, openMarketCount, standing, myCompletions, pendingApprovals] = await Promise.all([
     isAdmin(supabase),
-    readSlip(),
     countOpenMarkets(supabase),
     getMemberStanding(supabase, user.id),
     listMyTaskCompletions(supabase, user.id),
@@ -39,7 +37,7 @@ export default async function Home() {
   const tiles: HomeTile[] = [
     { id: 'markets', href: '/markets', icon: ChartColumn, title: 'Markets', subtitle: marketsTileSubtitle(openMarketCount) },
     { id: 'bets', href: '/bets', icon: Ticket, title: 'My bets', subtitle: 'Open, settled and cancelled' },
-    { id: 'parlays', href: '/parlays', icon: Layers, title: 'Parlays', subtitle: parlaysTileSubtitle(slip.length) },
+    { id: 'parlays', href: '/parlays', icon: Layers, title: 'Parlays', subtitle: 'Parlays you’ve placed, win or lose' },
     { id: 'tasks', href: '/tasks', icon: BookOpen, title: 'Tasks', subtitle: 'Earn DC with Bible study' },
     { id: 'feed', href: '/feed', icon: MessageSquareText, title: 'Feed', subtitle: 'What everyone’s been up to' },
     {

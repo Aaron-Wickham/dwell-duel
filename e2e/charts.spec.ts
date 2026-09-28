@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
+import { placeSolo } from './slip'
 
 test('a market with a bet shows its chart, on the market page and its list card', async ({ page }) => {
   await page.goto('/markets/new')
@@ -8,9 +9,7 @@ test('a market with a bet shows its chart, on the market page and its list card'
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)
 
-  await page.getByRole('combobox').first().selectOption({ label: 'Yes' })
-  await page.getByPlaceholder('Amount (DC)').fill('10')
-  await page.getByRole('button', { name: 'Place bet' }).click()
+  await placeSolo(page, 'Yes', 10)
   await expect(page.getByText('10 DC on Yes')).toBeVisible()
 
   await expect(page.getByRole('img', { name: /^Chance over time\. Now: No 0%, Yes 100%\.$/ })).toBeVisible()

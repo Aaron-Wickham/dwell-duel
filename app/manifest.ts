@@ -21,7 +21,7 @@ export default function manifest(): MetadataRoute.Manifest {
     // Android's long-press menu on the home-screen icon. iOS doesn't support manifest shortcuts.
     shortcuts: [
       { name: 'Markets', url: '/markets' },
-      { name: 'My slip', url: '/parlays' },
+      { name: 'My bets', url: '/bets' },
     ],
   }
 }

@@ -11,13 +11,6 @@ export function marketsTileSubtitle(openCount: number): string {
   return `${openCount} open markets`
 }
 
-// Reuses the spec's approved empty-slip copy ("Your slip is empty.") for the tile's zero case.
-export function parlaysTileSubtitle(slipCount: number): string {
-  if (slipCount === 0) return 'Your slip is empty.'
-  if (slipCount === 1) return '1 pick in your slip'
-  return `${slipCount} picks in your slip`
-}
-
 export function leaderboardTileSubtitle(rank: number, memberCount: number): string {
   return `You’re ranked ${rank} of ${memberCount}`
 }

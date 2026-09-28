@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import {
   heroCaption,
   marketsTileSubtitle,
-  parlaysTileSubtitle,
   leaderboardTileSubtitle,
   adminTileSubtitle,
 } from '@/lib/home/copy'
@@ -26,14 +25,6 @@ describe('marketsTileSubtitle', () => {
     expect(marketsTileSubtitle(0)).toBe('No open markets')
     expect(marketsTileSubtitle(1)).toBe('1 open market')
     expect(marketsTileSubtitle(3)).toBe('3 open markets')
-  })
-})
-
-describe('parlaysTileSubtitle', () => {
-  it('handles zero, one and many', () => {
-    expect(parlaysTileSubtitle(0)).toBe('Your slip is empty.')
-    expect(parlaysTileSubtitle(1)).toBe('1 pick in your slip')
-    expect(parlaysTileSubtitle(2)).toBe('2 picks in your slip')
   })
 })
 

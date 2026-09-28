@@ -1,9 +1,9 @@
 'use client'
 
 import type { CSSProperties } from 'react'
-import { useSyncExternalStore } from 'react'
 import { CircleCheck } from 'lucide-react'
 import { Toaster as SonnerToaster } from 'sonner'
+import { useIsDesktop } from '@/lib/ui/use-is-desktop'
 
 // Sonner's own "mobile" layout switches at a fixed 600px baked into its stylesheet. This
 // app's nav switches at Tailwind's md (768px) instead, so the toaster's position is
@@ -11,24 +11,7 @@ import { Toaster as SonnerToaster } from 'sonner'
 // keeps the toast at the TOP, below the 64px top bar: a floating "Slip (n)" button sits
 // just above the bottom tab bar, and a bottom toast would cover it right after a pick is
 // added. In the installed app the top bar sits below the status band, so the phone offset
-// grows by --safe-top.
-const DESKTOP_QUERY = '(min-width: 768px)'
-
-function subscribeToDesktop(onChange: () => void): () => void {
-  const query = window.matchMedia(DESKTOP_QUERY)
-  query.addEventListener('change', onChange)
-  return () => query.removeEventListener('change', onChange)
-}
-
-// The server snapshot is the phone layout; React swaps in the real match on hydration.
-function useIsDesktop(): boolean {
-  return useSyncExternalStore(
-    subscribeToDesktop,
-    () => window.matchMedia(DESKTOP_QUERY).matches,
-    () => false,
-  )
-}
-
+// grows by --safe-top. On desktop the same button floats bottom-right, so toasts stack above it.
 const PHONE_OFFSET = { top: 'calc(80px + var(--safe-top))', left: 16, right: 16 }
 
 export function Toaster() {
@@ -38,7 +21,7 @@ export function Toaster() {
       position={isDesktop ? 'bottom-right' : 'top-center'}
       gap={12}
       richColors
-      offset={isDesktop ? { bottom: 24, right: 24 } : PHONE_OFFSET}
+      offset={isDesktop ? { bottom: 96, right: 32 } : PHONE_OFFSET}
       mobileOffset={PHONE_OFFSET}
       icons={{ success: <CircleCheck aria-hidden="true" className="size-4" /> }}
       toastOptions={{ style: { boxShadow: 'var(--shadow-overlay)' } }}

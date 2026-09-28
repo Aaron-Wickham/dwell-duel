@@ -6,33 +6,33 @@ import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { isAdmin } from '@/lib/auth/is-admin'
-import { getMarket, getMarketBets, type MarketDetail } from '@/lib/markets/get-market'
+import { getMarket, type MarketDetail } from '@/lib/markets/get-market'
 import { getChartBets } from '@/lib/markets/chart-bets'
 import { buildProbabilitySeries } from '@/lib/markets/probability-series'
 import { computeOdds, type OutcomeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt } from '@/lib/markets/market-status'
 import { rowState } from '@/lib/markets/row-state'
-import { newestHref, readPageParams, showMoreHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
+import { readPageParams } from '@/lib/pagination/cursor'
 import { isUuid } from '@/lib/uuid'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { readSlip } from '@/lib/parlays/slip'
 import { MAX_PICKS, legOddsBp } from '@/lib/parlays/odds'
 import { addToSlipAction, removeFromSlipAction } from '@/lib/parlays/slip-actions'
 import { BackLink } from '@/components/ui/back-link'
+import { LoadingStatus } from '@/components/ui/loading-status'
 import { LocalTime } from '@/components/ui/local-time'
 import { Message } from '@/components/ui/message'
 import { Page, h1Class } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
-import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { StatusChip } from '@/components/ui/status-chip'
 import { ContentReveal } from '@/components/nav/page-transition'
-import { BetList } from '@/components/markets/bet-list'
 import { MarketActionsSkeleton, MarketBetsSkeleton, MarketChartSkeleton } from '@/components/markets/market-detail-skeletons'
 import { MarketSlipProvider } from '@/components/markets/market-slip'
 import { OutcomeRow } from '@/components/markets/outcome-row'
 import { ProbabilityChart } from '@/components/markets/probability-chart'
 import { BetForm } from './bet-form'
+import { MarketBets } from './market-bets'
 import { ResolveForm } from './resolve-form'
 import { SlipDrawer } from './slip-drawer'
 import { VoidButton } from './void-button'
@@ -107,31 +107,36 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           )}
         </div>
 
-        {/* Each section's fallback carries the same grid placement as the section itself. */}
-        <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-7">
-          <Suspense fallback={<MarketChartSkeleton />}>
-            <MarketChart market={market} odds={odds} now={now} />
-          </Suspense>
-          <Suspense fallback={<MarketActionsSkeleton outcomes={market.outcomes.length} />}>
-            <MarketActions
-              market={market}
-              odds={odds}
-              slip={slip}
-              isCreator={isCreator}
-              isPastClose={isPastClose}
-              canBet={canBet}
-            />
-          </Suspense>
-          <Suspense fallback={<MarketBetsSkeleton />}>
-            <MarketBets
-              market={market}
-              viewerId={user.id}
-              canBet={canBet}
-              page={readPageParams(searchParams, 'bets')}
-              searchParams={searchParams}
-            />
-          </Suspense>
-        </div>
+        {/* Each section's fallback carries the same grid placement as the section itself. The
+            four fallbacks announce nothing themselves (SkeletonScreen announce={false});
+            LoadingStatus wraps them in one combined status, scoped to just these four, for as
+            long as any of them is still showing. */}
+        <LoadingStatus>
+          <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-7">
+            <Suspense fallback={<MarketChartSkeleton />}>
+              <MarketChart market={market} odds={odds} now={now} />
+            </Suspense>
+            <Suspense fallback={<MarketActionsSkeleton outcomes={market.outcomes.length} />}>
+              <MarketActions
+                market={market}
+                odds={odds}
+                slip={slip}
+                isCreator={isCreator}
+                isPastClose={isPastClose}
+                canBet={canBet}
+              />
+            </Suspense>
+            <Suspense fallback={<MarketBetsSkeleton />}>
+              <MarketBets
+                market={market}
+                viewerId={user.id}
+                canBet={canBet}
+                page={readPageParams(searchParams, 'bets')}
+                searchParams={searchParams}
+              />
+            </Suspense>
+          </div>
+        </LoadingStatus>
 
         <Suspense fallback={null}>
           <MarketSlipDrawer slip={slip} />
@@ -288,45 +293,6 @@ async function MarketActions({
           </SectionCard>
         )}
       </div>
-    </ContentReveal>
-  )
-}
-
-async function MarketBets({
-  market,
-  viewerId,
-  canBet,
-  page,
-  searchParams,
-}: {
-  market: MarketDetail
-  viewerId: string
-  canBet: boolean
-  page: PageParams
-  searchParams: SearchParams
-}) {
-  const { supabase } = await requireUser()
-  const betsPage = await getMarketBets(supabase, market.id, page)
-  const pathname = `/markets/${market.id}`
-
-  return (
-    <ContentReveal>
-      <SectionCard title="Bets" titleId="bets-title" className="gap-1 lg:col-start-1 lg:row-start-3">
-        {betsPage.windowed && (
-          <div className="flex flex-col py-2">
-            <BackToNewest href={newestHref(pathname, searchParams, 'bets')} />
-          </div>
-        )}
-        <BetList bets={betsPage.rows} outcomes={market.outcomes} viewerId={viewerId} canBet={canBet} />
-        {betsPage.next && (
-          <div className="flex flex-col border-t border-line pt-3">
-            <ShowMore
-              href={showMoreHref(pathname, searchParams, 'bets', betsPage.next)}
-              fresh={betsPage.next.kind === 'window'}
-            />
-          </div>
-        )}
-      </SectionCard>
     </ContentReveal>
   )
 }

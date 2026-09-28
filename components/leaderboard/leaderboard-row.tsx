@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Avatar } from '@/components/ui/avatar'
+import { focusTarget } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
 
 export function LeaderboardRow({
@@ -8,15 +9,20 @@ export function LeaderboardRow({
   balance,
   isMe,
   href,
+  domId,
 }: {
   rank: number
   name: string
   balance: number
   isMe: boolean
   href: string
+  domId?: string
 }) {
   return (
-    <li className={cn('flex min-h-[60px] items-center gap-3 rounded-[12px] px-2.5 py-2.5 md:px-3.5', isMe && 'bg-acc-soft')}>
+    <li
+      {...focusTarget(domId)}
+      className={cn('flex min-h-[60px] items-center gap-3 rounded-[12px] px-2.5 py-2.5 md:px-3.5', isMe && 'bg-acc-soft')}
+    >
       <span
         className={cn(
           'flex size-10 shrink-0 items-center justify-center rounded-control text-lg font-extrabold tabular-nums',

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { FeedEvent, FeedKind } from './describe-event'
 import { readKeyset, type KeysetPage } from '@/lib/pagination/keyset'
-import type { PageParams } from '@/lib/pagination/cursor'
+import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 
 interface FeedRow {
   id: string
@@ -31,6 +31,8 @@ const FEED_COLUMNS =
   'task_completion:task_completions(task:tasks(title)), parlay:parlays(parlay_legs(id))'
 const FEED_KEY_COLUMNS = { ts: 'occurred_at', id: 'id' }
 
+const feedKey = (r: { id: string; occurred_at: string }): Cursor => ({ ts: r.occurred_at, id: r.id })
+
 function toFeedEvent(r: FeedRow): FeedEvent {
   return {
     id: r.id,
@@ -51,27 +53,37 @@ export async function listFeed(
   supabase: SupabaseClient,
   opts: { actorId?: string; page: PageParams },
 ): Promise<KeysetPage<FeedEvent>> {
-  const fetchRows = async (filter: string | null, limit: number): Promise<FeedRow[]> => {
+  // The range read and its key probe share one builder, so the two can't drift apart on filters.
+  const feedQuery = (columns: string, filter: string | null, limit: number) => {
     let query = supabase
       .from('activity_events')
-      .select(FEED_COLUMNS)
+      .select(columns)
       .is('hidden_at', null)
       .order('occurred_at', { ascending: false })
       .order('id', { ascending: false })
       .limit(limit)
     if (opts.actorId) query = query.eq('actor_id', opts.actorId)
     if (filter) query = query.or(filter)
-
-    const { data, error } = await query
-    if (error) throw error
-    return (data ?? []) as unknown as FeedRow[]
+    return query
   }
 
   const { rows, next, windowed } = await readKeyset<FeedRow>(
     opts.page,
     FEED_KEY_COLUMNS,
-    fetchRows,
-    (row) => ({ ts: row.occurred_at, id: row.id }),
+    async (filter, limit) => {
+      const { data, error } = await feedQuery(FEED_COLUMNS, filter, limit)
+      if (error) throw error
+      return (data ?? []) as unknown as FeedRow[]
+    },
+    feedKey,
+    // No actor embed here: activity_events and profiles are both readable exactly when
+    // is_invited(), and actor_id is a not-null foreign key, so the `!inner` join above never
+    // drops a row this probe counts.
+    async (filter, limit) => {
+      const { data, error } = await feedQuery('id, occurred_at', filter, limit)
+      if (error) throw error
+      return ((data ?? []) as unknown as { id: string; occurred_at: string }[]).map(feedKey)
+    },
   )
 
   return { rows: rows.map(toFeedEvent), next, windowed }

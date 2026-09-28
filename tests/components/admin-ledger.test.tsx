@@ -70,4 +70,26 @@ describe('LedgerRow', () => {
     expect(time).toHaveAttribute('datetime', createdAt)
     expect(time).toHaveTextContent(formatDay(createdAt))
   })
+
+  it('is a focus target named from its own line when given a DOM id', () => {
+    render(
+      <ul>
+        <LedgerRow
+          entry={{
+            id: 7,
+            profileId: 'p-mia',
+            memberName: 'Mia',
+            amount: 10,
+            type: 'Task reward',
+            context: 'Task approved: Read Genesis 1-3',
+            createdAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+          }}
+          domId="ledger-7"
+        />
+      </ul>,
+    )
+    const row = screen.getByRole('listitem', { name: /^Mia: \+10 DC — Task approved: Read Genesis 1-3/ })
+    expect(row).toHaveAttribute('id', 'ledger-7')
+    expect(row).toHaveAttribute('tabindex', '-1')
+  })
 })

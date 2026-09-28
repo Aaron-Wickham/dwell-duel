@@ -5,12 +5,14 @@ import {
   seedMembers,
   makeMember,
   clientFor,
+  anonClient,
   createTestMarket,
   createTestTask,
   ensureInvited,
   type Member,
   type TestMarket,
 } from './fixtures'
+import { pgQuery } from './pg-query'
 
 let alice: Member
 let bob: Member
@@ -40,8 +42,12 @@ interface FeedRow {
   task_title: string | null
 }
 
-async function feed(client: SupabaseClient, actorId?: string): Promise<FeedRow[]> {
-  let query = client
+// 0036 closed the view to members and anon; it stays as the equivalence oracle, read here through
+// the service role. The view is security_invoker, so the service role's own bypass of RLS means
+// it shows every row, which is what an invited member saw before the revoke. What each member
+// may see is activity_events' RLS, and that's asserted on activity_events itself.
+async function feed(actorId?: string): Promise<FeedRow[]> {
+  let query = serviceClient()
     .from('activity_feed')
     .select('id, kind, actor_id, actor_name, market_id, market_title, outcome_label, amount, leg_count, task_title')
     .order('occurred_at', { ascending: false })
@@ -74,7 +80,7 @@ describe('activity_feed', () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Feed market' })
     await bet(bobClient, market, 0, 7)
 
-    const rows = await feed(bobClient)
+    const rows = await feed()
     expect(rows).toContainEqual(
       expect.objectContaining({
         kind: 'market_created',
@@ -111,7 +117,7 @@ describe('activity_feed', () => {
     })
     expect(error).toBeNull()
 
-    expect(await feed(bobClient)).toContainEqual(
+    expect(await feed()).toContainEqual(
       expect.objectContaining({ kind: 'parlay_placed', actor_id: bob.id, amount: 10, leg_count: 2, market_id: null }),
     )
   })
@@ -123,7 +129,7 @@ describe('activity_feed', () => {
     await bet(aliceClient, market, 0, 4)
     await resolve(market, 0)
 
-    const rows = await feed(bobClient)
+    const rows = await feed()
     expect(rows).toContainEqual(
       expect.objectContaining({ kind: 'market_resolved', actor_id: alice.id, market_id: market.marketId, outcome_label: 'Yes' }),
     )
@@ -148,7 +154,7 @@ describe('activity_feed', () => {
     await resolve(market, 0)
     await resolve(market, 1)
 
-    const rows = (await feed(bobClient)).filter((r) => r.market_id === market.marketId)
+    const rows = (await feed()).filter((r) => r.market_id === market.marketId)
     const resolutions = rows.filter((r) => r.kind === 'market_resolved')
     expect(resolutions).toHaveLength(1)
     expect(resolutions[0].outcome_label).toBe('No')
@@ -167,7 +173,7 @@ describe('activity_feed', () => {
     await bet(bobClient, unbacked, 0, 5)
     await resolve(unbacked, 2)
 
-    const rows = await feed(bobClient)
+    const rows = await feed()
     expect(rows.filter((r) => r.kind === 'bet_won')).toEqual([])
     expect(rows.filter((r) => r.market_id === voided.marketId).map((r) => r.kind).sort()).toEqual([
       'bet_placed',
@@ -193,12 +199,12 @@ describe('activity_feed', () => {
     await resolve(a, 0)
     await resolve(b, 0)
 
-    expect(await feed(bobClient)).toContainEqual(
+    expect(await feed()).toContainEqual(
       expect.objectContaining({ kind: 'parlay_won', actor_id: bob.id, amount: 160, leg_count: 2 }),
     )
   })
 
-  it('shows approved task completions to everyone, and pending or rejected ones to no one', async () => {
+  it('shows approved task completions, and every invited member sees them in activity_events, but no pending or rejected ones', async () => {
     const approvedTask = await createTestTask(alice, { title: 'Read Psalm 1', rewardAmount: 12 })
     const rejectedTask = await createTestTask(alice, { title: 'Rejected task' })
     const pendingTask = await createTestTask(alice, { title: 'Pending task' })
@@ -213,15 +219,18 @@ describe('activity_feed', () => {
     expect((await aliceClient.rpc('approve_task_completion', { p_completion_id: approvedId })).error).toBeNull()
     expect((await aliceClient.rpc('reject_task_completion', { p_completion_id: rejectedId, p_reason: null })).error).toBeNull()
 
+    expect((await feed()).filter((r) => r.kind === 'task_completed')).toEqual([
+      expect.objectContaining({ id: `task:${approvedId}`, actor_id: bob.id, actor_name: 'Bob', task_title: 'Read Psalm 1', amount: 12 }),
+    ])
+
     const carol = await makeMember('Carol')
     const carolClient = await clientFor(carol)
     await ensureInvited(carolClient)
 
     for (const viewer of [carolClient, bobClient]) {
-      const tasks = (await feed(viewer)).filter((r) => r.kind === 'task_completed')
-      expect(tasks).toEqual([
-        expect.objectContaining({ actor_id: bob.id, actor_name: 'Bob', task_title: 'Read Psalm 1', amount: 12 }),
-      ])
+      const { data, error } = await viewer.from('activity_events').select('id, actor_id, amount').eq('kind', 'task_completed')
+      expect(error).toBeNull()
+      expect(data).toEqual([{ id: `task:${approvedId}`, actor_id: bob.id, amount: 12 }])
     }
   })
 
@@ -230,19 +239,34 @@ describe('activity_feed', () => {
     await bet(bobClient, market, 0, 5)
     await bet(aliceClient, market, 1, 5)
 
-    const rows = await feed(bobClient, alice.id)
+    const rows = await feed(alice.id)
     expect(rows.length).toBeGreaterThan(0)
     expect(rows.every((r) => r.actor_id === alice.id)).toBe(true)
     expect(rows.map((r) => r.kind).sort()).toEqual(['bet_placed', 'market_created'])
   })
 
-  it('shows an uninvited session nothing', async () => {
-    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Private market' })
+  it('is closed to members and anon, and open to the service role', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Closed view market' })
     await bet(bobClient, market, 0, 5)
 
     const carol = await makeMember('Carol')
     const carolClient = await clientFor(carol)
-    expect(await feed(carolClient)).toEqual([])
+    // An invited admin, an invited member, an uninvited member and a signed-out session alike.
+    for (const client of [aliceClient, bobClient, carolClient, anonClient()]) {
+      const { data, error } = await client.from('activity_feed').select('id')
+      expect(error?.code).toBe('42501')
+      expect(data).toBeNull()
+    }
+
+    const [grants] = await pgQuery<Record<string, boolean>>(`
+      select
+        has_table_privilege('authenticated', 'public.activity_feed', 'select, insert, update, delete') as authenticated,
+        has_table_privilege('anon', 'public.activity_feed', 'select, insert, update, delete') as anon,
+        has_table_privilege('service_role', 'public.activity_feed', 'select') as service_role
+    `)
+    expect(grants).toEqual({ authenticated: false, anon: false, service_role: true })
+
+    expect((await feed()).map((r) => r.kind).sort()).toEqual(['bet_placed', 'market_created'])
   })
 
   it('dates each event from its source column', async () => {
@@ -265,7 +289,7 @@ describe('activity_feed', () => {
     expect(submitErr).toBeNull()
     expect((await aliceClient.rpc('approve_task_completion', { p_completion_id: completionId as string })).error).toBeNull()
 
-    const { data: rows, error } = await bobClient.from('activity_feed').select('kind, market_id, occurred_at')
+    const { data: rows, error } = await serviceClient().from('activity_feed').select('kind, market_id, occurred_at')
     expect(error).toBeNull()
     const at = (kind: string, marketId?: string) =>
       Date.parse(rows!.find((r) => r.kind === kind && (marketId === undefined || r.market_id === marketId))!.occurred_at)

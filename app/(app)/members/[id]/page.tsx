@@ -4,17 +4,14 @@ import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { getMemberStanding } from '@/lib/social/leaderboard'
-import { listFeed } from '@/lib/social/list-feed'
-import { readPageParams, showMoreHref, newestHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
+import { readPageParams } from '@/lib/pagination/cursor'
 import { isUuid } from '@/lib/uuid'
 import { Page, h1Class } from '@/components/ui/page'
 import { BackLink } from '@/components/ui/back-link'
 import { Avatar } from '@/components/ui/avatar'
 import { SkeletonScreen } from '@/components/ui/skeleton'
-import { ContentReveal } from '@/components/nav/page-transition'
 import { FeedListSkeleton } from '@/components/feed/feed-list-skeleton'
-import { ShowMore, BackToNewest } from '@/components/ui/show-more'
-import { FeedList } from '@/app/(app)/feed/feed-list'
+import { MemberActivity } from './member-activity'
 
 // No loading.tsx for this route: the member must be found before anything streams, so an
 // unknown id still gets a real 404 status. Only the activity list streams in behind a skeleton.
@@ -51,38 +48,5 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
         <MemberActivity memberId={member.id} page={readPageParams(searchParams, 'activity')} searchParams={searchParams} />
       </Suspense>
     </Page>
-  )
-}
-
-async function MemberActivity({
-  memberId,
-  page,
-  searchParams,
-}: {
-  memberId: string
-  page: PageParams
-  searchParams: SearchParams
-}) {
-  const { supabase } = await requireUser()
-  const activity = await listFeed(supabase, { actorId: memberId, page })
-  const pathname = `/members/${memberId}`
-
-  return (
-    <ContentReveal>
-      <FeedList
-        events={activity.rows}
-        heading="Recent activity"
-        headingId="recent-activity"
-        aboveList={activity.windowed && <BackToNewest href={newestHref(pathname, searchParams, 'activity')} />}
-        belowList={
-          activity.next && (
-            <ShowMore
-              href={showMoreHref(pathname, searchParams, 'activity', activity.next)}
-              fresh={activity.next.kind === 'window'}
-            />
-          )
-        }
-      />
-    </ContentReveal>
   )
 }

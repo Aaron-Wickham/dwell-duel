@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
-import { serviceClient } from './helpers'
+import { deleteAllAuthUsers, serviceClient } from './helpers'
 
 export interface Member {
   id: string
@@ -53,8 +53,7 @@ export async function seedMembers(): Promise<[Member, Member]> {
   await db.from('allowed_emails').delete().neq('email', '')
   await db.from('profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000')
 
-  const { data: existing } = await db.auth.admin.listUsers()
-  for (const u of existing.users) await db.auth.admin.deleteUser(u.id)
+  await deleteAllAuthUsers(db)
 
   const alice = await makeMember('Alice')
   const bob = await makeMember('Bob')
@@ -86,6 +85,13 @@ export async function clientForEmail(email: string): Promise<SupabaseClient> {
 /** A client acting as the given member, subject to RLS. */
 export async function clientFor(member: Member): Promise<SupabaseClient> {
   return clientForEmail(member.email)
+}
+
+/** A signed-out client, subject to RLS as `anon`. */
+export function anonClient(): SupabaseClient {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    auth: { persistSession: false },
+  })
 }
 
 /**

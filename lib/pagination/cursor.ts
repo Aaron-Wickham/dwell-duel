@@ -3,7 +3,8 @@ export const WINDOW_CAP = 500
 
 export type Cursor = { ts: string; id: string }
 export type PageParams = { top: Cursor | null; bottom: Cursor | null }
-export type NextPage = { kind: 'extend' | 'window'; cursor: string }
+// firstId is the id of the first row the link will show, which "Show more" moves focus to.
+export type NextPage = { kind: 'extend' | 'window'; cursor: string; firstId: string }
 export type SearchParams = Record<string, string | string[] | undefined>
 
 const TS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/
@@ -66,7 +67,12 @@ function withQuery(pathname: string, query: URLSearchParams): string {
   return search ? `${pathname}?${search}` : pathname
 }
 
-export function showMoreHref(pathname: string, searchParams: SearchParams, param: string, next: NextPage): string {
+export function showMoreHref(
+  pathname: string,
+  searchParams: SearchParams,
+  param: string,
+  next: Pick<NextPage, 'kind' | 'cursor'>,
+): string {
   const query = toQuery(searchParams)
   if (next.kind === 'extend') {
     query.set(param, next.cursor)

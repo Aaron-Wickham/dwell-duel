@@ -39,4 +39,12 @@ describe('BetList', () => {
     expect(screen.getByText('No bets yet.')).toBeInTheDocument()
     expect(screen.queryByText('Be the first to back an outcome.')).not.toBeInTheDocument()
   })
+
+  it('gives each bet a focus target named from its sentence, when the list has a row id prefix', () => {
+    render(<BetList bets={bets} outcomes={outcomes} viewerId="p-alice" canBet rowIdPrefix="bet" />)
+    const row = screen.getByRole('listitem', { name: 'Bob — 15 DC on No' })
+    expect(row).toHaveAttribute('id', 'bet-2')
+    expect(row).toHaveAttribute('tabindex', '-1')
+    expect(screen.getByRole('listitem', { name: /^Alice — 5 DC on Yes/ })).toHaveAttribute('id', 'bet-1')
+  })
 })

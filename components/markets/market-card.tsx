@@ -8,6 +8,7 @@ import { ProbabilityChart, type ChartOutcome } from '@/components/markets/probab
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import type { SeriesPoint } from '@/lib/markets/probability-series'
 import { chartClosedAt, type MarketCardStatus } from '@/lib/markets/market-status'
+import { focusTarget } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
 
 const STATUS_LABEL: Record<MarketCardStatus, string> = {
@@ -46,6 +47,7 @@ export interface MarketCardProps {
   outcomes: MarketCardOutcome[]
   resolvedOutcomeLabel: string | null
   chart?: MarketCardChart
+  domId?: string
 }
 
 export function MarketCard({
@@ -58,11 +60,16 @@ export function MarketCard({
   outcomes,
   resolvedOutcomeLabel,
   chart,
+  domId,
 }: MarketCardProps) {
   const hasBets = outcomes.some((outcome) => outcome.pct !== null)
+  // Self-labelling (the default `focusTarget` behaviour) would name the card from its whole
+  // content -- the chart's own aria-label, then the odds list again -- so the card is labelled by
+  // its title alone instead.
+  const titleId = domId ? `${domId}-title` : undefined
 
   return (
-    <article className={cn(cardClass, 'flex flex-col gap-3 p-[18px]')}>
+    <article {...focusTarget(domId, titleId)} className={cn(cardClass, 'flex flex-col gap-3 p-[18px]')}>
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</StatusChip>
         <span className="text-sm text-ink2">
@@ -82,7 +89,7 @@ export function MarketCard({
           ) : null}
         </span>
       </div>
-      <h3 className="text-[18px] font-extrabold leading-[1.3] tracking-[-0.01em]">
+      <h3 id={titleId} className="text-[18px] font-extrabold leading-[1.3] tracking-[-0.01em]">
         <Link href={`/markets/${id}`} transitionTypes={['nav-forward']} className="hit-area">
           {title}
         </Link>

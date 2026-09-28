@@ -51,4 +51,13 @@ describe('SkeletonScreen', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Loading…')
     expect(screenEl.querySelectorAll('.skeleton')).toHaveLength(1)
   })
+
+  it('renders no status when announce is false, for a page with its own combined one', () => {
+    render(
+      <SkeletonScreen name="market-chart" announce={false} className="flex flex-col">
+        <Skeleton className="h-6" />
+      </SkeletonScreen>,
+    )
+    expect(screen.queryByRole('status')).toBeNull()
+  })
 })

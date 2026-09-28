@@ -52,4 +52,15 @@ describe('LeaderboardRow', () => {
     )
     expect(screen.getByRole('link', { name: 'Bob' })).toHaveClass('hit-area')
   })
+
+  it('is a focus target named from its rank, name and balance when given a DOM id', () => {
+    render(
+      <ol>
+        <LeaderboardRow rank={2} name="Bob" balance={90} isMe={false} href="/members/bob" domId="member-bob" />
+      </ol>,
+    )
+    const row = screen.getByRole('listitem', { name: /Rank 2.*Bob.*90 DC/ })
+    expect(row).toHaveAttribute('id', 'member-bob')
+    expect(row).toHaveAttribute('tabindex', '-1')
+  })
 })

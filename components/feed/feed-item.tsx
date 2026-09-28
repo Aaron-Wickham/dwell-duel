@@ -1,10 +1,21 @@
 import Link from 'next/link'
 import type { LucideIcon } from 'lucide-react'
 import type { Segment } from '@/lib/social/describe-event'
+import { focusTarget } from '@/lib/pagination/row-id'
 
-export function FeedItem({ icon: Icon, segments, age }: { icon: LucideIcon; segments: Segment[]; age: string }) {
+export function FeedItem({
+  icon: Icon,
+  segments,
+  age,
+  domId,
+}: {
+  icon: LucideIcon
+  segments: Segment[]
+  age: string
+  domId?: string
+}) {
   return (
-    <li className="flex items-start gap-3 py-3.5">
+    <li {...focusTarget(domId)} className="flex items-start gap-3 py-3.5">
       <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-sunk text-ink">
         <Icon aria-hidden="true" className="size-5" />
       </span>

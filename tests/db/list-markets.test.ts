@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
 import { countOpenMarkets, listClosedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
-import { readPageParams, showMoreHref, type PageParams } from '@/lib/pagination/cursor'
+import { encodeCursor, readPageParams, showMoreHref, type PageParams } from '@/lib/pagination/cursor'
 
 let alice: Member
 let bob: Member
@@ -46,18 +46,19 @@ describe('listOpenMarkets', () => {
     const voided = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Voided' })
     await voidMarket(voided.marketId)
 
-    const markets = await listOpenMarkets(bobClient)
+    const { rows: markets, next } = await listOpenMarkets(bobClient, FIRST)
 
     expect(markets.map((m) => m.title)).toEqual(['Awaiting', 'Newer', 'Older'])
     expect(markets.every((m) => m.status === 'open' && m.resolvedAt === null && m.resolvedOutcomeLabel === null)).toBe(true)
     expect(markets.map((m) => m.id)).not.toContain(voided.marketId)
+    expect(next).toBeNull()
   })
 
   it("orders a market's outcomes by label when they tie on creation time, regardless of input order", async () => {
     const { marketId } = await createTestMarket(aliceClient, ['Zebra', 'Apple', 'Mango'])
 
-    const markets = await listOpenMarkets(bobClient)
-    const market = markets.find((m) => m.id === marketId)
+    const { rows } = await listOpenMarkets(bobClient, FIRST)
+    const market = rows.find((m) => m.id === marketId)
 
     expect(market?.outcomes.map((o) => o.label)).toEqual(['Apple', 'Mango', 'Zebra'])
   })
@@ -71,8 +72,8 @@ describe('listOpenMarkets', () => {
       .update({ created_at: new Date(Date.now() - 60_000).toISOString() })
       .eq('id', outcomeIds[1])
 
-    const markets = await listOpenMarkets(bobClient)
-    const market = markets.find((m) => m.id === marketId)
+    const { rows } = await listOpenMarkets(bobClient, FIRST)
+    const market = rows.find((m) => m.id === marketId)
 
     expect(market?.outcomes.map((o) => o.label)).toEqual(['Beta', 'Alpha'])
   })
@@ -80,7 +81,57 @@ describe('listOpenMarkets', () => {
   it('is empty for an uninvited session', async () => {
     await createTestMarket(aliceClient, ['Yes', 'No'])
     const carol = await makeMember('Carol')
-    expect(await listOpenMarkets(await clientFor(carol))).toEqual([])
+    expect(await listOpenMarkets(await clientFor(carol), FIRST)).toEqual({ rows: [], next: null, windowed: false })
+  })
+
+  it('pages 50 at a time across a created_at tie, and a fresh window starts inside the tie', async () => {
+    const start = Date.parse('2026-09-01T00:00:00.000Z')
+    // Inserted directly, as the closed list's paging test does. Markets share a created_at in
+    // pairs offset by one, so the 50th and 51st newest tie and only the id orders them.
+    const rows = Array.from({ length: 60 }, (_, i) => ({
+      created_by: alice.id,
+      title: `Open ${String(i).padStart(2, '0')}`,
+      kind: 'binary',
+      status: 'open',
+      close_at: new Date(Date.now() + 86_400_000).toISOString(),
+      created_at: `${new Date(start + Math.floor((i + 1) / 2) * 60_000).toISOString().slice(0, 19)}.000456+00:00`,
+    }))
+    const { error } = await serviceClient().from('markets').insert(rows)
+    if (error) throw error
+    const { data: all, error: allErr } = await serviceClient()
+      .from('markets')
+      .select('id, created_at')
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+    if (allErr) throw allErr
+    const everything = all.map((m) => m.id as string)
+    expect(all[49].created_at).toBe(all[50].created_at)
+
+    const first = await listOpenMarkets(bobClient, FIRST)
+    expect(first.rows.map((m) => m.id)).toEqual(everything.slice(0, 50))
+    expect(first.next).toMatchObject({ kind: 'extend', firstId: everything[50] })
+
+    const href = new URL(showMoreHref('/markets', {}, 'open', first.next!), 'http://localhost')
+    const second = await listOpenMarkets(bobClient, readPageParams(Object.fromEntries(href.searchParams), 'open'))
+    expect(second.rows.map((m) => m.id)).toEqual(everything)
+    expect(second.next).toBeNull()
+
+    const window = await listOpenMarkets(
+      bobClient,
+      readPageParams({ open_from: encodeCursor({ ts: all[50].created_at, id: everything[50] }) }, 'open'),
+    )
+    expect(window.windowed).toBe(true)
+    expect(window.rows.map((m) => m.id)).toEqual(everything.slice(50))
+  })
+
+  it('reads a fresh window past the oldest open market as empty', async () => {
+    await createTestMarket(aliceClient, ['Yes', 'No'])
+    const pastTheEnd = encodeCursor({ ts: '2000-01-01T00:00:00Z', id: '00000000-0000-4000-8000-000000000000' })
+    expect(await listOpenMarkets(bobClient, readPageParams({ open_from: pastTheEnd }, 'open'))).toEqual({
+      rows: [],
+      next: null,
+      windowed: true,
+    })
   })
 })
 
@@ -134,24 +185,25 @@ describe('listClosedMarkets', () => {
   it('pages 50 at a time, with nothing skipped or repeated across a tie', async () => {
     const start = Date.parse('2026-09-01T00:00:00.000Z')
     // Inserted directly: sixty create/void round trips are slow, and the list never reads outcomes'
-    // pools. Pairs share a created_at, so the 50th/51st tie and the id breaks it.
+    // pools. Pairs share a created_at, offset by one, so the 50th/51st tie and the id breaks it.
     const rows = Array.from({ length: 60 }, (_, i) => ({
       created_by: alice.id,
       title: `Closed ${String(i).padStart(2, '0')}`,
       kind: 'binary',
       status: 'voided',
       close_at: new Date(start).toISOString(),
-      created_at: `${new Date(start + Math.floor(i / 2) * 60_000).toISOString().slice(0, 19)}.000456+00:00`,
+      created_at: `${new Date(start + Math.floor((i + 1) / 2) * 60_000).toISOString().slice(0, 19)}.000456+00:00`,
     }))
     const { error } = await serviceClient().from('markets').insert(rows)
     if (error) throw error
     const { data: all, error: allErr } = await serviceClient()
       .from('markets')
-      .select('id')
+      .select('id, created_at')
       .order('created_at', { ascending: false })
       .order('id', { ascending: false })
     if (allErr) throw allErr
     const everything = all.map((m) => m.id as string)
+    expect(all[49].created_at).toBe(all[50].created_at)
 
     const first = await listClosedMarkets(bobClient, FIRST)
     expect(first.rows.map((m) => m.id)).toEqual(everything.slice(0, 50))

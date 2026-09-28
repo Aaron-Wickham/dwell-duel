@@ -5,6 +5,7 @@ import { ageLabel } from '@/lib/social/relative-time'
 import { SectionCard } from '@/components/ui/section-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { FeedItem } from '@/components/feed/feed-item'
+import { rowDomId } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
 
 const EVENT_ICONS: Record<FeedKind, LucideIcon> = {
@@ -24,6 +25,8 @@ export function FeedList({
   headingHidden,
   aboveList,
   belowList,
+  emptyState,
+  rowIdPrefix,
 }: {
   events: FeedEvent[]
   heading: string
@@ -31,14 +34,22 @@ export function FeedList({
   headingHidden?: boolean
   aboveList?: ReactNode
   belowList?: ReactNode
+  emptyState?: ReactNode
+  rowIdPrefix?: string
 }) {
   const body =
     events.length === 0 ? (
-      <EmptyState icon={MessageSquareText} title="Nothing yet." />
+      emptyState ?? <EmptyState icon={MessageSquareText} title="Nothing yet." />
     ) : (
       <ul className={cn('flex flex-col divide-y divide-line', headingHidden && 'px-[18px] md:px-6')}>
         {events.map((e) => (
-          <FeedItem key={e.id} icon={EVENT_ICONS[e.kind]} segments={describeEvent(e)} age={ageLabel(e.occurredAt)} />
+          <FeedItem
+            key={e.id}
+            icon={EVENT_ICONS[e.kind]}
+            segments={describeEvent(e)}
+            age={ageLabel(e.occurredAt)}
+            domId={rowIdPrefix && rowDomId(rowIdPrefix, e.id)}
+          />
         ))}
       </ul>
     )

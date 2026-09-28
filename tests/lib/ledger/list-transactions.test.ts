@@ -34,7 +34,7 @@ const lookupIds = (queries: RecordedQuery[], table: string) =>
   queries.filter((q) => q.table === table).flatMap((q) => q.in[0][1] as string[])
 
 describe('listAllTransactions', () => {
-  it('reads 50 rows newest first, then probes 50 older ones for the Show more cursor', async () => {
+  it('reads 50 rows newest first, then probes the keys of 50 older ones for the Show more cursor', async () => {
     const shown = Array.from({ length: 50 }, (_, i) => 200 - i)
     const probed = Array.from({ length: 50 }, (_, i) => 150 - i)
     const { client, queries } = fakeLedger(shown, probed)
@@ -46,13 +46,20 @@ describe('listAllTransactions', () => {
       ['created_at', { ascending: false }],
       ['id', { ascending: false }],
     ])
+    expect(read.select).toBe('id, profile_id, amount, type, meta, created_at, profiles(display_name)')
     expect(read.limit).toBe(50)
     expect(read.or).toEqual([])
+    expect(probe.select).toBe('id, created_at')
+    expect(probe.order).toEqual(read.order)
     expect(probe.limit).toBe(50)
     expect(probe.or).toHaveLength(1)
     expect(page.rows.map((e) => e.id)).toEqual(shown)
     expect(page.rows[0]).toMatchObject({ memberName: 'Mia', context: 'Bet on Name of o200 in Name of m200' })
-    expect(page.next).toEqual({ kind: 'extend', cursor: encodeCursor({ ts: ledgerRow(101).created_at, id: '101' }) })
+    expect(page.next).toEqual({
+      kind: 'extend',
+      cursor: encodeCursor({ ts: ledgerRow(101).created_at, id: '101' }),
+      firstId: '150',
+    })
   })
 
   it('looks up names only for the rows shown, never the probed ones', async () => {

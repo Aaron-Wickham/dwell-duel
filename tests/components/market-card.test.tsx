@@ -251,4 +251,47 @@ describe('MarketCard', () => {
     )
     expect(screen.queryByTestId('chart')).not.toBeInTheDocument()
   })
+
+  it('becomes a focus target named from its title alone when given a DOM id', () => {
+    render(
+      <MarketCard
+        id="m7"
+        title="Will the choir sing?"
+        status="resolved"
+        kind="binary"
+        closeAt="2026-10-04T16:30:00.000Z"
+        resolvedAt="2026-10-05T16:30:00.000Z"
+        outcomes={[
+          { id: 'a', label: 'Yes', pct: 70 },
+          { id: 'b', label: 'No', pct: 30 },
+        ]}
+        resolvedOutcomeLabel="Yes"
+        domId="market-closed-m7"
+      />,
+    )
+    // An exact match: a self-label (the old, wrong behaviour) would also pick up the odds list
+    // and the winning-outcome line, so this fails if the card is ever named from its full content.
+    const card = screen.getByRole('article', { name: 'Will the choir sing?' })
+    expect(card).toHaveAttribute('id', 'market-closed-m7')
+    expect(card).toHaveAttribute('tabindex', '-1')
+    expect(card).toHaveAttribute('aria-labelledby', 'market-closed-m7-title')
+    expect(screen.getByText('Will the choir sing?').closest('h3')).toHaveAttribute('id', 'market-closed-m7-title')
+  })
+
+  it('is not focusable without a DOM id', () => {
+    render(
+      <MarketCard
+        id="m8"
+        title="Will the choir sing?"
+        status="open"
+        kind="binary"
+        closeAt="2026-10-04T16:30:00.000Z"
+        resolvedAt={null}
+        outcomes={[]}
+        resolvedOutcomeLabel={null}
+      />,
+    )
+    expect(screen.getByRole('article')).not.toHaveAttribute('tabindex')
+    expect(screen.getByRole('article')).not.toHaveAttribute('id')
+  })
 })

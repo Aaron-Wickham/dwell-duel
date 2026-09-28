@@ -22,19 +22,21 @@ function marketRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe('listOpenMarkets', () => {
-  it('reads only open markets, newest first, with the resolution embedded in the same request', async () => {
+  it('reads only open markets, 50 newest first, with the resolution embedded in the same request', async () => {
     const { client, queries } = fakeSupabase(() => ({ data: [marketRow({ status: 'open', current_resolution: null })] }))
 
-    const markets = await listOpenMarkets(client)
+    const page = await listOpenMarkets(client, { top: null, bottom: null })
 
     expect(queries).toHaveLength(1)
     expect(queries[0].select).toContain(RESOLUTION_EMBED)
-    expect(queries[0].eq).toEqual([['status', 'open']])
+    expect(queries[0].in).toEqual([['status', ['open']]])
+    expect(queries[0].limit).toBe(50)
     expect(queries[0].order.slice(0, 2)).toEqual([
       ['created_at', { ascending: false }],
       ['id', { ascending: false }],
     ])
-    expect(markets).toEqual([
+    expect(page.next).toBeNull()
+    expect(page.rows).toEqual([
       {
         id: '0b9c3f5e-8a1d-4c2b-9e7f-1a2b3c4d5e6f',
         title: 'Will it rain?',
@@ -49,6 +51,30 @@ describe('listOpenMarkets', () => {
         ],
       },
     ])
+  })
+
+  it('probes only the keys of the next open markets, with the same filter and order', async () => {
+    const rows = Array.from({ length: 50 }, (_, i) =>
+      marketRow({ id: `0b9c3f5e-8a1d-4c2b-9e7f-${String(1000 - i).padStart(12, '0')}`, status: 'open', current_resolution: null }),
+    )
+    const probed = [marketRow({ id: '0b9c3f5e-8a1d-4c2b-9e7f-000000000001', status: 'open', current_resolution: null })]
+    const { client, queries } = fakeSupabase((_query, index) => ({ data: index === 0 ? rows : probed }))
+
+    const page = await listOpenMarkets(client, { top: null, bottom: null })
+
+    const [read, probe] = queries
+    expect(probe.select).toBe('id, created_at')
+    expect(probe.in).toEqual([['status', ['open']]])
+    expect(probe.order).toEqual(read.order.slice(0, 2))
+    expect(page.rows).toHaveLength(50)
+    expect(page.next).toMatchObject({ kind: 'extend', firstId: '0b9c3f5e-8a1d-4c2b-9e7f-000000000001' })
+  })
+
+  it('ignores a cursor whose id is not a market id', async () => {
+    const { client, queries } = fakeSupabase(() => ({ data: [] }))
+    const page = await listOpenMarkets(client, { top: { ts: '2026-09-19T09:00:00Z', id: '42' }, bottom: null })
+    expect(queries[0].or).toEqual([])
+    expect(page.windowed).toBe(false)
   })
 })
 
@@ -68,6 +94,31 @@ describe('listClosedMarkets', () => {
       ['voided', null, null],
     ])
     expect(page.next).toBeNull()
+  })
+
+  it('probes only the keys of the next closed markets, with the same filter and order, and no embeds', async () => {
+    const rows = Array.from({ length: 50 }, (_, i) =>
+      marketRow({ id: `0b9c3f5e-8a1d-4c2b-9e7f-${String(1000 - i).padStart(12, '0')}` }),
+    )
+    const probed = [marketRow({ id: '0b9c3f5e-8a1d-4c2b-9e7f-000000000001', created_at: '2026-09-18T09:00:00+00:00' })]
+    const { client, queries } = fakeSupabase((_query, index) => ({ data: index === 0 ? rows : probed }))
+
+    const page = await listClosedMarkets(client, { top: null, bottom: null })
+
+    const [read, probe] = queries
+    expect(read.select).toContain(RESOLUTION_EMBED)
+    expect(probe.select).toBe('id, created_at')
+    expect(probe.in).toEqual(read.in)
+    expect(probe.order).toEqual([
+      ['created_at', { ascending: false }],
+      ['id', { ascending: false }],
+    ])
+    expect(read.order).toEqual([
+      ...probe.order,
+      ['created_at', { referencedTable: 'market_outcomes' }],
+      ['label', { referencedTable: 'market_outcomes' }],
+    ])
+    expect(page.next).toMatchObject({ kind: 'extend', firstId: '0b9c3f5e-8a1d-4c2b-9e7f-000000000001' })
   })
 
   it('ignores a cursor whose id is not a market id', async () => {

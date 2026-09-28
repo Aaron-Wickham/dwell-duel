@@ -13,14 +13,15 @@ interface Policy {
 
 type Expression = Pick<Policy, 'tablename' | 'policyname' | 'cmd' | 'qual' | 'with_check'>
 
-// pg_policies as migration 0035 leaves them: 0032's policies, unchanged apart from 0033's
-// (select …) wraps, plus 0035's new policy on activity_events.
-const POLICIES_AFTER_0035: Expression[] = [
+// pg_policies as the latest migration leaves them: 0032's policies, unchanged apart from 0033's
+// (select …) wraps, plus 0035's new policy on activity_events and 0037's on cancelled_bets.
+const POLICIES_NOW: Expression[] = [
   { tablename: 'activity_events', policyname: 'select_activity_events', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   { tablename: 'allowed_emails', policyname: 'admin_delete_invites', cmd: 'DELETE', qual: 'is_admin()', with_check: null },
   { tablename: 'allowed_emails', policyname: 'admin_insert_invites', cmd: 'INSERT', qual: null, with_check: 'is_admin()' },
   { tablename: 'allowed_emails', policyname: 'admin_select_invites', cmd: 'SELECT', qual: 'is_admin()', with_check: null },
   { tablename: 'bets', policyname: 'select_invited_bets', cmd: 'SELECT', qual: '(is_invited() OR is_admin())', with_check: null },
+  { tablename: 'cancelled_bets', policyname: 'select_invited_cancelled_bets', cmd: 'SELECT', qual: '(is_invited() OR is_admin())', with_check: null },
   {
     tablename: 'coin_transactions',
     policyname: 'select_own_or_admin_transactions',
@@ -88,7 +89,7 @@ describe('access rules after 0033', () => {
         qual: unwrap(p.qual),
         with_check: unwrap(p.with_check),
       })),
-    ).toEqual([...POLICIES_AFTER_0035].sort(byName))
+    ).toEqual([...POLICIES_NOW].sort(byName))
     for (const p of policies) {
       expect(p.permissive).toBe('PERMISSIVE')
       expect(p.roles).toEqual(['authenticated'])

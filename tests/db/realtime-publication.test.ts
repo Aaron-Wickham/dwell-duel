@@ -15,6 +15,7 @@ describe('supabase_realtime publication', () => {
       expect.arrayContaining([
         'activity_events',
         'bets',
+        'cancelled_bets',
         'markets',
         'market_resolutions',
         'parlays',

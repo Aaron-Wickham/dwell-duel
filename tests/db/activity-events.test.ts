@@ -148,6 +148,20 @@ async function fullScenario(): Promise<void> {
   await bet(aliceClient, b, 2, 2)
   expect(await mismatches()).toEqual([])
 
+  // A cancelled bet leaves both the view and the table.
+  await bet(carolClient, a, 0, 7)
+  const { data: carolBet, error: readErr } = await serviceClient()
+    .from('bets')
+    .select('id')
+    .eq('market_id', a.marketId)
+    .eq('profile_id', carol.id)
+    .eq('amount', 7)
+    .single()
+  if (readErr) throw readErr
+  const { error: cancelErr } = await carolClient.rpc('cancel_bet', { p_bet_id: carolBet.id })
+  if (cancelErr) throw cancelErr
+  expect(await mismatches()).toEqual([])
+
   await placeParlay(bobClient, [a.outcomeIds[0], b.outcomeIds[0]], 10)
   await placeParlay(carolClient, [a.outcomeIds[1], b.outcomeIds[1]], 5)
   expect(await mismatches()).toEqual([])

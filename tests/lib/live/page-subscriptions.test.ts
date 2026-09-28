@@ -37,13 +37,14 @@ describe('pageSubscriptions', () => {
   it('marketDetail carries the market id, and only the market id', () => {
     expect(pageSubscriptions.marketDetail(MARKET_ID)).toEqual([
       { table: 'bets', filter: `market_id=eq.${MARKET_ID}` },
+      { table: 'cancelled_bets', filter: `market_id=eq.${MARKET_ID}` },
       { table: 'markets', filter: `id=eq.${MARKET_ID}` },
       { table: 'market_resolutions', filter: `market_id=eq.${MARKET_ID}` },
     ])
   })
 
   it('markets declares the open/closed list tables', () => {
-    expect(pageSubscriptions.markets()).toEqual([{ table: 'markets' }, { table: 'bets' }])
+    expect(pageSubscriptions.markets()).toEqual([{ table: 'markets' }, { table: 'bets' }, { table: 'cancelled_bets' }])
   })
 
   it('home, for a member, filters task_completions to their own submissions and watches every profile for live ranks', () => {
@@ -71,6 +72,7 @@ describe('pageSubscriptions', () => {
   it('member watches every profile for live ranks, and carries the member id through activity_events', () => {
     expect(pageSubscriptions.member(MEMBER_ID)).toEqual([
       { table: 'activity_events', filter: `actor_id=eq.${MEMBER_ID}` },
+      { table: 'cancelled_bets', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'profiles' },
     ])
   })

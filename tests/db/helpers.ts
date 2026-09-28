@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient, isAuthRetryableFetchError, type SupabaseClient } from '@supabase/supabase-js'
 import { config } from 'dotenv'
 
 config({ path: '.env.local', quiet: true })
@@ -42,10 +42,18 @@ export async function deleteAllAuthUsers(db: SupabaseClient): Promise<void> {
     const { data, error } = await db.auth.admin.listUsers()
     if (error) throw error
     if (data.users.length === 0) return
-    for (const u of data.users) {
-      const { error: deleteErr } = await db.auth.admin.deleteUser(u.id)
-      if (deleteErr) throw deleteErr
-    }
+    for (const u of data.users) await deleteAuthUser(db, u.id)
   }
   throw new Error('deleteAllAuthUsers: auth users remain after 100 passes')
+}
+
+// Local Auth's admin API occasionally answers a delete with a retryable "Database error deleting
+// user" under the suite's sustained load; it succeeds when asked again.
+async function deleteAuthUser(db: SupabaseClient, id: string): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    const { error } = await db.auth.admin.deleteUser(id)
+    if (!error) return
+    if (!isAuthRetryableFetchError(error) || attempt === 3) throw error
+    await new Promise((resolve) => setTimeout(resolve, 200 * attempt))
+  }
 }

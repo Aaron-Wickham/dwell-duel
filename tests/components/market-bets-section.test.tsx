@@ -57,6 +57,8 @@ const market: MarketDetail = {
   kind: 'binary',
   status: 'open',
   closeAt: '2026-10-01T00:00:00Z',
+  createdAt: '2026-09-20T09:00:00Z',
+  seedPerOutcome: 20,
   createdBy: 'p-owner',
   creatorName: 'Owner',
   currentResolutionId: null,

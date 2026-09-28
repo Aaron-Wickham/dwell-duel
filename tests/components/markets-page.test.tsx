@@ -56,6 +56,7 @@ function market(n: number, status: MarketSummary['status'], closeInMs = DAY): Ma
     kind: 'binary',
     status,
     closeAt: new Date(Date.now() + closeInMs).toISOString(),
+    seedPerOutcome: 20,
     resolvedOutcomeLabel: status === 'resolved' ? 'Yes' : null,
     resolvedAt: status === 'resolved' ? new Date(Date.now() - DAY).toISOString() : null,
     outcomes: [],

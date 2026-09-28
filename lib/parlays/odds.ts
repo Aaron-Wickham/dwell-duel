@@ -1,5 +1,6 @@
-export const MAX_PICKS = 6
-export const MAX_MULTIPLIER = 20
+// supabase/migrations/0041's parlay_limits(); tests/db/parlay-limits.test.ts keeps them equal.
+export const MAX_PICKS = 10
+export const MAX_MULTIPLIER = 100
 
 // place_parlay locks each leg as trunc(total / pool, 4). Working in those same
 // 1/10,000ths with integer math makes every displayed multiplier and payout match
@@ -46,7 +47,8 @@ export function formatOdds(bp: number): string {
 }
 
 // What a solo stake would pay if its outcome won right now, counting the stake itself in both
-// pools, as resolve_market will: floor(stake × total / winning pool). Later bets move it.
+// pools, as resolve_market will: floor(stake × total / winning pool). Pass effective (seeded)
+// pools. Later bets move it.
 export function soloPayout(stake: number, outcomePool: number, totalPool: number): number {
   return Math.floor((stake * (totalPool + stake)) / (outcomePool + stake))
 }

@@ -92,7 +92,7 @@ describe('place_slip', () => {
       p_parlay_outcome_ids: [b.outcomeIds[0]],
       p_parlay_stake: 5,
     })
-    expect(error?.message).toBe('parlay: a parlay needs 2 to 6 picks')
+    expect(error?.message).toBe('parlay: a parlay needs 2 to 10 picks')
     expect(await balanceOf(bob)).toBe(100)
     expect(await countFor(bob)).toEqual({ bets: 0, parlays: 0 })
   })

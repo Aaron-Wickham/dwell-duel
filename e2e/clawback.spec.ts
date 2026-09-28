@@ -31,7 +31,8 @@ test('an override is blocked, naming the member who has spent their winnings', a
 
   const { data: outcomes, error: outcomesErr } = await db.from('market_outcomes').select('id, label').eq('market_id', marketId)
   if (outcomesErr) throw outcomesErr
-  // Bob's 20 on Yes is the whole winning pool, so Yes pays him all 60.
+  // Bob's 20 on Yes is the whole winning pool. With the market's 20 DC seed per outcome, Yes pays
+  // him floor(20 × (60 + 40) / (20 + 20)) = 50.
   for (const [label, amount] of [
     ['Yes', 20],
     ['No', 40],
@@ -64,7 +65,7 @@ test('an override is blocked, naming the member who has spent their winnings', a
 
   await expect(
     page.getByText(
-      'Can’t override: Bob has already spent 40 of 60 DC won on this market. Adjust their balances first if you still want to override.',
+      'Can’t override: Bob has already spent 30 of 50 DC won on this market. Adjust their balances first if you still want to override.',
     ),
   ).toBeVisible()
   await expect(page.getByLabel('Winning outcome')).toHaveAttribute('aria-invalid', 'true')

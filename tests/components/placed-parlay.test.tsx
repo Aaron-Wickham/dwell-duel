@@ -61,8 +61,8 @@ describe('PlacedParlay', () => {
   })
 
   it('notes when the multiplier was capped', () => {
-    renderParlay(parlay({ multiplierBp: 200_000, capped: true, potentialPayout: 100 }))
-    expect(statusLine('Pending — 5 DC at 20.00× — pays 100 DC if every pick wins (capped at 20×)')).toBeInTheDocument()
+    renderParlay(parlay({ multiplierBp: 1_000_000, capped: true, potentialPayout: 500 }))
+    expect(statusLine('Pending — 5 DC at 100.00× — pays 500 DC if every pick wins (capped at 100×)')).toBeInTheDocument()
   })
 
   it('lists each leg with a link to its market, the picked outcome and a status pill', () => {

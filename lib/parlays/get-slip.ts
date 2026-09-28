@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { effectivePools } from '@/lib/markets/odds'
 import { combineOdds, legOddsBp } from './odds'
 import type { SlipEntry } from './parse-slip'
 
@@ -10,8 +11,10 @@ export interface SlipPick {
   parlay: boolean
   // The market still takes bets: open, and before close_at.
   open: boolean
-  // Null while nobody has bet on this outcome: there's nothing yet to lock a parlay leg's odds to.
+  // Null only for an unseeded outcome nobody has bet on (0041 seeds every open market, so in
+  // practice a pick always has odds).
   oddsBp: number | null
+  // Effective pools, seed included, as resolve_market pays out on (lib/markets/odds.ts).
   outcomePool: number
   totalPool: number
 }
@@ -30,7 +33,7 @@ interface OutcomeRow {
   id: string
   label: string
   pool_total: number
-  markets: { id: string; title: string; status: string; close_at: string; market_outcomes: { pool_total: number }[] }
+  markets: { id: string; title: string; status: string; close_at: string; seed_per_outcome: number; market_outcomes: { pool_total: number }[] }
 }
 
 export async function getSlipView(supabase: SupabaseClient, entries: SlipEntry[]): Promise<SlipView> {
@@ -38,7 +41,7 @@ export async function getSlipView(supabase: SupabaseClient, entries: SlipEntry[]
 
   const { data, error } = await supabase
     .from('market_outcomes')
-    .select('id, label, pool_total, markets(id, title, status, close_at, market_outcomes(pool_total))')
+    .select('id, label, pool_total, markets(id, title, status, close_at, seed_per_outcome, market_outcomes(pool_total))')
     .in(
       'id',
       entries.map((e) => e.outcomeId),
@@ -51,7 +54,8 @@ export async function getSlipView(supabase: SupabaseClient, entries: SlipEntry[]
   const picks = entries.flatMap((entry): SlipPick[] => {
     const row = rows.find((r) => r.id === entry.outcomeId)
     if (!row) return []
-    const totalPool = row.markets.market_outcomes.reduce((sum, o) => sum + o.pool_total, 0)
+    const realTotal = row.markets.market_outcomes.reduce((sum, o) => sum + o.pool_total, 0)
+    const { pool, total } = effectivePools(row.pool_total, realTotal, row.markets.seed_per_outcome, row.markets.market_outcomes.length)
     return [
       {
         outcomeId: row.id,
@@ -60,9 +64,9 @@ export async function getSlipView(supabase: SupabaseClient, entries: SlipEntry[]
         marketTitle: row.markets.title,
         parlay: entry.parlay,
         open: row.markets.status === 'open' && new Date(row.markets.close_at).getTime() > now,
-        oddsBp: legOddsBp(totalPool, row.pool_total),
-        outcomePool: row.pool_total,
-        totalPool,
+        oddsBp: legOddsBp(total, pool),
+        outcomePool: pool,
+        totalPool: total,
       },
     ]
   })

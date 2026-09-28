@@ -74,12 +74,11 @@ describe('getSlipView', () => {
   })
 
   it('reports the cap', async () => {
-    const a = await seededMarket('Market A')
-    const b = await seededMarket('Market B')
-    const c = await seededMarket('Market C')
+    const markets = await Promise.all(['A', 'B', 'C', 'D'].map((n) => seededMarket(`Market ${n}`)))
 
-    const view = await getSlipView(bobClient, [leg(a.outcomeIds[0]), leg(b.outcomeIds[0]), leg(c.outcomeIds[0])])
-    expect(view.multiplierBp).toBe(200_000)
+    // 4 × 4 × 4 × 4 = 256, capped at 100.
+    const view = await getSlipView(bobClient, markets.map((m) => leg(m.outcomeIds[0])))
+    expect(view.multiplierBp).toBe(1_000_000)
     expect(view.capped).toBe(true)
   })
 
@@ -127,17 +126,15 @@ describe('listMyParlays', () => {
     expect(await listMyParlays(bobClient, bob.id)).toEqual([])
   })
 
-  it('reports a capped parlay at 20x', async () => {
-    const a = await seededMarket('Market A')
-    const b = await seededMarket('Market B')
-    const c = await seededMarket('Market C')
+  it('reports a capped parlay at 100x', async () => {
+    const markets = await Promise.all(['A', 'B', 'C', 'D'].map((n) => seededMarket(`Market ${n}`)))
     const { error } = await bobClient.rpc('place_parlay', {
-      p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0], c.outcomeIds[0]],
+      p_outcome_ids: markets.map((m) => m.outcomeIds[0]),
       p_stake: 10,
     })
     expect(error).toBeNull()
 
     const [capped] = await listMyParlays(bobClient, bob.id)
-    expect(capped).toMatchObject({ status: 'pending', multiplierBp: 200_000, capped: true, potentialPayout: 200 })
+    expect(capped).toMatchObject({ status: 'pending', multiplierBp: 1_000_000, capped: true, potentialPayout: 1000 })
   })
 })

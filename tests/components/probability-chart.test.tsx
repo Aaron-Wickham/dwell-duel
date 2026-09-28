@@ -316,3 +316,23 @@ describe('spreadLabels', () => {
     }
   })
 })
+
+describe('ProbabilityChart bet count', () => {
+  it('counts bets, not points, so a seeded market’s opening point isn’t called a bet', () => {
+    const now = Date.parse('2026-09-28T12:00:00Z')
+    render(
+      <ProbabilityChart
+        outcomes={[
+          { id: 'y', label: 'Yes', series: 2 },
+          { id: 'n', label: 'No', series: 1 },
+        ]}
+        points={[{ t: now - 60_000, shares: { y: 0.5, n: 0.5 } }]}
+        betCount={0}
+        now={now}
+        closedAt={null}
+        resolvedLabel={null}
+      />,
+    )
+    expect(screen.getByText('0 bets')).toBeInTheDocument()
+  })
+})

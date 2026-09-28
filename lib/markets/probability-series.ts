@@ -5,15 +5,26 @@ export type RangeKey = '1D' | '1W' | 'All'
 const DAY_MS = 24 * 60 * 60 * 1000
 export const RANGE_MS: Record<Exclude<RangeKey, 'All'>, number> = { '1D': DAY_MS, '1W': 7 * DAY_MS }
 
-export function buildProbabilitySeries(outcomeIds: string[], bets: ChartBet[]): SeriesPoint[] {
-  const pools = new Map(outcomeIds.map((id) => [id, 0]))
-  let total = 0
+// Pools start at the market's seed (0041), so a seeded market's line starts at an even split
+// at `startAt`, when it opened, rather than jumping to 100% on its first bet.
+export function buildProbabilitySeries(
+  outcomeIds: string[],
+  bets: ChartBet[],
+  { seed = 0, startAt }: { seed?: number; startAt?: string } = {},
+): SeriesPoint[] {
+  const pools = new Map(outcomeIds.map((id) => [id, seed]))
+  let total = seed * outcomeIds.length
   // Array.prototype.sort is stable, so bets on the same instant keep the reader's id order.
   const ordered = bets
     .map((bet) => ({ bet, t: Date.parse(bet.createdAt) }))
     .sort((a, b) => a.t - b.t)
 
   const points: SeriesPoint[] = []
+  if (total > 0 && startAt) {
+    const shares: Record<string, number> = {}
+    for (const [id, amount] of pools) shares[id] = amount / total
+    points.push({ t: Date.parse(startAt), shares })
+  }
   for (const { bet, t } of ordered) {
     const pool = pools.get(bet.outcomeId)
     if (pool === undefined) continue

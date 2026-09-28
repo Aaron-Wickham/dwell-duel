@@ -10,10 +10,22 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # DwellDuel
 
-Next.js (App Router) + TypeScript + Tailwind, Supabase (Postgres, auth,
-storage), deployed on Vercel. This is an early scaffold — no features, no
-data model, no `docs/ARCHITECTURE.md` yet. Once real conventions and
-architectural decisions exist, document them here and in `docs/`.
+An invite-only prediction-market app for a church friend group: members
+bet play-money Dwell Coin on friendly markets and earn it through
+Bible-study tasks. Next.js 16 (App Router) + TypeScript + Tailwind v4,
+Supabase (Postgres, Auth, Realtime, Storage), deployed on Vercel. Live at
+www.dwellduel.com; current release in `CHANGELOG.md`.
+
+Read before changing things:
+- `docs/ARCHITECTURE.md`: routes, code layout, data model, the functions
+  that move coins, migrations and key flows.
+- `docs/HOW-IT-WORKS.md`: the rules members see. Odds, payouts and parlay
+  maths there must stay true, so update it with any rule change.
+- This file: the conventions below.
+
+When a change adds a feature, a route, a table or a rule, update
+`docs/ARCHITECTURE.md` or `docs/HOW-IT-WORKS.md` in the same PR, and add
+a line to `CHANGELOG.md` under the next release.
 
 ## Working in this repo
 
@@ -191,11 +203,11 @@ architectural decisions exist, document them here and in `docs/`.
 - `npm test` runs the Vitest suite; `npm run test:e2e` runs Playwright
   (builds and starts its own production server on port 3000 — kill any
   server already listening there first).
-- `npm run db:reset` before running tests that hit local Supabase, once
-  there are migrations to reset against.
+- `npm run db:reset` before running tests that hit local Supabase. DB
+  tests (`tests/db/`) refuse to run against anything but localhost.
 
 ## Migrations
 
 - Sequential, zero-padded numbering (`00NN_description.sql`) in
-  `supabase/migrations/`, once the data model exists. Never edit a past
-  migration in place — add a new one.
+  `supabase/migrations/`. Never edit a past migration in place — add a
+  new one.

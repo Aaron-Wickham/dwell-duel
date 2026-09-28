@@ -1,5 +1,6 @@
 'use client'
 
+import { useId } from 'react'
 import Link from 'next/link'
 import { buttonVariants } from '@/components/ui/button'
 import { requestShowMoreFocus } from '@/components/ui/show-more-focus'
@@ -21,17 +22,38 @@ const linkClass = cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'self
 // `focusId` is the DOM id of the first row the link will show (rowDomId of next.firstId). The
 // link itself leaves the page or moves, so focus would otherwise fall back to the document; the
 // page's ShowMoreFocus moves it to that row once it renders.
-export function ShowMore({ href, fresh = false, focusId }: { href: string; fresh?: boolean; focusId?: string }) {
+// `description` names the list when a page has more than one "Show more" (the markets list's open
+// and closed lists), so they're distinguishable out of context while their name stays "Show more".
+export function ShowMore({
+  href,
+  fresh = false,
+  focusId,
+  description,
+}: {
+  href: string
+  fresh?: boolean
+  focusId?: string
+  description?: string
+}) {
+  const descriptionId = useId()
   return (
-    <Link
-      href={href}
-      scroll={fresh}
-      replace
-      className={linkClass}
-      onNavigate={focusId ? () => requestShowMoreFocus(focusId) : undefined}
-    >
-      Show more
-    </Link>
+    <>
+      <Link
+        href={href}
+        scroll={fresh}
+        replace
+        className={linkClass}
+        aria-describedby={description ? descriptionId : undefined}
+        onNavigate={focusId ? () => requestShowMoreFocus(focusId) : undefined}
+      >
+        Show more
+      </Link>
+      {description && (
+        <span id={descriptionId} hidden>
+          {description}
+        </span>
+      )}
+    </>
   )
 }
 

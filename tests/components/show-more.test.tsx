@@ -73,6 +73,12 @@ describe('ShowMore', () => {
     render(<ShowMore href="/feed?before=abc" />)
     expect(screen.getByRole('link', { name: 'Show more' })).toHaveAttribute('data-on-navigate', 'false')
   })
+
+  it('keeps its name and adds a description of the list it extends, when given one', () => {
+    render(<ShowMore href="/markets?open=abc" description="Open markets" />)
+    const link = screen.getByRole('link', { name: 'Show more' })
+    expect(link).toHaveAccessibleDescription('Open markets')
+  })
 })
 
 describe('BackToNewest', () => {

@@ -46,40 +46,35 @@ function toSummary(m: SummaryRow): MarketSummary {
   }
 }
 
-export async function listOpenMarkets(supabase: SupabaseClient): Promise<MarketSummary[]> {
-  const { data, error } = await supabase
-    .from('markets')
-    .select(SUMMARY_SELECT)
-    .eq('status', 'open')
-    .order('created_at', { ascending: false })
-    .order('id', { ascending: false })
-    // Same tiebreak as getMarket: insertion time, then label, so outcome order (and
-    // therefore colour assignment) is stable across requests.
-    .order('created_at', { referencedTable: 'market_outcomes' })
-    .order('label', { referencedTable: 'market_outcomes' })
-
-  if (error) throw error
-  return ((data ?? []) as unknown as SummaryRow[]).map(toSummary)
-}
-
 const MARKET_KEYS: KeyColumns = { ts: 'created_at', id: 'id', isId: isUuid }
 
 const marketKey = (m: { id: string; created_at: string }): Cursor => ({ ts: m.created_at, id: m.id })
 
 // The range read and its key probe share one builder, so the two can't drift apart on filters.
-function closedQuery(supabase: SupabaseClient, columns: string, filter: string | null, limit: number) {
-  let query = supabase.from('markets').select(columns).in('status', ['resolved', 'voided'])
+function marketsQuery(
+  supabase: SupabaseClient,
+  statuses: MarketSummary['status'][],
+  columns: string,
+  filter: string | null,
+  limit: number,
+) {
+  let query = supabase.from('markets').select(columns).in('status', statuses)
   if (filter) query = query.or(filter)
   return query.order('created_at', { ascending: false }).order('id', { ascending: false }).limit(limit)
 }
 
-// Resolved and voided markets are one list, one "Show more", shown in their two groups.
-export async function listClosedMarkets(supabase: SupabaseClient, page: PageParams): Promise<KeysetPage<MarketSummary>> {
+async function listMarkets(
+  supabase: SupabaseClient,
+  statuses: MarketSummary['status'][],
+  page: PageParams,
+): Promise<KeysetPage<MarketSummary>> {
   const result = await readKeyset(
     page,
     MARKET_KEYS,
     async (filter, limit) => {
-      const { data, error } = await closedQuery(supabase, SUMMARY_SELECT, filter, limit)
+      const { data, error } = await marketsQuery(supabase, statuses, SUMMARY_SELECT, filter, limit)
+        // Same tiebreak as getMarket: insertion time, then label, so outcome order (and
+        // therefore colour assignment) is stable across requests.
         .order('created_at', { referencedTable: 'market_outcomes' })
         .order('label', { referencedTable: 'market_outcomes' })
       if (error) throw error
@@ -87,12 +82,22 @@ export async function listClosedMarkets(supabase: SupabaseClient, page: PagePara
     },
     marketKey,
     async (filter, limit) => {
-      const { data, error } = await closedQuery(supabase, 'id, created_at', filter, limit)
+      const { data, error } = await marketsQuery(supabase, statuses, 'id, created_at', filter, limit)
       if (error) throw error
       return ((data ?? []) as unknown as { id: string; created_at: string }[]).map(marketKey)
     },
   )
   return { ...result, rows: result.rows.map(toSummary) }
+}
+
+// Open markets include those past their close time and awaiting resolution; the page splits them.
+export async function listOpenMarkets(supabase: SupabaseClient, page: PageParams): Promise<KeysetPage<MarketSummary>> {
+  return listMarkets(supabase, ['open'], page)
+}
+
+// Resolved and voided markets are one list, one "Show more", shown in their two groups.
+export async function listClosedMarkets(supabase: SupabaseClient, page: PageParams): Promise<KeysetPage<MarketSummary>> {
+  return listMarkets(supabase, ['resolved', 'voided'], page)
 }
 
 export async function countOpenMarkets(supabase: SupabaseClient): Promise<number> {

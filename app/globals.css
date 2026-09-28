@@ -36,9 +36,10 @@
   --loss: #A8281C;
   --loss-soft: #FAE1DD;
   --focus: #03272D;
-  --hero: #03272D;
-  --on-hero: #FFFFFF;
-  --hero-2: #B9D3CE;
+  --hero: #E3F4D5;
+  --on-hero: #03272D;
+  --hero-2: #46605E;
+  --hero-num: #2A6E0B;
   --wm-a: #03272D;
   --wm-b: #3FAE14;
   --sym-d: #03272D;
@@ -89,6 +90,9 @@
   --loss-soft: #3D1C17;
   --focus: #72DB2B;
   --hero: #0D3A41;
+  --on-hero: #FFFFFF;
+  --hero-2: #B9D3CE;
+  --hero-num: #72DB2B;
   --wm-a: #FFFFFF;
   --wm-b: #72DB2B;
   --sym-d: #FFFFFF;
@@ -126,6 +130,9 @@
     --loss-soft: #3D1C17;
     --focus: #72DB2B;
     --hero: #0D3A41;
+    --on-hero: #FFFFFF;
+    --hero-2: #B9D3CE;
+    --hero-num: #72DB2B;
     --wm-a: #FFFFFF;
     --wm-b: #72DB2B;
     --sym-d: #FFFFFF;

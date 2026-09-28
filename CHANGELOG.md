@@ -19,6 +19,13 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
   - security headers and a Content Security Policy;
   - the secret-key client is server-only.
 
+### Platform
+- **New Supabase keys:** moved Supabase to asymmetric signing keys and the new publishable/secret API keys; legacy keys disabled (#89).
+- **Typed database queries** generated from the migrations, checked in CI (#71).
+- **Guarded database deploys:** a dry run, an approval step and no overlapping runs (#70).
+- **Faster CI** with parallel unit tests, a single build and cached browsers; pinned Node 22 and weekly Dependabot updates (#73).
+- **Functions run next to the database,** in Cleveland beside Supabase's Ohio region (#66).
+
 ## v0.2.0-beta — 2026-09-28
 
 The first round of beta feedback: 20 issues, from roles to a new Home.

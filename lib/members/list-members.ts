@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import { avatarUrl } from '@/lib/profile/avatar'
 import { isRole, type Role } from '@/lib/auth/roles'
 import { chunk, IN_CHUNK } from '@/lib/pagination/chunk'
@@ -12,7 +12,7 @@ export interface MemberSummary {
   role: Role
 }
 
-export async function listMembers(supabase: SupabaseClient): Promise<MemberSummary[]> {
+export async function listMembers(supabase: DbClient): Promise<MemberSummary[]> {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, display_name, balance, role, avatar_path')

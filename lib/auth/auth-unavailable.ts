@@ -1,5 +1,5 @@
 import { isAuthError, isAuthRetryableFetchError } from '@supabase/supabase-js'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 
 export class AuthUnavailableError extends Error {
   constructor(options?: { cause?: unknown }) {
@@ -25,7 +25,7 @@ type ClaimsResult = { data: { claims: { sub: string; email?: string } } | null; 
 // (a bad alg claim), DOMException (a mismatched JWK) or TypeError (a non-string token). None of
 // that means Auth is down, so we fold it -- and claims that verify but carry no sub -- into "no
 // session" instead of letting it lock every caller out.
-export async function readClaims(supabase: SupabaseClient): Promise<ClaimsResult> {
+export async function readClaims(supabase: DbClient): Promise<ClaimsResult> {
   try {
     const { data, error } = await supabase.auth.getClaims()
     if (error) return { data: null, error }

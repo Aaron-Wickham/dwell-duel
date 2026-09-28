@@ -14,9 +14,8 @@ export default defineConfig({
   // (reproduced: coin-economy.spec.ts's final balance check failed
   // intermittently under parallel workers even after removing every
   // test's dependency on an exact balance value, because the race is in
-  // the underlying data, not any one assertion). The suite is small
-  // enough (five sub-second tests) that serial execution costs nothing
-  // and removes the race entirely.
+  // the underlying data, not any one assertion). Serial execution keeps
+  // the suite at about a minute and removes the race entirely.
   workers: 1,
   use: {
     baseURL: 'http://localhost:3000',
@@ -26,7 +25,8 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'npm run build && npm run start',
+    // CI has already built (.github/workflows/ci.yml), so it only serves that build.
+    command: process.env.CI ? 'npm run start' : 'npm run build && npm run start',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

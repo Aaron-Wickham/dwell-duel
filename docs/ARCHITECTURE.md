@@ -249,14 +249,22 @@ layout renders them as attributes on `<html>` (`data-theme`,
   database. DB tests refuse to run against anything but localhost.
 - **Production:** one Vercel project and one hosted Supabase project.
   Vercel preview deploys are off on purpose (see the README).
-- **CI** (`.github/workflows/ci.yml`): lint, Vitest, a production build
-  and Playwright on every push and PR, all against a throwaway local
-  Supabase.
+- **CI** (`.github/workflows/ci.yml`): lint, the type check, a
+  generated-types drift check, Vitest (the `unit` project in parallel, the
+  `db` project serially), a production build and Playwright on every push
+  and PR, all against a throwaway local Supabase.
+- **Database deploys** (`.github/workflows/deploy-production-db.yml`): a
+  dry run, then the push behind the `production-db` environment's approval,
+  one at a time.
+- **Typed queries:** `lib/supabase/database.types.ts` is generated from the
+  migrations and never edited; `lib/supabase/database.ts` wraps it
+  (`Database`, `DbClient`) and marks the few function arguments that take a
+  real null. Every client and helper uses `DbClient`.
 - **Security headers** (`next.config.ts`): a Content Security Policy that
   only allows scripts and connections to the app itself and its Supabase
   project, plus `X-Frame-Options: DENY`, `nosniff` and a referrer policy. A
   new third-party origin (analytics, an image host) has to be added to the
   CSP there.
 - **Required env vars** are checked at boot (`lib/env/required.ts`):
-  `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` always;
-  `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET` in production.
+  `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+  always; `SUPABASE_SECRET_KEY` and `CRON_SECRET` in production.

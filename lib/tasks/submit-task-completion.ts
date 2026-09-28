@@ -27,7 +27,7 @@ export async function submitTaskCompletionAction(taskId: string, _prevState: Act
 
   const { error } = await supabase.rpc('submit_task_completion', {
     p_task_id: taskId,
-    p_note: note || null,
+    p_note: note || undefined,
     p_attachments: attachments,
   })
   if (error) return { formError: error.message.charAt(0).toUpperCase() + error.message.slice(1) + '.' }

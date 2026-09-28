@@ -25,5 +25,5 @@ Thanks for helping. DwellDuel is a small, invite-only app, and every merge to
 - Keep a PR to one change, and update `docs/` and `CHANGELOG.md` with it.
 - Coin-moving logic belongs in a Postgres function (a migration), never in
   the web app.
-- Never commit secrets. `.env.local` is ignored; `.env.local.example` lists
-  the variables with empty values.
+- Never commit secrets. `.env.local` is ignored; copy `.env.local.example`
+  to `.env.local` and fill it in from `npx supabase status`.

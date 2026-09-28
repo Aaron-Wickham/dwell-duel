@@ -1,5 +1,5 @@
-export const ALWAYS_REQUIRED = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'] as const
-export const PRODUCTION_REQUIRED = ['SUPABASE_SERVICE_ROLE_KEY', 'CRON_SECRET'] as const
+export const ALWAYS_REQUIRED = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'] as const
+export const PRODUCTION_REQUIRED = ['SUPABASE_SECRET_KEY', 'CRON_SECRET'] as const
 
 // Every var this app needs before it can safely serve a request. `env` is an explicit parameter,
 // not a read of `process.env`, so this stays pure and easy to test with any combination of vars.

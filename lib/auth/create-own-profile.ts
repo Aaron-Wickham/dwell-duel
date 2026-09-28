@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 
 export type CreateOwnProfileResult = { ok: true } | { ok: false; reason: 'not_invited' | 'error' }
@@ -11,7 +11,7 @@ export type CreateOwnProfileResult = { ok: true } | { ok: false; reason: 'not_in
  * client-suppliable input.
  */
 export async function createOwnProfile(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   userId: string,
   email: string,
   displayName: string,

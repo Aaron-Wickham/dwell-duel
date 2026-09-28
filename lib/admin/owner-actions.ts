@@ -4,6 +4,9 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { isRole } from '@/lib/auth/roles'
 import type { ConfirmActionState } from '@/components/ui/confirm-action-button'
+import type { Database } from '@/lib/supabase/database'
+
+type Fns = Database['public']['Functions']
 
 function sentence(message: string): string {
   const text = message.charAt(0).toUpperCase() + message.slice(1)
@@ -12,7 +15,7 @@ function sentence(message: string): string {
 
 // Each RPC checks the caller's role itself (0040); these actions only pass the request on and
 // word the answer. Refreshing the whole layout keeps balances, lists and the nav current.
-async function run(fn: string, args: Record<string, unknown>): Promise<ConfirmActionState> {
+async function run<F extends keyof Fns>(fn: F, args: Fns[F]['Args']): Promise<ConfirmActionState> {
   const { supabase, user } = await requireUser()
   if (!user) return { formError: 'Not signed in.' }
   const { error } = await supabase.rpc(fn, args)

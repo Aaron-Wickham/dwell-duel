@@ -5,15 +5,44 @@ on:
     branches: [main]
     paths:
       - 'supabase/migrations/**'
+  # Also run on a branch before merging, so a build that needs a new migration never goes live
+  # ahead of it (AGENTS.md). The production-db environment's approval gates every run.
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+# Two pushes must never overlap, and a queued one must never cancel one that's mid-migration.
+concurrency:
+  group: prod-db
+  cancel-in-progress: false
+
 jobs:
-  push-migrations:
+  # Shows what would change before anyone approves the push.
+  plan:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
-      # 2.117.0 is the first release that accepts fine-grained sbp_v0_ tokens.
+      # The same version as ci.yml; 2.117.0 is the first release that accepts fine-grained sbp_v0_ tokens.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Dry run
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase db push --project-ref lymrpiivqvdnfcjmxksx --dry-run
+
+  push-migrations:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production-db
+    steps:
+      - uses: actions/checkout@v4
+
       - uses: supabase/setup-cli@v1
         with:
           version: 2.117.0

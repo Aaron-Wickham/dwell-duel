@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 
 export interface MarketEdit {
   id: number
@@ -12,7 +12,7 @@ export interface MarketEdit {
 
 // Newest first. Every member can read a market's edits (0043), so a question reworded after
 // people bet on it is always on the record.
-export async function listMarketEdits(supabase: SupabaseClient, marketId: string): Promise<MarketEdit[]> {
+export async function listMarketEdits(supabase: DbClient, marketId: string): Promise<MarketEdit[]> {
   const { data, error } = await supabase
     .from('market_edits')
     .select('id, edited_at, old_title, new_title, old_description, new_description, editor:profiles(display_name)')
@@ -23,7 +23,7 @@ export async function listMarketEdits(supabase: SupabaseClient, marketId: string
   return (data ?? []).map((e) => ({
     id: e.id,
     editedAt: e.edited_at,
-    editorName: (e.editor as unknown as { display_name: string } | null)?.display_name ?? 'Unknown member',
+    editorName: (e.editor)?.display_name ?? 'Unknown member',
     oldTitle: e.old_title,
     newTitle: e.new_title,
     oldDescription: e.old_description,

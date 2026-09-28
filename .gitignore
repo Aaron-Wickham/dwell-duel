@@ -48,3 +48,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Scratch scripts run from e2e/ (screenshots, one-off checks); never committed.
+/e2e/.*.ts

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import { PROOF_COLUMNS, toProofViews, type ProofRow } from '@/lib/proof/signed'
 import type { ProofView } from '@/lib/proof/types'
 
@@ -18,7 +18,7 @@ type Row = {
 }
 
 // The current resolution's reason and proof (0042), plus the one it overrode, newest first.
-export async function getResolutionProof(supabase: SupabaseClient, marketId: string): Promise<ResolutionProof | null> {
+export async function getResolutionProof(supabase: DbClient, marketId: string): Promise<ResolutionProof | null> {
   const { data, error } = await supabase
     .from('market_resolutions')
     .select(`id, note, reversed_at, market_outcomes(label), proof_attachments(${PROOF_COLUMNS})`)
@@ -26,7 +26,7 @@ export async function getResolutionProof(supabase: SupabaseClient, marketId: str
     .order('resolved_at', { ascending: false })
     .limit(2)
   if (error) throw error
-  const rows = (data ?? []) as unknown as Row[]
+  const rows = (data ?? []) as Row[]
   const current = rows.find((r) => r.reversed_at === null)
   if (!current) return null
   const previous = rows.find((r) => r.id !== current.id) ?? null

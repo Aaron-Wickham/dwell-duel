@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 
 export interface AddInviteResult {
@@ -15,7 +15,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
  * session — never from client-supplied input.
  */
 export async function addInvite(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   invitedBy: string,
   rawEmail: string,
 ): Promise<AddInviteResult> {

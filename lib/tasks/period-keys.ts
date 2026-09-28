@@ -1,8 +1,8 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import type { TaskSummary } from './list-tasks'
 
 export async function getCurrentPeriodKeys(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   periods: TaskSummary['period'][],
 ): Promise<Map<string, string>> {
   const distinct = [...new Set(periods)]
@@ -12,7 +12,7 @@ export async function getCurrentPeriodKeys(
     distinct.map(async (period) => {
       const { data, error } = await supabase.rpc('compute_period_key', { p_period: period })
       if (error) throw error
-      result.set(period ?? 'once', data as string)
+      result.set(period ?? 'once', data)
     }),
   )
 

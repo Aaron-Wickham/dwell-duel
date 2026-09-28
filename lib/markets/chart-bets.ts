@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import type { ChartBet } from '@/lib/markets/probability-series'
 import { WINDOW_CAP, type Cursor } from '@/lib/pagination/cursor'
 import { newerThanFilter, type KeyColumns } from '@/lib/pagination/keyset'
@@ -11,7 +11,7 @@ const BET_KEYS: KeyColumns = { ts: 'created_at', id: 'id' }
 
 type BetRow = { id: number; market_id: string; outcome_id: string; amount: number; created_at: string }
 
-async function readBets(supabase: SupabaseClient, marketIds: string[]): Promise<BetRow[]> {
+async function readBets(supabase: DbClient, marketIds: string[]): Promise<BetRow[]> {
   const rows: BetRow[] = []
   let after: Cursor | null = null
   for (;;) {
@@ -34,6 +34,6 @@ function toChartBet(row: BetRow): ChartBet {
   return { outcomeId: row.outcome_id, amount: row.amount, createdAt: row.created_at }
 }
 
-export async function getChartBets(supabase: SupabaseClient, marketId: string): Promise<ChartBet[]> {
+export async function getChartBets(supabase: DbClient, marketId: string): Promise<ChartBet[]> {
   return (await readBets(supabase, [marketId])).map(toChartBet)
 }

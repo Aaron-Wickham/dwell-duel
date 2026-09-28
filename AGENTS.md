@@ -172,7 +172,13 @@ a line to `CHANGELOG.md` under the next release.
   on its input, and a `tooLong` check in its server action.
 - **A new required env var** goes in `lib/env/required.ts`. A
   production-only one must be set in Vercel before merging, or
-  production won't boot.
+  production won't boot. Supabase keys are the publishable and secret
+  kind, never the legacy JWT keys.
+- **Typed clients.** Helpers take `DbClient` (`lib/supabase/database.ts`).
+  After a migration, regenerate `lib/supabase/database.types.ts`
+  (`npx supabase gen types typescript --local`); CI fails when it's stale.
+  Don't cast query rows with `as unknown as` unless the select list is a
+  runtime string, and say so.
 - **My bets pages `my_wagers`** (0044), a keys-only view of solo bets and
   parlays together (`bet:<id>`, `parlay:<uuid>`), then fetches the rows it
   names (`listMyWagers`). Cancelled bets page on their own.

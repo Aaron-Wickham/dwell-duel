@@ -5,42 +5,70 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+# A newer push to the same branch or PR supersedes a run still in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - run: npm ci
 
       - run: npm run lint
 
+      - run: npm run typecheck
+
+      # The same CLI version as deploy-production-db.yml, so migrations are tested with the tool that ships them.
       - uses: supabase/setup-cli@v1
         with:
-          version: 2.115.0
+          version: 2.117.0
 
+      # Only what the tests use: Postgres, Auth, the REST and Storage APIs, Realtime, Kong and
+      # postgres-meta (tests/db/pg-query.ts).
       - name: Start local Supabase
-        run: supabase start
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,mailpit
 
+      # The same kind of keys production uses: publishable and secret, not the legacy JWT keys.
       - name: Write .env.local from the local Supabase instance
         run: |
           STATUS=$(supabase status -o json)
           echo "NEXT_PUBLIC_SUPABASE_URL=$(echo "$STATUS" | jq -r .API_URL)" >> .env.local
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(echo "$STATUS" | jq -r .ANON_KEY)" >> .env.local
-          echo "SUPABASE_SERVICE_ROLE_KEY=$(echo "$STATUS" | jq -r .SERVICE_ROLE_KEY)" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(echo "$STATUS" | jq -r .PUBLISHABLE_KEY)" >> .env.local
+          echo "SUPABASE_SECRET_KEY=$(echo "$STATUS" | jq -r .SECRET_KEY)" >> .env.local
+
+      # The generated types must match the migrations (#71).
+      - name: Check database types are up to date
+        run: |
+          supabase gen types typescript --local > lib/supabase/database.types.ts
+          git diff --exit-code lib/supabase/database.types.ts
 
       - run: npm test
 
       - run: npm run build
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      # playwright.config.ts serves the build above in CI, rather than building again.
       - run: npx playwright test
 
       - uses: actions/upload-artifact@v4

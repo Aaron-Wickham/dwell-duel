@@ -94,7 +94,7 @@ describe('bulkRejectTaskCompletionsAction', () => {
 
     await bulkRejectTaskCompletionsAction(undefined, selection(['c-1'], '   '))
 
-    expect(supabase.rpc).toHaveBeenCalledWith('review_task_completions', { p_ids: ['c-1'], p_approve: false, p_note: null })
+    expect(supabase.rpc).toHaveBeenCalledWith('review_task_completions', { p_ids: ['c-1'], p_approve: false, p_note: undefined })
   })
 
   it('reports the ones that failed', async () => {

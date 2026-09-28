@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/supabase/database'
 import { effectivePools } from '@/lib/markets/odds'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
@@ -91,14 +91,16 @@ interface CancelledRow {
 
 const cancelledKey = (b: { id: number; cancelled_at: string }): Cursor => ({ ts: b.cancelled_at, id: String(b.id) })
 
-function cancelledQuery(supabase: SupabaseClient, userId: string, columns: string, filter: string | null, limit: number) {
+// The range read and its key probe share one builder. Its column list is a runtime string, so the
+// generated types can't follow it, and each reader casts its rows.
+function cancelledQuery(supabase: DbClient, userId: string, columns: string, filter: string | null, limit: number) {
   let query = supabase.from('cancelled_bets').select(columns).eq('profile_id', userId)
   if (filter) query = query.or(filter)
   return query.order('cancelled_at', { ascending: false }).order('id', { ascending: false }).limit(limit)
 }
 
 export async function listMyCancelledBets(
-  supabase: SupabaseClient,
+  supabase: DbClient,
   userId: string,
   page: PageParams,
 ): Promise<KeysetPage<MyCancelledBet>> {

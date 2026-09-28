@@ -67,7 +67,7 @@ export async function seedMembers(): Promise<[Member, Member]> {
  */
 export async function clientForEmail(email: string): Promise<SupabaseClient> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
   const { data, error } = await serviceClient().auth.admin.generateLink({
     type: 'magiclink',
     email,
@@ -89,7 +89,7 @@ export async function clientFor(member: Member): Promise<SupabaseClient> {
 
 /** A signed-out client, subject to RLS as `anon`. */
 export function anonClient(): SupabaseClient {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     auth: { persistSession: false },
   })
 }
@@ -111,7 +111,7 @@ export async function sessionCookieHeader(client: SupabaseClient): Promise<strin
   const jar = new Map<string, string>()
   const ssrClient = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll: () => [...jar.entries()].map(([name, value]) => ({ name, value })),

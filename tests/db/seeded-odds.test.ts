@@ -6,6 +6,7 @@ import { pgQuery } from './pg-query'
 import { buildProbabilitySeries } from '@/lib/markets/probability-series'
 import { computeOdds, effectivePools } from '@/lib/markets/odds'
 import { legOddsBp, MAX_MULTIPLIER, MAX_PICKS, soloPayout } from '@/lib/parlays/odds'
+import { getSlipView } from '@/lib/parlays/get-slip'
 
 const SEED = 20
 
@@ -113,6 +114,28 @@ describe('seeded markets (0041)', () => {
     // The app's own seeded odds agree to the basis point.
     const bNo = effectivePools(0, 10, SEED, 2)
     expect(legOddsBp(bNo.total, bNo.pool)).toBe(25_000)
+  })
+
+  // #51: the slip is how members build parlays, so check its whole path on markets nobody has
+  // bet on yet: the slip prices every leg (so Parlay isn't greyed out) and place_slip accepts them.
+  it('lets the slip parlay outcomes on brand-new markets that nobody has bet on', async () => {
+    const a = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: SEED, title: 'Fresh A' })
+    const b = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: SEED, title: 'Fresh B' })
+    const view = await getSlipView(bobClient, [
+      { outcomeId: a.outcomeIds[0], parlay: true },
+      { outcomeId: b.outcomeIds[1], parlay: true },
+    ])
+    expect(view.picks.map((p) => p.oddsBp)).toEqual([20_000, 20_000])
+    expect(view.multiplierBp).toBe(40_000)
+
+    const { error } = await bobClient.rpc('place_slip', {
+      p_singles: [],
+      p_parlay_outcome_ids: [a.outcomeIds[0], b.outcomeIds[1]],
+      p_parlay_stake: 5,
+    })
+    expect(error).toBeNull()
+    const { data: legs } = await serviceClient().from('parlay_legs').select('locked_odds').in('outcome_id', [a.outcomeIds[0], b.outcomeIds[1]])
+    expect((legs ?? []).map((l) => Number(l.locked_odds))).toEqual([2, 2])
   })
 
   it('draws seeded chances in the sparkline, as the market page computes them', async () => {

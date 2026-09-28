@@ -1,6 +1,6 @@
 export const SLIP_COOKIE = 'parlay_slip'
 
-// Solo picks aren't limited by a parlay's six legs, so the slip holds more than one parlay can.
+// The same cap as a parlay's MAX_PICKS; solo picks count toward it too.
 export const MAX_SLIP_PICKS = 10
 
 // One pick per outcome. `parlay` is the pick's Solo / Parlay switch; a new pick starts as Solo.

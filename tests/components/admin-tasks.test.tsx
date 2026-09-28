@@ -107,14 +107,18 @@ describe('PendingApprovals', () => {
   it('puts the row buttons before the bulk ones, so the first "Approve" approves a row', () => {
     render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
     const approves = screen.getAllByRole('button', { name: /Approve/ })
-    expect(approves.map((button) => button.textContent)).toEqual(['Approve', 'Approve', 'Approve selected'])
+    expect(approves.map((button) => button.textContent)).toEqual([
+      'Approve Alice’s Read Genesis 1-3',
+      'Approve Ben’s Memorize Psalm 23',
+      'Approve selected',
+    ])
   })
 
   it("gives the reviewer's own submission no checkbox or buttons, and says why (#59)", () => {
     render(<PendingApprovals viewerId="p-alice" pending={PENDING} />)
     expect(rowCheckboxes().map((box) => box.value)).toEqual(['c2'])
     expect(screen.getByText('This is your submission, so another reviewer reviews it.')).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: 'Approve' })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: /^Approve .+’s / })).toHaveLength(1)
   })
 
   it('checks every row with Select all', async () => {
@@ -192,21 +196,21 @@ describe('PendingApprovals', () => {
 describe('ReviewButtons', () => {
   it('ties an approve error to the Approve button, leaving the reject reason untouched', async () => {
     approveTaskCompletionAction.mockResolvedValue({ formError: 'Could not approve that submission.' })
-    render(<ReviewButtons completionId="c1" />)
+    render(<ReviewButtons completionId="c1" submitterName="Alice" taskTitle="Read Genesis 1-3" />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Approve Alice’s Read Genesis 1-3' }))
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('Could not approve that submission.')
-    expect(screen.getByRole('button', { name: 'Approve' })).toHaveAccessibleDescription('Could not approve that submission.')
+    expect(screen.getByRole('button', { name: 'Approve Alice’s Read Genesis 1-3' })).toHaveAccessibleDescription('Could not approve that submission.')
     expect(screen.getByPlaceholderText('Reason (optional)')).toHaveAttribute('aria-invalid', 'false')
   })
 
   it('ties a reject error to the reason field, marking it invalid', async () => {
     rejectTaskCompletionAction.mockResolvedValue({ formError: 'Could not reject that submission.' })
-    render(<ReviewButtons completionId="c1" />)
+    render(<ReviewButtons completionId="c1" submitterName="Alice" taskTitle="Read Genesis 1-3" />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Reject' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Reject Alice’s Read Genesis 1-3' }))
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('Could not reject that submission.')

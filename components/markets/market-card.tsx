@@ -68,6 +68,8 @@ export function MarketCard({
   chart,
   domId,
 }: MarketCardProps) {
+  // Every outcome has a seed pool (0041), so only a market that closed before seeding, with no
+  // bets on it, has no odds.
   const hasBets = outcomes.some((outcome) => outcome.pct !== null)
   // Self-labelling (the default `focusTarget` behaviour) would name the card from its whole
   // content -- the chart's own aria-label, then the odds list again -- so the card is labelled by
@@ -75,7 +77,7 @@ export function MarketCard({
   const titleId = domId ? `${domId}-title` : undefined
 
   return (
-    <article {...focusTarget(domId, titleId)} className={cn(cardClass, 'flex flex-col gap-3 p-[18px]')}>
+    <article {...focusTarget(domId, titleId)} className={cn(cardClass, 'flex min-w-0 flex-col gap-3 p-[18px]')}>
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</StatusChip>
         {kind === 'over_under' && line !== null && <StatusChip tone="void">O/U {formatLine(line)}</StatusChip>}
@@ -97,7 +99,7 @@ export function MarketCard({
           {edited && ' · Edited'}
         </span>
       </div>
-      <h3 id={titleId} className="text-[18px] font-extrabold leading-[1.3] tracking-[-0.01em]">
+      <h3 id={titleId} className="break-words text-[18px] font-extrabold leading-[1.3] tracking-[-0.01em]">
         <Link href={`/markets/${id}`} transitionTypes={['nav-forward']} className="hit-area">
           {title}
         </Link>
@@ -121,7 +123,7 @@ export function MarketCard({
                   aria-hidden="true"
                   className={cn('size-2.5 shrink-0 rounded-full', SERIES_BG[outcomeSeries(kind, outcome.label, index)])}
                 />
-                <span className="flex-1 font-bold">{outcome.label}</span>
+                <span className="min-w-0 flex-1 break-words font-bold">{outcome.label}</span>
                 <span className="min-w-12 text-right font-extrabold tabular-nums">{outcome.pct}%</span>
               </li>
             ))}
@@ -139,7 +141,7 @@ export function MarketCard({
               </span>
             ))}
           </div>
-          <p className="text-ink2">no bets yet</p>
+          <p className="text-ink2">No bets were placed.</p>
         </>
       )}
       {status === 'resolved' && resolvedOutcomeLabel && (

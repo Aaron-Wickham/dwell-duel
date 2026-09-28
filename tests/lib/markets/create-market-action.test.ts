@@ -126,3 +126,36 @@ describe('createMarketAction over/under', () => {
     expect(supabase.rpc).not.toHaveBeenCalled()
   })
 })
+
+describe('createMarketAction database errors', () => {
+  it("rewords create_market's own errors", async () => {
+    supabase.rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'a market may have at most 6 outcomes' } })
+
+    const state = await createMarketAction(undefined, multipleChoiceForm(['A', 'B', 'C', 'D', 'E', 'F', 'G']))
+
+    expect(state).toEqual({ formError: 'A market can have at most 6 outcomes.', field: 'outcomes' })
+    expect(redirect).not.toHaveBeenCalled()
+  })
+
+  it('names a duplicate outcome instead of showing the unique violation', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: null,
+      error: { code: '23505', message: 'duplicate key value violates unique constraint "market_outcomes_market_id_label_key"' },
+    })
+
+    const state = await createMarketAction(undefined, multipleChoiceForm(['Grace', 'Grace']))
+
+    expect(state).toEqual({ formError: 'Give each outcome a different name.', field: 'outcomes' })
+  })
+
+  it('hides an unknown error behind a generic message', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    supabase.rpc.mockResolvedValue({ data: null, error: { code: 'XX000', message: 'internal error' } })
+
+    const state = await createMarketAction(undefined, binaryForm('Will it rain?'))
+
+    expect(state).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(log).toHaveBeenCalled()
+    log.mockRestore()
+  })
+})

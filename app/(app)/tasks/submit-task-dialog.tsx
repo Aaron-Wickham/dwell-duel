@@ -31,6 +31,7 @@ export function SubmitTaskDialog({
 }) {
   const [open, setOpen] = useState(false)
   const [drafts, setDrafts] = useState<ProofDraft[]>([])
+  const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useOptimistic(false)
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     withSuccessToast(
@@ -49,6 +50,7 @@ export function SubmitTaskDialog({
         else {
           setOpen(false)
           setDrafts([])
+          setNote('')
         }
         return next
       },
@@ -73,7 +75,9 @@ export function SubmitTaskDialog({
         setOpen(next)
       }}
     >
-      <Dialog.Trigger className={buttonVariants({ size: 'sm' })}>I did this</Dialog.Trigger>
+      <Dialog.Trigger className={buttonVariants({ size: 'sm' })}>
+        I did this<span className="sr-only">, {taskTitle}</span>
+      </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-40 bg-scrim transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 motion-reduce:transition-none" />
         <Dialog.Popup className="fixed top-[calc(50%+(var(--safe-top)-var(--safe-bottom))/2)] left-1/2 z-40 flex max-h-[calc(100dvh-32px-var(--safe-top)-var(--safe-bottom))] w-[calc(100vw-32px)] max-w-[520px] -translate-x-1/2 -translate-y-1/2 flex-col gap-5 overflow-y-auto overscroll-contain rounded-card border border-line bg-surface p-6 text-ink shadow-overlay transition-[opacity,scale] duration-150 data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0 motion-reduce:transition-none">
@@ -90,6 +94,8 @@ export function SubmitTaskDialog({
               <Textarea
                 id={`${id}-note`}
                 name="note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
                 maxLength={TEXT_LIMITS.proofNote}
                 aria-invalid={state?.field === 'note'}
                 aria-describedby={state?.field === 'note' ? errorId : undefined}

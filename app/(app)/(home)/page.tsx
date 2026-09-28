@@ -14,6 +14,7 @@ import { HomeTiles, type HomeTile } from '@/components/home/home-tiles'
 import { InstallCard } from '@/components/home/install-card'
 import { adminTileSubtitle, leaderboardTileSubtitle, marketsTileSubtitle } from '@/lib/home/copy'
 import { feedbackHref } from '@/lib/app-shell/feedback'
+import { FALLBACK_NAME } from '@/lib/profile/fallback-name'
 
 export default async function Home() {
   const { supabase, user } = await requireUser()
@@ -66,7 +67,7 @@ export default async function Home() {
 
   return (
     <Page transition="tab">
-      <PageHeader title={`Welcome, ${standing?.displayName}`} />
+      <PageHeader title={`Welcome, ${standing?.displayName ?? FALLBACK_NAME}`} />
       <LiveTables subscriptions={pageSubscriptions.home({ me: user.id, admin: atLeast(role, 'reviewer') })} />
       <HomeHero
         balance={standing?.balance ?? 0}

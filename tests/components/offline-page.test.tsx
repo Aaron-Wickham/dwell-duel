@@ -12,6 +12,11 @@ describe('OfflinePage', () => {
     ).toBeInTheDocument()
   })
 
+  it('puts its content in the main landmark', () => {
+    render(<OfflinePage />)
+    expect(screen.getByRole('main')).toContainElement(screen.getByRole('heading', { level: 1 }))
+  })
+
   it('offers "Try again" as a plain link that reloads the URL being opened', () => {
     render(<OfflinePage />)
     // Testing Library doesn't give an empty-href anchor the link role, though browsers do.

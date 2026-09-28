@@ -31,6 +31,19 @@ beforeEach(() => {
 })
 
 describe('placeSlipAction', () => {
+  it('passes the attempt key through, so a retry after a lost response places nothing twice', async () => {
+    rpc.mockResolvedValue({ data: null, error: null })
+    const key = '11111111-2222-4333-8444-555555555555'
+    await placeSlipAction(undefined, form([['pick', `${A}:solo`], ['stake:' + A, '3'], ['idempotency_key', key]]))
+    expect(rpc).toHaveBeenCalledWith('place_slip', expect.objectContaining({ p_idempotency_key: key }))
+  })
+
+  it('ignores an attempt key that isn\'t a uuid', async () => {
+    rpc.mockResolvedValue({ data: null, error: null })
+    await placeSlipAction(undefined, form([['pick', `${A}:solo`], ['stake:' + A, '3'], ['idempotency_key', 'nope']]))
+    expect(rpc.mock.calls[0][1].p_idempotency_key).toBeUndefined()
+  })
+
   it('sends solo stakes and the parlay legs to place_slip, then empties the slip', async () => {
     rpc.mockResolvedValue({ data: 'parlay-1', error: null })
     from.mockReturnValue({

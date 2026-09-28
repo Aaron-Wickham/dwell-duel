@@ -1,11 +1,20 @@
-import type { ReactNode } from 'react'
+import type { MouseEventHandler, ReactNode } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
-export function BackLink({ href, children }: { href: string; children: ReactNode }) {
+export function BackLink({
+  href,
+  onClick,
+  children,
+}: {
+  href: string
+  onClick?: MouseEventHandler<HTMLAnchorElement>
+  children: ReactNode
+}) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       transitionTypes={['nav-back']}
       className="inline-flex min-h-11 items-center gap-1.5 self-start font-bold"
     >

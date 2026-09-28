@@ -35,7 +35,7 @@ export function SignInButton() {
           </>
         ) : (
           <>
-            <span aria-hidden="true" className="flex size-[26px] items-center justify-center rounded-full bg-white text-[15px] font-extrabold text-[#03272D]">
+            <span aria-hidden="true" className="flex size-[26px] items-center justify-center rounded-full bg-on-primary text-[15px] font-extrabold text-primary">
               G
             </span>
             Sign in with Google

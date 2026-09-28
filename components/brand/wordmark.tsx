@@ -6,7 +6,7 @@ export function DwellDuelSymbol({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
       <g transform="translate(50 50) translate(-55.5 -41.5)">
-        <g fill="#72DB2B">
+        <g className="fill-lime">
           {LEAF_ANGLES.map((angle) => (
             <path key={angle} d={LEAF_PATH} transform={`rotate(${angle} 50 50)`} />
           ))}
@@ -21,17 +21,20 @@ export function DwellDuelSymbol({ size }: { size: number }) {
   )
 }
 
-// `symbolBelowLg` drops the name below lg, where the desktop header has no room for it; the
-// link keeps its accessible name either way.
+// `symbolBelowLg` drops the name below lg, where the desktop header has no room for it, and
+// `symbolOnNarrow` below 360px, for a phone header with an extra button; the link keeps its
+// accessible name either way.
 export function Wordmark({
   size = 'md',
   href = '/',
   symbolBelowLg = false,
+  symbolOnNarrow = false,
   current = false,
 }: {
   size?: 'sm' | 'md'
   href?: string
   symbolBelowLg?: boolean
+  symbolOnNarrow?: boolean
   current?: boolean
 }) {
   return (
@@ -47,6 +50,7 @@ export function Wordmark({
           'whitespace-nowrap font-extrabold uppercase leading-none tracking-[-0.03em]',
           size === 'sm' ? 'text-[18px]' : 'text-[21px]',
           symbolBelowLg && 'max-lg:hidden',
+          symbolOnNarrow && 'max-[359px]:hidden',
         )}
       >
         <span className="text-wm-a">Dwell</span>

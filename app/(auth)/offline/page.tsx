@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: 'Offline', robots: { index: false } }
 // (TryAgainLink only adds the waiting state).
 export default function OfflinePage() {
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-10 md:px-20">
+    <main id="main" className="flex flex-1 items-center justify-center px-4 py-10 md:px-20">
       <Card padded={false} className="flex w-full max-w-[440px] flex-col items-start gap-4 p-7 md:p-10">
         <span aria-hidden="true" className="flex size-12 items-center justify-center rounded-full bg-gold-soft text-gold">
           <WifiOff className="size-6" />
@@ -21,6 +21,6 @@ export default function OfflinePage() {
         <p className="text-ink2">DwellDuel needs a connection for this page. It’ll load as soon as you’re back online.</p>
         <TryAgainLink />
       </Card>
-    </div>
+    </main>
   )
 }

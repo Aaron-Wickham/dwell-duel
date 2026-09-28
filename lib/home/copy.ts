@@ -13,7 +13,9 @@ export function marketsTileSubtitle(openCount: number): string {
   return `${openCount} open markets`
 }
 
+// Rank 0 means the member has no profile row, so there's no standing to report.
 export function leaderboardTileSubtitle(rank: number, memberCount: number): string {
+  if (rank === 0) return 'See who’s leading'
   return `You’re ranked ${rank} of ${memberCount}`
 }
 

@@ -12,18 +12,18 @@ The approved mockup is a Design canvas:
 | Artboards | Route |
 |---|---|
 | SignIn, NotInvited | `app/(auth)/sign-in`, `app/(auth)/not-invited` |
-| Home | `app/page.tsx` |
-| Markets | `app/markets` |
-| CreateMarket | `app/markets/new` |
-| Market (open, creator), MarketFull (slip full), MarketResolved (admin override) | `app/markets/[id]` |
+| Home | `app/(app)/(home)/page.tsx` |
+| Markets | `app/(app)/markets/(list)` |
+| CreateMarket | `app/(app)/markets/new` |
+| Market (open, creator), MarketFull (slip full), MarketResolved (admin override) | `app/(app)/markets/[id]` |
 | MyBets (solo bets and parlays, Open · Settled · Cancelled) | `app/(app)/bets` (`/parlays` redirects here) |
 | Settings | `app/(app)/settings` |
 | Launch (System page: launch animation frames) | `components/brand/launch-screen.tsx` |
-| Tasks | `app/tasks` |
-| Feed | `app/feed` |
-| Leaderboard | `app/leaderboard` |
-| Profile | `app/members/[id]` |
-| AdminInvites / AdminTasks / AdminMembers / AdminLedger | `app/admin/*` |
+| Tasks | `app/(app)/tasks` |
+| Feed | `app/(app)/feed` |
+| Leaderboard | `app/(app)/leaderboard` |
+| Profile | `app/(app)/members/[id]` |
+| AdminInvites / AdminTasks / AdminMembers / AdminLedger | `app/(app)/admin/*` |
 | NotFound | `app/not-found.tsx` |
 | EmptyStates | the empty branch of every list |
 
@@ -50,7 +50,7 @@ Theme is `data-theme` on `<html>`. It follows `prefers-color-scheme` until the m
   --acc-soft: #E3F4D5; --acc-text: #2A6E0B;
   --gold: #855600; --gold-soft: #F6E7C4;
   --win: #2A6E0B; --loss: #A8281C; --loss-soft: #FAE1DD;
-  --focus: #03272D; --hero: #03272D;
+  --focus: #03272D; --hero: #E3F4D5;
   --s1: #03272D; --s2: #2A6E0B; --s3: #855600; --s4: #3155B8; /* chart series */
 }
 [data-theme="dark"] {

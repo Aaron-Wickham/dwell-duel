@@ -38,7 +38,7 @@ function renderDialog(proofRequired = false) {
 }
 
 async function openDialog() {
-  await userEvent.click(screen.getByRole('button', { name: 'I did this' }))
+  await userEvent.click(screen.getByRole('button', { name: 'I did this, Read Psalm 23' }))
   return screen.findByRole('dialog', { name: 'Submit “Read Psalm 23”' })
 }
 

@@ -5,6 +5,8 @@ import { requireUser } from '@/lib/auth/require-user'
 import { isBalanceCheckViolation } from '@/lib/errors/balance-error'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export type ActionState = { formError?: string; field?: 'amount' | 'reason' } | undefined
 
 export async function adjustBalanceAction(profileId: string, _prevState: ActionState, formData: FormData): Promise<ActionState> {
@@ -18,10 +20,12 @@ export async function adjustBalanceAction(profileId: string, _prevState: ActionS
   if (!reason) return { formError: 'Add a reason — it’s shown in the ledger next to this adjustment.', field: 'reason' }
   if (reason.length > TEXT_LIMITS.adjustReason) return { formError: tooLong('Reason', TEXT_LIMITS.adjustReason), field: 'reason' }
 
+  const attemptKey = String(formData.get('idempotency_key') ?? '')
   const { error } = await supabase.rpc('adjust_balance', {
     p_profile_id: profileId,
     p_amount: amount,
     p_reason: reason,
+    p_idempotency_key: UUID.test(attemptKey) ? attemptKey : undefined,
   })
   if (error) {
     if (isBalanceCheckViolation(error)) {

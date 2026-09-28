@@ -10,7 +10,7 @@ import Link from 'next/link'
 import { Settings, UserRound } from 'lucide-react'
 import { Page, h1Class } from '@/components/ui/page'
 import { buttonVariants } from '@/components/ui/button'
-import { BackLink } from '@/components/ui/back-link'
+import { HistoryBackLink } from '@/components/ui/history-back-link'
 import { Avatar } from '@/components/ui/avatar'
 import { SkeletonScreen } from '@/components/ui/skeleton'
 import { FeedListSkeleton } from '@/components/feed/feed-list-skeleton'
@@ -30,7 +30,7 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
 
   return (
     <Page transition="drill-down">
-      <BackLink href="/leaderboard">Leaderboard</BackLink>
+      <HistoryBackLink />
       <LiveTables subscriptions={pageSubscriptions.member(member.id)} />
       <section className="flex flex-col gap-4">
         <div className="flex items-center gap-4 md:gap-5">

@@ -65,7 +65,7 @@ function ProfileLink({ me, active }: { me: NavMember; active: boolean }) {
   )
 }
 
-// Below xl every label won't fit beside the wordmark, balance and toggle (an admin's row needs
+// Below xl every label won't fit beside the wordmark, balance and avatar (an admin's row needs
 // ~1180px), so each link is a 44px icon until then, its label kept for assistive tech and as a
 // hover tooltip. `iconWithLabel` keeps the icon beside the label from xl too, as Admin's does.
 function DesktopLink({
@@ -167,10 +167,16 @@ export function AppNav({ balance, adminHref, me }: { balance: number; adminHref:
         className="no-callout sticky top-(--safe-top) z-30 flex h-16 shrink-0 items-center gap-1 border-b border-line bg-surface pr-2 pl-3 md:hidden"
       >
         {/* At 375px with a five-digit balance there's no width to spare beside the wordmark, so the
-            badge tucks under its right end instead. It's decorative, so taps pass through to the link. */}
+            badge tucks under its right end instead. It's decorative, so taps pass through to the link.
+            Below 360px an admin's extra button leaves room only for the symbol, and the badge goes too. */}
         <div className="relative shrink-0">
-          <Wordmark size="sm" current={pathname === '/'} />
-          <BetaBadge className="pointer-events-none absolute right-1 -bottom-1.5 h-3.5 px-1.5 text-[9px]" />
+          <Wordmark size="sm" current={pathname === '/'} symbolOnNarrow={Boolean(adminHref)} />
+          <BetaBadge
+            className={cn(
+              'pointer-events-none absolute right-1 -bottom-1.5 h-3.5 px-1.5 text-[9px]',
+              adminHref && 'max-[359px]:hidden',
+            )}
+          />
         </div>
         <span className="grow" />
         <BalanceChip balance={balance} active={active === 'bets'} />

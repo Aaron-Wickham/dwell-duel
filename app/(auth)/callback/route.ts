@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { serverClient } from '@/lib/supabase/server'
 import { createOwnProfile } from '@/lib/auth/create-own-profile'
+import { FALLBACK_NAME } from '@/lib/profile/fallback-name'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
           supabase,
           user.id,
           user.email ?? '',
-          user.user_metadata.full_name ?? user.email ?? 'Member',
+          user.user_metadata.full_name ?? user.email ?? FALLBACK_NAME,
           user.user_metadata.avatar_url ?? null,
         )
 

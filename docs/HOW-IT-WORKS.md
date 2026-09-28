@@ -110,9 +110,10 @@ bet what on each market, and bets and parlays also appear in the feed.
   on it ("Creator has 40 DC on Yes"), and so does its result in the feed. The resolver picks the winner (or, for an Over/Under,
   types the actual number) and **must say why**. They can attach photos,
   files or links as proof. The reason and proof show on the market page
-  and in the feed.
+  and in the feed. Before anything is paid, the app asks them to confirm,
+  naming the winner ("Yes wins").
 - **Overrides:** an admin can change a result. The original payouts are
-  taken back and the new winners paid. If a past winner has already spent
+  taken back and the new winners paid; the confirmation says so first. If a past winner has already spent
   their winnings, the override is blocked and names who, so an admin can
   sort out balances first.
 - **Voids:** the creator or an admin can void an unresolved market, and

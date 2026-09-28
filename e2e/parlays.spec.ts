@@ -57,13 +57,15 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   await expect(page).toHaveURL(/\/bets$/)
   const placed = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: 'Parlay leg one?' }).first()
   await expect(placed.getByText(/5 DC at 5\.76× · pays 28 DC if every pick wins/)).toBeVisible()
-  await expect(placed.getByText('Pending', { exact: true })).toBeVisible()
+  // The parlay's chip and both of its legs.
+  await expect(placed.getByText('Open', { exact: true })).toHaveCount(3)
 
   // The seeded session is an admin, so it can resolve before close_at.
   for (const url of marketUrls) {
     await page.goto(url)
     await page.getByRole('combobox').last().selectOption({ label: 'Yes' })
     await page.getByLabel('Why did this outcome win?').fill('Checked against the recording')
+    await page.getByRole('button', { name: 'Resolve market' }).click()
     await page.getByRole('button', { name: 'Confirm outcome' }).click()
     await expect(page.getByText('Status: resolved')).toBeVisible()
   }

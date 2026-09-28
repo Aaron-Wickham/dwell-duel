@@ -3,6 +3,8 @@
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
+import { friendlyError } from '@/lib/errors/friendly-error'
+import { CREATE_MARKET_ERRORS } from './create-market-errors'
 
 export type ActionState =
   | { formError?: string; field?: 'title' | 'description' | 'close_at' | 'outcomes' | 'line' | `outcome_${number}` }
@@ -49,7 +51,7 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
       p_close_at: closeAt,
       p_line: line,
     })
-    if (error) return { formError: error.message }
+    if (error) return friendlyError(error, CREATE_MARKET_ERRORS, 'create_market failed')
     redirect(`/markets/${marketId}`)
   }
 
@@ -78,7 +80,7 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
     p_close_at: closeAt,
   })
 
-  if (error) return { formError: error.message }
+  if (error) return friendlyError(error, CREATE_MARKET_ERRORS, 'create_market failed')
 
   redirect(`/markets/${marketId}`)
 }

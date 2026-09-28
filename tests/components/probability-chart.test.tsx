@@ -231,7 +231,7 @@ describe('ProbabilityChart', () => {
 
   it('says so when there are no bets, with no chart, ranges or summary image', () => {
     const { container } = render(<ProbabilityChart outcomes={yesNo} points={[]} now={NOW} />)
-    expect(screen.getByText('No bets yet — the chart starts with the first bet.')).toBeInTheDocument()
+    expect(screen.getByText('No bets were placed on this market.')).toBeInTheDocument()
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
     expect(screen.queryByRole('group')).not.toBeInTheDocument()
     expect(container.querySelector('.recharts-wrapper')).not.toBeInTheDocument()

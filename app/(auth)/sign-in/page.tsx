@@ -7,7 +7,7 @@ import { SignInButton } from './sign-in-button'
 
 export default function SignInPage() {
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-10 md:px-20">
+    <main id="main" className="flex flex-1 items-center justify-center px-4 py-10 md:px-20">
       <Card padded={false} className="flex w-full max-w-[440px] flex-col items-start gap-5 p-7 md:p-10">
         <DwellDuelSymbol size={64} />
         <BetaBadge />
@@ -23,6 +23,6 @@ export default function SignInPage() {
           <SignInButton />
         </Suspense>
       </Card>
-    </div>
+    </main>
   )
 }

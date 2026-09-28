@@ -14,10 +14,17 @@ const LEG_PILL: Record<LegStatus, string> = {
   voided: 'bg-sunk text-ink2',
 }
 
+const LEG_LABEL: Record<LegStatus, string> = {
+  pending: 'Open',
+  won: 'Won',
+  lost: 'Lost',
+  voided: 'Voided',
+}
+
 function StatusBadge({ parlay }: { parlay: ParlayView }) {
   switch (parlay.status) {
     case 'pending':
-      return <StatusChip tone="wait">Pending</StatusChip>
+      return <StatusChip tone="open">Open</StatusChip>
     case 'won':
       return <StatusChip tone="done">Won {parlay.credited} DC</StatusChip>
     case 'lost':
@@ -68,7 +75,7 @@ export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: st
                   LEG_PILL[leg.status],
                 )}
               >
-                {leg.status}
+                {LEG_LABEL[leg.status]}
               </span>
             </li>
           ))}

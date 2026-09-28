@@ -46,6 +46,17 @@ a line to `CHANGELOG.md` under the next release.
 - **Breakpoints.** The design is phone-first. Type sizes and page padding
   switch at `md:`, the same breakpoint as the nav. Multi-column grids
   switch at `lg:`.
+- **Forms keep what was typed.** React resets a form after its action,
+  even one that returned an error, so every field in a form with an action
+  is controlled (`value`/`checked` plus `onChange` state), cleared by hand
+  on success where that makes sense. A checkbox or radio also takes
+  `ref={keepCheckedOnReset(checked)}` (`lib/forms/keep-on-reset.ts`);
+  `Select` does the same for itself when given a `value`.
+- **Confirm before money or access changes.** A single-button action uses
+  `ConfirmActionButton`. A form that must ask first (resolve, balance,
+  role) keeps its own button and fields, passes `useConfirmSubmit()`'s
+  `onSubmit`, and renders `ConfirmSubmitDialog`, whose button submits the
+  form through its `form` attribute.
 - **Controls.** Every control is a real `<button>`, `<a>` or `<label>`ed
   input, at least 44px tall. Selects and checkboxes stay native. When a
   form shows a server error, wire `aria-invalid` and `aria-describedby`
@@ -89,6 +100,11 @@ a line to `CHANGELOG.md` under the next release.
 - **The `pressable` and `no-callout` utilities,** plus the `--safe-top` /
   `--safe-bottom` tokens, which are non-zero only in standalone mode.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.
+- **Retry-safe money actions.** The slip and the balance adjustment send
+  an attempt key (0047), held in a ref until the action succeeds and kept
+  when the response is lost, so tapping again returns the first result. A
+  new action that moves coins and can be retried takes a key the same way,
+  through `claim_idempotency_key` and `finish_idempotent`.
 - **Settings are cookies on `<html>`.** Theme (`data-theme`), haptics
   (`data-haptics="off"`) and reduced motion (`data-motion="reduce"`) are
   set by the root layout before any JS runs. `motion-reduce:` covers both

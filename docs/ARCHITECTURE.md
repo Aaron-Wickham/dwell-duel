@@ -66,7 +66,8 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/not-invited` and `/offline`. The API has one route,
 `/api/cron/keep-alive`, which a daily Vercel cron calls so the free
-Supabase project never pauses.
+Supabase project never pauses. It also deletes unattached proof files and
+attempt keys older than a day.
 
 ## Code layout
 
@@ -117,6 +118,9 @@ the task catalogue and invite list, which are allowed by policy.
   members.
 - `parlays` and `parlay_legs`: a stake, a status (`pending`, `won`, `lost`,
   `refunded`), and each leg's outcome with odds locked at placement.
+- `idempotency_keys` (0047): one row per slip or balance-adjustment
+  attempt, holding its result. Only `place_slip` and `adjust_balance` touch
+  it, and the daily cron prunes rows older than a day.
 
 **Tasks and proof**
 
@@ -178,6 +182,7 @@ after it ships. They roughly follow the project's history:
 | 0037–0039 | Cancelling bets, profile editing, the unified slip |
 | 0040–0045 | Roles, seeded odds, proof, Over/Under and market edits, My bets, At stake |
 | 0046 | Security: parlay odds without your own stakes, no resolving with a stake, no self-review, a 500 DC task cap, hidden emails |
+| 0047 | Attempt keys, so a retried slip or balance adjustment never acts twice |
 
 Merging a migration to `main` runs the **Deploy Production Database**
 workflow. It runs in parallel with Vercel's deploy, so a build that needs
@@ -197,7 +202,11 @@ of picks (`lib/parlays/slip.ts`). `SlipProvider` in the signed-in layout
 holds those picks, each marked Solo or Parlay, with optimistic add, remove
 and mode switches. Stakes live only in client state. The floating
 `SlipSheet` sends everything to `place_slip` in one call; it either all
-succeeds or nothing is placed. Bets are never optimistic.
+succeeds or nothing is placed. Bets are never optimistic. Each place sends
+an attempt key, kept until a place succeeds: if the bets commit but the
+answer is lost, the slip says so, and tapping Place again returns the first
+result instead of placing twice (0047). `adjust_balance` takes a key the
+same way.
 
 **Odds.** Pari-mutuel with a seed. A parlay leg locks its odds from
 everyone's money but the bettor's own (0046), and the slip previews the
@@ -211,7 +220,10 @@ Parlay legs lock their odds at placement, and parlays are paid by the
 house, not from market pools (the #51 decision).
 
 **Resolution and proof.** The resolve form needs a reason and can carry
-photos, files and links. Files upload straight from the browser to the
+photos, files and links. Submitting it opens a confirmation naming the
+winner (and, for an override, that earlier payouts are reversed); only its
+button runs the action (`ConfirmSubmitDialog`). Balance adjustments and
+role changes ask the same way. Files upload straight from the browser to the
 private `proof` bucket (`lib/proof/upload.ts`), then `record_proof`
 checks the paths when the RPC runs. Pages show proof through short-lived
 signed URLs made with the viewer's own session.

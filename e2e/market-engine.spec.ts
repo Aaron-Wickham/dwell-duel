@@ -23,10 +23,22 @@ test('create a market, place a bet, and resolve it as admin', async ({ page }) =
   await page.getByLabel('Why did this outcome win?').fill('The forecast said 90% and it poured')
   await page.getByLabel('Link').fill('https://example.com/weather-report')
   await page.getByRole('button', { name: 'Add link' }).click()
+  await page.getByRole('button', { name: 'Resolve market' }).click()
+  await expect(page.getByRole('alertdialog', { name: 'Resolve this market?' })).toContainText('Yes wins.')
   await page.getByRole('button', { name: 'Confirm outcome' }).click()
 
   await expect(page.getByText('Status: resolved')).toBeVisible()
   const why = page.getByRole('region', { name: 'Why it resolved this way' })
   await expect(why.getByText('The forecast said 90% and it poured')).toBeVisible()
   await expect(why.getByRole('link', { name: 'example.com/weather-report' })).toHaveAttribute('href', 'https://example.com/weather-report')
+})
+
+test('a create-market error keeps what was typed', async ({ page }) => {
+  await page.goto('/markets/new')
+  await page.getByLabel('Title').fill('Will the typing survive?')
+  await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() - 60 * 60 * 1000)))
+  await page.getByRole('button', { name: 'Create market' }).click()
+
+  await expect(page.getByText('Choose a close time in the future.')).toBeVisible()
+  await expect(page.getByLabel('Title')).toHaveValue('Will the typing survive?')
 })

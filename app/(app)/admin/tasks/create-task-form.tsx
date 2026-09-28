@@ -6,11 +6,37 @@ import { createTaskAction, type ActionState } from '@/lib/tasks/create-task'
 import { Field, Input, Select, Textarea } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { keepCheckedOnReset } from '@/lib/forms/keep-on-reset'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
+import { withSuccessToast } from '@/lib/toast/with-success-toast'
 
 export function CreateTaskForm() {
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [reward, setReward] = useState('')
+  const [proofRequired, setProofRequired] = useState(false)
   const [isRepeatable, setIsRepeatable] = useState(false)
-  const [state, formAction] = useActionState<ActionState, FormData>(createTaskAction, undefined)
+  const [period, setPeriod] = useState('daily')
+  const [state, formAction] = useActionState<ActionState, FormData>(
+    withSuccessToast(
+      async (prev: ActionState, formData: FormData) => {
+        const next = await createTaskAction(prev, formData)
+        // A created task starts the form afresh, ready for the next one.
+        if (!next?.formError) {
+          setTitle('')
+          setDescription('')
+          setReward('')
+          setProofRequired(false)
+          setIsRepeatable(false)
+          setPeriod('daily')
+        }
+        return next
+      },
+      (s) => Boolean(s?.formError),
+      'Task created.',
+    ),
+    undefined,
+  )
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -19,6 +45,8 @@ export function CreateTaskForm() {
           id="create-task-title"
           name="title"
           required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
           maxLength={TEXT_LIMITS.taskTitle}
           aria-invalid={state?.field === 'title'}
           aria-describedby={state?.field === 'title' ? 'create-task-error' : undefined}
@@ -28,6 +56,8 @@ export function CreateTaskForm() {
         <Textarea
           id="create-task-description"
           name="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           maxLength={TEXT_LIMITS.taskDescription}
           aria-invalid={state?.field === 'description'}
           aria-describedby={state?.field === 'description' ? 'create-task-error' : undefined}
@@ -42,12 +72,21 @@ export function CreateTaskForm() {
           max={MAX_TASK_REWARD}
           step="1"
           required
+          value={reward}
+          onChange={(e) => setReward(e.target.value)}
           aria-invalid={state?.field === 'reward_amount'}
           aria-describedby={state?.field === 'reward_amount' ? 'create-task-error' : undefined}
         />
       </Field>
       <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
-        <input name="proof_required" type="checkbox" className="m-0 size-[22px] accent-primary" />
+        <input
+          name="proof_required"
+          type="checkbox"
+          checked={proofRequired}
+          ref={keepCheckedOnReset(proofRequired)}
+          onChange={(e) => setProofRequired(e.target.checked)}
+          className="m-0 size-[22px] accent-primary"
+        />
         Require proof
       </label>
       <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
@@ -55,6 +94,7 @@ export function CreateTaskForm() {
           name="is_repeatable"
           type="checkbox"
           checked={isRepeatable}
+          ref={keepCheckedOnReset(isRepeatable)}
           onChange={(e) => setIsRepeatable(e.target.checked)}
           className="m-0 size-[22px] accent-primary"
         />
@@ -66,6 +106,8 @@ export function CreateTaskForm() {
             id="create-task-period"
             name="period"
             required
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
             aria-invalid={state?.field === 'period'}
             aria-describedby={state?.field === 'period' ? 'create-task-error' : undefined}
           >

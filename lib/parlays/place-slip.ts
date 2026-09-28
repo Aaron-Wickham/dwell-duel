@@ -17,6 +17,7 @@ export type PlaceSlipState =
   | undefined
 
 const WHOLE_DC = 'Enter a whole number of DC greater than 0.'
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function stakeOf(value: FormDataEntryValue | null): number | null {
   const n = Number(value)
@@ -57,10 +58,12 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
   }
   if (Object.keys(pickErrors).length > 0 || parlayError) return { pickErrors, parlayError }
 
+  const attemptKey = String(formData.get('idempotency_key') ?? '')
   const { data: parlayId, error } = await supabase.rpc('place_slip', {
     p_singles: singles,
     p_parlay_outcome_ids: legs,
     p_parlay_stake: parlayStake,
+    p_idempotency_key: UUID.test(attemptKey) ? attemptKey : undefined,
   })
   if (error) {
     if (isBalanceCheckViolation(error)) {

@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 
 export default function NotInvitedPage() {
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-10 md:px-20">
+    <main id="main" className="flex flex-1 items-center justify-center px-4 py-10 md:px-20">
       <Card padded={false} className="flex w-full max-w-[480px] flex-col items-start gap-4 p-7 md:p-10">
         <span aria-hidden="true" className="flex size-12 items-center justify-center rounded-full bg-gold-soft text-gold">
           <Mail className="size-6" />
@@ -20,6 +20,6 @@ export default function NotInvitedPage() {
           Try another account
         </Link>
       </Card>
-    </div>
+    </main>
   )
 }

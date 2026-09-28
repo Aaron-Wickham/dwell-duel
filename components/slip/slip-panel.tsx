@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useTransition } from 'react'
+import { useActionState, useRef, useTransition } from 'react'
 import Link from 'next/link'
 import { Ticket, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -42,7 +42,6 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
   const [removing, startRemove] = useTransition()
   const stakeId = `slip-stake-${pick.outcomeId}`
   const errorId = `slip-pick-error-${pick.outcomeId}`
-  const noOddsId = `slip-no-odds-${pick.outcomeId}`
   const stake = wholeDc(stakes[pick.outcomeId])
   const name = `${pick.outcomeLabel}, ${pick.marketTitle}`
 
@@ -90,19 +89,12 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
             <button
               type="button"
               aria-pressed={pick.parlay}
-              disabled={pick.oddsBp === null && !pick.parlay}
-              aria-describedby={pick.oddsBp === null ? noOddsId : undefined}
               className={segmentClass(pick.parlay)}
               onClick={() => setMode(pick.outcomeId, true)}
             >
               Parlay
             </button>
           </div>
-          {pick.oddsBp === null && (
-            <p id={noOddsId} className="text-sm text-ink2">
-              No one has bet on this outcome yet, so it has no odds to lock into a parlay.
-            </p>
-          )}
           {!pick.parlay && (
             <div className="flex flex-wrap items-center gap-3">
               <label htmlFor={stakeId} className="text-[15px] font-bold">
@@ -141,9 +133,22 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
 
 export function SlipPanel() {
   const { picks, parlayStake, setParlayStake, stakes, clearStakes, setOpen } = useSlip()
+  // One key per slip, kept across retries until a place succeeds: if a place commits but its
+  // response is lost, tapping again returns that result instead of placing twice (#61).
+  const attemptKey = useRef<string | null>(null)
   const [state, formAction] = useActionState<PlaceSlipState, FormData>(async (prev, formData) => {
-    const next = await placeSlipAction(prev, formData)
+    attemptKey.current ??= crypto.randomUUID()
+    formData.set('idempotency_key', attemptKey.current)
+    let next: PlaceSlipState
+    try {
+      next = await placeSlipAction(prev, formData)
+    } catch {
+      // The bets may have gone through with only the answer lost. Keeping the slip, and its key,
+      // makes tapping Place again safe either way.
+      return { formError: 'We couldn’t confirm your bets. Check your connection and tap Place again. Nothing will be placed twice.' }
+    }
     if (next?.placed) {
+      attemptKey.current = null
       toast.success(placedMessage(next.placed))
       haptics.success()
       clearStakes()

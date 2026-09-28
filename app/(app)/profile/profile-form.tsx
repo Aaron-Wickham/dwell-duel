@@ -23,6 +23,7 @@ export function ProfileForm({
   avatarSrc: string | null
 }) {
   const [name, setName] = useState(displayName)
+  const [bioText, setBioText] = useState(bio)
   const [photo, setPhoto] = useState<NewPhoto | null>(null)
   const [removed, setRemoved] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
@@ -133,7 +134,8 @@ export function ProfileForm({
         <Textarea
           id="pf-bio"
           name="bio"
-          defaultValue={bio}
+          value={bioText}
+          onChange={(e) => setBioText(e.target.value)}
           maxLength={TEXT_LIMITS.bio}
           aria-invalid={state?.field === 'bio'}
           aria-describedby={['pf-bio-hint', errorFor('bio')].filter(Boolean).join(' ')}

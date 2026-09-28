@@ -18,4 +18,9 @@ describe('SignInPage', () => {
     render(<SignInPage />)
     expect(screen.getByText('Beta')).toBeInTheDocument()
   })
+
+  it('puts its content in the main landmark', () => {
+    render(<SignInPage />)
+    expect(screen.getByRole('main')).toContainElement(screen.getByRole('heading', { level: 1 }))
+  })
 })

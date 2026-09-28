@@ -16,6 +16,8 @@ import { updateMarketAction, type ActionState } from '@/lib/markets/update-marke
 // Outcomes, close time and an over/under's line stay as they are: changing them would change the bet.
 export function EditMarketDialog({ marketId, title, description }: { marketId: string; title: string; description: string | null }) {
   const [open, setOpen] = useState(false)
+  const [draftTitle, setDraftTitle] = useState(title)
+  const [draftDescription, setDraftDescription] = useState(description ?? '')
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     withSuccessToast(
       async (prev: ActionState, formData: FormData) => {
@@ -35,6 +37,11 @@ export function EditMarketDialog({ marketId, title, description }: { marketId: s
       open={open}
       onOpenChange={(next) => {
         if (isPending && !next) return
+        // Each opening starts from the market as it stands, not from an edit that was cancelled.
+        if (next) {
+          setDraftTitle(title)
+          setDraftDescription(description ?? '')
+        }
         setOpen(next)
       }}
     >
@@ -57,7 +64,8 @@ export function EditMarketDialog({ marketId, title, description }: { marketId: s
                 id="edit-market-title"
                 name="title"
                 required
-                defaultValue={title}
+                value={draftTitle}
+                onChange={(e) => setDraftTitle(e.target.value)}
                 maxLength={TEXT_LIMITS.marketTitle}
                 aria-invalid={state?.field === 'title'}
                 aria-describedby={state?.field === 'title' ? errorId : undefined}
@@ -67,7 +75,8 @@ export function EditMarketDialog({ marketId, title, description }: { marketId: s
               <Textarea
                 id="edit-market-description"
                 name="description"
-                defaultValue={description ?? ''}
+                value={draftDescription}
+                onChange={(e) => setDraftDescription(e.target.value)}
                 maxLength={TEXT_LIMITS.marketDescription}
                 aria-invalid={state?.field === 'description'}
                 aria-describedby={state?.field === 'description' ? errorId : undefined}

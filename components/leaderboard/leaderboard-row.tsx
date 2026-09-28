@@ -35,13 +35,13 @@ export function LeaderboardRow({
         <span className="sr-only">Rank {rank}</span>
       </span>
       <Avatar name={name} src={avatarSrc} />
-      <span className="grow text-[17px] font-extrabold">
+      <span className="min-w-0 grow break-words text-[17px] font-extrabold">
         <Link href={href} transitionTypes={['nav-forward']} className="hit-area">
           {name}
         </Link>
         {isMe && <span className="font-semibold text-ink2"> (you)</span>}
       </span>
-      <span className="text-[17px] font-extrabold tabular-nums">{balance} DC</span>
+      <span className="shrink-0 whitespace-nowrap text-[17px] font-extrabold tabular-nums">{balance} DC</span>
     </li>
   )
 }

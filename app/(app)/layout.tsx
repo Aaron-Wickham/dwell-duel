@@ -2,7 +2,9 @@ import { requireUser } from '@/lib/auth/require-user'
 import { isAdmin } from '@/lib/auth/is-admin'
 import { readSlip } from '@/lib/parlays/slip'
 import { AppNav } from '@/components/app-nav/app-nav'
-import { SlipCountProvider } from '@/components/app-nav/slip-count'
+import { SlipProvider } from '@/components/slip/slip-provider'
+import { SlipSheet, SlipSpacer } from '@/components/slip/slip-sheet'
+import { getSlipView } from '@/lib/parlays/get-slip'
 import { LiveRefresh } from '@/components/live/live-refresh'
 import { LiveTablesProvider } from '@/components/live/live-tables'
 import { NavDepthTracker } from '@/lib/nav/nav-depth'
@@ -20,19 +22,22 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   ])
   if (error) throw error
   if (!profile) return children
+  const slipView = await getSlipView(supabase, slip)
 
   return (
     <LiveTablesProvider userId={user.id}>
-      <SlipCountProvider initial={slip.length}>
+      <SlipProvider view={slipView}>
         <NavDepthTracker />
         <AppNav balance={profile.balance} isAdmin={admin} />
         <main id="main" className="flex flex-1 flex-col pb-[calc(82px+var(--safe-bottom))] md:pb-0">
           <OfflineBanner />
           {children}
+          <SlipSpacer />
         </main>
+        <SlipSheet />
         <Toaster />
         <LiveRefresh />
-      </SlipCountProvider>
+      </SlipProvider>
     </LiveTablesProvider>
   )
 }

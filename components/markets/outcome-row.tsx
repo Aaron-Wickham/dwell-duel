@@ -6,6 +6,7 @@ import { OutcomeSlipControl } from '@/components/markets/outcome-slip-control'
 import { SERIES_BG } from '@/components/markets/series-classes'
 import type { Series } from '@/lib/markets/outcome-series'
 import type { OutcomeRowState } from '@/lib/markets/row-state'
+import type { SlipPick } from '@/lib/parlays/get-slip'
 import { formatOdds } from '@/lib/parlays/odds'
 import { cn } from '@/lib/utils'
 
@@ -14,7 +15,6 @@ import { cn } from '@/lib/utils'
 export type { OutcomeRowState }
 
 export function OutcomeRow({
-  outcomeId,
   label,
   poolTotal,
   probability,
@@ -22,11 +22,11 @@ export function OutcomeRow({
   series,
   state,
   winner = false,
+  slipPick,
   addAction,
   removeAction,
   disabledReasonId,
 }: {
-  outcomeId: string
   label: string
   poolTotal: number
   probability: number | null
@@ -34,6 +34,7 @@ export function OutcomeRow({
   series: Series
   state: OutcomeRowState
   winner?: boolean
+  slipPick: SlipPick
   addAction: (formData: FormData) => void | boolean | Promise<void | boolean>
   removeAction: (formData: FormData) => void | boolean | Promise<void | boolean>
   disabledReasonId?: string
@@ -78,8 +79,7 @@ export function OutcomeRow({
             )}
           </span>
           <OutcomeSlipControl
-            outcomeId={outcomeId}
-            label={label}
+            pick={slipPick}
             state={state}
             addAction={addAction}
             removeAction={removeAction}

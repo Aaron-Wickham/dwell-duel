@@ -41,6 +41,6 @@ describe('Toaster', () => {
     render(<Toaster />)
     const props = toasterProps.at(-1)!
     expect(props.position).toBe('bottom-right')
-    expect(props.offset).toEqual({ bottom: 24, right: 24 })
+    expect(props.offset).toEqual({ bottom: 96, right: 32 })
   })
 })

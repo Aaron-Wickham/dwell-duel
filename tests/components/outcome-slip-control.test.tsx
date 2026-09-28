@@ -3,13 +3,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { startTransition, useState } from 'react'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { SlipCountProvider, useSlipCount } from '@/components/app-nav/slip-count'
-import { MarketSlipProvider } from '@/components/markets/market-slip'
+import { SlipProvider, useSlip } from '@/components/slip/slip-provider'
 import { OutcomeSlipControl } from '@/components/markets/outcome-slip-control'
+import { EMPTY_SLIP, type SlipPick, type SlipView } from '@/lib/parlays/get-slip'
 import { CommitHistory } from './commit-history'
 
 const { success } = vi.hoisted(() => ({ success: vi.fn() }))
 vi.mock('sonner', () => ({ toast: { success } }))
+vi.mock('@/lib/parlays/slip-actions', () => ({ setPickModeAction: vi.fn() }))
 
 beforeEach(() => {
   success.mockReset()
@@ -23,82 +24,101 @@ function deferred<T>() {
   return { promise, resolve }
 }
 
+const pick = (outcomeId: string, outcomeLabel: string, marketId = 'm1'): SlipPick => ({
+  outcomeId,
+  outcomeLabel,
+  marketId,
+  marketTitle: `Market ${marketId}`,
+  parlay: false,
+  open: true,
+  oddsBp: 20_000,
+  outcomePool: 10,
+  totalPool: 20,
+})
+const YES = pick('o1', 'Yes')
+const NO = pick('o2', 'No')
+const viewOf = (...picks: SlipPick[]): SlipView => ({ ...EMPTY_SLIP, picks })
+
 function Count() {
-  return <output aria-label="Slip count">{`Badge ${useSlipCount().count}`}</output>
+  const { picks, open } = useSlip()
+  return <output aria-label="Slip">{`Picks ${picks.length}${open ? ' · open' : ''}`}</output>
 }
 
 function countChips(text: string): number {
   return text.split('In your slip').length - 1
 }
 
-function renderControl(state: 'add' | 'inslip', { count = 0, result }: { count?: number; result: Promise<boolean> }) {
-  const action = vi.fn(() => result)
-  render(
-    <SlipCountProvider initial={count}>
-      <Count />
-      <OutcomeSlipControl outcomeId="o1" label="Yes" state={state} addAction={action} removeAction={action} />
-    </SlipCountProvider>,
-  )
-  return action
-}
-
 describe('OutcomeSlipControl', () => {
-  it('flips to In your slip and bumps the nav count before the server answers', async () => {
+  it('flips to In your slip and adds the pick to the slip before the server answers', async () => {
     const answer = deferred<boolean>()
-    const addAction = renderControl('add', { result: answer.promise })
+    const addAction = vi.fn(() => answer.promise)
+    render(
+      <SlipProvider view={viewOf()}>
+        <Count />
+        <OutcomeSlipControl pick={YES} state="add" addAction={addAction} removeAction={vi.fn()} />
+      </SlipProvider>,
+    )
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add to parlay Yes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add to slip Yes' }))
 
     expect(addAction).toHaveBeenCalledWith(expect.any(FormData))
     expect(screen.getByText('In your slip')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Remove Yes' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Add to parlay Yes' })).toBeNull()
-    expect(screen.getByLabelText('Slip count')).toHaveTextContent('Badge 1')
+    expect(screen.getByLabelText('Slip')).toHaveTextContent('Picks 1')
     expect(success).not.toHaveBeenCalled()
 
     await act(async () => answer.resolve(true))
     await waitFor(() => expect(success).toHaveBeenCalledWith('Added to your slip.'))
   })
 
-  it('flips back and restores the count when the server makes no change', async () => {
+  it('flips back when the server makes no change', async () => {
     const answer = deferred<boolean>()
-    renderControl('add', { result: answer.promise })
+    render(
+      <SlipProvider view={viewOf()}>
+        <Count />
+        <OutcomeSlipControl pick={YES} state="add" addAction={() => answer.promise} removeAction={vi.fn()} />
+      </SlipProvider>,
+    )
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add to parlay Yes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add to slip Yes' }))
     expect(screen.getByText('In your slip')).toBeInTheDocument()
 
     await act(async () => answer.resolve(false))
 
-    expect(screen.getByRole('button', { name: 'Add to parlay Yes' })).toBeInTheDocument()
-    expect(screen.queryByText('In your slip')).toBeNull()
-    expect(screen.getByLabelText('Slip count')).toHaveTextContent('Badge 0')
+    expect(screen.getByRole('button', { name: 'Add to slip Yes' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Slip')).toHaveTextContent('Picks 0')
     expect(success).not.toHaveBeenCalled()
   })
 
-  it('keeps In your slip on screen while the server state lands, with no flash back to Add', async () => {
+  it('opens the slip from a row that is in it', async () => {
+    render(
+      <SlipProvider view={viewOf(YES)}>
+        <Count />
+        <OutcomeSlipControl pick={YES} state="inslip" addAction={vi.fn()} removeAction={vi.fn()} />
+      </SlipProvider>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Open slip' }))
+    expect(screen.getByLabelText('Slip')).toHaveTextContent('Picks 1 · open')
+  })
+
+  it('keeps In your slip on screen while the server slip lands, with no flash back to Add', async () => {
     const history: string[] = []
     const answer = deferred<void>()
 
     function Page() {
-      const [slip, setSlip] = useState<string[]>([])
+      const [view, setView] = useState(viewOf())
       async function addAction() {
         await answer.promise
         // Next applies the action's refreshed server props in a transition, like this one.
-        startTransition(() => setSlip(['o1']))
+        startTransition(() => setView(viewOf(YES)))
         return true
       }
       return (
-        <SlipCountProvider initial={slip.length}>
-          <p>{`Server slip: ${slip.length}`}</p>
+        <SlipProvider view={view}>
+          <p>{`Server slip: ${view.picks.length}`}</p>
           <Count />
-          <OutcomeSlipControl
-            outcomeId="o1"
-            label="Yes"
-            state={slip.includes('o1') ? 'inslip' : 'add'}
-            addAction={addAction}
-            removeAction={vi.fn()}
-          />
-        </SlipCountProvider>
+          <OutcomeSlipControl pick={YES} state="add" addAction={addAction} removeAction={vi.fn()} />
+        </SlipProvider>
       )
     }
 
@@ -107,131 +127,50 @@ describe('OutcomeSlipControl', () => {
         <Page />
       </CommitHistory>,
     )
-    await userEvent.click(screen.getByRole('button', { name: 'Add to parlay Yes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add to slip Yes' }))
     expect(screen.getByText('Server slip: 0')).toBeInTheDocument()
     expect(screen.getByText('In your slip')).toBeInTheDocument()
     const flipped = history.length
 
-    // Not inside act(): React commits the rest in separate tasks, as in a browser, so a
-    // flash back to Add would get its own commit in the history.
+    // Not inside act(): React commits the rest in separate tasks, as in a browser.
     answer.resolve()
     await waitFor(() => expect(screen.getByText('Server slip: 1')).toBeInTheDocument())
 
-    expect(screen.getAllByText('In your slip')).toHaveLength(1)
-    expect(screen.getByLabelText('Slip count')).toHaveTextContent('Badge 1')
     for (const text of history.slice(flipped - 1)) {
       expect(text).toContain('In your slip')
-      expect(text).toContain('Badge 1')
-      expect(text).not.toContain('Add to parlay')
+      expect(text).toContain('Picks 1')
+      expect(text).not.toContain('Add to slip')
     }
   })
 
-  it('flips the market’s current pick off as the new one goes on, and leaves the count alone', async () => {
+  it("replaces the market's current pick as the new one goes on, never showing two", async () => {
+    const history: string[] = []
     const answer = deferred<boolean>()
-    const action = vi.fn(() => answer.promise)
     render(
-      <SlipCountProvider initial={2}>
-        <Count />
-        <MarketSlipProvider pick="o1">
-          <OutcomeSlipControl outcomeId="o1" label="Yes" state="inslip" addAction={action} removeAction={action} />
-          <OutcomeSlipControl outcomeId="o2" label="No" state="add" addAction={action} removeAction={action} />
-        </MarketSlipProvider>
-      </SlipCountProvider>,
+      <CommitHistory history={history}>
+        <SlipProvider view={viewOf(YES, pick('o9', 'Other', 'm9'))}>
+          <Count />
+          <OutcomeSlipControl pick={YES} state="inslip" addAction={vi.fn()} removeAction={vi.fn()} />
+          <OutcomeSlipControl pick={NO} state="add" addAction={() => answer.promise} removeAction={vi.fn()} />
+        </SlipProvider>
+      </CommitHistory>,
     )
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add to parlay No' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add to slip No' }))
 
     expect(screen.getAllByText('In your slip')).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Remove No' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add to parlay Yes' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Slip count')).toHaveTextContent('Badge 2')
+    expect(screen.getByRole('button', { name: 'Add to slip Yes' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Slip')).toHaveTextContent('Picks 2')
+    for (const text of history) expect(countChips(text)).toBeLessThanOrEqual(1)
     // React entangles every pending action, so one left hanging would hold later tests' optimistic state.
     await act(async () => answer.resolve(true))
   })
 
-  it('never shows two In your slip chips for one market while the replacement lands', async () => {
-    const history: string[] = []
-    const answer = deferred<void>()
-
-    function Market() {
-      const [pick, setPick] = useState('o1')
-      async function addNo() {
-        await answer.promise
-        // Next applies the action's refreshed server props in a transition, like this one.
-        startTransition(() => setPick('o2'))
-        return true
-      }
-      return (
-        <MarketSlipProvider pick={pick}>
-          <p>{`Server pick: ${pick}`}</p>
-          <OutcomeSlipControl
-            outcomeId="o1"
-            label="Yes"
-            state={pick === 'o1' ? 'inslip' : 'add'}
-            addAction={vi.fn()}
-            removeAction={vi.fn()}
-          />
-          <OutcomeSlipControl
-            outcomeId="o2"
-            label="No"
-            state={pick === 'o2' ? 'inslip' : 'add'}
-            addAction={addNo}
-            removeAction={vi.fn()}
-          />
-        </MarketSlipProvider>
-      )
-    }
-
-    render(
-      <CommitHistory history={history}>
-        <Market />
-      </CommitHistory>,
-    )
-    await userEvent.click(screen.getByRole('button', { name: 'Add to parlay No' }))
-    expect(screen.getByText('Server pick: o1')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Remove No' })).toBeInTheDocument()
-
-    // Not inside act(): React commits the rest in separate tasks, as in a browser.
-    answer.resolve()
-    await waitFor(() => expect(screen.getByText('Server pick: o2')).toBeInTheDocument())
-
-    expect(screen.getByRole('button', { name: 'Remove No' })).toBeInTheDocument()
-    expect(history.length).toBeGreaterThan(2)
-    for (const text of history) expect(countChips(text)).toBe(1)
-  })
-
-  it('flips Remove back to Add and drops the count before the server answers, and reverts on false', async () => {
-    const answer = deferred<boolean>()
-    const removeAction = renderControl('inslip', { count: 1, result: answer.promise })
-
-    await userEvent.click(screen.getByRole('button', { name: 'Remove Yes' }))
-
-    expect(removeAction).toHaveBeenCalledWith(expect.any(FormData))
-    expect(screen.getByRole('button', { name: 'Add to parlay Yes' })).toBeInTheDocument()
-    expect(screen.queryByText('In your slip')).toBeNull()
-    expect(screen.getByLabelText('Slip count')).toHaveTextContent('Badge 0')
-
-    await act(async () => answer.resolve(false))
-
-    expect(screen.getByText('In your slip')).toBeInTheDocument()
-    expect(screen.getByLabelText('Slip count')).toHaveTextContent('Badge 1')
-    expect(success).not.toHaveBeenCalled()
-  })
-
-  it('offers no form while the slip is full', () => {
-    render(
-      <OutcomeSlipControl
-        outcomeId="o1"
-        label="Yes"
-        state="disabled"
-        addAction={vi.fn()}
-        removeAction={vi.fn()}
-        disabledReasonId="slip-full-note"
-      />,
-    )
-    const add = screen.getByRole('button', { name: 'Add to parlay Yes' })
+  it('shows Add to slip disabled, with its reason, when the slip is full', () => {
+    render(<OutcomeSlipControl pick={YES} state="disabled" addAction={vi.fn()} removeAction={vi.fn()} disabledReasonId="slip-full-note" />)
+    const add = screen.getByRole('button', { name: 'Add to slip Yes' })
     expect(add).toBeDisabled()
     expect(add).toHaveAttribute('aria-describedby', 'slip-full-note')
-    expect(add.closest('form')).toBeNull()
   })
 })

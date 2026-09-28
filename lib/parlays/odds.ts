@@ -44,3 +44,9 @@ export function potentialPayout(stake: number, legBps: number[]): number {
 export function formatOdds(bp: number): string {
   return (Math.trunc(bp / 100) / 100).toFixed(2)
 }
+
+// What a solo stake would pay if its outcome won right now, counting the stake itself in both
+// pools, as resolve_market will: floor(stake × total / winning pool). Later bets move it.
+export function soloPayout(stake: number, outcomePool: number, totalPool: number): number {
+  return Math.floor((stake * (totalPool + stake)) / (outcomePool + stake))
+}

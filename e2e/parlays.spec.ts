@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
-import { serverActionSettled } from './server-action'
+import { addToSlip, openSlip, placeSolo } from './slip'
 
-test('build a two-leg parlay from market pages, place it, and win it', async ({ page }) => {
+test('build a two-leg parlay in the slip, place it, and win it', async ({ page }) => {
   const marketUrls: string[] = []
 
   for (const title of ['Parlay leg one?', 'Parlay leg two?']) {
@@ -13,34 +13,30 @@ test('build a two-leg parlay from market pages, place it, and win it', async ({ 
     await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)
     marketUrls.push(page.url())
 
-    await page.getByRole('combobox').first().selectOption({ label: 'Yes' })
-    await page.getByPlaceholder('Amount (DC)').fill('5')
-    await page.getByRole('button', { name: 'Place bet' }).click()
+    // Seed the pools: 5 on Yes, 15 on No, so Yes pays 4×.
+    await placeSolo(page, 'Yes', 5)
     await expect(page.getByText('5 DC on Yes')).toBeVisible()
-
-    await page.getByRole('combobox').first().selectOption({ label: 'No' })
-    await page.getByPlaceholder('Amount (DC)').fill('15')
-    await page.getByRole('button', { name: 'Place bet' }).click()
+    await placeSolo(page, 'No', 15)
     await expect(page.getByText('15 DC on No')).toBeVisible()
-
-    const added = serverActionSettled(page)
-    await page
-      .getByRole('region', { name: 'Outcomes' })
-      .getByRole('listitem')
-      .filter({ hasText: 'Yes' })
-      .getByRole('button', { name: 'Add to parlay' })
-      .click()
-    await expect(page.getByText('In your slip')).toBeVisible()
-    await added
   }
 
-  await page.goto('/parlays')
-  await expect(page.getByText('Combined: 16.00×')).toBeVisible()
-  await page.getByLabel('Stake (DC)').fill('5')
-  await expect(page.getByText('Potential payout: 80 DC')).toBeVisible()
-  await page.getByRole('button', { name: 'Place parlay' }).click()
+  for (const url of marketUrls) {
+    await page.goto(url)
+    await addToSlip(page, 'Yes')
+  }
 
-  await expect(page.getByText('Parlay placed at 16.00× — potential payout 80 DC.')).toBeVisible()
+  const sheet = await openSlip(page)
+  for (const title of ['Parlay leg one?', 'Parlay leg two?']) {
+    await sheet.getByRole('group', { name: `Bet type for Yes, ${title}` }).getByRole('button', { name: 'Parlay' }).click()
+  }
+  const parlay = sheet.getByRole('region', { name: 'Parlay · 2 picks' })
+  await expect(parlay.getByText('16.00×')).toBeVisible()
+  await parlay.getByLabel('Stake (DC)').fill('5')
+  await expect(parlay.getByText('Pays 80 DC if every pick wins')).toBeVisible()
+  await sheet.getByRole('button', { name: 'Place 1 bet · 5 DC' }).click()
+  await expect(page.getByText('Placed a 2-leg parlay at 16.00×.').first()).toBeVisible()
+
+  await page.goto('/parlays')
   await expect(page.getByText('Pending — 5 DC at 16.00× — pays 80 DC if every pick wins').first()).toBeVisible()
 
   // The seeded session is an admin, so it can resolve before close_at.

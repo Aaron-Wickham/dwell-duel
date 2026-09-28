@@ -14,7 +14,7 @@ test('the app installs to the home screen with its manifest, splash screens and 
     theme_color: '#03272d',
     shortcuts: [
       { name: 'Markets', url: '/markets' },
-      { name: 'My slip', url: '/parlays' },
+      { name: 'My bets', url: '/bets' },
     ],
   })
   expect((await request.get('/site.webmanifest')).status()).toBe(404)

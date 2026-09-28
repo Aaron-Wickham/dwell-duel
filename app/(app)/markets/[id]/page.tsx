@@ -1,7 +1,6 @@
 import { Suspense } from 'react'
-import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
-import { Layers, Trophy } from 'lucide-react'
+import { Ticket, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
@@ -15,9 +14,9 @@ import { chartClosedAt } from '@/lib/markets/market-status'
 import { rowState } from '@/lib/markets/row-state'
 import { readPageParams } from '@/lib/pagination/cursor'
 import { isUuid } from '@/lib/uuid'
-import { getSlipView } from '@/lib/parlays/get-slip'
 import { readSlip } from '@/lib/parlays/slip'
-import { MAX_PICKS, legOddsBp } from '@/lib/parlays/odds'
+import { legOddsBp } from '@/lib/parlays/odds'
+import { MAX_SLIP_PICKS } from '@/lib/parlays/parse-slip'
 import { addToSlipAction, removeFromSlipAction } from '@/lib/parlays/slip-actions'
 import { BackLink } from '@/components/ui/back-link'
 import { LoadingStatus } from '@/components/ui/loading-status'
@@ -28,13 +27,10 @@ import { SectionCard } from '@/components/ui/section-card'
 import { StatusChip } from '@/components/ui/status-chip'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { MarketActionsSkeleton, MarketBetsSkeleton, MarketChartSkeleton } from '@/components/markets/market-detail-skeletons'
-import { MarketSlipProvider } from '@/components/markets/market-slip'
 import { OutcomeRow } from '@/components/markets/outcome-row'
 import { ProbabilityChart } from '@/components/markets/probability-chart'
-import { BetForm } from './bet-form'
 import { MarketBets } from './market-bets'
 import { ResolveForm } from './resolve-form'
-import { SlipDrawer } from './slip-drawer'
 import { VoidButton } from './void-button'
 
 // No loading.tsx for this route (and the markets list's own loading.tsx sits in the (list)
@@ -48,9 +44,8 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   if (!user) redirect('/sign-in')
   if (!isUuid(id)) notFound()
 
-  // The slip is only a cookie, so reading it here costs nothing. Its pick seeds
-  // MarketSlipProvider, which has to sit above both the outcomes and the drawer.
-  const [market, slip] = await Promise.all([getMarket(supabase, id), readSlip()])
+  // The slip is only a cookie, so reading it here costs nothing.
+  const [market, slipEntries] = await Promise.all([getMarket(supabase, id), readSlip()])
   if (!market) notFound()
 
   const odds = computeOdds(market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })))
@@ -65,7 +60,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const now = Date.now()
   const isPastClose = new Date(market.closeAt).getTime() <= now
   const canBet = market.status === 'open' && !isPastClose
-  const marketPick = market.outcomes.find((o) => slip.includes(o.id))?.id ?? null
+  const slip = slipEntries.map((e) => e.outcomeId)
 
   const statusTone =
     market.status === 'resolved' ? 'done' : market.status === 'voided' ? 'void' : isPastClose ? 'wait' : 'open'
@@ -83,65 +78,57 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
 
   return (
     <Page transition="drill-down">
-      {/* Wraps the drawer too (rendered below, outside the Outcomes section) so removing this
-          market's pick from inside it flips the outcome row off in the same transition. */}
-      <MarketSlipProvider pick={marketPick}>
-        <LiveTables subscriptions={pageSubscriptions.marketDetail(market.id)} />
-        <BackLink href="/markets">Markets</BackLink>
+      <LiveTables subscriptions={pageSubscriptions.marketDetail(market.id)} />
+      <BackLink href="/markets">Markets</BackLink>
 
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusChip tone={statusTone}>
-              Status: {market.status === 'open' && isPastClose ? 'awaiting resolution' : market.status}
-            </StatusChip>
-            <span className="text-sm text-ink2">
-              {when}Created by {isCreator ? 'you' : market.creatorName}
-            </span>
-          </div>
-          <h1 className={h1Class}>{market.title}</h1>
-          {market.description && <p className="max-w-[68ch] text-ink2">{market.description}</p>}
-          {market.status === 'resolved' && market.resolvedOutcomeLabel && (
-            <Message tone="ok" icon={Trophy} className="self-start">
-              Winning outcome: {market.resolvedOutcomeLabel}
-            </Message>
-          )}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusChip tone={statusTone}>
+            Status: {market.status === 'open' && isPastClose ? 'awaiting resolution' : market.status}
+          </StatusChip>
+          <span className="text-sm text-ink2">
+            {when}Created by {isCreator ? 'you' : market.creatorName}
+          </span>
         </div>
+        <h1 className={h1Class}>{market.title}</h1>
+        {market.description && <p className="max-w-[68ch] text-ink2">{market.description}</p>}
+        {market.status === 'resolved' && market.resolvedOutcomeLabel && (
+          <Message tone="ok" icon={Trophy} className="self-start">
+            Winning outcome: {market.resolvedOutcomeLabel}
+          </Message>
+        )}
+      </div>
 
-        {/* Each section's fallback carries the same grid placement as the section itself. The
-            four fallbacks announce nothing themselves (SkeletonScreen announce={false});
-            LoadingStatus wraps them in one combined status, scoped to just these four, for as
-            long as any of them is still showing. */}
-        <LoadingStatus>
-          <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-7">
-            <Suspense fallback={<MarketChartSkeleton />}>
-              <MarketChart market={market} odds={odds} now={now} />
-            </Suspense>
-            <Suspense fallback={<MarketActionsSkeleton outcomes={market.outcomes.length} />}>
-              <MarketActions
-                market={market}
-                odds={odds}
-                slip={slip}
-                isCreator={isCreator}
-                isPastClose={isPastClose}
-                canBet={canBet}
-              />
-            </Suspense>
-            <Suspense fallback={<MarketBetsSkeleton />}>
-              <MarketBets
-                market={market}
-                viewerId={user.id}
-                canBet={canBet}
-                page={readPageParams(searchParams, 'bets')}
-                searchParams={searchParams}
-              />
-            </Suspense>
-          </div>
-        </LoadingStatus>
-
-        <Suspense fallback={null}>
-          <MarketSlipDrawer slip={slip} />
-        </Suspense>
-      </MarketSlipProvider>
+      {/* Each section's fallback carries the same grid placement as the section itself. The
+          four fallbacks announce nothing themselves (SkeletonScreen announce={false});
+          LoadingStatus wraps them in one combined status, scoped to just these four, for as
+          long as any of them is still showing. */}
+      <LoadingStatus>
+        <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-7">
+          <Suspense fallback={<MarketChartSkeleton />}>
+            <MarketChart market={market} odds={odds} now={now} />
+          </Suspense>
+          <Suspense fallback={<MarketActionsSkeleton outcomes={market.outcomes.length} />}>
+            <MarketActions
+              market={market}
+              odds={odds}
+              slip={slip}
+              isCreator={isCreator}
+              isPastClose={isPastClose}
+              canBet={canBet}
+            />
+          </Suspense>
+          <Suspense fallback={<MarketBetsSkeleton />}>
+            <MarketBets
+              market={market}
+              viewerId={user.id}
+              canBet={canBet}
+              page={readPageParams(searchParams, 'bets')}
+              searchParams={searchParams}
+            />
+          </Suspense>
+        </div>
+      </LoadingStatus>
     </Page>
   )
 }
@@ -199,7 +186,7 @@ async function MarketActions({
   const showResolve = canResolve || canOverride
 
   const marketInSlip = market.outcomes.some((o) => slip.includes(o.id))
-  const slipFull = slip.length >= MAX_PICKS && !marketInSlip
+  const slipFull = slip.length >= MAX_SLIP_PICKS && !marketInSlip
 
   const closedCopy =
     market.status === 'resolved' ? (
@@ -238,25 +225,32 @@ async function MarketActions({
         className="gap-1 lg:col-start-1 lg:row-start-2"
       >
         {canBet && slipFull && (
-          <Message tone="gold" icon={Layers} id="slip-full-note" className="mt-2">
-            Your slip is full ({MAX_PICKS} picks).{' '}
-            <Link href="/parlays" className="text-inherit">
-              Review slip
-            </Link>
+          <Message tone="gold" icon={Ticket} id="slip-full-note" className="mt-2">
+            Your slip is full ({MAX_SLIP_PICKS} picks). Place or remove some to add more.
           </Message>
         )}
         <ul className="flex flex-col divide-y divide-line">
           {odds.map((o, index) => (
             <li key={o.outcomeId}>
               <OutcomeRow
-                outcomeId={o.outcomeId}
                 label={o.label}
                 poolTotal={o.poolTotal}
                 probability={o.impliedProbability}
                 oddsBp={legOddsBp(totalPool, o.poolTotal)}
                 series={outcomeSeries(market.kind, o.label, index)}
-                state={rowState(o.outcomeId, o.poolTotal, { slip, canBet, slipFull })}
+                state={rowState(o.outcomeId, { slip, canBet, slipFull })}
                 winner={market.status === 'resolved' && o.label === market.resolvedOutcomeLabel}
+                slipPick={{
+                  outcomeId: o.outcomeId,
+                  outcomeLabel: o.label,
+                  marketId: market.id,
+                  marketTitle: market.title,
+                  parlay: false,
+                  open: canBet,
+                  oddsBp: legOddsBp(totalPool, o.poolTotal),
+                  outcomePool: o.poolTotal,
+                  totalPool,
+                }}
                 addAction={addToSlipAction.bind(null, o.outcomeId)}
                 removeAction={removeFromSlipAction.bind(null, o.outcomeId)}
                 disabledReasonId={slipFull ? 'slip-full-note' : undefined}
@@ -268,8 +262,11 @@ async function MarketActions({
 
       <div className="flex flex-col gap-5 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:gap-7">
         {canBet ? (
-          <SectionCard title="Place a bet" titleId="bet-title" className="gap-4">
-            <BetForm marketId={market.id} outcomes={market.outcomes} />
+          <SectionCard title="Place a bet" titleId="bet-title" className="gap-2">
+            <p className="text-ink2">
+              Add an outcome to your slip, then set your stake and place it from the slip. Picks from
+              different markets can be combined into one parlay there.
+            </p>
           </SectionCard>
         ) : (
           <SectionCard title="Betting closed" titleId="closed-title" className="gap-2">
@@ -295,9 +292,4 @@ async function MarketActions({
       </div>
     </ContentReveal>
   )
-}
-
-async function MarketSlipDrawer({ slip }: { slip: string[] }) {
-  const { supabase } = await requireUser()
-  return <SlipDrawer slip={await getSlipView(supabase, slip)} />
 }

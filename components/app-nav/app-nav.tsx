@@ -12,7 +12,6 @@ import { NavPendingHint } from '@/components/nav/nav-pending-hint'
 import { haptics } from '@/lib/haptics'
 import { cn } from '@/lib/utils'
 import { ADMIN_HREF, NAV_ITEMS, activeNavId, type NavId } from './nav-items'
-import { useSlipCount } from './slip-count'
 import { ThemeToggle } from './theme-toggle'
 
 const ICONS: Record<NavId, LucideIcon> = {
@@ -24,10 +23,6 @@ const ICONS: Record<NavId, LucideIcon> = {
   feed: MessageSquareText,
   leaderboard: Trophy,
   admin: ShieldCheck,
-}
-
-function SlipCount({ count }: { count: number }) {
-  return <span className="sr-only">{`(${count})`}</span>
 }
 
 function BalanceChip({ balance }: { balance: number }) {
@@ -48,7 +43,6 @@ function DesktopLink({
   href,
   label,
   active,
-  count = 0,
   icon: Icon,
   iconWithLabel = false,
   transitionTypes,
@@ -56,7 +50,6 @@ function DesktopLink({
   href: string
   label: string
   active: boolean
-  count?: number
   icon: LucideIcon
   iconWithLabel?: boolean
   transitionTypes?: string[]
@@ -82,23 +75,6 @@ function DesktopLink({
       )}
       <Icon aria-hidden="true" className={cn('size-5 xl:size-[18px]', !iconWithLabel && 'xl:hidden')} />
       <span className="max-xl:sr-only">{label}</span>
-      {count > 0 && (
-        <>
-          {' '}
-          <SlipCount count={count} />
-          <span
-            aria-hidden="true"
-            className={cn(
-              'inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-lime px-1.5 text-xs font-extrabold text-on-lime',
-              // Over the icon's corner while the link is icon-only, as on the phone tab bar.
-              'max-xl:absolute max-xl:-top-1 max-xl:-right-1 max-xl:h-5 max-xl:min-w-5 max-xl:border-2 max-xl:border-surface max-xl:px-[5px] max-xl:text-[11px]',
-              active && 'dark:bg-on-primary dark:text-primary',
-            )}
-          >
-            {count}
-          </span>
-        </>
-      )}
       <NavPendingHint className="inset-x-3.5 bottom-1 h-0.5" />
     </Link>
   )
@@ -106,7 +82,6 @@ function DesktopLink({
 
 export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean }) {
   const active = activeNavId(usePathname())
-  const { count: slipCount } = useSlipCount()
 
   return (
     <MotionConfig reducedMotion="user">
@@ -132,7 +107,6 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
               label={item.label}
               icon={ICONS[item.id]}
               active={active === item.id}
-              count={item.id === 'parlays' ? slipCount : 0}
             />
           ))}
           {isAdmin && (
@@ -192,7 +166,6 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
         {NAV_ITEMS.map((item) => {
           const Icon = ICONS[item.id]
           const isActive = active === item.id
-          const count = item.id === 'parlays' ? slipCount : 0
           return (
             <Link
               key={item.id}
@@ -212,24 +185,8 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
                 )}
               >
                 <Icon aria-hidden="true" className="size-[22px]" />
-                {count > 0 && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute -top-1.5 right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-surface bg-primary px-[5px] text-[11px] font-extrabold text-on-primary"
-                  >
-                    {count}
-                  </span>
-                )}
               </span>
-              <span>
-                {item.shortLabel}
-                {count > 0 && (
-                  <>
-                    {' '}
-                    <SlipCount count={count} />
-                  </>
-                )}
-              </span>
+              <span>{item.shortLabel}</span>
               <NavPendingHint className="bottom-0.5 left-1/2 h-0.5 w-5 -translate-x-1/2" />
             </Link>
           )

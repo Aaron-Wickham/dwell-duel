@@ -6,6 +6,8 @@ import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { getMarket, type MarketDetail } from '@/lib/markets/get-market'
+import { getResolutionProof } from '@/lib/markets/resolution-proof'
+import { ProofList } from '@/components/proof/proof-list'
 import { getChartBets } from '@/lib/markets/chart-bets'
 import { buildProbabilitySeries } from '@/lib/markets/probability-series'
 import { computeOdds, effectivePools, type OutcomeOdds } from '@/lib/markets/odds'
@@ -48,6 +50,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // The slip is only a cookie, so reading it here costs nothing.
   const [market, slipEntries] = await Promise.all([getMarket(supabase, id), readSlip()])
   if (!market) notFound()
+  const resolution = market.status === 'resolved' ? await getResolutionProof(supabase, market.id) : null
 
   const odds = computeOdds(
     market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })),
@@ -100,6 +103,21 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           <Message tone="ok" icon={Trophy} className="self-start">
             Winning outcome: {market.resolvedOutcomeLabel}
           </Message>
+        )}
+        {resolution && (resolution.note || resolution.proof.length > 0 || resolution.previous) && (
+          <section aria-label="Why it resolved this way" className="flex max-w-[68ch] flex-col gap-3">
+            {resolution.note && <p className="whitespace-pre-line break-words">{resolution.note}</p>}
+            <ProofList proof={resolution.proof} label="Resolution proof" />
+            {resolution.previous && (
+              <div className="flex flex-col gap-2 text-sm text-ink2">
+                <p>
+                  Changed from <strong className="text-ink">{resolution.previous.outcomeLabel}</strong>
+                  {resolution.previous.note ? <>. Earlier reason: “{resolution.previous.note}”</> : '.'}
+                </p>
+                <ProofList proof={resolution.previous.proof} label="Earlier resolution proof" />
+              </div>
+            )}
+          </section>
         )}
       </div>
 

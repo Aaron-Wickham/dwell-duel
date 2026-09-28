@@ -32,7 +32,7 @@ describe('getMarket', () => {
       .from('markets')
       .update({ close_at: new Date(Date.now() - 1000).toISOString() })
       .eq('id', marketId)
-    const { error } = await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    const { error } = await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
     if (error) throw error
 
     const { data: resolution, error: resolutionErr } = await serviceClient()

@@ -21,6 +21,7 @@ export async function createTaskAction(_prevState: ActionState, formData: FormDa
   const rewardAmount = Number(formData.get('reward_amount'))
   const isRepeatable = formData.get('is_repeatable') === 'on'
   const period = String(formData.get('period') ?? '')
+  const proofRequired = formData.get('proof_required') === 'on'
 
   if (!title) return { formError: 'Enter a title.', field: 'title' }
   if (title.length > TEXT_LIMITS.taskTitle) return { formError: tooLong('Title', TEXT_LIMITS.taskTitle), field: 'title' }
@@ -40,6 +41,7 @@ export async function createTaskAction(_prevState: ActionState, formData: FormDa
     reward_amount: rewardAmount,
     is_repeatable: isRepeatable,
     period: isRepeatable ? period : null,
+    proof_required: proofRequired,
   })
 
   if (error) return { formError: error.message }

@@ -100,6 +100,7 @@ describe('listMyParlays', () => {
     expect(placeErr).toBeNull()
 
     const { error: resolveErr } = await aliceClient.rpc('resolve_market', {
+      p_note: 'Resolved in a test',
       p_market_id: a.marketId,
       p_outcome_id: a.outcomeIds[0],
     })

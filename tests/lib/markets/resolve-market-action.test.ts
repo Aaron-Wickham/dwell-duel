@@ -6,9 +6,10 @@ vi.mock('next/cache', () => ({ revalidatePath }))
 
 import { resolveMarketAction } from '@/lib/markets/resolve-market'
 
-function outcomeForm(outcomeId: string) {
+function outcomeForm(outcomeId: string, note = 'Final score 3–1') {
   const form = new FormData()
   form.set('outcome_id', outcomeId)
+  form.set('note', note)
   return form
 }
 
@@ -26,10 +27,16 @@ describe('resolveMarketAction', () => {
 
     const state = await resolveMarketAction('market-1', undefined, outcomeForm('outcome-2'))
 
-    expect(supabase.rpc).toHaveBeenCalledWith('resolve_market', { p_market_id: 'market-1', p_outcome_id: 'outcome-2' })
+    expect(supabase.rpc).toHaveBeenCalledWith('resolve_market', {
+      p_market_id: 'market-1',
+      p_outcome_id: 'outcome-2',
+      p_note: 'Final score 3–1',
+      p_attachments: [],
+    })
     expect(state).toEqual({
       formError:
         'Can’t override: Bob has already spent 40 of 60 DC won on this market. Adjust their balances first if you still want to override.',
+      field: 'outcome',
     })
     expect(revalidatePath).not.toHaveBeenCalled()
   })
@@ -39,7 +46,21 @@ describe('resolveMarketAction', () => {
 
     const state = await resolveMarketAction('market-1', undefined, outcomeForm('outcome-2'))
 
-    expect(state).toEqual({ formError: 'only an admin can change an already-resolved market' })
+    expect(state).toEqual({ formError: 'only an admin can change an already-resolved market', field: 'outcome' })
+  })
+
+  it('requires a note saying why, without calling the database', async () => {
+    const state = await resolveMarketAction('market-1', undefined, outcomeForm('outcome-1', '   '))
+    expect(state).toEqual({ formError: 'Say why this outcome won.', field: 'note' })
+    expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+
+  it('passes the attached proof records through', async () => {
+    supabase.rpc.mockResolvedValue({ data: null, error: null })
+    const form = outcomeForm('outcome-1')
+    form.set('attachments', JSON.stringify([{ kind: 'link', url: 'https://example.com/replay' }]))
+    await resolveMarketAction('market-1', undefined, form)
+    expect(supabase.rpc).toHaveBeenCalledWith('resolve_market', expect.objectContaining({ p_attachments: [{ kind: 'link', url: 'https://example.com/replay' }] }))
   })
 
   it('refreshes the layout when the resolution goes through', async () => {

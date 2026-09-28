@@ -18,6 +18,7 @@ export async function updateTaskAction(taskId: string, _prevState: ActionState, 
     .trim()
   const rewardAmount = Number(formData.get('reward_amount'))
   const isActive = formData.get('is_active') === 'on'
+  const proofRequired = formData.get('proof_required') === 'on'
 
   if (!title) return { formError: 'Enter a title.', field: 'title' }
   if (title.length > TEXT_LIMITS.taskTitle) return { formError: tooLong('Title', TEXT_LIMITS.taskTitle), field: 'title' }
@@ -30,7 +31,7 @@ export async function updateTaskAction(taskId: string, _prevState: ActionState, 
 
   const { error } = await supabase
     .from('tasks')
-    .update({ title, description: description || null, reward_amount: rewardAmount, is_active: isActive })
+    .update({ title, description: description || null, reward_amount: rewardAmount, is_active: isActive, proof_required: proofRequired })
     .eq('id', taskId)
 
   if (error) return { formError: error.message }

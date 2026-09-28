@@ -45,6 +45,10 @@ export function CreateTaskForm() {
         />
       </Field>
       <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
+        <input name="proof_required" type="checkbox" className="m-0 size-[22px] accent-primary" />
+        Require proof
+      </label>
+      <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
         <input
           name="is_repeatable"
           type="checkbox"

@@ -87,7 +87,7 @@ describe('listAllTransactions', () => {
     expect(betErr).toBeNull()
 
     // Admin created and can resolve immediately, since an admin caller skips the close_at wait.
-    const { error: resolveErr } = await adminClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    const { error: resolveErr } = await adminClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
     expect(resolveErr).toBeNull()
 
     const { rows } = await listAllTransactions(adminClient, FIRST)

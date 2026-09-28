@@ -40,7 +40,7 @@ describe('void_market', () => {
       .from('markets')
       .update({ close_at: new Date(Date.now() - 1000).toISOString() })
       .eq('id', marketId)
-    await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
 
     const { error } = await aliceClient.rpc('void_market', { p_market_id: marketId })
     expect(error).not.toBeNull()

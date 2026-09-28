@@ -16,6 +16,7 @@ const event: FeedEvent = {
   amount: 5,
   legCount: null,
   taskTitle: null,
+  resolutionNote: null,
 }
 
 describe('FeedList', () => {

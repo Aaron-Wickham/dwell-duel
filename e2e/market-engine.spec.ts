@@ -20,7 +20,13 @@ test('create a market, place a bet, and resolve it as admin', async ({ page }) =
   // The seeded session is promoted to admin (e2e/global-setup.ts), so it
   // can resolve immediately without waiting for close_at.
   await page.getByRole('combobox').last().selectOption({ label: 'Yes' })
+  await page.getByLabel('Why did this outcome win?').fill('The forecast said 90% and it poured')
+  await page.getByLabel('Link').fill('https://example.com/weather-report')
+  await page.getByRole('button', { name: 'Add link' }).click()
   await page.getByRole('button', { name: 'Confirm outcome' }).click()
 
   await expect(page.getByText('Status: resolved')).toBeVisible()
+  const why = page.getByRole('region', { name: 'Why it resolved this way' })
+  await expect(why.getByText('The forecast said 90% and it poured')).toBeVisible()
+  await expect(why.getByRole('link', { name: 'example.com/weather-report' })).toHaveAttribute('href', 'https://example.com/weather-report')
 })

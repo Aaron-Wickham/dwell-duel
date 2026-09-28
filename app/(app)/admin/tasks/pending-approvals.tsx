@@ -14,6 +14,7 @@ import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { EmptyState } from '@/components/ui/empty-state'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
+import { ProofList } from '@/components/proof/proof-list'
 import { ReviewButtons } from './review-buttons'
 
 const BULK_FORM_ID = 'bulk-review-form'
@@ -79,6 +80,12 @@ export function PendingApprovals({ pending }: { pending: PendingRow[] }) {
                       <span className="font-extrabold text-gold">({c.rewardAmount} DC)</span>
                     </p>
                     <p className="text-sm text-ink2">Submitted {c.submittedAge}</p>
+                    {c.note && <p className="mt-2 whitespace-pre-line break-words">“{c.note}”</p>}
+                    {c.proof.length > 0 && (
+                      <div className="mt-2">
+                        <ProofList proof={c.proof} label={`${c.submitterName}’s proof`} />
+                      </div>
+                    )}
                   </div>
                 </div>
                 <ReviewButtons completionId={c.id} />

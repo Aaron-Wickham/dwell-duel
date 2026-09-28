@@ -15,7 +15,8 @@ type Expression = Pick<Policy, 'tablename' | 'policyname' | 'cmd' | 'qual' | 'wi
 
 // pg_policies as the latest migration leaves them: 0032's policies, unchanged apart from 0033's
 // (select …) wraps, plus 0035's new policy on activity_events, 0037's on cancelled_bets, and
-// 0040's role changes (new profiles start as members; reviewers read every completion).
+// 0040's role changes (new profiles start as members; reviewers read every completion), and
+// 0042's proof_attachments.
 const POLICIES_NOW: Expression[] = [
   { tablename: 'activity_events', policyname: 'select_activity_events', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   { tablename: 'allowed_emails', policyname: 'admin_delete_invites', cmd: 'DELETE', qual: 'is_admin()', with_check: null },
@@ -42,6 +43,13 @@ const POLICIES_NOW: Expression[] = [
     qual: null,
     with_check:
       "((id = ( SELECT auth.uid() AS uid)) AND is_invited() AND (balance = 0) AND (role = 'member'::text) AND (lower(email) = lower((( SELECT auth.jwt() AS jwt) ->> 'email'::text))))",
+  },
+  {
+    tablename: 'proof_attachments',
+    policyname: 'select_proof_attachments',
+    cmd: 'SELECT',
+    qual: "(((task_completion_id IS NOT NULL) AND (EXISTS ( SELECT 1\n   FROM task_completions c\n  WHERE ((c.id = proof_attachments.task_completion_id) AND ((c.profile_id = ( SELECT auth.uid() AS uid)) OR has_role('reviewer'::text)))))) OR ((resolution_id IS NOT NULL) AND is_invited()))",
+    with_check: null,
   },
   { tablename: 'profiles', policyname: 'select_all_profiles', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   {

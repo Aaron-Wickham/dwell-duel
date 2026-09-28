@@ -57,7 +57,14 @@ function legacyToFeedEvent(r: LegacyFeedRow): FeedEvent {
     amount: r.amount,
     legCount: r.leg_count,
     taskTitle: r.task_title,
+    resolutionNote: null,
   }
+}
+
+// The legacy view predates resolution notes (0042), so the comparison is of everything else;
+// the note itself is checked on its own below.
+function withoutNotes<T extends { rows: FeedEvent[] }>(page: T): T {
+  return { ...page, rows: page.rows.map((e) => ({ ...e, resolutionNote: null })) }
 }
 
 async function legacyListFeed(
@@ -119,6 +126,7 @@ async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: num
 
 async function resolve(market: TestMarket, outcomeIndex: number): Promise<void> {
   const { error } = await aliceClient.rpc('resolve_market', {
+    p_note: 'Resolved in a test',
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcomeIndex],
   })
@@ -173,12 +181,13 @@ describe('listFeed vs the pre-activity_events view', () => {
     const legacyAll = await legacyListFeed(serviceClient(), { page: NO_PAGE })
     expect(viewerAll.rows.length).toBe(50)
     expect(viewerAll.next).not.toBeNull()
-    expect(viewerAll).toEqual(legacyAll)
+    expect(withoutNotes(viewerAll)).toEqual(legacyAll)
+    expect(viewerAll.rows.filter((e) => e.kind === 'market_resolved').every((e) => e.resolutionNote === 'Resolved in a test')).toBe(true)
 
     const viewerActor = await listFeed(bobClient, { actorId: bob.id, page: NO_PAGE })
     const legacyActor = await legacyListFeed(serviceClient(), { actorId: bob.id, page: NO_PAGE })
     expect(viewerActor.rows.length).toBeGreaterThan(0)
-    expect(viewerActor).toEqual(legacyActor)
+    expect(withoutNotes(viewerActor)).toEqual(legacyActor)
 
     // The cursor means "down to and including this row", read through the same
     // showMoreHref/readPageParams round trip a real "Show more" link uses.
@@ -187,7 +196,7 @@ describe('listFeed vs the pre-activity_events view', () => {
     const viewerPage2 = await listFeed(bobClient, { page: page2 })
     const legacyPage2 = await legacyListFeed(serviceClient(), { page: page2 })
     expect(viewerPage2.rows.length).toBeGreaterThan(0)
-    expect(viewerPage2).toEqual(legacyPage2)
+    expect(withoutNotes(viewerPage2)).toEqual(legacyPage2)
 
     const dave = await makeMember('Dave')
     const daveClient = await clientFor(dave)

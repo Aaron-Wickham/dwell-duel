@@ -13,7 +13,10 @@ export function PendingReviewChip() {
   )
 }
 
-export type TaskRowState = { kind: 'pending' } | { kind: 'approved' } | { kind: 'available'; rejectionNote?: string | null }
+export type TaskRowState =
+  | { kind: 'pending'; proofCount?: number }
+  | { kind: 'approved' }
+  | { kind: 'available'; rejectionNote?: string | null }
 
 export function TaskRow({
   title,
@@ -21,6 +24,7 @@ export function TaskRow({
   description,
   cadence,
   state,
+  proofRequired = false,
   action,
 }: {
   title: string
@@ -28,6 +32,7 @@ export function TaskRow({
   description: string | null
   cadence?: string | null
   state: TaskRowState
+  proofRequired?: boolean
   action?: ReactNode
 }) {
   return (
@@ -36,7 +41,7 @@ export function TaskRow({
         <p className={h3Class}>
           {title} — <span className="text-gold">{rewardAmount} DC</span>
         </p>
-        {(description || cadence) && (
+        {(description || cadence || proofRequired) && (
           <p className="flex flex-wrap items-center gap-1 text-sm text-ink2">
             {description}
             {cadence && (
@@ -44,11 +49,25 @@ export function TaskRow({
                 {cadence}
               </span>
             )}
+            {proofRequired && (
+              <span className="inline-flex h-6 items-center whitespace-nowrap rounded-full bg-sunk px-[9px] text-xs font-extrabold text-ink2">
+                Proof required
+              </span>
+            )}
           </p>
         )}
       </div>
       <div className="flex min-h-11 shrink-0 flex-col items-start justify-center gap-1.5">
-        {state.kind === 'pending' && <PendingReviewChip />}
+        {state.kind === 'pending' && (
+          <>
+            <PendingReviewChip />
+            {Boolean(state.proofCount) && (
+              <p className="text-sm text-ink2">
+                Sent with {state.proofCount} {state.proofCount === 1 ? 'attachment' : 'attachments'}
+              </p>
+            )}
+          </>
+        )}
         {state.kind === 'approved' && (
           <StatusChip tone="open">
             <Check aria-hidden="true" className="size-4" />

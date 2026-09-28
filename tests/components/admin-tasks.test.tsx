@@ -42,6 +42,8 @@ const PENDING: PendingRow[] = [
     rewardAmount: 10,
     submittedAt: '2026-09-25T09:00:00Z',
     submittedAge: '1h ago',
+    note: null,
+    proof: [],
   },
   {
     id: 'c2',
@@ -51,6 +53,8 @@ const PENDING: PendingRow[] = [
     rewardAmount: 25,
     submittedAt: '2026-09-24T10:00:00Z',
     submittedAge: '1d ago',
+    note: null,
+    proof: [],
   },
 ]
 
@@ -62,6 +66,7 @@ const GENESIS: TaskSummary = {
   isRepeatable: false,
   period: null,
   isActive: true,
+  proofRequired: false,
 }
 
 function rowCheckboxes() {

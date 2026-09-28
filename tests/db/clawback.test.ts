@@ -41,7 +41,7 @@ async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: num
 }
 
 async function resolve(market: TestMarket, outcomeIndex: number) {
-  return aliceClient.rpc('resolve_market', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[outcomeIndex] })
+  return aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: market.marketId, p_outcome_id: market.outcomeIds[outcomeIndex] })
 }
 
 async function balanceOf(member: Member): Promise<number> {
@@ -219,7 +219,7 @@ describe('resolve_market and void_market lock order', () => {
   const memberLoops = (def: string) => def.match(/for v_(?:txn|bet) in\s+select[\s\S]*?\bloop\b/g) ?? []
 
   it('credits and debits members in profile order, so concurrent resolutions cannot deadlock', async () => {
-    const resolveLoops = memberLoops(await definition('resolve_market(uuid,uuid)'))
+    const resolveLoops = memberLoops(await definition('resolve_market_core(uuid,uuid)'))
     const voidLoops = memberLoops(await definition('void_market(uuid)'))
 
     expect(resolveLoops).toHaveLength(3)
@@ -235,7 +235,7 @@ describe('resolve_market and void_market lock order', () => {
   const upfrontLock = /perform 1 from public\.profiles where id in \(\s*[\s\S]*?\) order by id for no key update;/
 
   it('locks every profile it could touch, in id order, in one statement before any write', async () => {
-    const resolveDef = await definition('resolve_market(uuid,uuid)')
+    const resolveDef = await definition('resolve_market_core(uuid,uuid)')
     const voidDef = await definition('void_market(uuid)')
 
     expect(resolveDef).toMatch(upfrontLock)
@@ -254,6 +254,6 @@ describe('resolve_market and void_market lock order', () => {
   // The clawback block re-locks the owing members. It must use the same NO KEY UPDATE strength:
   // upgrading to FOR UPDATE would wait on other transactions' foreign-key KEY SHARE locks again.
   it('locks owing members in the clawback block with NO KEY UPDATE', async () => {
-    expect(await definition('resolve_market(uuid,uuid)')).toMatch(/for no key update of p/)
+    expect(await definition('resolve_market_core(uuid,uuid)')).toMatch(/for no key update of p/)
   })
 })

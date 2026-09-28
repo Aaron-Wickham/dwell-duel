@@ -38,6 +38,7 @@ const TASK: TaskSummary = {
   isRepeatable: false,
   period: null,
   isActive: true,
+  proofRequired: false,
 }
 
 beforeEach(() => {

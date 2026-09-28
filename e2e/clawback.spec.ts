@@ -47,6 +47,7 @@ test('an override is blocked, naming the member who has spent their winnings', a
 
   await page.reload()
   await page.getByLabel('Winning outcome').selectOption({ label: 'Yes' })
+  await page.getByLabel('Why did this outcome win?').fill('Checked against the recording')
   await page.getByRole('button', { name: 'Confirm outcome' }).click()
   await expect(page.getByText('Status: resolved')).toBeVisible()
 
@@ -61,6 +62,7 @@ test('an override is blocked, naming the member who has spent their winnings', a
 
   await page.goto(marketPath)
   await page.getByLabel('Winning outcome').selectOption({ label: 'No' })
+  await page.getByLabel('Why did this outcome win?').fill('Checked against the recording')
   await page.getByRole('button', { name: 'Confirm outcome' }).click()
 
   await expect(

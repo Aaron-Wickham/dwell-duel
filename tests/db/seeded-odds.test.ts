@@ -28,7 +28,7 @@ async function bet(client: SupabaseClient, m: TestMarket, i: number, amount: num
 }
 
 async function resolve(m: TestMarket, i: number) {
-  const { error } = await aliceClient.rpc('resolve_market', { p_market_id: m.marketId, p_outcome_id: m.outcomeIds[i] })
+  const { error } = await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: m.marketId, p_outcome_id: m.outcomeIds[i] })
   if (error) throw error
 }
 

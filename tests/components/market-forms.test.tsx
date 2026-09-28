@@ -7,6 +7,7 @@ const { resolveMarketAction } = vi.hoisted(() => ({
   resolveMarketAction: vi.fn(),
 }))
 vi.mock('@/lib/markets/resolve-market', () => ({ resolveMarketAction }))
+vi.mock('@/lib/proof/upload', () => ({ uploadProof: async () => [], discardProof: async () => {} }))
 
 import { ResolveForm } from '@/app/(app)/markets/[id]/resolve-form'
 
@@ -32,6 +33,7 @@ describe('ResolveForm', () => {
     resolveMarketAction.mockResolvedValue({ formError: 'market not found' })
     render(<ResolveForm marketId="m1" outcomes={outcomes} />)
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Winning outcome' }), 'Yes')
+    await userEvent.type(screen.getByLabelText('Why did this outcome win?'), 'Final score 3–1')
     await userEvent.click(screen.getByRole('button', { name: 'Confirm outcome' }))
 
     const alert = await screen.findByRole('alert')
@@ -40,5 +42,18 @@ describe('ResolveForm', () => {
     expect(select).toHaveAttribute('aria-invalid', 'true')
     expect(select).toHaveAccessibleDescription('market not found')
     expect(resolveMarketAction.mock.calls[0][2].get('outcome_id')).toBe('o-yes')
+    expect(resolveMarketAction.mock.calls[0][2].get('note')).toBe('Final score 3–1')
+  })
+
+  it('ties a note error to the note, not the outcome', async () => {
+    resolveMarketAction.mockResolvedValue({ formError: 'Say why this outcome won.', field: 'note' })
+    render(<ResolveForm marketId="m1" outcomes={outcomes} />)
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Winning outcome' }), 'Yes')
+    await userEvent.type(screen.getByLabelText('Why did this outcome win?'), ' ')
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm outcome' }))
+
+    await screen.findByRole('alert')
+    expect(screen.getByLabelText('Why did this outcome win?')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('combobox', { name: 'Winning outcome' })).toHaveAttribute('aria-invalid', 'false')
   })
 })

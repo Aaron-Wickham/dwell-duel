@@ -138,6 +138,17 @@ describe('MarketsPage', () => {
     expect(screen.getByRole('article', { name: /Market 9/ })).toHaveAttribute('id', `market-closed-${market(9, 'voided').id}`)
   })
 
+  it('drops the open copy of a market that resolved between the two reads, keeping only the closed card', async () => {
+    const resolved = market(1, 'resolved')
+    await renderPage({ rows: [market(1, 'open')], next: null, windowed: false }, { rows: [resolved], next: null, windowed: false })
+
+    const cards = screen.getAllByRole('article', { name: /Market 1/ })
+    expect(cards).toHaveLength(1)
+    expect(cards[0]).toHaveAttribute('id', `market-closed-${resolved.id}`)
+    expect(document.querySelectorAll(`#market-closed-${resolved.id}`)).toHaveLength(1)
+    expect(document.getElementById(`market-open-${resolved.id}`)).toBeNull()
+  })
+
   it('shows Back to newest above each windowed list, leaving the other list’s position alone', async () => {
     await renderPage(
       { rows: [market(1, 'open')], next: null, windowed: true },

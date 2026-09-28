@@ -40,17 +40,24 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     listOpenMarkets(supabase, readPageParams(searchParams, 'open')),
     listClosedMarkets(supabase, readPageParams(searchParams, 'resolved')),
   ])
+  // A market can resolve or void between the two concurrent reads above, and then come back from
+  // both. It only ever moves from open to closed, so the closed copy is the fresher one: the open
+  // copy is dropped rather than rendering the market twice, with duplicate React keys and
+  // duplicate `market-closed-*` DOM/title ids.
   const closedIds = new Set(closed.rows.map((m) => m.id))
-  const markets = [...open.rows, ...closed.rows]
+  const markets = [
+    ...open.rows.filter((m) => !closedIds.has(m.id)).map((m) => [m, OPEN_ROW_ID_PREFIX] as const),
+    ...closed.rows.map((m) => [m, CLOSED_ROW_ID_PREFIX] as const),
+  ]
   const sparklinesByMarket = await readSparklines(
     supabase,
-    markets.map((m) => m.id),
+    markets.map(([m]) => m.id),
   )
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now()
   const now = new Date(nowMs)
 
-  const cards = markets.map((market) => {
+  const cards = markets.map(([market, prefix]) => {
     const odds = computeOdds(market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })))
     const points = sparklinesByMarket.get(market.id) ?? []
     const chart: MarketCardChart | undefined =
@@ -79,7 +86,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       })),
       resolvedOutcomeLabel: market.resolvedOutcomeLabel,
       chart,
-      domId: rowDomId(closedIds.has(market.id) ? CLOSED_ROW_ID_PREFIX : OPEN_ROW_ID_PREFIX, market.id),
+      domId: rowDomId(prefix, market.id),
     }
   })
 

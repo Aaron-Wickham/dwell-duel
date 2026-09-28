@@ -112,7 +112,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
             {when}Created by {isCreator ? 'you' : market.creatorName}
           </span>
         </div>
-        <h1 className={h1Class}>{market.title}</h1>
+        <h1 className={`${h1Class} break-words`}>{market.title}</h1>
         {creatorStake && (
           <p className="text-sm font-bold text-ink2">
             {isCreator ? creatorStake.replace('Creator has', 'You have').replace('Creator had', 'You had') : creatorStake}
@@ -296,9 +296,13 @@ async function MarketActions({
     : market.status !== 'open'
       ? `${youAre} This market can only be deleted now.`
       : canResolve
-        ? isCreator
-          ? 'You created this market, and it has closed. Reviewers and admins can resolve it too.'
-          : `${youAre} This market has closed and is waiting for a result.`
+        ? hasStake
+          ? `${youAre} You have a stake in this market, but an admin can still resolve it.`
+          : canBet
+            ? `${youAre} An admin can resolve a market before it closes.`
+            : isCreator
+              ? 'You created this market, and it has closed. Reviewers and admins can resolve it too.'
+              : `${youAre} This market has closed and is waiting for a result.`
         : isCreator && hasStake
           ? 'You bet on this market, so a reviewer or an admin resolves it.'
           : isCreator
@@ -376,7 +380,12 @@ async function MarketActions({
             <p className="text-sm text-ink2">{manageHint}</p>
             <div className="mt-3 flex flex-col gap-4">
               {showResolve && (
-                <ResolveForm marketId={market.id} outcomes={market.outcomes} line={market.kind === 'over_under' ? market.line : null} />
+                <ResolveForm
+                  marketId={market.id}
+                  outcomes={market.outcomes}
+                  line={market.kind === 'over_under' ? market.line : null}
+                  override={canOverride}
+                />
               )}
               {canVoid && (
                 <VoidButton marketId={market.id} className={showResolve ? 'border-t border-line pt-4' : undefined} />

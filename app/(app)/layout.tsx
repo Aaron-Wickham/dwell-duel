@@ -11,6 +11,7 @@ import { LiveTablesProvider } from '@/components/live/live-tables'
 import { NavDepthTracker } from '@/lib/nav/nav-depth'
 import { Toaster } from '@/components/ui/toaster'
 import { OfflineBanner } from '@/components/offline/offline-banner'
+import { FALLBACK_NAME } from '@/lib/profile/fallback-name'
 
 export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   const { supabase, user } = await requireUser()
@@ -22,17 +23,21 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
     readSlip(),
   ])
   if (error) throw error
-  if (!profile) return children
   const slipView = await getSlipView(supabase, slip, user.id)
 
   return (
     <LiveTablesProvider userId={user.id}>
       <SlipProvider view={slipView}>
         <NavDepthTracker />
+        {/* A missing profile row still gets the nav and <main>, so the page isn't stranded without them. */}
         <AppNav
-          balance={profile.balance}
+          balance={profile?.balance ?? 0}
           adminHref={adminHref(role)}
-          me={{ id: user.id, name: profile.display_name, avatarSrc: avatarUrl(profile.avatar_path) }}
+          me={{
+            id: user.id,
+            name: profile?.display_name ?? FALLBACK_NAME,
+            avatarSrc: avatarUrl(profile?.avatar_path),
+          }}
         />
         <main id="main" className="flex flex-1 flex-col pb-[calc(82px+var(--safe-bottom))] md:pb-0">
           <OfflineBanner />

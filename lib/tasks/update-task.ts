@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { rewardError } from './limits'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
+import { friendlyError } from '@/lib/errors/friendly-error'
+import { TASK_ERRORS } from './task-errors'
 
 export type ActionState = { formError?: string; field?: 'title' | 'description' | 'reward_amount' } | undefined
 
@@ -34,7 +36,7 @@ export async function updateTaskAction(taskId: string, _prevState: ActionState, 
     .update({ title, description: description || null, reward_amount: rewardAmount, is_active: isActive, proof_required: proofRequired })
     .eq('id', taskId)
 
-  if (error) return { formError: error.message }
+  if (error) return friendlyError(error, TASK_ERRORS, 'Updating a task failed')
 
   revalidatePath('/admin/tasks')
   return undefined

@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { rewardError } from './limits'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
+import { friendlyError } from '@/lib/errors/friendly-error'
+import { CREATE_TASK_ERRORS } from './task-errors'
 
 export type ActionState = { formError?: string; field?: 'title' | 'description' | 'reward_amount' | 'period' } | undefined
 
@@ -44,7 +46,7 @@ export async function createTaskAction(_prevState: ActionState, formData: FormDa
     proof_required: proofRequired,
   })
 
-  if (error) return { formError: error.message }
+  if (error) return friendlyError(error, CREATE_TASK_ERRORS, 'Creating a task failed')
 
   revalidatePath('/admin/tasks')
   return undefined

@@ -48,6 +48,7 @@ test('an override is blocked, naming the member who has spent their winnings', a
   await page.reload()
   await page.getByLabel('Winning outcome').selectOption({ label: 'Yes' })
   await page.getByLabel('Why did this outcome win?').fill('Checked against the recording')
+  await page.getByRole('button', { name: 'Resolve market' }).click()
   await page.getByRole('button', { name: 'Confirm outcome' }).click()
   await expect(page.getByText('Status: resolved')).toBeVisible()
 
@@ -58,11 +59,14 @@ test('an override is blocked, naming the member who has spent their winnings', a
   await bobRow.getByLabel('Amount').fill(String(20 - afterWin.balance))
   await bobRow.getByLabel('Reason').fill('Spent elsewhere')
   await bobRow.getByRole('button', { name: 'Adjust Bob' }).click()
+  await page.getByRole('alertdialog', { name: 'Adjust Bob’s balance?' }).getByRole('button', { name: 'Adjust balance' }).click()
   await expect(bobRow.getByText('20 DC', { exact: true })).toBeVisible()
 
   await page.goto(marketPath)
   await page.getByLabel('Winning outcome').selectOption({ label: 'No' })
   await page.getByLabel('Why did this outcome win?').fill('Checked against the recording')
+  await page.getByRole('button', { name: 'Override resolution' }).click()
+  await expect(page.getByRole('alertdialog', { name: 'Override the resolution?' })).toContainText('previous payouts are reversed')
   await page.getByRole('button', { name: 'Confirm outcome' }).click()
 
   await expect(

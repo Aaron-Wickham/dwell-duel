@@ -48,5 +48,15 @@ export async function GET(request: Request) {
     return new NextResponse('Proof cleanup failed', { status: 502 })
   }
 
+  // A key only has to outlive a retry of the same attempt (#61), so a day is plenty.
+  const { error: keysErr } = await db
+    .from('idempotency_keys')
+    .delete()
+    .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+  if (keysErr) {
+    console.error(keysErr)
+    return new NextResponse('Key cleanup failed', { status: 502 })
+  }
+
   return NextResponse.json({ ok: true, strayProofRemoved: names.length })
 }

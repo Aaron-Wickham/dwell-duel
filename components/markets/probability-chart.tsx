@@ -49,7 +49,9 @@ const GRID = [100, 75, 50, 25, 0]
 const PHONE = { height: 220, gap: 40 }
 const DESKTOP = { height: 300, gap: 48 }
 const LABEL_PAD = 20
-const EMPTY_TEXT = 'No bets yet — the chart starts with the first bet.'
+// A seeded market's series always has its opening point (0041), so only a market that closed
+// before seeding, with no bets on it, has nothing to draw.
+const EMPTY_TEXT = 'No bets were placed on this market.'
 
 type Row = { t: number } & Record<string, number>
 

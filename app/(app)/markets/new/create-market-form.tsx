@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Field, Input, Textarea } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { keepCheckedOnReset } from '@/lib/forms/keep-on-reset'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { cn } from '@/lib/utils'
 import { createMarketAction, type ActionState } from '@/lib/markets/create-market'
@@ -21,9 +22,12 @@ const toggleClass = (on: boolean) =>
   )
 
 export function CreateMarketForm() {
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [kind, setKind] = useState<MarketKind>('binary')
   const [outcomes, setOutcomes] = useState(['', ''])
-  const [closeAtIso, setCloseAtIso] = useState('')
+  const [line, setLine] = useState('')
+  const [closeAt, setCloseAt] = useState('')
   const [state, formAction] = useActionState<ActionState, FormData>(createMarketAction, undefined)
 
   function updateOutcome(index: number, value: string) {
@@ -52,6 +56,8 @@ export function CreateMarketForm() {
           id="cm-title"
           name="title"
           required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
           maxLength={TEXT_LIMITS.marketTitle}
           aria-invalid={state?.field === 'title'}
           aria-describedby={state?.field === 'title' ? 'create-market-error' : undefined}
@@ -62,6 +68,8 @@ export function CreateMarketForm() {
         <Textarea
           id="cm-desc"
           name="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           maxLength={TEXT_LIMITS.marketDescription}
           aria-invalid={state?.field === 'description'}
           aria-describedby={state?.field === 'description' ? 'create-market-error' : undefined}
@@ -77,6 +85,7 @@ export function CreateMarketForm() {
               name="kind"
               value="binary"
               checked={kind === 'binary'}
+              ref={keepCheckedOnReset(kind === 'binary')}
               onChange={() => setKind('binary')}
               className="size-[18px] accent-primary"
             />
@@ -88,6 +97,7 @@ export function CreateMarketForm() {
               name="kind"
               value="multiple_choice"
               checked={kind === 'multiple_choice'}
+              ref={keepCheckedOnReset(kind === 'multiple_choice')}
               onChange={() => setKind('multiple_choice')}
               className="size-[18px] accent-primary"
             />
@@ -99,6 +109,7 @@ export function CreateMarketForm() {
               name="kind"
               value="over_under"
               checked={kind === 'over_under'}
+              ref={keepCheckedOnReset(kind === 'over_under')}
               onChange={() => setKind('over_under')}
               className="size-[18px] accent-primary"
             />
@@ -126,6 +137,8 @@ export function CreateMarketForm() {
             step="0.5"
             min="0.5"
             required
+            value={line}
+            onChange={(e) => setLine(e.target.value)}
             className="md:w-40"
             aria-invalid={state?.field === 'line'}
             aria-describedby={['cm-line-hint', state?.field === 'line' ? 'create-market-error' : null].filter(Boolean).join(' ')}
@@ -180,12 +193,14 @@ export function CreateMarketForm() {
           id="cm-close"
           type="datetime-local"
           required
+          value={closeAt}
+          onChange={(e) => setCloseAt(e.target.value)}
           aria-invalid={state?.field === 'close_at'}
           aria-describedby={state?.field === 'close_at' ? 'create-market-error' : undefined}
-          onChange={(e) => setCloseAtIso(e.target.value ? new Date(e.target.value).toISOString() : '')}
         />
       </Field>
-      <input type="hidden" name="close_at" value={closeAtIso} />
+      {/* The picker's value is local wall-clock time; the server needs the instant it names. */}
+      <input type="hidden" name="close_at" value={closeAt ? new Date(closeAt).toISOString() : ''} />
 
       {state?.formError && (
         <Message tone="error" id="create-market-error">

@@ -3,9 +3,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const profiles = vi.fn()
 const rpc = vi.fn()
 const remove = vi.fn()
+const pruneKeys = vi.fn()
 vi.mock('@/lib/supabase/service-role', () => ({
   serviceRoleClient: () => ({
-    from: () => ({ select: () => ({ limit: profiles }) }),
+    from: (table: string) =>
+      table === 'idempotency_keys' ? { delete: () => ({ lt: pruneKeys }) } : { select: () => ({ limit: profiles }) },
     rpc,
     storage: { from: () => ({ remove }) },
   }),
@@ -20,6 +22,7 @@ beforeEach(() => {
   profiles.mockReset().mockResolvedValue({ error: null })
   rpc.mockReset().mockResolvedValue({ data: [], error: null })
   remove.mockReset().mockResolvedValue({ error: null })
+  pruneKeys.mockReset().mockResolvedValue({ error: null })
 })
 
 describe('keep-alive cron', () => {
@@ -50,6 +53,20 @@ describe('keep-alive cron', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const res = await GET(authorized())
     expect(res.status).toBe(502)
+  })
+
+  it('prunes attempt keys older than a day', async () => {
+    const res = await GET(authorized())
+    expect(res.status).toBe(200)
+    const [column, cutoff] = pruneKeys.mock.calls[0]
+    expect(column).toBe('created_at')
+    expect(Date.now() - Date.parse(cutoff)).toBeGreaterThanOrEqual(24 * 60 * 60 * 1000 - 1000)
+  })
+
+  it('reports a failed key prune as a 502', async () => {
+    pruneKeys.mockResolvedValue({ error: new Error('down') })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect((await GET(authorized())).status).toBe(502)
   })
 
   it('still reports a database failure first', async () => {

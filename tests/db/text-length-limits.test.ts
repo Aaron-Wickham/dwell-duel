@@ -201,13 +201,13 @@ describe('adjust_balance reason limit', () => {
       config: string
     }>(`
       select
-        has_function_privilege('anon', 'public.adjust_balance(uuid, integer, text)', 'execute') as anon,
-        has_function_privilege('authenticated', 'public.adjust_balance(uuid, integer, text)', 'execute') as authenticated,
-        has_function_privilege('service_role', 'public.adjust_balance(uuid, integer, text)', 'execute') as service_role,
+        has_function_privilege('anon', 'public.adjust_balance(uuid, integer, text, uuid)', 'execute') as anon,
+        has_function_privilege('authenticated', 'public.adjust_balance(uuid, integer, text, uuid)', 'execute') as authenticated,
+        has_function_privilege('service_role', 'public.adjust_balance(uuid, integer, text, uuid)', 'execute') as service_role,
         p.prosecdef as security_definer,
         array_to_string(p.proconfig, ',') as config
       from pg_proc p
-      where p.oid = 'public.adjust_balance(uuid, integer, text)'::regprocedure
+      where p.oid = 'public.adjust_balance(uuid, integer, text, uuid)'::regprocedure
     `)
     expect(fn).toEqual({ anon: false, authenticated: true, service_role: true, security_definer: true, config: 'search_path=""' })
   })

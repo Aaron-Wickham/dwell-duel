@@ -26,6 +26,23 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Faster CI** with parallel unit tests, a single build and cached browsers; pinned Node 22 and weekly Dependabot updates (#73).
 - **Functions run next to the database,** in Cleveland beside Supabase's Ohio region (#66).
 
+### Polish
+- **Long names and titles wrap** on narrow phones: market titles, leaderboard names and the admin task list's pills no longer overflow at 320px, and an admin's phone header shows the logo's symbol alone below 360px so the page never scrolls sideways (#65).
+- **Clearer buttons for screen readers:** Approve, Reject and "I did this" name the member and task they act on (#65).
+- **Consistent wording:** "Awaiting resolution", "Refunded" and "Open" everywhere in My bets, sentence-case parlay leg pills, and Tasks now says a reviewer checks each submission (#65).
+- **No more "no bets yet"** on markets that always have seeded odds; only a market closed before seeding with no bets says none were placed (#65).
+- **A missing profile no longer breaks the app:** the nav and page stay, Home greets you as "Member" and skips the rank (#65).
+- **Landmarks and back links:** sign-in, not-invited and offline pages have a main landmark, and a member's page says "Back" and returns to wherever you came from (#65).
+- **Friendly errors** when creating a market or saving a task, instead of raw database messages (#65).
+- The sign-in button's Google badge and the logo's leaves use theme colours, and the design handoff's routes and hero colour match the app (#65).
+
+### Forms and feedback
+- **Placing twice is safe:** if your bets go through but the answer is lost on a bad connection, the slip says so, and tapping Place again shows them placed instead of betting twice. Balance adjustments work the same way (#61).
+- **Forms keep what you typed** when they show an error: creating or editing a market, resolving, submitting a task, adjusting a balance, creating or editing a task, and your bio (#63).
+- **Resolving asks first:** the confirmation names the winner ("Over 42.5 wins"), and an override says the previous payouts will be reversed. Nothing is paid until you confirm, and Cancel leaves the form as it was (#64).
+- **Admin confirmations and toasts:** revoking an invite, changing a role and adjusting a balance ask first; revoking, and creating, saving, deactivating or reactivating a task, confirm with a toast (#65).
+- **Select all stays in step** with the pending approvals it covers, showing checked or partly checked as rows are ticked or leave the list (#65).
+
 ## v0.2.0-beta — 2026-09-28
 
 The first round of beta feedback: 20 issues, from roles to a new Home.

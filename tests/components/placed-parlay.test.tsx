@@ -35,7 +35,9 @@ describe('PlacedParlay', () => {
     renderParlay(parlay({}))
     expect(screen.getByText('Parlay · 2 picks')).toBeInTheDocument()
     expect(screen.getByText(/^5 DC at 16\.00× · pays 80 DC if every pick wins · Placed/)).toBeInTheDocument()
-    expect(screen.getByText('Pending')).toHaveClass('bg-gold-soft', 'text-gold')
+    const [chip, ...legPills] = screen.getAllByText('Open')
+    expect(chip).toHaveClass('bg-acc-soft', 'text-acc-text', 'h-7')
+    expect(legPills).toHaveLength(2)
   })
 
   it('describes a won parlay with what it paid', () => {
@@ -87,10 +89,10 @@ describe('PlacedParlay', () => {
     expect(screen.getByRole('link', { name: 'Will it rain?' })).toHaveAttribute('href', '/markets/m1')
     expect(screen.getByRole('link', { name: 'Who wins trivia night?' })).toHaveAttribute('href', '/markets/m2')
     expect(screen.getByText('Grace').tagName).toBe('STRONG')
-    expect(screen.getByText('won')).toHaveClass('bg-acc-soft', 'text-acc-text', 'h-6', 'rounded-full')
-    expect(screen.getByText('lost')).toHaveClass('bg-loss-soft', 'text-loss')
-    expect(screen.getByText('voided')).toHaveClass('bg-sunk', 'text-ink2')
-    expect(screen.getByText('pending')).toHaveClass('bg-gold-soft', 'text-gold')
+    expect(screen.getByText('Won')).toHaveClass('bg-acc-soft', 'text-acc-text', 'h-6', 'rounded-full')
+    expect(screen.getAllByText('Lost').at(-1)).toHaveClass('bg-loss-soft', 'text-loss', 'h-6')
+    expect(screen.getByText('Voided')).toHaveClass('bg-sunk', 'text-ink2')
+    expect(screen.getByText('Open')).toHaveClass('bg-gold-soft', 'text-gold')
   })
 
   it('gives each leg link a 44px tap target', () => {

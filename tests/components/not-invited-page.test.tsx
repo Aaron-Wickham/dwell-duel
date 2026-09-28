@@ -9,4 +9,9 @@ describe('NotInvitedPage', () => {
     expect(screen.getByRole('heading', { name: 'Not invited' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Try another account' })).toHaveAttribute('href', '/sign-in')
   })
+
+  it('puts its content in the main landmark', () => {
+    render(<NotInvitedPage />)
+    expect(screen.getByRole('main')).toContainElement(screen.getByRole('heading', { level: 1 }))
+  })
 })

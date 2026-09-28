@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useActionState, useRef, useState } from 'react'
+import { useActionState, useState } from 'react'
 import { Check } from 'lucide-react'
 import {
   bulkApproveTaskCompletionsAction,
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { EmptyState } from '@/components/ui/empty-state'
+import { keepCheckedOnReset } from '@/lib/forms/keep-on-reset'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { ProofList } from '@/components/proof/proof-list'
 import { ReviewButtons } from './review-buttons'
@@ -25,7 +26,7 @@ export type PendingRow = PendingCompletion & { submittedAge: string }
 
 // viewerId: a reviewer never reviews their own submission (0046), so those rows show why instead.
 export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[]; viewerId: string }) {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [approveState, approveAction, isApprovePending] = useActionState<BulkActionState | undefined, FormData>(bulkApproveTaskCompletionsAction, undefined)
   const [rejectState, rejectAction, isRejectPending] = useActionState<BulkActionState | undefined, FormData>(bulkRejectTaskCompletionsAction, undefined)
   // Only the most recently clicked bulk action's result stays visible — otherwise an
@@ -33,14 +34,23 @@ export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[];
   const [lastBulk, setLastBulk] = useState<'approve' | 'reject' | null>(null)
   const bulkReasonInvalid = lastBulk === 'reject' && !isRejectPending && rejectState?.field === 'reason'
 
-  function toggleAll(checked: boolean) {
-    containerRef.current?.querySelectorAll<HTMLInputElement>('input[name="completionIds"]').forEach((el) => {
-      el.checked = checked
+  // Worked out from the rows on screen, so Select all follows rows that leave the list once reviewed.
+  const selectable = pending.filter((c) => c.submitterId !== viewerId).map((c) => c.id)
+  const selectedCount = selectable.filter((id) => selected.has(id)).length
+  const allSelected = selectable.length > 0 && selectedCount === selectable.length
+  const someSelected = selectedCount > 0 && !allSelected
+
+  function toggle(id: string, checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (checked) next.add(id)
+      else next.delete(id)
+      return next
     })
   }
 
   return (
-    <div ref={containerRef} className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {/* Hidden while its own action is pending, so a stale result from an earlier click
           doesn't flash back on screen for the moment before the new one resolves. */}
       {lastBulk === 'approve' && !isApprovePending && approveState?.formError && (
@@ -76,6 +86,9 @@ export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[];
                       name="completionIds"
                       value={c.id}
                       form={BULK_FORM_ID}
+                      checked={selected.has(c.id)}
+                      ref={keepCheckedOnReset(selected.has(c.id))}
+                      onChange={(e) => toggle(c.id, e.target.checked)}
                       className="m-0 size-[22px] accent-primary"
                     />
                     <span className="sr-only">Select {c.submitterName}’s submission</span>
@@ -98,7 +111,7 @@ export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[];
                 {own ? (
                   <p className="text-sm font-bold text-ink2">This is your submission, so another reviewer reviews it.</p>
                 ) : (
-                  <ReviewButtons completionId={c.id} />
+                  <ReviewButtons completionId={c.id} submitterName={c.submitterName} taskTitle={c.taskTitle} />
                 )}
               </li>
               )
@@ -108,7 +121,16 @@ export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[];
           {/* After the rows, not above them as drawn: the e2e suite clicks the first button named "Approve", which must be a row's. */}
           <div className="flex flex-col gap-3 rounded-[14px] bg-sunk p-3.5">
             <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
-              <input type="checkbox" onChange={(e) => toggleAll(e.target.checked)} className="m-0 size-[22px] accent-primary" />
+              <input
+                type="checkbox"
+                checked={allSelected}
+                // indeterminate is a DOM property with no attribute, so it's set here on every render.
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelected
+                }}
+                onChange={(e) => setSelected(e.target.checked ? new Set(selectable) : new Set())}
+                className="m-0 size-[22px] accent-primary"
+              />
               Select all
             </label>
             <form id={BULK_FORM_ID} className="flex flex-col gap-2 md:flex-row md:items-center">

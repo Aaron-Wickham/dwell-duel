@@ -301,6 +301,38 @@ export type Database = {
           },
         ]
       }
+      idempotency_keys: {
+        Row: {
+          action: string
+          created_at: string
+          key: string
+          profile_id: string
+          result: Json | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          key: string
+          profile_id: string
+          result?: Json | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          key?: string
+          profile_id?: string
+          result?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idempotency_keys_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       market_edits: {
         Row: {
           edited_at: string
@@ -828,7 +860,12 @@ export type Database = {
     }
     Functions: {
       adjust_balance: {
-        Args: { p_amount: number; p_profile_id: string; p_reason: string }
+        Args: {
+          p_amount: number
+          p_idempotency_key?: string
+          p_profile_id: string
+          p_reason: string
+        }
         Returns: undefined
       }
       apply_coin_transaction: {
@@ -846,6 +883,10 @@ export type Database = {
       }
       can_resolve_market: { Args: { p_market_id: string }; Returns: boolean }
       cancel_bet: { Args: { p_bet_id: number }; Returns: undefined }
+      claim_idempotency_key: {
+        Args: { p_action: string; p_key: string }
+        Returns: Json
+      }
       compute_period_key: {
         Args: { p_at?: string; p_period: string }
         Returns: string
@@ -863,6 +904,10 @@ export type Database = {
       }
       delete_market: { Args: { p_market_id: string }; Returns: undefined }
       delete_task: { Args: { p_task_id: string }; Returns: undefined }
+      finish_idempotent: {
+        Args: { p_key: string; p_result: Json }
+        Returns: undefined
+      }
       has_role: { Args: { p_min: string }; Returns: boolean }
       has_stake_in_market: {
         Args: { p_market_id: string; p_profile_id: string }
@@ -909,6 +954,7 @@ export type Database = {
       }
       place_slip: {
         Args: {
+          p_idempotency_key?: string
           p_parlay_outcome_ids: string[]
           p_parlay_stake: number
           p_singles: Json

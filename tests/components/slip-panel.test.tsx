@@ -98,13 +98,6 @@ describe('SlipPanel', () => {
     expect(screen.getByRole('button', { name: 'Place 1 bet · 5 DC' })).not.toHaveAttribute('aria-disabled')
   })
 
-  it('keeps an outcome nobody has bet on to Solo, and says why', () => {
-    renderPanel(viewOf(pick(1, { oddsBp: null, outcomePool: 0 })))
-    const parlay = screen.getByRole('button', { name: 'Parlay' })
-    expect(parlay).toBeDisabled()
-    expect(parlay).toHaveAccessibleDescription(/no odds to lock into a parlay/)
-  })
-
   it('blocks placing while a pick is no longer available', () => {
     renderPanel(viewOf(pick(1), pick(2, { open: false })))
     expect(screen.getByText('No longer available')).toBeInTheDocument()

@@ -10,6 +10,7 @@ import { Message } from '@/components/ui/message'
 import { cn } from '@/lib/utils'
 import { ConfirmActionButton } from '@/components/ui/confirm-action-button'
 import { deleteTaskAction } from '@/lib/admin/owner-actions'
+import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { EditTaskForm } from './edit-task-form'
 
 const pillClass = 'inline-flex h-6 items-center whitespace-nowrap rounded-full px-[9px] text-xs font-extrabold'
@@ -18,17 +19,20 @@ const pillClass = 'inline-flex h-6 items-center whitespace-nowrap rounded-full p
 export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary; canDelete?: boolean }) {
   const [editing, setEditing] = useState(false)
   const boundUpdate = updateTaskAction.bind(null, task.id)
-  const [toggleState, toggleAction] = useActionState<ActionState, FormData>(boundUpdate, undefined)
+  const [toggleState, toggleAction] = useActionState<ActionState, FormData>(
+    withSuccessToast(boundUpdate, (s) => Boolean(s?.formError), task.isActive ? 'Task deactivated.' : 'Task reactivated.'),
+    undefined,
+  )
   const editFormId = `edit-task-${task.id}`
   const toggleErrorId = `toggle-${task.id}-error`
 
   return (
     <li className="flex flex-col gap-2 py-3.5">
-      <div className="flex items-center justify-between gap-3">
-        <p className={cn('font-extrabold', !task.isActive && 'text-ink2')}>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+        <p className={cn('min-w-0 break-words font-extrabold', !task.isActive && 'text-ink2')}>
           {task.title} — {task.rewardAmount} DC
         </p>
-        <span className="flex shrink-0 gap-1.5">
+        <span className="flex flex-wrap gap-1.5">
           {task.isRepeatable && task.period && <span className={cn(pillClass, 'bg-sunk text-ink2')}>{PERIOD_LABEL[task.period]}</span>}
           {task.proofRequired && <span className={cn(pillClass, 'bg-sunk text-ink2')}>Proof required</span>}
           {!task.isActive && <span className={cn(pillClass, 'bg-gold-soft text-gold')}>Inactive</span>}

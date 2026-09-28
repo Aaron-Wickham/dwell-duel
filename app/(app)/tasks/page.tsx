@@ -26,7 +26,7 @@ export default async function TasksPage() {
 
   return (
     <Page transition="tab">
-      <PageHeader title="Tasks" description="Earn DC with Bible study. An admin reviews each one before the coins land." />
+      <PageHeader title="Tasks" description="Earn DC with Bible study. A reviewer checks each one before the coins land." />
       <LiveTables subscriptions={pageSubscriptions.tasks(user.id)} />
       {activeTasks.length === 0 ? (
         <EmptyState icon={BookOpen} title="No tasks yet.">

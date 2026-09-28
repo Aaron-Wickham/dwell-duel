@@ -1,9 +1,10 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import type { MemberSummary } from '@/lib/members/list-members'
-import { ROLE_LABELS } from '@/lib/auth/roles'
+import { ROLE_LABELS, type Role } from '@/lib/auth/roles'
 import { setMemberRoleAction, type SetRoleState } from '@/lib/admin/owner-actions'
+import { ConfirmSubmitDialog, useConfirmSubmit } from '@/components/ui/confirm-submit-dialog'
 import { Field, Select } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
@@ -13,26 +14,45 @@ const ASSIGNABLE = ['admin', 'reviewer', 'member'] as const
 
 // Owner only: the owner's own role never appears here, and the RPC refuses it anyway.
 export function RoleForm({ member }: { member: MemberSummary }) {
-  const [state, formAction] = useActionState<SetRoleState, FormData>(
-    withSuccessToast(setMemberRoleAction.bind(null, member.id), (s) => Boolean(s?.formError), `${member.displayName}’s role saved.`),
+  const [role, setRole] = useState<Role>(member.role)
+  const confirm = useConfirmSubmit()
+  const [state, formAction, isPending] = useActionState<SetRoleState, FormData>(
+    withSuccessToast(
+      async (prev: SetRoleState, formData: FormData) => {
+        const next = await setMemberRoleAction(member.id, prev, formData)
+        confirm.setOpen(false)
+        return next
+      },
+      (s) => Boolean(s?.formError),
+      `${member.displayName}’s role saved.`,
+    ),
     undefined,
   )
+  const formId = `role-${member.id}-form`
   const selectId = `role-${member.id}`
   const errorId = `role-${member.id}-error`
 
   return (
-    <form action={formAction} className="flex flex-col gap-2 md:flex-row md:items-end md:gap-2">
+    <form
+      id={formId}
+      action={formAction}
+      onSubmit={(e) => {
+        if (role !== member.role) confirm.onSubmit(e)
+      }}
+      className="flex flex-col gap-2 md:flex-row md:items-end md:gap-2"
+    >
       <Field label="Role" htmlFor={selectId} className="md:w-48">
         <Select
           id={selectId}
           name="role"
-          defaultValue={member.role}
+          value={role}
+          onChange={(e) => setRole(e.target.value as Role)}
           aria-invalid={Boolean(state?.formError)}
           aria-describedby={state?.formError ? errorId : undefined}
         >
-          {ASSIGNABLE.map((role) => (
-            <option key={role} value={role}>
-              {ROLE_LABELS[role]}
+          {ASSIGNABLE.map((r) => (
+            <option key={r} value={r}>
+              {ROLE_LABELS[r]}
             </option>
           ))}
         </Select>
@@ -45,6 +65,15 @@ export function RoleForm({ member }: { member: MemberSummary }) {
           {state.formError}
         </Message>
       )}
+      <ConfirmSubmitDialog
+        formId={formId}
+        open={confirm.open}
+        onOpenChange={confirm.setOpen}
+        pending={isPending}
+        title={`Change ${member.displayName}’s role?`}
+        description={`${member.displayName} goes from ${ROLE_LABELS[member.role]} to ${ROLE_LABELS[role]}, straight away.`}
+        confirmLabel="Change role"
+      />
     </form>
   )
 }

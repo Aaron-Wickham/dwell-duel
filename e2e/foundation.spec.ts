@@ -17,8 +17,10 @@ test('admin can add and revoke an invite', async ({ page }) => {
   await page.getByRole('button', { name: 'Add' }).click()
   await expect(page.getByText('newperson@example.com')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Revoke' }).click()
-  await expect(page.getByText('newperson@example.com')).not.toBeVisible()
+  await page.getByRole('button', { name: 'Revoke newperson@example.com' }).click()
+  await page.getByRole('button', { name: 'Revoke invite' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByText('newperson@example.com', { exact: true })).not.toBeVisible()
 })
 
 test('sign-out returns to the sign-in page', async ({ browser }) => {

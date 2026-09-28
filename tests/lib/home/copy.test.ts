@@ -31,8 +31,12 @@ describe('marketsTileSubtitle', () => {
 })
 
 describe('leaderboardTileSubtitle', () => {
-  it('always states the rank', () => {
+  it('states the rank', () => {
     expect(leaderboardTileSubtitle(3, 8)).toBe('You’re ranked 3 of 8')
+  })
+
+  it('drops the rank when there is none, as for a member with no profile row', () => {
+    expect(leaderboardTileSubtitle(0, 0)).toBe('See who’s leading')
   })
 })
 

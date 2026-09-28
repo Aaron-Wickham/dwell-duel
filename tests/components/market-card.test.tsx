@@ -48,7 +48,7 @@ describe('MarketCard', () => {
     expect(screen.getByRole('link', { name: 'Who wins the chili cook-off?' })).toHaveAttribute('href', '/markets/m1')
     expect(screen.getByText('60%')).toBeInTheDocument()
     expect(screen.getByText('40%')).toBeInTheDocument()
-    expect(screen.queryByText('no bets yet')).not.toBeInTheDocument()
+    expect(screen.queryByText('No bets were placed.')).not.toBeInTheDocument()
   })
 
   it('gives the title link a 44px tap target', () => {
@@ -70,12 +70,12 @@ describe('MarketCard', () => {
     expect(screen.getByRole('link', { name: 'Who wins the chili cook-off?' })).toHaveClass('hit-area')
   })
 
-  it('shows outcome pills and "no bets yet" when nothing has been staked', () => {
+  it('shows outcome pills and says no bets were placed on a market closed before seeding', () => {
     render(
       <MarketCard
         id="m2"
         title="Who brings the best dessert?"
-        status="awaiting"
+        status="voided"
         kind="multiple_choice"
         closeAt="2026-09-30T12:00:00.000Z"
         resolvedAt={null}
@@ -86,10 +86,10 @@ describe('MarketCard', () => {
         resolvedOutcomeLabel={null}
       />,
     )
-    expect(screen.getByText('Awaiting resolution')).toBeInTheDocument()
+    expect(screen.getByText('Voided')).toBeInTheDocument()
     expect(screen.getByText('Grace')).toBeInTheDocument()
     expect(screen.getByText('Josh')).toBeInTheDocument()
-    expect(screen.getByText('no bets yet')).toBeInTheDocument()
+    expect(screen.getByText('No bets were placed.')).toBeInTheDocument()
   })
 
   it('shows the resolved winner line when the market has a winning outcome', () => {

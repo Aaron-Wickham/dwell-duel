@@ -59,3 +59,33 @@ describe('createTaskAction length limits', () => {
     expect(insert).toHaveBeenCalledWith(expect.objectContaining({ description: `${'d'.repeat(998)}\n${'d'}` }))
   })
 })
+
+describe('createTaskAction database errors', () => {
+  it('says only an admin can create tasks when RLS refuses the insert', async () => {
+    insert.mockResolvedValue({ error: { code: '42501', message: 'new row violates row-level security policy for table "tasks"' } })
+
+    const state = await createTaskAction(undefined, taskForm('Read Genesis 1-3'))
+
+    expect(state).toEqual({ formError: 'Only an admin can create or edit tasks.' })
+  })
+
+  it('rewords the reward cap constraint', async () => {
+    insert.mockResolvedValue({
+      error: { code: '23514', message: 'new row for relation "tasks" violates check constraint "tasks_reward_amount_max"' },
+    })
+
+    const state = await createTaskAction(undefined, taskForm('Read Genesis 1-3'))
+
+    expect(state).toEqual({ formError: 'A task can reward at most 500 DC.', field: 'reward_amount' })
+  })
+
+  it('hides an unknown error behind a generic message', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    insert.mockResolvedValue({ error: { code: 'XX000', message: 'internal error' } })
+
+    const state = await createTaskAction(undefined, taskForm('Read Genesis 1-3'))
+
+    expect(state).toEqual({ formError: 'Something went wrong. Try again.' })
+    log.mockRestore()
+  })
+})

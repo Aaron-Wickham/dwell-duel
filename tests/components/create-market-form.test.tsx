@@ -147,3 +147,40 @@ describe('CreateMarketForm over/under', () => {
     expect((createMarketAction.mock.calls[0][1] as FormData).get('line')).toBe('3.5')
   })
 })
+
+describe('CreateMarketForm keeps what was filled in (#63)', () => {
+  it('keeps the title, description and close time after a server error, with close_at still in step', async () => {
+    createMarketAction.mockResolvedValue({ formError: 'Choose a close time in the future.', field: 'close_at' })
+    const user = userEvent.setup()
+    const { container } = render(<CreateMarketForm />)
+
+    await user.type(screen.getByLabelText('Title'), 'Will it rain?')
+    await user.type(screen.getByLabelText('Description'), 'At the picnic')
+    await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
+    await user.click(screen.getByRole('button', { name: 'Create market' }))
+    await screen.findByRole('alert')
+
+    expect(screen.getByLabelText('Title')).toHaveValue('Will it rain?')
+    expect(screen.getByLabelText('Description')).toHaveValue('At the picnic')
+    expect(screen.getByLabelText('Close time')).toHaveValue('2030-01-01T10:00')
+    const closeAt = container.querySelector<HTMLInputElement>('input[name="close_at"]')!
+    expect(closeAt.value).toBe(new Date('2030-01-01T10:00').toISOString())
+  })
+
+  it('keeps an over/under line after a server error', async () => {
+    createMarketAction.mockResolvedValue({ formError: 'Set the line to a half number, like 3.5.', field: 'line' })
+    const user = userEvent.setup()
+    render(<CreateMarketForm />)
+
+    await user.type(screen.getByLabelText('Title'), 'Minutes the sermon runs')
+    await user.click(screen.getByRole('radio', { name: 'Over/Under' }))
+    await user.type(screen.getByLabelText('Line'), '42.5')
+    await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
+    await user.click(screen.getByRole('button', { name: 'Create market' }))
+    await screen.findByRole('alert')
+
+    expect(screen.getByLabelText('Line')).toHaveValue(42.5)
+    expect(screen.getByLabelText('Title')).toHaveValue('Minutes the sermon runs')
+    expect(screen.getByRole('radio', { name: 'Over/Under' })).toBeChecked()
+  })
+})

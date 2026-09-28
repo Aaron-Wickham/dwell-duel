@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { ProofPicker } from '@/components/proof/proof-picker'
+import { ConfirmSubmitDialog, useConfirmSubmit } from '@/components/ui/confirm-submit-dialog'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Field, Select, Textarea } from '@/components/ui/field'
 import { Message } from '@/components/ui/message'
@@ -11,24 +12,34 @@ import type { ProofDraft, ProofRecord } from '@/lib/proof/types'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { resolveMarketAction, type ActionState } from '@/lib/markets/resolve-market'
 import { formatLine } from '@/lib/markets/kind'
+import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import { Input } from '@/components/ui/field'
+
+const FORM_ID = 'resolve-form'
 
 // Every resolution and override says why (0042), and can carry photos, a document and links that
 // every member sees. Files upload from the browser first, and are removed again if resolving fails.
 // An over/under (`line` set) resolves on the actual number instead of a chosen outcome
 // (resolve_over_under, 0043), with a live preview of which side that makes the winner.
+// Paying out, or reversing earlier payouts for an override, waits for a confirmation naming the winner.
 export function ResolveForm({
   marketId,
   outcomes,
   line = null,
+  override = false,
 }: {
   marketId: string
   outcomes: { id: string; label: string }[]
   line?: number | null
+  override?: boolean
 }) {
   const [drafts, setDrafts] = useState<ProofDraft[]>([])
   const [actual, setActual] = useState('')
-  const [state, formAction] = useActionState<ActionState, FormData>(
+  const [outcomeId, setOutcomeId] = useState('')
+  const [note, setNote] = useState('')
+  const [done, setDone] = useState(false)
+  const confirm = useConfirmSubmit()
+  const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     withSuccessToast(
       async (prev: ActionState, formData: FormData) => {
         let records: ProofRecord[] = []
@@ -40,19 +51,30 @@ export function ResolveForm({
         formData.set('attachments', JSON.stringify(records))
         const next = await resolveMarketAction(marketId, prev, formData)
         if (next?.formError) await discardProof(records)
-        else setDrafts([])
+        else {
+          setDrafts([])
+          setDone(true)
+        }
+        confirm.setOpen(false)
         return next
       },
       (s) => Boolean(s?.formError),
-      'Market resolved.',
+      override ? 'Resolution overridden.' : 'Market resolved.',
     ),
     undefined,
   )
   const outcomeError = state?.formError && state.field !== 'note'
+  const actualNumber = actual.trim() === '' ? NaN : Number(actual)
+  const winner =
+    line !== null
+      ? Number.isFinite(actualNumber) && actualNumber !== line
+        ? `${actualNumber > line ? 'Over' : 'Under'} ${formatLine(line)}`
+        : null
+      : (outcomes.find((o) => o.id === outcomeId)?.label ?? null)
 
   return (
     <>
-      <form action={formAction} className="flex flex-col gap-4">
+      <form id={FORM_ID} action={formAction} onSubmit={confirm.onSubmit} className="flex flex-col gap-4">
         {line !== null ? (
           <Field label="Actual result" htmlFor="resolve-actual" hint={`The line is ${formatLine(line)}.`}>
             <Input
@@ -64,7 +86,11 @@ export function ResolveForm({
               min="0"
               required
               value={actual}
-              onChange={(e) => setActual(e.target.value)}
+              onChange={(e) => {
+                setActual(e.target.value)
+                // resolve_over_under refuses a tie, so the browser stops it before the confirmation.
+                e.target.setCustomValidity(e.target.value !== '' && Number(e.target.value) === line ? 'The result can’t equal the line.' : '')
+              }}
               className="md:w-40"
               aria-invalid={Boolean(outcomeError)}
               aria-describedby={['resolve-actual-hint', outcomeError ? 'resolve-error' : null, 'resolve-preview'].filter(Boolean).join(' ')}
@@ -83,7 +109,8 @@ export function ResolveForm({
               id="resolve-outcome"
               name="outcome_id"
               required
-              defaultValue=""
+              value={outcomeId}
+              onChange={(e) => setOutcomeId(e.target.value)}
               aria-invalid={Boolean(outcomeError)}
               aria-describedby={outcomeError ? 'resolve-error' : undefined}
             >
@@ -103,6 +130,8 @@ export function ResolveForm({
             id="resolve-note"
             name="note"
             required
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
             maxLength={TEXT_LIMITS.resolutionNote}
             aria-invalid={state?.field === 'note'}
             aria-describedby={['resolve-note-hint', state?.field === 'note' ? 'resolve-error' : null].filter(Boolean).join(' ')}
@@ -112,8 +141,25 @@ export function ResolveForm({
           <legend className="mb-1.5 text-[15px] font-bold">Proof (optional)</legend>
           <ProofPicker id="resolve-proof" value={drafts} onChange={setDrafts} />
         </fieldset>
-        <FormSubmitButton block>Confirm outcome</FormSubmitButton>
+        <FormSubmitButton block>{override ? 'Override resolution' : 'Resolve market'}</FormSubmitButton>
       </form>
+      <ConfirmSubmitDialog
+        formId={FORM_ID}
+        open={confirm.open}
+        onOpenChange={confirm.setOpen}
+        pending={isPending}
+        finalFocus={done ? focusPageHeading : true}
+        title={override ? 'Override the resolution?' : 'Resolve this market?'}
+        description={
+          <>
+            <strong className="text-ink">{winner} wins.</strong>{' '}
+            {override
+              ? 'The previous payouts are reversed, then winning bets and parlay legs are paid out on this outcome.'
+              : 'Winning bets and parlay legs are paid out straight away.'}
+          </>
+        }
+        confirmLabel="Confirm outcome"
+      />
       {state?.formError && (
         <Message tone="error" id="resolve-error">
           {state.formError}

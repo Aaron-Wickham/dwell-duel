@@ -1,5 +1,6 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { keepSelectedOnReset } from '@/lib/forms/keep-on-reset'
 import { cn } from '@/lib/utils'
 
 const control =
@@ -51,7 +52,7 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
 export function Select({ className, children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <span className="relative block">
-      <select className={cn(control, 'appearance-none pr-11', className)} {...props}>
+      <select ref={props.value === undefined ? undefined : keepSelectedOnReset(String(props.value))} className={cn(control, 'appearance-none pr-11', className)} {...props}>
         {children}
       </select>
       <ChevronDown

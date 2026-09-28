@@ -13,13 +13,13 @@ function ResultChip({ result }: { result: MyBet['result'] }) {
     case 'open':
       return <StatusChip tone="open">Open</StatusChip>
     case 'awaiting':
-      return <StatusChip tone="wait">Awaiting result</StatusChip>
+      return <StatusChip tone="wait">Awaiting resolution</StatusChip>
     case 'won':
       return <StatusChip tone="done">Won {result.payout} DC</StatusChip>
     case 'lost':
       return <StatusChip tone="lost">Lost</StatusChip>
     case 'refunded':
-      return <StatusChip tone="void">Voided · refunded</StatusChip>
+      return <StatusChip tone="void">Refunded</StatusChip>
   }
 }
 

@@ -1,21 +1,34 @@
 'use client'
 
 import { MAX_TASK_REWARD } from '@/lib/tasks/limits'
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { updateTaskAction, type ActionState } from '@/lib/tasks/update-task'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Textarea } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { keepCheckedOnReset } from '@/lib/forms/keep-on-reset'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
+import { withSuccessToast } from '@/lib/toast/with-success-toast'
 
 export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSummary; onDone: () => void }) {
-  const [state, formAction] = useActionState<ActionState, FormData>(async (prevState, formData) => {
-    const result = await updateTaskAction(task.id, prevState, formData)
-    if (!result?.formError) onDone()
-    return result
-  }, undefined)
+  const [title, setTitle] = useState(task.title)
+  const [description, setDescription] = useState(task.description ?? '')
+  const [reward, setReward] = useState(String(task.rewardAmount))
+  const [proofRequired, setProofRequired] = useState(task.proofRequired)
+  const [state, formAction] = useActionState<ActionState, FormData>(
+    withSuccessToast(
+      async (prevState: ActionState, formData: FormData) => {
+        const result = await updateTaskAction(task.id, prevState, formData)
+        if (!result?.formError) onDone()
+        return result
+      },
+      (s) => Boolean(s?.formError),
+      'Task saved.',
+    ),
+    undefined,
+  )
   const errorId = `${id}-error`
 
   return (
@@ -24,7 +37,8 @@ export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSumma
         <Input
           id={`${id}-title`}
           name="title"
-          defaultValue={task.title}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
           required
           maxLength={TEXT_LIMITS.taskTitle}
           aria-invalid={state?.field === 'title'}
@@ -35,7 +49,8 @@ export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSumma
         <Textarea
           id={`${id}-description`}
           name="description"
-          defaultValue={task.description ?? ''}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           maxLength={TEXT_LIMITS.taskDescription}
           aria-invalid={state?.field === 'description'}
           aria-describedby={state?.field === 'description' ? errorId : undefined}
@@ -49,14 +64,22 @@ export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSumma
           min="1"
           max={MAX_TASK_REWARD}
           step="1"
-          defaultValue={task.rewardAmount}
+          value={reward}
+          onChange={(e) => setReward(e.target.value)}
           required
           aria-invalid={state?.field === 'reward_amount'}
           aria-describedby={state?.field === 'reward_amount' ? errorId : undefined}
         />
       </Field>
       <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
-        <input name="proof_required" type="checkbox" defaultChecked={task.proofRequired} className="m-0 size-[22px] accent-primary" />
+        <input
+          name="proof_required"
+          type="checkbox"
+          checked={proofRequired}
+          ref={keepCheckedOnReset(proofRequired)}
+          onChange={(e) => setProofRequired(e.target.checked)}
+          className="m-0 size-[22px] accent-primary"
+        />
         Require proof
       </label>
       {/* Deactivate/Reactivate owns this flag; saving an edit keeps it as it is. */}

@@ -63,3 +63,25 @@ describe('updateTaskAction length limits', () => {
     expect(update).toHaveBeenCalledWith(expect.objectContaining({ description: `${'d'.repeat(998)}\n${'d'}` }))
   })
 })
+
+describe('updateTaskAction database errors', () => {
+  it('rewords a constraint violation', async () => {
+    eq.mockResolvedValue({
+      error: { code: '23514', message: 'new row for relation "tasks" violates check constraint "tasks_title_length"' },
+    })
+
+    const state = await updateTaskAction('t1', undefined, taskForm('Read Genesis 1-3'))
+
+    expect(state).toEqual({ formError: 'Title can be at most 120 characters.', field: 'title' })
+  })
+
+  it('hides an unknown error behind a generic message', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    eq.mockResolvedValue({ error: { code: 'XX000', message: 'internal error' } })
+
+    const state = await updateTaskAction('t1', undefined, taskForm('Read Genesis 1-3'))
+
+    expect(state).toEqual({ formError: 'Something went wrong. Try again.' })
+    log.mockRestore()
+  })
+})

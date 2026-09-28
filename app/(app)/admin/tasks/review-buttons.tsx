@@ -8,7 +8,15 @@ import { Message } from '@/components/ui/message'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 
-export function ReviewButtons({ completionId }: { completionId: string }) {
+export function ReviewButtons({
+  completionId,
+  submitterName,
+  taskTitle,
+}: {
+  completionId: string
+  submitterName: string
+  taskTitle: string
+}) {
   const hasError = (s: ActionState) => Boolean(s?.formError)
   const boundApprove = withSuccessToast(
     approveTaskCompletionAction.bind(null, completionId),
@@ -35,7 +43,7 @@ export function ReviewButtons({ completionId }: { completionId: string }) {
             className="grow"
             aria-describedby={approveState?.formError ? approveErrorId : undefined}
           >
-            Approve
+            Approve <span className="sr-only">{submitterName}’s {taskTitle}</span>
           </FormSubmitButton>
         </form>
         <form action={rejectAction} className="flex flex-col gap-2 md:grow md:flex-row md:items-center">
@@ -52,7 +60,7 @@ export function ReviewButtons({ completionId }: { completionId: string }) {
             aria-describedby={rejectState?.formError ? rejectErrorId : undefined}
           />
           <FormSubmitButton size="sm" variant="secondary">
-            Reject
+            Reject <span className="sr-only">{submitterName}’s {taskTitle}</span>
           </FormSubmitButton>
         </form>
       </div>

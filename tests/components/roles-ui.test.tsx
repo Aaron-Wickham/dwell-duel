@@ -58,10 +58,38 @@ describe('RoleForm', () => {
     render(<RoleForm member={BEN} />)
     await userEvent.selectOptions(screen.getByLabelText('Role'), 'admin')
     await userEvent.click(screen.getByRole('button', { name: 'Save role for Ben' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Change role' }))
     await waitFor(() => expect(actions.setMemberRoleAction).toHaveBeenCalledOnce())
     const [profileId, , formData] = actions.setMemberRoleAction.mock.calls[0]
     expect(profileId).toBe('p-ben')
     expect((formData as FormData).get('role')).toBe('admin')
+  })
+})
+
+describe('RoleForm confirmation (#65)', () => {
+  it('asks before changing a role, and changes nothing on Cancel, keeping the choice', async () => {
+    render(<RoleForm member={BEN} />)
+    await userEvent.selectOptions(screen.getByLabelText('Role'), 'admin')
+    await userEvent.click(screen.getByRole('button', { name: 'Save role for Ben' }))
+
+    const dialog = await screen.findByRole('alertdialog', { name: 'Change Ben’s role?' })
+    expect(dialog).toHaveAccessibleDescription('Ben goes from Reviewer to Admin, straight away.')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    expect(actions.setMemberRoleAction).not.toHaveBeenCalled()
+    expect(screen.getByLabelText('Role')).toHaveValue('admin')
+  })
+
+  it('keeps the chosen role after the server refuses it', async () => {
+    actions.setMemberRoleAction.mockResolvedValue({ formError: 'Only the owner can change roles.' })
+    render(<RoleForm member={BEN} />)
+    await userEvent.selectOptions(screen.getByLabelText('Role'), 'member')
+    await userEvent.click(screen.getByRole('button', { name: 'Save role for Ben' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Change role' }))
+
+    await screen.findByRole('alert')
+    expect(screen.getByLabelText('Role')).toHaveValue('member')
   })
 })
 

@@ -64,6 +64,9 @@
   --s5: #7B3FA8;
   --s6: #B0306F;
   --status-band: #03272D;
+  /* The launch screen matches the static iOS splash, teal with a white D, in both themes. */
+  --splash: #03272D;
+  --on-splash: #FFFFFF;
   --safe-top: 0px;
   --safe-bottom: 0px;
 }
@@ -199,6 +202,8 @@
   --color-s6: var(--s6);
   --color-scrim: var(--scrim);
   --color-status-band: var(--status-band);
+  --color-splash: var(--splash);
+  --color-on-splash: var(--on-splash);
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius-control: 12px;
   --radius-card: 18px;
@@ -481,4 +486,76 @@
 @keyframes vt-hint-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
+}
+
+/* Launch screen (components/brand/launch-screen.tsx). Hidden unless the cold-start script set
+   data-launch on <html>. The leaves grow in over the static splash's D, one after another, then the
+   overlay fades and stops taking taps; the whole thing is over by about 1.2s. */
+.launch-screen {
+  display: none;
+}
+:root[data-launch] .launch-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--splash);
+  animation: launch-out 300ms ease-in 900ms forwards;
+}
+.launch-leaf {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  scale: 0;
+  rotate: -25deg;
+  animation: launch-leaf 420ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes launch-leaf {
+  to {
+    scale: 1;
+    rotate: 0deg;
+  }
+}
+@keyframes launch-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+/* Reduced motion: no growing leaves, just the whole mark and a short fade. */
+@media (prefers-reduced-motion: reduce) {
+  .launch-leaf {
+    animation: none;
+    scale: 1;
+    rotate: 0deg;
+  }
+  :root[data-launch] .launch-screen {
+    animation: launch-out 150ms ease-in 150ms forwards;
+  }
+}
+:root[data-motion="reduce"] .launch-leaf {
+  animation: none;
+  scale: 1;
+  rotate: 0deg;
+}
+:root[data-motion="reduce"][data-launch] .launch-screen {
+  animation: launch-out 150ms ease-in 150ms forwards;
+}
+
+/* LeafLoader (components/brand/leaf-loader.tsx): the leaves pulse in turn. */
+.leaf-pulse {
+  animation: leaf-pulse 1.2s ease-in-out infinite;
+}
+@keyframes leaf-pulse {
+  0%, 60%, 100% { opacity: 1; }
+  30% { opacity: 0.25; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .leaf-pulse {
+    animation: none;
+  }
+}
+:root[data-motion="reduce"] .leaf-pulse {
+  animation: none;
 }

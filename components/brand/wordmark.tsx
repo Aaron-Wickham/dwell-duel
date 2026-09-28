@@ -1,21 +1,20 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-
-const LEAF = 'M50 3 C60 11 57 24 48 27 C41 20 43 10 50 3 Z'
+import { D_PATH, LEAF_ANGLES, LEAF_PATH } from './symbol-paths'
 
 export function DwellDuelSymbol({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
       <g transform="translate(50 50) translate(-55.5 -41.5)">
         <g fill="#72DB2B">
-          {[30, 50, 70, 90].map((angle) => (
-            <path key={angle} d={LEAF} transform={`rotate(${angle} 50 50)`} />
+          {LEAF_ANGLES.map((angle) => (
+            <path key={angle} d={LEAF_PATH} transform={`rotate(${angle} 50 50)`} />
           ))}
         </g>
         <path
           className="fill-sym-d"
           fillRule="evenodd"
-          d="M14 26 H42 A24 24 0 0 1 42 74 H14 Z M28 40 H42 A10 10 0 0 1 42 60 H28 Z"
+          d={D_PATH}
         />
       </g>
     </svg>

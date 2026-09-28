@@ -68,6 +68,12 @@ architectural decisions exist, document them here and in `docs/`.
   `lib/nav/back-swipe.ts`.
 - **Signed-out redirects** live in `proxy.ts`, and a new `(app)` section
   must be added to `lib/auth/app-paths.ts` (a test guards the drift).
+- **The brand mark's art** lives in `components/brand/symbol-paths.ts`.
+  The iOS splash is the D alone (`scripts/generate-splash.mjs`), because
+  the installed app's `LaunchScreen` grows the leaves in from that frame;
+  change one and you change the other. Favicons come from
+  `scripts/generate-favicons.mjs`. A full-page wait with no skeleton shows
+  `LeafLoader` beside words saying what's happening.
 - **The `pressable` and `no-callout` utilities,** plus the `--safe-top` /
   `--safe-bottom` tokens, which are non-zero only in standalone mode.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.

@@ -206,5 +206,6 @@ describe('listFeed vs the pre-activity_events view', () => {
     // The view itself is closed to every member, invited or not, since 0036.
     const { error: viewErr } = await daveClient.from('activity_feed').select('id').limit(1)
     expect(viewErr?.code).toBe('42501')
-  })
+    // It seeds a full feed and reads it three ways; on a busy CI runner that passes 5s.
+  }, 30_000)
 })

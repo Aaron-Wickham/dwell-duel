@@ -5,6 +5,7 @@ import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { adminHref, atLeast, getRole } from '@/lib/auth/roles'
 import { countOpenMarkets } from '@/lib/markets/list-markets'
+import { getAtStake } from '@/lib/home/at-stake'
 import { getMemberStanding } from '@/lib/social/leaderboard'
 import { listMyTaskCompletions, listPendingTaskCompletions } from '@/lib/tasks/list-task-completions'
 import { Page, PageHeader } from '@/components/ui/page'
@@ -18,12 +19,13 @@ export default async function Home() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const [role, openMarketCount, standing, myCompletions, pendingApprovals] = await Promise.all([
+  const [role, openMarketCount, standing, myCompletions, pendingApprovals, atStake] = await Promise.all([
     getRole(supabase),
     countOpenMarkets(supabase),
     getMemberStanding(supabase, user.id),
     listMyTaskCompletions(supabase, user.id),
     getRole(supabase).then((r) => (atLeast(r, 'reviewer') ? listPendingTaskCompletions(supabase) : [])),
+    getAtStake(supabase),
   ])
   const adminLink = adminHref(role)
 
@@ -70,6 +72,8 @@ export default async function Home() {
         balance={standing?.balance ?? 0}
         rank={rank}
         memberCount={memberCount}
+        atStakeDc={atStake.dc}
+        atStakeWagers={atStake.wagers}
         pendingCount={pendingReviews.length}
         pendingDc={pendingDc}
       />

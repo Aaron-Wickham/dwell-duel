@@ -50,6 +50,7 @@
   --on-hero: #03272D;
   --hero-2: #46605E;
   --hero-num: #2A6E0B;
+  --hero-inset: #D2EBBF;
   --wm-a: #03272D;
   --wm-b: #3FAE14;
   --sym-d: #03272D;
@@ -103,6 +104,7 @@
   --on-hero: #FFFFFF;
   --hero-2: #B9D3CE;
   --hero-num: #72DB2B;
+  --hero-inset: #082F35;
   --wm-a: #FFFFFF;
   --wm-b: #72DB2B;
   --sym-d: #FFFFFF;
@@ -143,6 +145,7 @@
     --on-hero: #FFFFFF;
     --hero-2: #B9D3CE;
     --hero-num: #72DB2B;
+    --hero-inset: #082F35;
     --wm-a: #FFFFFF;
     --wm-b: #72DB2B;
     --sym-d: #FFFFFF;
@@ -184,6 +187,7 @@
   --color-on-hero: var(--on-hero);
   --color-hero-2: var(--hero-2);
   --color-hero-num: var(--hero-num);
+  --color-hero-inset: var(--hero-inset);
   --color-wm-a: var(--wm-a);
   --color-wm-b: var(--wm-b);
   --color-sym-d: var(--sym-d);

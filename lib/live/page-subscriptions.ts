@@ -19,11 +19,16 @@ export const pageSubscriptions = {
   // An admin needs every submission; a member only needs their own. profiles is unfiltered so the
   // rank and member count (getMemberStanding) refresh when any member's balance changes, not just
   // this member's own.
+  // The hero's At stake moves when the member bets, cancels or places a parlay, and when a market
+  // or parlay settles (markets, and parlays' own status).
   home({ me, admin }: { me: string; admin: boolean }): LiveSubscription[] {
     return [
       { table: 'markets' },
       { table: 'tasks' },
       { table: 'profiles' },
+      { table: 'bets', filter: `profile_id=eq.${me}` },
+      { table: 'cancelled_bets', filter: `profile_id=eq.${me}` },
+      { table: 'parlays', filter: `profile_id=eq.${me}` },
       admin ? { table: 'task_completions' } : { table: 'task_completions', filter: `profile_id=eq.${me}` },
     ]
   },

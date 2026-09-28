@@ -1,22 +1,24 @@
 import { describe, it, expect } from 'vitest'
 import {
-  heroCaption,
+  atStakeDetail,
+  pendingDetail,
   marketsTileSubtitle,
   leaderboardTileSubtitle,
   adminTileSubtitle,
 } from '@/lib/home/copy'
 
-describe('heroCaption', () => {
-  it('drops the pending clause when nothing is pending', () => {
-    expect(heroCaption(3, 8, 0, 0)).toBe('Rank 3 of 8')
+describe('atStakeDetail', () => {
+  it('counts bets, and says so when nothing is riding', () => {
+    expect(atStakeDetail(0)).toBe('Nothing riding')
+    expect(atStakeDetail(1)).toBe('on 1 bet')
+    expect(atStakeDetail(4)).toBe('on 4 bets')
   })
+})
 
-  it('uses the singular for one pending review', () => {
-    expect(heroCaption(3, 8, 1, 25)).toBe('Rank 3 of 8 · 25 DC pending in 1 task review')
-  })
-
-  it('uses the plural for more than one', () => {
-    expect(heroCaption(3, 8, 2, 40)).toBe('Rank 3 of 8 · 40 DC pending in 2 task reviews')
+describe('pendingDetail', () => {
+  it('counts reviews', () => {
+    expect(pendingDetail(1)).toBe('in 1 review')
+    expect(pendingDetail(2)).toBe('in 2 reviews')
   })
 })
 

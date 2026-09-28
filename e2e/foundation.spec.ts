@@ -8,7 +8,7 @@ test('signed-in member sees their name and balance', async ({ page }) => {
   // so this only asserts a balance is shown at all, not a specific value.
   await page.goto('/')
   await expect(page.getByText('Alice', { exact: false })).toBeVisible()
-  await expect(page.getByText(/Balance: \d+ DC/)).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Your balance' }).getByText(/^\d+ DC$/).first()).toBeAttached()
 })
 
 test('admin can add and revoke an invite', async ({ page }) => {

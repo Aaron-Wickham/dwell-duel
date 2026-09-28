@@ -22,7 +22,10 @@ const NO_PAGE: PageParams = { top: null, bottom: null }
 // the last one before Task 2 moved listFeed from the activity_feed view onto activity_events --
 // `git show 8207124:lib/social/list-feed.ts`. Kept here rather than imported, since the source
 // file no longer has this shape; this is the reference the activity_events-backed listFeed must
-// stay equivalent to, so later work can't quietly drift the two apart.
+// stay equivalent to, so later work can't quietly drift the two apart. Since 0036 no member can
+// select the view, so the reference reads it through the service role: the view is
+// security_invoker, and the service role bypasses RLS, so it sees every row, exactly what an
+// invited member saw through the view before the revoke.
 interface LegacyFeedRow {
   id: string
   kind: FeedKind
@@ -123,7 +126,7 @@ async function resolve(market: TestMarket, outcomeIndex: number): Promise<void> 
 }
 
 describe('listFeed vs the pre-activity_events view', () => {
-  it("matches legacyListFeed's rows for the whole feed, one actor's activity, a second page, and an uninvited session", async () => {
+  it("matches legacyListFeed's rows for the whole feed, one actor's activity and a second page, and shows an uninvited session nothing", async () => {
     // Every kind: bets, a parlay, a resolve then an override, a parlay win, a void, and an
     // approved task -- the same shape tests/db/activity-events.test.ts's fullScenario proves
     // activity_events keeps in step with activity_feed for, so listFeed's own read of each table
@@ -167,13 +170,13 @@ describe('listFeed vs the pre-activity_events view', () => {
     }
 
     const viewerAll = await listFeed(bobClient, { page: NO_PAGE })
-    const legacyAll = await legacyListFeed(bobClient, { page: NO_PAGE })
+    const legacyAll = await legacyListFeed(serviceClient(), { page: NO_PAGE })
     expect(viewerAll.rows.length).toBe(50)
     expect(viewerAll.next).not.toBeNull()
     expect(viewerAll).toEqual(legacyAll)
 
     const viewerActor = await listFeed(bobClient, { actorId: bob.id, page: NO_PAGE })
-    const legacyActor = await legacyListFeed(bobClient, { actorId: bob.id, page: NO_PAGE })
+    const legacyActor = await legacyListFeed(serviceClient(), { actorId: bob.id, page: NO_PAGE })
     expect(viewerActor.rows.length).toBeGreaterThan(0)
     expect(viewerActor).toEqual(legacyActor)
 
@@ -182,16 +185,17 @@ describe('listFeed vs the pre-activity_events view', () => {
     const href = new URL(showMoreHref('/feed', {}, 'activity', viewerAll.next!), 'http://localhost')
     const page2 = readPageParams(Object.fromEntries(href.searchParams), 'activity')
     const viewerPage2 = await listFeed(bobClient, { page: page2 })
-    const legacyPage2 = await legacyListFeed(bobClient, { page: page2 })
+    const legacyPage2 = await legacyListFeed(serviceClient(), { page: page2 })
     expect(viewerPage2.rows.length).toBeGreaterThan(0)
     expect(viewerPage2).toEqual(legacyPage2)
 
     const dave = await makeMember('Dave')
     const daveClient = await clientFor(dave)
     const viewerUninvited = await listFeed(daveClient, { page: NO_PAGE })
-    const legacyUninvited = await legacyListFeed(daveClient, { page: NO_PAGE })
     expect(viewerUninvited.rows).toEqual([])
-    expect(legacyUninvited.rows).toEqual([])
-    expect(viewerUninvited).toEqual(legacyUninvited)
+    expect(viewerUninvited.next).toBeNull()
+    // The view itself is closed to every member, invited or not, since 0036.
+    const { error: viewErr } = await daveClient.from('activity_feed').select('id').limit(1)
+    expect(viewErr?.code).toBe('42501')
   })
 })

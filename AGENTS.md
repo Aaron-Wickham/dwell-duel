@@ -108,6 +108,9 @@ architectural decisions exist, document them here and in `docs/`.
   would show. A new feed kind, or a new way of writing a source table,
   needs a trigger change plus a step in `tests/db/activity-events.test.ts`'s
   equivalence scenario. No trigger watches `market_resolutions`.
+- **Members can't select `activity_feed`** since 0036. It stays only as
+  the DB tests' equivalence oracle, and tests read it through the service
+  client or `pgQuery`, never a member client.
 - **A build that depends on a new migration needs the migration applied
   first.** Merging to `main` runs the migration and the deploy in
   parallel, so run the Deploy Production Database workflow on the branch

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How DwellDuel works
+    url: https://github.com/Aaron-Wickham/dwell-duel/blob/main/docs/HOW-IT-WORKS.md
+    about: The rules for odds, payouts, parlays, tasks and roles.

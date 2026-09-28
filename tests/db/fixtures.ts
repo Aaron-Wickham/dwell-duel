@@ -192,11 +192,15 @@ export async function ensureInvited(client: SupabaseClient): Promise<void> {
  * so every test that needs a market also exercises the same validation
  * path a real user's create-market request goes through. Returns
  * outcome ids in the same order as the labels passed in.
+ *
+ * Markets start unseeded (seed_per_outcome 0), so tests about pools, payouts
+ * and parlay odds check the plain pool arithmetic; tests about seeded odds
+ * (0041) pass `seed` explicitly.
  */
 export async function createTestMarket(
   creatorClient: SupabaseClient,
   labels: string[],
-  opts?: { kind?: 'binary' | 'multiple_choice'; closeInMs?: number; title?: string },
+  opts?: { kind?: 'binary' | 'multiple_choice'; closeInMs?: number; title?: string; seed?: number },
 ): Promise<TestMarket> {
   await ensureInvited(creatorClient)
 
@@ -211,6 +215,12 @@ export async function createTestMarket(
     p_close_at: closeAt,
   })
   if (error) throw error
+
+  const { error: seedErr } = await serviceClient()
+    .from('markets')
+    .update({ seed_per_outcome: opts?.seed ?? 0 })
+    .eq('id', marketId as string)
+  if (seedErr) throw seedErr
 
   const { data: outcomes, error: outcomesErr } = await serviceClient()
     .from('market_outcomes')

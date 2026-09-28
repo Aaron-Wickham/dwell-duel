@@ -31,8 +31,8 @@ test('the slip button follows the member everywhere, and one tap places every so
   await page.setViewportSize({ width: 375, height: 812 })
 
   let sheet = await openSlip(page)
-  // Nobody has bet on these outcomes, so none has odds to lock into a parlay yet.
-  await expect(sheet.getByRole('button', { name: 'Parlay' }).first()).toBeDisabled()
+  // Every open market is seeded (0041), so even an outcome nobody has bet on has odds to lock.
+  await expect(sheet.getByRole('button', { name: 'Parlay' }).first()).toBeEnabled()
   for (let i = 0; i < 8; i++) {
     await page.keyboard.press('Tab')
     await expect(sheet.locator(':focus')).toHaveCount(1)

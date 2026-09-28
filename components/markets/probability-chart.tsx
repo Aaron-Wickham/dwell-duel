@@ -101,6 +101,7 @@ export function ProbabilityChart({
   closedAt = null,
   resolvedLabel = null,
   compact = false,
+  betCount = points.length,
 }: {
   outcomes: ChartOutcome[]
   points: SeriesPoint[]
@@ -108,6 +109,8 @@ export function ProbabilityChart({
   closedAt?: string | null
   resolvedLabel?: string | null
   compact?: boolean
+  // A seeded market's series opens with a point before any bet (0041), so the caption counts bets, not points.
+  betCount?: number
 }) {
   const timeZone = useTimeZone()
   const ranges = availableRanges(points, now)
@@ -216,7 +219,7 @@ export function ProbabilityChart({
     <div className="flex flex-col gap-3">
       {!compact && (
         <div className="flex min-h-11 flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-ink2">{points.length === 1 ? '1 bet' : `${points.length} bets`}</p>
+          <p className="text-sm text-ink2">{betCount === 1 ? '1 bet' : `${betCount} bets`}</p>
           {ranges.length > 1 && (
             <ToggleGroup
               aria-label="Time range"

@@ -13,7 +13,7 @@ import { Message } from '@/components/ui/message'
 import { h2Class } from '@/components/ui/page'
 import { StatusChip } from '@/components/ui/status-chip'
 import type { SlipPick } from '@/lib/parlays/get-slip'
-import { combineOdds, formatOdds, MAX_PICKS, potentialPayout, soloPayout } from '@/lib/parlays/odds'
+import { combineOdds, formatOdds, MAX_MULTIPLIER, MAX_PICKS, potentialPayout, soloPayout } from '@/lib/parlays/odds'
 import { placeSlipAction, type PlaceSlipState } from '@/lib/parlays/place-slip'
 import { removeFromSlipAction } from '@/lib/parlays/slip-actions'
 import { haptics } from '@/lib/haptics'
@@ -218,7 +218,7 @@ export function SlipPanel() {
             </h3>
             {legs.length >= 2 && legBps.length === legs.length && (
               <span className="font-extrabold tabular-nums">
-                {formatOdds(multiplierBp)}×{capped && ' (capped at 20×)'}
+                {formatOdds(multiplierBp)}×{capped && ` (capped at ${MAX_MULTIPLIER}×)`}
               </span>
             )}
           </div>

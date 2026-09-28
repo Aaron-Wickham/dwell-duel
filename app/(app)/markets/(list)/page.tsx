@@ -58,7 +58,10 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
   const now = new Date(nowMs)
 
   const cards = markets.map(([market, prefix]) => {
-    const odds = computeOdds(market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })))
+    const odds = computeOdds(
+      market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })),
+      market.seedPerOutcome,
+    )
     const points = sparklinesByMarket.get(market.id) ?? []
     const chart: MarketCardChart | undefined =
       points.length > 0

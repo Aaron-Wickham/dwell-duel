@@ -10,6 +10,8 @@ export interface MarketDetail {
   kind: 'binary' | 'multiple_choice'
   status: 'open' | 'resolved' | 'voided'
   closeAt: string
+  createdAt: string
+  seedPerOutcome: number
   createdBy: string
   creatorName: string
   currentResolutionId: string | null
@@ -32,7 +34,7 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
   const { data, error } = await supabase
     .from('markets')
     .select(
-      'id, title, description, kind, status, close_at, created_by, current_resolution_id, creator:profiles(display_name), market_outcomes(id, label, pool_total), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at)',
+      'id, title, description, kind, status, close_at, created_at, created_by, current_resolution_id, seed_per_outcome, creator:profiles(display_name), market_outcomes(id, label, pool_total), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at)',
     )
     .eq('id', marketId)
     // Rows come back with no default order, and colours are assigned by position for
@@ -67,6 +69,8 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
     kind: data.kind,
     status: data.status,
     closeAt: data.close_at,
+    createdAt: data.created_at,
+    seedPerOutcome: data.seed_per_outcome,
     createdBy: data.created_by,
     creatorName: creator?.display_name ?? 'Unknown member',
     currentResolutionId: data.current_resolution_id,

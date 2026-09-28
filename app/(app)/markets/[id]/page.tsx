@@ -8,7 +8,7 @@ import { atLeast, getRole } from '@/lib/auth/roles'
 import { getMarket, type MarketDetail } from '@/lib/markets/get-market'
 import { getChartBets } from '@/lib/markets/chart-bets'
 import { buildProbabilitySeries } from '@/lib/markets/probability-series'
-import { computeOdds, type OutcomeOdds } from '@/lib/markets/odds'
+import { computeOdds, effectivePools, type OutcomeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt } from '@/lib/markets/market-status'
 import { rowState } from '@/lib/markets/row-state'
@@ -49,7 +49,10 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const [market, slipEntries] = await Promise.all([getMarket(supabase, id), readSlip()])
   if (!market) notFound()
 
-  const odds = computeOdds(market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })))
+  const odds = computeOdds(
+    market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })),
+    market.seedPerOutcome,
+  )
 
   const isCreator = market.createdBy === user.id
   // Server Components render once per request with no re-render/
@@ -145,6 +148,7 @@ async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: 
   const chartPoints = buildProbabilitySeries(
     chartOutcomes.map((o) => o.id),
     chartBets,
+    { seed: market.seedPerOutcome, startAt: market.createdAt },
   )
 
   return (
@@ -153,6 +157,7 @@ async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: 
         <ProbabilityChart
           outcomes={chartOutcomes}
           points={chartPoints}
+          betCount={chartBets.length}
           now={now}
           closedAt={chartClosedAt(market.status, market.closeAt, market.resolvedAt)}
           resolvedLabel={market.status === 'resolved' ? market.resolvedOutcomeLabel : null}
@@ -235,13 +240,16 @@ async function MarketActions({
           </Message>
         )}
         <ul className="flex flex-col divide-y divide-line">
-          {odds.map((o, index) => (
+          {odds.map((o, index) => {
+            const effective = effectivePools(o.poolTotal, totalPool, market.seedPerOutcome, odds.length)
+            const oddsBp = legOddsBp(effective.total, effective.pool)
+            return (
             <li key={o.outcomeId}>
               <OutcomeRow
                 label={o.label}
                 poolTotal={o.poolTotal}
                 probability={o.impliedProbability}
-                oddsBp={legOddsBp(totalPool, o.poolTotal)}
+                oddsBp={oddsBp}
                 series={outcomeSeries(market.kind, o.label, index)}
                 state={rowState(o.outcomeId, { slip, canBet, slipFull })}
                 winner={market.status === 'resolved' && o.label === market.resolvedOutcomeLabel}
@@ -252,16 +260,17 @@ async function MarketActions({
                   marketTitle: market.title,
                   parlay: false,
                   open: canBet,
-                  oddsBp: legOddsBp(totalPool, o.poolTotal),
-                  outcomePool: o.poolTotal,
-                  totalPool,
+                  oddsBp,
+                  outcomePool: effective.pool,
+                  totalPool: effective.total,
                 }}
                 addAction={addToSlipAction.bind(null, o.outcomeId)}
                 removeAction={removeFromSlipAction.bind(null, o.outcomeId)}
                 disabledReasonId={slipFull ? 'slip-full-note' : undefined}
               />
             </li>
-          ))}
+            )
+          })}
         </ul>
       </SectionCard>
 

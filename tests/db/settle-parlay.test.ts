@@ -121,17 +121,13 @@ describe('parlay settlement', () => {
     expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: 17 })
   })
 
-  it('caps the multiplier at 20x', async () => {
-    const a = await seededMarket('Market A')
-    const b = await seededMarket('Market B')
-    const c = await seededMarket('Market C')
-    // 4 x 4 x 4 = 64, capped to 20
-    const id = await placeParlay([a.outcomeIds[0], b.outcomeIds[0], c.outcomeIds[0]], 10)
+  it('caps the multiplier at 100x', async () => {
+    const markets = [await seededMarket('Market A'), await seededMarket('Market B'), await seededMarket('Market C'), await seededMarket('Market D')]
+    // 4 x 4 x 4 x 4 = 256, capped to 100
+    const id = await placeParlay(markets.map((m) => m.outcomeIds[0]), 10)
 
-    await resolve(a, 0)
-    await resolve(b, 0)
-    await resolve(c, 0)
-    expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: 200 })
+    for (const m of markets) await resolve(m, 0)
+    expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: 1000 })
   })
 
   it('loses as soon as one leg loses, even with another leg still open, and stays lost', async () => {

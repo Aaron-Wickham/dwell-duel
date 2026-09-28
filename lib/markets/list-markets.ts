@@ -9,6 +9,7 @@ export interface MarketSummary {
   kind: 'binary' | 'multiple_choice'
   status: 'open' | 'resolved' | 'voided'
   closeAt: string
+  seedPerOutcome: number
   resolvedOutcomeLabel: string | null
   resolvedAt: string | null
   outcomes: { id: string; label: string; poolTotal: number }[]
@@ -18,7 +19,7 @@ export interface MarketSummary {
 // second `.in()` whose URL would grow with the list. The hint names the foreign key because
 // market_resolutions also points back at markets through market_id.
 const SUMMARY_SELECT =
-  'id, title, kind, status, close_at, created_at, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at), market_outcomes(id, label, pool_total)'
+  'id, title, kind, status, close_at, created_at, seed_per_outcome, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at), market_outcomes(id, label, pool_total)'
 
 type SummaryRow = {
   id: string
@@ -27,6 +28,7 @@ type SummaryRow = {
   status: MarketSummary['status']
   close_at: string
   created_at: string
+  seed_per_outcome: number
   current_resolution: { outcome_id: string; resolved_at: string } | null
   market_outcomes: { id: string; label: string; pool_total: number }[] | null
 }
@@ -40,6 +42,7 @@ function toSummary(m: SummaryRow): MarketSummary {
     kind: m.kind,
     status: m.status,
     closeAt: m.close_at,
+    seedPerOutcome: m.seed_per_outcome,
     resolvedOutcomeLabel: resolution ? (outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null) : null,
     resolvedAt: resolution?.resolved_at ?? null,
     outcomes,

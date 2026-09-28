@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { LegStatus } from '@/lib/parlays/leg-status'
 import type { ParlayView } from '@/lib/parlays/list-parlays'
-import { formatOdds } from '@/lib/parlays/odds'
+import { formatOdds, MAX_MULTIPLIER } from '@/lib/parlays/odds'
 import { cn } from '@/lib/utils'
 
 const STATUS: Record<ParlayView['status'], { label: string; className: string }> = {
@@ -38,7 +38,7 @@ export function PlacedParlay({ parlay }: { parlay: ParlayView }) {
     <li className="flex flex-col gap-2 py-4">
       <p>
         <span className={cn('font-extrabold', status.className)}>{status.label}</span>
-        {`${terms(parlay)}${parlay.capped ? ' (capped at 20×)' : ''}`}
+        {`${terms(parlay)}${parlay.capped ? ` (capped at ${MAX_MULTIPLIER}×)` : ''}`}
       </p>
       <ul className="flex flex-col">
         {parlay.legs.map((leg) => (

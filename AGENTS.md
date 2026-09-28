@@ -71,6 +71,11 @@ architectural decisions exist, document them here and in `docs/`.
 - **The `pressable` and `no-callout` utilities,** plus the `--safe-top` /
   `--safe-bottom` tokens, which are non-zero only in standalone mode.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.
+- **Odds are seeded** (0041): every outcome's pool counts
+  `markets.seed_per_outcome` virtual DC. Odds, chance, payout estimates and
+  charts go through `effectivePools` (`lib/markets/odds.ts`), the same maths
+  `resolve_market` pays on. Parlay limits live in SQL `parlay_limits()`,
+  mirrored by `MAX_PICKS` / `MAX_MULTIPLIER`; a DB test keeps them equal.
 - **Every bet goes through the slip.** `SlipProvider` (in the signed-in
   layout) holds the cookie's picks, each Solo or Parlay, with optimistic
   add, remove and mode switches; the floating `SlipSheet` places them all

@@ -151,3 +151,20 @@ describe('availableRanges', () => {
     ).toEqual(['1D', '1W', 'All'])
   })
 })
+
+describe('buildProbabilitySeries with a seed', () => {
+  it('starts at an even split when the market opened, then moves with each bet on seeded pools', () => {
+    const series = buildProbabilitySeries(['y', 'n'], [{ outcomeId: 'y', amount: 10, createdAt: '2026-09-02T00:00:00Z' }], {
+      seed: 20,
+      startAt: '2026-09-01T00:00:00Z',
+    })
+    expect(series).toEqual([
+      { t: Date.parse('2026-09-01T00:00:00Z'), shares: { y: 0.5, n: 0.5 } },
+      { t: Date.parse('2026-09-02T00:00:00Z'), shares: { y: 30 / 50, n: 20 / 50 } },
+    ])
+  })
+
+  it('draws no opening point for an unseeded market', () => {
+    expect(buildProbabilitySeries(['y', 'n'], [], { seed: 0, startAt: '2026-09-01T00:00:00Z' })).toEqual([])
+  })
+})

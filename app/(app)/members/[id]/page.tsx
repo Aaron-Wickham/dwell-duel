@@ -59,7 +59,9 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
 
 const ROW_ID_PREFIX = 'activity'
 
-async function MemberActivity({
+// Exported so the page-level paging tests (windowed-empty, focusId) can render this section
+// directly: it's an async Server Component inside a <Suspense>, which jsdom can't render in place.
+export async function MemberActivity({
   memberId,
   page,
   searchParams,

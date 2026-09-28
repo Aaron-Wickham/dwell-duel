@@ -55,7 +55,14 @@ architectural decisions exist, document them here and in `docs/`.
   survive the initial load, in which case it streams behind `<Suspense>`
   instead, as the member page does. A `loading.tsx` also wraps every
   route below it — that's why the markets list lives in
-  `markets/(list)/`, so the market page can return a real 404.
+  `markets/(list)/`, so the market page can return a real 404. A page
+  with several independently streamed sections passes each
+  `SkeletonScreen` fallback `announce={false}` and wraps those sections in
+  `components/ui/loading-status.tsx`'s `<LoadingStatus>` — a
+  `display: contents` wrapper announcing one status scoped to its own
+  subtree, for as long as any of its fallbacks is still showing — as the
+  market page does. A route-level `loading.tsx` keeps its own single
+  status.
 - **Drill-down pages** pass `Page`'s `transition="drill-down"`, which
   also enables the back-swipe; its logical parents live in
   `lib/nav/back-swipe.ts`.
@@ -76,13 +83,19 @@ architectural decisions exist, document them here and in `docs/`.
 - **Long lists page with "Show more".** `lib/pagination` plus
   `components/ui/show-more.tsx`'s `ShowMore`, which takes `href`, an
   optional `fresh` prop — pass `fresh` when `next.kind === 'window'`, so a
-  fresh window scrolls to the top — and `focusId`,
-  `rowDomId(prefix, next.firstId)`. Each row spreads
-  `focusTarget(rowDomId(prefix, row.id))` (`lib/pagination/row-id.ts`),
-  the page renders one `<ShowMoreFocus />`, and a window that comes back
-  empty renders `NothingOlder` instead of the list's empty state. A reader
-  whose row select carries embeds passes `readKeyset` a keys-only
-  `fetchKeys` for its probe.
+  fresh window scrolls to the top — `focusId`, `rowDomId(prefix,
+  next.firstId)`, and an optional `description` for a page that has more
+  than one "Show more" on it. Each row spreads
+  `focusTarget(rowDomId(prefix, row.id))` (`lib/pagination/row-id.ts`); a
+  row whose content is long enough to make a verbose accessible name (a
+  card) instead passes `focusTarget(domId, labelId)`, naming itself from
+  its title. The page renders one `<ShowMoreFocus />`, and a window that
+  comes back empty renders `NothingOlder` instead of the list's empty
+  state. A reader whose row select carries embeds passes `readKeyset` a
+  keys-only `fetchKeys` for its probe. An order that isn't
+  `(timestamp, id)` — the leaderboard's rank — reads through
+  `readOrdered` with its own `KeysetOrder`, `lib/pagination/rank-cursor.ts`'s
+  `RANK_ORDER`, instead of `readKeyset`.
 - **Keyset filters AND a plain timestamp bound** onto the cursor's
   tiebreak OR, so the query plans an Index Cond instead of scanning the
   whole table.

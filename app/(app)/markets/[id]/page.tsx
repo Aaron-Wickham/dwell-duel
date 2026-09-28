@@ -303,7 +303,9 @@ async function MarketActions({
 
 const BET_ROW_ID_PREFIX = 'bet'
 
-async function MarketBets({
+// Exported so the page-level paging tests (windowed-empty, focusId) can render this section
+// directly: it's an async Server Component inside a <Suspense>, which jsdom can't render in place.
+export async function MarketBets({
   market,
   viewerId,
   canBet,

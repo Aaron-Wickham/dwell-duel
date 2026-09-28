@@ -62,6 +62,18 @@
 - **The market page announces before hydration (Task 6).** `LoadingStatus` starts pending, so the server-rendered first flush, where the fallbacks are showing, already says "Loading…". A status that started empty would say nothing until the page hydrated. The first check after mount clears it when nothing is pending.
 - **`/markets`' two "Show more" links are told apart by description, not name (Task 5).** Each keeps the accessible name "Show more", so every existing selector resolves. `ShowMore`'s optional `description` adds "Open markets" or "Closed markets" through `aria-describedby`, for a screen reader's links list, where the preceding heading (H80) isn't read.
 
+## Execution rulings (as built)
+
+Forced during execution, after the rulings above were written, and reflected in the code rather than in the task bodies below:
+
+- **Task 1's three locks are taken with a NOWAIT retry loop, not one fixed acquisition order.** The ruling above (lock list leaves out the view, `bets`, `market_outcomes`) still holds, but a fixed order for `task_completions`, `parlays` and `activity_events` can deadlock: the app writes `activity_events` from both a resolve/void path and a parlay-settle path, in opposite orders against the other two tables. 0036 takes each lock with `NOWAIT` inside a retry loop instead, so a failed attempt releases whatever it holds and the migration never waits while holding a lock.
+- **Seven foreign key indexes, not five**, per the ruling above — carried through unchanged.
+- **Task 6's `LoadingStatus` is a scoped `useSyncExternalStore` wrapper, not a `useState` that starts `true`.** A plain state starting `true` flashed "Loading…" on a client navigation into an already-resolved page, and an unscoped check could count an outgoing page's own skeletons during a route transition. The built version answers `true` from `getServerSnapshot` (so the first flush still announces), and re-derives its status afterward from a `MutationObserver` scoped to its own wrapper.
+- **`focusTarget` takes an optional `labelId` (Task 3 fix round 1).** Overriding the self-`aria-labelledby` ruling above, `MarketCard` labels itself by its title rather than its whole content — the review judged a title the more useful accessible name for a card-shaped row.
+- **`ShowMore` takes an optional `description` (Task 5 Step 3b).** Already reflected in the ruling above; called out here because it was a controller edit made outside a task's own Verify step, unproven until the final review's own test run.
+- **The rank cursor rejects a balance outside `int4`'s range (Task 4 fix round 1).** Without the bound, a crafted or drifted balance reaches PostgREST as a literal Postgres can't store, which surfaced as the error page (`22003`) instead of falling back to the first page like any other bad cursor.
+- **The markets list tags each card by its source list and drops the open copy of a market that resolved between the two reads (Task 5 fix round 1).** Markets only move open → closed, so dropping the stale open copy is enough to keep every key and DOM id unique.
+
 ---
 
 ## Task 1: Close the old feed view, index the event cascades, enforce the feed's timestamps

@@ -49,7 +49,7 @@ export async function deleteAllAuthUsers(db: SupabaseClient): Promise<void> {
 
 // Local Auth's admin API occasionally answers a delete with a retryable "Database error deleting
 // user" under the suite's sustained load; it succeeds when asked again.
-async function deleteAuthUser(db: SupabaseClient, id: string): Promise<void> {
+export async function deleteAuthUser(db: SupabaseClient, id: string): Promise<void> {
   for (let attempt = 1; ; attempt++) {
     const { error } = await db.auth.admin.deleteUser(id)
     if (!error) return

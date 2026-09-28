@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, deleteAuthUser } from './helpers'
 import { seedMembers, makeMember, clientFor, ensureInvited } from './fixtures'
 import { getLeaderboardPage } from '@/lib/social/leaderboard'
 import { assignRanks } from '@/lib/social/ranking'
@@ -19,9 +19,10 @@ const TIE_BALANCE = 950
 const EXTRA_MEMBERS = 58
 
 let bobClient: SupabaseClient
-// Every member this file adds is deleted in afterAll, so the DB tests that clear auth users one
-// page at a time never inherit them. A run killed first still leaves nothing for seedMembers,
-// which pages through every auth user.
+// Every member this file adds is deleted in afterAll, so a local run doesn't accumulate them.
+// seedMembers() wipes every auth user before seeding, so a run killed before cleanup can't strand
+// extras for the next file's own seedMembers() to trip over — afterAll just keeps a repeated
+// local run tidy.
 const extras: string[] = []
 let board: (Profile & { rank: number })[]
 
@@ -69,10 +70,7 @@ afterAll(async () => {
     const { error } = await db.from('profiles').delete().in('id', extras)
     if (error) throw error
   }
-  for (const id of extras) {
-    const { error } = await db.auth.admin.deleteUser(id)
-    if (error) throw error
-  }
+  for (const id of extras) await deleteAuthUser(db, id)
 }, 60_000)
 
 describe('getLeaderboardPage', () => {

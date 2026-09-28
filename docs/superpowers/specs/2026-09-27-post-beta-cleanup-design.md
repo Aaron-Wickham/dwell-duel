@@ -141,3 +141,15 @@ A **preflight guard** runs before any constraint is added. It counts the rows th
 - **Before merging:** run Deploy Production Database on the branch to apply 0036.
 - **Merge:** the push from `main` then has nothing to apply.
 - **After deploy:** check that the leaderboard and markets list show "Show more" when there are enough rows, and that the feed and member pages still load.
+
+## As built
+
+Where the implementation deliberately differs from this spec:
+
+- **0036 takes its locks with a NOWAIT retry loop, not a plain `lock table`.** Access exclusive on `task_completions` and `parlays`, share row exclusive on `activity_events`, retried on lock-not-available: the app writes those tables in both orders (resolve/void versus parlay settle), so a fixed acquisition order can deadlock against live traffic.
+- **Seven foreign key indexes, not five.** Beyond the five cascade columns, `resolution_id` and `actor_id` are indexed too, for real queries neither existing index can serve.
+- **`LoadingStatus` is a scoped `useSyncExternalStore` wrapper.** It renders pending on the server (matching the fallback markup on first flush) and re-derives its status from a `MutationObserver` scoped to its own subtree, so an outgoing page's own skeletons can't be counted mid-transition.
+- **`focusTarget` takes an optional `labelId`.** A row whose full content would make a verbose accessible name (a market card) is labelled by a narrower element — its title — instead of itself.
+- **`ShowMore` takes an optional `description`.** A page with more than one "Show more" link (the markets list's open and closed lists) needs them distinguishable out of context while both keep the accessible name "Show more".
+- **The rank cursor rejects a balance outside Postgres's `int4` range.** Without the bound, a tampered or drifted balance reaches PostgREST as a literal it can't store, and the leaderboard would render its error page instead of falling back to the first page like any other bad cursor.
+- **The markets list tags each card by the list it came from, and drops the open copy of a market that resolved between the open and closed reads.** Markets only move open → closed, so dropping the stale open copy is enough that a market resolving mid-page-load can't produce a duplicate key or DOM id.

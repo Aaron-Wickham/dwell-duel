@@ -92,3 +92,37 @@ describe('createMarketAction length limits', () => {
     expect(supabase.rpc).toHaveBeenCalledWith('create_market', expect.objectContaining({ p_outcome_labels: ['Red', long] }))
   })
 })
+
+describe('createMarketAction over/under', () => {
+  function overUnderForm(line: string) {
+    const form = new FormData()
+    form.set('title', 'Times Sean says bet')
+    form.set('kind', 'over_under')
+    form.set('close_at', CLOSE_AT)
+    form.set('line', line)
+    return form
+  }
+
+  it('sends the line and lets create_market make the outcomes', async () => {
+    await createMarketAction(undefined, overUnderForm('3.5'))
+    expect(supabase.rpc).toHaveBeenCalledWith('create_market', {
+      p_title: 'Times Sean says bet',
+      p_description: null,
+      p_kind: 'over_under',
+      p_outcome_labels: [],
+      p_close_at: CLOSE_AT,
+      p_line: 3.5,
+    })
+    expect(redirect).toHaveBeenCalledWith('/markets/market-1')
+  })
+
+  it('refuses a line that isn’t a half number', async () => {
+    for (const line of ['3', '3.25', '0', '', 'abc']) {
+      expect(await createMarketAction(undefined, overUnderForm(line)), line).toEqual({
+        formError: 'Set the line to a half number, like 3.5.',
+        field: 'line',
+      })
+    }
+    expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+})

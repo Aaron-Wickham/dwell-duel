@@ -1,3 +1,4 @@
+import type { MarketKind } from '@/lib/markets/kind'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { avatarUrl } from '@/lib/profile/avatar'
@@ -7,11 +8,15 @@ export interface MarketDetail {
   id: string
   title: string
   description: string | null
-  kind: 'binary' | 'multiple_choice'
+  kind: MarketKind
   status: 'open' | 'resolved' | 'voided'
   closeAt: string
   createdAt: string
   seedPerOutcome: number
+  // An over/under's line, and the actual result it resolved on.
+  line: number | null
+  actualValue: number | null
+  editedAt: string | null
   createdBy: string
   creatorName: string
   currentResolutionId: string | null
@@ -34,7 +39,7 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
   const { data, error } = await supabase
     .from('markets')
     .select(
-      'id, title, description, kind, status, close_at, created_at, created_by, current_resolution_id, seed_per_outcome, creator:profiles(display_name), market_outcomes(id, label, pool_total), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at)',
+      'id, title, description, kind, status, close_at, created_at, created_by, current_resolution_id, seed_per_outcome, line, edited_at, creator:profiles(display_name), market_outcomes(id, label, pool_total), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at, actual_value)',
     )
     .eq('id', marketId)
     // Rows come back with no default order, and colours are assigned by position for
@@ -56,7 +61,7 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
   // The embed above replaces a second round trip to market_resolutions: current_resolution_id
   // is a to-one foreign key on markets itself, so PostgREST hands back one object (or null),
   // never an array.
-  const resolution = data.current_resolution as unknown as { outcome_id: string; resolved_at: string } | null
+  const resolution = data.current_resolution as unknown as { outcome_id: string; resolved_at: string; actual_value: number | null } | null
   const resolvedOutcomeLabel = resolution ? (outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null) : null
   const resolvedAt = resolution?.resolved_at ?? null
 
@@ -71,6 +76,9 @@ export async function getMarket(supabase: SupabaseClient, marketId: string): Pro
     closeAt: data.close_at,
     createdAt: data.created_at,
     seedPerOutcome: data.seed_per_outcome,
+    line: data.line,
+    actualValue: resolution?.actual_value ?? null,
+    editedAt: data.edited_at,
     createdBy: data.created_by,
     creatorName: creator?.display_name ?? 'Unknown member',
     currentResolutionId: data.current_resolution_id,

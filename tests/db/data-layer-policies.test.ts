@@ -16,7 +16,7 @@ type Expression = Pick<Policy, 'tablename' | 'policyname' | 'cmd' | 'qual' | 'wi
 // pg_policies as the latest migration leaves them: 0032's policies, unchanged apart from 0033's
 // (select …) wraps, plus 0035's new policy on activity_events, 0037's on cancelled_bets, and
 // 0040's role changes (new profiles start as members; reviewers read every completion), and
-// 0042's proof_attachments.
+// 0042's proof_attachments, and 0043's market_edits.
 const POLICIES_NOW: Expression[] = [
   { tablename: 'activity_events', policyname: 'select_activity_events', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   { tablename: 'allowed_emails', policyname: 'admin_delete_invites', cmd: 'DELETE', qual: 'is_admin()', with_check: null },
@@ -31,6 +31,7 @@ const POLICIES_NOW: Expression[] = [
     qual: '((profile_id = ( SELECT auth.uid() AS uid)) OR is_admin())',
     with_check: null,
   },
+  { tablename: 'market_edits', policyname: 'select_market_edits', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   { tablename: 'market_outcomes', policyname: 'select_market_outcomes', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   { tablename: 'market_resolutions', policyname: 'select_market_resolutions', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   { tablename: 'markets', policyname: 'select_markets', cmd: 'SELECT', qual: 'is_invited()', with_check: null },

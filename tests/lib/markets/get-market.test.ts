@@ -38,7 +38,7 @@ describe('getMarket', () => {
     expect(from).toHaveBeenCalledWith('markets')
     expect(select).toHaveBeenCalledTimes(1)
     expect(select.mock.calls[0][0]).toContain(
-      'current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at)',
+      'current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at, actual_value)',
     )
     expect(market?.resolvedOutcomeLabel).toBe('Yes')
     expect(market?.resolvedAt).toBe('2026-01-02T00:00:00Z')

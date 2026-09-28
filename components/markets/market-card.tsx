@@ -1,3 +1,4 @@
+import { formatLine, type MarketKind } from '@/lib/markets/kind'
 import Link from 'next/link'
 import { Trophy } from 'lucide-react'
 import { cardClass } from '@/components/ui/card'
@@ -41,7 +42,10 @@ export interface MarketCardProps {
   id: string
   title: string
   status: MarketCardStatus
-  kind: 'binary' | 'multiple_choice'
+  kind: MarketKind
+  // An over/under's line, shown as an O/U chip.
+  line?: number | null
+  edited?: boolean
   closeAt: string
   resolvedAt: string | null
   outcomes: MarketCardOutcome[]
@@ -55,6 +59,8 @@ export function MarketCard({
   title,
   status,
   kind,
+  line = null,
+  edited = false,
   closeAt,
   resolvedAt,
   outcomes,
@@ -72,6 +78,7 @@ export function MarketCard({
     <article {...focusTarget(domId, titleId)} className={cn(cardClass, 'flex flex-col gap-3 p-[18px]')}>
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</StatusChip>
+        {kind === 'over_under' && line !== null && <StatusChip tone="void">O/U {formatLine(line)}</StatusChip>}
         <span className="text-sm text-ink2">
           {status === 'open' && (
             <>
@@ -87,6 +94,7 @@ export function MarketCard({
               Closed <LocalTime iso={closeAt} format="day" />
             </>
           ) : null}
+          {edited && ' · Edited'}
         </span>
       </div>
       <h3 id={titleId} className="text-[18px] font-extrabold leading-[1.3] tracking-[-0.01em]">

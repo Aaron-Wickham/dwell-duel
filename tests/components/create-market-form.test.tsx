@@ -117,3 +117,33 @@ describe('CreateMarketForm', () => {
     expect(fieldset).not.toHaveAttribute('aria-invalid')
   })
 })
+
+describe('CreateMarketForm over/under', () => {
+  it('asks for a half-number line instead of outcomes', async () => {
+    const user = userEvent.setup()
+    render(<CreateMarketForm />)
+    await user.click(screen.getByRole('radio', { name: 'Over/Under' }))
+
+    const line = screen.getByLabelText('Line')
+    expect(line).toHaveAttribute('step', '0.5')
+    expect(line).toHaveAttribute('min', '0.5')
+    expect(line).toHaveAccessibleDescription(/Use a half number, like 3.5/)
+    expect(screen.queryByLabelText('Outcome 1')).not.toBeInTheDocument()
+  })
+
+  it('ties a line error to the line', async () => {
+    createMarketAction.mockResolvedValue({ formError: 'Set the line to a half number, like 3.5.', field: 'line' })
+    const user = userEvent.setup()
+    render(<CreateMarketForm />)
+    await user.type(screen.getByLabelText('Title'), 'Times Sean says bet')
+    await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
+    await user.click(screen.getByRole('radio', { name: 'Over/Under' }))
+    await user.type(screen.getByLabelText('Line'), '3.5')
+    await user.click(screen.getByRole('button', { name: 'Create market' }))
+
+    await screen.findByRole('alert')
+    expect(screen.getByLabelText('Line')).toHaveAttribute('aria-invalid', 'true')
+    expect((createMarketAction.mock.calls[0][1] as FormData).get('kind')).toBe('over_under')
+    expect((createMarketAction.mock.calls[0][1] as FormData).get('line')).toBe('3.5')
+  })
+})

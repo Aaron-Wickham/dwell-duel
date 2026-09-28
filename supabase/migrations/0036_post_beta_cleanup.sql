@@ -3,38 +3,54 @@
 -- enforced.
 --
 -- One explicit transaction, like 0034 and 0035, because the migration runner
--- autocommits each statement. lock_timeout bounds each lock wait below
--- separately; if a lock can't be taken in time, or a conflicting
--- transaction is already in flight and this migration would deadlock
--- against it, nothing is applied and the Deploy Production Database
--- workflow can simply be re-run.
+-- autocommits each statement. lock_timeout bounds the wait on every
+-- statement below the lock block; if one can't be taken in time, nothing is
+-- applied and the Deploy Production Database workflow can simply be
+-- re-run.
 --
--- The locks hold until commit, so no completion or parlay can change between
--- the guard's count and the constraints being added. task_completions and
--- parlays are taken in access exclusive mode up front -- the mode their
--- own `add constraint ... check` needs to validate -- so neither lock is
--- ever upgraded mid-transaction. Locking at a weaker mode first (say share
--- row exclusive) and upgrading later would deadlock against any read that
--- already holds that weaker mode and is itself waiting on this
--- transaction's own later statement: an in-flight approve_task_completion's
--- `select ... for update`, for instance, or resolve_market/void_market
--- reaching settle_parlay's update. activity_events only needs share row
--- exclusive: `create index` (not concurrently) takes a plain share lock,
--- which share row exclusive already covers, and nothing here writes rows
--- into it. The three are locked in the app's own global write order --
--- task_completions, then parlays, then activity_events, since every writer
--- reaches activity_events through a trigger after writing its source row --
--- so a transaction already holding an earlier table's lock and waiting on a
--- later one can still finish instead of deadlocking against this one. If a
--- conflicting transaction is already in progress regardless, this migration
--- is the one that waits, up to lock_timeout, and then aborts cleanly -- the
--- app's own transaction completes, and the migration is simply re-run.
--- activity_feed isn't in the list: locking a view locks every table it
--- reads, and a revoke needs no lock of its own.
+-- The app writes task_completions, parlays and activity_events in both
+-- orders: resolve_market/void_market update markets (whose trigger writes
+-- activity_events) before settle_parlay touches parlays, while an ordinary
+-- parlay settle writes parlays and only then activity_events through its
+-- own trigger. No fixed lock order is deadlock-free against every writer,
+-- so this migration never waits while holding a lock. Each attempt below
+-- takes all three locks with NOWAIT inside a subtransaction: either every
+-- lock is granted immediately, or none are, since a failed attempt's
+-- subtransaction rollback releases whatever that attempt had already
+-- taken. It retries every 0.1s for about 5s (matching lock_timeout below),
+-- then raises -- nothing is applied, and the migration is simply re-run.
+-- Locks taken inside a subtransaction that commits carry through to this
+-- outer transaction and hold until its own commit, so no completion or
+-- parlay can change between the guard's count and the constraints being
+-- added. task_completions and parlays are taken in access exclusive mode,
+-- what their own `add constraint ... check` needs to validate;
+-- activity_events only needs share row exclusive, since `create index`
+-- (not concurrently) takes a plain share lock, which share row exclusive
+-- already covers, and nothing here writes rows into it. activity_feed
+-- isn't locked: locking a view locks every table it reads, and a revoke
+-- needs no lock of its own.
 begin;
 set local lock_timeout = '5s';
-lock table public.task_completions, public.parlays in access exclusive mode;
-lock table public.activity_events in share row exclusive mode;
+
+do $$
+declare
+  attempt int := 0;
+begin
+  loop
+    begin
+      lock table public.task_completions, public.parlays in access exclusive mode nowait;
+      lock table public.activity_events in share row exclusive mode nowait;
+      exit;
+    exception when lock_not_available then
+      attempt := attempt + 1;
+      if attempt >= 50 then
+        raise;
+      end if;
+      perform pg_sleep(0.1);
+    end;
+  end loop;
+end
+$$;
 
 -- Preflight: the constraints below are added validated, so a row already
 -- breaking either invariant would fail the whole migration at the alter

@@ -6,16 +6,19 @@ import { seedMembers, createTestTask, type Member } from './fixtures'
 import { pgQuery } from './pg-query'
 
 // Reads the preflight guard out of the migration itself, so the test can't drift from what
-// actually runs: the do $$ ... $$; block before any change. It's the only do block in 0036, and
-// it doesn't nest $$ tags.
+// actually runs: the do $$ ... $$; block before any change. 0036 has a second do $$ block (the
+// NOWAIT lock-retry loop), so this picks the one that actually raises the invariant-violation
+// message, rather than assuming the guard is the file's only or first do block. Neither block
+// nests $$ tags.
 function readGuardBlock(): string {
   const sql = readFileSync(
     path.resolve(import.meta.dirname, '../../supabase/migrations/0036_post_beta_cleanup.sql'),
     'utf8',
   )
-  const match = sql.match(/do \$\$[\s\S]*?\$\$;/)
-  if (!match) throw new Error('could not find the preflight do $$ block in 0036_post_beta_cleanup.sql')
-  return match[0]
+  const blocks = sql.match(/do \$\$[\s\S]*?\$\$;/g) ?? []
+  const guard = blocks.find((b) => b.includes('rows already break the new invariants'))
+  if (!guard) throw new Error('could not find the preflight do $$ block in 0036_post_beta_cleanup.sql')
+  return guard
 }
 
 const FOREIGN_KEY_INDEXES: Record<string, string> = {

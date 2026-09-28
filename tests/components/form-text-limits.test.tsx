@@ -15,6 +15,7 @@ const actions = vi.hoisted(() => ({
   adjustBalanceAction: vi.fn(),
   addInviteAction: vi.fn(),
   revokeInviteAction: vi.fn(),
+  updateProfileAction: vi.fn(),
 }))
 vi.mock('@/lib/markets/create-market', () => ({ createMarketAction: actions.createMarketAction }))
 vi.mock('@/lib/tasks/create-task', () => ({ createTaskAction: actions.createTaskAction }))
@@ -26,6 +27,7 @@ vi.mock('@/lib/tasks/review-task-completion', () => ({
   bulkRejectTaskCompletionsAction: actions.bulkRejectTaskCompletionsAction,
 }))
 vi.mock('@/lib/members/adjust-balance', () => ({ adjustBalanceAction: actions.adjustBalanceAction }))
+vi.mock('@/lib/profile/update-profile', () => ({ updateProfileAction: actions.updateProfileAction }))
 vi.mock('@/lib/invites/actions', () => ({ addInviteAction: actions.addInviteAction, revokeInviteAction: actions.revokeInviteAction }))
 
 import { CreateMarketForm } from '@/app/(app)/markets/new/create-market-form'
@@ -34,6 +36,7 @@ import { EditTaskForm } from '@/app/(app)/admin/tasks/edit-task-form'
 import { PendingApprovals, type PendingRow } from '@/app/(app)/admin/tasks/pending-approvals'
 import { AdjustBalanceForm } from '@/app/(app)/admin/members/adjust-balance-form'
 import { AddInviteForm } from '@/app/(app)/admin/invites/add-invite-form'
+import { ProfileForm } from '@/app/(app)/profile/profile-form'
 
 const GENESIS: TaskSummary = {
   id: 't1',
@@ -93,12 +96,34 @@ describe('text limits on form inputs', () => {
   it('caps the balance-adjust reason and the invite email', () => {
     render(
       <>
-        <AdjustBalanceForm member={{ id: 'p-ben', displayName: 'Ben', email: 'ben@example.com', balance: 60, isAdmin: false }} />
+        <AdjustBalanceForm member={{ id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, isAdmin: false }} />
         <AddInviteForm />
       </>,
     )
     expect(screen.getByLabelText('Reason')).toHaveAttribute('maxlength', '200')
     expect(screen.getByLabelText('Email')).toHaveAttribute('maxlength', '254')
+  })
+})
+
+describe('the profile form', () => {
+  it('caps the display name and bio', () => {
+    render(<ProfileForm displayName="Ben" bio="" avatarSrc={null} />)
+    expect(screen.getByLabelText('Display name')).toHaveAttribute('maxlength', '80')
+    expect(screen.getByLabelText('Bio')).toHaveAttribute('maxlength', '160')
+  })
+
+  it('ties a too-long bio error to the bio only', async () => {
+    actions.updateProfileAction.mockResolvedValue({ formError: 'Bio can be at most 160 characters.', field: 'bio' })
+    render(<ProfileForm displayName="Ben" bio="" avatarSrc={null} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save profile' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Bio can be at most 160 characters.')
+    expect(screen.getByLabelText('Bio')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Bio')).toHaveAccessibleDescription(
+      'Optional. Up to 160 characters, shown on your profile. Bio can be at most 160 characters.',
+    )
+    expect(screen.getByLabelText('Display name')).toHaveAttribute('aria-invalid', 'false')
   })
 })
 

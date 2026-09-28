@@ -27,7 +27,7 @@ export function HomeHero({
         Balance:{' '}
         <AnimatedText
           plainText={`${balance} DC`}
-          className="text-[44px] leading-none font-extrabold tracking-[-0.03em] tabular-nums text-[#72DB2B] md:text-[60px]"
+          className="text-[44px] leading-none font-extrabold tracking-[-0.03em] tabular-nums text-hero-num md:text-[60px]"
         >
           <NumberFlow value={balance} locales="en-US" format={{ useGrouping: false }} suffix=" DC" />
         </AnimatedText>

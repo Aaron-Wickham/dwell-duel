@@ -63,7 +63,7 @@ describe('AppNav', () => {
       ...screen.getAllByRole('navigation', { name: 'Primary' }).flatMap((nav) => within(nav).getAllByRole('link')),
       within(screen.getAllByRole('banner')[1]).getByRole('link', { name: 'Admin' }),
     ]
-    expect(links).toHaveLength(14)
+    expect(links).toHaveLength(16)
     for (const link of links) {
       const hint = link.querySelector('.nav-pending-hint')
       expect(hint).toHaveAttribute('aria-hidden', 'true')
@@ -75,10 +75,34 @@ describe('AppNav', () => {
   it('links every destination in both navs', () => {
     render(<Nav balance={120} slipCount={0} isAdmin={false} />)
     const [desktop, phone] = screen.getAllByRole('navigation', { name: 'Primary' })
-    for (const name of ['Home', 'Markets', 'Parlays', 'Tasks', 'Feed', 'Leaderboard']) {
+    for (const name of ['Home', 'Markets', 'My bets', 'Parlays', 'Tasks', 'Feed', 'Leaderboard']) {
       expect(within(desktop).getByRole('link', { name })).toBeInTheDocument()
       expect(within(phone).getByRole('link', { name })).toBeInTheDocument()
     }
+  })
+
+  // jsdom applies no CSS, so these pin the classes that make the desktop row fit from 768px: an
+  // admin's full-label row needs ~1180px, so labels and the wordmark's name only show from xl / lg.
+  it('keeps every desktop link a 44px icon until xl, still named by its label', () => {
+    render(<Nav balance={120} slipCount={0} isAdmin />)
+    const desktop = screen.getAllByRole('navigation', { name: 'Primary' })[0]
+    for (const name of ['Home', 'Markets', 'My bets', 'Parlays', 'Tasks', 'Feed', 'Leaderboard', 'Admin']) {
+      const link = within(desktop).getByRole('link', { name })
+      expect(link).toHaveClass('min-h-11', 'min-w-11')
+      expect(link).toHaveAttribute('title', name)
+      expect(within(link).getByText(name)).toHaveClass('max-xl:sr-only')
+      expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    }
+    // Admin keeps its icon beside the label from xl; the section links drop theirs.
+    expect(within(desktop).getByRole('link', { name: 'Markets' }).querySelector('svg')).toHaveClass('xl:hidden')
+    expect(within(desktop).getByRole('link', { name: 'Admin' }).querySelector('svg')).not.toHaveClass('xl:hidden')
+  })
+
+  it("drops the desktop wordmark's name below lg, but not the phone's, keeping both links named", () => {
+    render(<Nav balance={120} slipCount={0} isAdmin={false} />)
+    const [desktopHome, phoneHome] = screen.getAllByRole('link', { name: 'DwellDuel home' })
+    expect(desktopHome.querySelector('span')).toHaveClass('max-lg:hidden')
+    expect(phoneHome.querySelector('span')).not.toHaveClass('max-lg:hidden')
   })
 
   it('shows the short Leaders label on the phone tab but names it Leaderboard', () => {

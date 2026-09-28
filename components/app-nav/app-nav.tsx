@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MotionConfig, motion } from 'motion/react'
-import { BookOpen, ChartColumn, CircleDot, House, Layers, MessageSquareText, ShieldCheck, Trophy, type LucideIcon } from 'lucide-react'
+import { BookOpen, ChartColumn, CircleDot, House, Layers, MessageSquareText, ShieldCheck, Ticket, Trophy, type LucideIcon } from 'lucide-react'
 import NumberFlow from '@number-flow/react'
 import { BetaBadge } from '@/components/brand/beta-badge'
 import { Wordmark } from '@/components/brand/wordmark'
@@ -18,6 +18,7 @@ import { ThemeToggle } from './theme-toggle'
 const ICONS: Record<NavId, LucideIcon> = {
   home: House,
   markets: ChartColumn,
+  bets: Ticket,
   parlays: Layers,
   tasks: BookOpen,
   feed: MessageSquareText,
@@ -40,19 +41,24 @@ function BalanceChip({ balance }: { balance: number }) {
   )
 }
 
+// Below xl every label won't fit beside the wordmark, balance and toggle (an admin's row needs
+// ~1180px), so each link is a 44px icon until then, its label kept for assistive tech and as a
+// hover tooltip. `iconWithLabel` keeps the icon beside the label from xl too, as Admin's does.
 function DesktopLink({
   href,
   label,
   active,
   count = 0,
   icon: Icon,
+  iconWithLabel = false,
   transitionTypes,
 }: {
   href: string
   label: string
   active: boolean
   count?: number
-  icon?: LucideIcon
+  icon: LucideIcon
+  iconWithLabel?: boolean
   transitionTypes?: string[]
 }) {
   return (
@@ -60,8 +66,9 @@ function DesktopLink({
       href={href}
       transitionTypes={transitionTypes}
       aria-current={active ? 'page' : undefined}
+      title={label}
       className={cn(
-        'pressable relative isolate inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-[15px] font-bold no-underline',
+        'pressable relative isolate inline-flex min-h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap rounded-full text-[15px] font-bold no-underline xl:px-3.5',
         active ? 'text-on-primary' : 'text-ink2 hover:bg-sunk hover:text-ink',
       )}
     >
@@ -73,8 +80,8 @@ function DesktopLink({
           transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
         />
       )}
-      {Icon && <Icon aria-hidden="true" className="size-[18px]" />}
-      {label}
+      <Icon aria-hidden="true" className={cn('size-5 xl:size-[18px]', !iconWithLabel && 'xl:hidden')} />
+      <span className="max-xl:sr-only">{label}</span>
       {count > 0 && (
         <>
           {' '}
@@ -83,6 +90,8 @@ function DesktopLink({
             aria-hidden="true"
             className={cn(
               'inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-lime px-1.5 text-xs font-extrabold text-on-lime',
+              // Over the icon's corner while the link is icon-only, as on the phone tab bar.
+              'max-xl:absolute max-xl:-top-1 max-xl:-right-1 max-xl:h-5 max-xl:min-w-5 max-xl:border-2 max-xl:border-surface max-xl:px-[5px] max-xl:text-[11px]',
               active && 'dark:bg-on-primary dark:text-primary',
             )}
           >
@@ -109,10 +118,10 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
       </a>
       <header
         style={{ viewTransitionName: 'app-header' }}
-        className="no-callout sticky top-(--safe-top) z-30 hidden h-[72px] shrink-0 items-center gap-5 border-b border-line bg-surface px-10 md:flex"
+        className="no-callout sticky top-(--safe-top) z-30 hidden h-[72px] shrink-0 items-center gap-3 border-b border-line bg-surface px-6 md:flex xl:gap-5 xl:px-10"
       >
-        <div className="flex items-center gap-2">
-          <Wordmark />
+        <div className="flex shrink-0 items-center gap-2">
+          <Wordmark symbolBelowLg />
           <BetaBadge />
         </div>
         <nav aria-label="Primary" className="flex items-center gap-0.5">
@@ -121,6 +130,7 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
               key={item.id}
               href={item.href}
               label={item.label}
+              icon={ICONS[item.id]}
               active={active === item.id}
               count={item.id === 'parlays' ? slipCount : 0}
             />
@@ -133,6 +143,7 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
                 label="Admin"
                 active={active === 'admin'}
                 icon={ShieldCheck}
+                iconWithLabel
                 transitionTypes={['nav-forward']}
               />
             </>
@@ -176,7 +187,7 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
       <nav
         aria-label="Primary"
         style={{ viewTransitionName: 'app-tabbar' }}
-        className="no-callout fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-[calc(12px+var(--safe-bottom))] md:hidden"
+        className="no-callout fixed inset-x-0 bottom-0 z-30 grid grid-cols-7 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-[calc(12px+var(--safe-bottom))] md:hidden"
       >
         {NAV_ITEMS.map((item) => {
           const Icon = ICONS[item.id]
@@ -196,7 +207,7 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
             >
               <span
                 className={cn(
-                  'relative flex h-[30px] w-[52px] items-center justify-center rounded-full',
+                  'relative flex h-[30px] w-11 items-center justify-center rounded-full',
                   isActive && 'bg-lime text-on-lime',
                 )}
               >

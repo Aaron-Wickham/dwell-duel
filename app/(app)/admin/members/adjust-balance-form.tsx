@@ -26,7 +26,7 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
     <>
       <form action={formAction} className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
         <div className="flex items-center gap-3 md:w-60 md:shrink-0 md:self-center">
-          <Avatar name={member.displayName} />
+          <Avatar name={member.displayName} src={member.avatarSrc} />
           <div className="flex min-w-0 grow flex-col">
             <Link
               href={`/members/${member.id}`}

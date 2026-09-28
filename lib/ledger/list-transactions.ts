@@ -18,6 +18,7 @@ const TYPE_LABELS: Record<string, string> = {
   bet_won: 'Bet won',
   bet_refunded: 'Bet refunded',
   bet_voided_refund: 'Market voided',
+  bet_cancelled: 'Bet cancelled',
   resolution_reversed: 'Resolution reversed',
   task_completed: 'Task reward',
   admin_adjustment: 'Admin adjustment',

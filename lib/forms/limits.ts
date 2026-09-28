@@ -1,4 +1,4 @@
-// supabase/migrations/0034_text_length_limits.sql enforces these same numbers.
+// supabase/migrations/0034_text_length_limits.sql (and 0038, for bio) enforces these same numbers.
 export const TEXT_LIMITS = {
   marketTitle: 120,
   marketDescription: 1000,
@@ -9,6 +9,7 @@ export const TEXT_LIMITS = {
   adjustReason: 200,
   inviteEmail: 254,
   displayName: 80,
+  bio: 160,
 } as const
 
 export function tooLong(label: string, max: number): string {

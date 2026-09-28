@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+vi.mock('@/lib/markets/cancel-bet', () => ({ cancelBetAction: vi.fn() }))
+
 import { BetList } from '@/components/markets/bet-list'
 import type { MarketBet } from '@/lib/markets/get-market'
 
@@ -10,8 +12,8 @@ const outcomes = [
 ]
 
 const bets: MarketBet[] = [
-  { id: 2, outcomeId: 'o-no', amount: 15, createdAt: '2026-09-25T10:00:00Z', profileId: 'p-bob', bettorName: 'Bob' },
-  { id: 1, outcomeId: 'o-yes', amount: 5, createdAt: '2026-09-25T09:00:00Z', profileId: 'p-alice', bettorName: 'Alice' },
+  { id: 2, outcomeId: 'o-no', amount: 15, createdAt: '2026-09-25T10:00:00Z', profileId: 'p-bob', bettorName: 'Bob', bettorAvatarSrc: null },
+  { id: 1, outcomeId: 'o-yes', amount: 5, createdAt: '2026-09-25T09:00:00Z', profileId: 'p-alice', bettorName: 'Alice', bettorAvatarSrc: null },
 ]
 
 describe('BetList', () => {
@@ -45,6 +47,16 @@ describe('BetList', () => {
     const row = screen.getByRole('listitem', { name: 'Bob — 15 DC on No' })
     expect(row).toHaveAttribute('id', 'bet-2')
     expect(row).toHaveAttribute('tabindex', '-1')
-    expect(screen.getByRole('listitem', { name: /^Alice — 5 DC on Yes/ })).toHaveAttribute('id', 'bet-1')
+    // The whole name, so the Cancel button's label is proven to stay out of it.
+    expect(screen.getByRole('listitem', { name: /^Alice — 5 DC on Yes ?\(you\)$/ })).toHaveAttribute('id', 'bet-1')
+  })
+
+  it("offers Cancel on the viewer's own bets only, and only while betting is open", () => {
+    const { rerender } = render(<BetList bets={bets} outcomes={outcomes} viewerId="p-alice" canBet />)
+    expect(screen.getAllByRole('button', { name: /^Cancel your/ }).map((b) => b.textContent)).toEqual(['Cancel'])
+    expect(screen.getByRole('button', { name: 'Cancel your 5 DC bet on Yes' })).toBeInTheDocument()
+
+    rerender(<BetList bets={bets} outcomes={outcomes} viewerId="p-alice" canBet={false} />)
+    expect(screen.queryByRole('button', { name: /^Cancel your/ })).not.toBeInTheDocument()
   })
 })

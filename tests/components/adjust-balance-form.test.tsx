@@ -7,6 +7,7 @@ import type { MemberSummary } from '@/lib/members/list-members'
 const member: MemberSummary = {
   id: 'member-1',
   displayName: 'Bob',
+  avatarSrc: null,
   email: 'bob@example.com',
   balance: 90,
   isAdmin: false,

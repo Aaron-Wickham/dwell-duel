@@ -23,7 +23,7 @@ describe('getMarketBets', () => {
     const page = await getMarketBets(client, 'm1', { top: null, bottom: null })
 
     expect(queries.map((q) => [q.table, q.select, q.eq, q.limit])).toEqual([
-      ['bets', 'id, outcome_id, amount, created_at, profile_id, profiles(display_name)', [['market_id', 'm1']], 50],
+      ['bets', 'id, outcome_id, amount, created_at, profile_id, profiles(display_name, avatar_path)', [['market_id', 'm1']], 50],
       ['bets', 'id, created_at', [['market_id', 'm1']], 50],
     ])
     expect(queries[1].order).toEqual(queries[0].order)
@@ -34,6 +34,7 @@ describe('getMarketBets', () => {
       createdAt: betRow(200).created_at,
       profileId: 'p-bob',
       bettorName: 'Bob',
+      bettorAvatarSrc: null,
     })
     expect(page.rows).toHaveLength(50)
     expect(decodeCursor(page.next?.cursor)).toEqual({ ts: betRow(101).created_at, id: '101' })

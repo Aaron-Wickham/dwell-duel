@@ -10,8 +10,10 @@ vi.mock('react', async (importOriginal) =>
 import HomeLoading from '@/app/(app)/(home)/loading'
 import MarketsLoading from '@/app/(app)/markets/(list)/loading'
 import CreateMarketLoading from '@/app/(app)/markets/new/loading'
+import BetsLoading from '@/app/(app)/bets/loading'
 import ParlaysLoading from '@/app/(app)/parlays/loading'
 import TasksLoading from '@/app/(app)/tasks/loading'
+import ProfileLoading from '@/app/(app)/profile/loading'
 import FeedLoading from '@/app/(app)/feed/loading'
 import LeaderboardLoading from '@/app/(app)/leaderboard/loading'
 import AdminInvitesLoading from '@/app/(app)/admin/invites/loading'
@@ -23,8 +25,10 @@ const SKELETONS: [string, ComponentType][] = [
   ['home', HomeLoading],
   ['markets', MarketsLoading],
   ['create-market', CreateMarketLoading],
+  ['bets', BetsLoading],
   ['parlays', ParlaysLoading],
   ['tasks', TasksLoading],
+  ['profile', ProfileLoading],
   ['feed', FeedLoading],
   ['leaderboard', LeaderboardLoading],
   ['admin-invites', AdminInvitesLoading],

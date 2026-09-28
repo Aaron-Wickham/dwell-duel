@@ -20,7 +20,7 @@ describe('getLeaderboardPage', () => {
 
     expect(queries).toHaveLength(2)
     const [read, probe] = queries
-    expect(read.select).toBe('id, display_name, balance')
+    expect(read.select).toBe('id, display_name, balance, avatar_path')
     expect(read.order).toEqual([
       ['balance', { ascending: false }],
       ['display_name', { ascending: true }],

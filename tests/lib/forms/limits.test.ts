@@ -13,6 +13,7 @@ describe('TEXT_LIMITS', () => {
       adjustReason: 200,
       inviteEmail: 254,
       displayName: 80,
+      bio: 160,
     })
   })
 })

@@ -10,6 +10,9 @@ export interface HomeTile {
   subtitle: string
 }
 
+// Tiles into a drill-down page slide forward; the rest are tabs.
+const DRILL_DOWN_TILES = new Set(['admin', 'profile'])
+
 const TILE_CLASS =
   'pressable group flex min-h-[72px] items-center gap-3.5 px-4 py-3 text-ink no-underline lg:min-h-24 lg:rounded-card lg:border lg:border-line lg:bg-surface lg:p-5 lg:shadow-card'
 
@@ -45,7 +48,7 @@ export function HomeTiles({ tiles }: { tiles: HomeTile[] }) {
             <Link
               key={tile.id}
               href={tile.href}
-              transitionTypes={tile.id === 'admin' ? ['nav-forward'] : undefined}
+              transitionTypes={DRILL_DOWN_TILES.has(tile.id) ? ['nav-forward'] : undefined}
               className={TILE_CLASS}
             >
               <TileBody icon={tile.icon} title={tile.title} subtitle={tile.subtitle} />

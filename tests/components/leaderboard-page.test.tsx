@@ -46,6 +46,7 @@ import { encodeRankCursor } from '@/lib/pagination/rank-cursor'
 const member = (n: number, balance: number, rank: number): LeaderboardEntry => ({
   id: `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
   displayName: `Member ${n}`,
+  avatarSrc: null,
   balance,
   rank,
 })

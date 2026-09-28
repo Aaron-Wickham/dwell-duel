@@ -4,12 +4,15 @@ export const pageSubscriptions = {
   marketDetail(marketId: string): LiveSubscription[] {
     return [
       { table: 'bets', filter: `market_id=eq.${marketId}` },
+      // A cancel deletes from bets, and a filtered channel never receives deletes; the
+      // cancelled_bets insert it makes in the same transaction is what reaches this page.
+      { table: 'cancelled_bets', filter: `market_id=eq.${marketId}` },
       { table: 'markets', filter: `id=eq.${marketId}` },
       { table: 'market_resolutions', filter: `market_id=eq.${marketId}` },
     ]
   },
   markets(): LiveSubscription[] {
-    return [{ table: 'markets' }, { table: 'bets' }]
+    return [{ table: 'markets' }, { table: 'bets' }, { table: 'cancelled_bets' }]
   },
   // The HomeHero's pending-review count and the admin tile's pending-approvals count both only
   // change via task_completions -- a rejection moves no balance, so bets/profiles don't cover it.
@@ -33,6 +36,8 @@ export const pageSubscriptions = {
   member(memberId: string): LiveSubscription[] {
     return [
       { table: 'activity_events', filter: `actor_id=eq.${memberId}` },
+      // A cancelled bet's event is deleted by cascade, which the filtered channel above can't see.
+      { table: 'cancelled_bets', filter: `profile_id=eq.${memberId}` },
       { table: 'profiles' },
     ]
   },
@@ -47,6 +52,15 @@ export const pageSubscriptions = {
   // parlays/parlay_legs when a leg wins while others in the same parlay are still open.
   parlays(userId: string): LiveSubscription[] {
     return [{ table: 'parlays', filter: `profile_id=eq.${userId}` }, { table: 'parlay_legs' }, { table: 'markets' }]
+  },
+  // markets, unfiltered, carries every status change and resolution that moves a bet between
+  // sections or changes its result.
+  myBets(userId: string): LiveSubscription[] {
+    return [
+      { table: 'bets', filter: `profile_id=eq.${userId}` },
+      { table: 'cancelled_bets', filter: `profile_id=eq.${userId}` },
+      { table: 'markets' },
+    ]
   },
   adminTasks(): LiveSubscription[] {
     return [{ table: 'task_completions' }]

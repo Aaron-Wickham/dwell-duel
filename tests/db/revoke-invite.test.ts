@@ -7,7 +7,7 @@ let admin: Member
 
 beforeEach(async () => {
   ;[admin] = await seedMembers()
-  await serviceClient().from('profiles').update({ is_admin: true }).eq('id', admin.id)
+  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', admin.id)
 })
 
 describe('revokeInvite', () => {

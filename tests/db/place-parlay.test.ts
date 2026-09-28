@@ -172,7 +172,7 @@ describe('place_parlay', () => {
   it('rejects a resolved market', async () => {
     const a = await seededMarket('Market A', 5, 15)
     const b = await seededMarket('Market B', 5, 15)
-    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
     const { error: resolveErr } = await aliceClient.rpc('resolve_market', {
       p_market_id: b.marketId,
       p_outcome_id: b.outcomeIds[0],

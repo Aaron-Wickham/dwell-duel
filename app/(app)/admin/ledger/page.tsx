@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { NotebookText } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
-import { isAdmin } from '@/lib/auth/is-admin'
+import { atLeast, getRole } from '@/lib/auth/roles'
 import { listAllTransactions } from '@/lib/ledger/list-transactions'
 import { newestHref, readPageParams, showMoreHref } from '@/lib/pagination/cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
@@ -20,7 +20,7 @@ export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>)
   const searchParams = await props.searchParams
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
-  if (!(await isAdmin(supabase))) redirect('/')
+  if (!atLeast(await getRole(supabase), 'admin')) redirect('/admin/tasks')
 
   const ledger = await listAllTransactions(supabase, readPageParams(searchParams, 'before'))
   const backToNewestHref = newestHref('/admin/ledger', searchParams, 'before')

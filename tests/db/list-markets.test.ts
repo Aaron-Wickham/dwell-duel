@@ -156,7 +156,7 @@ describe('listClosedMarkets', () => {
   })
 
   it('shows the current resolution after an override, not the reversed one', async () => {
-    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
     const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'])
     await resolve(marketId, outcomeIds[0])
     await resolve(marketId, outcomeIds[1])

@@ -4,7 +4,7 @@ import { Ticket, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { isAdmin } from '@/lib/auth/is-admin'
+import { atLeast, getRole } from '@/lib/auth/roles'
 import { getMarket, type MarketDetail } from '@/lib/markets/get-market'
 import { getChartBets } from '@/lib/markets/chart-bets'
 import { buildProbabilitySeries } from '@/lib/markets/probability-series'
@@ -31,6 +31,7 @@ import { OutcomeRow } from '@/components/markets/outcome-row'
 import { ProbabilityChart } from '@/components/markets/probability-chart'
 import { MarketBets } from './market-bets'
 import { ResolveForm } from './resolve-form'
+import { DeleteMarketButton } from './delete-market-button'
 import { VoidButton } from './void-button'
 
 // No loading.tsx for this route (and the markets list's own loading.tsx sits in the (list)
@@ -177,12 +178,15 @@ async function MarketActions({
   canBet: boolean
 }) {
   const { supabase } = await requireUser()
-  const admin = await isAdmin(supabase)
+  const role = await getRole(supabase)
+  const admin = atLeast(role, 'admin')
 
   const totalPool = odds.reduce((sum, o) => sum + o.poolTotal, 0)
   const canResolve = market.status === 'open' && ((isCreator && isPastClose) || admin)
   const canOverride = market.status === 'resolved' && admin
   const canVoid = market.status === 'open' && (isCreator || admin)
+  // delete_market (0040) refuses a market with bets; an empty pool is the cheap signal for the button.
+  const canDelete = role === 'owner' && totalPool === 0
   const showResolve = canResolve || canOverride
 
   const marketInSlip = market.outcomes.some((o) => slip.includes(o.id))
@@ -208,10 +212,11 @@ async function MarketActions({
       </>
     )
 
+  const youAre = role === 'owner' ? 'You’re the owner.' : 'You’re an admin.'
   const manageHint = canOverride
-    ? 'You’re an admin. A new outcome reverses the payouts and pays the new winners.'
+    ? `${youAre} A new outcome reverses the payouts and pays the new winners.`
     : !isCreator
-      ? 'You’re an admin. Only admins and this market’s creator see this.'
+      ? `${youAre} Only admins and this market’s creator see this.`
       : canResolve
         ? 'You created this market. Only you and admins see this.'
         : 'You created this market. You can resolve it once it closes.'
@@ -274,7 +279,7 @@ async function MarketActions({
           </SectionCard>
         )}
 
-        {(showResolve || canVoid) && (
+        {(showResolve || canVoid || canDelete) && (
           <SectionCard
             title={canOverride ? 'Override resolution' : 'Resolve market'}
             titleId="manage-title"
@@ -285,6 +290,11 @@ async function MarketActions({
               {showResolve && <ResolveForm marketId={market.id} outcomes={market.outcomes} />}
               {canVoid && (
                 <VoidButton marketId={market.id} className={showResolve ? 'border-t border-line pt-4' : undefined} />
+              )}
+              {canDelete && (
+                <div className={showResolve || canVoid ? 'border-t border-line pt-4' : undefined}>
+                  <DeleteMarketButton marketId={market.id} />
+                </div>
               )}
             </div>
           </SectionCard>

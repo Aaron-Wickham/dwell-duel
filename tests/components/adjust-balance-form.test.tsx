@@ -10,7 +10,7 @@ const member: MemberSummary = {
   avatarSrc: null,
   email: 'bob@example.com',
   balance: 90,
-  isAdmin: false,
+  role: 'member',
 }
 
 describe('AdjustBalanceForm', () => {

@@ -57,7 +57,7 @@ describe('parlays / parlay_legs select policies', () => {
 
   it('shows an admin every parlay and leg', async () => {
     await seedParlays()
-    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', bob.id)
+    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
     const bobClient = await clientFor(bob)
 
     const { data: parlays } = await bobClient.from('parlays').select('id')

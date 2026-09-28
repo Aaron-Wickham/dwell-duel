@@ -25,11 +25,11 @@ describe('profiles table', () => {
     const { data, error } = await db
       .from('profiles')
       .insert({ id: userId, email: 'schema-test@example.com', display_name: 'Test User' })
-      .select('is_admin, balance')
+      .select('role, balance')
       .single()
 
     expect(error).toBeNull()
-    expect(data?.is_admin).toBe(false)
+    expect(data?.role).toBe('member')
     expect(data?.balance).toBe(0)
   })
 

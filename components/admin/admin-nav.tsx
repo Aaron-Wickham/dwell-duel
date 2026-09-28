@@ -2,21 +2,25 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { atLeast, type Role } from '@/lib/auth/roles'
 import { cn } from '@/lib/utils'
 
-const SECTIONS = [
-  { href: '/admin/invites', label: 'Invites' },
-  { href: '/admin/tasks', label: 'Tasks' },
-  { href: '/admin/members', label: 'Members' },
-  { href: '/admin/ledger', label: 'Ledger' },
+const SECTIONS: { href: string; label: string; min: Role }[] = [
+  { href: '/admin/invites', label: 'Invites', min: 'admin' },
+  { href: '/admin/tasks', label: 'Tasks', min: 'reviewer' },
+  { href: '/admin/members', label: 'Members', min: 'admin' },
+  { href: '/admin/ledger', label: 'Ledger', min: 'admin' },
 ]
 
-export function AdminNav() {
+export function AdminNav({ role }: { role: Role }) {
   const pathname = usePathname()
+  const sections = SECTIONS.filter((s) => atLeast(role, s.min))
+  // A reviewer has only the approval queue; a one-tab switcher would just be noise.
+  if (sections.length < 2) return null
 
   return (
     <nav aria-label="Admin sections" className="no-callout flex gap-1 rounded-[14px] bg-sunk p-1 md:self-start">
-      {SECTIONS.map(({ href, label }) => {
+      {sections.map(({ href, label }) => {
         const current = pathname === href
         return (
           <Link

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { avatarUrl } from '@/lib/profile/avatar'
+import { isRole, type Role } from '@/lib/auth/roles'
 
 export interface MemberSummary {
   id: string
@@ -7,13 +8,13 @@ export interface MemberSummary {
   avatarSrc: string | null
   email: string
   balance: number
-  isAdmin: boolean
+  role: Role
 }
 
 export async function listMembers(supabase: SupabaseClient): Promise<MemberSummary[]> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, display_name, email, balance, is_admin, avatar_path')
+    .select('id, display_name, email, balance, role, avatar_path')
     .order('display_name', { ascending: true })
 
   if (error) throw error
@@ -24,6 +25,6 @@ export async function listMembers(supabase: SupabaseClient): Promise<MemberSumma
     avatarSrc: avatarUrl(p.avatar_path),
     email: p.email,
     balance: p.balance,
-    isAdmin: p.is_admin,
+    role: isRole(p.role) ? p.role : 'member',
   }))
 }

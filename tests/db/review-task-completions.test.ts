@@ -13,7 +13,7 @@ const MISSING = '00000000-0000-4000-8000-000000000000'
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
-  await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
   adminClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   await ensureInvited(bobClient)
@@ -165,7 +165,7 @@ describe('review_task_completions', () => {
     const { data, error } = await bobClient.rpc('review_task_completions', { p_ids: [completion], p_approve: true })
 
     expect(data).toBeNull()
-    expect(error?.message).toBe('only an admin can review task completions')
+    expect(error?.message).toBe('only a reviewer can review task completions')
     expect(await statusOf(completion)).toEqual({ status: 'pending', review_note: null })
     expect(await bobsRewards()).toEqual([])
   })

@@ -11,7 +11,7 @@ import { AnimatedText } from '@/components/ui/animated-text'
 import { NavPendingHint } from '@/components/nav/nav-pending-hint'
 import { haptics } from '@/lib/haptics'
 import { cn } from '@/lib/utils'
-import { ADMIN_HREF, NAV_ITEMS, activeNavId, type NavId } from './nav-items'
+import { NAV_ITEMS, activeNavId, type NavId } from './nav-items'
 import { ThemeToggle } from './theme-toggle'
 
 const ICONS: Record<NavId, LucideIcon> = {
@@ -80,7 +80,8 @@ function DesktopLink({
   )
 }
 
-export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean }) {
+// adminHref is null for members; reviewers land on the approval queue, admins on invites.
+export function AppNav({ balance, adminHref }: { balance: number; adminHref: string | null }) {
   const active = activeNavId(usePathname())
 
   return (
@@ -109,11 +110,11 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
               active={active === item.id}
             />
           ))}
-          {isAdmin && (
+          {adminHref && (
             <>
               <span aria-hidden="true" className="mx-1.5 h-6 w-px bg-line" />
               <DesktopLink
-                href={ADMIN_HREF}
+                href={adminHref}
                 label="Admin"
                 active={active === 'admin'}
                 icon={ShieldCheck}
@@ -140,9 +141,9 @@ export function AppNav({ balance, isAdmin }: { balance: number; isAdmin: boolean
         </div>
         <span className="grow" />
         <BalanceChip balance={balance} />
-        {isAdmin && (
+        {adminHref && (
           <Link
-            href={ADMIN_HREF}
+            href={adminHref}
             transitionTypes={['nav-forward']}
             aria-label="Admin"
             aria-current={active === 'admin' ? 'page' : undefined}

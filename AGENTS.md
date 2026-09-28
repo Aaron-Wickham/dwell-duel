@@ -115,8 +115,12 @@ architectural decisions exist, document them here and in `docs/`.
   and `page-subscriptions`.
 - **An Auth failure isn't "signed out."** `requireUser` reads claims
   through `readClaims` (`lib/auth/auth-unavailable.ts`) and throws
-  `AuthUnavailableError` when Auth itself is unavailable; `isAdmin`
-  throws on an RPC error the same way.
+  `AuthUnavailableError` when Auth itself is unavailable; `getRole`
+  (`lib/auth/roles.ts`) throws on an RPC error the same way.
+- **Roles are owner › admin › reviewer › member** (`profiles.role`, 0040).
+  Gate SQL with `has_role('<min>')` (`is_admin()` means admin or owner)
+  and pages with `atLeast(await getRole(supabase), '<min>')`. Balances,
+  deletes and granting roles are the owner's alone.
 - **Every level has an error page** — `app/(app)/error.tsx`,
   `app/error.tsx` and `app/global-error.tsx` — rendering
   `components/ui/error-card.tsx`'s `ErrorCard`, whose "Try again" calls

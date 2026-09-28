@@ -8,11 +8,14 @@ import { Button } from '@/components/ui/button'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { cn } from '@/lib/utils'
+import { ConfirmActionButton } from '@/components/ui/confirm-action-button'
+import { deleteTaskAction } from '@/lib/admin/owner-actions'
 import { EditTaskForm } from './edit-task-form'
 
 const pillClass = 'inline-flex h-6 items-center whitespace-nowrap rounded-full px-[9px] text-xs font-extrabold'
 
-export function TaskCatalogItem({ task }: { task: TaskSummary }) {
+// `canDelete` is the owner's: delete_task (0040) only removes a task nobody has submitted yet.
+export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary; canDelete?: boolean }) {
   const [editing, setEditing] = useState(false)
   const boundUpdate = updateTaskAction.bind(null, task.id)
   const [toggleState, toggleAction] = useActionState<ActionState, FormData>(boundUpdate, undefined)
@@ -56,6 +59,20 @@ export function TaskCatalogItem({ task }: { task: TaskSummary }) {
             <span className="sr-only">{task.title}</span>
           </FormSubmitButton>
         </form>
+        {canDelete && (
+          <ConfirmActionButton
+            id={`delete-task-${task.id}`}
+            trigger="Delete"
+            triggerLabel={`Delete ${task.title}`}
+            triggerVariant="quiet"
+            triggerSize="sm"
+            title="Delete this task?"
+            description="It’s removed for everyone. A task members have already submitted can’t be deleted; deactivate it instead."
+            confirmLabel="Delete task"
+            successMessage="Task deleted."
+            action={deleteTaskAction.bind(null, task.id)}
+          />
+        )}
       </div>
       {toggleState?.formError && (
         <Message tone="error" id={toggleErrorId}>

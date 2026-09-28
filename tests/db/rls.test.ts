@@ -94,14 +94,14 @@ describe('profiles insert policy', () => {
     expect(error).not.toBeNull()
   })
 
-  it('rejects an insert that tries to set is_admin directly', async () => {
+  it('rejects an insert that tries to set a role directly', async () => {
     await serviceClient().from('allowed_emails').insert({ email: 'invitee4@example.com' })
     const userId = await makeAuthUserWithoutProfile('invitee4@example.com')
     const client = await clientForEmail('invitee4@example.com')
 
     const { error } = await client
       .from('profiles')
-      .insert({ id: userId, email: 'invitee4@example.com', display_name: 'Boss', is_admin: true } as never)
+      .insert({ id: userId, email: 'invitee4@example.com', display_name: 'Boss', role: 'admin' } as never)
 
     expect(error).not.toBeNull()
   })
@@ -136,10 +136,10 @@ describe('profiles update policy', () => {
   it('denies a member self-granting admin via UPDATE', async () => {
     const client = await clientFor(alice)
 
-    await client.from('profiles').update({ is_admin: true }).eq('id', alice.id)
+    await client.from('profiles').update({ role: 'admin' }).eq('id', alice.id)
 
-    const { data } = await serviceClient().from('profiles').select('is_admin').eq('id', alice.id).single()
-    expect(data?.is_admin).toBe(false)
+    const { data } = await serviceClient().from('profiles').select('role').eq('id', alice.id).single()
+    expect(data?.role).toBe('member')
   })
 })
 
@@ -156,7 +156,7 @@ describe('allowed_emails policies', () => {
   })
 
   it('allows an admin to read and write', async () => {
-    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
     const client = await clientFor(alice)
 
     const { error: insertErr } = await client.from('allowed_emails').insert({ email: 'y@example.com' })
@@ -192,7 +192,7 @@ describe('coin_transactions select policy', () => {
   })
 
   it('shows an admin every transaction', async () => {
-    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
     const client = await clientFor(alice)
 
     const { data, error } = await client.from('coin_transactions').select('profile_id')

@@ -16,7 +16,7 @@ beforeEach(async () => {
   await ensureInvited(bobClient)
   // Alice creates, seeds, resolves, overrides, and voids every market; as
   // an admin she can resolve before close_at and override a resolution.
-  await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
 })
 
 // Every market is seeded 5 on its first outcome and 15 on its second:

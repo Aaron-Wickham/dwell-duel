@@ -114,7 +114,7 @@ beforeAll(async () => {
   const [alice, member] = await seedMembers()
   bob = member
   const db = serviceClient()
-  const { error: adminErr } = await db.from('profiles').update({ is_admin: true }).eq('id', alice.id)
+  const { error: adminErr } = await db.from('profiles').update({ role: 'admin' }).eq('id', alice.id)
   if (adminErr) throw adminErr
   const aliceClient = await clientFor(alice)
   const bobClient = await clientFor(bob)

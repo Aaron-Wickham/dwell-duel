@@ -16,7 +16,7 @@ beforeEach(async () => {
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   await ensureInvited(bobClient)
-  await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
 })
 
 // Seeded 5 on Yes / 15 on No: Yes is 4x, No is 4/3x.

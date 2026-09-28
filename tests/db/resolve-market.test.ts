@@ -86,7 +86,7 @@ describe('resolve_market (first resolution)', () => {
     const aliceClient = await clientFor(alice)
     const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'], { closeInMs: 60_000 })
 
-    await serviceClient().from('profiles').update({ is_admin: true }).eq('id', bob.id)
+    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
     const bobClient = await clientFor(bob)
 
     const { error } = await bobClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
@@ -116,7 +116,7 @@ describe('resolve_market (admin override)', () => {
     expect(aliceAfterFirst?.balance).toBe(100 - 20 + 50)
 
     // Admin override: it was actually "No" that won.
-    await db.from('profiles').update({ is_admin: true }).eq('id', bob.id)
+    await db.from('profiles').update({ role: 'admin' }).eq('id', bob.id)
     const adminClient = await clientFor(bob)
     const { error } = await adminClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[1] })
     expect(error).toBeNull()
@@ -180,7 +180,7 @@ describe('resolve_market (admin override)', () => {
       p_type: 'test_spend',
     })
 
-    await db.from('profiles').update({ is_admin: true }).eq('id', bob.id)
+    await db.from('profiles').update({ role: 'admin' }).eq('id', bob.id)
     const adminClient = await clientFor(bob)
     const { error } = await adminClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[1] })
     expect(error?.code).toBe('P0001')
@@ -217,7 +217,7 @@ describe('resolve_market (admin override)', () => {
     await aliceClient.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeIds[0] })
 
     const db = serviceClient()
-    await db.from('profiles').update({ is_admin: true }).eq('id', bob.id)
+    await db.from('profiles').update({ role: 'admin' }).eq('id', bob.id)
     const adminClient = await clientFor(bob)
 
     // First override: Red -> Blue. Pool is 30 (10 + 20); Red's reversal

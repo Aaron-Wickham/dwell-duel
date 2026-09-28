@@ -1,4 +1,5 @@
 import { requireUser } from '@/lib/auth/require-user'
+import { getRole } from '@/lib/auth/roles'
 import { getMarketBets, type MarketDetail } from '@/lib/markets/get-market'
 import { newestHref, showMoreHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
@@ -27,7 +28,7 @@ export async function MarketBets({
   searchParams: SearchParams
 }) {
   const { supabase } = await requireUser()
-  const betsPage = await getMarketBets(supabase, market.id, page)
+  const [betsPage, role] = await Promise.all([getMarketBets(supabase, market.id, page), getRole(supabase)])
   const pathname = `/markets/${market.id}`
   const backToNewestHref = newestHref(pathname, searchParams, 'bets')
 
@@ -48,6 +49,7 @@ export async function MarketBets({
             outcomes={market.outcomes}
             viewerId={viewerId}
             canBet={canBet}
+            canRemove={role === 'owner' && canBet}
             rowIdPrefix={BET_ROW_ID_PREFIX}
           />
         )}

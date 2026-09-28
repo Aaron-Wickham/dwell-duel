@@ -16,7 +16,7 @@ export const STORAGE_STATE_PATH = 'e2e/.auth/session.json'
  */
 export default async function globalSetup(): Promise<void> {
   const [alice] = await seedMembers()
-  await serviceClient().from('profiles').update({ is_admin: true }).eq('id', alice.id)
+  await serviceClient().from('profiles').update({ role: 'owner' }).eq('id', alice.id)
 
   // seedMembers()/makeMember() create alice's profile directly via the
   // service-role client, bypassing the real invite-claim flow — unlike an

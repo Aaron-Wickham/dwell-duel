@@ -173,6 +173,7 @@
   --color-hero: var(--hero);
   --color-on-hero: var(--on-hero);
   --color-hero-2: var(--hero-2);
+  --color-hero-num: var(--hero-num);
   --color-wm-a: var(--wm-a);
   --color-wm-b: var(--wm-b);
   --color-sym-d: var(--sym-d);
@@ -264,6 +265,18 @@
   summary,
   [role="button"] {
     touch-action: manipulation;
+  }
+
+  /* iOS Safari gives native date pickers an intrinsic min-width that ignores width: 100% and
+     centres the value, so on a phone they overflow their column. appearance: none drops that
+     sizing; tapping still opens the native picker. */
+  input:is([type="date"], [type="datetime-local"], [type="time"]) {
+    appearance: none;
+    min-width: 0;
+  }
+
+  input::-webkit-date-and-time-value {
+    text-align: start;
   }
 
   a {

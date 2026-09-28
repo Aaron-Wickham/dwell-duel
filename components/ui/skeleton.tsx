@@ -9,13 +9,27 @@ export function Skeleton({ className }: { className?: string }) {
   return <div aria-hidden="true" className={cn('skeleton', className)} />
 }
 
-export function SkeletonScreen({ name, className, children }: { name: string; className?: string; children: ReactNode }) {
+export function SkeletonScreen({
+  name,
+  className,
+  announce = true,
+  children,
+}: {
+  name: string
+  className?: string
+  // false when the page renders its own combined status (components/ui/loading-status.tsx)
+  // because it streams several sections that can be pending at once.
+  announce?: boolean
+  children: ReactNode
+}) {
   return (
     <SkeletonReveal>
       <div data-skeleton={name} className={className}>
-        <p role="status" className="sr-only">
-          Loading…
-        </p>
+        {announce && (
+          <p role="status" className="sr-only">
+            Loading…
+          </p>
+        )}
         {children}
       </div>
     </SkeletonReveal>

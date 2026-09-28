@@ -21,6 +21,7 @@ import { readSlip } from '@/lib/parlays/slip'
 import { MAX_PICKS, legOddsBp } from '@/lib/parlays/odds'
 import { addToSlipAction, removeFromSlipAction } from '@/lib/parlays/slip-actions'
 import { BackLink } from '@/components/ui/back-link'
+import { LoadingStatus } from '@/components/ui/loading-status'
 import { LocalTime } from '@/components/ui/local-time'
 import { Message } from '@/components/ui/message'
 import { Page, h1Class } from '@/components/ui/page'
@@ -110,7 +111,10 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           )}
         </div>
 
-        {/* Each section's fallback carries the same grid placement as the section itself. */}
+        {/* Each section's fallback carries the same grid placement as the section itself. The
+            four fallbacks announce nothing themselves (SkeletonScreen announce={false}); this is
+            the page's one combined status for as long as any of them is still showing. */}
+        <LoadingStatus />
         <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-7">
           <Suspense fallback={<MarketChartSkeleton />}>
             <MarketChart market={market} odds={odds} now={now} />

@@ -3,9 +3,12 @@ import { Skeleton, SkeletonCard, SkeletonField, SkeletonScreen } from '@/compone
 // Stand-ins for the sections market detail streams (app/(app)/markets/[id]/page.tsx). Each one
 // carries its section's grid placement, so from lg the two-column layout holds while they load.
 
+// The page renders one combined <LoadingStatus /> instead (app/(app)/markets/[id]/page.tsx),
+// since these four sections stream independently and can be pending at the same time.
+
 export function MarketChartSkeleton() {
   return (
-    <SkeletonScreen name="market-chart" className="lg:col-start-1 lg:row-start-1">
+    <SkeletonScreen name="market-chart" announce={false} className="lg:col-start-1 lg:row-start-1">
       <SkeletonCard>
         <Skeleton className="h-6 w-44" />
         <Skeleton className="h-[220px] md:h-[300px]" />
@@ -18,7 +21,7 @@ export function MarketChartSkeleton() {
 export function MarketActionsSkeleton({ outcomes }: { outcomes: number }) {
   return (
     <>
-      <SkeletonScreen name="market-outcomes" className="lg:col-start-1 lg:row-start-2">
+      <SkeletonScreen name="market-outcomes" announce={false} className="lg:col-start-1 lg:row-start-2">
         <SkeletonCard className="gap-1">
           <div className="flex items-center justify-between gap-3">
             <Skeleton className="h-6 w-28" />
@@ -43,6 +46,7 @@ export function MarketActionsSkeleton({ outcomes }: { outcomes: number }) {
       </SkeletonScreen>
       <SkeletonScreen
         name="market-bet-form"
+        announce={false}
         className="flex flex-col gap-5 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:gap-7"
       >
         <SkeletonCard className="gap-4">
@@ -58,7 +62,7 @@ export function MarketActionsSkeleton({ outcomes }: { outcomes: number }) {
 
 export function MarketBetsSkeleton() {
   return (
-    <SkeletonScreen name="market-bets" className="lg:col-start-1 lg:row-start-3">
+    <SkeletonScreen name="market-bets" announce={false} className="lg:col-start-1 lg:row-start-3">
       <SkeletonCard className="gap-1">
         <Skeleton className="h-6 w-16" />
         <div className="flex flex-col divide-y divide-line">

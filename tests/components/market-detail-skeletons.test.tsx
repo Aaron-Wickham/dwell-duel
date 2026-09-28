@@ -10,10 +10,11 @@ vi.mock('react', async (importOriginal) =>
 import { MarketActionsSkeleton, MarketBetsSkeleton, MarketChartSkeleton } from '@/components/markets/market-detail-skeletons'
 
 // The fallbacks sit on the page beside real content, so like a route skeleton they must add
-// nothing the market e2e specs count.
-function expectOnlyHiddenBlocks(container: HTMLElement, statuses: number) {
-  expect(screen.getAllByRole('status')).toHaveLength(statuses)
-  for (const status of screen.getAllByRole('status')) expect(status).toHaveTextContent('Loading…')
+// nothing the market e2e specs count. None of the four announces its own status any more (the
+// page renders one combined <LoadingStatus />, tested in loading-status.test.tsx): asserting zero
+// here is what would catch a status creeping back into one of them.
+function expectOnlyHiddenBlocks(container: HTMLElement) {
+  expect(screen.queryAllByRole('status')).toHaveLength(0)
   expect(container.querySelectorAll('.skeleton').length).toBeGreaterThan(1)
   for (const block of container.querySelectorAll('.skeleton')) {
     expect(block).toHaveAttribute('aria-hidden', 'true')
@@ -21,20 +22,20 @@ function expectOnlyHiddenBlocks(container: HTMLElement, statuses: number) {
   for (const role of ['heading', 'listitem', 'link', 'button', 'region'] as const) {
     expect(screen.queryAllByRole(role)).toHaveLength(0)
   }
-  expect(container).toHaveTextContent(new RegExp(`^(Loading…){${statuses}}$`))
+  expect(container).toHaveTextContent(/^$/)
 }
 
 describe.each<[string, ReactElement, string[]]>([
   ['market-chart', <MarketChartSkeleton key="chart" />, ['lg:col-start-1', 'lg:row-start-1']],
   ['market-bets', <MarketBetsSkeleton key="bets" />, ['lg:col-start-1', 'lg:row-start-3']],
 ])('the %s skeleton', (name, element, placement) => {
-  it('is named, announces loading, holds its grid cell, and shows nothing but hidden blocks', () => {
+  it('is named, holds its grid cell, announces nothing itself, and shows nothing but hidden blocks', () => {
     const { container } = render(element)
 
     const screenEl = container.querySelector(`[data-skeleton="${name}"]`)
     expect(screenEl).not.toBeNull()
     expect(screenEl).toHaveClass(...placement)
-    expectOnlyHiddenBlocks(container, 1)
+    expectOnlyHiddenBlocks(container)
   })
 })
 
@@ -47,7 +48,7 @@ describe('the market actions skeleton', () => {
     expect(outcomes).toHaveClass('lg:col-start-1', 'lg:row-start-2')
     expect(betForm).toHaveAttribute('data-skeleton', 'market-bet-form')
     expect(betForm).toHaveClass('lg:col-start-2', 'lg:row-span-3', 'lg:row-start-1')
-    expectOnlyHiddenBlocks(container, 2)
+    expectOnlyHiddenBlocks(container)
   })
 
   it('draws one outcome row per outcome', () => {

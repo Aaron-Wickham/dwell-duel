@@ -26,6 +26,22 @@ describe('SignInButton', () => {
     })
   })
 
+  it('says it is opening Google while the redirect loads, and ignores a second tap', async () => {
+    signInWithOAuth.mockImplementationOnce(() => new Promise(() => {}))
+    render(<SignInButton />)
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }))
+    expect(screen.getByRole('status')).toHaveTextContent('Opening Google…')
+    await userEvent.click(screen.getByRole('button', { name: 'Opening Google…' }))
+    expect(signInWithOAuth).toHaveBeenCalledOnce()
+  })
+
+  it('goes back to the button if the redirect could not start', async () => {
+    signInWithOAuth.mockResolvedValueOnce({ data: { url: null, provider: 'google' }, error: new Error('nope') } as never)
+    render(<SignInButton />)
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }))
+    expect(await screen.findByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument()
+  })
+
   it('shows the friendly error after a failed redirect back', () => {
     params = new URLSearchParams('error=auth')
     render(<SignInButton />)

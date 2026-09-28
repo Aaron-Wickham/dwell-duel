@@ -5,7 +5,7 @@ import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 
 export type ActionState =
-  | { formError?: string; field?: 'title' | 'description' | 'close_at' | 'outcomes' | `outcome_${number}` }
+  | { formError?: string; field?: 'title' | 'description' | 'close_at' | 'outcomes' | 'line' | `outcome_${number}` }
   | undefined
 
 const MIN_OUTCOMES = 2
@@ -28,11 +28,29 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
   if (description.length > TEXT_LIMITS.marketDescription) {
     return { formError: tooLong('Description', TEXT_LIMITS.marketDescription), field: 'description' }
   }
-  if (kind !== 'binary' && kind !== 'multiple_choice') return { formError: 'Choose a market kind.' }
+  if (kind !== 'binary' && kind !== 'multiple_choice' && kind !== 'over_under') return { formError: 'Choose a market kind.' }
 
   const closeAtDate = closeAt ? new Date(closeAt) : null
   if (!closeAtDate || Number.isNaN(closeAtDate.getTime()) || closeAtDate.getTime() <= Date.now()) {
     return { formError: 'Choose a close time in the future.', field: 'close_at' }
+  }
+
+  // An over/under's outcomes come from its line, made by create_market itself (0043).
+  if (kind === 'over_under') {
+    const line = Number(formData.get('line'))
+    if (!Number.isFinite(line) || line < 0.5 || line % 1 !== 0.5) {
+      return { formError: 'Set the line to a half number, like 3.5.', field: 'line' }
+    }
+    const { data: marketId, error } = await supabase.rpc('create_market', {
+      p_title: title,
+      p_description: description || null,
+      p_kind: kind,
+      p_outcome_labels: [],
+      p_close_at: closeAt,
+      p_line: line,
+    })
+    if (error) return { formError: error.message }
+    redirect(`/markets/${marketId}`)
   }
 
   // One line per outcome input, blanks included, so a line's position matches the form's "Outcome N".

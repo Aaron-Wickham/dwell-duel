@@ -57,3 +57,28 @@ describe('ResolveForm', () => {
     expect(screen.getByRole('combobox', { name: 'Winning outcome' })).toHaveAttribute('aria-invalid', 'false')
   })
 })
+
+describe('ResolveForm over/under', () => {
+  it('asks for the actual result and previews which side wins', async () => {
+    render(<ResolveForm marketId="m1" outcomes={[{ id: 'o', label: 'Over 3.5' }, { id: 'u', label: 'Under 3.5' }]} line={3.5} />)
+    expect(screen.queryByRole('combobox', { name: 'Winning outcome' })).not.toBeInTheDocument()
+    const actual = screen.getByLabelText('Actual result')
+    await userEvent.type(actual, '5')
+    expect(screen.getByText('Over 3.5 wins.')).toBeInTheDocument()
+    await userEvent.clear(actual)
+    await userEvent.type(actual, '2')
+    expect(screen.getByText('Under 3.5 wins.')).toBeInTheDocument()
+  })
+
+  it('sends the actual result with the reason', async () => {
+    resolveMarketAction.mockResolvedValue(undefined)
+    render(<ResolveForm marketId="m1" outcomes={[{ id: 'o', label: 'Over 3.5' }, { id: 'u', label: 'Under 3.5' }]} line={3.5} />)
+    await userEvent.type(screen.getByLabelText('Actual result'), '4')
+    await userEvent.type(screen.getByLabelText('Why did this outcome win?'), 'Counted on the recording')
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm outcome' }))
+    await vi.waitFor(() => expect(resolveMarketAction).toHaveBeenCalled())
+    const data = resolveMarketAction.mock.calls[0][2] as FormData
+    expect(data.get('actual')).toBe('4')
+    expect(data.get('outcome_id')).toBeNull()
+  })
+})

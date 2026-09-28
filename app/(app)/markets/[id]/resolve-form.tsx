@@ -10,11 +10,24 @@ import { discardProof, uploadProof } from '@/lib/proof/upload'
 import type { ProofDraft, ProofRecord } from '@/lib/proof/types'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { resolveMarketAction, type ActionState } from '@/lib/markets/resolve-market'
+import { formatLine } from '@/lib/markets/kind'
+import { Input } from '@/components/ui/field'
 
 // Every resolution and override says why (0042), and can carry photos, a document and links that
 // every member sees. Files upload from the browser first, and are removed again if resolving fails.
-export function ResolveForm({ marketId, outcomes }: { marketId: string; outcomes: { id: string; label: string }[] }) {
+// An over/under (`line` set) resolves on the actual number instead of a chosen outcome
+// (resolve_over_under, 0043), with a live preview of which side that makes the winner.
+export function ResolveForm({
+  marketId,
+  outcomes,
+  line = null,
+}: {
+  marketId: string
+  outcomes: { id: string; label: string }[]
+  line?: number | null
+}) {
   const [drafts, setDrafts] = useState<ProofDraft[]>([])
+  const [actual, setActual] = useState('')
   const [state, formAction] = useActionState<ActionState, FormData>(
     withSuccessToast(
       async (prev: ActionState, formData: FormData) => {
@@ -40,25 +53,51 @@ export function ResolveForm({ marketId, outcomes }: { marketId: string; outcomes
   return (
     <>
       <form action={formAction} className="flex flex-col gap-4">
-        <Field label="Winning outcome" htmlFor="resolve-outcome">
-          <Select
-            id="resolve-outcome"
-            name="outcome_id"
-            required
-            defaultValue=""
-            aria-invalid={Boolean(outcomeError)}
-            aria-describedby={outcomeError ? 'resolve-error' : undefined}
-          >
-            <option value="" disabled>
-              Choose the winner…
-            </option>
-            {outcomes.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
+        {line !== null ? (
+          <Field label="Actual result" htmlFor="resolve-actual" hint={`The line is ${formatLine(line)}.`}>
+            <Input
+              id="resolve-actual"
+              name="actual"
+              type="number"
+              inputMode="decimal"
+              step="any"
+              min="0"
+              required
+              value={actual}
+              onChange={(e) => setActual(e.target.value)}
+              className="md:w-40"
+              aria-invalid={Boolean(outcomeError)}
+              aria-describedby={['resolve-actual-hint', outcomeError ? 'resolve-error' : null, 'resolve-preview'].filter(Boolean).join(' ')}
+            />
+            <p id="resolve-preview" className="text-sm font-bold" aria-live="polite">
+              {actual !== '' && Number.isFinite(Number(actual))
+                ? Number(actual) === line
+                  ? 'That equals the line; check the number.'
+                  : `${Number(actual) > line ? 'Over' : 'Under'} ${formatLine(line)} wins.`
+                : ''}
+            </p>
+          </Field>
+        ) : (
+          <Field label="Winning outcome" htmlFor="resolve-outcome">
+            <Select
+              id="resolve-outcome"
+              name="outcome_id"
+              required
+              defaultValue=""
+              aria-invalid={Boolean(outcomeError)}
+              aria-describedby={outcomeError ? 'resolve-error' : undefined}
+            >
+              <option value="" disabled>
+                Choose the winner…
               </option>
-            ))}
-          </Select>
-        </Field>
+              {outcomes.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
         <Field label="Why did this outcome win?" htmlFor="resolve-note" hint="Everyone sees this, with any proof you add.">
           <Textarea
             id="resolve-note"

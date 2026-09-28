@@ -1,3 +1,4 @@
+import type { MarketKind } from '@/lib/markets/kind'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
@@ -6,10 +7,12 @@ import { isUuid } from '@/lib/uuid'
 export interface MarketSummary {
   id: string
   title: string
-  kind: 'binary' | 'multiple_choice'
+  kind: MarketKind
   status: 'open' | 'resolved' | 'voided'
   closeAt: string
   seedPerOutcome: number
+  line: number | null
+  edited: boolean
   resolvedOutcomeLabel: string | null
   resolvedAt: string | null
   outcomes: { id: string; label: string; poolTotal: number }[]
@@ -19,7 +22,7 @@ export interface MarketSummary {
 // second `.in()` whose URL would grow with the list. The hint names the foreign key because
 // market_resolutions also points back at markets through market_id.
 const SUMMARY_SELECT =
-  'id, title, kind, status, close_at, created_at, seed_per_outcome, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at), market_outcomes(id, label, pool_total)'
+  'id, title, kind, status, close_at, created_at, seed_per_outcome, line, edited_at, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at), market_outcomes(id, label, pool_total)'
 
 type SummaryRow = {
   id: string
@@ -29,6 +32,8 @@ type SummaryRow = {
   close_at: string
   created_at: string
   seed_per_outcome: number
+  line: number | null
+  edited_at: string | null
   current_resolution: { outcome_id: string; resolved_at: string } | null
   market_outcomes: { id: string; label: string; pool_total: number }[] | null
 }
@@ -43,6 +48,8 @@ function toSummary(m: SummaryRow): MarketSummary {
     status: m.status,
     closeAt: m.close_at,
     seedPerOutcome: m.seed_per_outcome,
+    line: m.line,
+    edited: m.edited_at !== null,
     resolvedOutcomeLabel: resolution ? (outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null) : null,
     resolvedAt: resolution?.resolved_at ?? null,
     outcomes,

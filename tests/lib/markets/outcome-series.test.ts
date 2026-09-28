@@ -17,3 +17,10 @@ describe('outcomeSeries', () => {
     expect(outcomeSeries('multiple_choice', 'Seventh', 6)).toBe(1)
   })
 })
+
+describe('outcomeSeries for over/under', () => {
+  it('makes Over blue and Under gold, whatever the order', () => {
+    expect(outcomeSeries('over_under', 'Over 3.5', 1)).toBe(4)
+    expect(outcomeSeries('over_under', 'Under 3.5', 0)).toBe(3)
+  })
+})

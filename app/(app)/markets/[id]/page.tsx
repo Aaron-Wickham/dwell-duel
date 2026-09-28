@@ -34,6 +34,9 @@ import { ProbabilityChart } from '@/components/markets/probability-chart'
 import { MarketBets } from './market-bets'
 import { ResolveForm } from './resolve-form'
 import { DeleteMarketButton } from './delete-market-button'
+import { EditMarketDialog } from './edit-market-dialog'
+import { listMarketEdits } from '@/lib/markets/market-edits'
+import { formatLine } from '@/lib/markets/kind'
 import { VoidButton } from './void-button'
 
 // No loading.tsx for this route (and the markets list's own loading.tsx sits in the (list)
@@ -50,7 +53,11 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // The slip is only a cookie, so reading it here costs nothing.
   const [market, slipEntries] = await Promise.all([getMarket(supabase, id), readSlip()])
   if (!market) notFound()
-  const resolution = market.status === 'resolved' ? await getResolutionProof(supabase, market.id) : null
+  const [resolution, edits, role] = await Promise.all([
+    market.status === 'resolved' ? getResolutionProof(supabase, market.id) : null,
+    market.editedAt ? listMarketEdits(supabase, market.id) : [],
+    getRole(supabase),
+  ])
 
   const odds = computeOdds(
     market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })),
@@ -68,6 +75,8 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const isPastClose = new Date(market.closeAt).getTime() <= now
   const canBet = market.status === 'open' && !isPastClose
   const slip = slipEntries.map((e) => e.outcomeId)
+  // update_market (0043): the creator or an admin, while the market still takes bets.
+  const canEdit = canBet && (isCreator || atLeast(role, 'admin'))
 
   const statusTone =
     market.status === 'resolved' ? 'done' : market.status === 'voided' ? 'void' : isPastClose ? 'wait' : 'open'
@@ -93,14 +102,45 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           <StatusChip tone={statusTone}>
             Status: {market.status === 'open' && isPastClose ? 'awaiting resolution' : market.status}
           </StatusChip>
+          {market.kind === 'over_under' && market.line !== null && (
+            <StatusChip tone="void">Over/Under {formatLine(market.line)}</StatusChip>
+          )}
           <span className="text-sm text-ink2">
             {when}Created by {isCreator ? 'you' : market.creatorName}
           </span>
         </div>
         <h1 className={h1Class}>{market.title}</h1>
-        {market.description && <p className="max-w-[68ch] text-ink2">{market.description}</p>}
+        {market.description && <p className="max-w-[68ch] whitespace-pre-line text-ink2">{market.description}</p>}
+        {edits.length > 0 && (
+          <details className="max-w-[68ch] text-sm text-ink2">
+            <summary className="inline-flex min-h-11 cursor-pointer items-center font-bold">
+              Edited <LocalTime iso={edits[0].editedAt} format="dateTime" />
+            </summary>
+            <ol className="mt-1 flex flex-col gap-3">
+              {edits.map((e) => (
+                <li key={e.id} className="flex flex-col gap-1 border-l-2 border-line pl-3">
+                  <span>
+                    {e.editorName}, <LocalTime iso={e.editedAt} format="dateTime" />
+                  </span>
+                  {e.oldTitle !== e.newTitle && (
+                    <span>
+                      Title was: <span className="text-ink">“{e.oldTitle}”</span>
+                    </span>
+                  )}
+                  {e.oldDescription !== e.newDescription && (
+                    <span className="whitespace-pre-line break-words">
+                      Description was: <span className="text-ink">{e.oldDescription ? `“${e.oldDescription}”` : '(none)'}</span>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </details>
+        )}
+        {canEdit && <EditMarketDialog marketId={market.id} title={market.title} description={market.description} />}
         {market.status === 'resolved' && market.resolvedOutcomeLabel && (
           <Message tone="ok" icon={Trophy} className="self-start">
+            {market.actualValue !== null && <>Actual: {market.actualValue} · </>}
             Winning outcome: {market.resolvedOutcomeLabel}
           </Message>
         )}
@@ -314,7 +354,9 @@ async function MarketActions({
           >
             <p className="text-sm text-ink2">{manageHint}</p>
             <div className="mt-3 flex flex-col gap-4">
-              {showResolve && <ResolveForm marketId={market.id} outcomes={market.outcomes} />}
+              {showResolve && (
+                <ResolveForm marketId={market.id} outcomes={market.outcomes} line={market.kind === 'over_under' ? market.line : null} />
+              )}
               {canVoid && (
                 <VoidButton marketId={market.id} className={showResolve ? 'border-t border-line pt-4' : undefined} />
               )}

@@ -9,6 +9,7 @@ import { Message } from '@/components/ui/message'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { cn } from '@/lib/utils'
 import { createMarketAction, type ActionState } from '@/lib/markets/create-market'
+import type { MarketKind } from '@/lib/markets/kind'
 
 const MAX_OUTCOMES = 6
 const MIN_OUTCOMES = 2
@@ -20,7 +21,7 @@ const toggleClass = (on: boolean) =>
   )
 
 export function CreateMarketForm() {
-  const [kind, setKind] = useState<'binary' | 'multiple_choice'>('binary')
+  const [kind, setKind] = useState<MarketKind>('binary')
   const [outcomes, setOutcomes] = useState(['', ''])
   const [closeAtIso, setCloseAtIso] = useState('')
   const [state, formAction] = useActionState<ActionState, FormData>(createMarketAction, undefined)
@@ -69,7 +70,7 @@ export function CreateMarketForm() {
 
       <fieldset className="flex flex-col gap-1.5">
         <legend className="text-[15px] font-bold">Type</legend>
-        <div className="grid grid-cols-2 gap-1.5 rounded-[14px] bg-sunk p-1">
+        <div className="grid grid-cols-1 gap-1.5 rounded-[14px] bg-sunk p-1 md:grid-cols-3">
           <label className={toggleClass(kind === 'binary')}>
             <input
               type="radio"
@@ -92,6 +93,17 @@ export function CreateMarketForm() {
             />
             Multiple choice
           </label>
+          <label className={toggleClass(kind === 'over_under')}>
+            <input
+              type="radio"
+              name="kind"
+              value="over_under"
+              checked={kind === 'over_under'}
+              onChange={() => setKind('over_under')}
+              className="size-[18px] accent-primary"
+            />
+            Over/Under
+          </label>
         </div>
       </fieldset>
 
@@ -100,6 +112,25 @@ export function CreateMarketForm() {
           <input type="hidden" name="outcome_labels" value="Yes" />
           <input type="hidden" name="outcome_labels" value="No" />
         </>
+      ) : kind === 'over_under' ? (
+        <Field
+          label="Line"
+          htmlFor="cm-line"
+          hint="Members bet on whether the result lands over or under this number. Use a half number, like 3.5, so there’s never a tie."
+        >
+          <Input
+            id="cm-line"
+            name="line"
+            type="number"
+            inputMode="decimal"
+            step="0.5"
+            min="0.5"
+            required
+            className="md:w-40"
+            aria-invalid={state?.field === 'line'}
+            aria-describedby={['cm-line-hint', state?.field === 'line' ? 'create-market-error' : null].filter(Boolean).join(' ')}
+          />
+        </Field>
       ) : (
         <fieldset className="flex flex-col gap-2">
           <legend className="text-[15px] font-bold">Outcomes</legend>

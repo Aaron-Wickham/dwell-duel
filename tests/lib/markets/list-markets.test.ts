@@ -12,6 +12,8 @@ function marketRow(overrides: Record<string, unknown> = {}) {
     status: 'resolved',
     close_at: '2026-09-20T09:00:00+00:00',
     created_at: '2026-09-19T09:00:00.123456+00:00',
+    line: null,
+    edited_at: null,
     current_resolution: { outcome_id: 'o-yes', resolved_at: '2026-09-21T09:00:00+00:00' },
     market_outcomes: [
       { id: 'o-no', label: 'No', pool_total: 5 },
@@ -45,6 +47,8 @@ describe('listOpenMarkets', () => {
         closeAt: '2026-09-20T09:00:00+00:00',
         resolvedOutcomeLabel: null,
         resolvedAt: null,
+        line: null,
+        edited: false,
         outcomes: [
           { id: 'o-no', label: 'No', poolTotal: 5 },
           { id: 'o-yes', label: 'Yes', poolTotal: 15 },

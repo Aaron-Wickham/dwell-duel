@@ -80,6 +80,8 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       title: market.title,
       status: marketCardStatus(market.status, market.closeAt, now),
       kind: market.kind,
+      line: market.line,
+      edited: market.edited,
       closeAt: market.closeAt,
       resolvedAt: market.resolvedAt,
       outcomes: odds.map((o) => ({

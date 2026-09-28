@@ -37,13 +37,15 @@ export function serviceClient(): SupabaseClient {
  * pages, so re-listing after each batch is always page 1 again.
  */
 export async function deleteAllAuthUsers(db: SupabaseClient): Promise<void> {
-  for (;;) {
+  // Bounded so a delete that reports success without taking effect fails loudly instead of spinning.
+  for (let pass = 0; pass < 100; pass++) {
     const { data, error } = await db.auth.admin.listUsers()
     if (error) throw error
-    if (data.users.length === 0) break
+    if (data.users.length === 0) return
     for (const u of data.users) {
       const { error: deleteErr } = await db.auth.admin.deleteUser(u.id)
       if (deleteErr) throw deleteErr
     }
   }
+  throw new Error('deleteAllAuthUsers: auth users remain after 100 passes')
 }

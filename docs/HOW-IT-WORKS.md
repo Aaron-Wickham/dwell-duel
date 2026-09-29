@@ -188,6 +188,22 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   this month, and its winnings count next month. Only members who've bet
   or been paid this month appear.
 - **Ties share a rank** on both boards ("1, 1, 3").
+- **Podium and records:** the top three of either board stand on a
+  podium above the list. Each row shows a win-loss record (like 6-3):
+  your settled solo bets and parlays, all time. Bets on a voided market,
+  or on one that resolved to an outcome nobody backed, are refunds and
+  count as neither, and open bets don't count yet.
+- **The race** (This month): a step line for each of the month's top five,
+  showing their running net profit day by day on Eastern time, with
+  each name and total at the end of the line.
+- **This month's awards**, each shown only once someone has earned it:
+  **Biggest win** (the most gained on one solo bet paid this month),
+  **Best parlay** (the highest multiplier among parlays paid this month),
+  **Sharpshooter** (the best solo hit rate over markets resolved this
+  month, with at least five decided bets) and **Most active** (the most
+  solo bets and parlays placed this month). A tie goes to whoever has
+  more of what's counted, then the name.
+- **Past champions** lists the months already crowned.
 - **Monthly champion:** when a month ends, whoever finished it with the
   top profit is posted to the feed ("Alice was October's champion with
   +140 DC"). If two finish level, it goes to whoever reached that total

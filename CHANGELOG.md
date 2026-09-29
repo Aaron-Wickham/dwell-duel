@@ -7,6 +7,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ## Unreleased
 
 ### Features
+- **A livelier leaderboard:** a podium for the top three, win-loss records on every row, and on This month a race chart of the top five's profit day by day, four awards (biggest win, best parlay, sharpshooter, most active) and the past champions (#121).
 - **Filter the markets page** by All, Open, Pending (closed but not yet resolved) or Closed (resolved and voided); the choice is in the URL (#124).
 
 ### Fixes

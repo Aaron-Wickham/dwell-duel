@@ -11,6 +11,8 @@ export const pageSubscriptions = {
       { table: 'market_resolutions', filter: `market_id=eq.${marketId}` },
       // The creator's parlay legs show in the creator-stake line (#84).
       { table: 'parlay_legs', filter: `market_id=eq.${marketId}` },
+      // A deleted comment is a soft delete, an UPDATE (0053), so this filtered channel hears it.
+      { table: 'market_comments', filter: `market_id=eq.${marketId}` },
     ]
   },
   // Every card's odds move with every bet, so this page does follow them all; LiveRefresh's
@@ -48,11 +50,15 @@ export const pageSubscriptions = {
       // A cancelled bet's event is deleted by cascade, which the filtered channel above can't see.
       { table: 'cancelled_bets', filter: `profile_id=eq.${memberId}` },
       { table: 'profiles', filter: `id=eq.${memberId}` },
+      // Unfiltered: a reaction row names its event, not the event's actor, and a filtered channel
+      // would never hear a reaction being taken back (a DELETE).
+      { table: 'feed_reactions' },
     ]
   },
-  // Every feed kind is a row in activity_events now, so it's the only table to watch.
+  // Every feed kind is a row in activity_events now. Reactions are watched unfiltered, so a
+  // reaction taken back (a DELETE) still arrives.
   feed(): LiveSubscription[] {
-    return [{ table: 'activity_events' }]
+    return [{ table: 'activity_events' }, { table: 'feed_reactions' }]
   },
   tasks(userId: string): LiveSubscription[] {
     return [{ table: 'tasks' }, { table: 'task_completions', filter: `profile_id=eq.${userId}` }]

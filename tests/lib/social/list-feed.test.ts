@@ -27,7 +27,7 @@ describe('listFeed', () => {
     const page = await listFeed(client, { actorId: 'p-alice', page: { top: null, bottom: null } })
 
     const [read, probe] = queries
-    expect(read.select).toContain('actor:profiles!inner(display_name)')
+    expect(read.select).toContain('actor:profiles!activity_events_actor_id_fkey!inner(display_name)')
     expect(probe.select).toBe('id, occurred_at')
     expect(probe.is).toEqual([['hidden_at', null]])
     expect(probe.eq).toEqual([['actor_id', 'p-alice']])

@@ -29,10 +29,16 @@ import { Page, h1Class } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { StatusChip } from '@/components/ui/status-chip'
 import { ContentReveal } from '@/components/nav/page-transition'
-import { MarketActionsSkeleton, MarketBetsSkeleton, MarketChartSkeleton } from '@/components/markets/market-detail-skeletons'
+import {
+  MarketActionsSkeleton,
+  MarketBetsSkeleton,
+  MarketChartSkeleton,
+  MarketCommentsSkeleton,
+} from '@/components/markets/market-detail-skeletons'
 import { OutcomeRow } from '@/components/markets/outcome-row'
 import { ProbabilityChart } from '@/components/markets/probability-chart'
 import { MarketBets } from './market-bets'
+import { MarketComments } from './market-comments'
 import { ResolveForm } from './resolve-form'
 import { describeCreatorStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
 import { DeleteMarketButton } from './delete-market-button'
@@ -44,8 +50,8 @@ import { VoidButton } from './void-button'
 
 // No loading.tsx for this route (and the markets list's own loading.tsx sits in the (list)
 // group, so it doesn't wrap this one): the market must be found before anything streams, so an
-// unknown id still gets a real 404 status. The chart, the outcomes and bet column, and the bets
-// each stream in behind their own skeleton.
+// unknown id still gets a real 404 status. The chart, the outcomes and bet column, the bets and
+// the comments each stream in behind their own skeleton.
 export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>) {
   const { id } = await props.params
   const searchParams = await props.searchParams
@@ -184,11 +190,11 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
       </div>
 
       {/* Each section's fallback carries the same grid placement as the section itself. The
-          four fallbacks announce nothing themselves (SkeletonScreen announce={false});
-          LoadingStatus wraps them in one combined status, scoped to just these four, for as
+          fallbacks announce nothing themselves (SkeletonScreen announce={false});
+          LoadingStatus wraps them in one combined status, scoped to just these, for as
           long as any of them is still showing. */}
       <LoadingStatus>
-        <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-7">
+        <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_auto_1fr] lg:items-start lg:gap-7">
           <Suspense fallback={<MarketChartSkeleton />}>
             <MarketChart market={market} odds={odds} now={now} />
           </Suspense>
@@ -207,6 +213,14 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
               viewerId={user.id}
               canBet={canBet}
               page={readPageParams(searchParams, 'bets')}
+              searchParams={searchParams}
+            />
+          </Suspense>
+          <Suspense fallback={<MarketCommentsSkeleton />}>
+            <MarketComments
+              marketId={market.id}
+              viewerId={user.id}
+              page={readPageParams(searchParams, 'comments')}
               searchParams={searchParams}
             />
           </Suspense>
@@ -371,7 +385,7 @@ async function MarketActions({
         </ul>
       </SectionCard>
 
-      <div className="flex flex-col gap-5 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:gap-7">
+      <div className="flex flex-col gap-5 lg:col-start-2 lg:row-span-4 lg:row-start-1 lg:gap-7">
         {canBet ? (
           <SectionCard title="Place a bet" titleId="bet-title" className="gap-2">
             <p className="text-ink2">

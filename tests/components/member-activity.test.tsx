@@ -9,11 +9,17 @@ vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
 )
 
-const { listFeed, requestShowMoreFocus } = vi.hoisted(() => ({
+const { listFeed, requestShowMoreFocus, getReactions } = vi.hoisted(() => ({
   listFeed: vi.fn(),
   requestShowMoreFocus: vi.fn(),
+  getReactions: vi.fn(),
 }))
 vi.mock('@/lib/social/list-feed', () => ({ listFeed }))
+vi.mock('@/lib/social/reactions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/social/reactions')>()),
+  getReactions,
+}))
+vi.mock('@/lib/social/reactions-actions', () => ({ setReactionAction: vi.fn() }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase: {}, user: { id: 'p-me' } }) }))
 vi.mock('@/components/ui/show-more-focus', () => ({ ShowMoreFocus: () => null, requestShowMoreFocus }))
 // A plain click runs onNavigate, as the App Router's Link does for a client-side navigation.
@@ -61,6 +67,7 @@ const event = (id: string): FeedEvent => ({
 })
 
 async function renderActivity(activity: KeysetPage<FeedEvent>, searchParams: Record<string, string> = {}) {
+  getReactions.mockResolvedValue(new Map())
   listFeed.mockResolvedValue(activity)
   render(
     await MemberActivity({
@@ -74,6 +81,7 @@ async function renderActivity(activity: KeysetPage<FeedEvent>, searchParams: Rec
 beforeEach(() => {
   listFeed.mockReset()
   requestShowMoreFocus.mockReset()
+  getReactions.mockReset()
 })
 
 describe('MemberActivity', () => {

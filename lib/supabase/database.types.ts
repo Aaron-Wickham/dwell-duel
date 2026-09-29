@@ -301,6 +301,42 @@ export type Database = {
           },
         ]
       }
+      feed_reactions: {
+        Row: {
+          created_at: string
+          event_id: string
+          kind: string
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          kind: string
+          profile_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          kind?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_reactions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "activity_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_reactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       idempotency_keys: {
         Row: {
           action: string
@@ -326,6 +362,58 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "idempotency_keys_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      market_comments: {
+        Row: {
+          body: string
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          id: number
+          market_id: string
+          profile_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: never
+          market_id: string
+          profile_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: never
+          market_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_comments_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "market_comments_market_id_fkey"
+            columns: ["market_id"]
+            isOneToOne: false
+            referencedRelation: "markets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "market_comments_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -888,6 +976,7 @@ export type Database = {
         Args: { p_completion_id: string }
         Returns: undefined
       }
+      betting_ledger_types: { Args: never; Returns: string[] }
       can_resolve_market: { Args: { p_market_id: string }; Returns: boolean }
       cancel_bet: { Args: { p_bet_id: number }; Returns: undefined }
       claim_idempotency_key: {
@@ -910,6 +999,10 @@ export type Database = {
         Returns: string
       }
       delete_market: { Args: { p_market_id: string }; Returns: undefined }
+      delete_market_comment: {
+        Args: { p_comment_id: number }
+        Returns: undefined
+      }
       delete_task: { Args: { p_task_id: string }; Returns: undefined }
       economy_flows: {
         Args: { p_from: string; p_to: string }
@@ -940,10 +1033,20 @@ export type Database = {
           unclassified: number
         }[]
       }
+      feed_reaction_counts: {
+        Args: { p_event_ids: string[] }
+        Returns: {
+          event_id: string
+          kind: string
+          mine: boolean
+          reactions: number
+        }[]
+      }
       finish_idempotent: {
         Args: { p_key: string; p_result: Json }
         Returns: undefined
       }
+      group_time_zone: { Args: never; Returns: string }
       has_role: { Args: { p_min: string }; Returns: boolean }
       has_stake_in_market: {
         Args: { p_market_id: string; p_profile_id: string }
@@ -1004,6 +1107,25 @@ export type Database = {
           id: string
         }[]
       }
+      member_stats: {
+        Args: { p_profile_id: string }
+        Returns: {
+          best_parlay_multiplier: number
+          best_parlay_payout: number
+          bets_lost: number
+          bets_refunded: number
+          bets_won: number
+          biggest_win: number
+          biggest_win_market_id: string
+          biggest_win_market_title: string
+          markets_created: number
+          net_profit: number
+          parlays_lost: number
+          parlays_refunded: number
+          parlays_won: number
+          tasks_completed: number
+        }[]
+      }
       my_at_stake: {
         Args: never
         Returns: {
@@ -1012,12 +1134,24 @@ export type Database = {
         }[]
       }
       my_role: { Args: never; Returns: string }
+      my_task_streaks: {
+        Args: { p_at?: string }
+        Returns: {
+          includes_current: boolean
+          streak: number
+          task_id: string
+        }[]
+      }
       parlay_limits: {
         Args: never
         Returns: {
           max_legs: number
           max_multiplier: number
         }[]
+      }
+      period_index: {
+        Args: { p_key: string; p_period: string }
+        Returns: number
       }
       place_bet: {
         Args: { p_amount: number; p_market_id: string; p_outcome_id: string }
@@ -1114,6 +1248,31 @@ export type Database = {
         Returns: undefined
       }
       void_market: { Args: { p_market_id: string }; Returns: undefined }
+      weekly_recap: {
+        Args: { p_week: string }
+        Returns: {
+          best_bettor_id: string
+          best_bettor_name: string
+          best_market_id: string
+          best_market_title: string
+          best_payout: number
+          best_stake: number
+          closing: Json
+          closing_total: number
+          my_betting_moves: number
+          my_betting_net: number
+          my_task_income: number
+          top_tasker_count: number
+          top_tasker_id: string
+          top_tasker_name: string
+          upset_chance: number
+          upset_market_id: string
+          upset_market_title: string
+          upset_outcome_label: string
+          week_end: string
+          week_start: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

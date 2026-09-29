@@ -40,4 +40,22 @@ describe('FeedItem', () => {
     )
     expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
   })
+
+  it('names a focusable row by its sentence alone once it carries reaction buttons', () => {
+    render(
+      <ul>
+        <FeedItem
+          icon={Target}
+          segments={['Alice bet 5 DC on Yes']}
+          age="1h ago"
+          domId="feed-bet_003a1"
+          reactions={<button type="button" aria-label="React fire, 0 reactions" />}
+        />
+      </ul>,
+    )
+    const item = screen.getByRole('listitem')
+    expect(item).toHaveAttribute('aria-labelledby', 'feed-bet_003a1-label')
+    expect(item).toHaveAccessibleName('Alice bet 5 DC on Yes')
+    expect(screen.getByRole('button', { name: 'React fire, 0 reactions' })).toBeInTheDocument()
+  })
 })

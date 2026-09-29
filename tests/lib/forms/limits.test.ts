@@ -16,6 +16,7 @@ describe('TEXT_LIMITS', () => {
       bio: 160,
       proofNote: 500,
       resolutionNote: 1000,
+      commentBody: 280,
     })
   })
 })

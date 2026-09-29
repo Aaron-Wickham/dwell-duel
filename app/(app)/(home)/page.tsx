@@ -10,6 +10,8 @@ import { getOnboarding } from '@/lib/home/onboarding'
 import { OnboardingCard } from '@/components/home/onboarding-card'
 import { getMarketsToResolve } from '@/lib/markets/markets-to-resolve'
 import { MarketsToResolveCard } from '@/components/home/markets-to-resolve-card'
+import { getWeeklyRecap } from '@/lib/home/recap'
+import { WeeklyRecapCard } from '@/components/home/weekly-recap-card'
 import { getMemberStanding } from '@/lib/social/leaderboard'
 import { countPendingTaskCompletions, getMyPendingRewards } from '@/lib/tasks/list-task-completions'
 import { Page, PageHeader } from '@/components/ui/page'
@@ -24,7 +26,7 @@ export default async function Home() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const [role, openMarketCount, standing, pendingReviews, pendingApprovals, atStake, marketsToResolve, onboarding] = await Promise.all([
+  const [role, openMarketCount, standing, pendingReviews, pendingApprovals, atStake, marketsToResolve, onboarding, weeklyRecap] = await Promise.all([
     getRole(supabase),
     countOpenMarkets(supabase),
     getMemberStanding(supabase, user.id),
@@ -33,6 +35,7 @@ export default async function Home() {
     getAtStake(supabase),
     getMarketsToResolve(supabase),
     getOnboarding(supabase, user.id),
+    getWeeklyRecap(supabase),
   ])
   const adminLink = adminHref(role)
 
@@ -84,6 +87,7 @@ export default async function Home() {
       />
       <OnboardingCard steps={onboarding} />
       <MarketsToResolveCard {...marketsToResolve} />
+      <WeeklyRecapCard recap={weeklyRecap} />
       <HomeTiles tiles={tiles} />
       <InstallCard />
     </Page>

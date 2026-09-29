@@ -59,6 +59,7 @@ export async function MarketBets({
               href={showMoreHref(pathname, searchParams, 'bets', betsPage.next)}
               fresh={betsPage.next.kind === 'window'}
               focusId={rowDomId(BET_ROW_ID_PREFIX, betsPage.next.firstId)}
+              description="Older bets"
             />
           </div>
         )}

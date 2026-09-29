@@ -1,19 +1,26 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import type { KeysetPage } from '@/lib/pagination/keyset'
 import type { FeedEvent } from '@/lib/social/describe-event'
+import { noReactions } from '@/lib/social/reactions'
 
 vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
 )
 
-const { listFeed, requestShowMoreFocus } = vi.hoisted(() => ({
+const { listFeed, requestShowMoreFocus, getReactions } = vi.hoisted(() => ({
   listFeed: vi.fn(),
   requestShowMoreFocus: vi.fn(),
+  getReactions: vi.fn(),
 }))
 vi.mock('@/lib/social/list-feed', () => ({ listFeed }))
+vi.mock('@/lib/social/reactions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/social/reactions')>()),
+  getReactions,
+}))
+vi.mock('@/lib/social/reactions-actions', () => ({ setReactionAction: vi.fn() }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase: {}, user: { id: 'p-me' } }) }))
 vi.mock('@/components/live/live-tables', () => ({ LiveTables: () => null }))
 vi.mock('@/components/ui/show-more-focus', () => ({ ShowMoreFocus: () => null, requestShowMoreFocus }))
@@ -60,6 +67,7 @@ const event = (id: string): FeedEvent => ({
 })
 
 async function renderPage(feed: KeysetPage<FeedEvent>, searchParams: Record<string, string> = {}) {
+  getReactions.mockResolvedValue(new Map())
   listFeed.mockResolvedValue(feed)
   render(await FeedPage({ params: Promise.resolve({}), searchParams: Promise.resolve(searchParams) }))
 }
@@ -67,6 +75,7 @@ async function renderPage(feed: KeysetPage<FeedEvent>, searchParams: Record<stri
 beforeEach(() => {
   listFeed.mockReset()
   requestShowMoreFocus.mockReset()
+  getReactions.mockReset()
 })
 
 describe('FeedPage', () => {
@@ -81,6 +90,21 @@ describe('FeedPage', () => {
     await renderPage({ rows: [], next: null, windowed: false })
     expect(screen.getByText('Nothing yet.')).toBeInTheDocument()
     expect(screen.queryByText('Nothing older here.')).toBeNull()
+  })
+
+  it("reads the page's reactions in one call and shows them on each item", async () => {
+    getReactions.mockImplementation(async () =>
+      new Map([['bet:1', { ...noReactions(), fire: { count: 3, mine: true }, clap: { count: 1, mine: false } }]]),
+    )
+    listFeed.mockResolvedValue({ rows: [event('bet:1'), event('bet:2')], next: null, windowed: false })
+    render(await FeedPage({ params: Promise.resolve({}), searchParams: Promise.resolve({}) }))
+
+    expect(getReactions).toHaveBeenCalledTimes(1)
+    expect(getReactions).toHaveBeenCalledWith({}, ['bet:1', 'bet:2'])
+    const [first, second] = screen.getAllByRole('group', { name: 'Reactions' })
+    expect(within(first).getByRole('button', { name: 'React fire, 3 reactions, you reacted' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(first).getByRole('button', { name: 'React clap, 1 reaction' })).toHaveAttribute('aria-pressed', 'false')
+    expect(within(second).getByRole('button', { name: 'React fire, 0 reactions' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('moves focus to the first new row when Show more is clicked', async () => {

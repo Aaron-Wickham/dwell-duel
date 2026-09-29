@@ -7,10 +7,15 @@ vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
 )
 
-import { MarketActionsSkeleton, MarketBetsSkeleton, MarketChartSkeleton } from '@/components/markets/market-detail-skeletons'
+import {
+  MarketActionsSkeleton,
+  MarketBetsSkeleton,
+  MarketChartSkeleton,
+  MarketCommentsSkeleton,
+} from '@/components/markets/market-detail-skeletons'
 
 // The fallbacks sit on the page beside real content, so like a route skeleton they must add
-// nothing the market e2e specs count. None of the four announces its own status any more (the
+// nothing the market e2e specs count. None of them announces its own status any more (the
 // page renders one combined <LoadingStatus />, tested in loading-status.test.tsx): asserting zero
 // here is what would catch a status creeping back into one of them.
 function expectOnlyHiddenBlocks(container: HTMLElement) {
@@ -28,6 +33,7 @@ function expectOnlyHiddenBlocks(container: HTMLElement) {
 describe.each<[string, ReactElement, string[]]>([
   ['market-chart', <MarketChartSkeleton key="chart" />, ['lg:col-start-1', 'lg:row-start-1']],
   ['market-bets', <MarketBetsSkeleton key="bets" />, ['lg:col-start-1', 'lg:row-start-3']],
+  ['market-comments', <MarketCommentsSkeleton key="comments" />, ['lg:col-start-1', 'lg:row-start-4']],
 ])('the %s skeleton', (name, element, placement) => {
   it('is named, holds its grid cell, announces nothing itself, and shows nothing but hidden blocks', () => {
     const { container } = render(element)
@@ -47,7 +53,7 @@ describe('the market actions skeleton', () => {
     expect(outcomes).toHaveAttribute('data-skeleton', 'market-outcomes')
     expect(outcomes).toHaveClass('lg:col-start-1', 'lg:row-start-2')
     expect(betForm).toHaveAttribute('data-skeleton', 'market-bet-form')
-    expect(betForm).toHaveClass('lg:col-start-2', 'lg:row-span-3', 'lg:row-start-1')
+    expect(betForm).toHaveClass('lg:col-start-2', 'lg:row-span-4', 'lg:row-start-1')
     expectOnlyHiddenBlocks(container)
   })
 

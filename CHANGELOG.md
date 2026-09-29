@@ -6,9 +6,13 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Features
+- **Filter the markets page** by All, Open, Pending (closed but not yet resolved) or Closed (resolved and voided); the choice is in the URL (#124).
+
 ### Fixes
 - **Sub-tabs slide like the main nav:** the active pill on My bets, Leaderboard, Markets and Admin's tabs glides to the new tab, and stays still with reduced motion (#117).
 - **Cancel and Remove sit at the status chip's height** on My bets and market pages, instead of a full-size button beside a small chip (#118).
+- **Mobile page can't zoom or scroll sideways:** the viewport is locked and the page is clipped to the screen's width, which stops the top bar and tab bar being pulled off the screen edges in the installed app (#127, #128, #129). Pinch-zoom is gone with it.
 - **Notifications don't repeat the app's name:** each one's title says what happened ("New market", "You won 26 DC", "Time to resolve", "Task approved"), with the detail underneath (#109).
 - **Market cards' sparklines start at the seeded 50/50,** like the market page's chart, and a seeded market nobody has bet on shows a flat line (#110).
 - **Home's Markets to resolve card appears when a market closes,** without a manual refresh (#111).

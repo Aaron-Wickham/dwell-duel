@@ -270,6 +270,10 @@
     background-color: var(--bg);
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
+    /* Nothing may make the page wider than the screen: a wider page lets iOS zoom out and pan
+       sideways, which pulls the fixed bars off the screen edges. clip, unlike hidden, keeps the
+       sticky top bar working. */
+    overflow-x: clip;
   }
 
   body {
@@ -281,6 +285,9 @@
     -webkit-font-smoothing: antialiased;
     /* No pull-to-refresh, overscroll glow or scroll chaining; live updates keep data fresh. */
     overscroll-behavior-y: none;
+    /* Vertical scroll only: no pinch-zoom and no sideways panning, in the installed app too. */
+    touch-action: pan-y;
+    overflow-x: clip;
   }
 
   /* Drops the double-tap-to-zoom wait, so taps land at once. */

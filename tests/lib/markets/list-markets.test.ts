@@ -80,6 +80,26 @@ describe('listOpenMarkets', () => {
     expect(decodeCursor(page.next?.cursor)).toEqual({ ts: '2026-09-21T09:00:00+00:00', id: '0b9c3f5e-8a1d-4c2b-9e7f-000000000001' })
   })
 
+  it('reads only markets still open for bets when given an upcoming bound, and only past-close ones when not', async () => {
+    const at = '2026-09-20T12:00:00.000Z'
+    const upcoming = fakeSupabase(() => ({ data: [] }))
+    await listOpenMarkets(upcoming.client, { top: null, bottom: null }, { upcoming: true, at })
+    expect(upcoming.queries[0].gt).toEqual([['close_at', at]])
+    expect(upcoming.queries[0].lte).toEqual([])
+
+    const overdue = fakeSupabase(() => ({ data: [] }))
+    await listOpenMarkets(overdue.client, { top: null, bottom: null }, { upcoming: false, at })
+    expect(overdue.queries[0].lte).toEqual([['close_at', at]])
+    expect(overdue.queries[0].gt).toEqual([])
+  })
+
+  it('adds no close-time bound by default', async () => {
+    const { client, queries } = fakeSupabase(() => ({ data: [] }))
+    await listOpenMarkets(client, { top: null, bottom: null })
+    expect(queries[0].gt).toEqual([])
+    expect(queries[0].lte).toEqual([])
+  })
+
   it('ignores a cursor whose id is not a market id', async () => {
     const { client, queries } = fakeSupabase(() => ({ data: [] }))
     const page = await listOpenMarkets(client, { top: { ts: '2026-09-19T09:00:00Z', id: '42' }, bottom: null })

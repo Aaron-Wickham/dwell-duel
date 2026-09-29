@@ -30,29 +30,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers()
-  Reflect.deleteProperty(window, 'visualViewport')
 })
-
-// visualViewport isn't a real EventTarget in jsdom, so `resize` handlers are captured and
-// invoked directly rather than dispatched.
-function mockVisualViewport(initialScale: number) {
-  const handlers: Array<() => void> = []
-  const viewport = {
-    scale: initialScale,
-    addEventListener: vi.fn((type: string, cb: () => void) => {
-      if (type === 'resize') handlers.push(cb)
-    }),
-    removeEventListener: vi.fn(),
-  }
-  Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport })
-  return {
-    viewport,
-    setScale(scale: number) {
-      viewport.scale = scale
-      handlers.forEach((cb) => cb())
-    },
-  }
-}
 
 // jsdom's TouchEvent takes plain objects for its touch lists; timeStamp is pinned so the
 // release velocity is exact.
@@ -104,7 +82,7 @@ function setup() {
 describe('BackSwipe', () => {
   it('renders its children in a pan-y surface that clips sideways overflow, with a hidden backdrop', () => {
     const { content, backdrop } = setup()
-    expect(content.parentElement).toHaveClass('touch-pan-y', 'touch-pinch-zoom', 'overflow-x-clip', 'flex-1')
+    expect(content.parentElement).toHaveClass('touch-pan-y', 'overflow-x-clip', 'flex-1')
     expect(backdrop).toHaveAttribute('aria-hidden', 'true')
     expect(backdrop).toHaveClass('hidden', 'bg-scrim', 'data-swiping:block')
     expect(content.style.transform).toBe('')
@@ -314,54 +292,5 @@ describe('BackSwipe', () => {
     vi.advanceTimersByTime(1000)
     expect(content.style.transform).toBe('')
     expect(push).not.toHaveBeenCalled()
-  })
-
-  it('marks the surface zoomed and blocks the swipe while the viewport is pinch-zoomed in', () => {
-    mockVisualViewport(2)
-    const { heading, content } = setup()
-
-    expect(content.parentElement).toHaveAttribute('data-zoomed')
-
-    drag(heading, [5, 400], [220, 410], 200)
-    vi.advanceTimersByTime(280)
-
-    expect(content.style.transform).toBe('')
-    expect(push).not.toHaveBeenCalled()
-  })
-
-  it('clears the zoomed marker and lets swipes work again once the viewport is back to scale 1', () => {
-    const { setScale } = mockVisualViewport(2)
-    const { heading, content } = setup()
-    expect(content.parentElement).toHaveAttribute('data-zoomed')
-
-    setScale(1)
-    expect(content.parentElement).not.toHaveAttribute('data-zoomed')
-
-    drag(heading, [5, 400], [220, 410], 200)
-    vi.advanceTimersByTime(280)
-
-    expect(push).toHaveBeenCalledWith('/markets', { transitionTypes: ['nav-back'] })
-  })
-
-  it('stops listening to the visual viewport when it unmounts', () => {
-    const { viewport } = mockVisualViewport(1)
-    const { unmount } = setup()
-    const handler = viewport.addEventListener.mock.calls.find(([type]) => type === 'resize')?.[1]
-    expect(handler).toBeTypeOf('function')
-
-    unmount()
-
-    expect(viewport.removeEventListener).toHaveBeenCalledWith('resize', handler)
-  })
-
-  it('never marks the surface zoomed and still swipes where visualViewport is unavailable', () => {
-    expect(window.visualViewport).toBeUndefined()
-    const { heading, content } = setup()
-    expect(content.parentElement).not.toHaveAttribute('data-zoomed')
-
-    drag(heading, [5, 400], [220, 410], 200)
-    vi.advanceTimersByTime(280)
-
-    expect(push).toHaveBeenCalledWith('/markets', { transitionTypes: ['nav-back'] })
   })
 })

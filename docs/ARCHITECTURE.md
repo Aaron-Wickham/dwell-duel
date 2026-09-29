@@ -341,8 +341,9 @@ after it ships. They roughly follow the project's history:
 | 0059 | Leaderboard extras (#121): `leaderboard_race`, `leaderboard_awards`, `member_records` (security definer, invited members only, aggregates only) |
 
 Merging a migration to `main` runs the **Deploy Production Database**
-workflow. It runs in parallel with Vercel's deploy, so a build that needs
-a new migration runs that workflow on its branch before merging.
+workflow, with no approval step. It runs in parallel with Vercel's deploy;
+the push (under a minute) normally finishes before the build does, and
+migrations stay additive so old code survives a slower one.
 
 ## Key flows
 
@@ -495,8 +496,7 @@ leaves out empty lines and hides when every one is empty.
   `db` project serially), a production build and Playwright on every push
   and PR, all against a throwaway local Supabase.
 - **Database deploys** (`.github/workflows/deploy-production-db.yml`): a
-  dry run, then the push behind the `production-db` environment's approval,
-  one at a time.
+  dry run, then the push, one at a time and with no approval step.
 - **Typed queries:** `lib/supabase/database.types.ts` is generated from the
   migrations and never edited; `lib/supabase/database.ts` wraps it
   (`Database`, `DbClient`) and marks the few function arguments that take a

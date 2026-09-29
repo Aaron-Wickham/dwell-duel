@@ -19,7 +19,8 @@ describe('standalone page height', () => {
 
   it('does not apply it outside standalone', () => {
     const outside = css.replace(/@media \(display-mode: standalone\)[\s\S]*?\n\}\n/g, '')
-    expect(outside).not.toMatch(/100lvh/)
+    // The launch overlay has its own 100lvh below; what must stay inside is the body's.
+    expect(outside).not.toMatch(/(^|\n)body\s*\{[^}]*100lvh/)
   })
 
   // The overlay is painted in the first frames of a cold start, while the viewport can still be
@@ -29,7 +30,8 @@ describe('standalone page height', () => {
   it('sizes the launch overlay to the large viewport, not to inset: 0', () => {
     const rule = /:root\[data-launch\] \.launch-screen\s*\{([^}]*)\}/.exec(css)
     expect(rule).not.toBeNull()
-    expect(rule![1]).toMatch(/height:\s*100lvh/)
-    expect(rule![1]).not.toMatch(/inset:\s*0/)
+    const declarations = rule![1].replace(/\/\*[\s\S]*?\*\//g, '')
+    expect(declarations).toMatch(/height:\s*100lvh/)
+    expect(declarations).not.toMatch(/inset:\s*0/)
   })
 })

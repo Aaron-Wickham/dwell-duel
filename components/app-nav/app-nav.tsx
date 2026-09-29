@@ -272,10 +272,21 @@ export function AppNav({
               >
                 <span
                   className={cn(
-                    'relative flex h-[30px] w-[52px] items-center justify-center rounded-full',
-                    isActive && 'bg-lime text-on-lime',
+                    'relative isolate flex h-[30px] w-[52px] items-center justify-center rounded-full',
+                    isActive && 'text-on-lime',
                   )}
                 >
+                  {/* One pill that slides between tabs, like the desktop nav's. The tab bar stays
+                      pinned through page transitions, and its new snapshot is live, so the slide
+                      shows while the page moves under it. */}
+                  {isActive && (
+                    <m.span
+                      layoutId="tabbar-pill"
+                      aria-hidden="true"
+                      className="absolute inset-0 -z-10 rounded-full bg-lime"
+                      transition={PILL_TRANSITION}
+                    />
+                  )}
                   <Icon aria-hidden="true" className="size-[22px]" />
                 </span>
                 <span>{item.shortLabel}</span>

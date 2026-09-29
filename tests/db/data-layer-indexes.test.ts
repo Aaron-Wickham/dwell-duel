@@ -293,9 +293,17 @@ describe('0048 indexes (#67)', () => {
     const nodes = await planNodes(
       `select id, amount, type, meta, created_at from public.coin_transactions where profile_id = '${bob.id}' and created_at >= '${ts}' and (created_at > '${ts}' or (created_at = '${ts}' and id >= ${oldestLedgerRow.id})) order by created_at desc, id desc limit 500`,
     )
-    const scan = nodes.find((n) => n['Index Name'] === 'coin_transactions_profile_created_idx')
-    expect(scan?.['Index Cond']).toMatch(/profile_id/)
-    expect(scan?.['Index Cond']).toMatch(/created_at/)
+    // Either ledger index can serve this: after the whole suite has filled the ledger, walking
+    // created_at with the profile as a filter can cost less than the profile index (as the test
+    // above allows), and which one the planner takes varies from run to run (#139). What must hold
+    // is that the keyset's created_at bound lands in an Index Cond, so the page never reads the
+    // whole ledger, and that the profile index, whenever it is chosen, seeks on the profile too.
+    const ledgerIndexes = ['coin_transactions_profile_created_idx', 'coin_transactions_created_idx']
+    const seeks = nodes.filter((n) => ledgerIndexes.includes(n['Index Name'] ?? '') && /created_at/.test(n['Index Cond'] ?? ''))
+    expect(seeks, `plan: ${JSON.stringify(nodes)}`).not.toHaveLength(0)
+    for (const seek of seeks.filter((n) => n['Index Name'] === 'coin_transactions_profile_created_idx')) {
+      expect(seek['Index Cond']).toMatch(/profile_id/)
+    }
     expect(seqScanned(nodes)).toEqual([])
   })
 

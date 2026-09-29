@@ -12,7 +12,7 @@ afterEach(() => {
 describe('ClosesSoonChip', () => {
   it('shows how long is left for a market closing within a day', () => {
     vi.useFakeTimers({ now: NOW })
-    render(<ClosesSoonChip closeAt="2026-09-25T14:30:00Z" now={NOW} />)
+    render(<ClosesSoonChip closeAt="2026-09-25T14:20:00Z" now={NOW} />)
     expect(screen.getByText('Closes in 2h')).toBeInTheDocument()
   })
 
@@ -40,6 +40,6 @@ describe('ClosesSoonChip', () => {
     expect(screen.queryByText(/Closes in/)).toBeNull()
 
     act(() => vi.advanceTimersByTime(60_000))
-    expect(screen.getByText('Closes in 23h')).toBeInTheDocument()
+    expect(screen.getByText('Closes in 24h')).toBeInTheDocument()
   })
 })

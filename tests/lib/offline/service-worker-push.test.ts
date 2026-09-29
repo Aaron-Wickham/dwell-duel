@@ -47,10 +47,10 @@ describe('public/sw.js push', () => {
   it('shows the notification with the app icon and the in-app url', async () => {
     const worker = loadWorker()
     await worker.dispatch('push', {
-      data: pushData({ title: 'DwellDuel', body: 'You won 26 DC on Will it rain?', url: '/markets/m-1' }),
+      data: pushData({ title: 'You won 26 DC', body: 'Will it rain?: No', url: '/markets/m-1' }),
     })
-    expect(worker.showNotification).toHaveBeenCalledWith('DwellDuel', {
-      body: 'You won 26 DC on Will it rain?',
+    expect(worker.showNotification).toHaveBeenCalledWith('You won 26 DC', {
+      body: 'Will it rain?: No',
       icon: '/android-chrome-192.png',
       badge: '/favicon-48.png',
       data: { url: `${ORIGIN}/markets/m-1` },
@@ -59,7 +59,7 @@ describe('public/sw.js push', () => {
 
   it('never points a notification at another site', async () => {
     const worker = loadWorker()
-    await worker.dispatch('push', { data: pushData({ title: 'DwellDuel', body: 'x', url: 'https://evil.example/' }) })
+    await worker.dispatch('push', { data: pushData({ title: 'New market', body: 'x', url: 'https://evil.example/' }) })
     expect(worker.showNotification.mock.calls[0][1]).toMatchObject({ data: { url: `${ORIGIN}/` } })
   })
 

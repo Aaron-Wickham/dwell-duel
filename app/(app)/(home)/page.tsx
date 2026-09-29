@@ -8,8 +8,9 @@ import { countOpenMarkets } from '@/lib/markets/list-markets'
 import { getAtStake } from '@/lib/home/at-stake'
 import { getOnboarding } from '@/lib/home/onboarding'
 import { OnboardingCard } from '@/components/home/onboarding-card'
-import { getMarketsToResolve } from '@/lib/markets/markets-to-resolve'
+import { getMarketsToResolve, nextResolveCheckAt } from '@/lib/markets/markets-to-resolve'
 import { MarketsToResolveCard } from '@/components/home/markets-to-resolve-card'
+import { RefreshAt } from '@/components/home/refresh-at'
 import { getWeeklyRecap } from '@/lib/home/recap'
 import { WeeklyRecapCard } from '@/components/home/weekly-recap-card'
 import { getMemberStanding } from '@/lib/social/leaderboard'
@@ -26,7 +27,18 @@ export default async function Home() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const [role, openMarketCount, standing, pendingReviews, pendingApprovals, atStake, marketsToResolve, onboarding, weeklyRecap] = await Promise.all([
+  const [
+    role,
+    openMarketCount,
+    standing,
+    pendingReviews,
+    pendingApprovals,
+    atStake,
+    marketsToResolve,
+    nextResolveCheck,
+    onboarding,
+    weeklyRecap,
+  ] = await Promise.all([
     getRole(supabase),
     countOpenMarkets(supabase),
     getMemberStanding(supabase, user.id),
@@ -34,6 +46,7 @@ export default async function Home() {
     getRole(supabase).then((r) => (atLeast(r, 'reviewer') ? countPendingTaskCompletions(supabase) : 0)),
     getAtStake(supabase),
     getMarketsToResolve(supabase),
+    getRole(supabase).then((r) => nextResolveCheckAt(supabase, user.id, atLeast(r, 'reviewer'))),
     getOnboarding(supabase, user.id),
     getWeeklyRecap(supabase),
   ])
@@ -87,6 +100,7 @@ export default async function Home() {
       />
       <OnboardingCard steps={onboarding} />
       <MarketsToResolveCard {...marketsToResolve} />
+      <RefreshAt at={nextResolveCheck} />
       <WeeklyRecapCard recap={weeklyRecap} />
       <HomeTiles tiles={tiles} />
       <InstallCard />

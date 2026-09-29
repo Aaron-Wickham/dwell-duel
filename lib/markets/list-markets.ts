@@ -10,6 +10,7 @@ export interface MarketSummary {
   kind: MarketKind
   status: 'open' | 'resolved' | 'voided'
   closeAt: string
+  createdAt: string
   seedPerOutcome: number
   line: number | null
   edited: boolean
@@ -47,6 +48,7 @@ function toSummary(m: SummaryRow): MarketSummary {
     kind: m.kind,
     status: m.status,
     closeAt: m.close_at,
+    createdAt: m.created_at,
     seedPerOutcome: m.seed_per_outcome,
     line: m.line,
     edited: m.edited_at !== null,

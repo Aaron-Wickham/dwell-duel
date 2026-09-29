@@ -21,6 +21,10 @@ function marketRow(marketId: string, points: { t: string; shares: Record<string,
 
 const ONE_POINT = [{ t: '2026-09-26T10:00:00Z', shares: { yes: 1 } }]
 
+// Unseeded unless a test says otherwise, so the RPC's points pass through untouched.
+const unseeded = (id: string) => ({ id, seedPerOutcome: 0, createdAt: '2026-09-25T09:00:00Z', outcomeIds: ['yes', 'no'] })
+const unseededAll = (ids: string[]) => ids.map(unseeded)
+
 describe('listSparklines', () => {
   it('reads the listed markets in chunks of at most 50 ids, one row per market', async () => {
     const ids = Array.from({ length: 120 }, (_, i) => `m${i}`)
@@ -28,7 +32,7 @@ describe('listSparklines', () => {
       data: params.p_market_ids.map((id) => marketRow(id, ONE_POINT)),
     }))
 
-    const byMarket = await listSparklines(client, ids)
+    const byMarket = await listSparklines(client, unseededAll(ids))
 
     expect(calls.map((c) => c.p_market_ids.length)).toEqual([50, 50, 20])
     expect(calls.flatMap((c) => c.p_market_ids)).toEqual(ids)
@@ -41,7 +45,7 @@ describe('listSparklines', () => {
       data: [marketRow('busy', ONE_POINT), marketRow('unasked', ONE_POINT)],
     }))
 
-    const byMarket = await listSparklines(client, ['busy', 'quiet'])
+    const byMarket = await listSparklines(client, unseededAll(['busy', 'quiet']))
 
     expect([...byMarket.keys()]).toEqual(['busy', 'quiet'])
     expect(byMarket.get('quiet')).toEqual([])
@@ -59,7 +63,7 @@ describe('listSparklines', () => {
       ],
     }))
 
-    const byMarket = await listSparklines(client, ['m1'])
+    const byMarket = await listSparklines(client, unseededAll(['m1']))
 
     const tied = Date.parse('2026-09-26T10:00:00.123Z')
     expect(byMarket.get('m1')).toEqual([
@@ -67,6 +71,26 @@ describe('listSparklines', () => {
       { t: tied, shares: { yes: 0.5, no: 0.5 } },
       { t: Date.parse('2026-09-26T10:01:00Z'), shares: { yes: 0.6, no: 0.4 } },
     ])
+  })
+
+  it('starts a seeded market at an even split when it opened, before its first bet, as the market page does', async () => {
+    const { client } = fakeRpc(() => ({
+      data: [marketRow('seeded', [{ t: '2026-09-26T10:00:00Z', shares: { yes: 0.75, no: 0.25 } }])],
+    }))
+    const seeded = { ...unseeded('seeded'), seedPerOutcome: 20 }
+
+    const byMarket = await listSparklines(client, [seeded])
+
+    expect(byMarket.get('seeded')).toEqual([
+      { t: Date.parse('2026-09-25T09:00:00Z'), shares: { yes: 0.5, no: 0.5 } },
+      { t: Date.parse('2026-09-26T10:00:00Z'), shares: { yes: 0.75, no: 0.25 } },
+    ])
+  })
+
+  it('gives a seeded market nobody has bet on just its even start, so its card draws a flat line', async () => {
+    const { client } = fakeRpc(() => ({ data: [] }))
+    const byMarket = await listSparklines(client, [{ ...unseeded('quiet'), seedPerOutcome: 20 }])
+    expect(byMarket.get('quiet')).toEqual([{ t: Date.parse('2026-09-25T09:00:00Z'), shares: { yes: 0.5, no: 0.5 } }])
   })
 
   it('makes no request for no markets', async () => {
@@ -77,7 +101,7 @@ describe('listSparklines', () => {
 
   it('throws when a chunk’s RPC call fails', async () => {
     const { client } = fakeRpc(() => ({ error: new Error('rpc failed') }))
-    await expect(listSparklines(client, ['m1'])).rejects.toThrow('rpc failed')
+    await expect(listSparklines(client, unseededAll(['m1']))).rejects.toThrow('rpc failed')
   })
 })
 
@@ -90,7 +114,7 @@ describe('readSparklines', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { client } = fakeRpc(() => ({ error: new Error('rpc failed') }))
 
-    const byMarket = await readSparklines(client, ['m1'])
+    const byMarket = await readSparklines(client, unseededAll(['m1']))
 
     expect(byMarket).toEqual(new Map())
     expect(spy).toHaveBeenCalledTimes(1)
@@ -101,7 +125,7 @@ describe('readSparklines', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { client } = fakeRpc((params) => ({ data: params.p_market_ids.map((id) => marketRow(id, ONE_POINT)) }))
 
-    const byMarket = await readSparklines(client, ['m1'])
+    const byMarket = await readSparklines(client, unseededAll(['m1']))
 
     expect(byMarket).toEqual(new Map([['m1', [{ t: Date.parse('2026-09-26T10:00:00Z'), shares: { yes: 1 } }]]]))
     expect(spy).not.toHaveBeenCalled()

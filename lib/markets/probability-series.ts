@@ -38,6 +38,17 @@ export function buildProbabilitySeries(
   return points
 }
 
+export type SeededMarket = { seedPerOutcome: number; createdAt: string; outcomeIds: string[] }
+
+// market_sparklines returns points only at bets, so the market page's chart and the cards'
+// sparklines both prepend the seeded even split at the market's opening (0041) here, and agree.
+export function withSeededStart(points: SeriesPoint[], market: SeededMarket): SeriesPoint[] {
+  if (market.seedPerOutcome <= 0 || market.outcomeIds.length === 0) return points
+  const even = 1 / market.outcomeIds.length
+  const start = { t: Date.parse(market.createdAt), shares: Object.fromEntries(market.outcomeIds.map((id) => [id, even])) }
+  return [start, ...points]
+}
+
 export function sliceRange(points: SeriesPoint[], range: RangeKey, now: number): SeriesPoint[] {
   if (range === 'All') return points
   const start = now - RANGE_MS[range]

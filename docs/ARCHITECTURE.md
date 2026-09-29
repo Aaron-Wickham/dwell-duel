@@ -228,11 +228,15 @@ the daily cron deletes proof files nothing attached),
 `set_member_role`, `delete_market`, `delete_task` and `remove_bet` (owner
 only), `update_my_profile`, `record_proof`, `market_sparklines` (the
 cards' 40-point sparklines and the market chart's 200 points, sampled in
-SQL so no page reads every bet),
+SQL so no page reads every bet; both prepend a seeded market's even
+opening split through `withSeededStart`, since the function returns points
+only at bets),
 `markets_to_resolve` (0049, security invoker: the closed, unresolved
 markets waiting on the caller, capped at 10 with an uncapped `total`; a
 creator's own at once, and for reviewers and admins any left 48 hours or
-whose creator has a stake, always filtered through `can_resolve_market`),
+whose creator has a stake, always filtered through `can_resolve_market`;
+a close fires no database change, so Home's `RefreshAt` refreshes it at
+the next moment the list could grow, from `nextResolveCheckAt`),
 `my_at_stake` and `parlay_limits`.
 
 Push recipients (0057) come from service-role-only functions, so members
@@ -423,8 +427,10 @@ or rejecting a task and creating a market call `afterAction()`
 (`lib/push/notify.ts`), which runs the send through Next's `after()`, so
 the member's action never waits on it; the recipients are read from the
 database once the RPC has committed. The daily cron sends the reminders
-to resolve. The wording is `lib/push/messages.ts`: payloads are `{ title:
-'DwellDuel', body, url }`, with an in-app `url`. `public/sw.js` shows them
+to resolve. The wording is `lib/push/messages.ts`: payloads are `{ title,
+body, url }`, with an in-app `url`. The OS already names the app, so the
+title says what happened ("New market", "You won 26 DC") and the body
+carries the detail. `public/sw.js` shows them
 on `push` and, on `notificationclick`, focuses an open window and
 navigates it, or opens one; it adds no caching. Without both VAPID keys
 (local dev, CI, tests) nothing is scheduled or sent, the cron claims no

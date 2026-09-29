@@ -4,6 +4,7 @@ import { serviceClient } from './helpers'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
 import { getChartSeries, CHART_POINTS } from '@/lib/markets/chart-series'
 import { buildProbabilitySeries } from '@/lib/markets/probability-series'
+import { listSparklines } from '@/lib/markets/sparklines'
 import type { DbClient } from '@/lib/supabase/database'
 
 let alice: Member
@@ -84,5 +85,40 @@ describe('getChartSeries (#68)', () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     const chart = await getChartSeries(bobClient as unknown as DbClient, await marketFacts(market.marketId, market.outcomeIds))
     expect(chart).toEqual({ points: [], betCount: 0 })
+  })
+})
+
+describe('card sparklines and the market page chart (#110)', () => {
+  it('both start a seeded market at the even split when it opened, and agree point for point', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    await placeBet(aliceClient, market.marketId, market.outcomeIds[0], 10)
+    await placeBet(bobClient, market.marketId, market.outcomeIds[1], 25)
+    const facts = await marketFacts(market.marketId, market.outcomeIds)
+
+    const chart = await getChartSeries(bobClient as unknown as DbClient, facts)
+    const card = (await listSparklines(bobClient as unknown as DbClient, [facts])).get(market.marketId)!
+
+    expect(card[0]).toEqual({
+      t: Date.parse(facts.createdAt),
+      shares: { [market.outcomeIds[0]]: 0.5, [market.outcomeIds[1]]: 0.5 },
+    })
+    expect(card).toHaveLength(3)
+    expect(card).toEqual(chart.points)
+  })
+
+  it('gives a seeded market nobody has bet on just its even start on its card', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    const facts = await marketFacts(market.marketId, market.outcomeIds)
+    const card = (await listSparklines(bobClient as unknown as DbClient, [facts])).get(market.marketId)
+    expect(card).toEqual([{ t: Date.parse(facts.createdAt), shares: { [market.outcomeIds[0]]: 0.5, [market.outcomeIds[1]]: 0.5 } }])
+  })
+
+  it('starts an unseeded market’s card at its first bet', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await placeBet(aliceClient, market.marketId, market.outcomeIds[0], 10)
+    const facts = await marketFacts(market.marketId, market.outcomeIds)
+    const card = (await listSparklines(bobClient as unknown as DbClient, [facts])).get(market.marketId)!
+    expect(card).toHaveLength(1)
+    expect(card[0].shares[market.outcomeIds[0]]).toBeCloseTo(1, 10)
   })
 })

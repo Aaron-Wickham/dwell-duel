@@ -56,6 +56,7 @@ function market(n: number, status: MarketSummary['status'], closeInMs = DAY): Ma
     kind: 'binary',
     status,
     closeAt: new Date(Date.now() + closeInMs).toISOString(),
+    createdAt: '2026-09-01T10:00:00Z',
     seedPerOutcome: 20,
     line: null,
     edited: false,
@@ -101,7 +102,8 @@ describe('MarketsPage', () => {
     )
     expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: openTop, bottom: null })
     expect(listClosedMarkets).toHaveBeenCalledWith({}, { top: null, bottom: closedEnd })
-    expect(readSparklines).toHaveBeenCalledWith({}, [market(1, 'open').id, market(2, 'open').id, market(9, 'voided').id])
+    const facts = (m: MarketSummary) => ({ id: m.id, seedPerOutcome: 20, createdAt: '2026-09-01T10:00:00Z', outcomeIds: [] })
+    expect(readSparklines).toHaveBeenCalledWith({}, [market(1, 'open'), market(2, 'open'), market(9, 'voided')].map(facts))
   })
 
   it('puts the open list’s Show more under its groups and the closed list’s under theirs', async () => {

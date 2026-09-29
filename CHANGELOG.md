@@ -6,6 +6,12 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Fixes
+- **Notifications don't repeat the app's name:** each one's title says what happened ("New market", "You won 26 DC", "Time to resolve", "Task approved"), with the detail underneath (#109).
+- **Market cards' sparklines start at the seeded 50/50,** like the market page's chart, and a seeded market nobody has bet on shows a flat line (#110).
+- **Home's Markets to resolve card appears when a market closes,** without a manual refresh (#111).
+- **"Closes in" rounds to the nearest hour or minute,** so 1h 59m reads "2h", not "1h" (#112).
+
 ### Under the hood
 - Upgraded Vitest 5 and the CI actions (checkout 7, setup-node 7, cache 6, upload-artifact 7, Supabase setup-cli 3) from Dependabot #92–#97. TypeScript stays on 5.9 and ESLint on 9 until typescript-eslint and eslint-config-next's plugins support TS 7 and ESLint 10, and @types/node stays on Node 22's line (#98–#100).
 

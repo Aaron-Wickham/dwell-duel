@@ -60,8 +60,8 @@ describe('notify', () => {
     expect(rpc).toHaveBeenCalledWith('push_market_result', { p_market_id: 'm-1' })
     expect(sendPush).toHaveBeenCalledWith(
       [
-        { profileId: 'alice', payload: { title: 'DwellDuel', body: 'You won 26 DC on Will it rain?', url: '/markets/m-1' } },
-        { profileId: 'bob', payload: { title: 'DwellDuel', body: 'Will it rain? resolved: No', url: '/markets/m-1' } },
+        { profileId: 'alice', payload: { title: 'You won 26 DC', body: 'Will it rain?: No', url: '/markets/m-1' } },
+        { profileId: 'bob', payload: { title: 'Market resolved', body: 'Will it rain?: No', url: '/markets/m-1' } },
       ],
       db,
     )
@@ -74,7 +74,7 @@ describe('notify', () => {
     await notifyTaskReviews(['c-1'], db)
     expect(rpc).toHaveBeenCalledWith('push_task_reviews', { p_completion_ids: ['c-1'] })
     expect(sendPush.mock.calls[0][0]).toEqual([
-      { profileId: 'alice', payload: { title: 'DwellDuel', body: 'Your task “Read Psalm 23” was rejected: No photo', url: '/tasks' } },
+      { profileId: 'alice', payload: { title: 'Task not approved', body: 'Read Psalm 23: No photo', url: '/tasks' } },
     ])
   })
 
@@ -82,7 +82,7 @@ describe('notify', () => {
     const { db } = dbReturning([{ profile_id: 'bob', title: 'Sermon past noon?' }])
     await notifyNewMarket('m-2', db)
     expect(sendPush.mock.calls[0][0]).toEqual([
-      { profileId: 'bob', payload: { title: 'DwellDuel', body: 'New market: Sermon past noon?', url: '/markets/m-2' } },
+      { profileId: 'bob', payload: { title: 'New market', body: 'Sermon past noon?', url: '/markets/m-2' } },
     ])
   })
 

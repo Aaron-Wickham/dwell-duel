@@ -15,6 +15,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Parlays open into a breakdown:** each parlay on My bets is one tappable card (stake, multiplier, what it pays, a progress bar of its picks) leading to a new page with every pick's locked odds and result, and how the multiplier adds up (#120).
 
 ### Fixes
+- **The Best parlay award shows the parlay's multiplier,** the same figure as its parlay page and the profile's Stats card, instead of the payout over the stake, which rounding the payout down to whole DC could leave a few hundredths lower (#146).
 - **The phone tab bar's pill slides between tabs** like the desktop nav's and the sub-tabs', instead of jumping, including while the page moves under it. The new tab's icon pops as the pill arrives and its label eases to bold; reduced motion keeps it all still (#154).
 - **Every tap target gives under the finger:** the back links, the logo, Settings' switches, a market's edit history, and create-market's kind choices and remove-outcome button now shrink on press like the rest, and market cards, leaderboard rows, the podium, awards, past champions, bet rows and admin's member names are tappable as a whole, pressing as one card (#156).
 - **Settings' "Reduce animations" stills toasts too:** they used to slide and fade unless the device itself asked for reduced motion (#157).

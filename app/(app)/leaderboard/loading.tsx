@@ -7,7 +7,7 @@ export default function Loading() {
     <SkeletonScreen name="leaderboard" className={pageClass}>
       <SkeletonPageHeader description />
       <Skeleton className="h-[52px] w-full rounded-[14px] md:w-72" />
-      <SkeletonCard className="max-w-[820px] gap-0 px-2 py-1.5 md:px-3 md:py-1.5">
+      <SkeletonCard className="gap-0 px-2 py-1.5 md:px-3 md:py-1.5">
         {Array.from({ length: 6 }, (_, i) => (
           <div key={i} className="flex min-h-[60px] items-center gap-3 px-2.5 py-2.5 md:px-3.5">
             <Skeleton className="size-10 shrink-0" />

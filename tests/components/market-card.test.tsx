@@ -24,6 +24,28 @@ vi.mock('@/components/markets/market-sparkline', () => ({
 }))
 
 describe('MarketCard', () => {
+  it('as a preview, shows its title without a link and says when no close time is set', () => {
+    render(
+      <MarketCard
+        preview
+        id="preview"
+        title="Will it snow?"
+        status="open"
+        kind="binary"
+        closeAt=""
+        resolvedAt={null}
+        outcomes={[
+          { id: 'a', label: 'Yes', pct: 50 },
+          { id: 'b', label: 'No', pct: 50 },
+        ]}
+        resolvedOutcomeLabel={null}
+      />,
+    )
+    expect(screen.getByRole('heading', { level: 3, name: 'Will it snow?' })).toBeInTheDocument()
+    expect(screen.queryByRole('link')).toBeNull()
+    expect(screen.getByText('No close time yet')).toBeInTheDocument()
+  })
+
   it('shows an open market\'s status, meta line, title link and outcome percentages', () => {
     const { container } = render(
       <MarketCard
@@ -263,16 +285,16 @@ describe('MarketCard', () => {
           { id: 'b', label: 'No', pct: 30 },
         ]}
         resolvedOutcomeLabel="Yes"
-        domId="market-closed-m7"
+        domId="market-resolved-m7"
       />,
     )
     // An exact match: a self-label (the old, wrong behaviour) would also pick up the odds list
     // and the winning-outcome line, so this fails if the card is ever named from its full content.
     const card = screen.getByRole('article', { name: 'Will the choir sing?' })
-    expect(card).toHaveAttribute('id', 'market-closed-m7')
+    expect(card).toHaveAttribute('id', 'market-resolved-m7')
     expect(card).toHaveAttribute('tabindex', '-1')
-    expect(card).toHaveAttribute('aria-labelledby', 'market-closed-m7-title')
-    expect(screen.getByText('Will the choir sing?').closest('h3')).toHaveAttribute('id', 'market-closed-m7-title')
+    expect(card).toHaveAttribute('aria-labelledby', 'market-resolved-m7-title')
+    expect(screen.getByText('Will the choir sing?').closest('h3')).toHaveAttribute('id', 'market-resolved-m7-title')
   })
 
   it('is not focusable without a DOM id', () => {

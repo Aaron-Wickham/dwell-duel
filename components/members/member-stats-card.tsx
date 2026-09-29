@@ -49,7 +49,7 @@ export function MemberStatsCard({ stats }: { stats: MemberStats }) {
           Wins, losses and profit show here once a bet or parlay settles.
         </EmptyState>
       )}
-      <dl className={cn('grid grid-cols-2 gap-x-4 gap-y-4 lg:grid-cols-3', !hasHistory && 'border-t border-line pt-3')}>
+      <dl className={cn('grid grid-cols-2 gap-x-4 gap-y-4', !hasHistory && 'border-t border-line pt-3')}>
         {hasHistory && (
           <>
             <Stat label="Solo bets" detail={refunded(stats.bets)}>
@@ -96,7 +96,7 @@ export function MemberStatsSkeleton() {
   return (
     <SkeletonCard>
       <Skeleton className="h-7 w-20" />
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4">
         {Array.from({ length: 6 }, (_, i) => (
           <div key={i} className="flex flex-col gap-1.5">
             <Skeleton className="h-4 w-20" />

@@ -37,57 +37,61 @@ export default async function SettingsPage() {
     <Page transition="drill-down">
       <BackLink href={`/members/${user.id}`}>Your profile</BackLink>
       <PageHeader title="Settings" description="These apply on this device." />
-      <div className="flex max-w-[720px] flex-col gap-5 md:gap-7">
-        <SectionCard title="Appearance" titleId="settings-appearance">
-          <ThemeSetting initial={theme} />
-        </SectionCard>
-        {/* A member still being set up has no profile yet, but can always change the rest and sign out. */}
-        {profile && (
-          <SectionCard title="Profile" titleId="settings-profile">
-            <div className="flex flex-wrap items-center gap-4">
-              <Avatar name={profile.display_name as string} src={avatarUrl(profile.avatar_path as string | null)} />
-              <p className="min-w-0 grow font-bold break-words">{profile.display_name as string}</p>
-              <Link
-                href="/profile"
-                transitionTypes={['nav-forward']}
-                className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
-              >
-                <UserRound aria-hidden="true" className="size-[18px]" />
-                Edit profile
-              </Link>
-            </div>
+      <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-2 lg:items-start">
+        <div className="flex flex-col gap-5 md:gap-7">
+          <SectionCard title="Appearance" titleId="settings-appearance">
+            <ThemeSetting initial={theme} />
           </SectionCard>
-        )}
-        <SectionCard title="Haptics & motion" titleId="settings-motion">
-          <MotionSettings haptics={prefs.haptics} reduceMotion={prefs.reduceMotion} />
-        </SectionCard>
-        <SectionCard title="Notifications" titleId="settings-notifications">
-          <NotificationSettings
-            publicKey={vapidKeys()?.publicKey ?? null}
-            endpoints={notifications.endpoints}
-            prefs={notifications.prefs}
-            reviewer={atLeast(role, 'reviewer')}
-          />
-        </SectionCard>
-        <SectionCard title="Help" titleId="settings-help">
-          <p className="text-ink2">Odds, payouts, parlays, results and tasks, explained.</p>
-          <Link
-            href="/how-it-works"
-            transitionTypes={['nav-forward']}
-            className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'self-start no-underline')}
-          >
-            <BookOpenText aria-hidden="true" className="size-[18px]" />
-            How it works
-          </Link>
-        </SectionCard>
-        <SectionCard title="Account" titleId="settings-account">
-          <form action={signOut}>
-            <button type="submit" className={cn(buttonVariants({ variant: 'secondary', block: true }), 'md:w-auto')}>
-              <LogOut aria-hidden="true" className="size-5" />
-              Sign out
-            </button>
-          </form>
-        </SectionCard>
+          {/* A member still being set up has no profile yet, but can always change the rest and sign out. */}
+          {profile && (
+            <SectionCard title="Profile" titleId="settings-profile">
+              <div className="flex flex-wrap items-center gap-4">
+                <Avatar name={profile.display_name as string} src={avatarUrl(profile.avatar_path as string | null)} />
+                <p className="min-w-0 grow font-bold break-words">{profile.display_name as string}</p>
+                <Link
+                  href="/profile"
+                  transitionTypes={['nav-forward']}
+                  className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
+                >
+                  <UserRound aria-hidden="true" className="size-[18px]" />
+                  Edit profile
+                </Link>
+              </div>
+            </SectionCard>
+          )}
+          <SectionCard title="Haptics & motion" titleId="settings-motion">
+            <MotionSettings haptics={prefs.haptics} reduceMotion={prefs.reduceMotion} />
+          </SectionCard>
+        </div>
+        <div className="flex flex-col gap-5 md:gap-7">
+          <SectionCard title="Notifications" titleId="settings-notifications">
+            <NotificationSettings
+              publicKey={vapidKeys()?.publicKey ?? null}
+              endpoints={notifications.endpoints}
+              prefs={notifications.prefs}
+              reviewer={atLeast(role, 'reviewer')}
+            />
+          </SectionCard>
+          <SectionCard title="Help" titleId="settings-help">
+            <p className="text-ink2">Odds, payouts, parlays, results and tasks, explained.</p>
+            <Link
+              href="/how-it-works"
+              transitionTypes={['nav-forward']}
+              className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'self-start no-underline')}
+            >
+              <BookOpenText aria-hidden="true" className="size-[18px]" />
+              How it works
+            </Link>
+          </SectionCard>
+          <SectionCard title="Account" titleId="settings-account">
+            <form action={signOut}>
+              <button type="submit" className={cn(buttonVariants({ variant: 'secondary', block: true }), 'md:w-auto')}>
+                <LogOut aria-hidden="true" className="size-5" />
+                Sign out
+              </button>
+            </form>
+          </SectionCard>
+        </div>
       </div>
     </Page>
   )

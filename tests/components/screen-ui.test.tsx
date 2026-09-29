@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ChartColumn } from 'lucide-react'
-import { Page, PageHeader, h1Class, h2Class } from '@/components/ui/page'
+import { Page, PageHeader, h1Class, h2Class, pageClass, pageClassFor } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { BackLink } from '@/components/ui/back-link'
@@ -19,6 +19,23 @@ describe('Page', () => {
     expect(page).toHaveClass('max-w-[1280px]', 'px-4', 'md:px-20', 'gap-4')
     expect(page).not.toHaveClass('gap-5')
     expect(screen.getByText('Body')).toBeInTheDocument()
+  })
+
+  it('narrows to a centred reading column with the same padding', () => {
+    const { container } = render(
+      <Page width="reading">
+        <p>Body</p>
+      </Page>,
+    )
+    const page = container.firstChild
+    expect(page).toHaveClass('max-w-[980px]', 'mx-auto', 'px-4', 'md:px-20')
+    expect(page).not.toHaveClass('max-w-[1280px]')
+  })
+
+  it('shares its widths with skeletons through pageClassFor', () => {
+    expect(pageClass).toBe(pageClassFor('wide'))
+    expect(pageClassFor('reading')).toContain('max-w-[980px]')
+    expect(pageClassFor('reading')).not.toContain('max-w-[1280px]')
   })
 })
 

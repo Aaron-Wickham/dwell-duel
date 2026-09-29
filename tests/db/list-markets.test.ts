@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
-import { countOpenMarkets, listClosedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
+import { countOpenMarkets, listResolvedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
 import { encodeCursor, readPageParams, showMoreHref, type PageParams } from '@/lib/pagination/cursor'
 
 let alice: Member
@@ -87,7 +87,7 @@ describe('listOpenMarkets', () => {
 
   it('pages 50 at a time across a close_at tie, broken by id, and a fresh window starts inside the tie', async () => {
     const start = Date.parse('2026-12-01T00:00:00.000Z')
-    // Inserted directly, as the closed list's paging test does. Markets share a close_at in
+    // Inserted directly, as the resolved list's paging test does. Markets share a close_at in
     // pairs offset by one, so the 50th and 51st soonest tie and only the id orders them; each
     // created_at runs the other way, so the list can't pass by reading creation order.
     const rows = Array.from({ length: 60 }, (_, i) => ({
@@ -138,7 +138,7 @@ describe('listOpenMarkets', () => {
   })
 })
 
-describe('listClosedMarkets', () => {
+describe('listResolvedMarkets', () => {
   it('dates the current resolution, from the embedded join', async () => {
     const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'], { closeInMs: 1000 })
     await closeNow(marketId)
@@ -151,7 +151,7 @@ describe('listClosedMarkets', () => {
       .single()
     if (resolutionErr) throw resolutionErr
 
-    const { rows } = await listClosedMarkets(bobClient, FIRST)
+    const { rows } = await listResolvedMarkets(bobClient, FIRST)
     const market = rows.find((m) => m.id === marketId)
     expect(market?.status).toBe('resolved')
     expect(market?.resolvedOutcomeLabel).toBe('Yes')
@@ -164,7 +164,7 @@ describe('listClosedMarkets', () => {
     await resolve(marketId, outcomeIds[0])
     await resolve(marketId, outcomeIds[1])
 
-    const { rows } = await listClosedMarkets(bobClient, FIRST)
+    const { rows } = await listResolvedMarkets(bobClient, FIRST)
     expect(rows.find((m) => m.id === marketId)?.resolvedOutcomeLabel).toBe('No')
   })
 
@@ -176,7 +176,7 @@ describe('listClosedMarkets', () => {
     await voidMarket(voided.marketId)
     await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Still open' })
 
-    const page = await listClosedMarkets(bobClient, FIRST)
+    const page = await listResolvedMarkets(bobClient, FIRST)
 
     expect(page.rows.map((m) => [m.title, m.status, m.resolvedOutcomeLabel])).toEqual([
       ['Voided', 'voided', null],
@@ -208,12 +208,12 @@ describe('listClosedMarkets', () => {
     const everything = all.map((m) => m.id as string)
     expect(all[49].created_at).toBe(all[50].created_at)
 
-    const first = await listClosedMarkets(bobClient, FIRST)
+    const first = await listResolvedMarkets(bobClient, FIRST)
     expect(first.rows.map((m) => m.id)).toEqual(everything.slice(0, 50))
     expect(first.next?.kind).toBe('extend')
 
     const href = new URL(showMoreHref('/markets', {}, 'resolved', first.next!), 'http://localhost')
-    const second = await listClosedMarkets(bobClient, readPageParams(Object.fromEntries(href.searchParams), 'resolved'))
+    const second = await listResolvedMarkets(bobClient, readPageParams(Object.fromEntries(href.searchParams), 'resolved'))
     expect(second.rows.map((m) => m.id)).toEqual(everything)
     expect(second.next).toBeNull()
   })

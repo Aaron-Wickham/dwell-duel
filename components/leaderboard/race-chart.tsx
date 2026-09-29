@@ -38,7 +38,7 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
   const summary = series.map((s) => `${s.name} ${signedDc(s.final)}`).join(', ')
 
   return (
-    <SectionCard title="The race" titleId="leaderboard-race" className="max-w-[820px]">
+    <SectionCard title="The race" titleId="leaderboard-race">
       <p className="text-sm text-ink2">Net betting profit, day by day, for this month’s top {series.length}.</p>
       <div role="img" aria-label={`Net betting profit this month: ${summary}`} className="relative" style={{ height: HEIGHT }}>
         <div className="absolute inset-y-0 right-[104px] left-0 md:right-[150px]">

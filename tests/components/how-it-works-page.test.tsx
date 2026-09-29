@@ -31,6 +31,18 @@ describe('the How it works page', () => {
     for (const title of h2s) expect(screen.getByRole('region', { name: title })).toBeInTheDocument()
   })
 
+  it('lists every section in a contents nav that links to its heading', () => {
+    const { container } = render(<HowItWorksPage />)
+    const nav = screen.getByRole('navigation', { name: 'Contents' })
+    const links = [...nav.querySelectorAll('a')]
+    expect(links.map((a) => a.textContent)).toEqual(headings(2))
+    for (const link of links) {
+      const target = container.querySelector(link.getAttribute('href')!)
+      expect(target?.tagName).toBe('H2')
+      expect(target).toHaveTextContent(link.textContent!)
+    }
+  })
+
   it('renders tables with column headers and links nothing to repo files', () => {
     const { container } = render(<HowItWorksPage />)
     expect(screen.getByRole('columnheader', { name: 'Kind' })).toBeInTheDocument()

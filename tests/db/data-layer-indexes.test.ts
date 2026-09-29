@@ -236,9 +236,11 @@ describe('0033 indexes', () => {
     // prefers the pre-existing (task_id, profile_id, period_key) unique index (0017) over the new
     // task_completions_profile_submitted_idx — both are actor-selective; which one wins at the
     // spec's target scale is for Task 12 to check.
+    // 0054's approved-streak index (profile_id first) joins the tie.
     expectActorSelective(nodes, 'task_completions', bob.id, [
       'task_completions_one_active_per_period',
       'task_completions_profile_submitted_idx',
+      'task_completions_approved_streak_idx',
     ])
 
     expect(indexesUsed(nodes)).toContain('markets_current_resolution_id_idx')
@@ -323,6 +325,45 @@ describe('0049 index (#74)', () => {
     )
     const scan = nodes.find((n) => n['Index Name'] === 'markets_status_close_idx')
     expect(scan?.['Index Cond']).toMatch(/close_at >=/)
+    expect(seqScanned(nodes)).toEqual([])
+  })
+})
+
+describe('0055 member_stats (#83)', () => {
+  it("aggregates a member's stats from their own index entries", async () => {
+    // A plpgsql function's query is planned inside it, out of EXPLAIN's reach, so the query is
+    // lifted from the function's own source and planned with the member's id in place of the
+    // parameter: the plan checked is the one the function runs, not a copy that could drift.
+    const [fn] = await pgQuery<{ prosrc: string }>(`select prosrc from pg_proc where proname = 'member_stats'`)
+    const body = fn.prosrc.match(/return query\s+([\s\S]*?);\s*end;\s*$/)?.[1]
+    expect(body).toBeTruthy()
+    const nodes = await planNodes(body!.replace(/\bp_profile_id\b/g, `'${bob.id}'::uuid`))
+
+    expect([...relationsRead(nodes)]).toEqual(
+      expect.arrayContaining(['bets', 'parlays', 'parlay_legs', 'coin_transactions', 'markets', 'task_completions']),
+    )
+    expectActorSelective(nodes, 'bets', bob.id, ['bets_profile_created_idx'])
+    expectActorSelective(nodes, 'coin_transactions', bob.id, ['coin_transactions_profile_created_idx'])
+    expectActorSelective(nodes, 'markets', bob.id, ['markets_created_by_idx'])
+    // The best-parlay branch also wants status = 'won', which parlays_won_settled_idx covers
+    // without profile_id: over this fixture's few rows it can tie with the profile indexes, as in
+    // the activity test above. The record branch has only the profile to go on.
+    // At this fixture's handful of parlays, a pkey walk with profile_id as a Filter ties too.
+    expectActorSelective(nodes, 'parlays', bob.id, [
+      'parlays_profile_created_idx',
+      'parlays_profile_id_idx',
+      'parlays_won_settled_idx',
+      'parlays_pkey',
+    ])
+    // 0054's approved-only (profile_id, …) index fits exactly; the rest are the same near-empty
+    // tie as the activity test's, plus the approved-only index that matches the status but not
+    // the member.
+    expectActorSelective(nodes, 'task_completions', bob.id, [
+      'task_completions_approved_streak_idx',
+      'task_completions_profile_submitted_idx',
+      'task_completions_one_active_per_period',
+      'task_completions_approved_reviewed_idx',
+    ])
     expect(seqScanned(nodes)).toEqual([])
   })
 })

@@ -156,13 +156,22 @@ full ledger) can see it.
 Admins keep a catalogue of Bible-study tasks, each with a DC reward.
 
 - A task is **one-off** or **repeats** daily, weekly (ISO weeks, starting
-  Monday), monthly or yearly. Periods are in UTC.
+  Monday), monthly or yearly. Periods run on US Eastern time, so a daily
+  task resets at **midnight Eastern**, a weekly one at midnight going into
+  Monday, and so on.
 - You submit a task once per period, with an optional note. Some tasks
   **require proof**: a photo, file or link.
 - A **reviewer** approves it, which pays the reward, or rejects it with a
   reason. After a rejection you can submit again. Nobody reviews their own
   submission, and a task can reward at most 500 DC.
 - Your Home screen shows DC that's **Pending** review.
+- **Streaks:** do a repeating task in back-to-back periods and its row
+  shows your streak, like "🔥 5-week streak", from two in a row. Only
+  approved submissions count: one waiting for review joins the streak
+  once it's approved. The streak lasts until the end of the current
+  period, so a daily streak survives today until midnight even if you
+  haven't done today's yet; miss a whole period and it starts again.
+  Streaks earn no extra DC.
 
 ## The leaderboard
 
@@ -185,13 +194,49 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   first. A month where nobody bet, or nobody came out ahead, has no
   champion.
 
+## Profile stats
+
+Every member's profile has a **Stats** card, which any member can see:
+
+- **Solo bets** and **Parlays:** how many settled bets were won, lost
+  and refunded. A bet on a voided market, or on a market that resolved to
+  an outcome nobody backed, counts as refunded. Cancelled bets, and bets
+  still open or waiting to be resolved, don't count. After an override,
+  a bet counts by the final result.
+- **Net profit:** all-time net betting profit, worked out exactly as the
+  This month board does, over every month. A stake counts when it's
+  placed, so an open bet counts against it until it settles.
+- **Biggest win:** the largest payout minus its stake on a single solo
+  bet, with the market. A payout an override took back doesn't count.
+- **Best parlay:** the won parlay with the highest multiplier (its winning
+  legs' odds multiplied, up to the 100× cap), and what it paid.
+- **Markets created** and **Tasks completed** (approved submissions only).
+
+Until a member has a settled bet or parlay, the card says "No settled
+bets yet." and shows only markets created and tasks completed.
+
+## Reactions and comments
+
+- **Reactions:** on any item in the feed or in a member's activity, tap
+  🔥 🙏 😂 or 👏 to react, and tap it again to take it back. You can
+  give each of the four once per item. Everyone sees the counts, and
+  your own reactions are highlighted.
+- **Comments:** every market has a short comment thread under its bets.
+  A comment is up to 280 characters and shows its author and when it was
+  posted, newest at the bottom. The latest 50 show first; "Show more"
+  brings in older ones.
+- **Deleting:** you can delete your own comments. Admins and the owner
+  can delete anyone's, to keep the thread kind. A deleted comment is gone
+  for everyone and can't be brought back. Reactions and comments move no
+  DC.
+
 ## Roles
 
-| Role | Can also… |
+| Role | Can also…
 |---|---|
 | **Member** | Bet, create and resolve their own markets, submit tasks |
 | **Reviewer** | Approve and reject task submissions (not their own), and resolve closed markets they have no stake in |
-| **Admin** | Invite people, manage tasks, resolve, override or void any market, view members and the full ledger |
+| **Admin** | Invite people, manage tasks, resolve, override or void any market, delete any comment, view members and the full ledger |
 | **Owner** (exactly one) | Adjust balances, grant and remove roles, and delete a market or task that hasn't been used |
 
 ## Around the app
@@ -200,9 +245,22 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   links to everything else. New members also get a **Getting started**
   card: add your photo, place your first bet and try a task. It goes away
   once you've done all three, or when you dismiss it.
+- **Weekly recap:** on Sundays and Mondays (Eastern time), Home recaps
+  the week, Monday to Sunday. On Sunday it's the week so far; on Monday
+  it's the same week, finished. It shows your net betting profit for the
+  week (counted like This month, when money moves) with task rewards
+  apart; the **best call**, the week's biggest profit on a single solo
+  bet; the **biggest upset**, the result whose winner had the lowest
+  chance when the market closed (only an underdog, under 50%, on a market
+  someone bet on); who had the **most tasks approved** (a tie goes to
+  whoever got there first); and the markets closing in the week ahead.
+  A line with nothing to report is left out, and a quiet week shows no
+  recap at all.
 - **Feed:** everyone's bets, parlays, new markets, results, wins,
-  approved tasks and each month's champion, updated live.
-- **Leaderboard and profiles:** see [The leaderboard](#the-leaderboard).
+  approved tasks and each month's champion, with their reactions, updated
+  live. See [Reactions and comments](#reactions-and-comments).
+- **Leaderboard and profiles:** see [The leaderboard](#the-leaderboard)
+  and [Profile stats](#profile-stats).
   Tap your avatar (top right) for your profile, where Edit profile and
   Settings live.
 - **Settings:** theme (System, Light or Dark), vibration on taps (Android),

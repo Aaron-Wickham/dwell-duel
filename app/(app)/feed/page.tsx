@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { listFeed } from '@/lib/social/list-feed'
+import { getReactions } from '@/lib/social/reactions'
 import { readPageParams, showMoreHref, newestHref } from '@/lib/pagination/cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
 import { Page, PageHeader } from '@/components/ui/page'
@@ -19,6 +20,7 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
   if (!user) redirect('/sign-in')
 
   const feed = await listFeed(supabase, { page: readPageParams(searchParams, 'before') })
+  const reactions = await getReactions(supabase, feed.rows.map((e) => e.id))
   const backToNewestHref = newestHref('/feed', searchParams, 'before')
 
   return (
@@ -28,6 +30,7 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
       <ShowMoreFocus />
       <FeedList
         events={feed.rows}
+        reactions={reactions}
         heading="Events"
         headingId="feed-events"
         headingHidden

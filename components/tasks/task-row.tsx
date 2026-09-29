@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react'
 import { Check, Clock } from 'lucide-react'
 import { StatusChip } from '@/components/ui/status-chip'
+import type { TaskSummary } from '@/lib/tasks/list-tasks'
+import { MIN_STREAK_SHOWN } from '@/lib/tasks/streak-label'
+import { StreakBadge } from './streak-badge'
 
 const h3Class = 'text-[17px] font-extrabold leading-[1.3] tracking-[-0.01em]'
 
@@ -23,6 +26,7 @@ export function TaskRow({
   rewardAmount,
   description,
   cadence,
+  streak,
   state,
   proofRequired = false,
   action,
@@ -31,6 +35,7 @@ export function TaskRow({
   rewardAmount: number
   description: string | null
   cadence?: string | null
+  streak?: { period: NonNullable<TaskSummary['period']>; count: number } | null
   state: TaskRowState
   proofRequired?: boolean
   action?: ReactNode
@@ -41,7 +46,7 @@ export function TaskRow({
         <p className={h3Class}>
           {title} — <span className="text-gold">{rewardAmount} DC</span>
         </p>
-        {(description || cadence || proofRequired) && (
+        {(description || cadence || proofRequired || (streak && streak.count >= MIN_STREAK_SHOWN)) && (
           <p className="flex flex-wrap items-center gap-1 text-sm text-ink2">
             {description}
             {cadence && (
@@ -49,6 +54,7 @@ export function TaskRow({
                 {cadence}
               </span>
             )}
+            {streak && <StreakBadge period={streak.period} count={streak.count} />}
             {proofRequired && (
               <span className="inline-flex h-6 items-center whitespace-nowrap rounded-full bg-sunk px-[9px] text-xs font-extrabold text-ink2">
                 Proof required

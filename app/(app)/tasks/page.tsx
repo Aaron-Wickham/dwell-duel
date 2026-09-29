@@ -6,6 +6,7 @@ import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { listTasks } from '@/lib/tasks/list-tasks'
 import { listMyTaskCompletions } from '@/lib/tasks/list-task-completions'
 import { getCurrentPeriodKeys } from '@/lib/tasks/period-keys'
+import { getMyTaskStreaks } from '@/lib/tasks/streaks'
 import { Page, PageHeader } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -17,7 +18,11 @@ export default async function TasksPage() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const [allTasks, myCompletions] = await Promise.all([listTasks(supabase), listMyTaskCompletions(supabase, user.id)])
+  const [allTasks, myCompletions, streaks] = await Promise.all([
+    listTasks(supabase),
+    listMyTaskCompletions(supabase, user.id),
+    getMyTaskStreaks(supabase),
+  ])
   const activeTasks = allTasks.filter((t) => t.isActive)
   const currentPeriodKeys = await getCurrentPeriodKeys(
     supabase,
@@ -52,6 +57,7 @@ export default async function TasksPage() {
                   rewardAmount={task.rewardAmount}
                   description={task.description}
                   cadence={task.isRepeatable ? PERIOD_LABEL[task.period!] : null}
+                  streak={task.period ? { period: task.period, count: streaks.get(task.id) ?? 0 } : null}
                   state={state}
                   proofRequired={task.proofRequired}
                   action={<SubmitTaskDialog taskId={task.id} taskTitle={task.title} memberId={user.id} proofRequired={task.proofRequired} />}

@@ -1,5 +1,6 @@
 import { requireUser } from '@/lib/auth/require-user'
 import { listFeed } from '@/lib/social/list-feed'
+import { getReactions } from '@/lib/social/reactions'
 import { newestHref, showMoreHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
 import { ContentReveal } from '@/components/nav/page-transition'
@@ -23,6 +24,7 @@ export async function MemberActivity({
 }) {
   const { supabase } = await requireUser()
   const activity = await listFeed(supabase, { actorId: memberId, page })
+  const reactions = await getReactions(supabase, activity.rows.map((e) => e.id))
   const pathname = `/members/${memberId}`
   const backToNewestHref = newestHref(pathname, searchParams, 'activity')
 
@@ -31,6 +33,7 @@ export async function MemberActivity({
       <ShowMoreFocus />
       <FeedList
         events={activity.rows}
+        reactions={reactions}
         heading="Recent activity"
         headingId="recent-activity"
         rowIdPrefix={ROW_ID_PREFIX}

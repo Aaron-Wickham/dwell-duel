@@ -4,7 +4,7 @@ import { Skeleton, SkeletonCard, SkeletonField, SkeletonScreen } from '@/compone
 // carries its section's grid placement, so from lg the two-column layout holds while they load.
 
 // The page renders one combined <LoadingStatus /> instead (app/(app)/markets/[id]/page.tsx),
-// since these four sections stream independently and can be pending at the same time.
+// since these sections stream independently and can be pending at the same time.
 
 export function MarketChartSkeleton() {
   return (
@@ -47,7 +47,7 @@ export function MarketActionsSkeleton({ outcomes }: { outcomes: number }) {
       <SkeletonScreen
         name="market-bet-form"
         announce={false}
-        className="flex flex-col gap-5 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:gap-7"
+        className="flex flex-col gap-5 lg:col-start-2 lg:row-span-4 lg:row-start-1 lg:gap-7"
       >
         <SkeletonCard className="gap-4">
           <Skeleton className="h-6 w-32" />
@@ -73,6 +73,28 @@ export function MarketBetsSkeleton() {
             </div>
           ))}
         </div>
+      </SkeletonCard>
+    </SkeletonScreen>
+  )
+}
+
+export function MarketCommentsSkeleton() {
+  return (
+    <SkeletonScreen name="market-comments" announce={false} className="lg:col-start-1 lg:row-start-4">
+      <SkeletonCard className="gap-3">
+        <Skeleton className="h-6 w-28" />
+        <div className="flex flex-col divide-y divide-line">
+          {Array.from({ length: 2 }, (_, i) => (
+            <div key={i} className="flex items-start gap-3 py-3">
+              <Skeleton className="size-8 shrink-0 rounded-full" />
+              <div className="flex grow flex-col gap-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-64 max-w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <SkeletonField />
       </SkeletonCard>
     </SkeletonScreen>
   )

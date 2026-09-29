@@ -75,6 +75,14 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ### Leaderboard
 - The leaderboard ranks by net worth (balance plus DC riding on open bets) everywhere, adds a "This month" tab ranked by net betting profit on Eastern time, and posts each month's champion to the feed (#77).
 
+### Social
+- Reactions and comments (#79): react 🔥 🙏 😂 👏 to anything in the feed or a member's activity, and discuss each market in a comment thread (280 characters, newest at the bottom). Authors delete their own comments, admins and the owner any, and both update live.
+- A weekly recap on Home on Sundays and Mondays (Eastern): your net betting profit and task rewards, the group's best call and biggest upset, who did the most tasks, and the markets closing in the week ahead (#81).
+- Profile stats: each member's profile shows their settled record for solo bets and parlays, all-time net betting profit, biggest win, best parlay, markets created and tasks completed (#83).
+
+### Tasks
+- Daily, weekly, monthly and yearly tasks now reset at midnight US Eastern instead of UTC, and each repeating task shows your current streak ("🔥 5-week streak") once you've done it two periods in a row; only approved submissions count (#82).
+
 ### Tests
 - **Closed test gaps** (#72): end-to-end tests for role gates (a member is kept out of Admin and sees no admin controls; a reviewer lands on the approval queue), cancelling a bet, overriding a resolution, rejecting a submission with a reason and editing your profile; unit tests for saving a profile and submitting a task; and database tests for money moving at the same time: a bet racing a resolve, two resolves at once, a void racing a resolve and two slips that together overdraw a balance.
 

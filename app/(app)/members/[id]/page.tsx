@@ -14,10 +14,14 @@ import { HistoryBackLink } from '@/components/ui/history-back-link'
 import { Avatar } from '@/components/ui/avatar'
 import { SkeletonScreen } from '@/components/ui/skeleton'
 import { FeedListSkeleton } from '@/components/feed/feed-list-skeleton'
+import { LoadingStatus } from '@/components/ui/loading-status'
+import { MemberStatsSkeleton } from '@/components/members/member-stats-card'
 import { MemberActivity } from './member-activity'
+import { MemberStats } from './member-stats'
 
 // No loading.tsx for this route: the member must be found before anything streams, so an
-// unknown id still gets a real 404 status. Only the activity list streams in behind a skeleton.
+// unknown id still gets a real 404 status. The stats and the activity list stream in behind
+// skeletons, under one combined loading status.
 export default async function MemberPage(props: PageProps<'/members/[id]'>) {
   const { id } = await props.params
   const searchParams = await props.searchParams
@@ -56,15 +60,26 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
           </div>
         )}
       </section>
-      <Suspense
-        fallback={
-          <SkeletonScreen name="member-activity">
-            <FeedListSkeleton />
-          </SkeletonScreen>
-        }
-      >
-        <MemberActivity memberId={member.id} page={readPageParams(searchParams, 'activity')} searchParams={searchParams} />
-      </Suspense>
+      <LoadingStatus>
+        <Suspense
+          fallback={
+            <SkeletonScreen name="member-stats" announce={false}>
+              <MemberStatsSkeleton />
+            </SkeletonScreen>
+          }
+        >
+          <MemberStats memberId={member.id} />
+        </Suspense>
+        <Suspense
+          fallback={
+            <SkeletonScreen name="member-activity" announce={false}>
+              <FeedListSkeleton />
+            </SkeletonScreen>
+          }
+        >
+          <MemberActivity memberId={member.id} page={readPageParams(searchParams, 'activity')} searchParams={searchParams} />
+        </Suspense>
+      </LoadingStatus>
     </Page>
   )
 }

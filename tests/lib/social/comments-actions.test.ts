@@ -1,0 +1,69 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+const { insert, rpc, refresh } = vi.hoisted(() => ({ insert: vi.fn(), rpc: vi.fn(), refresh: vi.fn() }))
+const supabase = { from: () => ({ insert }), rpc }
+vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase, user: { id: 'member-1' } }) }))
+vi.mock('next/cache', () => ({ refresh }))
+
+import { deleteCommentAction, postCommentAction } from '@/lib/social/comments-actions'
+
+const MARKET = '11111111-1111-4111-8111-111111111111'
+
+function form(body: string) {
+  const data = new FormData()
+  data.set('body', body)
+  return data
+}
+
+beforeEach(() => {
+  insert.mockReset()
+  insert.mockResolvedValue({ error: null })
+  rpc.mockReset()
+  rpc.mockResolvedValue({ error: null })
+  refresh.mockReset()
+})
+
+describe('postCommentAction', () => {
+  it('posts the trimmed comment as the signed-in member and refreshes the page', async () => {
+    expect(await postCommentAction(MARKET, undefined, form('  Yes is a lock \r\nfor sure  '))).toEqual({ posted: true })
+    expect(insert).toHaveBeenCalledWith({ market_id: MARKET, profile_id: 'member-1', body: 'Yes is a lock \nfor sure' })
+    expect(refresh).toHaveBeenCalled()
+  })
+
+  it('refuses an empty comment', async () => {
+    expect(await postCommentAction(MARKET, undefined, form('   '))).toEqual({ formError: 'Write a comment first.' })
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('refuses a comment over 280 characters, counting after the trim', async () => {
+    expect(await postCommentAction(MARKET, undefined, form('a'.repeat(281)))).toEqual({
+      formError: 'A comment can be at most 280 characters.',
+    })
+    expect(insert).not.toHaveBeenCalled()
+
+    expect(await postCommentAction(MARKET, undefined, form(` ${'a'.repeat(280)} `))).toEqual({ posted: true })
+  })
+
+  it('says so when the market has gone', async () => {
+    insert.mockResolvedValue({ error: { code: '23503', message: 'fk' } })
+    expect(await postCommentAction(MARKET, undefined, form('Hi'))).toEqual({ formError: 'This market no longer exists.' })
+    expect(await postCommentAction('not-a-uuid', undefined, form('Hi'))).toEqual({ formError: 'This market no longer exists.' })
+    expect(refresh).not.toHaveBeenCalled()
+  })
+})
+
+describe('deleteCommentAction', () => {
+  it('deletes through delete_market_comment and refreshes the page', async () => {
+    expect(await deleteCommentAction(7, undefined, new FormData())).toBeUndefined()
+    expect(rpc).toHaveBeenCalledWith('delete_market_comment', { p_comment_id: 7 })
+    expect(refresh).toHaveBeenCalled()
+  })
+
+  it("passes on the database's refusal", async () => {
+    rpc.mockResolvedValue({ error: { message: 'only the comment\'s author or an admin can delete it' } })
+    expect(await deleteCommentAction(7, undefined, new FormData())).toEqual({
+      formError: 'Only the comment\'s author or an admin can delete it.',
+    })
+    expect(refresh).not.toHaveBeenCalled()
+  })
+})

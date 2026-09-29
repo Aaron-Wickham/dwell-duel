@@ -21,16 +21,18 @@ interface FeedRow {
 }
 
 // Names, labels, the task title and the parlay leg count are joined at read time through
-// PostgREST embeds, not stored on activity_events: every one of these foreign keys (actor_id,
-// market_id, outcome_id, task_completion_id, parlay_id) has exactly one relationship to embed
-// through, so no `!fkey` disambiguation is needed. actor_id is not null, but the actor embed is
+// PostgREST embeds, not stored on activity_events. Only the actor embed names its foreign key:
+// feed_reactions (0053) has foreign keys to both activity_events and profiles inside its primary
+// key, which PostgREST reads as a second, many-to-many way from an event to profiles. Every other
+// foreign key here (market_id, outcome_id, task_completion_id, parlay_id) has exactly one
+// relationship to embed through. actor_id is not null, but the actor embed is
 // still `!inner`, matching activity_feed's plain join on profiles: a row whose actor a viewer
 // can't see (RLS) is dropped, the same as the view never having a row to join in the first place,
 // instead of surfacing with an empty actorName. parlay_legs is capped at 10 rows per parlay
 // (MAX_PICKS, lib/parlays/odds.ts), so this never grows with the size of the table.
 const FEED_COLUMNS =
   'id, kind, occurred_at, actor_id, market_id, amount, ' +
-  'actor:profiles!inner(display_name), market:markets(title, created_by), outcome:market_outcomes(label), ' +
+  'actor:profiles!activity_events_actor_id_fkey!inner(display_name), market:markets(title, created_by), outcome:market_outcomes(label), ' +
   'task_completion:task_completions(task:tasks(title)), parlay:parlays(parlay_legs(id)), resolution:market_resolutions(note)'
 const FEED_KEY_COLUMNS = { ts: 'occurred_at', id: 'id' }
 

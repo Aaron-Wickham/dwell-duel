@@ -42,6 +42,7 @@ describe('pageSubscriptions', () => {
       { table: 'markets', filter: `id=eq.${MARKET_ID}` },
       { table: 'market_resolutions', filter: `market_id=eq.${MARKET_ID}` },
       { table: 'parlay_legs', filter: `market_id=eq.${MARKET_ID}` },
+      { table: 'market_comments', filter: `market_id=eq.${MARKET_ID}` },
     ])
   })
 
@@ -80,6 +81,7 @@ describe('pageSubscriptions', () => {
       { table: 'activity_events', filter: `actor_id=eq.${MEMBER_ID}` },
       { table: 'cancelled_bets', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'profiles', filter: `id=eq.${MEMBER_ID}` },
+      { table: 'feed_reactions' },
     ])
   })
 
@@ -108,8 +110,15 @@ describe('pageSubscriptions', () => {
     ])
   })
 
-  it('feed watches only activity_events, now that every event kind is a row in it', () => {
-    expect(pageSubscriptions.feed()).toEqual([{ table: 'activity_events' }])
+  it('feed watches activity_events, where every event kind is a row, and every reaction', () => {
+    expect(pageSubscriptions.feed()).toEqual([{ table: 'activity_events' }, { table: 'feed_reactions' }])
+  })
+
+  // A filtered channel never receives a DELETE, and taking a reaction back is one.
+  it('watches feed_reactions unfiltered wherever reactions show', () => {
+    for (const subs of [pageSubscriptions.feed(), pageSubscriptions.member(MEMBER_ID)]) {
+      expect(subs).toContainEqual({ table: 'feed_reactions' })
+    }
   })
 
   it('tasks filters task_completions to the signed-in member', () => {

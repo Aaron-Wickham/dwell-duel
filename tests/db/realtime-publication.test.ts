@@ -23,6 +23,8 @@ describe('supabase_realtime publication', () => {
         'tasks',
         'task_completions',
         'profiles',
+        'feed_reactions',
+        'market_comments',
       ]),
     )
   })

@@ -5,6 +5,8 @@ import { ageLabel } from '@/lib/social/relative-time'
 import { SectionCard } from '@/components/ui/section-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { FeedItem } from '@/components/feed/feed-item'
+import { ReactionBar } from '@/components/feed/reaction-bar'
+import { noReactions, type EventReactions } from '@/lib/social/reactions'
 import { rowDomId } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +23,7 @@ const EVENT_ICONS: Record<FeedKind, LucideIcon> = {
 
 export function FeedList({
   events,
+  reactions,
   heading,
   headingId,
   headingHidden,
@@ -30,6 +33,8 @@ export function FeedList({
   rowIdPrefix,
 }: {
   events: FeedEvent[]
+  // Each event's reactions (getReactions). Without it, the items show no reaction buttons.
+  reactions?: Map<string, EventReactions>
   heading: string
   headingId: string
   headingHidden?: boolean
@@ -51,6 +56,7 @@ export function FeedList({
             age={ageLabel(e.occurredAt)}
             detail={e.kind === 'market_resolved' ? e.resolutionNote : null}
             note={e.kind === 'market_resolved' ? e.creatorStake : null}
+            reactions={reactions && <ReactionBar eventId={e.id} reactions={reactions.get(e.id) ?? noReactions()} />}
             domId={rowIdPrefix && rowDomId(rowIdPrefix, e.id)}
           />
         ))}

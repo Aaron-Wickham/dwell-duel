@@ -17,7 +17,7 @@ Next.js 16 on Vercel ── proxy.ts: signed-out requests → /sign-in
 Supabase (one hosted project: production)
   ├─ Auth: Google only, invite-gated
   ├─ Postgres: tables + RLS + security-definer RPCs (all money moves here)
-  ├─ Realtime: 10 published tables drive live page refreshes
+  ├─ Realtime: 12 published tables drive live page refreshes
   └─ Storage: `avatars` (public), `proof` (private, signed URLs)
 ```
 
@@ -49,16 +49,16 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 
 | Route | What it is |
 |---|---|
-| `/` | Home: greeting, balance hero (balance, rank, At stake, Pending), a new member's Getting started card, Markets to resolve, tiles |
+| `/` | Home: greeting, balance hero (balance, rank, At stake, Pending), a new member's Getting started card, Markets to resolve, the weekly recap (Sundays and Mondays), tiles |
 | `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then resolved and voided newest first, each paged |
 | `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under. `?from=<id>` pre-fills it from a market (Duplicate) |
-| `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, resolve/void/edit, share and duplicate, resolution proof |
+| `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
 | `/parlays` | Redirects to `/bets` (kept for old links) |
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
-| `/feed` | Everyone's activity, live |
+| `/feed` | Everyone's activity, with reactions, live |
 | `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`) |
-| `/members/[id]` | A member's profile and activity; your own adds Edit profile and Settings |
+| `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings |
 | `/profile` | Edit your name, photo and bio |
 | `/settings` | Theme, haptics, reduced motion, How it works, sign out |
 | `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`) |
@@ -80,7 +80,7 @@ components/     UI by area: app-nav, brand, feed, home, markets, parlays, proof,
                 Button, Field, SubNav, ShowMore, EmptyState, Skeleton…)
 lib/            logic by area: auth, markets, bets, parlays, tasks, proof, social,
                 live, pagination, preferences, theme, forms, env, nav…
-supabase/       migrations/0001…0052, config.toml
+supabase/       migrations/0001…0056, config.toml
 tests/          components/, lib/, db/ (Vitest), plus e2e/ (Playwright)
 scripts/        generate-splash.mjs, generate-favicons.mjs
 public/         sw.js (service worker), icons, favicons, iOS splash screens
@@ -125,6 +125,14 @@ the task catalogue and invite list, which are allowed by policy.
   replaced.
 - `market_edits`: every title or description change, readable by all
   members.
+- `market_comments` (0053): a market's thread. `body` is at most 280
+  characters (`TEXT_LIMITS.commentBody`). Members insert their own; the
+  author, or an admin or the owner, deletes one through
+  `delete_market_comment`, a soft delete that empties `body` and sets
+  `deleted_at` and `deleted_by`. Members have no direct update or delete.
+  Reads leave deleted rows out (`lib/social/comments.ts`), keyset-paged on
+  `market_comments_market_idx`: the newest 50, shown oldest first, with
+  "Show more" above for older ones (`?comments=`).
 - `parlays` and `parlay_legs`: a stake, a status (`pending`, `won`, `lost`,
   `refunded`), and each leg's outcome with odds locked at placement.
 - `idempotency_keys` (0047): one row per slip or balance-adjustment
@@ -136,7 +144,15 @@ the task catalogue and invite list, which are allowed by policy.
 - `tasks`: the Bible-study catalogue. Reward, whether it repeats (daily,
   weekly, monthly or yearly), active flag and `proof_required`.
 - `task_completions`: submissions (`pending`, `approved`, `rejected`) with
-  a note, one per task per period.
+  a note, one per task per period. `period_key` comes from
+  `compute_period_key(period, at)`: `YYYY-MM-DD`, ISO `IYYY-"W"IW`, `YYYY-MM`
+  or `YYYY`, read in `group_time_zone()` (America/New_York since 0054, UTC
+  before). `my_task_streaks(p_at default now())` (0054, security definer,
+  the caller's own rows) returns `task_id, streak, includes_current`: the
+  run of consecutive periods with an approved completion ending in the
+  current period or the one before, numbered by `period_index` (not
+  callable by members). The Tasks page shows it as `StreakBadge` from two
+  periods up.
 - `proof_attachments`: files, photos and links attached to a submission or
   a resolution. The files live in the private `proof` storage bucket.
 
@@ -149,6 +165,15 @@ the task catalogue and invite list, which are allowed by policy.
   `season:YYYY-MM`, so it has no source row and the DB tests' equivalence
   check against `activity_feed` leaves it out. `actor_id` cascades, so a
   champion's events go with their profile.
+- `feed_reactions` (0053): one row per member, event and kind (`fire`,
+  `pray`, `laugh`, `clap`), keyed `(event_id, profile_id, kind)` and
+  cascading with the event and the member. Members insert and delete their
+  own rows directly under RLS (`lib/social/reactions-actions.ts`); pages
+  read a page of events' counts through `feed_reaction_counts(p_event_ids)`
+  (security invoker, one row per event and kind with a `mine` flag),
+  chunked with `chunk()` in `getReactions` (`lib/social/reactions.ts`). The
+  feed and member activity show them as `ReactionBar`, optimistic through
+  `useOptimistic`, since reactions move no coins.
 - `activity_feed` (view): the old computed feed. It is kept only as the
   DB tests' oracle; members can't read it.
 
@@ -202,7 +227,8 @@ read the same function through `getMemberStanding`. `leaderboard_month`
 `season_profits`: the net of the betting ledger types (`bet_*`,
 `parlay_*`, `resolution_reversed`) between midnights in America/New_York,
 leaving out `starting_grant`, `task_completed`, `admin_adjustment` and any
-type added later. `settle_season(p_month default last month)` (service role
+type added later; since 0055 that list is `betting_ledger_types()`, shared
+with `member_stats`. `settle_season(p_month default last month)` (service role
 only) posts a finished month's top positive profit as a `season_champion`
 event, ties going to whoever reached the total first.
 
@@ -225,9 +251,27 @@ the migration. The panel also checks the identity *all DC ever added less
 all removed = in circulation*, and says so if it fails or if the ledger
 holds a type it doesn't know.
 
+**Member stats** (0055, #83). `member_stats(p_profile_id)` returns one row
+for the member page's Stats card (`lib/members/stats.ts`,
+`components/members/member-stats-card.tsx`, streamed behind its own
+`<Suspense>`): settled solo bets and parlays won, lost and refunded; all-time
+net betting profit; the biggest win (a current resolution's `bet_won` less
+its stake, with the market); the best won parlay (its resolved legs' locked
+odds multiplied, capped by `parlay_limits()`, and its payout); markets
+created; and approved task completions. A solo bet counts as refunded when
+its market was voided or resolved to an outcome nobody backed; cancelled
+bets and open ones count nowhere. Net profit is `betting_ledger_types()`
+summed over all time, the This month board's classification, so a stake
+still riding counts as spent. It is security definer, because the ledger is
+own-or-admin and net profit comes from it; it returns only aggregates, and
+raises `not invited` (42501) for anyone else. Every branch is one grouped
+pass over the member's own index entries (bets, parlays and the ledger by
+profile, `markets_created_by_idx`, task completions by profile), with no
+subquery per row, so 0055 adds no index.
+
 ### Migrations
 
-Migrations are numbered in order, `0001`–`0052`, and none is ever edited
+Migrations are numbered in order, `0001`–`0056`, and none is ever edited
 after it ships. They roughly follow the project's history:
 
 | Range | What they add |
@@ -246,6 +290,10 @@ after it ships. They roughly follow the project's history:
 | 0050 | `member_activity`: join and last sign-in dates for Admin → Members, admins only |
 | 0051 | Net worth and seasons: `stakes_riding` (shared with `my_at_stake`), `leaderboard_net_worth`, `season_profits`, `leaderboard_month`, `settle_season` and the `season_champion` feed kind |
 | 0052 | `economy_summary`: the owner's economy panel on Admin → Ledger (supply in circulation, and this month's DC added and removed by source) |
+| 0053 | Reactions and comments: `feed_reactions` and `feed_reaction_counts`, `market_comments` and `delete_market_comment`, both tables published for realtime |
+| 0054 | Task periods in US Eastern time: `group_time_zone()`, `compute_period_key` read in that zone, stored keys recomputed from `submitted_at` where the one-active-per-period index allows; task streaks: `period_index`, `my_task_streaks` and an approved-only `(profile_id, task_id, period_key)` index |
+| 0055 | Member stats: `member_stats` for the profile's Stats card, and `betting_ledger_types()`, 0051's betting types named once and shared with `season_profits` |
+| 0056 | `weekly_recap(p_week)`: Home's weekly recap, one row of date-bounded aggregates for the Eastern week holding `p_week` |
 
 Merging a migration to `main` runs the **Deploy Production Database**
 workflow. It runs in parallel with Vercel's deploy, so a build that needs
@@ -308,7 +356,13 @@ signed URLs made with the viewer's own session.
 a long-lived channel on the member's own profile, which carries their
 balance and avatar, plus a per-page channel. A change to a subscribed
 table triggers `router.refresh()`, so the server re-renders with fresh
-data. Ten tables are published (`LIVE_TABLES`).
+data. Twelve tables are published (`LIVE_TABLES`). A filtered channel never
+receives a DELETE, so a page that must hear one either watches the table
+unfiltered (the feed and member activity watch `feed_reactions` that way,
+since taking a reaction back is a delete) or has the delete write
+something it can hear: a cancelled bet inserts into `cancelled_bets`, and a
+deleted comment is an UPDATE, which the market page's channel filtered to
+its market receives.
 
 **Long lists.** Keyset pagination (`lib/pagination`) with "Show more".
 Each list keeps its place in URL cursors, jumps to a fresh window after
@@ -336,6 +390,21 @@ head-only counts: a photo (`profiles.avatar_path`), any bet or parlay
 (`bets`, `cancelled_bets`, `parlays`) and any task submission. It hides
 itself once all three are done. Dismissing it sets the `onboarding`
 cookie, which skips those reads, so it never flashes back.
+
+**Weekly recap** (0056, #81). On Sundays and Mondays in America/New_York,
+Home shows `components/home/weekly-recap-card.tsx`. `lib/home/recap-week.ts`
+works out the day and the week from the server's clock in that zone (Sunday:
+the week so far; Monday: the same week, finished), and `getWeeklyRecap`
+(`lib/home/recap.ts`) skips the call on any other day. `weekly_recap(p_week)`
+is security definer, invited members only, and returns one row, each figure
+read over an indexed one-week range: the caller's own betting net
+(`betting_ledger_types()`) and task income from `coin_transactions`; the best
+call (largest payout less stake on a solo bet) and the biggest upset (lowest
+effective-pool chance of a winner, under 50%, on a market with real stakes)
+from the `bet_won` and `market_resolved` events in `activity_events`, so an
+overridden result doesn't count; the most approved `task_completions`; and
+open markets closing the following week (first three and a total). The card
+leaves out empty lines and hides when every one is empty.
 
 ## Environments and deploys
 

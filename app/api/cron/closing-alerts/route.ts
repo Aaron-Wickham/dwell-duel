@@ -4,9 +4,10 @@ import { sendClosingAlerts } from '@/lib/push/notify'
 import { CLOSING_ALERTS_JOB } from '@/lib/admin/cron-health'
 
 // Tells a market's creator, and every admin, once it has closed with no result (#123). A market
-// closing is only the clock passing, so nothing in the database fires; .github/workflows/
-// closing-alerts.yml calls this every ten minutes with the same CRON_SECRET the daily cron uses,
-// because Vercel Hobby can't run a cron more than once a day. Each market is claimed in push_log
+// closing is only the clock passing, so no trigger fires; pg_cron's closing-alerts job (0064) calls
+// this every ten minutes with the same CRON_SECRET the daily cron uses, because Vercel Hobby can't
+// run a cron more than once a day, and .github/workflows/closing-alerts.yml backs it up (GitHub
+// drops most runs of a ten-minute schedule, #189). Each market is claimed in push_log
 // as it's sent, so calling it as often as you like never repeats a push. Each successful run is
 // recorded in cron_heartbeats (#149), and the Admin pages warn when the last one is too old.
 export async function GET(request: Request) {

@@ -76,7 +76,7 @@ attempt keys older than a day, calls `settle_season()` to post last
 month's champion to the feed (a no-op once it's posted), and sends the
 push reminders to resolve closed markets (`push_resolve_reminders()`).
 The other, `/api/cron/closing-alerts`, sends the same closing alerts every
-ten minutes from GitHub Actions and records a heartbeat (see Notifications).
+ten minutes from Supabase's `pg_cron` and records a heartbeat (see Notifications).
 
 ## Code layout
 
@@ -346,6 +346,7 @@ after it ships. They roughly follow the project's history:
 | 0057 | Push notifications: `push_subscriptions`, `notification_prefs`, `push_log`, `save_push_subscription` and the service-role `push_*` recipient functions |
 | 0059 | Leaderboard extras (#121): `leaderboard_race`, `leaderboard_awards`, `member_records` (security definer, invited members only, aggregates only) |
 | 0060 | Best parlay award (#146): `leaderboard_awards` computes Best parlay's multiplier as `member_stats` does (resolved legs' locked odds multiplied, capped), not credited / stake |
+| 0064 | Closing alerts from `pg_cron` (#189): `pg_cron` and `pg_net`, `ping_closing_alerts()` (service role only) and the `closing-alerts` job every ten minutes |
 | 0061 | Cron heartbeat (#149): `cron_heartbeats` (service-role writes, admin reads) and `record_cron_heartbeat`, stamped by `/api/cron/closing-alerts` |
 | 0062 | `leaderboard_race_steps` (#145): the race from the month's first settled bet, step by step, replacing `leaderboard_race`'s day-by-day points (a new function, so the old one keeps working during the deploy) |
 | 0063 | Drops 0059's `leaderboard_race` (#176), unused since 0062 |
@@ -454,12 +455,17 @@ database once the RPC has committed. The daily cron sends the reminders
 to resolve. Submitting a task alerts reviewers at once (`notifyTaskSubmitted`).
 A market closing is only the clock passing, so `/api/cron/closing-alerts`
 (`sendClosingAlerts`: the creator's reminder and the admins' alert) is called
-every ten minutes by `.github/workflows/closing-alerts.yml`, which needs the
-`CRON_SECRET` repository secret and the `APP_URL` repository variable (the
-app's origin; the run fails without it). Vercel Hobby cron runs once a day,
-and the daily keep-alive still calls the same function as a backstop. GitHub
-can delay a schedule or switch it off after 60 days without repository
-activity, so each successful call stamps `cron_heartbeats` (#149), and the
+every ten minutes by the database (0064, #189): `pg_cron`'s `closing-alerts`
+job runs `ping_closing_alerts()`, which calls the route through `pg_net` with
+the app's origin and `CRON_SECRET` from Supabase Vault (`app_url`,
+`cron_secret`; set once in the SQL editor, never in a migration; without
+them it does nothing, as locally and in CI). GitHub dropped most runs of a
+ten-minute scheduled workflow, so `.github/workflows/closing-alerts.yml`
+(the `CRON_SECRET` repository secret and the `APP_URL` repository variable)
+is only a backup now; the route claims each market in `push_log`, so two
+callers never repeat a push. Vercel Hobby cron runs once a day, and the
+daily keep-alive still calls the same function as a backstop. Each
+successful call stamps `cron_heartbeats` (#149), and the
 Admin layout shows admins and the owner a warning (`ClosingAlertsWarning`,
 `lib/admin/cron-health.ts`) once the last stamp is over 30 minutes old or
 missing. Only the ten-minute route stamps it: the daily keep-alive doesn't,

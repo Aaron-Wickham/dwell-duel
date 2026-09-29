@@ -1301,6 +1301,7 @@ export type Database = {
         Args: { p_key: string; p_period: string }
         Returns: number
       }
+      ping_closing_alerts: { Args: never; Returns: number }
       place_bet: {
         Args: { p_amount: number; p_market_id: string; p_outcome_id: string }
         Returns: undefined

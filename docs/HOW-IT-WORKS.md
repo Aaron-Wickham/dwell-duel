@@ -210,7 +210,8 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   each name and total at the end of the line.
 - **This month's awards**, each shown only once someone has earned it:
   **Biggest win** (the most gained on one solo bet paid this month),
-  **Best parlay** (the highest multiplier among parlays paid this month),
+  **Best parlay** (the highest multiplier among parlays paid this month,
+  the same figure its parlay page and the profile's Stats card show),
   **Sharpshooter** (the best solo hit rate over markets resolved this
   month, with at least five decided bets) and **Most active** (the most
   solo bets and parlays placed this month). A tie goes to whoever has

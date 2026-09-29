@@ -19,6 +19,21 @@ updates:
       # Everything else that's a patch or minor, in one PR.
       minor-and-patch:
         update-types: ['minor', 'patch']
+    ignore:
+      # The app runs on Node 22 (.nvmrc, CI and Vercel). Newer Node types would let code compile
+      # against APIs that don't exist at runtime; move this with .nvmrc.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # typescript-eslint (through eslint-config-next) throws "typescript-eslint does not support
+      # TS 7.0" and its peer range is typescript <6.1.0, so 6.x is still offered. Drop this once
+      # it supports TS 7.
+      - dependency-name: typescript
+        versions: ['>=7']
+      # eslint-config-next 16.3's plugins don't run on ESLint 10: eslint-plugin-react fails with
+      # "contextOrFilename.getFilename is not a function", and it, eslint-plugin-import and
+      # eslint-plugin-jsx-a11y only declare eslint ^9 peers. Drop this once they support 10.
+      - dependency-name: eslint
+        update-types: ['version-update:semver-major']
   - package-ecosystem: github-actions
     directory: /
     schedule:

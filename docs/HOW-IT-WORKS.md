@@ -42,6 +42,11 @@ says so ("Closes in 2h"). Closed markets still waiting for a result are
 grouped under Awaiting resolution, and resolved and voided markets
 follow, newest first.
 
+The tabs above the list narrow it: **All** (the default), **Open** (still
+taking bets), **Pending** (closed, waiting for a result) and **Closed**
+(resolved or voided). The choice is in the page's address, so a
+reload or a shared link keeps it.
+
 For a question that comes round every week, **Duplicate** on any market
 opens Create market already filled in with its question, description,
 kind and outcomes (or line). The closing time moves on by one or more
@@ -120,6 +125,11 @@ stake × the multiplier, rounded down.
 **My bets** shows your solo bets and parlays together, newest first, under
 Open, Settled and Cancelled. Only you can see it. Everyone can see who
 bet what on each market, and bets and parlays also appear in the feed.
+
+Tap a parlay to open its **breakdown**: its stake, multiplier and what it
+pays (or paid), each pick with the odds locked when you placed it and
+where its market stands, and a short sum showing how the multiplier adds
+up. A voided pick is shown as left out, and the rest carry on.
 
 Its **Coins** tab is your coin history: every DC that came in or went
 out, newest first, in plain words ("Won 26 DC on Will it rain?", "Task
@@ -255,9 +265,10 @@ hear about, and your choices apply on every device:
 
 | Notification | When | Starts |
 |---|---|---|
-| **Markets to resolve** | A market you made has closed and is waiting for you to resolve it (once per market, sent once a day) | On |
+| **Markets to resolve** | A market you made has closed and is waiting for you to resolve it. Admins and the owner also hear about every closed market that has no result, once each. Sent within about ten minutes of closing, with a daily backup if that's missed | On |
 | **Results** | A market you bet on, solo or as a parlay leg, is resolved ("You won 26 DC", then the market and its result), changed by an override or voided | On |
 | **Task reviews** | Your task submission is approved or rejected, with the reviewer's reason | On |
+| **Tasks to review** (reviewers and above only) | A member submits a task waiting for review. Never your own | On |
 | **New markets** | Someone else creates a market | Off |
 
 A parlay only pays once all its legs are settled, so if your only stake
@@ -279,6 +290,10 @@ phone's settings.
 | **Reviewer** | Approve and reject task submissions (not their own), and resolve closed markets they have no stake in |
 | **Admin** | Invite people, manage tasks, resolve, override or void any market, delete any comment, view members and the full ledger |
 | **Owner** (exactly one) | Adjust balances, grant and remove roles, and delete a market or task that hasn't been used |
+
+Reviewers and above get a red count on the **Admin** button for what is
+waiting on them: other members' task submissions (reviewers and above) and
+closed markets with no result (admins and above). It disappears at zero.
 
 ## Around the app
 

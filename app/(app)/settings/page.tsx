@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { BookOpenText, LogOut, UserRound } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
+import { atLeast, getRole } from '@/lib/auth/roles'
 import { signOut } from '@/lib/auth/sign-out'
 import { resolvePreferences } from '@/lib/preferences/preferences'
 import { vapidKeys } from '@/lib/push/config'
@@ -22,10 +23,11 @@ export default async function SettingsPage() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const [{ data: profile, error }, jar, notifications] = await Promise.all([
+  const [{ data: profile, error }, jar, notifications, role] = await Promise.all([
     supabase.from('profiles').select('display_name, avatar_path').eq('id', user.id).maybeSingle(),
     cookies(),
     getMyNotificationSettings(supabase, user.id),
+    getRole(supabase),
   ])
   if (error) throw error
   const theme = resolveTheme(jar.get(THEME_COOKIE)?.value) ?? 'system'
@@ -64,6 +66,7 @@ export default async function SettingsPage() {
             publicKey={vapidKeys()?.publicKey ?? null}
             endpoints={notifications.endpoints}
             prefs={notifications.prefs}
+            reviewer={atLeast(role, 'reviewer')}
           />
         </SectionCard>
         <SectionCard title="Help" titleId="settings-help">

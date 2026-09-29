@@ -1,0 +1,26 @@
+name: Closing alerts
+
+# Vercel Hobby runs a cron once a day at most, so this is what tells admins soon after a market
+# closes (#123). It only calls the app; the app decides who hears what, once per market.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the closing-alerts route
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is not set for this repository; skipping."
+            exit 0
+          fi
+          curl --fail --silent --show-error --max-time 30 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            https://www.dwellduel.com/api/cron/closing-alerts

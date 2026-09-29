@@ -194,7 +194,7 @@ the task catalogue and invite list, which are allowed by policy.
   `results` and `task_reviews` (default on) and `new_markets` (default
   off). No row means the defaults. Own row only, select, insert and update.
 - `push_log`: what must go out only once, keyed `(kind, ref)`; today only
-  `resolve_reminder` per market. Service role only.
+  `resolve_reminder` and `market_alert` per market. Service role only.
 
 **Views for pages**
 
@@ -247,7 +247,13 @@ as they're returned), `push_market_result(market)` (every solo bettor and
 parlay-leg holder, with their payout and refund from the current
 resolution; cancelled bets live elsewhere, so never count),
 `push_task_reviews(ids)` and `push_new_market(market)` (everyone but the
-creator who opted in).
+creator who opted in). Review alerts (0058) add `push_task_alerts(completion)`
+(reviewers and above except the submitter, `review_alerts` on) and
+`push_market_alerts()` (admins and above except the market's creator, who has
+the reminder, `resolve_reminders` on; each market claimed once as `market_alert`).
+`my_review_counts()` (security invoker) counts what waits on the caller: other
+members' pending task submissions for a reviewer and above, closed unresolved
+markets for an admin and above.
 
 The leaderboard (0051) reads two boards through `rpc()`, each returning
 `id, display_name, avatar_path, score, rank` with a competition rank over
@@ -327,6 +333,7 @@ after it ships. They roughly follow the project's history:
 | 0054 | Task periods in US Eastern time: `group_time_zone()`, `compute_period_key` read in that zone, stored keys recomputed from `submitted_at` where the one-active-per-period index allows; task streaks: `period_index`, `my_task_streaks` and an approved-only `(profile_id, task_id, period_key)` index |
 | 0055 | Member stats: `member_stats` for the profile's Stats card, and `betting_ledger_types()`, 0051's betting types named once and shared with `season_profits` |
 | 0056 | `weekly_recap(p_week)`: Home's weekly recap, one row of date-bounded aggregates for the Eastern week holding `p_week` |
+| 0058 | Review alerts (#123): `notification_prefs.review_alerts`, `push_task_alerts`, `push_market_alerts`, the `market_alert` kind in `push_log`, and `my_review_counts` for the Admin badge |
 | 0057 | Push notifications: `push_subscriptions`, `notification_prefs`, `push_log`, `save_push_subscription` and the service-role `push_*` recipient functions |
 
 Merging a migration to `main` runs the **Deploy Production Database**
@@ -427,7 +434,15 @@ or rejecting a task and creating a market call `afterAction()`
 (`lib/push/notify.ts`), which runs the send through Next's `after()`, so
 the member's action never waits on it; the recipients are read from the
 database once the RPC has committed. The daily cron sends the reminders
-to resolve. The wording is `lib/push/messages.ts`: payloads are `{ title,
+to resolve. Submitting a task alerts reviewers at once (`notifyTaskSubmitted`).
+A market closing is only the clock passing, so `/api/cron/closing-alerts`
+(`sendClosingAlerts`: the creator's reminder and the admins' alert) is called
+every ten minutes by `.github/workflows/closing-alerts.yml`, which needs the
+`CRON_SECRET` repository secret (Vercel Hobby cron runs once a day, and the
+daily keep-alive still calls the same function as a backstop). The signed-in
+layout reads `getReviewCounts` for the Admin button's badge, follows
+`task_completions` (and `markets` for admins) live, and refreshes at the next
+market close. The wording is `lib/push/messages.ts`: payloads are `{ title,
 body, url }`, with an in-app `url`. The OS already names the app, so the
 title says what happened ("New market", "You won 26 DC") and the body
 carries the detail. `public/sw.js` shows them

@@ -19,11 +19,18 @@ type Support = 'supported' | 'unsupported' | 'ios-install'
 type Device = 'checking' | 'off' | 'on' | 'denied'
 
 const KINDS: { kind: NotificationKind; label: string; hint: string }[] = [
-  { kind: 'resolve_reminders', label: 'Markets to resolve', hint: 'When a market you made has closed and is waiting on you.' },
+  { kind: 'resolve_reminders', label: 'Markets to resolve', hint: 'When a market you made has closed and is waiting on you. Admins hear about every closed market.' },
   { kind: 'results', label: 'Results', hint: 'When a market you bet on is resolved, changed or voided.' },
   { kind: 'task_reviews', label: 'Task reviews', hint: 'When your task is approved or rejected.' },
   { kind: 'new_markets', label: 'New markets', hint: 'When someone else creates a market.' },
 ]
+
+// Only offered to reviewers and above, who are the only people it's ever sent to.
+const REVIEWER_KIND = {
+  kind: 'review_alerts',
+  label: 'Tasks to review',
+  hint: 'When a member submits a task waiting on you.',
+} as const satisfies { kind: NotificationKind; label: string; hint: string }
 
 const TURN_ON_FAILED = 'Couldn’t turn on notifications. Check your connection and try again.'
 const TURN_OFF_FAILED = 'Couldn’t turn off notifications. Check your connection and try again.'
@@ -175,7 +182,7 @@ function DeviceStatus({ publicKey, endpoints }: { publicKey: string; endpoints: 
   )
 }
 
-function PrefsForm({ prefs }: { prefs: NotificationPrefs }) {
+function PrefsForm({ prefs, reviewer }: { prefs: NotificationPrefs; reviewer: boolean }) {
   const [values, setValues] = useState(prefs)
   const [state, formAction] = useActionState<PrefsState, FormData>(
     withSuccessToast(saveNotificationPrefsAction, (s) => Boolean(s?.formError), 'Notification choices saved.'),
@@ -187,7 +194,7 @@ function PrefsForm({ prefs }: { prefs: NotificationPrefs }) {
     <form action={formAction} className="flex flex-col gap-3">
       <fieldset className="flex flex-col gap-3" aria-describedby={state?.formError ? errorId : undefined}>
         <legend className="mb-1.5 text-[15px] font-bold">Notify me about</legend>
-        {KINDS.map(({ kind, label, hint }) => (
+        {(reviewer ? [...KINDS, REVIEWER_KIND] : KINDS).map(({ kind, label, hint }) => (
           <div key={kind} className="flex flex-col gap-0.5">
             <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
               <input
@@ -207,6 +214,8 @@ function PrefsForm({ prefs }: { prefs: NotificationPrefs }) {
           </div>
         ))}
       </fieldset>
+      {/* Not offered to a member, but a save mustn't switch it off for when they become a reviewer. */}
+      {!reviewer && <input type="hidden" name="review_alerts" value={values.review_alerts ? 'on' : ''} />}
       <p className="text-sm text-ink2">These choices apply on every device where notifications are on.</p>
       {state?.formError && (
         <Message tone="error" id={errorId}>
@@ -224,10 +233,12 @@ export function NotificationSettings({
   publicKey,
   endpoints,
   prefs,
+  reviewer,
 }: {
   publicKey: string | null
   endpoints: string[]
   prefs: NotificationPrefs
+  reviewer: boolean
 }) {
   const support = useSyncExternalStore(subscribe, detectSupport, () => null)
 
@@ -245,7 +256,7 @@ export function NotificationSettings({
       ) : support === 'supported' ? (
         <DeviceStatus publicKey={publicKey} endpoints={endpoints} />
       ) : null}
-      <PrefsForm prefs={prefs} />
+      <PrefsForm prefs={prefs} reviewer={reviewer} />
     </div>
   )
 }

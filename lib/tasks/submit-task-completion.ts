@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
+import { afterAction, notifyTaskSubmitted } from '@/lib/push/notify'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import type { ProofRecord } from '@/lib/proof/types'
 
@@ -25,13 +26,14 @@ export async function submitTaskCompletionAction(taskId: string, _prevState: Act
     return { formError: 'Your attachments didn’t come through. Try again.' }
   }
 
-  const { error } = await supabase.rpc('submit_task_completion', {
+  const { data: completionId, error } = await supabase.rpc('submit_task_completion', {
     p_task_id: taskId,
     p_note: note || undefined,
     p_attachments: attachments,
   })
   if (error) return { formError: error.message.charAt(0).toUpperCase() + error.message.slice(1) + '.' }
 
+  afterAction(() => notifyTaskSubmitted(completionId))
   revalidatePath('/tasks')
   return undefined
 }

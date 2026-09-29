@@ -7,6 +7,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ## Unreleased
 
 ### Features
+- **Alerts for reviewers and admins:** a task submission pushes to reviewers and above (not the submitter), a market that has closed with no result pushes to admins and above, and the Admin button shows a badge with what is waiting on you. A new "Tasks to review" choice in Settings covers reviewers; admins use "Markets to resolve" (#123).
 - **Filter the markets page** by All, Open, Pending (closed but not yet resolved) or Closed (resolved and voided); the choice is in the URL (#124).
 
 ### Fixes

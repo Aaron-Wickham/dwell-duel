@@ -19,8 +19,25 @@ import { AppNav } from '@/components/app-nav/app-nav'
 
 const ME = { id: 'me-1', name: 'Grace', avatarSrc: null }
 
-function Nav({ balance, isAdmin, avatarSrc = null }: { balance: number; isAdmin: boolean; avatarSrc?: string | null }) {
-  return <AppNav balance={balance} adminHref={isAdmin ? '/admin/invites' : null} me={{ ...ME, avatarSrc }} />
+function Nav({
+  balance,
+  isAdmin,
+  avatarSrc = null,
+  attention = 0,
+}: {
+  balance: number
+  isAdmin: boolean
+  avatarSrc?: string | null
+  attention?: number
+}) {
+  return (
+    <AppNav
+      balance={balance}
+      adminHref={isAdmin ? '/admin/invites' : null}
+      adminAttention={attention}
+      me={{ ...ME, avatarSrc }}
+    />
+  )
 }
 
 beforeEach(() => {
@@ -250,6 +267,31 @@ describe('AppNav', () => {
       expect(tap).toHaveBeenCalledOnce()
     } finally {
       window.removeEventListener('click', cancel, true)
+    }
+  })
+
+  it('badges Admin with what is waiting, describing it without changing the button’s name', () => {
+    render(<Nav balance={120} isAdmin attention={3} />)
+    const phoneBar = screen.getAllByRole('banner')[1]
+    const admin = within(phoneBar).getByRole('link', { name: 'Admin' })
+    expect(admin).toHaveAccessibleDescription('3 waiting')
+    expect(admin).toHaveTextContent('3')
+  })
+
+  it('caps the badge at 9+', () => {
+    render(<Nav balance={120} isAdmin attention={14} />)
+    const admin = within(screen.getAllByRole('banner')[1]).getByRole('link', { name: 'Admin' })
+    expect(admin).toHaveTextContent('9+')
+    expect(admin).toHaveAccessibleDescription('14 waiting')
+  })
+
+  it('shows no badge and no description when nothing is waiting', () => {
+    render(<Nav balance={120} isAdmin attention={0} />)
+    for (const bar of screen.getAllByRole('banner')) {
+      const admin = within(bar).queryByRole('link', { name: 'Admin' })
+      if (!admin) continue
+      expect(admin).not.toHaveAttribute('aria-describedby')
+      expect(admin).not.toHaveTextContent(/\d/)
     }
   })
 })

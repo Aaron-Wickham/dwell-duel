@@ -27,9 +27,18 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   ])
   if (error) throw error
   const isAdmin = atLeast(role, 'admin')
+  // The badge is a nicety: if reading it fails, the page still renders, without it.
   const [reviewCounts, nextClose] = await Promise.all([
-    getReviewCounts(supabase, role),
-    isAdmin ? nextResolveCheckAt(supabase, user.id, true) : null,
+    getReviewCounts(supabase, role).catch((error: unknown) => {
+      console.error('Reading the review counts failed', error)
+      return { tasks: 0, markets: 0 }
+    }),
+    isAdmin
+      ? nextResolveCheckAt(supabase, user.id, true).catch((error: unknown) => {
+          console.error('Reading the next market close failed', error)
+          return null
+        })
+      : null,
   ])
   const alertTables = reviewSubscriptions(role)
 

@@ -1199,15 +1199,6 @@ export type Database = {
           score: number
         }[]
       }
-      leaderboard_race: {
-        Args: { p_top?: number }
-        Returns: {
-          day: string
-          display_name: string
-          profile_id: string
-          profit: number
-        }[]
-      }
       leaderboard_race_steps: {
         Args: { p_top?: number }
         Returns: {

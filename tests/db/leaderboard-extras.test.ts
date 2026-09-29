@@ -53,7 +53,6 @@ const award = (rows: Award[], kind: string) => rows.find((r) => r.kind === kind)
 describe('access', () => {
   it('refuses anonymous callers and members who are not on the invite list', async () => {
     for (const [fn, args] of [
-      ['leaderboard_race', undefined],
       ['leaderboard_race_steps', undefined],
       ['leaderboard_awards', undefined],
       ['member_records', { p_ids: [alice.id] }],
@@ -64,7 +63,6 @@ describe('access', () => {
     const outsider = await makeMember('Dave')
     const outsiderClient = await clientFor(outsider)
     for (const [fn, args] of [
-      ['leaderboard_race', undefined],
       ['leaderboard_race_steps', undefined],
       ['leaderboard_awards', undefined],
       ['member_records', { p_ids: [alice.id] }],
@@ -182,39 +180,6 @@ describe('member_records', () => {
   })
 })
 
-describe('leaderboard_race', () => {
-  it('draws each of the top members from the first day of the month to today, cumulative', async () => {
-    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
-    await bet(bobClient, market, 0, 20)
-    await bet(carolClient, market, 1, 20)
-    await resolve(market, 0)
-
-    const { data, error } = await bobClient.rpc('leaderboard_race', { p_top: 2 })
-    if (error) throw error
-    const rows = data as { profile_id: string; display_name: string; day: string; profit: string | number }[]
-    const byMember = new Map<string, typeof rows>()
-    for (const r of rows) byMember.set(r.profile_id, [...(byMember.get(r.profile_id) ?? []), r])
-    expect([...byMember.keys()].sort()).toEqual([bob.id, carol.id].sort())
-
-    const now = new Date()
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(now)
-    for (const series of byMember.values()) {
-      expect(series.at(-1)?.day).toBe(today)
-      expect(series[0].day.slice(8)).toBe('01')
-      // Consecutive days, so a line spans the whole month so far.
-      expect(series).toHaveLength(Number(today.slice(8)))
-    }
-    // Bob won 20 and Carol lost 20, so by today they stand at +20 and -20.
-    expect(Number(byMember.get(bob.id)?.at(-1)?.profit)).toBe(20)
-    expect(Number(byMember.get(carol.id)?.at(-1)?.profit)).toBe(-20)
-  })
-
-  it('caps the lines at eight', async () => {
-    const { error } = await bobClient.rpc('leaderboard_race', { p_top: 99 })
-    expect(error).toBeNull()
-  })
-})
-
 type Step = { profile_id: string; display_name: string; step: number; at: string; profit: string | number }
 
 async function steps(client: SupabaseClient, top = 5): Promise<Map<string, Step[]>> {
@@ -226,6 +191,11 @@ async function steps(client: SupabaseClient, top = 5): Promise<Map<string, Step[
 }
 
 describe('leaderboard_race_steps', () => {
+  it('caps the lines at eight', async () => {
+    const byMember = await steps(bobClient, 99)
+    expect(byMember.size).toBeLessThanOrEqual(8)
+  })
+
   it('has nothing to draw until a bet settles, however many are placed', async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await bet(bobClient, market, 0, 20)

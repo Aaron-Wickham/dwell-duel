@@ -112,8 +112,8 @@ a line to `CHANGELOG.md` under the next release.
   `prefers-reduced-motion` rule under `:root[data-motion="reduce"]`; an
   animated number uses `AnimatedNumber`, never `NumberFlow` directly, and
   script checks `reducedMotion()` from `lib/ui/reduced-motion.ts`.
-- **Segmented tabs are `SubNav`** (`components/ui/sub-nav.tsx`), with tab
-  state in the URL, as My bets' `?tab=` and the admin sections do.
+- **Segmented tabs are `SubNav`** (`components/ui/sub-nav.tsx`, a client
+  component whose pill slides between tabs), with tab state in the URL, as My bets' `?tab=` and the admin sections do.
 - **Odds are seeded** (0041): every outcome's pool counts
   `markets.seed_per_outcome` virtual DC. Odds, chance, payout estimates and
   charts go through `effectivePools` (`lib/markets/odds.ts`), the same maths

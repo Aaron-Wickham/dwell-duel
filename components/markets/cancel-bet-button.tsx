@@ -10,7 +10,7 @@ export function CancelBetButton({ betId, amount, outcomeLabel }: { betId: number
       trigger="Cancel"
       triggerLabel={`Cancel your ${amount} DC bet on ${outcomeLabel}`}
       triggerVariant="secondary"
-      triggerSize="sm"
+      triggerSize="chip"
       className="shrink-0 items-end gap-1"
       title="Cancel this bet?"
       description={`Your ${amount} DC on ${outcomeLabel} comes back to your balance.`}

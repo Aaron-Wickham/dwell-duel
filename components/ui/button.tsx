@@ -15,6 +15,8 @@ const buttonCva = cva(
       size: {
         md: 'min-h-12 px-5 text-base',
         sm: 'min-h-11 px-3.5 text-[15px]',
+        // Sits beside a StatusChip at the chip's own height; hit-area keeps the 44px tap target.
+        chip: 'hit-area h-7 min-h-7 rounded-full px-2.5 text-[13px]',
       },
       block: {
         true: 'w-full',

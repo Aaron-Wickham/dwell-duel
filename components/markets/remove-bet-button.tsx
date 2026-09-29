@@ -20,7 +20,7 @@ export function RemoveBetButton({
       trigger="Remove"
       triggerLabel={`Remove ${bettorName}’s ${amount} DC bet on ${outcomeLabel}`}
       triggerVariant="secondary"
-      triggerSize="sm"
+      triggerSize="chip"
       title={`Remove ${bettorName}’s bet?`}
       description={`Their ${amount} DC on ${outcomeLabel} goes back to their balance.`}
       confirmLabel="Remove bet"

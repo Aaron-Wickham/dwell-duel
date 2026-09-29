@@ -2,9 +2,9 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { D_PATH, LEAF_ANGLES, LEAF_PATH } from './symbol-paths'
 
-export function DwellDuelSymbol({ size }: { size: number }) {
+export function DwellDuelSymbol({ size, className }: { size: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true" className={className}>
       <g transform="translate(50 50) translate(-55.5 -41.5)">
         <g className="fill-lime">
           {LEAF_ANGLES.map((angle) => (
@@ -44,7 +44,10 @@ export function Wordmark({
       aria-current={current ? 'page' : undefined}
       className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[10px] pr-1 no-underline"
     >
-      <DwellDuelSymbol size={size === 'sm' ? 28 : 32} />
+      {/* The D's bottom edge sits at 82.5% of the symbol's box, so centring the box centres it a
+          little low; these lift it until it meets the wordmark's baseline (measured in
+          e2e/brand.spec.ts, which keeps them honest). */}
+      <DwellDuelSymbol size={size === 'sm' ? 28 : 32} className={size === 'sm' ? '-translate-y-[2.6px]' : '-translate-y-[3.15px]'} />
       <span
         className={cn(
           'whitespace-nowrap font-extrabold uppercase leading-none tracking-[-0.03em]',

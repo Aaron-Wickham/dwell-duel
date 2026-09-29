@@ -14,6 +14,8 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ### Fixes
 - **Sub-tabs slide like the main nav:** the active pill on My bets, Leaderboard, Markets and Admin's tabs glides to the new tab, and stays still with reduced motion (#117).
 - **Cancel and Remove sit at the status chip's height** on My bets and market pages, instead of a full-size button beside a small chip (#118).
+- **The top bar's logo and wordmark line up:** the bottom of the symbol's D now meets the wordmark's baseline, on phone and desktop (#119).
+- **New favicon:** a big D with one lime leaf. The SVG turns the D white on dark browser themes; the PNG fallbacks (Safari) put the same mark on a teal tile (#122).
 - **Mobile page can't zoom or scroll sideways:** the viewport is locked and the page is clipped to the screen's width, which stops the top bar and tab bar being pulled off the screen edges in the installed app (#127, #128, #129). Pinch-zoom is gone with it.
 - **Notifications don't repeat the app's name:** each one's title says what happened ("New market", "You won 26 DC", "Time to resolve", "Task approved"), with the detail underneath (#109).
 - **Market cards' sparklines start at the seeded 50/50,** like the market page's chart, and a seeded market nobody has bet on shows a flat line (#110).

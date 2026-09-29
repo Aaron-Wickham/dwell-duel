@@ -4,8 +4,8 @@ import { vapidKeys } from '@/lib/push/config'
 
 export const CLOSING_ALERTS_JOB = 'closing-alerts'
 
-// The schedule runs every ten minutes, and GitHub often starts a scheduled run late, so a warning
-// waits out a couple of missed runs rather than flagging one slow start.
+// pg_cron calls the route at least every ten minutes (0064), so a warning waits out a couple of
+// missed calls rather than flagging one slow start.
 export const CLOSING_ALERTS_STALE_MS = 30 * 60 * 1000
 
 export type ClosingAlertsHealth = { stale: false } | { stale: true; lastRunAt: string | null }

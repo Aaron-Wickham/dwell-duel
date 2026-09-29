@@ -1,6 +1,6 @@
 name: Closing alerts
 
-# A backup for pg_cron's closing-alerts job (0064, #189), which is the real ten-minute timer: GitHub
+# A backup for pg_cron's closing-alerts job (0064, #189), which is the real timer (every minute): GitHub
 # runs a */10 schedule on a best-effort basis and dropped most of its runs. It only calls the app;
 # the app decides who hears what, once per market, so the two callers never repeat a push. Each
 # successful call is recorded, and the Admin pages warn when none has landed for 30 minutes (#149).

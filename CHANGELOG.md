@@ -9,6 +9,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ### Features
 - **Alerts for reviewers and admins:** a task submission pushes to reviewers and above (not the submitter), a market that has closed with no result pushes to admins and above, and the Admin button shows a badge with what is waiting on you. A new "Tasks to review" choice in Settings covers reviewers; admins use "Markets to resolve" (#123).
 - **Filter the markets page** by All, Open, Pending (closed but not yet resolved) or Closed (resolved and voided); the choice is in the URL (#124).
+- **Parlays open into a breakdown:** each parlay on My bets is one tappable card (stake, multiplier, what it pays, a progress bar of its picks) leading to a new page with every pick's locked odds and result, and how the multiplier adds up (#120).
 
 ### Fixes
 - **Sub-tabs slide like the main nav:** the active pill on My bets, Leaderboard, Markets and Admin's tabs glides to the new tab, and stays still with reduced motion (#117).

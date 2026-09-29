@@ -31,36 +31,41 @@ function renderParlay(p: ParlayView) {
 }
 
 describe('PlacedParlay', () => {
-  it('describes a pending parlay, with what it pays if every pick wins', () => {
+  it('shows a pending parlay’s stake, multiplier and what it pays if every pick wins', () => {
     renderParlay(parlay({}))
-    expect(screen.getByText('Parlay · 2 picks')).toBeInTheDocument()
-    expect(screen.getByText(/^5 DC at 16\.00× · pays 80 DC if every pick wins · Placed/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Parlay · 2 picks' })).toHaveAttribute('href', '/parlays/p1')
+    expect(screen.getByText('5 DC')).toBeInTheDocument()
+    expect(screen.getByText('16.00×')).toBeInTheDocument()
+    expect(screen.getByText('Pays if all win')).toBeInTheDocument()
+    expect(screen.getByText('80 DC')).toHaveClass('text-acc-text')
     const [chip, ...legPills] = screen.getAllByText('Open')
     expect(chip).toHaveClass('bg-acc-soft', 'text-acc-text', 'h-7')
-    expect(legPills).toHaveLength(2)
+    expect(legPills.filter((el) => el.className.includes('h-6'))).toHaveLength(2)
   })
 
-  it('describes a won parlay with what it paid', () => {
+  it('shows a won parlay’s payout in the figure and the chip', () => {
     renderParlay(parlay({ status: 'won', credited: 80 }))
-    expect(screen.getByText(/^5 DC at 16\.00× · Placed/)).toBeInTheDocument()
     expect(screen.getByText('Won 80 DC')).toBeInTheDocument()
+    expect(screen.getByText('Won')).toBeInTheDocument()
+    expect(screen.getByText('80 DC')).toHaveClass('text-acc-text')
   })
 
-  it('describes a lost parlay', () => {
+  it('shows a lost parlay as lost', () => {
     renderParlay(parlay({ status: 'lost' }))
-    expect(screen.getByText(/^5 DC at 16\.00× · Placed/)).toBeInTheDocument()
-    expect(screen.getByText('Lost')).toHaveClass('bg-loss-soft', 'text-loss')
+    expect(screen.getAllByText('Lost')[0]).toHaveClass('bg-loss-soft', 'text-loss')
+    expect(screen.getAllByText('Lost').at(-1)).toHaveClass('text-loss')
   })
 
-  it('describes a refunded parlay', () => {
+  it('shows a refunded parlay’s stake as returned', () => {
     renderParlay(parlay({ status: 'refunded', credited: 5, multiplierBp: 10_000, potentialPayout: 5 }))
-    expect(screen.getByText(/^5 DC returned · Placed/)).toBeInTheDocument()
+    expect(screen.getByText('Returned')).toBeInTheDocument()
     expect(screen.getByText('Refunded')).toHaveClass('bg-sunk', 'text-ink2')
   })
 
   it('notes when the multiplier was capped', () => {
     renderParlay(parlay({ multiplierBp: 1_000_000, capped: true, potentialPayout: 500 }))
-    expect(screen.getByText(/^5 DC at 100\.00× \(capped at 100×\) · pays 500 DC if every pick wins/)).toBeInTheDocument()
+    expect(screen.getByText('Multiplier (max 100×)')).toBeInTheDocument()
+    expect(screen.getByText('100.00×')).toBeInTheDocument()
   })
 
   it('is a Show more focus target named by its heading when given a row id', () => {
@@ -74,7 +79,22 @@ describe('PlacedParlay', () => {
     expect(row).toHaveAttribute('tabindex', '-1')
   })
 
-  it('lists each leg with a link to its market, the picked outcome and a status pill', () => {
+  it('summarises how the picks stand, with one progress segment per pick', () => {
+    renderParlay(
+      parlay({
+        legs: [
+          { marketId: 'm1', marketTitle: 'A?', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'won' },
+          { marketId: 'm2', marketTitle: 'B?', outcomeLabel: 'No', lockedOddsBp: 40_000, status: 'pending' },
+          { marketId: 'm3', marketTitle: 'C?', outcomeLabel: 'No', lockedOddsBp: 40_000, status: 'pending' },
+        ],
+      }),
+    )
+    const progress = screen.getByRole('img', { name: '1 won · 2 open' })
+    expect(progress.children).toHaveLength(3)
+    expect(screen.getByText('1 won · 2 open')).toBeInTheDocument()
+  })
+
+  it('lists the picks as plain text with the picked outcome and a status pill, so the whole card is one link', () => {
     renderParlay(
       parlay({
         status: 'lost',
@@ -82,21 +102,32 @@ describe('PlacedParlay', () => {
           { marketId: 'm1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'won' },
           { marketId: 'm2', marketTitle: 'Who wins trivia night?', outcomeLabel: 'Grace', lockedOddsBp: 40_000, status: 'lost' },
           { marketId: 'm3', marketTitle: 'Will the choir sing?', outcomeLabel: 'No', lockedOddsBp: 20_000, status: 'voided' },
-          { marketId: 'm4', marketTitle: 'Will the bake sale top $500?', outcomeLabel: 'Yes', lockedOddsBp: 20_000, status: 'pending' },
         ],
       }),
     )
-    expect(screen.getByRole('link', { name: 'Will it rain?' })).toHaveAttribute('href', '/markets/m1')
-    expect(screen.getByRole('link', { name: 'Who wins trivia night?' })).toHaveAttribute('href', '/markets/m2')
+    expect(screen.getAllByRole('link')).toHaveLength(1)
+    expect(screen.getByText(/Will it rain\?/)).toBeInTheDocument()
     expect(screen.getByText('Grace').tagName).toBe('STRONG')
     expect(screen.getByText('Won')).toHaveClass('bg-acc-soft', 'text-acc-text', 'h-6', 'rounded-full')
-    expect(screen.getAllByText('Lost').at(-1)).toHaveClass('bg-loss-soft', 'text-loss', 'h-6')
     expect(screen.getByText('Voided')).toHaveClass('bg-sunk', 'text-ink2')
-    expect(screen.getByText('Open')).toHaveClass('bg-gold-soft', 'text-gold')
   })
 
-  it('gives each leg link a 44px tap target', () => {
+  it('previews three picks and says how many more the breakdown holds', () => {
+    const legs = Array.from({ length: 5 }, (_, i) => ({
+      marketId: `m${i}`,
+      marketTitle: `Market ${i}?`,
+      outcomeLabel: 'Yes',
+      lockedOddsBp: 20_000,
+      status: 'pending' as const,
+    }))
+    renderParlay(parlay({ legs }))
+    expect(screen.getByText(/Market 2\?/)).toBeInTheDocument()
+    expect(screen.queryByText(/Market 3\?/)).toBeNull()
+    expect(screen.getByText('+2 more picks · View breakdown')).toBeInTheDocument()
+  })
+
+  it('stretches its one link over the card so the whole card is the tap target', () => {
     renderParlay(parlay({}))
-    for (const link of screen.getAllByRole('link')) expect(link).toHaveClass('hit-area')
+    expect(screen.getByRole('link')).toHaveClass('after:absolute', 'after:inset-0')
   })
 })

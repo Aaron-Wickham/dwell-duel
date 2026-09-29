@@ -12,11 +12,13 @@ function pngSize(file: string): [number, number] {
 }
 
 describe('favicon', () => {
-  it('is a small SVG on a teal tile, with no embedded metadata', () => {
+  it('is a small tile-less SVG whose D turns white in dark mode, with no embedded metadata', () => {
     const svg = readFileSync(path.join(PUBLIC, 'favicon.svg'), 'utf8')
     expect(statSync(path.join(PUBLIC, 'favicon.svg')).size).toBeLessThan(2048)
     expect(svg).not.toMatch(/metadata|c2pa/i)
-    expect(svg).toMatch(/<rect[^>]*rx="7"[^>]*fill="#03272D"/)
+    expect(svg).not.toMatch(/<rect/)
+    expect(svg).toMatch(/\.d\{fill:#03272D\}@media \(prefers-color-scheme:dark\)\{\.d\{fill:#FFFFFF\}\}/)
+    expect(svg).toMatch(/fill="#72DB2B"/)
   })
 
   it('has 16, 32 and 48 pixel PNG fallbacks, all declared', () => {

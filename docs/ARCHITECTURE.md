@@ -340,10 +340,12 @@ after it ships. They roughly follow the project's history:
 | 0057 | Push notifications: `push_subscriptions`, `notification_prefs`, `push_log`, `save_push_subscription` and the service-role `push_*` recipient functions |
 | 0059 | Leaderboard extras (#121): `leaderboard_race`, `leaderboard_awards`, `member_records` (security definer, invited members only, aggregates only) |
 
-Merging a migration to `main` runs the **Deploy Production Database**
-workflow, with no approval step. It runs in parallel with Vercel's deploy;
-the push (under a minute) normally finishes before the build does, and
-migrations stay additive so old code survives a slower one.
+Every merge to `main` runs the **Deploy Production** workflow, with no
+approval step: a dry run and the push when the merge touched
+`supabase/migrations/`, then the app deploy through a Vercel deploy hook.
+The app never goes live before its migrations; a failed migration fails the
+run and leaves the old app live. Migrations stay additive anyway, because
+the old app is still serving while they apply.
 
 ## Key flows
 
@@ -495,8 +497,13 @@ leaves out empty lines and hides when every one is empty.
   generated-types drift check, Vitest (the `unit` project in parallel, the
   `db` project serially), a production build and Playwright on every push
   and PR, all against a throwaway local Supabase.
-- **Database deploys** (`.github/workflows/deploy-production-db.yml`): a
-  dry run, then the push, one at a time and with no approval step.
+- **Deploys** (`.github/workflows/deploy-production.yml`): Vercel's Git
+  integration is off for `main` (`vercel.json`'s `git.deploymentEnabled`).
+  Each push to `main` runs the workflow instead, one at a time and with no
+  approval step: when `supabase/migrations/` changed, a dry run and then
+  the push; then a POST to the Vercel deploy hook in the
+  `VERCEL_DEPLOY_HOOK_URL` repository secret. Redeploy by hand with
+  "Run workflow" on it.
 - **Typed queries:** `lib/supabase/database.types.ts` is generated from the
   migrations and never edited; `lib/supabase/database.ts` wraps it
   (`Database`, `DbClient`) and marks the few function arguments that take a

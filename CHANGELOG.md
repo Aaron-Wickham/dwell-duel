@@ -13,19 +13,22 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Parlays open into a breakdown:** each parlay on My bets is one tappable card (stake, multiplier, what it pays, a progress bar of its picks) leading to a new page with every pick's locked odds and result, and how the multiplier adds up (#120).
 
 ### Fixes
-- **The launch animation no longer flickers:** on a cold start the animation's D was briefly centred in a viewport 62pt short, so it showed doubled and jumped before the leaves grew. It is now sized to the full screen from the first frame.
-- **The tab bar and launch animation sit right on iPhone's installed app:** on a page too short to scroll, the app was giving the page a viewport about 62pt short, so the tab bar floated above the bottom, jumped when a page finished loading, and the launch animation left a bar at the bottom and a doubled D. The page is now always at least screen-tall there (#127, #128).
+- **The tab bar and launch animation sit right in iPhone's installed app.** On a page too short to scroll, the app gave the page a viewport about 62pt short, so the tab bar floated above the bottom and jumped when a page finished loading, and the launch animation left a bar at the bottom. The page is now always at least screen-tall there, and the launch overlay is sized to the whole screen from its first frame, which also stops its D flashing doubled and jumping before the leaves grow (#127, #128).
 - **Sub-tabs slide like the main nav:** the active pill on My bets, Leaderboard, Markets and Admin's tabs glides to the new tab, and stays still with reduced motion (#117).
 - **Cancel and Remove sit at the status chip's height** on My bets and market pages, instead of a full-size button beside a small chip (#118).
 - **The top bar's logo and wordmark line up:** the bottom of the symbol's D now meets the wordmark's baseline, on phone and desktop (#119).
 - **New favicon:** a big D with one lime leaf. The SVG turns the D white on dark browser themes; the PNG fallbacks (Safari) put the same mark on a teal tile (#122).
-- **Mobile page can't zoom or scroll sideways:** the viewport is locked and the page is clipped to the screen's width, which stops the top bar and tab bar being pulled off the screen edges in the installed app (#127, #128, #129). Pinch-zoom is gone with it.
+- **Mobile page can't zoom or scroll sideways:** the viewport is locked and the page is clipped to the screen's width (#129). Pinch-zoom is gone with it.
 - **Notifications don't repeat the app's name:** each one's title says what happened ("New market", "You won 26 DC", "Time to resolve", "Task approved"), with the detail underneath (#109).
 - **Market cards' sparklines start at the seeded 50/50,** like the market page's chart, and a seeded market nobody has bet on shows a flat line (#110).
 - **Home's Markets to resolve card appears when a market closes,** without a manual refresh (#111).
 - **"Closes in" rounds to the nearest hour or minute,** so 1h 59m reads "2h", not "1h" (#112).
 
 ### Under the hood
+- **Migrations apply on merge with no approval step,** so keep them additive; the workflow no longer waits on the `production-db` environment (#138).
+- **A GitHub Actions schedule** (`closing-alerts.yml`, every ten minutes, needs the `CRON_SECRET` repository secret) calls `/api/cron/closing-alerts`, because Vercel's Hobby cron runs once a day. The daily cron still sends the same alerts as a backstop (#123).
+- **The coin-history index test no longer fails at random:** it asserts that the keyset bound lands in an index condition, whichever ledger index the planner picks (#139).
+- The rules doc, which the How it works page renders, now covers the markets filter, the parlay breakdown and review alerts.
 - Upgraded Vitest 5 and the CI actions (checkout 7, setup-node 7, cache 6, upload-artifact 7, Supabase setup-cli 3) from Dependabot #92–#97. TypeScript moves to 6.0 (#114) and stays below 7, and ESLint stays on 9, until typescript-eslint and eslint-config-next's plugins support TS 7 and ESLint 10, and @types/node stays on Node 22's line (#98–#100).
 
 ## v0.3.0-beta — 2026-09-28

@@ -5,8 +5,7 @@ on:
     branches: [main]
     paths:
       - 'supabase/migrations/**'
-  # Also run on a branch before merging, so a build that needs a new migration never goes live
-  # ahead of it (AGENTS.md). The production-db environment's approval gates every run.
+  # Also runnable by hand on any branch.
   workflow_dispatch:
 
 permissions:
@@ -18,7 +17,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Shows what would change before anyone approves the push.
+  # A dry run first: a migration that can't apply fails here, before anything is pushed. Migrations
+  # apply on merge with no approval step (Aaron's call, #138); CI has already run every one against
+  # a local database, and a push takes well under the minutes a Vercel build does, so the database
+  # is normally ready before the app that needs it goes live.
   plan:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -39,7 +41,6 @@ jobs:
     needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: production-db
     steps:
       - uses: actions/checkout@v7
 

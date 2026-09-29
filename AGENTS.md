@@ -222,10 +222,12 @@ a line to `CHANGELOG.md` under the next release.
   `avatars` bucket; render them with `avatarUrl()` from
   `lib/profile/avatar.ts` through `<Avatar src>`. Profile edits go through
   `update_my_profile`; members have no direct update on `profiles`.
-- **A build that depends on a new migration needs the migration applied
-  first.** Merging to `main` runs the migration and the deploy in
-  parallel, so run the Deploy Production Database workflow on the branch
-  before merging, or ship the migration in its own PR ahead of the build.
+- **Migrations apply themselves on merge.** Merging to `main` runs the
+  Deploy Production Database workflow with no approval step, in parallel
+  with Vercel's deploy. The push takes well under a build's time, so the
+  database is normally ready first, but keep migrations additive (new
+  tables, columns and functions) so old code survives a slow one, and
+  ship a destructive change in its own PR after the code stops using it.
 
 ## Testing
 

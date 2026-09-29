@@ -1,3 +1,5 @@
+import { seasonName, signedDc } from './season'
+
 export type FeedKind =
   | 'bet_placed'
   | 'parlay_placed'
@@ -6,6 +8,7 @@ export type FeedKind =
   | 'bet_won'
   | 'parlay_won'
   | 'task_completed'
+  | 'season_champion'
 
 export interface FeedEvent {
   id: string
@@ -23,6 +26,8 @@ export interface FeedEvent {
   resolutionNote: string | null
   // For a result: what the market's creator had riding on it (#84).
   creatorStake: string | null
+  // For a champion: the month they won, as YYYY-MM (0051).
+  season: string | null
 }
 
 export type Segment = string | { text: string; href: string }
@@ -51,5 +56,7 @@ export function describeEvent(e: FeedEvent): Segment[] {
       return [actor(e), `'s ${e.legCount}-pick parlay paid ${e.amount} DC`]
     case 'task_completed':
       return [actor(e), ` completed ${e.taskTitle} (+${e.amount} DC)`]
+    case 'season_champion':
+      return [actor(e), ` was ${e.season ? seasonName(e.season) : 'last month'}’s champion with ${signedDc(e.amount ?? 0)}`]
   }
 }

@@ -69,6 +69,11 @@ export const pageSubscriptions = {
       { table: 'markets' },
     ]
   },
+  // coin_transactions isn't published for realtime, but every row in it moves the member's own
+  // balance in the same transaction, so their profile row changes whenever their history does.
+  myCoins(userId: string): LiveSubscription[] {
+    return [{ table: 'profiles', filter: `id=eq.${userId}` }]
+  },
   adminTasks(): LiveSubscription[] {
     return [{ table: 'task_completions' }]
   },

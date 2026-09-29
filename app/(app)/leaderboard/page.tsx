@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation'
-import { Trophy } from 'lucide-react'
+import { CalendarDays, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { getLeaderboardPage } from '@/lib/social/leaderboard'
-import { newestHref, showMoreHref } from '@/lib/pagination/cursor'
+import { getLeaderboardPage, type Board } from '@/lib/social/leaderboard'
+import { currentSeasonName } from '@/lib/social/season'
+import { newestHref, showMoreHref, type SearchParams } from '@/lib/pagination/cursor'
 import { readRankPageParams } from '@/lib/pagination/rank-cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
 import { Page, PageHeader } from '@/components/ui/page'
@@ -13,65 +14,101 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
+import { SubNav } from '@/components/ui/sub-nav'
 import { LeaderboardRow } from '@/components/leaderboard/leaderboard-row'
 
+const PATH = '/leaderboard'
 const ROW_ID_PREFIX = 'member'
 
+const TABS: Record<Board, { label: string; href: string }> = {
+  all: { label: 'Net worth', href: PATH },
+  month: { label: 'This month', href: `${PATH}?tab=month` },
+}
+
+function readBoard(value: SearchParams[string]): Board {
+  return value === 'month' ? 'month' : 'all'
+}
+
+function description(board: Board): string {
+  if (board === 'all') return 'Ranked by net worth: balance plus DC riding on open bets. Ties share a rank.'
+  return `Ranked by net betting profit in ${currentSeasonName()}: winnings and refunds minus stakes. Ties share a rank.`
+}
+
+// Both tabs page on `before`: a tab link carries no cursor, so switching always starts at the top.
 export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) {
   const searchParams = await props.searchParams
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const board = await getLeaderboardPage(supabase, readRankPageParams(searchParams, 'before'))
-  const backToNewestHref = newestHref('/leaderboard', searchParams, 'before')
+  const board = readBoard(searchParams.tab)
+  const page = await getLeaderboardPage(supabase, board, readRankPageParams(searchParams, 'before'))
+  const backToNewestHref = newestHref(PATH, searchParams, 'before')
+
+  let body
+  if (page.windowed && page.rows.length === 0) {
+    body = <NothingOlder href={backToNewestHref} />
+  } else if (board === 'all' && !page.windowed && page.rows.length <= 1) {
+    body = (
+      <EmptyState icon={Trophy} title="No other members yet.">
+        Invite friends to start the competition.
+      </EmptyState>
+    )
+  } else if (board === 'month' && page.rows.length === 0) {
+    body = (
+      <EmptyState icon={CalendarDays} title="No bets this month yet.">
+        Place a bet to get on this month’s board.
+      </EmptyState>
+    )
+  } else {
+    body = (
+      <SectionCard
+        title={<span className="sr-only">{board === 'all' ? 'Net worth rankings' : 'This month’s rankings'}</span>}
+        titleId="leaderboard-rankings"
+        className="max-w-[820px] gap-0 py-1.5 px-2 md:py-1.5 md:px-3"
+      >
+        {page.windowed && (
+          <div className="flex flex-col px-2.5 py-2.5 md:px-3.5">
+            <BackToNewest href={backToNewestHref} />
+          </div>
+        )}
+        <ol className="flex flex-col">
+          {page.rows.map((member) => (
+            <LeaderboardRow
+              key={member.id}
+              rank={member.rank}
+              name={member.displayName}
+              avatarSrc={member.avatarSrc}
+              score={member.score}
+              signed={board === 'month'}
+              isMe={member.id === user.id}
+              href={`/members/${member.id}`}
+              domId={rowDomId(ROW_ID_PREFIX, member.id)}
+            />
+          ))}
+        </ol>
+        {page.next && (
+          <div className="flex flex-col px-2.5 py-2.5 md:px-3.5">
+            <ShowMore
+              href={showMoreHref(PATH, searchParams, 'before', page.next)}
+              fresh={page.next.kind === 'window'}
+              focusId={rowDomId(ROW_ID_PREFIX, page.next.firstId)}
+            />
+          </div>
+        )}
+      </SectionCard>
+    )
+  }
 
   return (
     <Page transition="tab">
-      <PageHeader title="Leaderboard" description="Ranked by balance. Ties share a rank." />
+      <PageHeader title="Leaderboard" description={description(board)} />
       <LiveTables subscriptions={pageSubscriptions.leaderboard()} />
       <ShowMoreFocus />
-      {board.windowed && board.rows.length === 0 ? (
-        <NothingOlder href={backToNewestHref} />
-      ) : !board.windowed && board.rows.length <= 1 ? (
-        <EmptyState icon={Trophy} title="No other members yet.">
-          Invite friends to start the competition.
-        </EmptyState>
-      ) : (
-        <SectionCard
-          title={<span className="sr-only">Rankings</span>}
-          titleId="leaderboard-rankings"
-          className="max-w-[820px] gap-0 py-1.5 px-2 md:py-1.5 md:px-3"
-        >
-          {board.windowed && (
-            <div className="flex flex-col px-2.5 py-2.5 md:px-3.5">
-              <BackToNewest href={backToNewestHref} />
-            </div>
-          )}
-          <ol className="flex flex-col">
-            {board.rows.map((member) => (
-              <LeaderboardRow
-                key={member.id}
-                rank={member.rank}
-                name={member.displayName}
-                avatarSrc={member.avatarSrc}
-                balance={member.balance}
-                isMe={member.id === user.id}
-                href={`/members/${member.id}`}
-                domId={rowDomId(ROW_ID_PREFIX, member.id)}
-              />
-            ))}
-          </ol>
-          {board.next && (
-            <div className="flex flex-col px-2.5 py-2.5 md:px-3.5">
-              <ShowMore
-                href={showMoreHref('/leaderboard', searchParams, 'before', board.next)}
-                fresh={board.next.kind === 'window'}
-                focusId={rowDomId(ROW_ID_PREFIX, board.next.firstId)}
-              />
-            </div>
-          )}
-        </SectionCard>
-      )}
+      <SubNav
+        label="Ranking"
+        items={(Object.keys(TABS) as Board[]).map((b) => ({ href: TABS[b].href, label: TABS[b].label, current: b === board }))}
+      />
+      {body}
     </Page>
   )
 }

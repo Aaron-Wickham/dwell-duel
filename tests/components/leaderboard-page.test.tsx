@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import type { KeysetPage } from '@/lib/pagination/keyset'
-import type { LeaderboardEntry } from '@/lib/social/ranking'
+import type { LeaderboardEntry } from '@/lib/social/leaderboard'
 
 vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
@@ -43,11 +43,11 @@ vi.mock('next/link', () => ({
 import LeaderboardPage from '@/app/(app)/leaderboard/page'
 import { encodeRankCursor } from '@/lib/pagination/rank-cursor'
 
-const member = (n: number, balance: number, rank: number): LeaderboardEntry => ({
+const member = (n: number, score: number, rank: number): LeaderboardEntry => ({
   id: `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
   displayName: `Member ${n}`,
   avatarSrc: null,
-  balance,
+  score,
   rank,
 })
 
@@ -63,9 +63,9 @@ beforeEach(() => {
 
 describe('LeaderboardPage', () => {
   it('reads the range and window cursors from before and before_from', async () => {
-    const bottom = { balance: 10, name: 'Member 9', id: member(9, 10, 9).id }
+    const bottom = { score: 10, name: 'Member 9', id: member(9, 10, 9).id }
     await renderPage({ rows: [member(1, 50, 1), member(2, 40, 2)], next: null, windowed: false }, { before: encodeRankCursor(bottom) })
-    expect(getLeaderboardPage).toHaveBeenCalledWith({}, { top: null, bottom })
+    expect(getLeaderboardPage).toHaveBeenCalledWith({}, 'all', { top: null, bottom })
   })
 
   it('shows Show more under the ranks, keeping the scroll position, and moves focus to the first new member', async () => {
@@ -108,5 +108,46 @@ describe('LeaderboardPage', () => {
     await renderPage({ rows: [member(1, 100, 1)], next: null, windowed: false })
     expect(screen.getByText('No other members yet.')).toBeInTheDocument()
     expect(screen.queryByText('Nothing older here.')).toBeNull()
+  })
+
+  it('ranks by net worth by default, says so, and marks its tab current', async () => {
+    await renderPage({ rows: [member(1, 50, 1), member(2, 40, 2)], next: null, windowed: false })
+    expect(screen.getByText('Ranked by net worth: balance plus DC riding on open bets. Ties share a rank.')).toBeInTheDocument()
+    const tabs = screen.getByRole('navigation', { name: 'Ranking' })
+    expect(within(tabs).getByRole('link', { name: 'Net worth' })).toHaveAttribute('aria-current', 'page')
+    expect(within(tabs).getByRole('link', { name: 'Net worth' })).toHaveAttribute('href', '/leaderboard')
+    expect(within(tabs).getByRole('link', { name: 'This month' })).toHaveAttribute('href', '/leaderboard?tab=month')
+    expect(screen.getByText('50 DC')).toBeInTheDocument()
+  })
+
+  it("reads This month from ?tab=month, with signed profits, and pages with the tab kept", async () => {
+    await renderPage(
+      {
+        rows: [member(1, 140, 1), member(2, -30, 2)],
+        next: { kind: 'extend', cursor: 'NEXT', firstId: member(3, -40, 3).id },
+        windowed: false,
+      },
+      { tab: 'month' },
+    )
+    expect(getLeaderboardPage).toHaveBeenCalledWith({}, 'month', { top: null, bottom: null })
+    expect(screen.getByText(/^Ranked by net betting profit in \w+: winnings and refunds minus stakes\./)).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Ranking' })).getByRole('link', { name: 'This month' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.getByText('+140 DC')).toBeInTheDocument()
+    expect(screen.getByText('−30 DC')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Show more' })).toHaveAttribute('href', '/leaderboard?tab=month&before=NEXT')
+  })
+
+  it('says nobody has bet this month on an empty month board, even with one member', async () => {
+    await renderPage({ rows: [], next: null, windowed: false }, { tab: 'month' })
+    expect(screen.getByText('No bets this month yet.')).toBeInTheDocument()
+    expect(screen.queryByText('No other members yet.')).toBeNull()
+  })
+
+  it('shows a month board of one, since one bettor is still a board', async () => {
+    await renderPage({ rows: [member(1, 12, 1)], next: null, windowed: false }, { tab: 'month' })
+    expect(screen.getByText('+12 DC')).toBeInTheDocument()
   })
 })

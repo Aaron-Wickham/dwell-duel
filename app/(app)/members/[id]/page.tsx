@@ -38,7 +38,7 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
           <div className="flex min-w-0 flex-col gap-1">
             <h1 className={`${h1Class} break-words`}>{member.displayName}</h1>
             <p className="text-[18px] font-extrabold tabular-nums">
-              {member.balance} DC · Rank {member.rank} of {member.memberCount}
+              {member.score} DC net worth · Rank {member.rank} of {member.memberCount}
             </p>
           </div>
         </div>

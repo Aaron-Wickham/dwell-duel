@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
   RANK_ORDER,
-  aheadOfRankFilter,
   decodeRankCursor,
   encodeRankCursor,
   readRankPageParams,
@@ -16,7 +15,7 @@ function encodeBytes(bytes: number[]): string {
 }
 const encodeText = (text: string) => encodeBytes([...new TextEncoder().encode(text)])
 
-type Member = { balance: number; display_name: string; id: string }
+type Member = { score: number; display_name: string; id: string }
 
 // Evaluates a filter the way PostgREST's `or=(…)` does: nested and(…) / or(…) around
 // `col.op."value"` leaves, where a backslash inside the quotes escapes the next character.
@@ -35,7 +34,7 @@ function matches(filter: string, row: Member): boolean {
       i++
       return group[1] === 'and' ? parts.every(Boolean) : parts.some(Boolean)
     }
-    const leaf = /^(balance|display_name|id)\.(lt|lte|gt|gte|eq)\."/.exec(filter.slice(i))
+    const leaf = /^(score|display_name|id)\.(lt|lte|gt|gte|eq)\."/.exec(filter.slice(i))
     if (!leaf) throw new Error(`unparsed filter at ${i}: ${filter.slice(i)}`)
     i += leaf[0].length
     let text = ''
@@ -48,7 +47,7 @@ function matches(filter: string, row: Member): boolean {
     i++
     const column = leaf[1] as keyof Member
     const value = row[column]
-    const other = column === 'balance' ? Number(text) : text
+    const other = column === 'score' ? Number(text) : text
     switch (leaf[2]) {
       case 'lt':
         return value < other
@@ -69,27 +68,28 @@ function matches(filter: string, row: Member): boolean {
 
 const NAMES = ['Ann', 'O"Brien, (Jr.)', 'Back\\slash', 'x"),id.gt.(0', 'Zoë 🎲', 'a,b.c:d', 'Ann']
 
-// 49 members in tiers of balances, so ties span several names, and the last seven repeat the first
-// seven's names, so a tie on balance and name falls back to the id.
+// 49 members in tiers of scores, some negative (a month's profit),, so ties span several names, and the last seven repeat the first
+// seven's names, so a tie on score and name falls back to the id.
 const BOARD: Member[] = Array.from({ length: 49 }, (_, i) => ({
-  balance: [300, 150, 150, 90, 90, 90, 0][i % 7],
+  score: [300, 150, 150, 90, 90, 0, -40][i % 7],
   display_name: NAMES[Math.floor(i / 7) % NAMES.length] + (i % 3 === 0 ? '' : ` ${i % 3}`),
   id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
 })).sort((a, b) =>
-  a.balance !== b.balance ? b.balance - a.balance : a.display_name !== b.display_name ? (a.display_name < b.display_name ? -1 : 1) : a.id < b.id ? -1 : 1,
+  a.score !== b.score ? b.score - a.score : a.display_name !== b.display_name ? (a.display_name < b.display_name ? -1 : 1) : a.id < b.id ? -1 : 1,
 )
 
-const keyOf = (m: Member): RankCursor => ({ balance: m.balance, name: m.display_name, id: m.id })
+const keyOf = (m: Member): RankCursor => ({ score: m.score, name: m.display_name, id: m.id })
 const select = (filter: string | null) => BOARD.filter((m) => filter === null || matches(filter, m))
 
 describe('encodeRankCursor / decodeRankCursor', () => {
   it.each<RankCursor>([
-    { balance: 150, name: 'Alice', id: ID },
-    { balance: 0, name: '', id: ID },
-    { balance: 2_147_483_647, name: 'O"Brien, (Jr.) \\ back', id: ID },
-    { balance: 42, name: 'Zoë 🎲 — ünïcode', id: ID },
-    { balance: 7, name: '🎲'.repeat(80), id: ID },
-  ])('round-trips $balance / $name', (cursor) => {
+    { score: 150, name: 'Alice', id: ID },
+    { score: 0, name: '', id: ID },
+    { score: 2_147_483_648, name: 'O"Brien, (Jr.) \\ back', id: ID },
+    { score: -120, name: 'Down this month', id: ID },
+    { score: 42, name: 'Zoë 🎲 — ünïcode', id: ID },
+    { score: 7, name: '🎲'.repeat(80), id: ID },
+  ])('round-trips $score / $name', (cursor) => {
     const encoded = encodeRankCursor(cursor)
     expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/)
     expect(decodeRankCursor(encoded)).toEqual(cursor)
@@ -100,20 +100,18 @@ describe('encodeRankCursor / decodeRankCursor', () => {
   })
 
   it('decodes a repeated query param (an array) to null', () => {
-    const one = encodeRankCursor({ balance: 1, name: 'A', id: ID })
+    const one = encodeRankCursor({ score: 1, name: 'A', id: ID })
     expect(decodeRankCursor([one, one])).toBeNull()
   })
 
   it.each([
-    ['a JSON object', `{"balance":1,"name":"A","id":"${ID}"}`],
+    ['a JSON object', `{"score":1,"name":"A","id":"${ID}"}`],
     ['two elements', `[1,"A"]`],
     ['four elements', `[1,"A","${ID}","x"]`],
-    ['a string balance', `["1","A","${ID}"]`],
-    ['a negative balance', `[-1,"A","${ID}"]`],
-    ['a fractional balance', `[1.5,"A","${ID}"]`],
-    ['an unsafe integer balance', `[9007199254740993,"A","${ID}"]`],
-    ['a balance just past int4 max', `[2147483648,"A","${ID}"]`],
-    ['a balance just past int4 min', `[-2147483649,"A","${ID}"]`],
+    ['a string score', `["1","A","${ID}"]`],
+    ['a fractional score', `[1.5,"A","${ID}"]`],
+    ['an unsafe integer score', `[9007199254740993,"A","${ID}"]`],
+    ['an unsafe negative score', `[-9007199254740993,"A","${ID}"]`],
     ['a numeric name', `[1,7,"${ID}"]`],
     ['a name past 80 characters', `[1,"${'a'.repeat(81)}","${ID}"]`],
     ['an id that is not a uuid', `[1,"A","42"]`],
@@ -130,8 +128,8 @@ describe('encodeRankCursor / decodeRankCursor', () => {
 
 describe('readRankPageParams', () => {
   it('reads the range end from the param and the window start from param_from', () => {
-    const top: RankCursor = { balance: 90, name: 'Top', id: ID }
-    const bottom: RankCursor = { balance: 10, name: 'Bottom', id: ID }
+    const top: RankCursor = { score: 90, name: 'Top', id: ID }
+    const bottom: RankCursor = { score: 10, name: 'Bottom', id: ID }
     expect(
       readRankPageParams({ before: encodeRankCursor(bottom), before_from: encodeRankCursor(top) }, 'before'),
     ).toEqual({ top, bottom })
@@ -141,26 +139,20 @@ describe('readRankPageParams', () => {
 
 describe('RANK_ORDER filters', () => {
   it('builds the strictly-after filter in the board order, with every value quoted', () => {
-    expect(RANK_ORDER.after({ balance: 90, name: 'Bob', id: ID })).toBe(
-      `or(balance.lt."90",and(balance.eq."90",or(display_name.gt."Bob",and(display_name.eq."Bob",id.gt."${ID}"))))`,
+    expect(RANK_ORDER.after({ score: 90, name: 'Bob', id: ID })).toBe(
+      `or(score.lt."90",and(score.eq."90",or(display_name.gt."Bob",and(display_name.eq."Bob",id.gt."${ID}"))))`,
     )
   })
 
   it('escapes quotes and backslashes in a name, so it stays a literal', () => {
-    const filter = RANK_ORDER.after({ balance: 1, name: 'x"),id.gt.(0\\', id: ID })
+    const filter = RANK_ORDER.after({ score: 1, name: 'x"),id.gt.(0\\', id: ID })
     expect(filter).toContain('display_name.gt."x\\"),id.gt.(0\\\\"')
-    expect(select(filter)).toEqual(BOARD.filter((m) => m.balance < 1 || (m.balance === 1 && m.display_name > 'x"),id.gt.(0\\')))
+    expect(select(filter)).toEqual(BOARD.filter((m) => m.score < 1 || (m.score === 1 && m.display_name > 'x"),id.gt.(0\\')))
   })
 
   it('selects exactly the members after each member on the board', () => {
     BOARD.forEach((member, index) => {
       expect(select(RANK_ORDER.after(keyOf(member)))).toEqual(BOARD.slice(index + 1))
-    })
-  })
-
-  it('selects exactly the members ahead of each member on the board', () => {
-    BOARD.forEach((member, index) => {
-      expect(select(aheadOfRankFilter(keyOf(member)))).toEqual(BOARD.slice(0, index))
     })
   })
 

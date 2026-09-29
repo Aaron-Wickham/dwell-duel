@@ -17,7 +17,8 @@ This page explains the rules.
   Sign in with that Google account; any other account lands on a "not
   invited" page.
 - **Everyone starts with 100 DC.** Every coin you gain or spend is a line
-  in the ledger, so a balance can always be explained.
+  in the ledger, so a balance can always be explained. Your own lines are
+  under My bets → Coins.
 
 ## Markets
 
@@ -120,6 +121,12 @@ stake × the multiplier, rounded down.
 Open, Settled and Cancelled. Only you can see it. Everyone can see who
 bet what on each market, and bets and parlays also appear in the feed.
 
+Its **Coins** tab is your coin history: every DC that came in or went
+out, newest first, in plain words ("Won 26 DC on Will it rain?", "Task
+reward: Read Ruth", "Refund: market voided"). It includes the reason for
+any balance adjustment the owner made. Only you (and admins, through the
+full ledger) can see it.
+
 ## Results
 
 - **Who resolves:** once a market has closed, its creator or any
@@ -157,6 +164,27 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   submission, and a task can reward at most 500 DC.
 - Your Home screen shows DC that's **Pending** review.
 
+## The leaderboard
+
+- **Net worth** (the main board) ranks everyone by **balance plus the DC
+  riding on open bets**: solo bets on markets that haven't resolved yet
+  and parlays still pending. Placing a bet doesn't move you down; losing
+  it does. Home and your profile show your rank on this board.
+- **This month** ranks **net betting profit** for the calendar month, on
+  Eastern time (America/New_York): winnings, refunds and cancelled-bet
+  refunds, minus stakes, and minus any winnings an override took back.
+  Starting grants, task rewards and balance adjustments don't count, so
+  everyone starts each month level. Money counts **when it moves**: a
+  stake placed this month on a market that resolves next month is a loss
+  this month, and its winnings count next month. Only members who've bet
+  or been paid this month appear.
+- **Ties share a rank** on both boards ("1, 1, 3").
+- **Monthly champion:** when a month ends, whoever finished it with the
+  top profit is posted to the feed ("Alice was October's champion with
+  +140 DC"). If two finish level, it goes to whoever reached that total
+  first. A month where nobody bet, or nobody came out ahead, has no
+  champion.
+
 ## Roles
 
 | Role | Can also… |
@@ -172,10 +200,11 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   links to everything else. New members also get a **Getting started**
   card: add your photo, place your first bet and try a task. It goes away
   once you've done all three, or when you dismiss it.
-- **Feed:** everyone's bets, parlays, new markets, results, wins and
-  approved tasks, updated live.
-- **Leaderboard and profiles:** ranks by balance. Tap your avatar (top
-  right) for your profile, where Edit profile and Settings live.
+- **Feed:** everyone's bets, parlays, new markets, results, wins,
+  approved tasks and each month's champion, updated live.
+- **Leaderboard and profiles:** see [The leaderboard](#the-leaderboard).
+  Tap your avatar (top right) for your profile, where Edit profile and
+  Settings live.
 - **Settings:** theme (System, Light or Dark), vibration on taps (Android),
   reduced animations, this How it works page, and sign out.
 - **Install it:** add DwellDuel to your Home Screen for a full-screen app

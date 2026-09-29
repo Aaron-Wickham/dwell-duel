@@ -3,6 +3,7 @@ import type { FeedEvent, FeedKind } from './describe-event'
 import { readKeyset, type KeysetPage } from '@/lib/pagination/keyset'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { describeCreatorStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
+import { seasonOfEventId } from './season'
 
 interface FeedRow {
   id: string
@@ -50,6 +51,7 @@ function toFeedEvent(r: FeedRow): FeedEvent {
     taskTitle: r.task_completion?.task?.title ?? null,
     resolutionNote: r.resolution?.note ?? null,
     creatorStake: null,
+    season: r.kind === 'season_champion' ? seasonOfEventId(r.id) : null,
   }
 }
 

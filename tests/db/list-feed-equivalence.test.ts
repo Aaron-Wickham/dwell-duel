@@ -59,6 +59,7 @@ function legacyToFeedEvent(r: LegacyFeedRow): FeedEvent {
     taskTitle: r.task_title,
     resolutionNote: null,
     creatorStake: null,
+    season: null,
   }
 }
 

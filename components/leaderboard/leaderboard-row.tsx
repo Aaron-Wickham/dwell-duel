@@ -1,13 +1,15 @@
 import Link from 'next/link'
 import { Avatar } from '@/components/ui/avatar'
 import { focusTarget } from '@/lib/pagination/row-id'
+import { signedDc } from '@/lib/social/season'
 import { cn } from '@/lib/utils'
 
 export function LeaderboardRow({
   rank,
   name,
   avatarSrc = null,
-  balance,
+  score,
+  signed = false,
   isMe,
   href,
   domId,
@@ -15,7 +17,9 @@ export function LeaderboardRow({
   rank: number
   name: string
   avatarSrc?: string | null
-  balance: number
+  score: number
+  // A month's profit shows its sign; net worth never goes below zero.
+  signed?: boolean
   isMe: boolean
   href: string
   domId?: string
@@ -41,7 +45,7 @@ export function LeaderboardRow({
         </Link>
         {isMe && <span className="font-semibold text-ink2"> (you)</span>}
       </span>
-      <span className="shrink-0 whitespace-nowrap text-[17px] font-extrabold tabular-nums">{balance} DC</span>
+      <span className="shrink-0 whitespace-nowrap text-[17px] font-extrabold tabular-nums">{signed ? signedDc(score) : `${score} DC`}</span>
     </li>
   )
 }

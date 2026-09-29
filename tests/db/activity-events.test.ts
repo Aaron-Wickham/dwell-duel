@@ -81,6 +81,11 @@ interface Mismatch {
 // activity_feed: id, kind, occurred_at, actor_id and amount as the spec names them, plus the
 // market, outcome label, leg count and task title, which prove the stored related ids are right.
 // Both directions, so a missing row and an extra one both show up. Empty means equal.
+//
+// season_champion (0051) is left out: settle_season writes it on demand, from a finished month's
+// ledger, not a trigger from a source row, so the view has nothing to derive it from. The
+// scenario still settles a season, so the comparison proves the champion's row changes nothing
+// else, and tests/db/net-worth-and-seasons.test.ts covers the row itself.
 const MISMATCHES = `
   with stored as (
     select e.id, e.kind, e.occurred_at, e.actor_id, e.amount, e.market_id, o.label as outcome_label,
@@ -90,7 +95,7 @@ const MISMATCHES = `
     left join public.market_outcomes o on o.id = e.outcome_id
     left join public.task_completions c on c.id = e.task_completion_id
     left join public.tasks t on t.id = c.task_id
-    where e.hidden_at is null
+    where e.hidden_at is null and e.kind <> 'season_champion'
   ),
   derived as (
     select id, kind, occurred_at, actor_id, amount, market_id, outcome_label, leg_count, task_title
@@ -198,6 +203,13 @@ async function fullScenario(): Promise<void> {
   if (reviewErr) throw reviewErr
   expect(reviewRows).toEqual([{ id: completionId2, ok: true, error: null }])
   expect(await mismatches()).toEqual([])
+
+  // A finished month's champion, from ledger rows dated in June (only the ledger, not balances).
+  await pgQuery(`insert into public.coin_transactions (profile_id, amount, type, created_at) values ('${carol.id}', 18, 'bet_won', '2026-06-12T12:00:00Z')`)
+  const { data: champion, error: settleErr } = await serviceClient().rpc('settle_season', { p_month: '2026-06-01' })
+  if (settleErr) throw settleErr
+  expect(champion).toBe(carol.id)
+  expect(await mismatches()).toEqual([])
 }
 
 describe('activity_events', () => {
@@ -216,6 +228,7 @@ describe('activity_events', () => {
       { kind: 'market_resolved', visible: 1, hidden: 1 },
       { kind: 'parlay_placed', visible: 2, hidden: 0 },
       { kind: 'parlay_won', visible: 1, hidden: 1 },
+      { kind: 'season_champion', visible: 1, hidden: 0 },
       { kind: 'task_completed', visible: 2, hidden: 0 },
     ])
     expect(await feedCount()).toBe(15)
@@ -225,7 +238,8 @@ describe('activity_events', () => {
     await fullScenario()
 
     // The migration's own backfill statement, run into a scratch copy of the table, so the real
-    // rows stay as the triggers left them. Every column is compared, related ids included.
+    // rows stay as the triggers left them. Every column is compared, related ids included. The
+    // champion isn't a row the view ever had, so it isn't one the backfill makes.
     const migration = readFileSync(path.resolve('supabase/migrations/0035_activity_events.sql'), 'utf8')
     const backfill = migration.match(/^insert into public\.activity_events [^;]*?from public\.activity_feed[^;]*;/m)?.[0]
     expect(backfill).toBeDefined()
@@ -235,9 +249,9 @@ describe('activity_events', () => {
       ${backfill!.replace('insert into public.activity_events', 'insert into pg_temp.backfill')}
       select
         (select count(*)::integer from (
-          (select ${columns} from pg_temp.backfill except select ${columns} from public.activity_events where hidden_at is null)
+          (select ${columns} from pg_temp.backfill except select ${columns} from public.activity_events where hidden_at is null and kind <> 'season_champion')
           union all
-          (select ${columns} from public.activity_events where hidden_at is null except select ${columns} from pg_temp.backfill)
+          (select ${columns} from public.activity_events where hidden_at is null and kind <> 'season_champion' except select ${columns} from pg_temp.backfill)
         ) d) as differing,
         (select count(*)::integer from pg_temp.backfill) as backfilled
     `)

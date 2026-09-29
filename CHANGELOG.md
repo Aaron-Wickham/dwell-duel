@@ -68,6 +68,13 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ### Admin
 - Invites offer "Copy invite message", with the sign-in link and the Google account to use, and Admin → Members shows when each member joined and last signed in (#85).
 
+### Coins
+- Your own coin history: a new Coins tab on My bets lists every DC you've gained or spent, newest first, in plain words: winnings, stakes, refunds, task rewards and the owner's adjustment reasons (#76).
+- The owner's Economy card on Admin → Ledger shows the DC in circulation (balances, open bets, pending parlays) and this month's DC added and removed by source, and checks that the ledger reconciles (#86).
+
+### Leaderboard
+- The leaderboard ranks by net worth (balance plus DC riding on open bets) everywhere, adds a "This month" tab ranked by net betting profit on Eastern time, and posts each month's champion to the feed (#77).
+
 ### Tests
 - **Closed test gaps** (#72): end-to-end tests for role gates (a member is kept out of Admin and sees no admin controls; a reviewer lands on the approval queue), cancelling a bet, overriding a resolution, rejecting a submission with a reason and editing your profile; unit tests for saving a profile and submitting a task; and database tests for money moving at the same time: a bet racing a resolve, two resolves at once, a void racing a resolve and two slips that together overdraw a balance.
 

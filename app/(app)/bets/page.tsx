@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
-import { Ban, CircleDot, History } from 'lucide-react'
+import { Ban, CircleDot, Coins, History } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { listMyCancelledBets } from '@/lib/bets/list-my-bets'
 import { listMyWagers } from '@/lib/bets/list-my-wagers'
+import { listMyTransactions } from '@/lib/ledger/my-transactions'
 import { newestHref, readPageParams, showMoreHref, type SearchParams } from '@/lib/pagination/cursor'
 import type { KeysetPage } from '@/lib/pagination/keyset'
 import { rowDomId } from '@/lib/pagination/row-id'
@@ -18,10 +19,11 @@ import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { SubNav } from '@/components/ui/sub-nav'
 import { CancelledBetRows, WagerRows } from './bet-rows'
+import { CoinRows } from './coin-rows'
 
 const PATH = '/bets'
 
-type Tab = 'open' | 'settled' | 'cancelled'
+type Tab = 'open' | 'settled' | 'cancelled' | 'coins'
 
 const TABS: Record<Tab, { label: string; empty: { icon: LucideIcon; title: string; body: string } }> = {
   open: {
@@ -40,10 +42,18 @@ const TABS: Record<Tab, { label: string; empty: { icon: LucideIcon; title: strin
     label: 'Cancelled',
     empty: { icon: Ban, title: 'No cancelled bets.', body: 'Bets you cancel before a market closes show up here.' },
   },
+  coins: {
+    label: 'Coins',
+    empty: {
+      icon: Coins,
+      title: 'No coin movements yet.',
+      body: 'Every coin you gain or spend shows up here: bets, winnings, refunds and task rewards.',
+    },
+  },
 }
 
 function readTab(value: SearchParams[string]): Tab {
-  return value === 'settled' || value === 'cancelled' ? value : 'open'
+  return value === 'settled' || value === 'cancelled' || value === 'coins' ? value : 'open'
 }
 
 function TabSection<Row>({
@@ -103,7 +113,14 @@ export default async function MyBetsPage(props: PageProps<'/bets'>) {
   const pageParams = readPageParams(searchParams, tab)
 
   let section: ReactNode
-  if (tab === 'cancelled') {
+  if (tab === 'coins') {
+    const page = await listMyTransactions(supabase, user.id, pageParams)
+    section = (
+      <TabSection tab={tab} page={page} searchParams={searchParams}>
+        <CoinRows entries={page.rows} rowIdPrefix={tab} />
+      </TabSection>
+    )
+  } else if (tab === 'cancelled') {
     const page = await listMyCancelledBets(supabase, user.id, pageParams)
     section = (
       <TabSection tab={tab} page={page} searchParams={searchParams}>
@@ -121,11 +138,14 @@ export default async function MyBetsPage(props: PageProps<'/bets'>) {
 
   return (
     <Page transition="tab">
-      <PageHeader title="My bets" description="Your solo bets and parlays. Only you can see this page." />
-      <LiveTables subscriptions={pageSubscriptions.myBets(user.id)} />
+      <PageHeader
+        title="My bets"
+        description="Your solo bets, parlays and coin history. Only you can see this page."
+      />
+      <LiveTables subscriptions={tab === 'coins' ? pageSubscriptions.myCoins(user.id) : pageSubscriptions.myBets(user.id)} />
       <ShowMoreFocus />
       <SubNav
-        label="Bet status"
+        label="My bets sections"
         items={(Object.keys(TABS) as Tab[]).map((t) => ({
           href: t === 'open' ? PATH : `${PATH}?tab=${t}`,
           label: TABS[t].label,

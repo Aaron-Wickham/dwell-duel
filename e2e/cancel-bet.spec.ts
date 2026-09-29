@@ -46,7 +46,7 @@ test('cancel an open bet from My bets: it is refunded and leaves the market', as
   await expect(row).toHaveCount(0)
   await expect(navBalance(page)).toHaveAccessibleName(`Balance ${before} DC, view my bets`)
 
-  await page.getByRole('navigation', { name: 'Bet status' }).getByRole('link', { name: 'Cancelled' }).click()
+  await page.getByRole('navigation', { name: 'My bets sections' }).getByRole('link', { name: 'Cancelled' }).click()
   await expect(page).toHaveURL(/\/bets\?tab=cancelled$/)
   const cancelled = page.getByRole('listitem', { name: title })
   await expect(cancelled.getByText(/5 DC on Yes · Cancelled/)).toBeVisible()

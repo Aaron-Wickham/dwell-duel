@@ -79,6 +79,20 @@ export interface Lookups {
   tasks: Map<string, string>
 }
 
+// The titles and labels a page of ledger rows names, one chunked lookup per table. Shared by the
+// admin ledger and a member's own coin history, which word their rows differently.
+export async function fetchLookups(supabase: DbClient, metas: EntryMeta[]): Promise<Lookups> {
+  const ids = (key: 'market_id' | 'outcome_id' | 'task_id') => [
+    ...new Set(metas.map((m) => m[key]).filter((v): v is string => Boolean(v))),
+  ]
+  const [markets, outcomes, tasks] = await Promise.all([
+    fetchMarketTitles(supabase, ids('market_id')),
+    fetchOutcomeLabels(supabase, ids('outcome_id')),
+    fetchTaskTitles(supabase, ids('task_id')),
+  ])
+  return { markets, outcomes, tasks }
+}
+
 // Every other type's context is its label, plus ": {market title}" when the row has a
 // market_id (e.g. a voided-market refund) -- the specific movements below read differently
 // enough (different wording, or no market involved at all) that they need their own copy.
@@ -154,17 +168,7 @@ export async function listAllTransactions(supabase: DbClient, page: PageParams):
 
   const rows = result.rows
   const metas = rows.map((t) => t.meta ?? {})
-
-  const marketIds = [...new Set(metas.map((m) => m.market_id).filter((v): v is string => Boolean(v)))]
-  const outcomeIds = [...new Set(metas.map((m) => m.outcome_id).filter((v): v is string => Boolean(v)))]
-  const taskIds = [...new Set(metas.map((m) => m.task_id).filter((v): v is string => Boolean(v)))]
-
-  const [markets, outcomes, tasks] = await Promise.all([
-    fetchMarketTitles(supabase, marketIds),
-    fetchOutcomeLabels(supabase, outcomeIds),
-    fetchTaskTitles(supabase, taskIds),
-  ])
-  const lookups: Lookups = { markets, outcomes, tasks }
+  const lookups = await fetchLookups(supabase, metas)
 
   return {
     ...result,

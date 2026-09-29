@@ -281,6 +281,19 @@ describe('0048 indexes (#67)', () => {
     expect(seqScanned(nodes)).toEqual([])
   })
 
+  it("seeks a member's own coin history page by profile and the keyset bound (#76)", async () => {
+    // The shape listMyTransactions sends for a "Show more" range: its profile filter plus
+    // readKeyset's plain created_at bound, which must both land in the Index Cond.
+    const ts = oldestLedgerRow.created_at
+    const nodes = await planNodes(
+      `select id, amount, type, meta, created_at from public.coin_transactions where profile_id = '${bob.id}' and created_at >= '${ts}' and (created_at > '${ts}' or (created_at = '${ts}' and id >= ${oldestLedgerRow.id})) order by created_at desc, id desc limit 500`,
+    )
+    const scan = nodes.find((n) => n['Index Name'] === 'coin_transactions_profile_created_idx')
+    expect(scan?.['Index Cond']).toMatch(/profile_id/)
+    expect(scan?.['Index Cond']).toMatch(/created_at/)
+    expect(seqScanned(nodes)).toEqual([])
+  })
+
   it('indexes the foreign keys that had none', async () => {
     const rows = await pgQuery<{ indexname: string }>(
       `select indexname from pg_indexes where schemaname = 'public' and indexname in ('parlay_legs_outcome_id_idx', 'markets_created_by_idx', 'market_resolutions_outcome_id_idx', 'idempotency_keys_profile_id_idx')`,

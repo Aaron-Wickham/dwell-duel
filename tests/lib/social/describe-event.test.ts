@@ -15,6 +15,7 @@ const base: FeedEvent = {
   taskTitle: null,
   resolutionNote: null,
   creatorStake: null,
+  season: null,
 }
 const sarah = { text: 'Sarah', href: '/members/u1' }
 const market = { text: 'Will it rain?', href: '/markets/m1' }
@@ -54,5 +55,12 @@ describe('describeEvent', () => {
     expect(
       describeEvent({ ...base, kind: 'task_completed', marketId: null, marketTitle: null, outcomeLabel: null, amount: 10, taskTitle: 'Read Genesis 1-3' }),
     ).toEqual([sarah, ' completed Read Genesis 1-3 (+10 DC)'])
+  })
+
+  it("describes a month's champion, with the month and the signed profit", () => {
+    const champion = { ...base, id: 'season:2025-10', kind: 'season_champion' as const, marketId: null, marketTitle: null, outcomeLabel: null, amount: 140, season: '2025-10' }
+    const segments = describeEvent(champion)
+    expect(segments[0]).toEqual(sarah)
+    expect(segments[1]).toMatch(/^ was October( 2025)?’s champion with \+140 DC$/)
   })
 })

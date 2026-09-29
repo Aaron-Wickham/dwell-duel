@@ -267,7 +267,9 @@ a line to `CHANGELOG.md` under the next release.
   (builds and starts its own production server on port 3000 — kill any
   server already listening there first).
 - `npm run db:reset` before running tests that hit local Supabase. DB
-  tests (`tests/db/`) refuse to run against anything but localhost.
+  tests (`tests/db/`) refuse to run against anything but localhost. If
+  storage uploads then fail with `42P10` (the local Storage service holds
+  stale state after a reset), run `npx supabase stop && npx supabase start`.
 
 ## Migrations
 

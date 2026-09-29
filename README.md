@@ -187,6 +187,11 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
   session from the public publishable key without going through the invite gate.
 - Add the app's redirect URLs (`http://localhost:3000/callback`, and the
   production one) to Supabase → Auth → URL Configuration.
+- **Closing alerts' timer** (0064): in the SQL editor, store the app's origin
+  and the same `CRON_SECRET` Vercel has in Vault, so `pg_cron` can call
+  `/api/cron/closing-alerts` within a minute of a market closing:
+  `select vault.create_secret('https://www.dwellduel.com', 'app_url');` and
+  `select vault.create_secret('<CRON_SECRET>', 'cron_secret');`.
 - **Before your first sign-in,** invite yourself in the SQL editor:
   `insert into public.allowed_emails (email) values ('you@gmail.com');`
 - **After it,** make yourself the owner, keyed off the verified

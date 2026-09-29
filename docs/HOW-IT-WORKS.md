@@ -275,7 +275,7 @@ hear about, and your choices apply on every device:
 
 | Notification | When | Starts |
 |---|---|---|
-| **Markets to resolve** | A market you made has closed and is waiting for you to resolve it. Admins and the owner also hear about every closed market that has no result, once each. Sent within about ten minutes of closing, with a daily backup if that's missed | On |
+| **Markets to resolve** | A market you made has closed and is waiting for you to resolve it. Admins and the owner also hear about every closed market that has no result, once each. Sent within about a minute of closing, with a daily backup if that's missed | On |
 | **Results** | A market you bet on, solo or as a parlay leg, is resolved ("You won 26 DC", then the market and its result), changed by an override or voided | On |
 | **Task reviews** | Your task submission is approved or rejected, with the reviewer's reason | On |
 | **Tasks to review** (reviewers and above only) | A member submits a task waiting for review. Never your own | On |

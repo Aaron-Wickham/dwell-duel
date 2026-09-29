@@ -6,6 +6,12 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Fixes
+- **Closing alerts arrive within a minute.** GitHub was dropping most runs of the ten-minute schedule (the Admin warning from #149 caught it), so the timer now lives in Supabase: every minute `pg_cron` checks for a market that has just closed and, if there is one, calls the app through `pg_net` with the address and secret from Vault; it also calls at least every ten minutes to keep the heartbeat honest. The GitHub schedule stays as a backup, and the Admin warning names both (#189).
+
+### Under the hood
+- Local testing: after `npm run db:reset`, file uploads in the DB tests can fail with `42P10` until the local stack is restarted (`npx supabase stop && npx supabase start`); AGENTS.md says so.
+
 ## v0.4.0-beta — 2026-09-29
 
 Everything from the September 29 rounds: #109–#183, with nothing left open. Desktop layouts that use the whole width, one motion language on phone and desktop (sliding tab bar, hover lifts, press feedback), one set of words for a market's state, a leaderboard race that reads with real data, review alerts, a markets filter, parlay breakdowns, and deploys that wait for their migrations.

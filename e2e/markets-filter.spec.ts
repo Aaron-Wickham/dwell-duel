@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
 
-test('the filters split markets into open, pending resolution and closed, and the choice lives in the URL', async ({ page }) => {
+test('the filters split markets into open, awaiting and resolved, and the choice lives in the URL', async ({ page }) => {
   const title = `Filter check ${Date.now()}`
   const close = new Date(Date.now() + 2 * 60 * 60 * 1000)
   close.setSeconds(0, 0)
@@ -21,15 +21,25 @@ test('the filters split markets into open, pending resolution and closed, and th
   await expect(filters.getByRole('link', { name: 'Open' })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('link', { name: title })).toBeVisible()
 
-  await filters.getByRole('link', { name: 'Pending' }).click()
-  await expect(page).toHaveURL(/status=pending$/)
-  await expect(filters.getByRole('link', { name: 'Pending' })).toHaveAttribute('aria-current', 'page')
+  await filters.getByRole('link', { name: 'Awaiting' }).click()
+  await expect(page).toHaveURL(/status=awaiting$/)
+  await expect(filters.getByRole('link', { name: 'Awaiting' })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('link', { name: title })).toHaveCount(0)
 
-  await filters.getByRole('link', { name: 'Closed' }).click()
-  await expect(page).toHaveURL(/status=closed$/)
+  await filters.getByRole('link', { name: 'Resolved' }).click()
+  await expect(page).toHaveURL(/status=resolved$/)
   await expect(page.getByRole('link', { name: title })).toHaveCount(0)
 
   await page.reload()
-  await expect(filters.getByRole('link', { name: 'Closed' })).toHaveAttribute('aria-current', 'page')
+  await expect(filters.getByRole('link', { name: 'Resolved' })).toHaveAttribute('aria-current', 'page')
+})
+
+test('links to the old Pending and Closed tabs land on Awaiting and Resolved', async ({ page }) => {
+  const filters = page.getByRole('navigation', { name: 'Filter markets' })
+
+  await page.goto('/markets?status=pending')
+  await expect(filters.getByRole('link', { name: 'Awaiting' })).toHaveAttribute('aria-current', 'page')
+
+  await page.goto('/markets?status=closed')
+  await expect(filters.getByRole('link', { name: 'Resolved' })).toHaveAttribute('aria-current', 'page')
 })

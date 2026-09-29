@@ -89,7 +89,7 @@ export default async function ParlayPage(props: PageProps<'/parlays/[id]'>) {
                 <p className="text-sm text-ink2">
                   {note ?? (
                     <>
-                      Closes <LocalTime iso={leg.closeAt} format="dateTime" />
+                      {leg.status === 'awaiting' ? 'Closed' : 'Closes'} <LocalTime iso={leg.closeAt} format="dateTime" />
                     </>
                   )}
                 </p>

@@ -30,6 +30,8 @@ const row = (legs: unknown[], over: Record<string, unknown> = {}) =>
     typeof toParlayDetail
   >[0]
 
+const BEFORE_CLOSE = Date.parse('2026-09-29T12:00:00Z')
+
 describe('toParlayDetail', () => {
   it('multiplies the locked odds and reads each leg’s state from its market', () => {
     const detail = toParlayDetail(
@@ -38,17 +40,18 @@ describe('toParlayDetail', () => {
         leg({ locked_odds: 2 }, { id: 'm-2', title: 'Other?' }),
       ]),
       'Grace',
+      BEFORE_CLOSE,
     )
     expect(detail.ownerName).toBe('Grace')
     expect(detail.multiplierBp).toBe(42_000)
     expect(detail.potentialPayout).toBe(21)
-    expect(detail.legs.map((l) => l.status)).toEqual(['won', 'pending'])
+    expect(detail.legs.map((l) => l.status)).toEqual(['won', 'open'])
     expect(detail.legs[0]).toMatchObject({ winningLabel: 'Yes', resolvedAt: '2026-09-29T10:00:00Z', marketStatus: 'resolved' })
     expect(detail.legs[1]).toMatchObject({ winningLabel: null, closeAt: '2026-10-01T12:00:00Z' })
   })
 
   it('leaves a voided leg out of the multiplier, as settle_parlay does', () => {
-    const detail = toParlayDetail(row([leg({}, { status: 'voided' }), leg({ locked_odds: 2 }, { id: 'm-2' })]), 'Grace')
+    const detail = toParlayDetail(row([leg({}, { status: 'voided' }), leg({ locked_odds: 2 }, { id: 'm-2' })]), 'Grace', BEFORE_CLOSE)
     expect(detail.legs[0].status).toBe('voided')
     expect(detail.multiplierBp).toBe(20_000)
     expect(detail.potentialPayout).toBe(10)
@@ -58,8 +61,14 @@ describe('toParlayDetail', () => {
     const detail = toParlayDetail(
       row([leg({}, { status: 'resolved', current_resolution: { outcome_id: 'o-no', resolved_at: '2026-09-29T10:00:00Z' } })]),
       'Grace',
+      BEFORE_CLOSE,
     )
     expect(detail.legs[0]).toMatchObject({ status: 'lost', winningLabel: 'No' })
+  })
+
+  it('marks an unresolved leg past its market’s close time as awaiting', () => {
+    const detail = toParlayDetail(row([leg()]), 'Grace', Date.parse('2026-10-01T12:00:01Z'))
+    expect(detail.legs[0].status).toBe('awaiting')
   })
 })
 
@@ -88,8 +97,8 @@ describe('getParlayDetail', () => {
 
 describe('legTally and tallySummary', () => {
   it('counts each state and leaves out the empty ones', () => {
-    const tally = legTally([{ status: 'won' }, { status: 'pending' }, { status: 'pending' }, { status: 'voided' }])
-    expect(tally).toEqual({ won: 1, lost: 0, open: 2, voided: 1 })
-    expect(tallySummary(tally)).toBe('1 won · 2 open · 1 voided')
+    const tally = legTally([{ status: 'won' }, { status: 'open' }, { status: 'open' }, { status: 'awaiting' }, { status: 'voided' }])
+    expect(tally).toEqual({ won: 1, lost: 0, open: 2, awaiting: 1, voided: 1 })
+    expect(tallySummary(tally)).toBe('1 won · 2 open · 1 awaiting · 1 voided')
   })
 })

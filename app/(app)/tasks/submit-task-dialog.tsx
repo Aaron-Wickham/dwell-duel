@@ -5,6 +5,7 @@ import { Dialog } from '@base-ui/react/dialog'
 import { PendingReviewChip } from '@/components/tasks/task-row'
 import { ProofPicker } from '@/components/proof/proof-picker'
 import { buttonVariants } from '@/components/ui/button'
+import { dialogBackdropClass, dialogPopupClass } from '@/components/ui/dialog-classes'
 import { Field, Textarea } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
@@ -12,6 +13,7 @@ import { h2Class } from '@/components/ui/page'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { discardProof, uploadProof } from '@/lib/proof/upload'
 import type { ProofDraft, ProofRecord } from '@/lib/proof/types'
+import { cn } from '@/lib/utils'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { submitTaskCompletionAction, type ActionState } from '@/lib/tasks/submit-task-completion'
 
@@ -79,8 +81,8 @@ export function SubmitTaskDialog({
         I did this<span className="sr-only">, {taskTitle}</span>
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-40 bg-scrim transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 motion-reduce:transition-none" />
-        <Dialog.Popup className="fixed top-[calc(50%+(var(--safe-top)-var(--safe-bottom))/2)] left-1/2 z-40 flex max-h-[calc(100dvh-32px-var(--safe-top)-var(--safe-bottom))] w-[calc(100vw-32px)] max-w-[520px] -translate-x-1/2 -translate-y-1/2 flex-col gap-5 overflow-y-auto overscroll-contain rounded-card border border-line bg-surface p-6 text-ink shadow-overlay transition-[opacity,scale] duration-150 data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0 motion-reduce:transition-none">
+        <Dialog.Backdrop className={dialogBackdropClass} />
+        <Dialog.Popup className={cn(dialogPopupClass, 'max-w-[520px]')}>
           <div className="flex flex-col gap-2">
             <Dialog.Title className={h2Class}>Submit “{taskTitle}”</Dialog.Title>
             <Dialog.Description id={hintId} className="text-ink2">

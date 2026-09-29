@@ -22,7 +22,7 @@ const MIN_OUTCOMES = 2
 
 const toggleClass = (on: boolean) =>
   cn(
-    'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] font-bold text-ink2',
+    'pressable flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] font-bold text-ink2',
     on && 'bg-surface text-ink shadow-tab',
   )
 
@@ -188,7 +188,7 @@ export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
                   onClick={() => removeOutcome(index)}
                   disabled={outcomes.length <= MIN_OUTCOMES}
                   aria-label={`Remove outcome ${index + 1}`}
-                  className="inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-control text-ink hover:bg-sunk disabled:cursor-not-allowed disabled:text-ink2 disabled:hover:bg-transparent"
+                  className="pressable inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-control text-ink hover:bg-sunk disabled:cursor-not-allowed disabled:text-ink2 disabled:hover:bg-transparent"
                 >
                   <X aria-hidden="true" className="size-5" />
                 </button>

@@ -18,11 +18,12 @@ const member: MemberSummary = {
 const NOW = Date.parse('2026-09-28T12:00:00Z')
 
 describe('AdjustBalanceForm', () => {
-  it('links the member name to their profile with a 44px tap target', () => {
+  it('links the member name to their profile, the whole identity block its tap target', () => {
     render(<AdjustBalanceForm member={member} now={NOW} />)
     const link = screen.getByRole('link', { name: 'Bob' })
     expect(link).toHaveAttribute('href', '/members/member-1')
-    expect(link).toHaveClass('hit-area')
+    expect(link).toHaveClass('stretched-link')
+    expect(link.parentElement!.closest('.pressable')).toHaveClass('relative')
   })
 
   it('keeps the name bold and shows the balance beside it', () => {

@@ -93,7 +93,7 @@ function Toggle({
 }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <label htmlFor={id} className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold has-disabled:cursor-default">
+      <label htmlFor={id} className="pressable inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold has-disabled:cursor-default">
         <input
           id={id}
           type="checkbox"

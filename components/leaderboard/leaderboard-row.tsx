@@ -30,7 +30,7 @@ export function LeaderboardRow({
   return (
     <li
       {...focusTarget(domId)}
-      className={cn('flex min-h-[60px] items-center gap-3 rounded-[12px] px-2.5 py-2.5 md:px-3.5', isMe && 'bg-acc-soft')}
+      className={cn('pressable hover-lift relative flex min-h-[60px] items-center gap-3 rounded-[12px] px-2.5 py-2.5 md:px-3.5', isMe && 'bg-acc-soft')}
     >
       <span
         className={cn(
@@ -43,7 +43,7 @@ export function LeaderboardRow({
       </span>
       <Avatar name={name} src={avatarSrc} />
       <span className="min-w-0 grow break-words text-[17px] font-extrabold">
-        <Link href={href} transitionTypes={['nav-forward']} className="hit-area">
+        <Link href={href} transitionTypes={['nav-forward']} className="stretched-link">
           {name}
         </Link>
         {isMe && <span className="font-semibold text-ink2"> (you)</span>}

@@ -44,13 +44,14 @@ describe('LeaderboardRow', () => {
     expect(screen.getByText('(you)', { exact: false })).toBeInTheDocument()
   })
 
-  it('gives the name link a 44px tap target', () => {
+  it('stretches the name link over the row, which presses as one', () => {
     render(
       <ol>
         <LeaderboardRow rank={2} name="Bob" score={90} isMe={false} href="/members/bob" />
       </ol>,
     )
-    expect(screen.getByRole('link', { name: 'Bob' })).toHaveClass('hit-area')
+    expect(screen.getByRole('link', { name: 'Bob' })).toHaveClass('stretched-link')
+    expect(screen.getByRole('listitem')).toHaveClass('pressable', 'relative')
   })
 
   it('is a focus target named from its rank, name and score when given a DOM id', () => {

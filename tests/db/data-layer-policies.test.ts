@@ -17,7 +17,7 @@ type Expression = Pick<Policy, 'tablename' | 'policyname' | 'cmd' | 'qual' | 'wi
 // (select …) wraps, plus 0035's new policy on activity_events, 0037's on cancelled_bets, and
 // 0040's role changes (new profiles start as members; reviewers read every completion), and
 // 0042's proof_attachments, 0043's market_edits, 0053's feed_reactions and market_comments, and
-// 0057's push_subscriptions and notification_prefs.
+// 0057's push_subscriptions and notification_prefs, and 0061's cron_heartbeats.
 const POLICIES_NOW: Expression[] = [
   { tablename: 'activity_events', policyname: 'select_activity_events', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   { tablename: 'allowed_emails', policyname: 'admin_delete_invites', cmd: 'DELETE', qual: 'is_admin()', with_check: null },
@@ -32,6 +32,7 @@ const POLICIES_NOW: Expression[] = [
     qual: '((profile_id = ( SELECT auth.uid() AS uid)) OR is_admin())',
     with_check: null,
   },
+  { tablename: 'cron_heartbeats', policyname: 'select_cron_heartbeats_admin', cmd: 'SELECT', qual: "has_role('admin'::text)", with_check: null },
   {
     tablename: 'feed_reactions',
     policyname: 'delete_own_feed_reactions',

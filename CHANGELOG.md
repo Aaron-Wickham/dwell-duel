@@ -25,6 +25,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **"Closes in" rounds to the nearest hour or minute,** so 1h 59m reads "2h", not "1h" (#112).
 
 ### Under the hood
+- **Admins are told if closing alerts stop.** Each successful run of the ten-minute schedule is recorded (`cron_heartbeats`), and the Admin pages show admins and the owner a warning once none has landed for 30 minutes. The workflow reads the app's address from the `APP_URL` repository variable instead of a hard-coded URL, and fails if it isn't set (#149).
 - **Migrations apply on merge with no approval step,** so keep them additive; the workflow no longer waits on the `production-db` environment (#138).
 - **A GitHub Actions schedule** (`closing-alerts.yml`, every ten minutes, needs the `CRON_SECRET` repository secret) calls `/api/cron/closing-alerts`, because Vercel's Hobby cron runs once a day. The daily cron still sends the same alerts as a backstop (#123).
 - **The coin-history index test no longer fails at random:** it asserts that the keyset bound lands in an index condition, whichever ledger index the planner picks (#139).

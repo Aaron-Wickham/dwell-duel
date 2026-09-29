@@ -14,15 +14,34 @@ test('the Admin button shows a badge once a market has closed with no result', a
   const marketId = page.url().split('/').pop()!
 
   const admin = page.getByRole('banner').getByRole('link', { name: 'Admin', exact: true })
-  await expect(admin).not.toHaveAttribute('aria-describedby', /.+/)
-
-  const { error } = await serviceClient()
-    .from('markets')
-    .update({ close_at: new Date(Date.now() - 60_000).toISOString() })
-    .eq('id', marketId)
-  if (error) throw error
+  // Compared with the count before, not with no badge: a retry, or another spec, can leave markets
+  // already waiting, and then "no badge yet" could never hold.
+  const waiting = () =>
+    admin.evaluate((el) => {
+      const id = el.getAttribute('aria-describedby')
+      return Number(/\d+/.exec((id && document.getElementById(id)?.textContent) || '0')?.[0] ?? 0)
+    })
+  const before = await waiting()
 
   // Closing is only the clock passing, but the market row changing reaches the open page live.
-  await expect(admin).toHaveAccessibleDescription(/\d+ waiting/, { timeout: 15_000 })
+  // The page's live channel joins a moment after load, and a change before the join is never
+  // replayed, so the row is touched again on each poll until one lands after it.
+  const close = async () => {
+    const { error } = await serviceClient()
+      .from('markets')
+      .update({ close_at: new Date(Date.now() - 60_000).toISOString() })
+      .eq('id', marketId)
+    if (error) throw error
+  }
+  await expect
+    .poll(
+      async () => {
+        await close()
+        return waiting()
+      },
+      { timeout: 20_000, intervals: [1_000, 2_000, 3_000] },
+    )
+    .toBeGreaterThan(before)
+  await expect(admin).toHaveAccessibleDescription(/\d+ waiting/)
   await expect(admin).toHaveText(/\d/)
 })

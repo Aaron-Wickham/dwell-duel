@@ -53,7 +53,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | Route | What it is |
 |---|---|
 | `/` | Home: greeting, balance hero (balance, rank, At stake, Pending), a new member's Getting started card, Markets to resolve, the weekly recap (Sundays and Mondays), tiles |
-| `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then resolved and voided newest first, each paged. `?status=all|open|pending|closed` (`lib/markets/status-filter.ts`) narrows it: open and pending read the open list split at the close time (`listOpenMarkets`' `bound`), closed reads only the closed list |
+| `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then resolved and voided newest first, each paged. `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) narrows it: open and awaiting read the open list split at the close time (`listOpenMarkets`' `bound`), resolved reads only the resolved list (`listResolvedMarkets`, voided included) |
 | `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under. `?from=<id>` pre-fills it from a market (Duplicate) |
 | `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
@@ -341,10 +341,12 @@ after it ships. They roughly follow the project's history:
 | 0059 | Leaderboard extras (#121): `leaderboard_race`, `leaderboard_awards`, `member_records` (security definer, invited members only, aggregates only) |
 | 0060 | Best parlay award (#146): `leaderboard_awards` computes Best parlay's multiplier as `member_stats` does (resolved legs' locked odds multiplied, capped), not credited / stake |
 
-Merging a migration to `main` runs the **Deploy Production Database**
-workflow, with no approval step. It runs in parallel with Vercel's deploy;
-the push (under a minute) normally finishes before the build does, and
-migrations stay additive so old code survives a slower one.
+Every merge to `main` runs the **Deploy Production** workflow, with no
+approval step: a dry run and the push when the merge touched
+`supabase/migrations/`, then the app deploy through a Vercel deploy hook.
+The app never goes live before its migrations; a failed migration fails the
+run and leaves the old app live. Migrations stay additive anyway, because
+the old app is still serving while they apply.
 
 ## Key flows
 
@@ -496,8 +498,13 @@ leaves out empty lines and hides when every one is empty.
   generated-types drift check, Vitest (the `unit` project in parallel, the
   `db` project serially), a production build and Playwright on every push
   and PR, all against a throwaway local Supabase.
-- **Database deploys** (`.github/workflows/deploy-production-db.yml`): a
-  dry run, then the push, one at a time and with no approval step.
+- **Deploys** (`.github/workflows/deploy-production.yml`): Vercel's Git
+  integration is off for `main` (`vercel.json`'s `git.deploymentEnabled`).
+  Each push to `main` runs the workflow instead, one at a time and with no
+  approval step: when `supabase/migrations/` changed, a dry run and then
+  the push; then a POST to the Vercel deploy hook in the
+  `VERCEL_DEPLOY_HOOK_URL` repository secret. Redeploy by hand with
+  "Run workflow" on it.
 - **Typed queries:** `lib/supabase/database.types.ts` is generated from the
   migrations and never edited; `lib/supabase/database.ts` wraps it
   (`Database`, `DbClient`) and marks the few function arguments that take a

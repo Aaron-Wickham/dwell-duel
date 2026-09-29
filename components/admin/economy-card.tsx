@@ -29,7 +29,7 @@ export function EconomyCard({ summary }: { summary: EconomySummary }) {
         <dd className="text-2xl font-extrabold tabular-nums">{summary.inCirculation} DC</dd>
         <dd className="text-sm text-ink2 tabular-nums">
           {summary.balances} DC in balances · {summary.betsAtStake} DC in open bets · {summary.parlaysAtStake} DC in
-          pending parlays
+          open parlays
         </dd>
       </dl>
 

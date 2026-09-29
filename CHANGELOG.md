@@ -9,11 +9,12 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ### Features
 - **Alerts for reviewers and admins:** a task submission pushes to reviewers and above (not the submitter), a market that has closed with no result pushes to admins and above, and the Admin button shows a badge with what is waiting on you. A new "Tasks to review" choice in Settings covers reviewers; admins use "Markets to resolve" (#123).
 - **A livelier leaderboard:** a podium for the top three, win-loss records on every row, and on This month a race chart of the top five's profit day by day, four awards (biggest win, best parlay, sharpshooter, most active) and the past champions (#121).
-- **Filter the markets page** by All, Open, Pending (closed but not yet resolved) or Closed (resolved and voided); the choice is in the URL (#124).
+- **Filter the markets page** by All, Open, Awaiting (past the close time, not yet resolved) or Resolved (voided included); the choice is in the URL (#124, #152).
 - **Parlays open into a breakdown:** each parlay on My bets is one tappable card (stake, multiplier, what it pays, a progress bar of its picks) leading to a new page with every pick's locked odds and result, and how the multiplier adds up (#120).
 
 ### Fixes
 - **The Best parlay award shows the parlay's multiplier,** the same figure as its parlay page and the profile's Stats card, instead of the payout over the stake, which rounding the payout down to whole DC could leave a few hundredths lower (#146).
+- **One set of words for where a market stands: Open, Awaiting, Resolved.** The markets filter's Pending and Closed tabs are now Awaiting and Resolved, so a tab no longer calls a market "Closed" while its card says it is awaiting resolution; a voided market sits under Resolved with its own Voided chip, and old links to the Pending and Closed tabs still land. "Closed" is now only ever a time. A parlay pick whose market is past its close time says "Awaiting resolution", like a solo bet, Home's Markets to resolve card links straight to the Awaiting tab, and the owner's Economy card counts DC in open parlays, not pending ones (#152).
 - **The tab bar and launch animation sit right in iPhone's installed app.** On a page too short to scroll, the app gave the page a viewport about 62pt short, so the tab bar floated above the bottom and jumped when a page finished loading, and the launch animation left a bar at the bottom. The page is now always at least screen-tall there, and the launch overlay is sized to the whole screen from its first frame, which also stops its D flashing doubled and jumping before the leaves grow (#127, #128).
 - **Sub-tabs slide like the main nav:** the active pill on My bets, Leaderboard, Markets and Admin's tabs glides to the new tab, and stays still with reduced motion (#117).
 - **Cancel and Remove sit at the status chip's height** on My bets and market pages, instead of a full-size button beside a small chip (#118).
@@ -26,6 +27,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **"Closes in" rounds to the nearest hour or minute,** so 1h 59m reads "2h", not "1h" (#112).
 
 ### Under the hood
+- **The app deploys only after its migrations.** Vercel's own Git deploys are off for `main`; the Deploy Production workflow (was Deploy Production Database) pushes any new migrations, then triggers Vercel through a deploy hook. A failed migration blocks the deploy (#148).
 - **Migrations apply on merge with no approval step,** so keep them additive; the workflow no longer waits on the `production-db` environment (#138).
 - **A GitHub Actions schedule** (`closing-alerts.yml`, every ten minutes, needs the `CRON_SECRET` repository secret) calls `/api/cron/closing-alerts`, because Vercel's Hobby cron runs once a day. The daily cron still sends the same alerts as a backstop (#123).
 - **The coin-history index test no longer fails at random:** it asserts that the keyset bound lands in an index condition, whichever ledger index the planner picks (#139).

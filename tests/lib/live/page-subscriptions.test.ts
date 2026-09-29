@@ -46,7 +46,7 @@ describe('pageSubscriptions', () => {
     ])
   })
 
-  it('markets declares the open/closed list tables', () => {
+  it('markets declares the open/resolved list tables', () => {
     expect(pageSubscriptions.markets()).toEqual([{ table: 'markets' }, { table: 'bets' }, { table: 'cancelled_bets' }])
   })
 

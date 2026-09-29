@@ -45,7 +45,7 @@ interface DetailRow {
   }[]
 }
 
-export function toParlayDetail(row: DetailRow, ownerName: string): ParlayDetail {
+export function toParlayDetail(row: DetailRow, ownerName: string, now: number): ParlayDetail {
   const legs = row.parlay_legs.map((l): ParlayLegDetail => {
     const resolution = l.markets.current_resolution
     return {
@@ -53,7 +53,7 @@ export function toParlayDetail(row: DetailRow, ownerName: string): ParlayDetail 
       marketTitle: l.markets.title,
       outcomeLabel: l.market_outcomes.label,
       lockedOddsBp: lockedOddsToBp(l.locked_odds),
-      status: legStatus(l.markets.status, resolution?.outcome_id ?? null, l.outcome_id),
+      status: legStatus(l.markets.status, resolution?.outcome_id ?? null, l.outcome_id, l.markets.close_at, now),
       closeAt: l.markets.close_at,
       marketStatus: l.markets.status,
       winningLabel: resolution ? (l.markets.market_outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null) : null,
@@ -87,16 +87,13 @@ export async function getParlayDetail(supabase: DbClient, id: string): Promise<P
   const row = data as unknown as DetailRow
   const { data: owner, error: ownerError } = await supabase.from('profiles').select('display_name').eq('id', row.profile_id).maybeSingle()
   if (ownerError) throw ownerError
-  return toParlayDetail(row, owner?.display_name ?? 'A member')
+  return toParlayDetail(row, owner?.display_name ?? 'A member', Date.now())
 }
 
 // How the legs stand, in leg order, for the progress bar and its one-line summary.
-export function legTally(legs: { status: LegStatus }[]): { won: number; lost: number; open: number; voided: number } {
-  const tally = { won: 0, lost: 0, open: 0, voided: 0 }
-  for (const { status } of legs) {
-    if (status === 'pending') tally.open++
-    else tally[status]++
-  }
+export function legTally(legs: { status: LegStatus }[]): Record<LegStatus, number> {
+  const tally = { won: 0, lost: 0, open: 0, awaiting: 0, voided: 0 }
+  for (const { status } of legs) tally[status]++
   return tally
 }
 
@@ -105,6 +102,7 @@ export function tallySummary(tally: ReturnType<typeof legTally>): string {
     tally.won > 0 && `${tally.won} won`,
     tally.lost > 0 && `${tally.lost} lost`,
     tally.open > 0 && `${tally.open} open`,
+    tally.awaiting > 0 && `${tally.awaiting} awaiting`,
     tally.voided > 0 && `${tally.voided} voided`,
   ].filter(Boolean)
   return parts.join(' · ')

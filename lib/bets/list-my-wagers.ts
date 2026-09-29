@@ -75,7 +75,7 @@ export async function listMyWagers(
       if (bet) rows.push({ kind: 'bet', key: id, bet: toMyBet(bet, now) })
     } else {
       const parlay = parlays.get(id.slice(7))
-      if (parlay) rows.push({ kind: 'parlay', key: id, parlay: toParlayView(parlay) })
+      if (parlay) rows.push({ kind: 'parlay', key: id, parlay: toParlayView(parlay, now) })
     }
   }
   return { ...keys, rows }

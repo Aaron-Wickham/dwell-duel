@@ -118,7 +118,7 @@ describe('parlays on My bets', () => {
     expect(pending.legs).toEqual(
       expect.arrayContaining([
         { marketId: a.marketId, marketTitle: 'Market A', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'won' },
-        { marketId: b.marketId, marketTitle: 'Market B', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'pending' },
+        { marketId: b.marketId, marketTitle: 'Market B', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'open' },
       ]),
     )
 

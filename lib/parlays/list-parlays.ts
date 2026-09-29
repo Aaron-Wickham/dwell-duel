@@ -29,6 +29,7 @@ interface LegRow {
     id: string
     title: string
     status: 'open' | 'resolved' | 'voided'
+    close_at: string
     current_resolution: { outcome_id: string } | null
   }
 }
@@ -43,9 +44,9 @@ export interface ParlayRow {
 }
 
 export const PARLAY_COLUMNS =
-  'id, stake, status, credited, created_at, parlay_legs(outcome_id, locked_odds, market_outcomes(label), markets(id, title, status, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id)))'
+  'id, stake, status, credited, created_at, parlay_legs(outcome_id, locked_odds, market_outcomes(label), markets(id, title, status, close_at, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id)))'
 
-export function toParlayView(p: ParlayRow): ParlayView {
+export function toParlayView(p: ParlayRow, now: number): ParlayView {
   const legs = p.parlay_legs.map((l): ParlayLegView => {
     const winner = l.markets.current_resolution?.outcome_id ?? null
     return {
@@ -53,7 +54,7 @@ export function toParlayView(p: ParlayRow): ParlayView {
       marketTitle: l.markets.title,
       outcomeLabel: l.market_outcomes.label,
       lockedOddsBp: lockedOddsToBp(l.locked_odds),
-      status: legStatus(l.markets.status, winner, l.outcome_id),
+      status: legStatus(l.markets.status, winner, l.outcome_id, l.markets.close_at, now),
     }
   })
 

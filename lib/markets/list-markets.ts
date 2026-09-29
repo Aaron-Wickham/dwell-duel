@@ -62,7 +62,7 @@ function toSummary(m: SummaryRow): MarketSummary {
 // newer ones; resolved and voided markets list newest first.
 type MarketKeys = KeyColumns & { ts: 'close_at' | 'created_at' }
 const OPEN_KEYS: MarketKeys = { ts: 'close_at', id: 'id', isId: isUuid, ascending: true }
-const CLOSED_KEYS: MarketKeys = { ts: 'created_at', id: 'id', isId: isUuid }
+const RESOLVED_KEYS: MarketKeys = { ts: 'created_at', id: 'id', isId: isUuid }
 
 // A key probe selects only the id and the list's own timestamp column.
 type KeyRow = { id: string } & Partial<Record<MarketKeys['ts'], string>>
@@ -130,8 +130,8 @@ export async function listOpenMarkets(
 }
 
 // Resolved and voided markets are one list, one "Show more", shown in their two groups.
-export async function listClosedMarkets(supabase: DbClient, page: PageParams): Promise<KeysetPage<MarketSummary>> {
-  return listMarkets(supabase, ['resolved', 'voided'], CLOSED_KEYS, page)
+export async function listResolvedMarkets(supabase: DbClient, page: PageParams): Promise<KeysetPage<MarketSummary>> {
+  return listMarkets(supabase, ['resolved', 'voided'], RESOLVED_KEYS, page)
 }
 
 export async function countOpenMarkets(supabase: DbClient): Promise<number> {

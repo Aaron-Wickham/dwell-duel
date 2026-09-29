@@ -515,7 +515,13 @@
 }
 :root[data-launch] .launch-screen {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  left: 0;
+  /* Not inset: 0. For the first paint of a cold start the installed app's viewport can still be
+     62pt short, so the D would be centred too high and jump down when iOS corrects it. 100lvh is
+     the screen's height from the first frame. */
+  height: 100lvh;
   z-index: 100;
   display: flex;
   align-items: center;

@@ -31,6 +31,11 @@ test('cancel an open bet from My bets: it is refunded and leaves the market', as
   const trigger = row.getByRole('button', { name: 'Cancel your 5 DC bet on Yes' })
   const dialog = page.getByRole('alertdialog', { name: 'Cancel this bet?' })
 
+  // Cancel is drawn at the status chip's own height, not a full-size button.
+  const chip = row.getByText('Open', { exact: true })
+  const [chipBox, cancelBox] = [await chip.boundingBox(), await trigger.boundingBox()]
+  expect(Math.abs(cancelBox!.height - chipBox!.height)).toBeLessThanOrEqual(1)
+
   // Keeping the bet leaves it where it was.
   await trigger.click()
   await expect(dialog.getByText('Your 5 DC on Yes comes back to your balance.')).toBeVisible()

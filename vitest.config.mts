@@ -19,6 +19,10 @@ export default defineConfig({
     ],
   },
   resolve: {
-    alias: { '@': path.resolve(import.meta.dirname, '.') },
+    alias: {
+      '@': path.resolve(import.meta.dirname, '.'),
+      // Next resolves `server-only` to an empty module on the server; tests run server code too.
+      'server-only': path.resolve(import.meta.dirname, 'node_modules/next/dist/compiled/server-only/empty.js'),
+    },
   },
 })

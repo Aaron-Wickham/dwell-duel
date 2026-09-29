@@ -626,6 +626,41 @@ export type Database = {
           },
         ]
       }
+      notification_prefs: {
+        Row: {
+          new_markets: boolean
+          profile_id: string
+          resolve_reminders: boolean
+          results: boolean
+          task_reviews: boolean
+          updated_at: string
+        }
+        Insert: {
+          new_markets?: boolean
+          profile_id: string
+          resolve_reminders?: boolean
+          results?: boolean
+          task_reviews?: boolean
+          updated_at?: string
+        }
+        Update: {
+          new_markets?: boolean
+          profile_id?: string
+          resolve_reminders?: boolean
+          results?: boolean
+          task_reviews?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_prefs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parlay_legs: {
         Row: {
           id: string
@@ -803,6 +838,65 @@ export type Database = {
             columns: ["task_completion_id"]
             isOneToOne: false
             referencedRelation: "task_completions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_log: {
+        Row: {
+          kind: string
+          ref: string
+          sent_at: string
+        }
+        Insert: {
+          kind: string
+          ref: string
+          sent_at?: string
+        }
+        Update: {
+          kind?: string
+          ref?: string
+          sent_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_success_at: string | null
+          p256dh: string
+          profile_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_success_at?: string | null
+          p256dh: string
+          profile_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_success_at?: string | null
+          p256dh?: string
+          profile_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1170,6 +1264,49 @@ export type Database = {
         }
         Returns: string
       }
+      push_market_result: {
+        Args: { p_market_id: string }
+        Returns: {
+          has_solo: boolean
+          is_override: boolean
+          outcome_label: string
+          profile_id: string
+          refunded: number
+          status: string
+          title: string
+          won: number
+        }[]
+      }
+      push_new_market: {
+        Args: { p_market_id: string }
+        Returns: {
+          profile_id: string
+          title: string
+        }[]
+      }
+      push_resolve_reminders: {
+        Args: never
+        Returns: {
+          market_id: string
+          profile_id: string
+          title: string
+        }[]
+      }
+      push_task_reviews: {
+        Args: { p_completion_ids: string[] }
+        Returns: {
+          completion_id: string
+          profile_id: string
+          review_note: string
+          reward_amount: number
+          status: string
+          task_title: string
+        }[]
+      }
+      push_wants: {
+        Args: { p_kind: string; p_profile_id: string }
+        Returns: boolean
+      }
       record_proof: {
         Args: {
           p_completion_id: string
@@ -1215,6 +1352,15 @@ export type Database = {
         }[]
       }
       role_rank: { Args: { p_role: string }; Returns: number }
+      save_push_subscription: {
+        Args: {
+          p_auth: string
+          p_endpoint: string
+          p_p256dh: string
+          p_user_agent?: string
+        }
+        Returns: undefined
+      }
       season_profits: {
         Args: { p_month: string }
         Returns: {

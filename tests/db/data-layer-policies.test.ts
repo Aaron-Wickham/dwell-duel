@@ -16,7 +16,8 @@ type Expression = Pick<Policy, 'tablename' | 'policyname' | 'cmd' | 'qual' | 'wi
 // pg_policies as the latest migration leaves them: 0032's policies, unchanged apart from 0033's
 // (select …) wraps, plus 0035's new policy on activity_events, 0037's on cancelled_bets, and
 // 0040's role changes (new profiles start as members; reviewers read every completion), and
-// 0042's proof_attachments, 0043's market_edits, and 0053's feed_reactions and market_comments.
+// 0042's proof_attachments, 0043's market_edits, 0053's feed_reactions and market_comments, and
+// 0057's push_subscriptions and notification_prefs.
 const POLICIES_NOW: Expression[] = [
   { tablename: 'activity_events', policyname: 'select_activity_events', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   { tablename: 'allowed_emails', policyname: 'admin_delete_invites', cmd: 'DELETE', qual: 'is_admin()', with_check: null },
@@ -58,6 +59,9 @@ const POLICIES_NOW: Expression[] = [
   { tablename: 'market_outcomes', policyname: 'select_market_outcomes', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   { tablename: 'market_resolutions', policyname: 'select_market_resolutions', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   { tablename: 'markets', policyname: 'select_markets', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
+  { tablename: 'notification_prefs', policyname: 'insert_own_notification_prefs', cmd: 'INSERT', qual: null, with_check: '(profile_id = ( SELECT auth.uid() AS uid))' },
+  { tablename: 'notification_prefs', policyname: 'select_own_notification_prefs', cmd: 'SELECT', qual: '(profile_id = ( SELECT auth.uid() AS uid))', with_check: null },
+  { tablename: 'notification_prefs', policyname: 'update_own_notification_prefs', cmd: 'UPDATE', qual: '(profile_id = ( SELECT auth.uid() AS uid))', with_check: '(profile_id = ( SELECT auth.uid() AS uid))' },
   { tablename: 'parlay_legs', policyname: 'select_invited_parlay_legs', cmd: 'SELECT', qual: '(is_invited() OR is_admin())', with_check: null },
   { tablename: 'parlays', policyname: 'select_invited_parlays', cmd: 'SELECT', qual: '(is_invited() OR is_admin())', with_check: null },
   {
@@ -83,6 +87,15 @@ const POLICIES_NOW: Expression[] = [
     qual: "((profile_id = ( SELECT auth.uid() AS uid)) OR has_role('reviewer'::text) OR ((status = 'approved'::text) AND is_invited()))",
     with_check: null,
   },
+  { tablename: 'push_subscriptions', policyname: 'delete_own_push_subscriptions', cmd: 'DELETE', qual: '(profile_id = ( SELECT auth.uid() AS uid))', with_check: null },
+  {
+    tablename: 'push_subscriptions',
+    policyname: 'insert_own_push_subscriptions',
+    cmd: 'INSERT',
+    qual: null,
+    with_check: '((profile_id = ( SELECT auth.uid() AS uid)) AND is_invited())',
+  },
+  { tablename: 'push_subscriptions', policyname: 'select_own_push_subscriptions', cmd: 'SELECT', qual: '(profile_id = ( SELECT auth.uid() AS uid))', with_check: null },
   { tablename: 'tasks', policyname: 'admin_insert_tasks', cmd: 'INSERT', qual: null, with_check: 'is_admin()' },
   { tablename: 'tasks', policyname: 'admin_update_tasks', cmd: 'UPDATE', qual: 'is_admin()', with_check: 'is_admin()' },
   { tablename: 'tasks', policyname: 'select_tasks', cmd: 'SELECT', qual: 'is_invited()', with_check: null },

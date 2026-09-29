@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
+import { afterAction, notifyTaskReviews } from '@/lib/push/notify'
 
 export type ActionState = { formError?: string; field?: 'reason' } | undefined
 
@@ -12,6 +13,7 @@ export async function approveTaskCompletionAction(completionId: string, _prevSta
 
   const { error } = await supabase.rpc('approve_task_completion', { p_completion_id: completionId })
   if (error) return { formError: error.message }
+  afterAction(() => notifyTaskReviews([completionId]))
 
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')
@@ -30,6 +32,7 @@ export async function rejectTaskCompletionAction(completionId: string, _prevStat
     p_reason: reason || undefined,
   })
   if (error) return { formError: error.message }
+  afterAction(() => notifyTaskReviews([completionId]))
 
   revalidatePath('/admin/tasks')
   return undefined
@@ -51,6 +54,12 @@ function tally(requested: number, rows: ReviewRow[] | null, error: { message: st
   return { succeeded: (rows ?? []).length - failures.length, failed: failures.length, firstError: failures[0]?.error }
 }
 
+// Only the rows this call reviewed, so one that failed as already reviewed isn't announced twice.
+function notifyReviewed(rows: ReviewRow[] | null) {
+  const reviewed = (rows ?? []).filter((row) => row.ok).map((row) => row.id)
+  if (reviewed.length > 0) afterAction(() => notifyTaskReviews(reviewed))
+}
+
 export async function bulkApproveTaskCompletionsAction(_prevState: BulkActionState | undefined, formData: FormData): Promise<BulkActionState> {
   const { supabase, user } = await requireUser()
   if (!user) return { formError: 'Not signed in.' }
@@ -60,6 +69,7 @@ export async function bulkApproveTaskCompletionsAction(_prevState: BulkActionSta
 
   const { data, error } = await supabase.rpc('review_task_completions', { p_ids: completionIds, p_approve: true })
   const { succeeded, failed, firstError } = tally(completionIds.length, data, error)
+  notifyReviewed(data)
 
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')
@@ -83,6 +93,7 @@ export async function bulkRejectTaskCompletionsAction(_prevState: BulkActionStat
     p_note: reason || undefined,
   })
   const { succeeded, failed, firstError } = tally(completionIds.length, data, error)
+  notifyReviewed(data)
 
   revalidatePath('/admin/tasks')
   if (failed === 0) return { summary: `${succeeded} rejected.` }

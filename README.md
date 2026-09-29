@@ -153,6 +153,15 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
   new one under Supabase → Settings → API Keys, update the Vercel variable,
   redeploy, run the keep-alive cron from Vercel → Settings → Cron Jobs to
   check it, then delete the old key.
+- **Push notifications** need a VAPID key pair in Vercel's Production
+  environment: `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`
+  (the subject is fixed as `https://www.dwellduel.com`). Generate them once
+  with `npx web-push generate-vapid-keys`, and keep them: changing the pair
+  stops every existing subscription from receiving, until each member
+  turns notifications on again. Production won't boot without them
+  (`lib/env/required.ts`); locally and in CI, sending is a no-op without
+  them. The public key is inlined at build time, so redeploy after
+  setting it.
 - **Inviting someone** is purely in the app: add their email under Admin →
   Invites. Google's OAuth consent screen is published, so there's no
   Google Cloud step.

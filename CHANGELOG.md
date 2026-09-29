@@ -13,6 +13,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Parlays open into a breakdown:** each parlay on My bets is one tappable card (stake, multiplier, what it pays, a progress bar of its picks) leading to a new page with every pick's locked odds and result, and how the multiplier adds up (#120).
 
 ### Fixes
+- **The tab bar and launch animation sit right on iPhone's installed app:** on a page too short to scroll, the app was giving the page a viewport about 62pt short, so the tab bar floated above the bottom, jumped when a page finished loading, and the launch animation left a bar at the bottom and a doubled D. The page is now always at least screen-tall there (#127, #128).
 - **Sub-tabs slide like the main nav:** the active pill on My bets, Leaderboard, Markets and Admin's tabs glides to the new tab, and stays still with reduced motion (#117).
 - **Cancel and Remove sit at the status chip's height** on My bets and market pages, instead of a full-size button beside a small chip (#118).
 - **The top bar's logo and wordmark line up:** the bottom of the symbol's D now meets the wordmark's baseline, on phone and desktop (#119).

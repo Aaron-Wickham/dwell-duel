@@ -270,6 +270,75 @@ await run(
   `,
 )
 
+// Every resolution above ran in one transaction, so all of them, and the payouts they wrote,
+// share one moment; the leaderboard's race (#145) would show a single step. Spread each settled
+// market over the last few weeks instead, with an override an hour after the result it replaced.
+await run(
+  'Settlement times spread over the last 25 days',
+  `
+  select setseed(0.43);
+  create temp table scale_settled on commit drop as
+    select m.id as market_id, now() - interval '1 hour' - random() * interval '25 days' as at
+    from public.markets m
+    where m.description = ${seedNote} and m.status in ('resolved', 'voided');
+
+  -- A market settles after it closes, and nobody bets on a closed market: close each one half an
+  -- hour before it settles, open it at least a week earlier, and move later bets (and their
+  -- ledger rows) back inside that window.
+  update public.markets m
+  set close_at = s.at - interval '30 minutes',
+    created_at = least(m.created_at, s.at - interval '7 days')
+  from scale_settled s
+  where m.id = s.market_id;
+
+  create temp table scale_moved_bets on commit drop as
+    select b.id, b.profile_id, b.market_id, b.outcome_id, b.amount, b.created_at as old_at,
+      m.created_at + random() * (m.close_at - m.created_at) as at
+    from public.bets b
+    join public.markets m on m.id = b.market_id
+    join scale_settled s on s.market_id = m.id
+    where b.created_at >= m.close_at or b.created_at < m.created_at;
+
+  update public.bets b set created_at = x.at from scale_moved_bets x where b.id = x.id;
+
+  -- bet_placed rows name no bet, so they're matched on everything else the seed wrote them with.
+  update public.coin_transactions t
+  set created_at = x.at
+  from scale_moved_bets x
+  where t.type = 'bet_placed' and t.profile_id = x.profile_id and t.amount = -x.amount
+    and t.created_at = x.old_at and (t.meta ->> 'market_id')::uuid = x.market_id
+    and (t.meta ->> 'outcome_id')::uuid = x.outcome_id;
+
+  update public.market_resolutions r
+  set resolved_at = s.at + case when r.id = m.current_resolution_id then interval '1 hour' else interval '0' end
+  from scale_settled s
+  join public.markets m on m.id = s.market_id
+  where r.market_id = s.market_id;
+
+  update public.coin_transactions t
+  set created_at = s.at + interval '1 hour'
+  from scale_settled s
+  where t.type in ('bet_won', 'bet_refunded', 'bet_voided_refund', 'resolution_reversed')
+    and (t.meta ->> 'market_id')::uuid = s.market_id;
+
+  create temp table scale_parlay_settled on commit drop as
+    select l.parlay_id, max(s.at) + interval '1 hour' as at
+    from public.parlay_legs l
+    join scale_settled s on s.market_id = l.market_id
+    group by l.parlay_id;
+
+  update public.parlays pa set settled_at = x.at
+  from scale_parlay_settled x
+  where pa.id = x.parlay_id and pa.settled_at is not null;
+
+  update public.coin_transactions t
+  set created_at = x.at
+  from scale_parlay_settled x
+  where t.type in ('parlay_won', 'parlay_refunded', 'parlay_reversed')
+    and (t.meta ->> 'parlay_id')::uuid = x.parlay_id;
+  `,
+)
+
 await run(
   `Tasks (${TASKS}) and completions (up to ${COMPLETIONS})`,
   `

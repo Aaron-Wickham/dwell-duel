@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Avatar } from '@/components/ui/avatar'
+import { formatOdds, lockedOddsToBp } from '@/lib/parlays/odds'
 import type { Award, AwardKind } from '@/lib/social/leaderboard-extras'
 import { signedDc } from '@/lib/social/season'
 
@@ -15,7 +16,7 @@ function figure(award: Award): string {
     case 'biggest_win':
       return signedDc(award.value)
     case 'best_parlay':
-      return `${award.value.toFixed(2)}×`
+      return `${formatOdds(lockedOddsToBp(award.value))}×`
     case 'sharpshooter':
       return `${Math.round(award.value * 100)}%`
     case 'most_active':

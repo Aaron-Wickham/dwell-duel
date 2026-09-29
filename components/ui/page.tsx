@@ -7,19 +7,32 @@ export const h1Class = 'text-[28px] font-extrabold leading-[1.12] tracking-[-0.0
 export const h2Class = 'text-[19px] font-extrabold leading-[1.25] tracking-[-0.01em] md:text-[21px]'
 export const eyebrowClass = 'text-xs font-extrabold uppercase tracking-[0.09em] text-ink2'
 
-export const pageClass =
-  'mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-5 px-4 pt-5 pb-8 md:gap-7 md:px-20 md:pt-10 md:pb-20'
+// `wide` gives a 1120px content column inside md:px-20; `reading` gives about 820px, centred, for a
+// single stream or long text, so the header, tabs and content always share one pair of edges.
+const pageWidths = { wide: 'max-w-[1280px]', reading: 'max-w-[980px]' } as const
+export type PageWidth = keyof typeof pageWidths
+
+export function pageClassFor(width: PageWidth = 'wide'): string {
+  return cn(
+    'mx-auto flex w-full flex-1 flex-col gap-5 px-4 pt-5 pb-8 md:gap-7 md:px-20 md:pt-10 md:pb-20',
+    pageWidths[width],
+  )
+}
+
+export const pageClass = pageClassFor('wide')
 
 export function Page({
   className,
   transition,
+  width = 'wide',
   children,
 }: {
   className?: string
   transition?: 'tab' | 'drill-down'
+  width?: PageWidth
   children: ReactNode
 }) {
-  const page = <div className={cn(pageClass, className)}>{children}</div>
+  const page = <div className={cn(pageClassFor(width), className)}>{children}</div>
   if (transition === 'tab') return <TabTransition>{page}</TabTransition>
   if (transition === 'drill-down') {
     return (

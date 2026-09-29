@@ -4,7 +4,7 @@ import { ChartColumn, Plus } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { listClosedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
+import { listResolvedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
 import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { marketCardStatus, type MarketCardStatus } from '@/lib/markets/market-status'
@@ -33,21 +33,28 @@ const OPEN_GROUPS: MarketCardStatus[] = ['open', 'awaiting']
 const EMPTY_TITLES: Record<MarketFilter, string> = {
   all: 'No markets yet.',
   open: 'No open markets.',
-  pending: 'Nothing waiting to be resolved.',
-  closed: 'No closed markets yet.',
+  awaiting: 'Nothing awaiting resolution.',
+  resolved: 'No resolved markets yet.',
 }
 
 const EMPTY_BODIES: Record<MarketFilter, string> = {
   all: 'Open the first one and get the duel started.',
-  open: 'Every market is closed. Create one to get the next duel going.',
-  pending: 'Markets past their close time show up here until someone resolves them.',
-  closed: 'Resolved and voided markets show up here.',
+  open: 'Nothing is taking bets right now. Create one to get the next duel going.',
+  awaiting: 'Markets past their close time show up here until someone resolves them.',
+  resolved: 'Resolved and voided markets show up here.',
+}
+
+// The open list holds both sides of the close time unless a tab picks one.
+const OPEN_LIST_DESCRIPTIONS: Record<Exclude<MarketFilter, 'resolved'>, string> = {
+  all: 'Open and awaiting markets',
+  open: 'Open markets',
+  awaiting: 'Markets awaiting resolution',
 }
 
 const NO_ROWS = { rows: [], next: null, windowed: false } as const
 
 const OPEN_ROW_ID_PREFIX = 'market-open'
-const CLOSED_ROW_ID_PREFIX = 'market-closed'
+const RESOLVED_ROW_ID_PREFIX = 'market-resolved'
 
 export default async function MarketsPage(props: PageProps<'/markets'>) {
   const searchParams = await props.searchParams
@@ -59,22 +66,22 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
   const nowMs = Date.now()
   const now = new Date(nowMs)
   const openParams = readPageParams(searchParams, 'open')
-  const [open, closed] = await Promise.all([
-    filter === 'closed'
+  const [open, resolved] = await Promise.all([
+    filter === 'resolved'
       ? NO_ROWS
       : filter === 'all'
         ? listOpenMarkets(supabase, openParams)
         : listOpenMarkets(supabase, openParams, { upcoming: filter === 'open', at: now.toISOString() }),
-    filter === 'all' || filter === 'closed' ? listClosedMarkets(supabase, readPageParams(searchParams, 'resolved')) : NO_ROWS,
+    filter === 'all' || filter === 'resolved' ? listResolvedMarkets(supabase, readPageParams(searchParams, 'resolved')) : NO_ROWS,
   ])
   // A market can resolve or void between the two concurrent reads above, and then come back from
-  // both. It only ever moves from open to closed, so the closed copy is the fresher one: the open
-  // copy is dropped rather than rendering the market twice, with duplicate React keys and
-  // duplicate `market-closed-*` DOM/title ids.
-  const closedIds = new Set(closed.rows.map((m) => m.id))
+  // both. It only ever moves from open to resolved or voided, so the resolved list's copy is the
+  // fresher one: the open copy is dropped rather than rendering the market twice, with duplicate
+  // React keys and duplicate `market-resolved-*` DOM/title ids.
+  const resolvedIds = new Set(resolved.rows.map((m) => m.id))
   const markets = [
-    ...open.rows.filter((m) => !closedIds.has(m.id)).map((m) => [m, OPEN_ROW_ID_PREFIX] as const),
-    ...closed.rows.map((m) => [m, CLOSED_ROW_ID_PREFIX] as const),
+    ...open.rows.filter((m) => !resolvedIds.has(m.id)).map((m) => [m, OPEN_ROW_ID_PREFIX] as const),
+    ...resolved.rows.map((m) => [m, RESOLVED_ROW_ID_PREFIX] as const),
   ]
   const sparklinesByMarket = await readSparklines(
     supabase,
@@ -130,7 +137,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     markets: cards.filter((card) => card.status === group.id),
   })).filter((group) => group.markets.length > 0)
   const openGroups = groups.filter((group) => OPEN_GROUPS.includes(group.id))
-  const closedGroups = groups.filter((group) => !OPEN_GROUPS.includes(group.id))
+  const resolvedGroups = groups.filter((group) => !OPEN_GROUPS.includes(group.id))
 
   // Each list's window says where it starts above its own groups: Back to newest, or, when the
   // window has no rows left, that there's nothing older, where those groups would have been.
@@ -178,7 +185,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       />
       <LiveTables subscriptions={pageSubscriptions.markets()} />
       <ShowMoreFocus />
-      {groups.length === 0 && !open.windowed && !closed.windowed ? (
+      {groups.length === 0 && !open.windowed && !resolved.windowed ? (
         <EmptyState
           icon={ChartColumn}
           title={EMPTY_TITLES[filter]}
@@ -203,17 +210,17 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
               href={showMoreHref('/markets', searchParams, 'open', open.next)}
               fresh={open.next.kind === 'window'}
               focusId={rowDomId(OPEN_ROW_ID_PREFIX, open.next.firstId)}
-              description="Open markets"
+              description={OPEN_LIST_DESCRIPTIONS[filter === 'resolved' ? 'all' : filter]}
             />
           )}
-          {windowTop(closed, 'resolved')}
-          {closedGroups.map(renderGroup)}
-          {closed.next && (
+          {windowTop(resolved, 'resolved')}
+          {resolvedGroups.map(renderGroup)}
+          {resolved.next && (
             <ShowMore
-              href={showMoreHref('/markets', searchParams, 'resolved', closed.next)}
-              fresh={closed.next.kind === 'window'}
-              focusId={rowDomId(CLOSED_ROW_ID_PREFIX, closed.next.firstId)}
-              description="Closed markets"
+              href={showMoreHref('/markets', searchParams, 'resolved', resolved.next)}
+              fresh={resolved.next.kind === 'window'}
+              focusId={rowDomId(RESOLVED_ROW_ID_PREFIX, resolved.next.firstId)}
+              description="Resolved markets"
             />
           )}
         </>

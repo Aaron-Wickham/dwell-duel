@@ -40,11 +40,11 @@ function caption(award: Award): string | null {
 export function Awards({ awards }: { awards: Award[] }) {
   if (awards.length === 0) return null
   return (
-    <section aria-labelledby="leaderboard-awards" className="flex max-w-[820px] flex-col gap-3">
+    <section aria-labelledby="leaderboard-awards" className="flex flex-col gap-3">
       <h2 id="leaderboard-awards" className="text-[19px] font-extrabold leading-[1.25] tracking-[-0.01em] md:text-[21px]">
         This month’s awards
       </h2>
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-2">
         {awards.map((award) => (
           <li key={award.kind} className="pressable hover-lift relative flex min-w-0 flex-col gap-1.5 rounded-card border border-line bg-surface p-3.5 shadow-card">
             <span className="text-xs font-extrabold tracking-[0.06em] text-ink2 uppercase">{LABEL[award.kind]}</span>

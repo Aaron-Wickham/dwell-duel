@@ -43,6 +43,10 @@ a line to `CHANGELOG.md` under the next release.
   and has exactly one `<h1>`, from `PageHeader` or `h1Class`. Sections are
   `SectionCard`s, whose `<h2>` names the region. Lists with nothing in them
   render an `EmptyState`.
+- **Page widths come from `<Page width>`:** `wide` (default, 1120px of
+  content) or `reading` (about 820px, centred), and a skeleton uses
+  `pageClassFor(width)`. Don't cap a card's width inside a page; fill the
+  column, with multi-column grids at `lg:` (the table in the handoff doc).
 - **Breakpoints.** The design is phone-first. Type sizes and page padding
   switch at `md:`, the same breakpoint as the nav. Multi-column grids
   switch at `lg:`.
@@ -247,12 +251,13 @@ a line to `CHANGELOG.md` under the next release.
   `avatars` bucket; render them with `avatarUrl()` from
   `lib/profile/avatar.ts` through `<Avatar src>`. Profile edits go through
   `update_my_profile`; members have no direct update on `profiles`.
-- **Migrations apply themselves on merge.** Merging to `main` runs the
-  Deploy Production Database workflow with no approval step, in parallel
-  with Vercel's deploy. The push takes well under a build's time, so the
-  database is normally ready first, but keep migrations additive (new
-  tables, columns and functions) so old code survives a slow one, and
-  ship a destructive change in its own PR after the code stops using it.
+- **Migrations apply themselves on merge, before the app deploys.**
+  Merging to `main` runs the Deploy Production workflow with no approval
+  step: it pushes any new migrations, then triggers Vercel through a deploy
+  hook (Vercel's own Git deploys are off for `main`). The old app keeps
+  serving while a migration applies, so keep migrations additive (new
+  tables, columns and functions), and ship a destructive change in its own
+  PR after the code stops using it.
 
 ## Testing
 

@@ -28,7 +28,7 @@ export function MarketsToResolveCard({ total, markets }: MarketsToResolve) {
       </ul>
       {more > 0 && (
         <p className="text-sm text-ink2">
-          And {more} more under <Link href="/markets">Awaiting resolution</Link>.
+          And {more} more under <Link href="/markets?status=awaiting">Awaiting resolution</Link>.
         </p>
       )}
     </SectionCard>

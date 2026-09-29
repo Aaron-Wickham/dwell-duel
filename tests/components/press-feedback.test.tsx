@@ -63,7 +63,7 @@ const CASES: [string, () => ReactElement][] = [
             capped: false,
             potentialPayout: 20,
             createdAt: '2026-09-25T12:00:00Z',
-            legs: [{ marketId: 'k1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', lockedOddsBp: 20_000, status: 'pending' }],
+            legs: [{ marketId: 'k1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', lockedOddsBp: 20_000, status: 'open' }],
           }}
         />
       </ul>

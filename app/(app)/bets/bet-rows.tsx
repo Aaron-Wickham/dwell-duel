@@ -23,6 +23,10 @@ function ResultChip({ result }: { result: MyBet['result'] }) {
   }
 }
 
+// A list with dividers on a phone; at lg, a grid of cards like the markets page. Each card
+// stretches to its row's height, so its status sits at the same place across a row.
+const betListClass = 'flex flex-col divide-y divide-line lg:grid lg:grid-cols-3 lg:gap-4 lg:divide-y-0 lg:py-3'
+
 function Row({
   domId,
   marketId,
@@ -38,7 +42,10 @@ function Row({
 }) {
   const titleId = `${domId}-title`
   return (
-    <li {...focusTarget(domId, titleId)} className="pressable hover-lift-row relative flex items-start justify-between gap-3 py-3">
+    <li
+      {...focusTarget(domId, titleId)}
+      className="pressable hover-lift-row relative flex items-start justify-between gap-3 py-3 lg:hover-lift lg:before:hidden lg:flex-col lg:justify-start lg:rounded-[14px] lg:border lg:border-line lg:p-4"
+    >
       <div className="flex min-w-0 flex-col gap-1">
         <Link
           id={titleId}
@@ -50,14 +57,16 @@ function Row({
         </Link>
         <p className="text-sm text-ink2">{detail}</p>
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-2">{aside}</div>
+      <div className="flex shrink-0 flex-col items-end gap-2 lg:mt-auto lg:w-full lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+        {aside}
+      </div>
     </li>
   )
 }
 
 export function WagerRows({ wagers, rowIdPrefix }: { wagers: Wager[]; rowIdPrefix: string }) {
   return (
-    <ul className="flex flex-col divide-y divide-line">
+    <ul className={betListClass}>
       {wagers.map((w) => {
         const domId = rowDomId(rowIdPrefix, w.key)
         if (w.kind === 'parlay') return <PlacedParlay key={w.key} parlay={w.parlay} domId={domId} />
@@ -93,7 +102,7 @@ export function WagerRows({ wagers, rowIdPrefix }: { wagers: Wager[]; rowIdPrefi
 
 export function CancelledBetRows({ bets, rowIdPrefix }: { bets: MyCancelledBet[]; rowIdPrefix: string }) {
   return (
-    <ul className="flex flex-col divide-y divide-line">
+    <ul className={betListClass}>
       {bets.map((b) => (
         <Row
           key={b.id}

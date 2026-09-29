@@ -1,27 +1,36 @@
-import { pageClass } from '@/components/ui/page'
+import { pageClassFor } from '@/components/ui/page'
 import { Skeleton, SkeletonCard, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
 
-// Mirrors How it works: back link, header, intro and a stack of section cards.
+// Mirrors How it works: back link, header, intro and a stack of section cards, with the contents
+// beside them at lg.
 export default function Loading() {
   return (
-    <SkeletonScreen name="how-it-works" className={pageClass}>
+    <SkeletonScreen name="how-it-works" className={pageClassFor('reading')}>
       <div className="flex min-h-11 items-center">
         <Skeleton className="h-5 w-16" />
       </div>
       <SkeletonPageHeader />
-      <div className="flex max-w-[720px] flex-col gap-5 md:gap-7">
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-5 w-full" />
-          <Skeleton className="h-5 w-4/5" />
+      <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start">
+        <div className="hidden lg:flex lg:flex-col lg:gap-4">
+          <Skeleton className="h-4 w-20" />
+          {Array.from({ length: 8 }, (_, i) => (
+            <Skeleton key={i} className="h-5 w-36" />
+          ))}
         </div>
-        {[0, 1, 2].map((i) => (
-          <SkeletonCard key={i} className="gap-3">
-            <Skeleton className="h-6 w-40" />
+        <div className="flex min-w-0 flex-col gap-5 md:gap-7">
+          <div className="flex flex-col gap-2">
             <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-3/5" />
-          </SkeletonCard>
-        ))}
+            <Skeleton className="h-5 w-4/5" />
+          </div>
+          {[0, 1, 2].map((i) => (
+            <SkeletonCard key={i} className="gap-3">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-3/5" />
+            </SkeletonCard>
+          ))}
+        </div>
       </div>
     </SkeletonScreen>
   )

@@ -42,7 +42,7 @@ function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean
 export function Podium({ members, signed, meId }: { members: PodiumMember[]; signed: boolean; meId: string }) {
   const [first, second, third] = members
   return (
-    <section aria-label="Top three" className={cn(cardClass, 'max-w-[820px] p-4 md:p-6')}>
+    <section aria-label="Top three" className={cn(cardClass, 'p-4 md:p-6')}>
       <ol className="flex items-end justify-center gap-3 md:gap-6">
         <Place member={second} signed={signed} meId={meId} />
         <Place member={first} signed={signed} meId={meId} />

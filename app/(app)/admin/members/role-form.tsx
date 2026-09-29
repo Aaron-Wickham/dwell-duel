@@ -39,9 +39,9 @@ export function RoleForm({ member }: { member: MemberSummary }) {
       onSubmit={(e) => {
         if (role !== member.role) confirm.onSubmit(e)
       }}
-      className="flex flex-col gap-2 md:flex-row md:items-end md:gap-2"
+      className="flex flex-col gap-2 md:flex-row md:items-end md:gap-2 lg:flex-col lg:items-stretch"
     >
-      <Field label="Role" htmlFor={selectId} className="md:w-48">
+      <Field label="Role" htmlFor={selectId} className="md:w-48 lg:w-auto">
         <Select
           id={selectId}
           name="role"
@@ -57,7 +57,7 @@ export function RoleForm({ member }: { member: MemberSummary }) {
           ))}
         </Select>
       </Field>
-      <FormSubmitButton variant="secondary" className="md:w-auto">
+      <FormSubmitButton variant="secondary" className="md:w-auto lg:w-full">
         Save role <span className="sr-only">for {member.displayName}</span>
       </FormSubmitButton>
       {state?.formError && (

@@ -18,7 +18,7 @@ chili cook-off?". They earn more DC by completing Bible-study tasks.
 Markets use shared-pool (pari-mutuel) odds; bets can be combined into
 parlays; and everything that happens shows up in a live feed.
 
-**Current release:** [v0.2.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.2.0-beta) · see the [changelog](CHANGELOG.md).
+**Current release:** [v0.3.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.3.0-beta) · see the [changelog](CHANGELOG.md).
 
 | Home | A market | The feed | Settings |
 |---|---|---|---|
@@ -208,6 +208,7 @@ GitHub Actions (`.github/dependabot.yml`).
 
 | Release | Date | Highlights |
 |---|---|---|
+| [v0.3.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.3.0-beta) | 2026-09-28 | Security fixes, retry-safe betting, a net-worth leaderboard with monthly champions, coin history, reactions and comments, streaks, profile stats, a weekly recap, push notifications, faster pages |
 | [v0.2.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.2.0-beta) | 2026-09-28 | Roles, seeded odds, 10-leg parlays, proof, Over/Under, market edits, My bets, Settings, a new Home, the launch animation |
 | [v0.1.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.1.0-beta) | 2026-09-27 | The first beta: markets, parlays, tasks, the coin ledger, the social layer, the installable app |
 

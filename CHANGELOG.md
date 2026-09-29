@@ -4,7 +4,9 @@ Releases are tagged on GitHub; each one lists its pull requests. DwellDuel
 is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 `main` deploys, so a release marks a milestone, not a deploy.
 
-## v0.3.0-beta — unreleased
+## v0.3.0-beta — 2026-09-28
+
+Every open issue from the post-beta audit, #57 to #89 (32 done; #75, a DC floor, was declined): security fixes, new Supabase keys, speed, and a round of features for markets, coins, the leaderboard, social and notifications.
 
 ### Security
 - **Parlay odds can't be pumped:** a leg's odds are locked without your own bets on that market, so betting against yourself and cancelling no longer inflates a parlay (#57).

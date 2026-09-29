@@ -4,6 +4,11 @@ Releases are tagged on GitHub; each one lists its pull requests. DwellDuel
 is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 `main` deploys, so a release marks a milestone, not a deploy.
 
+## Unreleased
+
+### Under the hood
+- Upgraded Vitest 5 and the CI actions (checkout 7, setup-node 7, cache 6, upload-artifact 7, Supabase setup-cli 3) from Dependabot #92–#97. TypeScript stays on 5.9 and ESLint on 9 until typescript-eslint and eslint-config-next's plugins support TS 7 and ESLint 10, and @types/node stays on Node 22's line (#98–#100).
+
 ## v0.3.0-beta — 2026-09-28
 
 Every open issue from the post-beta audit, #57 to #89 (32 done; #75, a DC floor, was declined): security fixes, new Supabase keys, speed, and a round of features for markets, coins, the leaderboard, social and notifications.

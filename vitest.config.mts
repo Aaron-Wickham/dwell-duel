@@ -9,11 +9,9 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
     projects: [
       {
-        extends: true,
         test: { name: 'unit', include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'], exclude: ['tests/db/**'] },
       },
       {
-        extends: true,
         test: { name: 'db', include: ['tests/db/**/*.test.ts'], fileParallelism: false, testTimeout: 15_000 },
       },
     ],

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeAll } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { RaceChart } from '@/components/leaderboard/race-chart'
 import type { RaceSeries } from '@/lib/social/leaderboard-extras'
 
@@ -29,7 +30,7 @@ const labelTop = (name: string) => Number.parseFloat(screen.getByText(name).clos
 describe('RaceChart', () => {
   it('describes the standings to assistive tech and labels each line’s end with the name and total', () => {
     render(<RaceChart series={[series('Aaron', [0, 30, 64]), series('Maci', [0, 10, 41]), series('Py', [0, -3, -3])]} />)
-    expect(screen.getByRole('img', { name: 'Net betting profit this month: Aaron +64 DC, Maci +41 DC, Py −3 DC' })).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Net betting profit this month: Aaron +64 DC, Maci +41 DC, Py −3 DC' })).toBeInTheDocument()
     expect(screen.getByText('Aaron')).toBeInTheDocument()
     expect(screen.getByText('−3 DC')).toBeInTheDocument()
   })
@@ -61,21 +62,133 @@ describe('RaceChart', () => {
     expect(labelTop('Aaron')).toBeLessThan(labelTop('Maci'))
   })
 
+  it('runs a runaway last place off the bottom, still labelled with the true total, and says so', () => {
+    render(
+      <RaceChart
+        series={[series('Maci', [0, 40, 40]), series('Py', [0, 10, 30]), series('Aaron', [0, -20, -20]), series('Jo', [0, -30, -868])]}
+      />,
+    )
+    expect(screen.getByText('−868 DC')).toBeInTheDocument()
+    expect(screen.getByTestId('race-off-bottom')).toBeInTheDocument()
+    expect(screen.getByTestId('race-exit-bottom')).toBeInTheDocument()
+    expect(screen.queryByTestId('race-exit')).toBeNull()
+    expect(screen.getByText('Jo is off the bottom at −868 DC, so everyone else stays readable.')).toBeInTheDocument()
+    expect(labelTop('Jo')).toBeGreaterThan(labelTop('Aaron'))
+  })
+
+  it('names both runaways in one note when each end is clipped', () => {
+    render(<RaceChart series={[series('Ada', [0, 900]), series('Ben', [0, 10]), series('Cy', [0, 5]), series('Di', [0, -800])]} />)
+    expect(
+      screen.getByText('Ada is off the top at +900 DC and Di is off the bottom at −800 DC, so everyone else stays readable.'),
+    ).toBeInTheDocument()
+  })
+
   it('draws no clipping cue when nobody runs away', () => {
     render(<RaceChart series={[series('Ada', [0, 30]), series('Ben', [0, 20])]} />)
     expect(screen.queryByTestId('race-exit')).toBeNull()
-    expect(screen.queryByText(/off the top/)).toBeNull()
+    expect(screen.queryByTestId('race-exit-bottom')).toBeNull()
+    expect(screen.queryByText(/off the (top|bottom)/)).toBeNull()
+  })
+
+  describe('from the keyboard', () => {
+    // Four moments plus now: step 0 before the first settlement, step 4 now.
+    const race = [series('Aaron', [-5, 10, 10, 64]), series('Maci', [0, 30, 35, 41]), series('Py', [0, 0, -3, -3])]
+    const announcer = () => screen.getByTestId('race-announcer')
+
+    it('is a slider over the moments that starts at now and says nothing until stepped', async () => {
+      const user = userEvent.setup()
+      render(<RaceChart series={race} />)
+      await user.tab()
+      const slider = screen.getByRole('slider')
+      expect(slider).toHaveFocus()
+      expect(slider).toHaveAttribute('aria-valuemin', '0')
+      expect(slider).toHaveAttribute('aria-valuemax', '4')
+      expect(slider).toHaveAttribute('aria-valuenow', '4')
+      expect(slider).toHaveAttribute('aria-valuetext', 'Now')
+      expect(announcer()).toHaveAttribute('aria-live', 'polite')
+      expect(announcer()).toHaveTextContent(/^$/)
+      expect(screen.queryByTestId('race-key-readout')).toBeNull()
+    })
+
+    it('steps with the arrow keys and announces everyone’s total at each moment, best first', async () => {
+      const user = userEvent.setup()
+      render(<RaceChart series={race} />)
+      await user.tab()
+      const slider = screen.getByRole('slider')
+
+      await user.keyboard('{ArrowLeft}')
+      expect(slider).toHaveAttribute('aria-valuenow', '3')
+      expect(announcer()).toHaveTextContent('Aaron +64 DC, Maci +41 DC, Py −3 DC')
+
+      await user.keyboard('{ArrowLeft}{ArrowLeft}')
+      expect(slider).toHaveAttribute('aria-valuenow', '1')
+      expect(announcer()).toHaveTextContent('Maci +30 DC, Aaron +10 DC, Py 0 DC')
+      // The same readout hover shows, for sighted keyboard users.
+      expect(within(screen.getByTestId('race-key-readout')).getByText('+30 DC')).toBeInTheDocument()
+
+      await user.keyboard('{ArrowUp}')
+      expect(slider).toHaveAttribute('aria-valuenow', '2')
+      expect(announcer()).toHaveTextContent('Maci +35 DC, Aaron +10 DC, Py −3 DC')
+    })
+
+    it('goes to either end with Home and End and stops there', async () => {
+      const user = userEvent.setup()
+      render(<RaceChart series={race} />)
+      await user.tab()
+      const slider = screen.getByRole('slider')
+
+      await user.keyboard('{Home}{ArrowLeft}{PageDown}')
+      expect(slider).toHaveAttribute('aria-valuenow', '0')
+      expect(slider).toHaveAttribute('aria-valuetext', 'Before the first settlement')
+      expect(announcer()).toHaveTextContent('Maci 0 DC, Py 0 DC, Aaron −5 DC')
+
+      await user.keyboard('{End}{ArrowRight}{PageUp}')
+      expect(slider).toHaveAttribute('aria-valuenow', '4')
+      expect(slider).toHaveAttribute('aria-valuetext', 'Now')
+      expect(announcer()).toHaveTextContent('Aaron +64 DC, Maci +41 DC, Py −3 DC')
+    })
+
+    it('leaves modified keys to the browser', () => {
+      render(<RaceChart series={race} />)
+      const slider = screen.getByRole('slider')
+      fireEvent.keyDown(slider, { key: 'ArrowLeft', altKey: true })
+      expect(slider).toHaveAttribute('aria-valuenow', '4')
+      expect(announcer()).toHaveTextContent(/^$/)
+    })
+
+    it('doesn’t trap focus, and hands the readout back when focus or the pointer moves on', async () => {
+      const user = userEvent.setup()
+      render(
+        <>
+          <RaceChart series={race} />
+          <button type="button">Next</button>
+        </>,
+      )
+      await user.tab()
+      await user.keyboard('{ArrowLeft}')
+      expect(screen.getByTestId('race-key-readout')).toBeInTheDocument()
+      await user.tab()
+      expect(screen.getByRole('button', { name: 'Next' })).toHaveFocus()
+      expect(screen.queryByTestId('race-key-readout')).toBeNull()
+      expect(announcer()).toHaveTextContent(/^$/)
+
+      await user.tab({ shift: true })
+      await user.keyboard('{ArrowLeft}')
+      expect(screen.getByTestId('race-key-readout')).toBeInTheDocument()
+      fireEvent.pointerMove(screen.getByRole('slider'))
+      expect(screen.queryByTestId('race-key-readout')).toBeNull()
+    })
   })
 
   it('draws a lone point as a flat line', () => {
     render(<RaceChart series={[series('Ada', [12])]} />)
-    expect(screen.getByRole('img', { name: 'Net betting profit this month: Ada +12 DC' })).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Net betting profit this month: Ada +12 DC' })).toBeInTheDocument()
   })
 
   it('says the race hasn’t started until a bet settles', () => {
     render(<RaceChart series={[]} />)
     expect(screen.getByRole('heading', { name: 'The race' })).toBeInTheDocument()
     expect(screen.getByText('The race starts once bets settle.')).toBeInTheDocument()
-    expect(screen.queryByRole('img')).toBeNull()
+    expect(screen.queryByRole('slider')).toBeNull()
   })
 })

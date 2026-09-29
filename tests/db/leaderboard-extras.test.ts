@@ -4,6 +4,7 @@ import { combineOdds, formatOdds, lockedOddsToBp } from '@/lib/parlays/odds'
 import { getParlayDetail } from '@/lib/parlays/get-parlay'
 import { readMemberStats } from '@/lib/members/stats'
 import { serviceClient } from './helpers'
+import { pgQuery } from './pg-query'
 import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
 
 let alice: Member
@@ -270,5 +271,43 @@ describe('leaderboard_race_steps', () => {
     if (error) throw error
     const bobSteps = (await steps(bobClient)).get(bob.id)!
     expect(bobSteps.map((s) => Number(s.profit))).toEqual([-20, 0])
+  })
+
+  it('merges more than 120 moments into 120 steps, with every kept total exact', async () => {
+    // 150 moments a millisecond apart, just before now: Bob is paid i DC at the i-th, and Carol
+    // 2 DC at every third, so she shares his moments rather than adding her own.
+    const moments = 150
+    const base = Date.now() - 10_000
+    const at = (i: number) => new Date(base + i).toISOString()
+    const rows: string[] = []
+    for (let i = 1; i <= moments; i++) {
+      rows.push(`('${bob.id}', ${i}, 'bet_won', '${at(i)}')`)
+      if (i % 3 === 0) rows.push(`('${carol.id}', 2, 'bet_refunded', '${at(i)}')`)
+    }
+    await pgQuery(`insert into public.coin_transactions (profile_id, amount, type, created_at) values ${rows.join(', ')}`)
+
+    const byMember = await steps(bobClient)
+    expect([...byMember.keys()].sort()).toEqual([bob.id, carol.id].sort())
+    const bobSteps = byMember.get(bob.id)!
+    const carolSteps = byMember.get(carol.id)!
+    // Step 0, before the first settlement, then the 120 kept moments.
+    expect(bobSteps.map((s) => s.step)).toEqual(Array.from({ length: 121 }, (_, k) => k))
+    expect(carolSteps.map((s) => s.at)).toEqual(bobSteps.map((s) => s.at))
+
+    // Each kept moment is one of the fixture's, in order, ending at the last.
+    const kept = bobSteps.slice(1).map((s) => Date.parse(s.at) - base)
+    expect(kept.every((i) => Number.isInteger(i) && i >= 1 && i <= moments)).toBe(true)
+    expect(kept.every((i, k) => k === 0 || i > kept[k - 1])).toBe(true)
+    expect(kept.at(-1)).toBe(moments)
+
+    // The total at every kept moment is everything paid up to and including it.
+    expect(Number(bobSteps[0].profit)).toBe(0)
+    expect(Number(carolSteps[0].profit)).toBe(0)
+    kept.forEach((i, k) => {
+      expect(Number(bobSteps[k + 1].profit)).toBe((i * (i + 1)) / 2)
+      expect(Number(carolSteps[k + 1].profit)).toBe(2 * Math.floor(i / 3))
+    })
+    expect(Number(bobSteps.at(-1)!.profit)).toBe((moments * (moments + 1)) / 2)
+    expect(Number(carolSteps.at(-1)!.profit)).toBe(100)
   })
 })

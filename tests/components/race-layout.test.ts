@@ -19,7 +19,7 @@ describe('raceLayout', () => {
       ],
       PHONE,
     )
-    expect(layout).toMatchObject({ low: -3, high: 64, clipped: null })
+    expect(layout).toMatchObject({ low: -3, high: 64, clippedTop: null, clippedBottom: null })
     // Best final highest on the page.
     const [a, b, c] = layout.labelTops as number[]
     expect(a).toBeLessThan(b)
@@ -35,23 +35,85 @@ describe('raceLayout', () => {
       [0, -5, -20],
     ]
     const layout = raceLayout(values, PHONE)
-    expect(layout.clipped).toBe(0)
+    expect(layout.clippedTop).toBe(0)
     expect(layout.high).toBeGreaterThan(40)
     expect(layout.high).toBeLessThan(868)
     // Second place's peak sits in the top half of the scale, not squashed at the bottom.
     expect((40 - layout.low) / (layout.high - layout.low)).toBeGreaterThan(0.5)
     // The leader's label goes to the top edge.
     expect(layout.labelTops[0]).toBe(Math.min(...shown(layout.labelTops)))
-    expect(exitStep(values[0], layout.high)).toBe(2)
+    expect(exitStep(values[0], layout.high, 'top')).toBe(2)
   })
 
   it('doesn’t clip when everyone else is flat at zero, since there is nothing to show them by', () => {
-    expect(raceLayout([[0, 500], [0, 0], [0, 0]], PHONE).clipped).toBeNull()
+    expect(raceLayout([[0, 500], [0, 0], [0, 0]], PHONE).clippedTop).toBeNull()
+    expect(raceLayout([[0, 0], [0, 0], [0, -500]], PHONE).clippedBottom).toBeNull()
+  })
+
+  it('clips a runaway last place the same way, mirrored', () => {
+    const leader = [
+      [0, 20, 868],
+      [0, 40, 40],
+      [0, 10, 30],
+      [0, -10, -10],
+      [0, -5, -20],
+    ]
+    const values = leader.map((v) => v.map((x) => -x))
+    const layout = raceLayout(values, PHONE)
+    expect(layout.clippedTop).toBeNull()
+    expect(layout.clippedBottom).toBe(0)
+    const mirrored = raceLayout(leader, PHONE)
+    expect(mirrored.clippedBottom).toBeNull()
+    expect(layout.low).toBeCloseTo(-mirrored.high)
+    expect(layout.high).toBeCloseTo(-mirrored.low)
+    // Second-last's trough sits in the bottom half of the scale, not squashed at the top.
+    expect((layout.high - -40) / (layout.high - layout.low)).toBeGreaterThan(0.5)
+    // The last place's label goes to the bottom edge, still under everyone else's.
+    expect(layout.labelTops[0]).toBe(Math.max(...shown(layout.labelTops)))
+    expect(exitStep(values[0], layout.low, 'bottom')).toBe(2)
+  })
+
+  it('labels a member whose low ran off the bottom but who recovered at their true place', () => {
+    const values = [
+      [0, 40, 40],
+      [0, -800, 20],
+      [0, 10, 10],
+    ]
+    const layout = raceLayout(values, PHONE)
+    expect(layout).toMatchObject({ clippedTop: null, clippedBottom: 1 })
+    const [first, second, third] = layout.labelTops as number[]
+    expect(second).toBeGreaterThan(first)
+    expect(second).toBeLessThan(third)
+  })
+
+  it('clips both ends when a runaway at each end would hide the other', () => {
+    const values = [
+      [0, 900],
+      [0, 10],
+      [0, 5],
+      [0, -800],
+    ]
+    const layout = raceLayout(values, PHONE)
+    expect(layout).toMatchObject({ clippedTop: 0, clippedBottom: 3 })
+    expect(layout.high).toBeLessThan(900)
+    expect(layout.low).toBeGreaterThan(-800)
+    expect(layout.low).toBeLessThan(0)
+    expect(exitStep(values[0], layout.high, 'top')).toBe(1)
+    expect(exitStep(values[3], layout.low, 'bottom')).toBe(1)
+    const tops = layout.labelTops as number[]
+    expect(tops[0]).toBe(Math.min(...tops))
+    expect(tops[3]).toBe(Math.max(...tops))
+  })
+
+  it('judges each end with the other end’s lines still on the scale', () => {
+    // Against the middle alone the leader looks like a runaway, but the last place stays on the
+    // scale, so the leader is within reach of everyone and nothing is clipped.
+    expect(raceLayout([[0, 100], [0, 30], [0, -20]], PHONE)).toMatchObject({ clippedTop: null, clippedBottom: null })
   })
 
   it('doesn’t blow a tight pack up into a fake spread beside a runaway', () => {
     const layout = raceLayout([[0, 900], [0, 5], [0, 4], [0, 3]], PHONE)
-    expect(layout.clipped).toBe(0)
+    expect(layout.clippedTop).toBe(0)
     // At least 8% of the leader's range, so the pack's 5 DC spread stays small.
     expect(layout.high).toBeGreaterThanOrEqual(72)
   })
@@ -63,7 +125,7 @@ describe('raceLayout', () => {
       [0, 10, 10],
     ]
     const layout = raceLayout(values, PHONE)
-    expect(layout.clipped).toBe(1)
+    expect(layout.clippedTop).toBe(1)
     const [first, second] = layout.labelTops as number[]
     expect(second).toBeGreaterThan(first)
   })

@@ -36,6 +36,6 @@ describe('MarketsToResolveCard', () => {
     render(<MarketsToResolveCard total={13} markets={Array.from({ length: 10 }, (_, i) => market(i))} />)
     const region = screen.getByRole('region', { name: 'Markets to resolve (13)' })
     expect(within(region).getByText(/And 3 more under/)).toBeInTheDocument()
-    expect(within(region).getByRole('link', { name: 'Awaiting resolution' })).toHaveAttribute('href', '/markets')
+    expect(within(region).getByRole('link', { name: 'Awaiting resolution' })).toHaveAttribute('href', '/markets?status=awaiting')
   })
 })

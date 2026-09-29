@@ -4,8 +4,8 @@ import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
 describe('rowDomId', () => {
   it('prefixes a plain id as it is, whether a number or a string', () => {
     expect(rowDomId('ledger', 4242)).toBe('ledger-4242')
-    expect(rowDomId('market-closed', '0b9c3f5e-8a1d-4c2b-9e7f-1a2b3c4d5e6f')).toBe(
-      'market-closed-0b9c3f5e-8a1d-4c2b-9e7f-1a2b3c4d5e6f',
+    expect(rowDomId('market-resolved', '0b9c3f5e-8a1d-4c2b-9e7f-1a2b3c4d5e6f')).toBe(
+      'market-resolved-0b9c3f5e-8a1d-4c2b-9e7f-1a2b3c4d5e6f',
     )
   })
 
@@ -27,10 +27,10 @@ describe('focusTarget', () => {
   })
 
   it('names the row from a given label id instead, when its own content would be too verbose', () => {
-    expect(focusTarget('market-closed-m7', 'market-closed-m7-title')).toEqual({
-      id: 'market-closed-m7',
+    expect(focusTarget('market-resolved-m7', 'market-resolved-m7-title')).toEqual({
+      id: 'market-resolved-m7',
       tabIndex: -1,
-      'aria-labelledby': 'market-closed-m7-title',
+      'aria-labelledby': 'market-resolved-m7-title',
     })
   })
 

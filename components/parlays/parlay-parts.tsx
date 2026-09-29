@@ -5,14 +5,16 @@ import type { ParlayView } from '@/lib/parlays/list-parlays'
 import { cn } from '@/lib/utils'
 
 export const LEG_PILL: Record<LegStatus, string> = {
-  pending: 'bg-gold-soft text-gold',
+  open: 'bg-gold-soft text-gold',
+  awaiting: 'bg-gold-soft text-gold',
   won: 'bg-acc-soft text-acc-text',
   lost: 'bg-loss-soft text-loss',
   voided: 'bg-sunk text-ink2',
 }
 
 export const LEG_LABEL: Record<LegStatus, string> = {
-  pending: 'Open',
+  open: 'Open',
+  awaiting: 'Awaiting resolution',
   won: 'Won',
   lost: 'Lost',
   voided: 'Voided',
@@ -21,7 +23,8 @@ export const LEG_LABEL: Record<LegStatus, string> = {
 const SEGMENT: Record<LegStatus, string> = {
   won: 'bg-win',
   lost: 'bg-loss',
-  pending: 'bg-line',
+  open: 'bg-line',
+  awaiting: 'bg-line',
   voided: 'border border-line bg-sunk',
 }
 

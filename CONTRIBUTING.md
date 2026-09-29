@@ -17,8 +17,8 @@ Thanks for helping. DwellDuel is a small, invite-only app, and every merge to
      (the code owner). A new push after approval asks for a fresh review.
    - CI's `test` check passing (lint, unit and DB tests, build, e2e);
    - every review conversation resolved.
-6. Once it's merged, Vercel deploys it. If it adds a migration, the owner runs
-   the **Deploy Production Database** workflow first.
+6. Once it's merged, the **Deploy Production** workflow applies any new
+   migrations, then deploys the app through Vercel.
 
 ## Rules of thumb
 

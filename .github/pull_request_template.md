@@ -1,7 +1,7 @@
 ## Summary
 <!-- What changed and why. Group by area (database, app, design). -->
 
-**Migration:** <!-- none, or the file and what it adds. If the build needs it, run "Deploy Production Database" on this branch before merging. -->
+**Migration:** <!-- none, or the file and what it adds. It applies on merge, before the app deploys; keep it additive. -->
 
 ## Test plan
 - [ ] DB tests

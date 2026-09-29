@@ -330,7 +330,7 @@ async function MarketActions({
             ? `${youAre} An admin can resolve a market before it closes.`
             : isCreator
               ? 'You created this market, and it has closed. Reviewers and admins can resolve it too.'
-              : `${youAre} This market has closed and is waiting for a result.`
+              : `${youAre} This market has closed and is awaiting resolution.`
         : isCreator && hasStake
           ? 'You bet on this market, so a reviewer or an admin resolves it.'
           : isCreator

@@ -1,5 +1,12 @@
 {
-  "regions": ["cle1"],
+  "regions": [
+    "cle1"
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "main": false
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/keep-alive",

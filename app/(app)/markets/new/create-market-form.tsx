@@ -184,7 +184,7 @@ export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
                 onClick={() => removeOutcome(index)}
                 disabled={outcomes.length <= MIN_OUTCOMES}
                 aria-label={`Remove outcome ${index + 1}`}
-                className="inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-control text-ink hover:bg-sunk disabled:cursor-not-allowed disabled:text-ink2 disabled:hover:bg-transparent"
+                className="pressable inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-control text-ink hover:bg-sunk disabled:cursor-not-allowed disabled:text-ink2 disabled:hover:bg-transparent"
               >
                 <X aria-hidden="true" className="size-5" />
               </button>

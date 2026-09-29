@@ -11,10 +11,10 @@ export function PastChampions({ champions }: { champions: PastChampion[] }) {
     <SectionCard title="Past champions" titleId="leaderboard-champions" className="max-w-[820px]">
       <ul className="flex flex-col divide-y divide-line">
         {champions.map((champion) => (
-          <li key={champion.season} className="flex min-h-11 items-center gap-3 py-2 first:pt-0 last:pb-0">
+          <li key={champion.season} className="pressable relative flex min-h-11 items-center gap-3 py-2 first:pt-0 last:pb-0">
             <Trophy aria-hidden="true" className="size-5 shrink-0 text-gold" />
             <span className="grow">{seasonName(champion.season)}</span>
-            <Link href={`/members/${champion.memberId}`} transitionTypes={['nav-forward']} className="hit-area font-extrabold">
+            <Link href={`/members/${champion.memberId}`} transitionTypes={['nav-forward']} className="stretched-link font-extrabold">
               {champion.name}
             </Link>
             <StatusChip tone="open">{signedDc(champion.profit)}</StatusChip>

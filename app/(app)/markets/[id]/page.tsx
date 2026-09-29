@@ -129,7 +129,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
         {market.description && <p className="max-w-[68ch] whitespace-pre-line text-ink2">{market.description}</p>}
         {edits.length > 0 && (
           <details className="max-w-[68ch] text-sm text-ink2">
-            <summary className="inline-flex min-h-11 cursor-pointer items-center font-bold">
+            <summary className="pressable inline-flex min-h-11 cursor-pointer items-center font-bold">
               Edited <LocalTime iso={edits[0].editedAt} format="dateTime" />
             </summary>
             <ol className="mt-1 flex flex-col gap-3">

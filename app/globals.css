@@ -256,14 +256,15 @@
   user-select: none;
   transition: scale var(--duration-press) ease-out;
 
-  &:active:not(:disabled, [aria-disabled="true"]) {
+  /* A control inside a pressable card presses alone; the card stays put. */
+  &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
     scale: 0.97;
   }
 
   @media (prefers-reduced-motion: reduce) {
     transition: none;
 
-    &:active:not(:disabled, [aria-disabled="true"]) {
+    &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
       scale: none;
       opacity: 0.7;
     }
@@ -272,10 +273,21 @@
   :root[data-motion="reduce"] & {
     transition: none;
 
-    &:active:not(:disabled, [aria-disabled="true"]) {
+    &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
       scale: none;
       opacity: 0.7;
     }
+  }
+}
+
+/* A card or row that one link makes tappable as a whole: the link's ::after covers its nearest
+   positioned ancestor, the card, which is `relative pressable`. Another control inside the card
+   sits above the cover in a `relative z-[1]` wrapper. */
+@utility stretched-link {
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
   }
 }
 

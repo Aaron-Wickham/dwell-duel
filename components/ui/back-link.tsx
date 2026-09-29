@@ -16,7 +16,7 @@ export function BackLink({
       href={href}
       onClick={onClick}
       transitionTypes={['nav-back']}
-      className="inline-flex min-h-11 items-center gap-1.5 self-start font-bold"
+      className="pressable inline-flex min-h-11 items-center gap-1.5 self-start font-bold"
     >
       <ArrowLeft aria-hidden="true" className="size-5 shrink-0" />
       {children}

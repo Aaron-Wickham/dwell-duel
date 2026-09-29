@@ -106,6 +106,11 @@ a line to `CHANGELOG.md` under the next release.
   changes to the shell in the simulator's installed app, not just Safari.
 - **The `pressable` and `no-callout` utilities,** plus the `--safe-top` /
   `--safe-bottom` tokens, which are non-zero only in standalone mode.
+  Every tap target is `pressable`. A card or row that one link makes
+  tappable as a whole is `relative pressable`, and its link carries
+  `stretched-link` (its `::after` covers the card); any other control in
+  the card sits in a `relative z-[1]` wrapper. `press-feedback.test.tsx`
+  guards the listed components.
 - **Motion tokens.** Curves and durations are the `--ease-*` /
   `--duration-*` tokens in `globals.css`'s `@theme static` block (`ease-ios`,
   `duration-(--duration-fast)` in markup), mirrored for script by

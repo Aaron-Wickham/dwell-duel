@@ -49,7 +49,7 @@ describe('MarketCard', () => {
     expect(screen.queryByText('No bets were placed.')).not.toBeInTheDocument()
   })
 
-  it('gives the title link a 44px tap target', () => {
+  it('stretches the title link over the card, which presses as one', () => {
     render(
       <MarketCard
         id="m1"
@@ -65,7 +65,8 @@ describe('MarketCard', () => {
         resolvedOutcomeLabel={null}
       />,
     )
-    expect(screen.getByRole('link', { name: 'Who wins the chili cook-off?' })).toHaveClass('hit-area')
+    expect(screen.getByRole('link', { name: 'Who wins the chili cook-off?' })).toHaveClass('stretched-link')
+    expect(screen.getByRole('article')).toHaveClass('pressable', 'relative')
   })
 
   it('shows outcome pills and says no bets were placed on a market closed before seeding', () => {

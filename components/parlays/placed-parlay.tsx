@@ -37,7 +37,7 @@ export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: st
               id={titleId}
               href={`/parlays/${parlay.id}`}
               transitionTypes={['nav-forward']}
-              className="font-bold no-underline after:absolute after:inset-0 after:rounded-[14px] after:content-['']"
+              className="stretched-link font-bold no-underline"
             >
               Parlay · {parlay.legs.length} picks
             </Link>

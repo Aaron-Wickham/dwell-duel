@@ -82,7 +82,7 @@ export function MarketCard({
   const titleId = domId ? `${domId}-title` : undefined
 
   return (
-    <article {...focusTarget(domId, titleId)} className={cn(cardClass, 'flex min-w-0 flex-col gap-3 p-[18px]')}>
+    <article {...focusTarget(domId, titleId)} className={cn(cardClass, 'pressable relative flex min-w-0 flex-col gap-3 p-[18px]')}>
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</StatusChip>
         {status === 'open' && now !== undefined && <ClosesSoonChip closeAt={closeAt} now={now} />}
@@ -106,7 +106,7 @@ export function MarketCard({
         </span>
       </div>
       <h3 id={titleId} className="break-words text-[18px] font-extrabold leading-[1.3] tracking-[-0.01em]">
-        <Link href={`/markets/${id}`} transitionTypes={['nav-forward']} className="hit-area">
+        <Link href={`/markets/${id}`} transitionTypes={['nav-forward']} className="stretched-link">
           {title}
         </Link>
       </h3>

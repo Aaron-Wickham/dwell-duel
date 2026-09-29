@@ -128,6 +128,7 @@ describe('PlacedParlay', () => {
 
   it('stretches its one link over the card so the whole card is the tap target', () => {
     renderParlay(parlay({}))
-    expect(screen.getByRole('link')).toHaveClass('after:absolute', 'after:inset-0')
+    expect(screen.getByRole('link')).toHaveClass('stretched-link')
+    expect(screen.getByRole('link').closest('.pressable')).toHaveClass('relative')
   })
 })

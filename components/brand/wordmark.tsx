@@ -42,7 +42,7 @@ export function Wordmark({
       href={href}
       aria-label="DwellDuel home"
       aria-current={current ? 'page' : undefined}
-      className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[10px] pr-1 no-underline"
+      className="pressable inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[10px] pr-1 no-underline"
     >
       {/* The D's bottom edge sits at 82.5% of the symbol's box, so centring the box centres it a
           little low; these lift it until it meets the wordmark's baseline (measured in

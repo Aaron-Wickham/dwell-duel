@@ -56,6 +56,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
   - Home counts pending tasks instead of reading your whole task history;
   - the signed-in layout reads your slip alongside everything else.
 
+### Tests
+- **Closed test gaps** (#72): end-to-end tests for role gates (a member is kept out of Admin and sees no admin controls; a reviewer lands on the approval queue), cancelling a bet, overriding a resolution, rejecting a submission with a reason and editing your profile; unit tests for saving a profile and submitting a task; and database tests for money moving at the same time: a bet racing a resolve, two resolves at once, a void racing a resolve and two slips that together overdraw a balance.
+
 ## v0.2.0-beta — 2026-09-28
 
 The first round of beta feedback: 20 issues, from roles to a new Home.

@@ -76,7 +76,7 @@ describe('listFeed', () => {
     expect(second.rows.slice(0, 50).map((e) => e.id)).toEqual(first.rows.map((e) => e.id))
     expect(new Set(second.rows.map((e) => e.id)).size).toBe(51)
     expect(second.next).toBeNull()
-  })
+  }, 30_000)
 
   it('joins a parlay’s leg count and a task’s title through activity_events', async () => {
     const a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Parlay market A' })

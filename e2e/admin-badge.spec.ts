@@ -23,14 +23,25 @@ test('the Admin button shows a badge once a market has closed with no result', a
     })
   const before = await waiting()
 
-  const { error } = await serviceClient()
-    .from('markets')
-    .update({ close_at: new Date(Date.now() - 60_000).toISOString() })
-    .eq('id', marketId)
-  if (error) throw error
-
   // Closing is only the clock passing, but the market row changing reaches the open page live.
-  await expect.poll(waiting, { timeout: 15_000 }).toBeGreaterThan(before)
+  // The page's live channel joins a moment after load, and a change before the join is never
+  // replayed, so the row is touched again on each poll until one lands after it.
+  const close = async () => {
+    const { error } = await serviceClient()
+      .from('markets')
+      .update({ close_at: new Date(Date.now() - 60_000).toISOString() })
+      .eq('id', marketId)
+    if (error) throw error
+  }
+  await expect
+    .poll(
+      async () => {
+        await close()
+        return waiting()
+      },
+      { timeout: 20_000, intervals: [1_000, 2_000, 3_000] },
+    )
+    .toBeGreaterThan(before)
   await expect(admin).toHaveAccessibleDescription(/\d+ waiting/)
   await expect(admin).toHaveText(/\d/)
 })

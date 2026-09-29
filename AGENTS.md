@@ -43,6 +43,10 @@ a line to `CHANGELOG.md` under the next release.
   and has exactly one `<h1>`, from `PageHeader` or `h1Class`. Sections are
   `SectionCard`s, whose `<h2>` names the region. Lists with nothing in them
   render an `EmptyState`.
+- **Page widths come from `<Page width>`:** `wide` (default, 1120px of
+  content) or `reading` (about 820px, centred), and a skeleton uses
+  `pageClassFor(width)`. Don't cap a card's width inside a page; fill the
+  column, with multi-column grids at `lg:` (the table in the handoff doc).
 - **Breakpoints.** The design is phone-first. Type sizes and page padding
   switch at `md:`, the same breakpoint as the nav. Multi-column grids
   switch at `lg:`.

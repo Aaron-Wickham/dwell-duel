@@ -54,12 +54,12 @@ export function AdjustBalanceForm({ member, now }: { member: MemberSummary; now:
         onSubmit={(e) => {
           if (confirmable) confirm.onSubmit(e)
         }}
-        className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4"
+        className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4 lg:flex-col lg:items-stretch lg:gap-3"
       >
         <MemberIdentity member={member} now={now} />
-        <div className="flex min-w-0 grow flex-col gap-3 md:flex-row md:items-end md:gap-2">
+        <div className="flex min-w-0 grow flex-col gap-3 md:flex-row md:items-end md:gap-2 lg:flex-col lg:items-stretch lg:gap-3">
           <div className="flex min-w-0 grow items-end gap-2">
-            <Field label="Amount" htmlFor={amountId} className="w-[108px] shrink-0 md:w-[150px]">
+            <Field label="Amount" htmlFor={amountId} className="w-[108px] shrink-0 md:w-[150px] lg:w-[108px]">
               <Input
                 id={amountId}
                 name="amount"
@@ -85,7 +85,7 @@ export function AdjustBalanceForm({ member, now }: { member: MemberSummary; now:
               />
             </Field>
           </div>
-          <FormSubmitButton block className="md:w-auto">
+          <FormSubmitButton block className="md:w-auto lg:w-full">
             Adjust{' '}
             <span className="sr-only">{member.displayName}</span>
           </FormSubmitButton>

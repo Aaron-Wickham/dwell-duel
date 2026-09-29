@@ -77,7 +77,7 @@ export function FeedList({
     <SectionCard
       title={headingHidden ? <span className="sr-only">{heading}</span> : heading}
       titleId={headingId}
-      className={cn('max-w-[820px]', headingHidden ? 'gap-0 py-1 px-0 md:py-1 md:px-0' : 'pb-1 md:pt-[18px] md:pb-1')}
+      className={headingHidden ? 'gap-0 py-1 px-0 md:py-1 md:px-0' : 'pb-1 md:pt-[18px] md:pb-1'}
     >
       {aboveList}
       {body}

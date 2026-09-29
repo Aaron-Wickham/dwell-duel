@@ -7,6 +7,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ## Unreleased
 
 ### Features
+- **Desktop layouts use the whole width:** no page leaves its content pinned left with empty space on the right. The leaderboard puts the race chart, awards and past champions beside the rankings; My bets shows bets as a grid of cards; a member's page puts their stats beside their activity; Edit profile shows a live preview of your profile; Settings is two columns; Create market shows a live preview of the market's card; a parlay's picks sit beside its payout; Admin › Members is a grid of cards. The feed and How it works (now with a sticky contents list) get a centred reading width. Phone layouts don't change (#158, #159, #160, #161, #162, #163, #164, #165).
 - **Alerts for reviewers and admins:** a task submission pushes to reviewers and above (not the submitter), a market that has closed with no result pushes to admins and above, and the Admin button shows a badge with what is waiting on you. A new "Tasks to review" choice in Settings covers reviewers; admins use "Markets to resolve" (#123).
 - **A livelier leaderboard:** a podium for the top three, win-loss records on every row, and on This month a race chart of the top five's profit day by day, four awards (biggest win, best parlay, sharpshooter, most active) and the past champions (#121).
 - **Filter the markets page** by All, Open, Awaiting (past the close time, not yet resolved) or Resolved (voided included); the choice is in the URL (#124, #152).

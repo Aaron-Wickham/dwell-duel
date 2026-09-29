@@ -9,6 +9,7 @@ import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { marketCardStatus, type MarketCardStatus } from '@/lib/markets/market-status'
 import { readSparklines } from '@/lib/markets/sparklines'
+import { MARKET_FILTERS, MARKET_FILTER_LABELS, readMarketFilter, type MarketFilter } from '@/lib/markets/status-filter'
 import { newestHref, readPageParams, showMoreHref } from '@/lib/pagination/cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
 import { Page, PageHeader, h2Class } from '@/components/ui/page'
@@ -17,6 +18,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
+import { SubNav } from '@/components/ui/sub-nav'
 import { cn } from '@/lib/utils'
 import { MarketCard, type MarketCardChart } from '@/components/markets/market-card'
 
@@ -28,6 +30,22 @@ const GROUPS: { id: MarketCardStatus; heading: string }[] = [
 ]
 
 const OPEN_GROUPS: MarketCardStatus[] = ['open', 'awaiting']
+const EMPTY_TITLES: Record<MarketFilter, string> = {
+  all: 'No markets yet.',
+  open: 'No open markets.',
+  pending: 'Nothing waiting to be resolved.',
+  closed: 'No closed markets yet.',
+}
+
+const EMPTY_BODIES: Record<MarketFilter, string> = {
+  all: 'Open the first one and get the duel started.',
+  open: 'Every market is closed. Create one to get the next duel going.',
+  pending: 'Markets past their close time show up here until someone resolves them.',
+  closed: 'Resolved and voided markets show up here.',
+}
+
+const NO_ROWS = { rows: [], next: null, windowed: false } as const
+
 const OPEN_ROW_ID_PREFIX = 'market-open'
 const CLOSED_ROW_ID_PREFIX = 'market-closed'
 
@@ -36,9 +54,18 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
+  const filter = readMarketFilter(searchParams.status)
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now()
+  const now = new Date(nowMs)
+  const openParams = readPageParams(searchParams, 'open')
   const [open, closed] = await Promise.all([
-    listOpenMarkets(supabase, readPageParams(searchParams, 'open')),
-    listClosedMarkets(supabase, readPageParams(searchParams, 'resolved')),
+    filter === 'closed'
+      ? NO_ROWS
+      : filter === 'all'
+        ? listOpenMarkets(supabase, openParams)
+        : listOpenMarkets(supabase, openParams, { upcoming: filter === 'open', at: now.toISOString() }),
+    filter === 'all' || filter === 'closed' ? listClosedMarkets(supabase, readPageParams(searchParams, 'resolved')) : NO_ROWS,
   ])
   // A market can resolve or void between the two concurrent reads above, and then come back from
   // both. It only ever moves from open to closed, so the closed copy is the fresher one: the open
@@ -58,9 +85,6 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       outcomeIds: m.outcomes.map((o) => o.id),
     })),
   )
-  // eslint-disable-next-line react-hooks/purity
-  const nowMs = Date.now()
-  const now = new Date(nowMs)
 
   const cards = markets.map(([market, prefix]) => {
     const odds = computeOdds(
@@ -144,12 +168,20 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
           </Link>
         }
       />
+      <SubNav
+        label="Filter markets"
+        items={MARKET_FILTERS.map((f) => ({
+          href: f === 'all' ? '/markets' : `/markets?status=${f}`,
+          label: MARKET_FILTER_LABELS[f],
+          current: f === filter,
+        }))}
+      />
       <LiveTables subscriptions={pageSubscriptions.markets()} />
       <ShowMoreFocus />
       {groups.length === 0 && !open.windowed && !closed.windowed ? (
         <EmptyState
           icon={ChartColumn}
-          title="No markets yet."
+          title={EMPTY_TITLES[filter]}
           action={
             <Link
               href="/markets/new"
@@ -160,7 +192,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
             </Link>
           }
         >
-          Open the first one and get the duel started.
+          {EMPTY_BODIES[filter]}
         </EmptyState>
       ) : (
         <>

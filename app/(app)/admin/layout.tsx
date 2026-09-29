@@ -4,6 +4,8 @@ import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { Page, PageHeader } from '@/components/ui/page'
 import { AdminNav } from '@/components/admin/admin-nav'
+import { ClosingAlertsWarning } from '@/components/admin/closing-alerts-warning'
+import { readClosingAlertsHealth } from '@/lib/admin/cron-health'
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   // Reviewers and up get the Admin header; each page keeps its own, stricter check, because a
@@ -12,6 +14,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   if (!user) redirect('/sign-in')
   const role = await getRole(supabase)
   if (!atLeast(role, 'reviewer')) redirect('/')
+  // A Server Component renders once per request, so the purity rule's re-render worry doesn't apply.
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now()
+  const closingAlerts = await readClosingAlertsHealth(supabase, role, now)
 
   return (
     <Page transition="drill-down">
@@ -19,6 +25,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <PageHeader title="Admin" />
         <AdminNav role={role} />
       </div>
+      <ClosingAlertsWarning health={closingAlerts} now={now} />
       {children}
     </Page>
   )

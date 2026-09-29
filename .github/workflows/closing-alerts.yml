@@ -1,7 +1,8 @@
 name: Closing alerts
 
 # Vercel Hobby runs a cron once a day at most, so this is what tells admins soon after a market
-# closes (#123). It only calls the app; the app decides who hears what, once per market.
+# closes (#123). It only calls the app; the app decides who hears what, once per market. Each
+# successful call is recorded, and the Admin pages warn when none has landed for 30 minutes (#149).
 on:
   schedule:
     - cron: '*/10 * * * *'
@@ -16,11 +17,18 @@ jobs:
       - name: Call the closing-alerts route
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # The deployed app's origin, e.g. https://www.dwellduel.com, as a repository variable
+          # (Settings > Secrets and variables > Actions > Variables).
+          APP_URL: ${{ vars.APP_URL }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
             echo "CRON_SECRET is not set for this repository; skipping."
             exit 0
           fi
+          if [ -z "$APP_URL" ]; then
+            echo "::error::The APP_URL repository variable is not set, so there is no app to call."
+            exit 1
+          fi
           curl --fail --silent --show-error --max-time 30 \
             -H "Authorization: Bearer $CRON_SECRET" \
-            https://www.dwellduel.com/api/cron/closing-alerts
+            "${APP_URL%/}/api/cron/closing-alerts"

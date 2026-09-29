@@ -66,7 +66,7 @@ describe('EconomyCard', () => {
     const card = screen.getByRole('region', { name: 'Economy' })
     expect(within(card).getByText('341 DC')).toBeInTheDocument()
     expect(
-      within(card).getByText('325 DC in balances · 12 DC in open bets · 4 DC in pending parlays'),
+      within(card).getByText('325 DC in balances · 12 DC in open bets · 4 DC in open parlays'),
     ).toBeInTheDocument()
   })
 

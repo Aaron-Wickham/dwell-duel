@@ -31,7 +31,7 @@ function renderParlay(p: ParlayView) {
 }
 
 describe('PlacedParlay', () => {
-  it('shows a pending parlay’s stake, multiplier and what it pays if every pick wins', () => {
+  it('shows an open parlay’s stake, multiplier and what it pays if every pick wins', () => {
     renderParlay(parlay({}))
     expect(screen.getByRole('link', { name: 'Parlay · 2 picks' })).toHaveAttribute('href', '/parlays/p1')
     expect(screen.getByText('5 DC')).toBeInTheDocument()

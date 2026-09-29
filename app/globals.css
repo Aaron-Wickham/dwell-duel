@@ -389,6 +389,12 @@
     position: absolute;
     inset: 0;
   }
+
+  @media (pointer: fine) {
+    &::after {
+      content: none;
+    }
+  }
 }
 
 /* 44px tap target for inline text links, without growing the row. */

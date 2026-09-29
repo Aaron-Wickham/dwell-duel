@@ -7,6 +7,7 @@ import { revokeInvite } from './revoke-invite'
 
 export interface AddInviteFormState {
   formError?: string
+  addedEmail?: string
 }
 
 export async function addInviteAction(
@@ -19,7 +20,7 @@ export async function addInviteAction(
   const result = await addInvite(supabase, user.id, email)
   revalidatePath('/admin/invites')
   if (!result.ok) return { formError: result.formError }
-  return undefined
+  return { addedEmail: result.email }
 }
 
 export interface RevokeInviteFormState {

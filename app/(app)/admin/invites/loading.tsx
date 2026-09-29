@@ -23,9 +23,12 @@ export default function Loading() {
         <Skeleton className="h-6 w-24" />
         <div className="flex flex-col divide-y divide-line">
           {Array.from({ length: 3 }, (_, i) => (
-            <div key={i} className="flex min-h-16 items-center justify-between gap-3 py-2.5">
+            <div key={i} className="flex min-h-16 flex-col gap-2 py-2.5 md:flex-row md:items-center md:justify-between md:gap-3">
               <Skeleton className="h-4 w-56 max-w-full" />
-              <Skeleton className="h-11 w-24 shrink-0" />
+              <div className="flex gap-2 md:shrink-0">
+                <Skeleton className="h-11 w-48" />
+                <Skeleton className="h-11 w-24" />
+              </div>
             </div>
           ))}
         </div>

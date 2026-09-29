@@ -11,6 +11,8 @@ import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { cn } from '@/lib/utils'
 import { createMarketAction, type ActionState } from '@/lib/markets/create-market'
 import type { MarketKind } from '@/lib/markets/kind'
+import { nextWeeklyClose } from '@/lib/markets/weekly-close'
+import { useTimeZone } from '@/components/ui/local-time'
 
 const MAX_OUTCOMES = 6
 const MIN_OUTCOMES = 2
@@ -21,13 +23,28 @@ const toggleClass = (on: boolean) =>
     on && 'bg-surface text-ink shadow-tab',
   )
 
-export function CreateMarketForm() {
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [kind, setKind] = useState<MarketKind>('binary')
-  const [outcomes, setOutcomes] = useState(['', ''])
-  const [line, setLine] = useState('')
-  const [closeAt, setCloseAt] = useState('')
+// A market being duplicated (?from=), read on the server. `closeAt` is the original's close.
+export interface MarketPrefill {
+  title: string
+  description: string
+  kind: MarketKind
+  outcomes: string[]
+  line: string
+  closeAt: string
+  now: number
+}
+
+export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [description, setDescription] = useState(initial?.description ?? '')
+  const [kind, setKind] = useState<MarketKind>(initial?.kind ?? 'binary')
+  const [outcomes, setOutcomes] = useState(initial?.kind === 'multiple_choice' ? initial.outcomes : ['', ''])
+  const [line, setLine] = useState(initial?.line ?? '')
+  const [editedCloseAt, setCloseAt] = useState<string | null>(initial ? null : '')
+  const timeZone = useTimeZone() ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+  // Until it's edited, a duplicate's close time is worked out in the viewer's own time zone,
+  // which the server can't know.
+  const closeAt = editedCloseAt ?? (initial ? nextWeeklyClose(initial.closeAt, initial.now, timeZone) : '')
   const [state, formAction] = useActionState<ActionState, FormData>(createMarketAction, undefined)
 
   function updateOutcome(index: number, value: string) {

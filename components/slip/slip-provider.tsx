@@ -23,6 +23,8 @@ function applyChange(picks: SlipPick[], change: Change): SlipPick[] {
 
 type Slip = {
   picks: SlipPick[]
+  // The member's balance as the layout last read it, for the quick-stake chips' Max.
+  balance: number
   // `add` and `remove` are useOptimistic updates, so they must be called inside the action that
   // changes the slip (ToastActionForm's `optimistic`); the layout's fresh slip takes over when it
   // settles. `setMode` starts its own transition.
@@ -41,6 +43,7 @@ type Slip = {
 // Outside the signed-in layout (unit tests of a lone control) there's no slip to change.
 const SlipContext = createContext<Slip>({
   picks: [],
+  balance: 0,
   add: () => {},
   remove: () => {},
   setMode: () => {},
@@ -55,7 +58,7 @@ const SlipContext = createContext<Slip>({
 
 // Lives in the signed-in layout, which stays mounted across navigations, so stakes typed into
 // the slip survive moving between pages (though not a reload: only the picks are in the cookie).
-export function SlipProvider({ view, children }: { view: SlipView; children: ReactNode }) {
+export function SlipProvider({ view, balance = 0, children }: { view: SlipView; balance?: number; children: ReactNode }) {
   const [picks, change] = useOptimistic(view.picks, applyChange)
   const [stakes, setStakes] = useState<Record<string, string>>({})
   const [parlayStake, setParlayStake] = useState('')
@@ -63,6 +66,7 @@ export function SlipProvider({ view, children }: { view: SlipView; children: Rea
 
   const slip: Slip = {
     picks,
+    balance,
     add: (pick) => change({ type: 'add', pick }),
     remove: (outcomeId) => change({ type: 'remove', outcomeId }),
     setMode: (outcomeId, parlay) =>

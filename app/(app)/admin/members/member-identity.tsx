@@ -3,10 +3,11 @@ import type { MemberSummary } from '@/lib/members/list-members'
 import { ROLE_LABELS } from '@/lib/auth/roles'
 import { Avatar } from '@/components/ui/avatar'
 import { StatusChip } from '@/components/ui/status-chip'
+import { MemberActivity } from './member-activity'
 
 const ROLE_TONE = { owner: 'done', admin: 'open', reviewer: 'wait' } as const
 
-export function MemberIdentity({ member }: { member: MemberSummary }) {
+export function MemberIdentity({ member, now }: { member: MemberSummary; now: number }) {
   return (
     <div className="flex items-center gap-3 md:w-60 md:shrink-0 md:self-center">
       <Avatar name={member.displayName} src={member.avatarSrc} />
@@ -18,6 +19,7 @@ export function MemberIdentity({ member }: { member: MemberSummary }) {
           {member.role !== 'member' && <StatusChip tone={ROLE_TONE[member.role]}>{ROLE_LABELS[member.role]}</StatusChip>}
         </span>
         <span className="text-sm text-ink2 tabular-nums">{member.balance} DC</span>
+        <MemberActivity joinedAt={member.joinedAt} lastSignInAt={member.lastSignInAt} now={now} />
       </div>
     </div>
   )

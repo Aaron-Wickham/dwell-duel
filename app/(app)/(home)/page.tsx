@@ -6,6 +6,10 @@ import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { adminHref, atLeast, getRole } from '@/lib/auth/roles'
 import { countOpenMarkets } from '@/lib/markets/list-markets'
 import { getAtStake } from '@/lib/home/at-stake'
+import { getOnboarding } from '@/lib/home/onboarding'
+import { OnboardingCard } from '@/components/home/onboarding-card'
+import { getMarketsToResolve } from '@/lib/markets/markets-to-resolve'
+import { MarketsToResolveCard } from '@/components/home/markets-to-resolve-card'
 import { getMemberStanding } from '@/lib/social/leaderboard'
 import { countPendingTaskCompletions, getMyPendingRewards } from '@/lib/tasks/list-task-completions'
 import { Page, PageHeader } from '@/components/ui/page'
@@ -20,13 +24,15 @@ export default async function Home() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const [role, openMarketCount, standing, pendingReviews, pendingApprovals, atStake] = await Promise.all([
+  const [role, openMarketCount, standing, pendingReviews, pendingApprovals, atStake, marketsToResolve, onboarding] = await Promise.all([
     getRole(supabase),
     countOpenMarkets(supabase),
     getMemberStanding(supabase, user.id),
     getMyPendingRewards(supabase, user.id),
     getRole(supabase).then((r) => (atLeast(r, 'reviewer') ? countPendingTaskCompletions(supabase) : 0)),
     getAtStake(supabase),
+    getMarketsToResolve(supabase),
+    getOnboarding(supabase, user.id),
   ])
   const adminLink = adminHref(role)
 
@@ -76,6 +82,8 @@ export default async function Home() {
         pendingCount={pendingReviews.count}
         pendingDc={pendingReviews.dc}
       />
+      <OnboardingCard steps={onboarding} />
+      <MarketsToResolveCard {...marketsToResolve} />
       <HomeTiles tiles={tiles} />
       <InstallCard />
     </Page>

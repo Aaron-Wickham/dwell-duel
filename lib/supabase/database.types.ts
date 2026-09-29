@@ -922,6 +922,23 @@ export type Database = {
           points: Json
         }[]
       }
+      markets_to_resolve: {
+        Args: never
+        Returns: {
+          close_at: string
+          id: string
+          title: string
+          total: number
+        }[]
+      }
+      member_activity: {
+        Args: { p_ids: string[] }
+        Returns: {
+          id: string
+          joined_at: string
+          last_sign_in_at: string
+        }[]
+      }
       member_emails: {
         Args: { p_ids: string[] }
         Returns: {

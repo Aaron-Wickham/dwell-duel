@@ -248,17 +248,20 @@ describe('0033 indexes', () => {
 })
 
 describe('0048 indexes (#67)', () => {
-  it('lists open markets newest first from the status index', async () => {
+  it('lists resolved and voided markets newest first from the status index', async () => {
     const nodes = await planNodes(
-      `select id, created_at from public.markets where status in ('open') order by created_at desc, id desc limit 51`,
+      `select id, created_at from public.markets where status in ('resolved', 'voided') order by created_at desc, id desc limit 51`,
     )
-    expect(indexesUsed(nodes)).toContain('markets_status_created_idx')
+    // Two statuses can't be walked in created_at order from one index range, so at this fixture's
+    // few rows the planner may as well take 0049's status index and sort; either is index-based.
+    expect(indexesUsed(nodes).some((name) => ['markets_status_created_idx', 'markets_status_close_idx'].includes(name))).toBe(true)
     expect(seqScanned(nodes)).toEqual([])
   })
 
   it('counts open markets from the status index', async () => {
     const nodes = await planNodes(`select count(*) from public.markets where status = 'open'`)
-    expect(indexesUsed(nodes)).toContain('markets_status_created_idx')
+    // 0049's (status, close_at, id) leads with status too, and serves the count as well.
+    expect(indexesUsed(nodes).some((name) => ['markets_status_created_idx', 'markets_status_close_idx'].includes(name))).toBe(true)
     expect(seqScanned(nodes)).toEqual([])
   })
 
@@ -285,5 +288,28 @@ describe('0048 indexes (#67)', () => {
     expect(rows.map((r) => r.indexname).sort()).toEqual(
       ['idempotency_keys_profile_id_idx', 'market_resolutions_outcome_id_idx', 'markets_created_by_idx', 'parlay_legs_outcome_id_idx'],
     )
+  })
+})
+
+describe('0049 index (#74)', () => {
+  it('lists open markets soonest to close first from the close index', async () => {
+    const nodes = await planNodes(
+      `select id, close_at from public.markets where status in ('open') order by close_at, id limit 51`,
+    )
+    expect(indexesUsed(nodes)).toContain('markets_status_close_idx')
+    expect(seqScanned(nodes)).toEqual([])
+  })
+
+  it('seeks a later page of open markets by its close_at bound', async () => {
+    // The keyset filter's plain `close_at >=` bound, beside its (close_at, id) tiebreak OR, is
+    // what gives the planner an Index Cond on close_at rather than a Filter over every open market.
+    const ts = '2026-09-01T00:00:00+00:00'
+    const id = '00000000-0000-4000-8000-000000000000'
+    const nodes = await planNodes(
+      `select id, close_at from public.markets where status in ('open') and close_at >= '${ts}' and (close_at > '${ts}' or (close_at = '${ts}' and id > '${id}')) order by close_at, id limit 51`,
+    )
+    const scan = nodes.find((n) => n['Index Name'] === 'markets_status_close_idx')
+    expect(scan?.['Index Cond']).toMatch(/close_at >=/)
+    expect(seqScanned(nodes)).toEqual([])
   })
 })

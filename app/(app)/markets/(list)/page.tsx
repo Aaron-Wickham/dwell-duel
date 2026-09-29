@@ -92,6 +92,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       resolvedOutcomeLabel: market.resolvedOutcomeLabel,
       chart,
       domId: rowDomId(prefix, market.id),
+      now: nowMs,
     }
   })
 

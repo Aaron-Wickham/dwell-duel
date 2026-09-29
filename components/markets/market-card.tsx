@@ -6,6 +6,7 @@ import { StatusChip } from '@/components/ui/status-chip'
 import { LocalTime } from '@/components/ui/local-time'
 import { SERIES_BG } from '@/components/markets/series-classes'
 import { MarketSparkline } from '@/components/markets/market-sparkline'
+import { ClosesSoonChip } from '@/components/markets/closes-soon-chip'
 import type { ChartOutcome } from '@/components/markets/probability-chart'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import type { SeriesPoint } from '@/lib/markets/probability-series'
@@ -53,6 +54,8 @@ export interface MarketCardProps {
   resolvedOutcomeLabel: string | null
   chart?: MarketCardChart
   domId?: string
+  // The page's render time, for the "Closes in 2h" chip on a market closing within a day.
+  now?: number
 }
 
 export function MarketCard({
@@ -68,6 +71,7 @@ export function MarketCard({
   resolvedOutcomeLabel,
   chart,
   domId,
+  now,
 }: MarketCardProps) {
   // Every outcome has a seed pool (0041), so only a market that closed before seeding, with no
   // bets on it, has no odds.
@@ -81,6 +85,7 @@ export function MarketCard({
     <article {...focusTarget(domId, titleId)} className={cn(cardClass, 'flex min-w-0 flex-col gap-3 p-[18px]')}>
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</StatusChip>
+        {status === 'open' && now !== undefined && <ClosesSoonChip closeAt={closeAt} now={now} />}
         {kind === 'over_under' && line !== null && <StatusChip tone="void">O/U {formatLine(line)}</StatusChip>}
         <span className="text-sm text-ink2">
           {status === 'open' && (

@@ -38,7 +38,7 @@ function OpenState() {
 
 // Stands in for the layout: a mode switch's action re-renders it with the server's updated slip,
 // in a transition, as Next does with the action's refreshed props.
-function Layout({ initial }: { initial: SlipView }) {
+function Layout({ initial, balance = 100 }: { initial: SlipView; balance?: number }) {
   const [view, setView] = useState(initial)
   setPickModeAction.mockImplementation(async (outcomeId: string, parlay: boolean) => {
     startTransition(() =>
@@ -47,15 +47,15 @@ function Layout({ initial }: { initial: SlipView }) {
     return true
   })
   return (
-    <SlipProvider view={view}>
+    <SlipProvider view={view} balance={balance}>
       <OpenState />
       <SlipPanel />
     </SlipProvider>
   )
 }
 
-function renderPanel(view: SlipView) {
-  return render(<Layout initial={view} />)
+function renderPanel(view: SlipView, balance?: number) {
+  return render(<Layout initial={view} balance={balance} />)
 }
 
 beforeEach(() => {
@@ -85,12 +85,12 @@ describe('SlipPanel', () => {
   it('moves picks into one parlay with a shared stake, and needs two of them', async () => {
     renderPanel(viewOf(pick(1), pick(2)))
 
-    await userEvent.click(within(screen.getByRole('group', { name: /Outcome 1/ })).getByRole('button', { name: 'Parlay' }))
+    await userEvent.click(within(screen.getByRole('group', { name: /Bet type for Outcome 1/ })).getByRole('button', { name: 'Parlay' }))
     expect(setPickModeAction).toHaveBeenCalledWith(pick(1).outcomeId, true)
     const parlay = screen.getByRole('region', { name: 'Parlay · 1 pick' })
     expect(within(parlay).getByText(/needs at least 2 picks/)).toBeInTheDocument()
 
-    await userEvent.click(within(screen.getByRole('group', { name: /Outcome 2/ })).getByRole('button', { name: 'Parlay' }))
+    await userEvent.click(within(screen.getByRole('group', { name: /Bet type for Outcome 2/ })).getByRole('button', { name: 'Parlay' }))
     const two = screen.getByRole('region', { name: 'Parlay · 2 picks' })
     expect(within(two).getByText('4.00×')).toBeInTheDocument()
     await userEvent.type(within(two).getByLabelText('Stake (DC)'), '5')
@@ -142,5 +142,64 @@ describe('SlipPanel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Remove Outcome 1, Market 1' }))
     expect(removeFromSlipAction).toHaveBeenCalledWith(pick(1).outcomeId)
     expect(placeSlipAction).not.toHaveBeenCalled()
+  })
+
+  describe('quick stakes', () => {
+    it("sets a solo pick's stake from a chip", async () => {
+      renderPanel(viewOf(pick(1)))
+      const chips = screen.getByRole('group', { name: 'Quick stakes for Outcome 1, Market 1' })
+      expect(within(chips).getAllByRole('button').map((b) => b.textContent)).toEqual(['5', '10', '25', 'Max'])
+
+      await userEvent.click(within(chips).getByRole('button', { name: '25' }))
+      expect(screen.getByLabelText('Stake (DC)')).toHaveValue(25)
+      expect(screen.getByRole('button', { name: 'Place 1 bet · 25 DC' })).toBeInTheDocument()
+    })
+
+    it('makes Max the balance less the slip’s other stakes', async () => {
+      renderPanel(viewOf(pick(1), pick(2)), 40)
+      await userEvent.type(screen.getAllByLabelText('Stake (DC)')[0], '15')
+
+      const second = screen.getByRole('group', { name: 'Quick stakes for Outcome 2, Market 2' })
+      await userEvent.click(within(second).getByRole('button', { name: 'Max, 25 DC' }))
+      expect(screen.getAllByLabelText('Stake (DC)')[1]).toHaveValue(25)
+      // The first pick's own stake doesn't count against it: 40 less the second's 25.
+      const first = screen.getByRole('group', { name: 'Quick stakes for Outcome 1, Market 1' })
+      expect(within(first).getByRole('button', { name: /^Max/ })).toHaveAccessibleName('Max, 15 DC')
+    })
+
+    it('disables a chip that is more than is available, and Max at nothing left', async () => {
+      renderPanel(viewOf(pick(1), pick(2)), 30)
+      await userEvent.type(screen.getAllByLabelText('Stake (DC)')[0], '22')
+
+      const chips = within(screen.getByRole('group', { name: 'Quick stakes for Outcome 2, Market 2' }))
+      expect(chips.getByRole('button', { name: '5' })).toBeEnabled()
+      expect(chips.getByRole('button', { name: '10' })).toBeDisabled()
+      expect(chips.getByRole('button', { name: '25' })).toBeDisabled()
+      expect(chips.getByRole('button', { name: 'Max, 8 DC' })).toBeEnabled()
+
+      await userEvent.clear(screen.getAllByLabelText('Stake (DC)')[0])
+      await userEvent.type(screen.getAllByLabelText('Stake (DC)')[0], '30')
+      expect(chips.getByRole('button', { name: 'Max, 0 DC' })).toBeDisabled()
+      expect(chips.getByRole('button', { name: '5' })).toBeDisabled()
+    })
+
+    it('sets the parlay stake from the parlay’s chips, net of the solo stakes', async () => {
+      renderPanel(viewOf(pick(1), pick(2, { parlay: true }), pick(3, { parlay: true })), 50)
+      await userEvent.type(screen.getByLabelText('Stake (DC)', { selector: '#slip-stake-' + pick(1).outcomeId }), '20')
+
+      const parlay = within(screen.getByRole('region', { name: 'Parlay · 2 picks' }))
+      const chips = within(parlay.getByRole('group', { name: 'Quick stakes for the parlay' }))
+      expect(screen.queryByRole('group', { name: /Quick stakes for Outcome 2/ })).not.toBeInTheDocument()
+
+      await userEvent.click(chips.getByRole('button', { name: 'Max, 30 DC' }))
+      expect(parlay.getByLabelText('Stake (DC)')).toHaveValue(30)
+      // The solo pick's own chips now leave out the parlay's 30.
+      const solo = within(screen.getByRole('group', { name: 'Quick stakes for Outcome 1, Market 1' }))
+      expect(solo.getByRole('button', { name: 'Max, 20 DC' })).toBeEnabled()
+      expect(solo.getByRole('button', { name: '25' })).toBeDisabled()
+
+      await userEvent.click(chips.getByRole('button', { name: '10' }))
+      expect(parlay.getByLabelText('Stake (DC)')).toHaveValue(10)
+    })
   })
 })

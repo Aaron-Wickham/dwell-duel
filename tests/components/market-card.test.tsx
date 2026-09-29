@@ -291,4 +291,31 @@ describe('MarketCard', () => {
     expect(screen.getByRole('article')).not.toHaveAttribute('tabindex')
     expect(screen.getByRole('article')).not.toHaveAttribute('id')
   })
+  it('adds a "Closes in" chip to an open market closing within a day, and to no other card', () => {
+    const now = Date.parse('2026-10-04T14:00:00.000Z')
+    // The chip's clock takes over from `now` as soon as it mounts.
+    vi.useFakeTimers({ now })
+    const card = (status: 'open' | 'awaiting', closeAt: string) => (
+      <MarketCard
+        id="m1"
+        title="Who wins the chili cook-off?"
+        status={status}
+        kind="binary"
+        closeAt={closeAt}
+        resolvedAt={null}
+        outcomes={[]}
+        resolvedOutcomeLabel={null}
+        now={now}
+      />
+    )
+    const { rerender } = render(card('open', '2026-10-04T16:30:00.000Z'))
+    expect(screen.getByText('Closes in 2h')).toBeInTheDocument()
+
+    rerender(card('open', '2026-10-06T16:30:00.000Z'))
+    expect(screen.queryByText(/Closes in/)).toBeNull()
+
+    rerender(card('awaiting', '2026-10-04T13:00:00.000Z'))
+    expect(screen.queryByText(/Closes in/)).toBeNull()
+    vi.useRealTimers()
+  })
 })

@@ -44,6 +44,12 @@ test('the slip button follows the member everywhere, and one tap places every so
   sheet = await openSlip(page)
   const stakes = sheet.getByLabel('Stake (DC)')
   await expect(stakes).toHaveCount(3)
+  // A quick-stake chip fills in its own pick's stake.
+  const chips = sheet.getByRole('group', { name: /^Quick stakes for Yes, / })
+  await expect(chips).toHaveCount(3)
+  await chips.first().getByRole('button', { name: '10', exact: true }).click()
+  await expect(stakes.first()).toHaveValue('10')
+  await expect(sheet.getByRole('button', { name: 'Place 3 bets · 10 DC' })).toBeVisible()
   for (const [i, amount] of ['4', '6', '10'].entries()) await stakes.nth(i).fill(amount)
   await sheet.getByRole('button', { name: 'Place 3 bets · 20 DC' }).click()
   await expect(page.getByText('Placed 3 solo bets.').first()).toBeVisible()

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { countOpenMarkets, listClosedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
+import { decodeCursor } from '@/lib/pagination/cursor'
 import { fakeSupabase } from '../fake-supabase'
 
 const RESOLUTION_EMBED = 'current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at)'
@@ -24,7 +25,7 @@ function marketRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe('listOpenMarkets', () => {
-  it('reads only open markets, 50 newest first, with the resolution embedded in the same request', async () => {
+  it('reads only open markets, 50 soonest to close first, with the resolution embedded in the same request', async () => {
     const { client, queries } = fakeSupabase(() => ({ data: [marketRow({ status: 'open', current_resolution: null })] }))
 
     const page = await listOpenMarkets(client, { top: null, bottom: null })
@@ -34,8 +35,8 @@ describe('listOpenMarkets', () => {
     expect(queries[0].in).toEqual([['status', ['open']]])
     expect(queries[0].limit).toBe(50)
     expect(queries[0].order.slice(0, 2)).toEqual([
-      ['created_at', { ascending: false }],
-      ['id', { ascending: false }],
+      ['close_at', { ascending: true }],
+      ['id', { ascending: true }],
     ])
     expect(page.next).toBeNull()
     expect(page.rows).toEqual([
@@ -61,17 +62,21 @@ describe('listOpenMarkets', () => {
     const rows = Array.from({ length: 50 }, (_, i) =>
       marketRow({ id: `0b9c3f5e-8a1d-4c2b-9e7f-${String(1000 - i).padStart(12, '0')}`, status: 'open', current_resolution: null }),
     )
-    const probed = [marketRow({ id: '0b9c3f5e-8a1d-4c2b-9e7f-000000000001', status: 'open', current_resolution: null })]
+    const probed = [{ id: '0b9c3f5e-8a1d-4c2b-9e7f-000000000001', close_at: '2026-09-21T09:00:00+00:00' }]
     const { client, queries } = fakeSupabase((_query, index) => ({ data: index === 0 ? rows : probed }))
 
     const page = await listOpenMarkets(client, { top: null, bottom: null })
 
     const [read, probe] = queries
-    expect(probe.select).toBe('id, created_at')
+    expect(probe.select).toBe('id, close_at')
+    expect(probe.or).toEqual([
+      'and(close_at.gte."2026-09-20T09:00:00+00:00",or(close_at.gt."2026-09-20T09:00:00+00:00",and(close_at.eq."2026-09-20T09:00:00+00:00",id.gt."0b9c3f5e-8a1d-4c2b-9e7f-000000000951")))',
+    ])
     expect(probe.in).toEqual([['status', ['open']]])
     expect(probe.order).toEqual(read.order.slice(0, 2))
     expect(page.rows).toHaveLength(50)
     expect(page.next).toMatchObject({ kind: 'extend', firstId: '0b9c3f5e-8a1d-4c2b-9e7f-000000000001' })
+    expect(decodeCursor(page.next?.cursor)).toEqual({ ts: '2026-09-21T09:00:00+00:00', id: '0b9c3f5e-8a1d-4c2b-9e7f-000000000001' })
   })
 
   it('ignores a cursor whose id is not a market id', async () => {

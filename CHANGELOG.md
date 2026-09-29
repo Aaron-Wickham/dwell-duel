@@ -56,6 +56,18 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
   - Home counts pending tasks instead of reading your whole task history;
   - the signed-in layout reads your slip alongside everything else.
 
+### Markets
+- Open markets now sort by closing time, soonest first, with a "Closes in 2h" chip inside a day, and Home lists the closed markets waiting on you to resolve (#74).
+- Quick stakes in the slip: tap 5, 10, 25 or Max to set a solo pick's or the parlay's stake; Max is your balance less the slip's other stakes, and chips you can't cover are disabled (#87).
+- A Share button on every market: it uses the share sheet where there is one, or copies the market's link (#87).
+- Duplicate a market for weekly questions: Create market opens filled in with the question, description, kind and outcomes or line, closing at the same local time a week or more later; nothing is created until you submit (#88).
+
+### Getting started
+- New members get a dismissible Getting started card on Home (add your photo, place your first bet, try a task), and How it works is now a page in the app, linked from Settings and the slip (#78).
+
+### Admin
+- Invites offer "Copy invite message", with the sign-in link and the Google account to use, and Admin → Members shows when each member joined and last signed in (#85).
+
 ### Tests
 - **Closed test gaps** (#72): end-to-end tests for role gates (a member is kept out of Admin and sees no admin controls; a reviewer lands on the approval queue), cancelling a bet, overriding a resolution, rejecting a submission with a reason and editing your profile; unit tests for saving a profile and submitting a task; and database tests for money moving at the same time: a bet racing a resolve, two resolves at once, a void racing a resolve and two slips that together overdraw a balance.
 

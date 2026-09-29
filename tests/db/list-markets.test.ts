@@ -38,17 +38,18 @@ async function voidMarket(marketId: string): Promise<void> {
 }
 
 describe('listOpenMarkets', () => {
-  it('lists only open markets, newest first, awaiting ones included, with no resolution time', async () => {
-    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Older' })
-    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Newer' })
+  it('lists only open markets, soonest to close first, awaiting ones included, with no resolution time', async () => {
+    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Closes later', closeInMs: 3 * 86_400_000 })
+    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Closes soon', closeInMs: 3_600_000 })
     const awaiting = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Awaiting' })
     await closeNow(awaiting.marketId)
-    const voided = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Voided' })
+    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Closes tomorrow', closeInMs: 86_400_000 })
+    const voided = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Voided', closeInMs: 60_000 })
     await voidMarket(voided.marketId)
 
     const { rows: markets, next } = await listOpenMarkets(bobClient, FIRST)
 
-    expect(markets.map((m) => m.title)).toEqual(['Awaiting', 'Newer', 'Older'])
+    expect(markets.map((m) => m.title)).toEqual(['Awaiting', 'Closes soon', 'Closes tomorrow', 'Closes later'])
     expect(markets.every((m) => m.status === 'open' && m.resolvedAt === null && m.resolvedOutcomeLabel === null)).toBe(true)
     expect(markets.map((m) => m.id)).not.toContain(voided.marketId)
     expect(next).toBeNull()
@@ -84,28 +85,29 @@ describe('listOpenMarkets', () => {
     expect(await listOpenMarkets(await clientFor(carol), FIRST)).toEqual({ rows: [], next: null, windowed: false })
   })
 
-  it('pages 50 at a time across a created_at tie, and a fresh window starts inside the tie', async () => {
-    const start = Date.parse('2026-09-01T00:00:00.000Z')
-    // Inserted directly, as the closed list's paging test does. Markets share a created_at in
-    // pairs offset by one, so the 50th and 51st newest tie and only the id orders them.
+  it('pages 50 at a time across a close_at tie, broken by id, and a fresh window starts inside the tie', async () => {
+    const start = Date.parse('2026-12-01T00:00:00.000Z')
+    // Inserted directly, as the closed list's paging test does. Markets share a close_at in
+    // pairs offset by one, so the 50th and 51st soonest tie and only the id orders them; each
+    // created_at runs the other way, so the list can't pass by reading creation order.
     const rows = Array.from({ length: 60 }, (_, i) => ({
       created_by: alice.id,
       title: `Open ${String(i).padStart(2, '0')}`,
       kind: 'binary',
       status: 'open',
-      close_at: new Date(Date.now() + 86_400_000).toISOString(),
-      created_at: `${new Date(start + Math.floor((i + 1) / 2) * 60_000).toISOString().slice(0, 19)}.000456+00:00`,
+      close_at: `${new Date(start + Math.floor((i + 1) / 2) * 60_000).toISOString().slice(0, 19)}.000456+00:00`,
+      created_at: new Date(Date.parse('2026-09-01T00:00:00.000Z') - i * 60_000).toISOString(),
     }))
     const { error } = await serviceClient().from('markets').insert(rows)
     if (error) throw error
     const { data: all, error: allErr } = await serviceClient()
       .from('markets')
-      .select('id, created_at')
-      .order('created_at', { ascending: false })
-      .order('id', { ascending: false })
+      .select('id, close_at')
+      .order('close_at', { ascending: true })
+      .order('id', { ascending: true })
     if (allErr) throw allErr
     const everything = all.map((m) => m.id as string)
-    expect(all[49].created_at).toBe(all[50].created_at)
+    expect(all[49].close_at).toBe(all[50].close_at)
 
     const first = await listOpenMarkets(bobClient, FIRST)
     expect(first.rows.map((m) => m.id)).toEqual(everything.slice(0, 50))
@@ -114,19 +116,20 @@ describe('listOpenMarkets', () => {
     const href = new URL(showMoreHref('/markets', {}, 'open', first.next!), 'http://localhost')
     const second = await listOpenMarkets(bobClient, readPageParams(Object.fromEntries(href.searchParams), 'open'))
     expect(second.rows.map((m) => m.id)).toEqual(everything)
+    expect(new Set(second.rows.map((m) => m.id)).size).toBe(60)
     expect(second.next).toBeNull()
 
     const window = await listOpenMarkets(
       bobClient,
-      readPageParams({ open_from: encodeCursor({ ts: all[50].created_at, id: everything[50] }) }, 'open'),
+      readPageParams({ open_from: encodeCursor({ ts: all[50].close_at, id: everything[50] }) }, 'open'),
     )
     expect(window.windowed).toBe(true)
     expect(window.rows.map((m) => m.id)).toEqual(everything.slice(50))
   })
 
-  it('reads a fresh window past the oldest open market as empty', async () => {
+  it('reads a fresh window past the last open market to close as empty', async () => {
     await createTestMarket(aliceClient, ['Yes', 'No'])
-    const pastTheEnd = encodeCursor({ ts: '2000-01-01T00:00:00Z', id: '00000000-0000-4000-8000-000000000000' })
+    const pastTheEnd = encodeCursor({ ts: '2999-01-01T00:00:00Z', id: '00000000-0000-4000-8000-000000000000' })
     expect(await listOpenMarkets(bobClient, readPageParams({ open_from: pastTheEnd }, 'open'))).toEqual({
       rows: [],
       next: null,

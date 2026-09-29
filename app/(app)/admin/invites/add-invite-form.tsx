@@ -7,6 +7,7 @@ import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
+import { CopyInviteButton } from './copy-invite-button'
 
 export function AddInviteForm() {
   const [state, formAction] = useActionState(
@@ -40,6 +41,14 @@ export function AddInviteForm() {
         <Message tone="error" id="add-invite-error">
           {state.formError}
         </Message>
+      )}
+      {state?.addedEmail && (
+        // The email stays out of this text: the e2e suite finds the new invite by its email,
+        // which must appear as text only once.
+        <div className="flex flex-col gap-2">
+          <Message tone="ok">Invite added. Send them the invite message so they know to sign in.</Message>
+          <CopyInviteButton email={state.addedEmail} className="self-start" />
+        </div>
       )}
     </form>
   )

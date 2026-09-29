@@ -208,10 +208,13 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
 - **The race** (This month): a step line for each of the month's top five,
   showing their running net profit from the month's first settled bet,
   one step each time a total moved, with each name and total at the end
-  of the line. Hover or tap it for everyone's exact total at that moment.
-  When one member is far ahead, their line runs off the top (an arrow
-  marks where) so the others stay readable; their label still shows
-  their true total. Until a bet settles, the race says it hasn't started.
+  of the line. Hover or tap it for everyone's exact total at that moment,
+  or focus it and use the arrow keys (Home and End jump to either end) to
+  step through the moments, with a screen reader reading out the totals.
+  When one member is far ahead, or far behind, their line runs off the
+  top or bottom (an arrow marks where) so the others stay readable; their
+  label still shows their true total. Until a bet settles, the race says
+  it hasn't started.
 - **This month's awards**, each shown only once someone has earned it:
   **Biggest win** (the most gained on one solo bet paid this month),
   **Best parlay** (the highest multiplier among parlays paid this month),

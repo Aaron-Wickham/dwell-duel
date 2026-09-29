@@ -301,6 +301,21 @@ export type Database = {
           },
         ]
       }
+      cron_heartbeats: {
+        Row: {
+          last_run_at: string
+          name: string
+        }
+        Insert: {
+          last_run_at: string
+          name: string
+        }
+        Update: {
+          last_run_at?: string
+          name?: string
+        }
+        Relationships: []
+      }
       feed_reactions: {
         Row: {
           created_at: string
@@ -1371,6 +1386,7 @@ export type Database = {
         Args: { p_kind: string; p_profile_id: string }
         Returns: boolean
       }
+      record_cron_heartbeat: { Args: { p_name: string }; Returns: undefined }
       record_proof: {
         Args: {
           p_completion_id: string

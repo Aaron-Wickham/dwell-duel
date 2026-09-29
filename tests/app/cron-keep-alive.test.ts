@@ -49,6 +49,11 @@ describe('keep-alive cron', () => {
     expect(remove).not.toHaveBeenCalled()
   })
 
+  it('leaves the closing-alerts heartbeat alone, so a dead ten-minute schedule still shows', async () => {
+    expect((await GET(authorized())).status).toBe(200)
+    expect(rpc).not.toHaveBeenCalledWith('record_cron_heartbeat', expect.anything())
+  })
+
   it('reports a failed cleanup as a 502, so the cron log shows it', async () => {
     rpc.mockResolvedValue({ data: [{ name: 'task/u/1/a.txt' }], error: null })
     remove.mockResolvedValue({ error: new Error('storage down') })

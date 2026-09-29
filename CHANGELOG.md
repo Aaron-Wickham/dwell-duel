@@ -25,6 +25,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **"Closes in" rounds to the nearest hour or minute,** so 1h 59m reads "2h", not "1h" (#112).
 
 ### Under the hood
+- **`npm run check:ios` checks the installed iPhone app** in the iOS Simulator: it cold-launches the Home Screen web app on a page and fails when the viewport is shorter than the screen, the bug behind #127 and #128, which no browser test can see. `--video` records the launch as contact sheets (#147).
 - **Migrations apply on merge with no approval step,** so keep them additive; the workflow no longer waits on the `production-db` environment (#138).
 - **A GitHub Actions schedule** (`closing-alerts.yml`, every ten minutes, needs the `CRON_SECRET` repository secret) calls `/api/cron/closing-alerts`, because Vercel's Hobby cron runs once a day. The daily cron still sends the same alerts as a backstop (#123).
 - **The coin-history index test no longer fails at random:** it asserts that the keyset bound lands in an index condition, whichever ledger index the planner picks (#139).

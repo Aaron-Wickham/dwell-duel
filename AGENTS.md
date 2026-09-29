@@ -103,7 +103,9 @@ a line to `CHANGELOG.md` under the next release.
   the bottom. `globals.css` makes `body` at least `100lvh` tall in
   `display-mode: standalone`; `min-height: 100%` can't do it, because it is
   measured against that shrinking viewport. Don't remove it, and check
-  changes to the shell in the simulator's installed app, not just Safari.
+  changes to the shell in the simulator's installed app, not just Safari:
+  `npm run check:ios` cold-launches the installed app on a booted
+  simulator and fails on a short viewport (`--video` records the launch).
 - **The `pressable` and `no-callout` utilities,** plus the `--safe-top` /
   `--safe-bottom` tokens, which are non-zero only in standalone mode.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.

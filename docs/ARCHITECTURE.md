@@ -497,6 +497,17 @@ leaves out empty lines and hides when every one is empty.
   and PR, all against a throwaway local Supabase.
 - **Database deploys** (`.github/workflows/deploy-production-db.yml`): a
   dry run, then the push, one at a time and with no approval step.
+- **Checking the installed app** (`npm run check:ios`,
+  `scripts/ios-standalone-check.mjs`): Playwright has no standalone mode,
+  so the installed iPhone app is checked in the iOS Simulator by hand before
+  a release. The script builds and serves the app behind a small proxy that
+  adds a measuring script to each page, points the simulator's installed
+  DwellDuel web app (a `.webclip` whose URL is a plist value) at `--path`,
+  cold-launches it with `simctl launch com.apple.webapp -webClipIdentifier`,
+  and fails when the viewport is shorter than the screen (the 812 vs 874pt
+  bug of #127). `--video` records the launch and writes ffmpeg contact
+  sheets. Install the web app once from the simulator's Safari (Share ›
+  Add to Home Screen); the script opens Safari and says how when it's missing.
 - **Typed queries:** `lib/supabase/database.types.ts` is generated from the
   migrations and never edited; `lib/supabase/database.ts` wraps it
   (`Database`, `DbClient`) and marks the few function arguments that take a

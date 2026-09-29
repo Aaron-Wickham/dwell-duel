@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import {
   marketResultPayload,
+  marketAlertPayload,
   newMarketPayload,
   resolveReminderPayload,
+  taskAlertPayload,
   taskReviewPayload,
   type MarketResultRow,
 } from '@/lib/push/messages'
@@ -109,5 +111,21 @@ describe('push payloads', () => {
       ...[{}, { won: 1 }, { refunded: 1 }, { status: 'voided' }, { isOverride: true }].map((r) => result(r).title),
     ]
     expect(titles).not.toContain('DwellDuel')
+  })
+
+  it('tells a reviewer who submitted what, linking to the queue', () => {
+    expect(taskAlertPayload({ taskTitle: 'Read Psalm 23', submitterName: 'Grace' })).toEqual({
+      title: 'Task to review',
+      body: 'Grace: Read Psalm 23',
+      url: '/admin/tasks',
+    })
+  })
+
+  it('tells an admin a market needs a result, linking to it', () => {
+    expect(marketAlertPayload({ marketId: 'm-1', title: 'Will it rain?' })).toEqual({
+      title: 'Market needs a result',
+      body: 'Will it rain? has closed',
+      url: '/markets/m-1',
+    })
   })
 })

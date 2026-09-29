@@ -5,7 +5,16 @@ vi.mock('@/lib/push/send', () => ({ sendPush }))
 vi.mock('@/lib/supabase/service-role', () => ({ serviceRoleClient: vi.fn() }))
 vi.mock('next/server', () => ({ after }))
 
-import { afterAction, notifyMarketResult, notifyNewMarket, notifyTaskReviews, sendResolveReminders } from '@/lib/push/notify'
+import {
+  afterAction,
+  notifyMarketResult,
+  notifyNewMarket,
+  notifyTaskReviews,
+  notifyTaskSubmitted,
+  sendClosingAlerts,
+  sendMarketAlerts,
+  sendResolveReminders,
+} from '@/lib/push/notify'
 import type { DbClient } from '@/lib/supabase/database'
 
 const dbReturning = (data: unknown, error: unknown = null) => {
@@ -98,5 +107,53 @@ describe('notify', () => {
     const { db, rpc } = dbReturning([])
     expect(await sendResolveReminders(db)).toEqual({ reminded: 0 })
     expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('tells the reviewers the database picks about a new submission', async () => {
+    const { db, rpc } = dbReturning([{ profile_id: 'rae', task_title: 'Read Psalm 23', submitter_name: 'Grace' }])
+    await notifyTaskSubmitted('c-1', db)
+    expect(rpc).toHaveBeenCalledWith('push_task_alerts', { p_completion_id: 'c-1' })
+    expect(sendPush.mock.calls[0][0]).toEqual([
+      { profileId: 'rae', payload: { title: 'Task to review', body: 'Grace: Read Psalm 23', url: '/admin/tasks' } },
+    ])
+  })
+
+  it('logs a failed task alert read and sends nothing', async () => {
+    const { db } = dbReturning(null, new Error('db down'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(await notifyTaskSubmitted('c-1', db)).toBeNull()
+    expect(sendPush).not.toHaveBeenCalled()
+  })
+
+  it('alerts each admin once per market, counting markets not recipients', async () => {
+    const { db, rpc } = dbReturning([
+      { market_id: 'm-1', title: 'Will it rain?', profile_id: 'ada' },
+      { market_id: 'm-1', title: 'Will it rain?', profile_id: 'olive' },
+    ])
+    expect(await sendMarketAlerts(db)).toEqual({ alerted: 1 })
+    expect(rpc).toHaveBeenCalledWith('push_market_alerts')
+    expect(sendPush.mock.calls[0][0]).toHaveLength(2)
+  })
+
+  it("doesn't claim market alerts it can't send", async () => {
+    vi.stubEnv('VAPID_PRIVATE_KEY', '')
+    const { db, rpc } = dbReturning([])
+    expect(await sendMarketAlerts(db)).toEqual({ alerted: 0 })
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('reports a failed alert read to the caller', async () => {
+    const failure = new Error('db down')
+    const { db } = dbReturning(null, failure)
+    expect(await sendMarketAlerts(db)).toEqual({ error: failure })
+  })
+
+  it('runs the creator reminders and the admin alerts together', async () => {
+    const rpc = vi.fn(async (fn: string) =>
+      fn === 'push_resolve_reminders'
+        ? { data: [{ market_id: 'm-1', title: 'A', profile_id: 'alice' }], error: null }
+        : { data: [{ market_id: 'm-2', title: 'B', profile_id: 'ada' }], error: null },
+    )
+    expect(await sendClosingAlerts({ rpc } as unknown as DbClient)).toEqual({ reminded: 1, alerted: 1 })
   })
 })

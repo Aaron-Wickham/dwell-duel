@@ -632,6 +632,7 @@ export type Database = {
           profile_id: string
           resolve_reminders: boolean
           results: boolean
+          review_alerts: boolean
           task_reviews: boolean
           updated_at: string
         }
@@ -640,6 +641,7 @@ export type Database = {
           profile_id: string
           resolve_reminders?: boolean
           results?: boolean
+          review_alerts?: boolean
           task_reviews?: boolean
           updated_at?: string
         }
@@ -648,6 +650,7 @@ export type Database = {
           profile_id?: string
           resolve_reminders?: boolean
           results?: boolean
+          review_alerts?: boolean
           task_reviews?: boolean
           updated_at?: string
         }
@@ -1227,6 +1230,13 @@ export type Database = {
           wagers: number
         }[]
       }
+      my_review_counts: {
+        Args: never
+        Returns: {
+          markets: number
+          tasks: number
+        }[]
+      }
       my_role: { Args: never; Returns: string }
       my_task_streaks: {
         Args: { p_at?: string }
@@ -1264,6 +1274,14 @@ export type Database = {
         }
         Returns: string
       }
+      push_market_alerts: {
+        Args: never
+        Returns: {
+          market_id: string
+          profile_id: string
+          title: string
+        }[]
+      }
       push_market_result: {
         Args: { p_market_id: string }
         Returns: {
@@ -1290,6 +1308,14 @@ export type Database = {
           market_id: string
           profile_id: string
           title: string
+        }[]
+      }
+      push_task_alerts: {
+        Args: { p_completion_id: string }
+        Returns: {
+          profile_id: string
+          submitter_name: string
+          task_title: string
         }[]
       }
       push_task_reviews: {

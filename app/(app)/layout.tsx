@@ -1,5 +1,8 @@
 import { requireUser } from '@/lib/auth/require-user'
-import { adminHref, getRole } from '@/lib/auth/roles'
+import { adminHref, atLeast, getRole } from '@/lib/auth/roles'
+import { getReviewCounts, reviewSubscriptions } from '@/lib/admin/review-counts'
+import { nextResolveCheckAt } from '@/lib/markets/markets-to-resolve'
+import { RefreshAt } from '@/components/home/refresh-at'
 import { avatarUrl } from '@/lib/profile/avatar'
 import { readSlip } from '@/lib/parlays/slip'
 import { AppNav } from '@/components/app-nav/app-nav'
@@ -7,7 +10,7 @@ import { SlipProvider } from '@/components/slip/slip-provider'
 import { SlipSheet, SlipSpacer } from '@/components/slip/slip-sheet'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { LiveRefresh } from '@/components/live/live-refresh'
-import { LiveTablesProvider } from '@/components/live/live-tables'
+import { LiveTables, LiveTablesProvider } from '@/components/live/live-tables'
 import { NavDepthTracker } from '@/lib/nav/nav-depth'
 import { Toaster } from '@/components/ui/toaster'
 import { OfflineBanner } from '@/components/offline/offline-banner'
@@ -23,15 +26,25 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
     readSlip().then((slip) => getSlipView(supabase, slip, user.id)),
   ])
   if (error) throw error
+  const isAdmin = atLeast(role, 'admin')
+  const [reviewCounts, nextClose] = await Promise.all([
+    getReviewCounts(supabase, role),
+    isAdmin ? nextResolveCheckAt(supabase, user.id, true) : null,
+  ])
+  const alertTables = reviewSubscriptions(role)
 
   return (
     <LiveTablesProvider userId={user.id}>
       <SlipProvider view={slipView} balance={profile?.balance ?? 0}>
         <NavDepthTracker />
+        {alertTables.length > 0 && <LiveTables subscriptions={alertTables} />}
+        {/* A market closing changes nothing in the database, so an admin's badge refreshes at the next close. */}
+        {isAdmin && <RefreshAt at={nextClose} />}
         {/* A missing profile row still gets the nav and <main>, so the page isn't stranded without them. */}
         <AppNav
           balance={profile?.balance ?? 0}
           adminHref={adminHref(role)}
+          adminAttention={reviewCounts.tasks + reviewCounts.markets}
           me={{
             id: user.id,
             name: profile?.display_name ?? FALLBACK_NAME,

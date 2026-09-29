@@ -11,6 +11,16 @@ export function resolveReminderPayload(market: { marketId: string; title: string
   return { title: 'Time to resolve', body: `${market.title} has closed`, url: `/markets/${market.marketId}` }
 }
 
+// Sent to reviewers and above when a member submits a task, and to admins and above once a market
+// has closed with no result.
+export function taskAlertPayload(row: { taskTitle: string; submitterName: string }): PushPayload {
+  return { title: 'Task to review', body: `${row.submitterName}: ${row.taskTitle}`, url: '/admin/tasks' }
+}
+
+export function marketAlertPayload(market: { marketId: string; title: string }): PushPayload {
+  return { title: 'Market needs a result', body: `${market.title} has closed`, url: `/markets/${market.marketId}` }
+}
+
 export interface MarketResultRow {
   title: string
   status: string

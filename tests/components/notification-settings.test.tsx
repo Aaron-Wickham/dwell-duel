@@ -67,7 +67,7 @@ function unstubBrowser() {
 }
 
 function renderCard(props: Partial<Parameters<typeof NotificationSettings>[0]> = {}) {
-  return render(<NotificationSettings publicKey={PUBLIC_KEY} endpoints={[]} prefs={DEFAULT_NOTIFICATION_PREFS} {...props} />)
+  return render(<NotificationSettings publicKey={PUBLIC_KEY} endpoints={[]} prefs={DEFAULT_NOTIFICATION_PREFS} reviewer={false} {...props} />)
 }
 
 beforeEach(() => {
@@ -175,6 +175,17 @@ describe('NotificationSettings', () => {
     expect(screen.getByRole('checkbox', { name: 'Results' })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: 'Task reviews' })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: 'New markets' })).not.toBeChecked()
+  })
+
+  it('offers Tasks to review only to a reviewer, and keeps a member’s stored choice through a save', () => {
+    stubBrowser()
+    const { container, unmount } = renderCard({ prefs: { ...DEFAULT_NOTIFICATION_PREFS, review_alerts: false } })
+    expect(screen.queryByRole('checkbox', { name: 'Tasks to review' })).toBeNull()
+    expect(container.querySelector<HTMLInputElement>('input[type="hidden"][name="review_alerts"]')?.value).toBe('')
+    unmount()
+
+    renderCard({ reviewer: true })
+    expect(screen.getByRole('checkbox', { name: 'Tasks to review' })).toBeChecked()
   })
 
   it('saves the choices, and keeps them as ticked when the save fails', async () => {

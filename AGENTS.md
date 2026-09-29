@@ -110,7 +110,11 @@ a line to `CHANGELOG.md` under the next release.
   tappable as a whole is `relative pressable`, and its link carries
   `stretched-link` (its `::after` covers the card); any other control in
   the card sits in a `relative z-[1]` wrapper. `press-feedback.test.tsx`
-  guards the listed components.
+  guards the listed components. Under a mouse (`(hover: hover) and
+  (pointer: fine)`), `pressable` also grows a control to 103%; a card or
+  row adds `hover-lift` to lift onto `--lift-shadow` instead. Both drop the
+  movement under reduced motion, and `pressable` carries the transition
+  for both, so a colour hover on a `pressable` eases on its own.
 - **Motion tokens.** Curves and durations are the `--ease-*` /
   `--duration-*` tokens in `globals.css`'s `@theme static` block (`ease-ios`,
   `duration-(--duration-fast)` in markup), mirrored for script by

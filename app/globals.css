@@ -56,6 +56,7 @@
   --sym-d: #03272D;
   --shadow: 0 1px 2px rgba(3, 39, 45, 0.05), 0 6px 20px rgba(3, 39, 45, 0.05);
   --overlay-shadow: 0 2px 6px rgba(3, 39, 45, 0.08), 0 18px 48px rgba(3, 39, 45, 0.18);
+  --lift-shadow: 0 2px 6px rgba(3, 39, 45, 0.06), 0 12px 28px rgba(3, 39, 45, 0.12);
   --scrim: rgba(3, 39, 45, 0.45);
   --s1: #03272D;
   --s2: #2A6E0B;
@@ -125,6 +126,8 @@
   --sym-d: #FFFFFF;
   --shadow: none;
   --overlay-shadow: none;
+  /* Dark surfaces hide a soft shadow, so the lifted card's edge brightens too. */
+  --lift-shadow: 0 0 0 1px var(--line-s), 0 12px 28px rgba(0, 8, 10, 0.55);
   --scrim: rgba(0, 8, 10, 0.72);
   --s1: #EAF4EE;
   --s2: #8BE651;
@@ -166,6 +169,8 @@
     --sym-d: #FFFFFF;
     --shadow: none;
     --overlay-shadow: none;
+  /* Dark surfaces hide a soft shadow, so the lifted card's edge brightens too. */
+  --lift-shadow: 0 0 0 1px var(--line-s), 0 12px 28px rgba(0, 8, 10, 0.55);
     --scrim: rgba(0, 8, 10, 0.72);
     --s1: #EAF4EE;
     --s2: #8BE651;
@@ -222,6 +227,7 @@
   --shadow-card: var(--shadow);
   --shadow-tab: 0 1px 3px rgba(3, 39, 45, 0.12);
   --shadow-overlay: var(--overlay-shadow);
+  --shadow-lift: var(--lift-shadow);
 }
 
 /* Motion tokens: every curve and duration the app moves with. lib/ui/motion.ts mirrors them for
@@ -249,12 +255,28 @@
   user-select: none;
 }
 
-/* The native press: controls give under the finger. Reduced motion swaps the scale for a dim. */
+/* The native press: controls give under the finger. Under a mouse they also grow a little as it
+   comes over them (#155), only where hovering is real: a tap on a phone would leave the hover stuck.
+   Reduced motion swaps the press for a dim and drops the grow, keeping the colour changes. */
 @utility pressable {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
-  transition: scale var(--duration-press) ease-out;
+  transition:
+    scale var(--duration-press) ease-out,
+    translate var(--duration-hover) var(--ease-ios),
+    box-shadow var(--duration-hover) var(--ease-ios),
+    color var(--duration-hover) ease-out,
+    background-color var(--duration-hover) ease-out,
+    border-color var(--duration-hover) ease-out,
+    text-decoration-color var(--duration-hover) ease-out,
+    text-decoration-thickness var(--duration-hover) ease-out;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:active, :disabled, [aria-disabled="true"]) {
+      scale: 1.03;
+    }
+  }
 
   /* A control inside a pressable card presses alone; the card stays put. */
   &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
@@ -262,7 +284,14 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    transition: none;
+    transition:
+      color var(--duration-hover) ease-out,
+      background-color var(--duration-hover) ease-out,
+      border-color var(--duration-hover) ease-out;
+
+    &:hover:not(:active, :disabled, [aria-disabled="true"]) {
+      scale: none;
+    }
 
     &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
       scale: none;
@@ -271,11 +300,41 @@
   }
 
   :root[data-motion="reduce"] & {
-    transition: none;
+    transition:
+      color var(--duration-hover) ease-out,
+      background-color var(--duration-hover) ease-out,
+      border-color var(--duration-hover) ease-out;
+
+    &:hover:not(:active, :disabled, [aria-disabled="true"]) {
+      scale: none;
+    }
 
     &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
       scale: none;
       opacity: 0.7;
+    }
+  }
+}
+
+/* Cards and rows lift toward a mouse instead of growing: up 2px, onto a shadow. Always with
+   pressable, which carries the transition; `.pressable` in the selector outranks its grow.
+   Reduced motion keeps the shadow and drops the move. */
+@utility hover-lift {
+  @media (hover: hover) and (pointer: fine) {
+    &.pressable:hover:not(:active) {
+      scale: none;
+      translate: 0 -2px;
+      box-shadow: var(--lift-shadow);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &.pressable:hover:not(:active) {
+        translate: none;
+      }
+    }
+
+    :root[data-motion="reduce"] &.pressable:hover:not(:active) {
+      translate: none;
     }
   }
 }
@@ -360,6 +419,7 @@
     text-decoration-line: underline;
     text-decoration-thickness: 1.5px;
     text-underline-offset: 3px;
+    transition: text-decoration-thickness var(--duration-hover) ease-out;
   }
 
   a:hover {

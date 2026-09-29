@@ -7,6 +7,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ## Unreleased
 
 ### Features
+- **Desktop hover: buttons grow, cards lift.** With a mouse, buttons, chips, tabs and nav items grow slightly and change colour, and tappable cards and rows (market cards, parlays, home tiles, the leaderboard, bets, admin's members) lift onto a shadow. Every colour hover eases instead of snapping. Nothing changes on touch, and reduced motion keeps only the colour (#155).
 - **Alerts for reviewers and admins:** a task submission pushes to reviewers and above (not the submitter), a market that has closed with no result pushes to admins and above, and the Admin button shows a badge with what is waiting on you. A new "Tasks to review" choice in Settings covers reviewers; admins use "Markets to resolve" (#123).
 - **A livelier leaderboard:** a podium for the top three, win-loss records on every row, and on This month a race chart of the top five's profit day by day, four awards (biggest win, best parlay, sharpshooter, most active) and the past champions (#121).
 - **Filter the markets page** by All, Open, Pending (closed but not yet resolved) or Closed (resolved and voided); the choice is in the URL (#124).

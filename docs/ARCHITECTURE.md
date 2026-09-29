@@ -471,7 +471,10 @@ under `data-motion="reduce"` itself.
 WAAPI; `tests/lib/ui/motion.test.ts` keeps the two equal and rejects a
 `cubic-bezier` anywhere else. The sliding pills (the desktop nav's, SubNav's)
 share one slide, `PILL_SLIDE` / `PILL_TRANSITION`: 280ms on the iOS curve.
-The three dialogs share `components/ui/dialog-classes.ts`.
+The three dialogs share `components/ui/dialog-classes.ts`. `pressable`
+shrinks every control on press and, under a mouse only, grows it; a
+tappable card or row adds `hover-lift` and lifts onto `--lift-shadow`
+instead, its one link covering it through `stretched-link`.
 
 **Getting started.** Home's onboarding card (`components/home/onboarding-card.tsx`)
 reads its three steps from real data in `lib/home/onboarding.ts`, with

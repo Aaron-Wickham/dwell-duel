@@ -82,7 +82,7 @@ export function MarketCard({
   const titleId = domId ? `${domId}-title` : undefined
 
   return (
-    <article {...focusTarget(domId, titleId)} className={cn(cardClass, 'pressable relative flex min-w-0 flex-col gap-3 p-[18px]')}>
+    <article {...focusTarget(domId, titleId)} className={cn(cardClass, 'pressable hover-lift relative flex min-w-0 flex-col gap-3 p-[18px]')}>
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</StatusChip>
         {status === 'open' && now !== undefined && <ClosesSoonChip closeAt={closeAt} now={now} />}

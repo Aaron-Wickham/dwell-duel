@@ -12,6 +12,7 @@ vi.mock('@/lib/theme/set-theme', () => ({ setThemeAction: vi.fn() }))
 vi.mock('@/lib/preferences/set-preference', () => ({ setHapticsAction: vi.fn(), setReduceMotionAction: vi.fn() }))
 
 import { BackLink } from '@/components/ui/back-link'
+import { buttonVariants } from '@/components/ui/button'
 import { Wordmark } from '@/components/brand/wordmark'
 import { MarketCard } from '@/components/markets/market-card'
 import { PlacedParlay } from '@/components/parlays/placed-parlay'
@@ -162,11 +163,26 @@ describe('press feedback', () => {
     expect(targets.length).toBeGreaterThan(0)
     for (const el of targets) {
       if (el.classList.contains('stretched-link')) {
-        // The cover is the link's ::after, positioned against the card that presses.
-        expect(el.parentElement!.closest('.pressable'), el.outerHTML).toHaveClass('relative')
+        // The cover is the link's ::after, positioned against the card, which presses and lifts.
+        expect(el.parentElement!.closest('.pressable'), el.outerHTML).toHaveClass('relative', 'hover-lift')
       } else {
         expect(el, el.outerHTML).toHaveClass('pressable')
       }
+    }
+  })
+
+  it('lifts the home tiles, which are cards themselves', () => {
+    const { container } = render(
+      <HomeTiles tiles={[{ id: 'markets', href: '/markets', icon: ChartColumn, title: 'Markets', subtitle: 'Bet on it' }]} />,
+    )
+    expect(container.querySelector('a')).toHaveClass('pressable', 'hover-lift')
+  })
+
+  it('gives every Button variant a hover colour as well as the grow', () => {
+    for (const variant of ['primary', 'secondary', 'danger', 'quiet'] as const) {
+      const classes = buttonVariants({ variant }).split(' ')
+      expect(classes).toContain('pressable')
+      expect(classes.some((c) => c.startsWith('hover:')), variant).toBe(true)
     }
   })
 

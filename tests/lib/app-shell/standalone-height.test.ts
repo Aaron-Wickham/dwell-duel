@@ -21,4 +21,15 @@ describe('standalone page height', () => {
     const outside = css.replace(/@media \(display-mode: standalone\)[\s\S]*?\n\}\n/g, '')
     expect(outside).not.toMatch(/100lvh/)
   })
+
+  // The overlay is painted in the first frames of a cold start, while the viewport can still be
+  // short. inset: 0 would centre its D in that short area, so it flashed doubled against the
+  // system splash's D and jumped when iOS corrected the viewport. 100lvh is the screen's height
+  // from the first frame.
+  it('sizes the launch overlay to the large viewport, not to inset: 0', () => {
+    const rule = /:root\[data-launch\] \.launch-screen\s*\{([^}]*)\}/.exec(css)
+    expect(rule).not.toBeNull()
+    expect(rule![1]).toMatch(/height:\s*100lvh/)
+    expect(rule![1]).not.toMatch(/inset:\s*0/)
+  })
 })

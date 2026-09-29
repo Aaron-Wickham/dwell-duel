@@ -12,6 +12,7 @@ import { AnimatedText } from '@/components/ui/animated-text'
 import { Avatar } from '@/components/ui/avatar'
 import { NavPendingHint } from '@/components/nav/nav-pending-hint'
 import { haptics } from '@/lib/haptics'
+import { ICON_POP, PILL_TRANSITION } from '@/lib/ui/motion'
 import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS, activeNavId, type NavId } from './nav-items'
@@ -106,7 +107,7 @@ function DesktopLink({
           layoutId="nav-pill"
           aria-hidden="true"
           className="absolute inset-0 -z-10 rounded-full bg-primary"
-          transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
+          transition={PILL_TRANSITION}
         />
       )}
       <Icon aria-hidden="true" className={cn('size-5 xl:size-[18px]', !iconWithLabel && 'xl:hidden')} />
@@ -266,18 +267,47 @@ export function AppNav({
                 onClick={haptics.tap}
                 className={cn(
                   'pressable relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-[14px] text-xs leading-[1.1] no-underline',
-                  isActive ? 'font-extrabold text-ink' : 'font-bold text-ink2',
+                  isActive ? 'text-ink' : 'text-ink2',
                 )}
               >
                 <span
                   className={cn(
-                    'relative flex h-[30px] w-[52px] items-center justify-center rounded-full',
-                    isActive && 'bg-lime text-on-lime',
+                    'relative isolate flex h-[30px] w-[52px] items-center justify-center rounded-full',
+                    isActive && 'text-on-lime',
                   )}
                 >
-                  <Icon aria-hidden="true" className="size-[22px]" />
+                  {/* One pill that slides between tabs, like the desktop nav's. The tab bar stays
+                      pinned through page transitions, and its new snapshot is live, so the slide
+                      shows while the page moves under it. */}
+                  {isActive && (
+                    <m.span
+                      layoutId="tabbar-pill"
+                      aria-hidden="true"
+                      className="absolute inset-0 -z-10 rounded-full bg-lime"
+                      transition={PILL_TRANSITION}
+                    />
+                  )}
+                  {/* The newly active icon pops as the pill arrives; initial={false} keeps a cold
+                      launch still, and MotionConfig drops it under reduced motion. */}
+                  <m.span
+                    className="flex"
+                    initial={false}
+                    animate={{ scale: isActive ? [1, 1.18, 1] : 1 }}
+                    transition={ICON_POP}
+                  >
+                    <Icon aria-hidden="true" className="size-[22px]" />
+                  </m.span>
                 </span>
-                <span>{item.shortLabel}</span>
+                {/* Manrope is variable, so the weight eases between bold and extrabold; the label
+                    is centred in a fixed-width column, so nothing beside it moves. */}
+                <span
+                  className={cn(
+                    'transition-[font-weight] duration-(--duration-slide) ease-ios motion-reduce:transition-none',
+                    isActive ? 'font-extrabold' : 'font-bold',
+                  )}
+                >
+                  {item.shortLabel}
+                </span>
                 <NavPendingHint className="bottom-0.5 left-1/2 h-0.5 w-5 -translate-x-1/2" />
               </Link>
             )

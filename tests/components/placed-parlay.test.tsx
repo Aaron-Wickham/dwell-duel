@@ -31,7 +31,7 @@ function renderParlay(p: ParlayView) {
 }
 
 describe('PlacedParlay', () => {
-  it('shows a pending parlay’s stake, multiplier and what it pays if every pick wins', () => {
+  it('shows an open parlay’s stake, multiplier and what it pays if every pick wins', () => {
     renderParlay(parlay({}))
     expect(screen.getByRole('link', { name: 'Parlay · 2 picks' })).toHaveAttribute('href', '/parlays/p1')
     expect(screen.getByText('5 DC')).toBeInTheDocument()
@@ -141,6 +141,7 @@ describe('PlacedParlay', () => {
 
   it('stretches its one link over the card so the whole card is the tap target', () => {
     renderParlay(parlay({}))
-    expect(screen.getByRole('link')).toHaveClass('after:absolute', 'after:inset-0')
+    expect(screen.getByRole('link')).toHaveClass('stretched-link')
+    expect(screen.getByRole('link').closest('.pressable')).toHaveClass('relative')
   })
 })

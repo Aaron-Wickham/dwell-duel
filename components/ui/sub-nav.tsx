@@ -2,15 +2,13 @@
 
 import { useLayoutEffect, useRef } from 'react'
 import Link from 'next/link'
+import { PILL_SLIDE } from '@/lib/ui/motion'
 import { reducedMotion } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
 
 export type SubNavItem = { href: string; label: string; current: boolean }
 
 type Rect = { left: number; width: number }
-
-const SLIDE_MS = 280
-const SLIDE_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 
 // Where each switcher's pill last sat, so one that remounts on a route change (Bets and the
 // Leaderboard re-render their page around it) still slides from the old tab instead of appearing.
@@ -54,7 +52,7 @@ export function SubNav({ label, items }: { label: string; items: SubNavItem[] })
           { left: `${from.left}px`, width: `${from.width}px` },
           { left: `${to.left}px`, width: `${to.width}px` },
         ],
-        { duration: SLIDE_MS, easing: SLIDE_EASE },
+        PILL_SLIDE,
       )
     }
 

@@ -56,6 +56,7 @@
   --sym-d: #03272D;
   --shadow: 0 1px 2px rgba(3, 39, 45, 0.05), 0 6px 20px rgba(3, 39, 45, 0.05);
   --overlay-shadow: 0 2px 6px rgba(3, 39, 45, 0.08), 0 18px 48px rgba(3, 39, 45, 0.18);
+  --lift-shadow: 0 2px 6px rgba(3, 39, 45, 0.06), 0 12px 28px rgba(3, 39, 45, 0.12);
   --scrim: rgba(3, 39, 45, 0.45);
   --s1: #03272D;
   --s2: #2A6E0B;
@@ -125,6 +126,8 @@
   --sym-d: #FFFFFF;
   --shadow: none;
   --overlay-shadow: none;
+  /* Dark surfaces hide a soft shadow, so the lifted card's edge brightens too. */
+  --lift-shadow: 0 0 0 1px var(--line-s), 0 12px 28px rgba(0, 8, 10, 0.55);
   --scrim: rgba(0, 8, 10, 0.72);
   --s1: #EAF4EE;
   --s2: #8BE651;
@@ -166,6 +169,8 @@
     --sym-d: #FFFFFF;
     --shadow: none;
     --overlay-shadow: none;
+  /* Dark surfaces hide a soft shadow, so the lifted card's edge brightens too. */
+  --lift-shadow: 0 0 0 1px var(--line-s), 0 12px 28px rgba(0, 8, 10, 0.55);
     --scrim: rgba(0, 8, 10, 0.72);
     --s1: #EAF4EE;
     --s2: #8BE651;
@@ -222,6 +227,24 @@
   --shadow-card: var(--shadow);
   --shadow-tab: 0 1px 3px rgba(3, 39, 45, 0.12);
   --shadow-overlay: var(--overlay-shadow);
+  --shadow-lift: var(--lift-shadow);
+}
+
+/* Motion tokens: every curve and duration the app moves with. lib/ui/motion.ts mirrors them for
+   script (Motion's springs and tweens, WAAPI), and tests/lib/ui/motion.test.ts keeps the two equal.
+   Static, so each is a variable on :root even when no utility uses it. */
+@theme static {
+  /* The iOS curve: fast out, long settle. Sliding pills, sheets, page moves, the back-swipe. */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  /* A small overshoot, for things that grow in: the launch screen's leaves. */
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-press: 120ms;
+  --duration-fast: 150ms;
+  --duration-hover: 180ms;
+  --duration-enter: 210ms;
+  --duration-slide: 280ms;
+  --duration-page: 360ms;
+  --duration-sheet: 450ms;
 }
 
 /* Chrome that is tapped, never read: a long press shouldn't select it or open iOS's callout menu.
@@ -232,33 +255,139 @@
   user-select: none;
 }
 
-/* The native press: controls give under the finger. Reduced motion swaps the scale for a dim. */
+/* The native press: controls give under the finger. Under a mouse they also grow a little as it
+   comes over them (#155), only where hovering is real: a tap on a phone would leave the hover stuck.
+   Reduced motion swaps the press for a dim and drops the grow, keeping the colour changes. */
 @utility pressable {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
-  transition: scale 120ms ease-out;
+  transition:
+    scale var(--duration-press) ease-out,
+    translate var(--duration-hover) var(--ease-ios),
+    box-shadow var(--duration-hover) var(--ease-ios),
+    color var(--duration-hover) ease-out,
+    background-color var(--duration-hover) ease-out,
+    border-color var(--duration-hover) ease-out,
+    text-decoration-color var(--duration-hover) ease-out,
+    text-decoration-thickness var(--duration-hover) ease-out;
 
-  &:active:not(:disabled, [aria-disabled="true"]) {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:active, :disabled, [aria-disabled="true"]) {
+      scale: 1.03;
+    }
+  }
+
+  /* A control inside a pressable card presses alone; the card stays put. */
+  &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
     scale: 0.97;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    transition: none;
+    transition:
+      color var(--duration-hover) ease-out,
+      background-color var(--duration-hover) ease-out,
+      border-color var(--duration-hover) ease-out;
 
-    &:active:not(:disabled, [aria-disabled="true"]) {
+    &:hover:not(:active, :disabled, [aria-disabled="true"]) {
+      scale: none;
+    }
+
+    &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
       scale: none;
       opacity: 0.7;
     }
   }
 
   :root[data-motion="reduce"] & {
-    transition: none;
+    transition:
+      color var(--duration-hover) ease-out,
+      background-color var(--duration-hover) ease-out,
+      border-color var(--duration-hover) ease-out;
 
-    &:active:not(:disabled, [aria-disabled="true"]) {
+    &:hover:not(:active, :disabled, [aria-disabled="true"]) {
+      scale: none;
+    }
+
+    &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
       scale: none;
       opacity: 0.7;
     }
+  }
+}
+
+/* Cards and rows lift toward a mouse instead of growing: up 2px, onto a shadow. Always with
+   pressable, which carries the transition; `.pressable` in the selector outranks its grow.
+   Reduced motion keeps the shadow and drops the move. */
+@utility hover-lift {
+  @media (hover: hover) and (pointer: fine) {
+    &.pressable:hover:not(:active) {
+      scale: none;
+      translate: 0 -2px;
+      box-shadow: var(--lift-shadow);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &.pressable:hover:not(:active) {
+        translate: none;
+      }
+    }
+
+    :root[data-motion="reduce"] &.pressable:hover:not(:active) {
+      translate: none;
+    }
+  }
+}
+
+/* hover-lift for a row in a divided list, which has no side padding: it lifts onto a panel drawn
+   10px wider than itself, so the shadow and dark ring clear the text. The row's own box, and so
+   the phone layout and the dividers, don't change. Needs a positioned row (`relative`). */
+@utility hover-lift-row {
+  isolation: isolate;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -4px -10px;
+    z-index: -1;
+    border-radius: var(--radius-control);
+    background-color: var(--surface);
+    box-shadow: var(--lift-shadow);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-hover) ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &.pressable:hover:not(:active) {
+      scale: none;
+      translate: 0 -2px;
+    }
+
+    &.pressable:hover:not(:active)::before {
+      opacity: 1;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &.pressable:hover:not(:active) {
+        translate: none;
+      }
+    }
+
+    :root[data-motion="reduce"] &.pressable:hover:not(:active) {
+      translate: none;
+    }
+  }
+}
+
+/* A card or row that one link makes tappable as a whole: the link's ::after covers its nearest
+   positioned ancestor, the card, which is `relative pressable`. Another control inside the card
+   sits above the cover in a `relative z-[1]` wrapper. */
+@utility stretched-link {
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
   }
 }
 
@@ -331,6 +460,7 @@
     text-decoration-line: underline;
     text-decoration-thickness: 1.5px;
     text-underline-offset: 3px;
+    transition: text-decoration-thickness var(--duration-hover) ease-out;
   }
 
   a:hover {
@@ -385,9 +515,9 @@
    classes: nav-forward / nav-back from a link's transitionTypes, page-enter / page-exit for
    everything else. */
 :root {
-  --vt-exit: 150ms;
-  --vt-enter: 210ms;
-  --vt-move: 360ms;
+  --vt-exit: var(--duration-fast);
+  --vt-enter: var(--duration-enter);
+  --vt-move: var(--duration-page);
 }
 
 /* The overlay would otherwise swallow every tap made while a transition runs. */
@@ -414,25 +544,25 @@
   --vt-offset: -60px;
   animation:
     var(--vt-exit) ease-in both vt-fade reverse,
-    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x reverse;
+    var(--vt-move) var(--ease-ios) both vt-slide-x reverse;
 }
 ::view-transition-new(.nav-forward) {
   --vt-offset: 60px;
   animation:
     var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
-    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x;
+    var(--vt-move) var(--ease-ios) both vt-slide-x;
 }
 ::view-transition-old(.nav-back) {
   --vt-offset: 60px;
   animation:
     var(--vt-exit) ease-in both vt-fade reverse,
-    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x reverse;
+    var(--vt-move) var(--ease-ios) both vt-slide-x reverse;
 }
 ::view-transition-new(.nav-back) {
   --vt-offset: -60px;
   animation:
     var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
-    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x;
+    var(--vt-move) var(--ease-ios) both vt-slide-x;
 }
 
 ::view-transition-old(.page-exit) {
@@ -488,7 +618,7 @@
 }
 .nav-pending-hint[data-pending] {
   animation:
-    vt-hint-in 150ms ease-out 120ms forwards,
+    vt-hint-in var(--duration-fast) ease-out 120ms forwards,
     vt-hint-pulse 1s ease-in-out 270ms infinite;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -534,7 +664,7 @@
   transform-origin: 50% 100%;
   scale: 0;
   rotate: -25deg;
-  animation: launch-leaf 420ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: launch-leaf 420ms var(--ease-pop) forwards;
 }
 @keyframes launch-leaf {
   to {
@@ -583,4 +713,11 @@
 }
 :root[data-motion="reduce"] .leaf-pulse {
   animation: none;
+}
+
+/* Sonner stills its toasts for the device setting on its own; this does the same for Settings'
+   "Reduce animations", which Sonner can't see. */
+:root[data-motion="reduce"] :is(.sonner-loading-bar, [data-sonner-toast], [data-sonner-toast] > *) {
+  transition: none !important;
+  animation: none !important;
 }

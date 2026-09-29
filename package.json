@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "check:ios": "node scripts/ios-standalone-check.mjs",
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "typecheck": "next typegen && tsc --noEmit"

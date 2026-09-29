@@ -7,10 +7,10 @@ const buttonCva = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-primary text-on-primary',
-        secondary: 'border-line-s bg-surface text-ink',
-        danger: 'border-loss bg-transparent text-loss',
-        quiet: 'bg-transparent text-ink underline decoration-[1.5px] underline-offset-[3px]',
+        primary: 'bg-primary text-on-primary hover:bg-primary/88',
+        secondary: 'border-line-s bg-surface text-ink hover:bg-sunk',
+        danger: 'border-loss bg-transparent text-loss hover:bg-loss-soft',
+        quiet: 'bg-transparent text-ink underline decoration-[1.5px] underline-offset-[3px] hover:decoration-[3px]',
       },
       size: {
         md: 'min-h-12 px-5 text-base',

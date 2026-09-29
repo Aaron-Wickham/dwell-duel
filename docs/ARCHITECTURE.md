@@ -256,7 +256,7 @@ the reminder, `resolve_reminders` on; each market claimed once as `market_alert`
 members' pending task submissions for a reviewer and above, closed unresolved
 markets for an admin and above.
 
-The leaderboard's extras (0059, `lib/social/leaderboard-extras.ts`) sit on the This month tab and the rows: `leaderboard_race(p_top)` (cumulative daily profit for the top members, drawn by `RaceChart` as step lines), `leaderboard_awards()` (four awards for the month), `member_records(ids)` (the W-L chip, read for the page's rows in chunks) and the past champions from the `season_champion` events. The top of either board also shows a `Podium`.
+The leaderboard's extras (0059, `lib/social/leaderboard-extras.ts`) sit on the This month tab and the rows: `leaderboard_race_steps(p_top)` (0062: the top members' running profit from the month's first settled bet, one step per moment a total moved, capped at 120 steps; drawn by `RaceChart` as step lines, with `race-layout.ts` choosing the scale, clipping a runaway leader and placing the end labels; 0059's daily `leaderboard_race` is unused and can be dropped), `leaderboard_awards()` (four awards for the month), `member_records(ids)` (the W-L chip, read for the page's rows in chunks) and the past champions from the `season_champion` events. The top of either board also shows a `Podium`.
 
 The leaderboard (0051) reads two boards through `rpc()`, each returning
 `id, display_name, avatar_path, score, rank` with a competition rank over
@@ -339,6 +339,7 @@ after it ships. They roughly follow the project's history:
 | 0058 | Review alerts (#123): `notification_prefs.review_alerts`, `push_task_alerts`, `push_market_alerts`, the `market_alert` kind in `push_log`, and `my_review_counts` for the Admin badge |
 | 0057 | Push notifications: `push_subscriptions`, `notification_prefs`, `push_log`, `save_push_subscription` and the service-role `push_*` recipient functions |
 | 0059 | Leaderboard extras (#121): `leaderboard_race`, `leaderboard_awards`, `member_records` (security definer, invited members only, aggregates only) |
+| 0062 | `leaderboard_race_steps` (#145): the race from the month's first settled bet, step by step, replacing `leaderboard_race`'s day-by-day points (a new function, so the old one keeps working during the deploy) |
 
 Merging a migration to `main` runs the **Deploy Production Database**
 workflow, with no approval step. It runs in parallel with Vercel's deploy;

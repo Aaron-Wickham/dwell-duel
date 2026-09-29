@@ -50,6 +50,7 @@ describe('access', () => {
   it('refuses anonymous callers and members who are not on the invite list', async () => {
     for (const [fn, args] of [
       ['leaderboard_race', undefined],
+      ['leaderboard_race_steps', undefined],
       ['leaderboard_awards', undefined],
       ['member_records', { p_ids: [alice.id] }],
     ] as const) {
@@ -60,6 +61,7 @@ describe('access', () => {
     const outsiderClient = await clientFor(outsider)
     for (const [fn, args] of [
       ['leaderboard_race', undefined],
+      ['leaderboard_race_steps', undefined],
       ['leaderboard_awards', undefined],
       ['member_records', { p_ids: [alice.id] }],
     ] as const) {
@@ -176,5 +178,64 @@ describe('leaderboard_race', () => {
   it('caps the lines at eight', async () => {
     const { error } = await bobClient.rpc('leaderboard_race', { p_top: 99 })
     expect(error).toBeNull()
+  })
+})
+
+type Step = { profile_id: string; display_name: string; step: number; at: string; profit: string | number }
+
+async function steps(client: SupabaseClient, top = 5): Promise<Map<string, Step[]>> {
+  const { data, error } = await client.rpc('leaderboard_race_steps', { p_top: top })
+  if (error) throw error
+  const byMember = new Map<string, Step[]>()
+  for (const r of data as Step[]) byMember.set(r.profile_id, [...(byMember.get(r.profile_id) ?? []), r])
+  return byMember
+}
+
+describe('leaderboard_race_steps', () => {
+  it('has nothing to draw until a bet settles, however many are placed', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await bet(bobClient, market, 0, 20)
+    await bet(carolClient, market, 1, 20)
+    expect((await steps(bobClient)).size).toBe(0)
+  })
+
+  it('starts at the first settled bet, where stakes already placed stand, and steps at each move after', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await bet(bobClient, market, 0, 20)
+    await bet(carolClient, market, 1, 20)
+    await resolve(market, 0)
+    const later = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await bet(bobClient, later, 0, 5)
+
+    const { data: resolution, error } = await serviceClient()
+      .from('market_resolutions')
+      .select('resolved_at')
+      .eq('market_id', market.marketId)
+      .single()
+    if (error) throw error
+
+    const byMember = await steps(bobClient, 2)
+    expect([...byMember.keys()].sort()).toEqual([bob.id, carol.id].sort())
+    const bobSteps = byMember.get(bob.id)!
+    const carolSteps = byMember.get(carol.id)!
+    // Every member has a point at every step, in order.
+    expect(bobSteps.map((s) => s.step)).toEqual([0, 1, 2])
+    expect(carolSteps.map((s) => s.at)).toEqual(bobSteps.map((s) => s.at))
+
+    // Step 0 is the first settlement's moment, before it paid: both stakes out.
+    expect(Date.parse(bobSteps[0].at)).toBe(Date.parse(resolution.resolved_at))
+    expect(bobSteps.map((s) => Number(s.profit))).toEqual([-20, 20, 15])
+    // Carol's loss had no ledger row of its own; her stake left at placement.
+    expect(carolSteps.map((s) => Number(s.profit))).toEqual([-20, -20, -20])
+    expect(Date.parse(bobSteps[2].at)).toBeGreaterThan(Date.parse(bobSteps[1].at))
+  })
+
+  it('starts at a void\'s refunds too', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await bet(bobClient, market, 0, 20)
+    const { error } = await aliceClient.rpc('void_market', { p_market_id: market.marketId })
+    if (error) throw error
+    const bobSteps = (await steps(bobClient)).get(bob.id)!
+    expect(bobSteps.map((s) => Number(s.profit))).toEqual([-20, 0])
   })
 })

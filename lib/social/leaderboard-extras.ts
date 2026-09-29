@@ -6,20 +6,22 @@ import { seasonOfEventId } from './season'
 export interface RaceSeries {
   id: string
   name: string
-  // Cumulative net betting profit at the end of each day since the month began, oldest first.
-  points: { day: string; profit: number }[]
+  // Running net betting profit, oldest first: the first point is where they stood just before the
+  // month's first bet settled, each later one a moment their total (or a rival's) moved.
+  points: { at: string; profit: number }[]
   final: number
 }
 
-// The top members' month so far, best first. leaderboard_race (0059) draws every member's line
-// edge to edge, so the series are the same length.
+// The top members' month so far, best first, or none until a bet has settled this month.
+// leaderboard_race_steps (0062) gives every member a point at every step, so the series are the
+// same length.
 export async function getRace(supabase: DbClient, top = 5): Promise<RaceSeries[]> {
-  const { data, error } = await supabase.rpc('leaderboard_race', { p_top: top })
+  const { data, error } = await supabase.rpc('leaderboard_race_steps', { p_top: top })
   if (error) throw error
   const byMember = new Map<string, RaceSeries>()
   for (const row of data ?? []) {
     const series = byMember.get(row.profile_id) ?? { id: row.profile_id, name: row.display_name, points: [], final: 0 }
-    series.points.push({ day: row.day, profit: Number(row.profit) })
+    series.points.push({ at: row.at, profit: Number(row.profit) })
     series.final = Number(row.profit)
     byMember.set(row.profile_id, series)
   }

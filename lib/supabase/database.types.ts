@@ -1193,6 +1193,16 @@ export type Database = {
           profit: number
         }[]
       }
+      leaderboard_race_steps: {
+        Args: { p_top?: number }
+        Returns: {
+          at: string
+          display_name: string
+          profile_id: string
+          profit: number
+          step: number
+        }[]
+      }
       market_sparklines: {
         Args: { p_market_ids: string[]; p_points?: number }
         Returns: {

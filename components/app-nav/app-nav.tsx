@@ -12,7 +12,7 @@ import { AnimatedText } from '@/components/ui/animated-text'
 import { Avatar } from '@/components/ui/avatar'
 import { NavPendingHint } from '@/components/nav/nav-pending-hint'
 import { haptics } from '@/lib/haptics'
-import { PILL_TRANSITION } from '@/lib/ui/motion'
+import { ICON_POP, PILL_TRANSITION } from '@/lib/ui/motion'
 import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS, activeNavId, type NavId } from './nav-items'
@@ -267,7 +267,7 @@ export function AppNav({
                 onClick={haptics.tap}
                 className={cn(
                   'pressable relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-[14px] text-xs leading-[1.1] no-underline',
-                  isActive ? 'font-extrabold text-ink' : 'font-bold text-ink2',
+                  isActive ? 'text-ink' : 'text-ink2',
                 )}
               >
                 <span
@@ -287,9 +287,27 @@ export function AppNav({
                       transition={PILL_TRANSITION}
                     />
                   )}
-                  <Icon aria-hidden="true" className="size-[22px]" />
+                  {/* The newly active icon pops as the pill arrives; initial={false} keeps a cold
+                      launch still, and MotionConfig drops it under reduced motion. */}
+                  <m.span
+                    className="flex"
+                    initial={false}
+                    animate={{ scale: isActive ? [1, 1.18, 1] : 1 }}
+                    transition={ICON_POP}
+                  >
+                    <Icon aria-hidden="true" className="size-[22px]" />
+                  </m.span>
                 </span>
-                <span>{item.shortLabel}</span>
+                {/* Manrope is variable, so the weight eases between bold and extrabold; the label
+                    is centred in a fixed-width column, so nothing beside it moves. */}
+                <span
+                  className={cn(
+                    'transition-[font-weight] duration-(--duration-slide) ease-ios motion-reduce:transition-none',
+                    isActive ? 'font-extrabold' : 'font-bold',
+                  )}
+                >
+                  {item.shortLabel}
+                </span>
                 <NavPendingHint className="bottom-0.5 left-1/2 h-0.5 w-5 -translate-x-1/2" />
               </Link>
             )

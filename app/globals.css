@@ -339,6 +339,47 @@
   }
 }
 
+/* hover-lift for a row in a divided list, which has no side padding: it lifts onto a panel drawn
+   10px wider than itself, so the shadow and dark ring clear the text. The row's own box, and so
+   the phone layout and the dividers, don't change. Needs a positioned row (`relative`). */
+@utility hover-lift-row {
+  isolation: isolate;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -4px -10px;
+    z-index: -1;
+    border-radius: var(--radius-control);
+    background-color: var(--surface);
+    box-shadow: var(--lift-shadow);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-hover) ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &.pressable:hover:not(:active) {
+      scale: none;
+      translate: 0 -2px;
+    }
+
+    &.pressable:hover:not(:active)::before {
+      opacity: 1;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &.pressable:hover:not(:active) {
+        translate: none;
+      }
+    }
+
+    :root[data-motion="reduce"] &.pressable:hover:not(:active) {
+      translate: none;
+    }
+  }
+}
+
 /* A card or row that one link makes tappable as a whole: the link's ::after covers its nearest
    positioned ancestor, the card, which is `relative pressable`. Another control inside the card
    sits above the cover in a `relative z-[1]` wrapper. */

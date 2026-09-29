@@ -38,7 +38,7 @@ function Row({
 }) {
   const titleId = `${domId}-title`
   return (
-    <li {...focusTarget(domId, titleId)} className="pressable hover-lift relative flex items-start justify-between gap-3 py-3">
+    <li {...focusTarget(domId, titleId)} className="pressable hover-lift-row relative flex items-start justify-between gap-3 py-3">
       <div className="flex min-w-0 flex-col gap-1">
         <Link
           id={titleId}

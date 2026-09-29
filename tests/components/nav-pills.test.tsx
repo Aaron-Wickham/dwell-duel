@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { HTMLAttributes } from 'react'
 import { render, screen, within } from '@testing-library/react'
-import { PILL_TRANSITION } from '@/lib/ui/motion'
+import { ICON_POP, PILL_TRANSITION } from '@/lib/ui/motion'
 
 let pathname = '/markets'
 vi.mock('next/navigation', () => ({ usePathname: () => pathname }))
@@ -10,12 +10,13 @@ vi.mock('@number-flow/react', () => ({ default: ({ value }: { value: number }) =
 
 // Motion's layout animation can't run in jsdom; what matters is that each pill is one shared
 // layoutId with the shared slide, so Motion moves it instead of drawing a new one.
-type PillProps = HTMLAttributes<HTMLSpanElement> & { layoutId?: string; transition?: unknown }
-const { pills } = vi.hoisted(() => ({ pills: [] as { layoutId?: string; transition?: unknown }[] }))
+type MotionProps = { layoutId?: string; transition?: unknown; initial?: unknown; animate?: { scale: unknown } }
+type SpanProps = HTMLAttributes<HTMLSpanElement> & MotionProps
+const { spans } = vi.hoisted(() => ({ spans: [] as MotionProps[] }))
 vi.mock('motion/react-m', () => ({
-  span: ({ layoutId, transition, ...props }: PillProps) => {
-    pills.push({ layoutId, transition })
-    return <span data-layout-id={layoutId} {...props} />
+  span: ({ layoutId, transition, initial, animate, ...props }: SpanProps) => {
+    spans.push({ layoutId, transition, initial, animate })
+    return <span data-layout-id={layoutId} data-pop={animate ? JSON.stringify(animate.scale) : undefined} {...props} />
   },
 }))
 
@@ -31,7 +32,7 @@ function tabBar() {
 
 beforeEach(() => {
   pathname = '/markets'
-  pills.length = 0
+  spans.length = 0
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
@@ -62,9 +63,29 @@ describe('the nav pills (#154)', () => {
 
   it('slides the tab bar and desktop pills the same way', () => {
     render(<Nav />)
-    const byId = new Map(pills.map((p) => [p.layoutId, p.transition]))
+    const byId = new Map(spans.map((p) => [p.layoutId, p.transition]))
     expect(byId.get('tabbar-pill')).toBe(PILL_TRANSITION)
     expect(byId.get('nav-pill')).toBe(PILL_TRANSITION)
+  })
+
+  it('pops the newly active icon, never on first render', () => {
+    render(<Nav />)
+    const pops = spans.filter((s) => s.animate)
+    expect(pops).toHaveLength(5)
+    for (const pop of pops) {
+      expect(pop.initial).toBe(false)
+      expect(pop.transition).toBe(ICON_POP)
+    }
+    const markets = within(tabBar()).getByRole('link', { name: 'Markets' })
+    expect(markets.querySelector('[data-pop]')).toHaveAttribute('data-pop', '[1,1.18,1]')
+    expect(within(tabBar()).getByRole('link', { name: 'Feed' }).querySelector('[data-pop]')).toHaveAttribute('data-pop', '1')
+  })
+
+  it('eases the label weight instead of snapping it', () => {
+    render(<Nav />)
+    const label = within(within(tabBar()).getByRole('link', { name: 'Markets' })).getByText('Markets')
+    expect(label).toHaveClass('font-extrabold', 'transition-[font-weight]', 'motion-reduce:transition-none')
+    expect(within(within(tabBar()).getByRole('link', { name: 'Feed' })).getByText('Feed')).toHaveClass('font-bold')
   })
 
   it('draws no pill on a page outside every tab', () => {

@@ -112,7 +112,9 @@ a line to `CHANGELOG.md` under the next release.
   the card sits in a `relative z-[1]` wrapper. `press-feedback.test.tsx`
   guards the listed components. Under a mouse (`(hover: hover) and
   (pointer: fine)`), `pressable` also grows a control to 103%; a card or
-  row adds `hover-lift` to lift onto `--lift-shadow` instead. Both drop the
+  row adds `hover-lift` to lift onto `--lift-shadow` instead (a row in a
+  divided list, with no side padding, takes `hover-lift-row`, which lifts
+  onto a panel a little wider than itself). Both drop the
   movement under reduced motion, and `pressable` carries the transition
   for both, so a colour hover on a `pressable` eases on its own.
 - **Motion tokens.** Curves and durations are the `--ease-*` /

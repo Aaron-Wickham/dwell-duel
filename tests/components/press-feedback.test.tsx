@@ -163,12 +163,28 @@ describe('press feedback', () => {
     expect(targets.length).toBeGreaterThan(0)
     for (const el of targets) {
       if (el.classList.contains('stretched-link')) {
-        // The cover is the link's ::after, positioned against the card, which presses and lifts.
-        expect(el.parentElement!.closest('.pressable'), el.outerHTML).toHaveClass('relative', 'hover-lift')
+        // The cover is the link's ::after, positioned against the card, which presses and lifts
+        // (a card itself, or a divided list's row onto its wider panel).
+        const owner = el.parentElement!.closest('.pressable')!
+        expect(owner, el.outerHTML).toHaveClass('relative')
+        expect(owner.matches('.hover-lift, .hover-lift-row'), owner.outerHTML).toBe(true)
       } else {
         expect(el, el.outerHTML).toHaveClass('pressable')
       }
     }
+  })
+
+  it('lifts rows in divided lists onto a panel wider than the row, not the row itself', () => {
+    const { container } = render(<PastChampions champions={[{ season: '2026-08', memberId: 'm1', name: 'Grace', profit: 40 }]} />)
+    expect(container.querySelector('li')).toHaveClass('pressable', 'relative', 'hover-lift-row')
+    expect(container.querySelector('li')).not.toHaveClass('hover-lift')
+  })
+
+  it('presses create-market’s market kind choices', () => {
+    const { container } = render(<CreateMarketForm />)
+    const kinds = container.querySelectorAll('label:has(input[type="radio"][name="kind"])')
+    expect(kinds).toHaveLength(3)
+    for (const label of kinds) expect(label).toHaveClass('pressable')
   })
 
   it('lifts the home tiles, which are cards themselves', () => {

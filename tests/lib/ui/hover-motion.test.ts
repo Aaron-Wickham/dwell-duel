@@ -60,6 +60,16 @@ describe('desktop hover motion', () => {
     expect(fineLift).toMatch(/:root\[data-motion="reduce"\] &\.pressable:hover:not\(:active\) \{\s*translate: none;/)
   })
 
+  it('lifts a divided row onto a wider panel, only under a real mouse', () => {
+    const row = utility('hover-lift-row')
+    expect(row).toMatch(/&::before \{[^}]*inset: -4px -10px;[^}]*box-shadow: var\(--lift-shadow\);[^}]*opacity: 0;/)
+    const fine = block(row, FINE_HOVER)
+    expect(fine).toMatch(/&\.pressable:hover:not\(:active\) \{\s*scale: none;\s*translate: 0 -2px;/)
+    expect(fine).toMatch(/&\.pressable:hover:not\(:active\)::before \{\s*opacity: 1;/)
+    expect(block(fine, '@media (prefers-reduced-motion: reduce)')).toContain('translate: none')
+    expect(fine).toMatch(/:root\[data-motion="reduce"\] &\.pressable:hover:not\(:active\) \{\s*translate: none;/)
+  })
+
   it('has a lift shadow in light, dark and the system dark fallback', () => {
     expect(css.match(/--lift-shadow:/g)).toHaveLength(3)
   })

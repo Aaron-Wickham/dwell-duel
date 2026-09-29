@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
-import { DURATION, EASE, PILL_SLIDE, PILL_TRANSITION, cssEase } from '@/lib/ui/motion'
+import { DURATION, EASE, ICON_POP, PILL_SLIDE, PILL_TRANSITION, cssEase } from '@/lib/ui/motion'
 
 const root = path.resolve(import.meta.dirname, '../../..')
 const css = readFileSync(path.join(root, 'app/globals.css'), 'utf8')
@@ -43,6 +43,10 @@ describe('motion tokens', () => {
   it('slides every pill the same way, in WAAPI and in Motion', () => {
     expect(PILL_SLIDE).toEqual({ duration: DURATION.slide, easing: cssEase('ios') })
     expect(PILL_TRANSITION).toEqual({ type: 'tween', duration: DURATION.slide / 1000, ease: [...EASE.ios] })
+  })
+
+  it('pops the tab icon over the pill’s own slide', () => {
+    expect(ICON_POP).toMatchObject({ duration: PILL_TRANSITION.duration, ease: PILL_TRANSITION.ease })
   })
 
   it('keeps every curve in the token block or its mirror', () => {

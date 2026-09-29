@@ -1,6 +1,8 @@
 // Script's copy of the motion tokens in app/globals.css, for Motion and WAAPI, which can't read
 // CSS variables. tests/lib/ui/motion.test.ts fails when the two drift apart.
 
+import type { Transition } from 'motion/react'
+
 type Bezier = readonly [number, number, number, number]
 
 export const EASE = {
@@ -35,3 +37,10 @@ export const PILL_TRANSITION = {
   duration: DURATION.slide / 1000,
   ease: [...EASE.ios],
 } as const
+
+// The phone tab bar's icon swelling as the pill arrives under it, over the same 280ms.
+export const ICON_POP: Transition = {
+  duration: DURATION.slide / 1000,
+  times: [0, 0.4, 1],
+  ease: [...EASE.ios],
+}

@@ -19,7 +19,7 @@ const MIN_OUTCOMES = 2
 
 const toggleClass = (on: boolean) =>
   cn(
-    'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] font-bold text-ink2',
+    'pressable flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] font-bold text-ink2',
     on && 'bg-surface text-ink shadow-tab',
   )
 

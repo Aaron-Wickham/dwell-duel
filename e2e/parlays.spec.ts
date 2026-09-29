@@ -56,9 +56,20 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   await page.goto('/parlays')
   await expect(page).toHaveURL(/\/bets$/)
   const placed = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: 'Parlay leg one?' }).first()
-  await expect(placed.getByText(/5 DC at 5\.76× · pays 28 DC if every pick wins/)).toBeVisible()
+  await expect(placed.getByText('5.76×')).toBeVisible()
+  await expect(placed.getByText('28 DC')).toBeVisible()
   // The parlay's chip and both of its legs.
   await expect(placed.getByText('Open', { exact: true })).toHaveCount(3)
+
+  // The card opens the parlay's breakdown, and the way back is My bets.
+  await placed.getByRole('link', { name: 'Parlay · 2 picks' }).click()
+  await expect(page).toHaveURL(/\/parlays\/[0-9a-f-]+$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Parlay · 2 picks' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Picks' }).getByRole('link', { name: 'Parlay leg one?' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'How it adds up' }).getByText('= 5.76×')).toBeVisible()
+  await page.getByRole('link', { name: 'My bets' }).first().click()
+  await expect(page).toHaveURL(/\/bets$/)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1280)
 
   // The seeded session is an admin, so it can resolve before close_at.
   for (const url of marketUrls) {
@@ -75,4 +86,7 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   await expect(page).toHaveURL(/\/bets\?tab=settled$/)
   const won = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: 'Parlay leg one?' }).first()
   await expect(won.getByText('Won 28 DC')).toBeVisible()
+  await won.getByRole('link', { name: 'Parlay · 2 picks' }).click()
+  await expect(page.getByRole('region', { name: 'Summary' })).toContainText('Won 28 DC')
+  await expect(page.getByRole('region', { name: 'Picks' }).getByText('Resolved: Yes')).toHaveCount(2)
 })

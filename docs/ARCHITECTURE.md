@@ -58,6 +58,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
 | `/parlays` | Redirects to `/bets` (kept for old links) |
+| `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its locked odds and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`, so an unknown id is a real 404 |
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
 | `/feed` | Everyone's activity, with reactions, live |
 | `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`) |

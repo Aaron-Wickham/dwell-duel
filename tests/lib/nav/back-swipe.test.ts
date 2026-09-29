@@ -57,6 +57,7 @@ describe('logicalParent', () => {
     ['/markets/3f2a0c1e-8d8b-4c43-9f0f-0a7c5b1d2e3f', '/markets'],
     ['/markets/new', '/markets'],
     ['/members/3f2a0c1e-8d8b-4c43-9f0f-0a7c5b1d2e3f', '/leaderboard'],
+    ['/parlays/3f2a0c1e-8d8b-4c43-9f0f-0a7c5b1d2e3f', '/bets'],
     ['/admin/invites', '/'],
     ['/admin/tasks', '/'],
     ['/admin/members', '/'],

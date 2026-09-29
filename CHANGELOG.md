@@ -6,6 +6,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Features
+- **Parlays open into a breakdown:** each parlay on My bets is one tappable card (stake, multiplier, what it pays, a progress bar of its picks) leading to a new page with every pick's locked odds and result, and how the multiplier adds up (#120).
+
 ### Fixes
 - **Notifications don't repeat the app's name:** each one's title says what happened ("New market", "You won 26 DC", "Time to resolve", "Task approved"), with the detail underneath (#109).
 - **Market cards' sparklines start at the seeded 50/50,** like the market page's chart, and a seeded market nobody has bet on shows a flat line (#110).

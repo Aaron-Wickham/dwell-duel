@@ -17,5 +17,6 @@ export function logicalParent(pathname: string): string {
   const [first, second] = pathname.split('/').filter(Boolean)
   if (first === 'markets' && second) return '/markets'
   if (first === 'members' && second) return '/leaderboard'
+  if (first === 'parlays' && second) return '/bets'
   return '/'
 }

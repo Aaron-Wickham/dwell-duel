@@ -1,0 +1,104 @@
+name: Deploy Production
+
+# Every push to main deploys through here, not through Vercel's Git integration (vercel.json turns
+# that off for main): migrations first, when there are any, then the app through a Vercel deploy
+# hook. So new code never goes live before the functions and tables it calls (#148).
+on:
+  push:
+    branches: [main]
+  # Also runnable by hand from main: pushes any pending migrations, then redeploys.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Two runs must never overlap, and a queued one must never cancel one that's mid-migration.
+concurrency:
+  group: prod-db
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      migrations: ${{ steps.diff.outputs.migrations }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # A push whose previous commit is unknown (a new branch, a force push) or a manual run
+      # counts as having migrations: a push with nothing pending is a quick no-op.
+      - name: Did this push change supabase/migrations?
+        id: diff
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "${{ github.event_name }}" != "push" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "migrations=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "$BEFORE" "$GITHUB_SHA" -- supabase/migrations; then
+            echo "migrations=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "migrations=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # A dry run first: a migration that can't apply fails here, before anything is pushed. Migrations
+  # apply on merge with no approval step (Aaron's call, #138); CI has already run every one against
+  # a local database.
+  plan:
+    needs: changes
+    if: needs.changes.outputs.migrations == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      # The same version as ci.yml; 2.117.0 is the first release that accepts fine-grained sbp_v0_ tokens.
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.117.0
+
+      - name: Dry run
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase db push --project-ref lymrpiivqvdnfcjmxksx --dry-run
+
+  push-migrations:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.117.0
+
+      - name: Push migrations to the production project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase db push --project-ref lymrpiivqvdnfcjmxksx
+
+  # Runs straight away when nothing changed under supabase/migrations, and only after a successful
+  # push when something did; a failed migration fails the run and leaves the old app live.
+  deploy-app:
+    needs: [changes, push-migrations]
+    if: >-
+      always() &&
+      needs.changes.result == 'success' &&
+      (needs.push-migrations.result == 'success' ||
+       (needs.changes.outputs.migrations == 'false' && needs.push-migrations.result == 'skipped'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger the Vercel production deploy
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$VERCEL_DEPLOY_HOOK_URL" ]; then
+            echo "::error::The VERCEL_DEPLOY_HOOK_URL repository secret is not set, so nothing was deployed."
+            exit 1
+          fi
+          curl --fail --silent --show-error --max-time 30 -X POST "$VERCEL_DEPLOY_HOOK_URL" > /dev/null
+          echo "Vercel is building the production deploy of $GITHUB_SHA."

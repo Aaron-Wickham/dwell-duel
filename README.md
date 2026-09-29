@@ -131,19 +131,19 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
 
 ## Production
 
-- **Vercel project** `dwell-duel`, connected to this repo: every merge to
-  `main` deploys. Functions run in `cle1` (`vercel.json`), next to the
+- **Vercel project** `dwell-duel`, connected to this repo. Every merge to
+  `main` deploys, but through `.github/workflows/deploy-production.yml`
+  and a Vercel deploy hook (the `VERCEL_DEPLOY_HOOK_URL` repo secret), not
+  Vercel's Git integration, which `vercel.json` turns off for `main`. Functions run in `cle1` (`vercel.json`), next to the
   Supabase project in us-east-2. A daily Vercel cron calls `/api/cron/keep-alive` so the
   free-tier Supabase project never pauses (it needs `CRON_SECRET`).
-- **Supabase project** `dwell-duel` holds the real data. Merging a change
-  under `supabase/migrations/` to `main` runs
-  `.github/workflows/deploy-production-db.yml`, which pushes it to
-  production (it needs the `SUPABASE_ACCESS_TOKEN` repo secret). It shows a
-  dry run first, then waits for the owner's approval on the `production-db`
-  environment, and never runs two at once. It runs alongside Vercel's
-  deploy, not before it, so when a build depends on a new migration, run
-  the workflow on the branch before merging. Re-run it from the Actions tab
-  if a push fails.
+- **Supabase project** `dwell-duel` holds the real data. When a merge to
+  `main` changes `supabase/migrations/`, the same workflow shows a dry run,
+  pushes the migrations to production (it needs the
+  `SUPABASE_ACCESS_TOKEN` repo secret) and only then triggers the app
+  deploy, so new code never runs against an old schema. It never runs two
+  at once. If a push fails, nothing deploys; fix it and re-run the
+  workflow from the Actions tab.
 - **Supabase keys.** Sessions are signed with an ECC (ES256) key, so the
   app verifies them locally with no Auth round trip; the legacy HS256
   secret is revoked and the legacy `anon` / `service_role` JWT API keys are

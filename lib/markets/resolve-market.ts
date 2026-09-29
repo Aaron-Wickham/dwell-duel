@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { clawbackMessage, parseClawbackError } from '@/lib/markets/clawback'
+import { afterAction, notifyMarketResult } from '@/lib/push/notify'
 import type { ProofRecord } from '@/lib/proof/types'
 
 export type ActionState = { formError?: string; field?: 'outcome' | 'note' } | undefined
@@ -46,6 +47,7 @@ export async function resolveMarketAction(
     return { formError: (short && clawbackMessage(short)) ?? error.message, field: 'outcome' }
   }
 
+  afterAction(() => notifyMarketResult(marketId))
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')
   return undefined

@@ -83,6 +83,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ### Tasks
 - Daily, weekly, monthly and yearly tasks now reset at midnight US Eastern instead of UTC, and each repeating task shows your current streak ("🔥 5-week streak") once you've done it two periods in a row; only approved submissions count (#82).
 
+### Notifications
+- Push notifications, opt in per device under Settings → Notifications (#80): a reminder to resolve your closed market, the result of a market you bet on (what you won, an override or a void), your task's approval or rejection with the reason, and, if you turn it on, new markets. Each kind can be turned off; on iPhone and iPad, add DwellDuel to your Home Screen first (iOS 16.4+).
+
 ### Tests
 - **Closed test gaps** (#72): end-to-end tests for role gates (a member is kept out of Admin and sees no admin controls; a reviewer lands on the approval queue), cancelling a bet, overriding a resolution, rejecting a submission with a reason and editing your profile; unit tests for saving a profile and submitting a task; and database tests for money moving at the same time: a bet racing a resolve, two resolves at once, a void racing a resolve and two slips that together overdraw a balance.
 

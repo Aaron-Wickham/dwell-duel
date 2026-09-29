@@ -5,6 +5,8 @@ import { BookOpenText, LogOut, UserRound } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { signOut } from '@/lib/auth/sign-out'
 import { resolvePreferences } from '@/lib/preferences/preferences'
+import { vapidKeys } from '@/lib/push/config'
+import { getMyNotificationSettings } from '@/lib/push/prefs'
 import { avatarUrl } from '@/lib/profile/avatar'
 import { resolveTheme, THEME_COOKIE } from '@/lib/theme/theme'
 import { Avatar } from '@/components/ui/avatar'
@@ -13,15 +15,17 @@ import { buttonVariants } from '@/components/ui/button'
 import { Page, PageHeader } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { cn } from '@/lib/utils'
+import { NotificationSettings } from './notification-settings'
 import { MotionSettings, ThemeSetting } from './settings-controls'
 
 export default async function SettingsPage() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const [{ data: profile, error }, jar] = await Promise.all([
+  const [{ data: profile, error }, jar, notifications] = await Promise.all([
     supabase.from('profiles').select('display_name, avatar_path').eq('id', user.id).maybeSingle(),
     cookies(),
+    getMyNotificationSettings(supabase, user.id),
   ])
   if (error) throw error
   const theme = resolveTheme(jar.get(THEME_COOKIE)?.value) ?? 'system'
@@ -54,6 +58,13 @@ export default async function SettingsPage() {
         )}
         <SectionCard title="Haptics & motion" titleId="settings-motion">
           <MotionSettings haptics={prefs.haptics} reduceMotion={prefs.reduceMotion} />
+        </SectionCard>
+        <SectionCard title="Notifications" titleId="settings-notifications">
+          <NotificationSettings
+            publicKey={vapidKeys()?.publicKey ?? null}
+            endpoints={notifications.endpoints}
+            prefs={notifications.prefs}
+          />
         </SectionCard>
         <SectionCard title="Help" titleId="settings-help">
           <p className="text-ink2">Odds, payouts, parlays, results and tasks, explained.</p>

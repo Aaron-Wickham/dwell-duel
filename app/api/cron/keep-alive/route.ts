@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { serviceRoleClient } from '@/lib/supabase/service-role'
+import { sendResolveReminders } from '@/lib/push/notify'
 
 /**
  * Supabase pauses free-tier projects after 7 days with no database
@@ -66,5 +67,18 @@ export async function GET(request: Request) {
     return new NextResponse('Season settle failed', { status: 502 })
   }
 
-  return NextResponse.json({ ok: true, strayProofRemoved: names.length, seasonChampion: champion ?? null })
+  // A creator whose market has closed is asked to resolve it, once per market (#80). Vercel Hobby
+  // runs this cron once a day, so that's how soon after closing the reminder can come.
+  const reminders = await sendResolveReminders(db)
+  if ('error' in reminders) {
+    console.error(reminders.error)
+    return new NextResponse('Resolve reminders failed', { status: 502 })
+  }
+
+  return NextResponse.json({
+    ok: true,
+    strayProofRemoved: names.length,
+    seasonChampion: champion ?? null,
+    resolveReminders: reminders.reminded,
+  })
 }

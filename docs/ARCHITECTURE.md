@@ -19,6 +19,9 @@ Supabase (one hosted project: production)
   ├─ Postgres: tables + RLS + security-definer RPCs (all money moves here)
   ├─ Realtime: 12 published tables drive live page refreshes
   └─ Storage: `avatars` (public), `proof` (private, signed URLs)
+
+Web push: server actions and the daily cron → web-push (VAPID) → the
+browser's push service → public/sw.js shows the notification
 ```
 
 The rule that shapes everything else is that **all business logic that
@@ -60,7 +63,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`) |
 | `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings |
 | `/profile` | Edit your name, photo and bio |
-| `/settings` | Theme, haptics, reduced motion, How it works, sign out |
+| `/settings` | Theme, haptics, reduced motion, notifications, How it works, sign out |
 | `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`) |
 | `/admin/invites` · `/admin/tasks` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role; the ledger opens with the owner's Economy card |
 
@@ -68,8 +71,9 @@ Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/not-invited` and `/offline`. The API has one route,
 `/api/cron/keep-alive`, which a daily Vercel cron calls so the free
 Supabase project never pauses. It also deletes unattached proof files and
-attempt keys older than a day, and calls `settle_season()` to post last
-month's champion to the feed (a no-op once it's posted).
+attempt keys older than a day, calls `settle_season()` to post last
+month's champion to the feed (a no-op once it's posted), and sends the
+push reminders to resolve closed markets (`push_resolve_reminders()`).
 
 ## Code layout
 
@@ -79,8 +83,8 @@ components/     UI by area: app-nav, brand, feed, home, markets, parlays, proof,
                 slip, tasks, live, offline, ui (shared primitives: Page, SectionCard,
                 Button, Field, SubNav, ShowMore, EmptyState, Skeleton…)
 lib/            logic by area: auth, markets, bets, parlays, tasks, proof, social,
-                live, pagination, preferences, theme, forms, env, nav…
-supabase/       migrations/0001…0056, config.toml
+                live, pagination, preferences, push, theme, forms, env, nav…
+supabase/       migrations/0001…0057, config.toml
 tests/          components/, lib/, db/ (Vitest), plus e2e/ (Playwright)
 scripts/        generate-splash.mjs, generate-favicons.mjs
 public/         sw.js (service worker), icons, favicons, iOS splash screens
@@ -177,6 +181,21 @@ the task catalogue and invite list, which are allowed by policy.
 - `activity_feed` (view): the old computed feed. It is kept only as the
   DB tests' oracle; members can't read it.
 
+**Notifications** (0057)
+
+- `push_subscriptions`: one row per subscribed device: `endpoint`
+  (unique, https, at most 1024 characters), the device's `p256dh` and
+  `auth` keys, `user_agent`, `created_at` and `last_success_at`. A member
+  reads, inserts and deletes only their own rows; Settings saves through
+  `save_push_subscription`, which also hands a shared device's row to
+  whoever saves it with the same keys (the keys never leave the device).
+  Endpoints must be on a known push service (`lib/push/subscription.ts`).
+- `notification_prefs`: one row per member, `resolve_reminders`,
+  `results` and `task_reviews` (default on) and `new_markets` (default
+  off). No row means the defaults. Own row only, select, insert and update.
+- `push_log`: what must go out only once, keyed `(kind, ref)`; today only
+  `resolve_reminder` per market. Service role only.
+
 **Views for pages**
 
 - `my_wagers`: keys for My bets, solo bets and parlays together
@@ -215,6 +234,16 @@ markets waiting on the caller, capped at 10 with an uncapped `total`; a
 creator's own at once, and for reviewers and admins any left 48 hours or
 whose creator has a stake, always filtered through `can_resolve_market`),
 `my_at_stake` and `parlay_limits`.
+
+Push recipients (0057) come from service-role-only functions, so members
+can't call them: `push_wants(profile, kind)` (still invited, a device
+subscribed, the kind not turned off), `push_resolve_reminders()` (closed,
+unresolved markets whose creator may resolve them, claimed in `push_log`
+as they're returned), `push_market_result(market)` (every solo bettor and
+parlay-leg holder, with their payout and refund from the current
+resolution; cancelled bets live elsewhere, so never count),
+`push_task_reviews(ids)` and `push_new_market(market)` (everyone but the
+creator who opted in).
 
 The leaderboard (0051) reads two boards through `rpc()`, each returning
 `id, display_name, avatar_path, score, rank` with a competition rank over
@@ -271,7 +300,7 @@ subquery per row, so 0055 adds no index.
 
 ### Migrations
 
-Migrations are numbered in order, `0001`–`0056`, and none is ever edited
+Migrations are numbered in order, `0001`–`0057`, and none is ever edited
 after it ships. They roughly follow the project's history:
 
 | Range | What they add |
@@ -294,6 +323,7 @@ after it ships. They roughly follow the project's history:
 | 0054 | Task periods in US Eastern time: `group_time_zone()`, `compute_period_key` read in that zone, stored keys recomputed from `submitted_at` where the one-active-per-period index allows; task streaks: `period_index`, `my_task_streaks` and an approved-only `(profile_id, task_id, period_key)` index |
 | 0055 | Member stats: `member_stats` for the profile's Stats card, and `betting_ledger_types()`, 0051's betting types named once and shared with `season_profits` |
 | 0056 | `weekly_recap(p_week)`: Home's weekly recap, one row of date-bounded aggregates for the Eastern week holding `p_week` |
+| 0057 | Push notifications: `push_subscriptions`, `notification_prefs`, `push_log`, `save_push_subscription` and the service-role `push_*` recipient functions |
 
 Merging a migration to `main` runs the **Deploy Production Database**
 workflow. It runs in parallel with Vercel's deploy, so a build that needs
@@ -379,6 +409,29 @@ payloads, server actions or Supabase responses. Pages slide in with
 React's `<ViewTransition>`, drill-down pages support a back swipe, and
 each signed-in route has a skeleton.
 
+**Push notifications** (#80). Settings' Notifications card
+(`app/(app)/settings/notification-settings.tsx`) asks for permission,
+subscribes this device's service worker with the VAPID public key, and
+saves the subscription (`lib/push/actions.ts`); its "on" state is this
+device's `pushManager.getSubscription()` matching one of the member's
+saved endpoints. Its four checkboxes save `notification_prefs`. Sending is
+server-only (`lib/push/send.ts`, `web-push`): it reads the recipients'
+subscriptions with the service-role client, sends up to six at a time, and
+deletes a subscription whose push service answers 404 or 410. It never
+throws; failures are logged. Resolving, overriding, voiding, approving
+or rejecting a task and creating a market call `afterAction()`
+(`lib/push/notify.ts`), which runs the send through Next's `after()`, so
+the member's action never waits on it; the recipients are read from the
+database once the RPC has committed. The daily cron sends the reminders
+to resolve. The wording is `lib/push/messages.ts`: payloads are `{ title:
+'DwellDuel', body, url }`, with an in-app `url`. `public/sw.js` shows them
+on `push` and, on `notificationclick`, focuses an open window and
+navigates it, or opens one; it adds no caching. Without both VAPID keys
+(local dev, CI, tests) nothing is scheduled or sent, the cron claims no
+reminders, and Settings says notifications aren't available here. iOS
+offers web push only to an app on the Home Screen (16.4+), so there the
+card says to install first.
+
 **Settings.** Theme, haptics and reduced motion are cookies. The root
 layout renders them as attributes on `<html>` (`data-theme`,
 `data-haptics`, `data-motion`), so they apply before any script runs.
@@ -430,4 +483,5 @@ leaves out empty lines and hides when every one is empty.
   CSP there.
 - **Required env vars** are checked at boot (`lib/env/required.ts`):
   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-  always; `SUPABASE_SECRET_KEY` and `CRON_SECRET` in production.
+  always; `SUPABASE_SECRET_KEY`, `CRON_SECRET`,
+  `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` in production.

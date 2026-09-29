@@ -113,7 +113,10 @@ describe('leaderboard_net_worth', () => {
     await db.from('profiles').update({ balance: 80 }).eq('id', carol.id)
 
     const board = await getLeaderboardPage(carolClient, 'all', NO_PAGE)
-    expect(board.rows.map((m) => [m.displayName, m.score, m.rank])).toEqual([
+    // Tied members follow each other by id, which is random, so the tie's order isn't pinned.
+    const byRankThenName = (a: (string | number)[], b: (string | number)[]) =>
+      Number(a[2]) - Number(b[2]) || String(a[0]).localeCompare(String(b[0]))
+    expect(board.rows.map((m) => [m.displayName, m.score, m.rank]).sort(byRankThenName)).toEqual([
       ['Alice', 100, 1],
       ['Bob', 100, 1],
       ['Carol', 80, 3],

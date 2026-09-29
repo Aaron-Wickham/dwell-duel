@@ -10,6 +10,8 @@ const PRODUCTION = {
   ...BASE,
   SUPABASE_SECRET_KEY: 'secret-key',
   CRON_SECRET: 'cron-secret',
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'vapid-public-key',
+  VAPID_PRIVATE_KEY: 'vapid-private-key',
   VERCEL_ENV: 'production',
 }
 
@@ -46,8 +48,15 @@ describe('assertRequiredEnv', () => {
 
   it('throws naming every missing var', () => {
     expect(() => assertRequiredEnv({ ...BASE, VERCEL_ENV: 'production', SUPABASE_SECRET_KEY: 'x' })).toThrow(
-      'Missing required environment variables: CRON_SECRET',
+      'Missing required environment variables: CRON_SECRET, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY',
     )
+  })
+
+  it('requires both push keys in production', () => {
+    const { VAPID_PRIVATE_KEY: _private, ...withoutPrivate } = PRODUCTION
+    expect(missingEnv(withoutPrivate)).toEqual(['VAPID_PRIVATE_KEY'])
+    const { NEXT_PUBLIC_VAPID_PUBLIC_KEY: _public, ...withoutPublic } = PRODUCTION
+    expect(missingEnv(withoutPublic)).toEqual(['NEXT_PUBLIC_VAPID_PUBLIC_KEY'])
   })
 
   it("never includes a variable's value in the message", () => {

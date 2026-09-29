@@ -80,3 +80,47 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(networkFirstNavigation(event))
   }
 })
+
+// Web push (#80). The payload is { title, body, url } from lib/push/messages.ts; url is an in-app
+// path. Only same-origin paths are opened, so a payload can never send a tap somewhere else.
+function inAppUrl(path) {
+  try {
+    const url = new URL(path, self.location.origin)
+    return url.origin === self.location.origin ? url.href : self.location.origin + '/'
+  } catch {
+    return self.location.origin + '/'
+  }
+}
+
+self.addEventListener('push', (event) => {
+  let data = {}
+  try {
+    data = event.data ? event.data.json() : {}
+  } catch {
+    data = { body: event.data ? event.data.text() : '' }
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'DwellDuel', {
+      body: data.body || '',
+      icon: '/android-chrome-192.png',
+      badge: '/favicon-48.png',
+      data: { url: inAppUrl(data.url || '/') },
+    }),
+  )
+})
+
+// Reuses an open DwellDuel window when there is one, so a tap doesn't stack up tabs.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = event.notification.data?.url || self.location.origin + '/'
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windows) => {
+      const open = windows.find((client) => new URL(client.url).origin === self.location.origin)
+      if (open) {
+        await open.focus()
+        return open.navigate(url).catch(() => self.clients.openWindow(url))
+      }
+      return self.clients.openWindow(url)
+    }),
+  )
+})

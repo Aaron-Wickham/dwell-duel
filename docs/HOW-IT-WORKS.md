@@ -230,6 +230,31 @@ bets yet." and shows only markets created and tasks completed.
   for everyone and can't be brought back. Reactions and comments move no
   DC.
 
+## Notifications
+
+DwellDuel can send notifications to your phone or computer, even when
+the app is closed. They're off until you turn them on, under **Settings →
+Notifications**, on each device you want them on. You choose what you
+hear about, and your choices apply on every device:
+
+| Notification | When | Starts |
+|---|---|---|
+| **Markets to resolve** | A market you made has closed and is waiting for you to resolve it (once per market, sent once a day) | On |
+| **Results** | A market you bet on, solo or as a parlay leg, is resolved ("You won 26 DC on Will it rain?"), changed by an override or voided | On |
+| **Task reviews** | Your task submission is approved or rejected, with the reviewer's reason | On |
+| **New markets** | Someone else creates a market | Off |
+
+A parlay only pays once all its legs are settled, so if your only stake
+in a market is a parlay leg, the notification just gives the result. A
+cancelled bet gets no notification. Tapping a notification opens the
+market or your tasks.
+
+**On iPhone and iPad,** notifications only work once DwellDuel is on
+your Home Screen (iOS 16.4 or later): tap Share, then Add to Home Screen,
+open DwellDuel from there and turn them on in Settings. If you've blocked
+notifications for DwellDuel, allow them again in your browser's or
+phone's settings.
+
 ## Roles
 
 | Role | Can also…
@@ -264,8 +289,9 @@ bets yet." and shows only markets created and tasks completed.
   Tap your avatar (top right) for your profile, where Edit profile and
   Settings live.
 - **Settings:** theme (System, Light or Dark), vibration on taps (Android),
-  reduced animations, this How it works page, and sign out.
+  reduced animations, [notifications](#notifications), this How it works
+  page, and sign out.
 - **Install it:** add DwellDuel to your Home Screen for a full-screen app
   with a launch animation. It shows an offline page when you lose
-  connection.
+  connection, and on iPhone and iPad it's how you get notifications.
 - **Feedback:** use "Send feedback" on Home.

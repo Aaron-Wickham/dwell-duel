@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
+import { afterAction, notifyMarketResult } from '@/lib/push/notify'
 
 export type ActionState = { formError?: string } | undefined
 
@@ -17,6 +18,7 @@ export async function voidMarketAction(
 
   if (error) return { formError: error.message }
 
+  afterAction(() => notifyMarketResult(marketId))
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')
   return undefined

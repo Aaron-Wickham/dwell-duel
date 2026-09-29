@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { friendlyError } from '@/lib/errors/friendly-error'
+import { afterAction, notifyNewMarket } from '@/lib/push/notify'
 import { CREATE_MARKET_ERRORS } from './create-market-errors'
 
 export type ActionState =
@@ -52,6 +53,7 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
       p_line: line,
     })
     if (error) return friendlyError(error, CREATE_MARKET_ERRORS, 'create_market failed')
+    afterAction(() => notifyNewMarket(marketId))
     redirect(`/markets/${marketId}`)
   }
 
@@ -82,5 +84,6 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
 
   if (error) return friendlyError(error, CREATE_MARKET_ERRORS, 'create_market failed')
 
+  afterAction(() => notifyNewMarket(marketId))
   redirect(`/markets/${marketId}`)
 }

@@ -1,7 +1,7 @@
 import { pageClass } from '@/components/ui/page'
 import { Skeleton, SkeletonCard, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
 
-// Mirrors Settings: back link, header, and the five section cards.
+// Mirrors Settings: back link, header, and the six section cards.
 export default function Loading() {
   return (
     <SkeletonScreen name="settings" className={pageClass}>
@@ -26,6 +26,13 @@ export default function Loading() {
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-11 w-48" />
           <Skeleton className="h-11 w-48" />
+        </SkeletonCard>
+        <SkeletonCard className="gap-3">
+          <Skeleton className="h-6 w-36" />
+          <Skeleton className="h-5 w-64 max-w-full" />
+          <Skeleton className="h-11 w-52" />
+          <Skeleton className="h-11 w-44" />
+          <Skeleton className="h-11 w-44" />
         </SkeletonCard>
         <SkeletonCard className="gap-3">
           <Skeleton className="h-6 w-16" />

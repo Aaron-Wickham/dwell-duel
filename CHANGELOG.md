@@ -13,7 +13,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **"Closes in" rounds to the nearest hour or minute,** so 1h 59m reads "2h", not "1h" (#112).
 
 ### Under the hood
-- Upgraded Vitest 5 and the CI actions (checkout 7, setup-node 7, cache 6, upload-artifact 7, Supabase setup-cli 3) from Dependabot #92–#97. TypeScript stays on 5.9 and ESLint on 9 until typescript-eslint and eslint-config-next's plugins support TS 7 and ESLint 10, and @types/node stays on Node 22's line (#98–#100).
+- Upgraded Vitest 5 and the CI actions (checkout 7, setup-node 7, cache 6, upload-artifact 7, Supabase setup-cli 3) from Dependabot #92–#97. TypeScript moves to 6.0 (#114) and stays below 7, and ESLint stays on 9, until typescript-eslint and eslint-config-next's plugins support TS 7 and ESLint 10, and @types/node stays on Node 22's line (#98–#100).
 
 ## v0.3.0-beta — 2026-09-28
 

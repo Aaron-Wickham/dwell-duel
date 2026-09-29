@@ -9,11 +9,11 @@ const ROLE_TONE = { owner: 'done', admin: 'open', reviewer: 'wait' } as const
 
 export function MemberIdentity({ member, now }: { member: MemberSummary; now: number }) {
   return (
-    <div className="flex items-center gap-3 md:w-60 md:shrink-0 md:self-center">
+    <div className="pressable hover-lift relative flex items-center gap-3 rounded-control md:w-60 md:shrink-0 md:self-center lg:w-auto lg:self-auto">
       <Avatar name={member.displayName} src={member.avatarSrc} />
       <div className="flex min-w-0 grow flex-col">
         <span className="flex flex-wrap items-center gap-2">
-          <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="hit-area font-extrabold">
+          <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="stretched-link font-extrabold">
             {member.displayName}
           </Link>
           {member.role !== 'member' && <StatusChip tone={ROLE_TONE[member.role]}>{ROLE_LABELS[member.role]}</StatusChip>}

@@ -55,4 +55,19 @@ describe.each(SKELETONS)('the %s skeleton', (name, Loading) => {
     }
     expect(container).toHaveTextContent(/^Loading…$/)
   })
+
+  it('fills its page column, with no left-pinned width cap', () => {
+    const { container } = render(<Loading />)
+    expect(container.innerHTML).not.toMatch(/max-w-\[(720|820)px\]/)
+  })
+})
+
+describe('skeletons of reading-width pages', () => {
+  it.each([
+    ['feed', FeedLoading],
+    ['how-it-works', HowItWorksLoading],
+  ] as const)('the %s skeleton is centred at the reading width, like its page', (name, Loading) => {
+    const { container } = render(<Loading />)
+    expect(container.querySelector(`[data-skeleton="${name}"]`)).toHaveClass('max-w-[980px]', 'mx-auto')
+  })
 })

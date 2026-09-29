@@ -73,7 +73,7 @@ function TabSection<Row>({
     <SectionCard
       title={label}
       titleId={`${tab}-bets-title`}
-      className={page.rows.length > 0 ? 'max-w-[820px] gap-1' : 'max-w-[820px]'}
+      className={page.rows.length > 0 ? 'gap-1' : undefined}
     >
       {page.windowed && page.rows.length > 0 && (
         <div className="flex flex-col py-2">

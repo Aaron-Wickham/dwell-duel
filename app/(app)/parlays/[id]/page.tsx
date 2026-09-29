@@ -35,7 +35,7 @@ export default async function ParlayPage(props: PageProps<'/parlays/[id]'>) {
   const dropped = parlay.legs.length - counted.length
 
   return (
-    <Page transition="drill-down" className="max-w-[820px]">
+    <Page transition="drill-down">
       <BackLink href="/bets">My bets</BackLink>
       <LiveTables subscriptions={pageSubscriptions.parlay(parlay.id)} />
       <PageHeader
@@ -47,79 +47,83 @@ export default async function ParlayPage(props: PageProps<'/parlays/[id]'>) {
         }
       />
 
-      <section aria-labelledby="parlay-summary" className={cn(cardClass, 'flex flex-col gap-4 bg-hero p-[18px] text-on-hero md:p-6')}>
-        <h2 id="parlay-summary" className="sr-only">
-          Summary
-        </h2>
-        <div className="flex items-center justify-between gap-3">
-          <ParlayStatusChip parlay={parlay} className="bg-surface text-ink" />
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-sm text-hero-2">{figure.label}</span>
-          <span className={cn('text-[34px] leading-none font-extrabold tabular-nums', figure.tone === 'win' ? 'text-hero-num' : '')}>
-            {figure.value}
-          </span>
-          <span className="text-sm text-hero-2">
-            {parlay.stake} DC stake · {formatOdds(parlay.multiplierBp)}× multiplier
-            {parlay.capped ? ` (capped at ${MAX_MULTIPLIER}×)` : ''}
-          </span>
-        </div>
-        <ParlayProgress legs={parlay.legs} />
-      </section>
+      {/* At lg the picks take the wide column, with the summary and the maths beside them, as on the
+          market page; on a phone they keep the summary-first order. */}
+      <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_1fr] lg:items-start">
+        <section aria-labelledby="parlay-summary" className={cn(cardClass, 'flex flex-col gap-4 bg-hero p-[18px] text-on-hero md:p-6 lg:col-start-2 lg:row-start-1')}>
+          <h2 id="parlay-summary" className="sr-only">
+            Summary
+          </h2>
+          <div className="flex items-center justify-between gap-3">
+            <ParlayStatusChip parlay={parlay} className="bg-surface text-ink" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm text-hero-2">{figure.label}</span>
+            <span className={cn('text-[34px] leading-none font-extrabold tabular-nums', figure.tone === 'win' ? 'text-hero-num' : '')}>
+              {figure.value}
+            </span>
+            <span className="text-sm text-hero-2">
+              {parlay.stake} DC stake · {formatOdds(parlay.multiplierBp)}× multiplier
+              {parlay.capped ? ` (capped at ${MAX_MULTIPLIER}×)` : ''}
+            </span>
+          </div>
+          <ParlayProgress legs={parlay.legs} />
+        </section>
 
-      <SectionCard title="Picks" titleId="parlay-picks">
-        <ul className="flex flex-col divide-y divide-line">
-          {parlay.legs.map((leg) => {
-            const note = legDetail(leg)
-            return (
-              <li key={leg.marketId} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
-                <div className="flex items-start justify-between gap-3">
-                  <Link
-                    href={`/markets/${leg.marketId}`}
-                    transitionTypes={['nav-forward']}
-                    className="hit-area min-w-0 font-bold break-words"
-                  >
-                    {leg.marketTitle}
-                  </Link>
-                  <LegPill status={leg.status} />
-                </div>
-                <p className="text-sm text-ink2">
-                  Pick: <strong className="text-ink">{leg.outcomeLabel}</strong> · locked at {formatOdds(leg.lockedOddsBp)}×
-                </p>
-                <p className="text-sm text-ink2">
-                  {note ?? (
-                    <>
-                      {leg.status === 'awaiting' ? 'Closed' : 'Closes'} <LocalTime iso={leg.closeAt} format="dateTime" />
-                    </>
-                  )}
-                </p>
-              </li>
-            )
-          })}
-        </ul>
-      </SectionCard>
+        <SectionCard title="Picks" titleId="parlay-picks" className="lg:col-start-1 lg:row-span-2 lg:row-start-1">
+          <ul className="flex flex-col divide-y divide-line">
+            {parlay.legs.map((leg) => {
+              const note = legDetail(leg)
+              return (
+                <li key={leg.marketId} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <Link
+                      href={`/markets/${leg.marketId}`}
+                      transitionTypes={['nav-forward']}
+                      className="hit-area min-w-0 font-bold break-words"
+                    >
+                      {leg.marketTitle}
+                    </Link>
+                    <LegPill status={leg.status} />
+                  </div>
+                  <p className="text-sm text-ink2">
+                    Pick: <strong className="text-ink">{leg.outcomeLabel}</strong> · locked at {formatOdds(leg.lockedOddsBp)}×
+                  </p>
+                  <p className="text-sm text-ink2">
+                    {note ?? (
+                      <>
+                        {leg.status === 'awaiting' ? 'Closed' : 'Closes'} <LocalTime iso={leg.closeAt} format="dateTime" />
+                      </>
+                    )}
+                  </p>
+                </li>
+              )
+            })}
+          </ul>
+        </SectionCard>
 
-      <SectionCard title="How it adds up" titleId="parlay-maths">
-        <dl className="flex flex-col gap-2 tabular-nums">
-          <div className="flex justify-between gap-3">
-            <dt>Stake</dt>
-            <dd className="font-bold">{parlay.stake} DC</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="min-w-0 break-words">{counted.map((leg) => `${formatOdds(leg.lockedOddsBp)}×`).join(' · ')}</dt>
-            <dd className="font-bold">= {formatOdds(parlay.multiplierBp)}×</dd>
-          </div>
-          <div className="flex justify-between gap-3 border-t border-line pt-2">
-            <dt className="font-bold">{parlay.status === 'pending' ? 'Pays if every pick wins' : figure.label}</dt>
-            <dd className="font-bold">{parlay.status === 'lost' ? 'Nothing' : figure.value}</dd>
-          </div>
-        </dl>
-        <p className="text-sm text-ink2">
-          Each pick’s odds were locked when the parlay was placed, and they multiply together
-          {parlay.capped ? `, up to a ${MAX_MULTIPLIER}× cap` : ''}.
-          {dropped > 0 ? ` ${dropped} voided ${dropped === 1 ? 'pick was' : 'picks were'} left out and the rest carried on.` : ''}
-        </p>
-      </SectionCard>
+        <SectionCard title="How it adds up" titleId="parlay-maths" className="lg:col-start-2 lg:row-start-2">
+          <dl className="flex flex-col gap-2 tabular-nums">
+            <div className="flex justify-between gap-3">
+              <dt>Stake</dt>
+              <dd className="font-bold">{parlay.stake} DC</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="min-w-0 break-words">{counted.map((leg) => `${formatOdds(leg.lockedOddsBp)}×`).join(' · ')}</dt>
+              <dd className="font-bold">= {formatOdds(parlay.multiplierBp)}×</dd>
+            </div>
+            <div className="flex justify-between gap-3 border-t border-line pt-2">
+              <dt className="font-bold">{parlay.status === 'pending' ? 'Pays if every pick wins' : figure.label}</dt>
+              <dd className="font-bold">{parlay.status === 'lost' ? 'Nothing' : figure.value}</dd>
+            </div>
+          </dl>
+          <p className="text-sm text-ink2">
+            Each pick’s odds were locked when the parlay was placed, and they multiply together
+            {parlay.capped ? `, up to a ${MAX_MULTIPLIER}× cap` : ''}.
+            {dropped > 0 ? ` ${dropped} voided ${dropped === 1 ? 'pick was' : 'picks were'} left out and the rest carried on.` : ''}
+          </p>
+        </SectionCard>
+      </div>
     </Page>
   )
 }

@@ -75,6 +75,7 @@ Every text pairing above passes WCAG AA; I checked them with a script.
 - **Focus:** every control gets a visible ring: `:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }`.
 - **Corner radii:** cards 18px, buttons and inputs 12px, chips fully rounded (999px).
 - **Page padding:** 16px on phone, 80px on desktop with a 1120px max content width.
+- **Page widths:** `<Page width>` picks one of two centred columns, and the page's header, tabs and content always share its edges, so nothing is left-pinned with empty space on the right. See *Desktop layouts* below.
 - **Type sizes (px):**
 
 | Element | Phone | Desktop | Weight |
@@ -86,6 +87,32 @@ Every text pairing above passes WCAG AA; I checked them with a script.
 
 - **Real elements only:** `<button>`, `<a>`, and `<label>` paired with its input. No clickable divs.
 - **Icon-only buttons** get an `aria-label`.
+- **Press and hover (#153):** every control shrinks to 97% on press. Under a mouse (not on touch), buttons, chips, tabs and nav items grow to 103% and change colour; tappable cards and rows lift 2px onto a shadow instead. Reduced motion keeps the colour changes (and the lift's shadow) and drops the movement. Curves and durations come from the motion tokens in `globals.css`.
+- **Sliding pills:** the desktop nav's, the phone tab bar's and the sub-tabs' active pill all slide to the new tab the same way: 280ms on the iOS curve. On the tab bar the new tab's icon pops (to 118% and back) over the same 280ms, and its label's weight eases from bold to extrabold.
+
+## Desktop layouts (#158)
+
+Phone layouts are single columns and don't change. From `lg:` (1024px) each page uses its column like this:
+
+| Page | Width | At `lg:` |
+|---|---|---|
+| Markets | wide | Three columns of market cards. |
+| Market | wide | Chart and outcomes (7fr) beside betting, resolution and the rest (5fr). |
+| Leaderboard | wide | Podium across the top. This month: rankings (7fr) beside the race chart, the awards as a 2×2 grid and past champions (5fr). Net worth: podium and rankings at full width. |
+| Feed | reading | One centred stream. |
+| My bets | wide | Open, Settled and Cancelled show bets as cards in three columns (a solo bet's status sits at the bottom of its card); Coins stays a list. |
+| Member | wide | Photo, name, bio and a two-column Stats card (5fr) beside Recent activity (7fr). |
+| Edit profile | wide | Photo and a live preview of the profile (5fr) beside name, bio and Save (7fr). |
+| Settings | wide | Two columns of section cards: Appearance, Profile, Haptics & motion; then Notifications, Help, Account. |
+| How it works | reading | A sticky contents list (200px) beside the rules (about 68 characters a line). |
+| Create market | wide | The form (7fr) beside a live preview of its market card (5fr). |
+| Parlay | wide | Picks (7fr) beside the summary and How it adds up (5fr). |
+| Admin › Members | wide | A card per member in three columns. |
+
+- **wide** is `max-w-[1280px]`: a 1120px content column inside the 80px padding.
+- **reading** is `max-w-[980px]`: about 820px of content, centred, for a single stream or long text.
+- Side-by-side columns are `minmax(0,7fr)` / `minmax(0,5fr)` (or the reverse), `items-start`, so each card is as tall as its content. Where the phone order differs from the columns, the grid places items (`lg:col-start-*`, `lg:row-start-*`) rather than reordering the markup.
+- A route's `loading.tsx` skeleton follows the same width and columns.
 
 ## Navigation (one `<AppNav>` in the signed-in layout)
 

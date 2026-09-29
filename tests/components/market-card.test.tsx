@@ -24,6 +24,28 @@ vi.mock('@/components/markets/market-sparkline', () => ({
 }))
 
 describe('MarketCard', () => {
+  it('as a preview, shows its title without a link and says when no close time is set', () => {
+    render(
+      <MarketCard
+        preview
+        id="preview"
+        title="Will it snow?"
+        status="open"
+        kind="binary"
+        closeAt=""
+        resolvedAt={null}
+        outcomes={[
+          { id: 'a', label: 'Yes', pct: 50 },
+          { id: 'b', label: 'No', pct: 50 },
+        ]}
+        resolvedOutcomeLabel={null}
+      />,
+    )
+    expect(screen.getByRole('heading', { level: 3, name: 'Will it snow?' })).toBeInTheDocument()
+    expect(screen.queryByRole('link')).toBeNull()
+    expect(screen.getByText('No close time yet')).toBeInTheDocument()
+  })
+
   it('shows an open market\'s status, meta line, title link and outcome percentages', () => {
     const { container } = render(
       <MarketCard
@@ -49,7 +71,7 @@ describe('MarketCard', () => {
     expect(screen.queryByText('No bets were placed.')).not.toBeInTheDocument()
   })
 
-  it('gives the title link a 44px tap target', () => {
+  it('stretches the title link over the card, which presses as one', () => {
     render(
       <MarketCard
         id="m1"
@@ -65,7 +87,8 @@ describe('MarketCard', () => {
         resolvedOutcomeLabel={null}
       />,
     )
-    expect(screen.getByRole('link', { name: 'Who wins the chili cook-off?' })).toHaveClass('hit-area')
+    expect(screen.getByRole('link', { name: 'Who wins the chili cook-off?' })).toHaveClass('stretched-link')
+    expect(screen.getByRole('article')).toHaveClass('pressable', 'relative')
   })
 
   it('shows outcome pills and says no bets were placed on a market closed before seeding', () => {

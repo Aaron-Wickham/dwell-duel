@@ -18,9 +18,9 @@ const BLOCK = { 1: 'h-[72px] bg-lime text-on-lime', 2: 'h-[48px] bg-sunk text-in
 function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean; meId: string }) {
   const place = Math.min(member.rank, 3) as 1 | 2 | 3
   return (
-    <li className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
+    <li className="pressable hover-lift relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-t-[10px] text-center">
       <Avatar name={member.name} src={member.avatarSrc} size={place === 1 ? 'lg' : 'md'} />
-      <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="hit-area max-w-full truncate text-[15px] font-extrabold">
+      <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="stretched-link max-w-full truncate text-[15px] font-extrabold">
         {member.name}
       </Link>
       {member.id === meId && <span className="-mt-1 text-xs font-bold text-ink2">you</span>}
@@ -42,7 +42,7 @@ function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean
 export function Podium({ members, signed, meId }: { members: PodiumMember[]; signed: boolean; meId: string }) {
   const [first, second, third] = members
   return (
-    <section aria-label="Top three" className={cn(cardClass, 'max-w-[820px] p-4 md:p-6')}>
+    <section aria-label="Top three" className={cn(cardClass, 'p-4 md:p-6')}>
       <ol className="flex items-end justify-center gap-3 md:gap-6">
         <Place member={second} signed={signed} meId={meId} />
         <Place member={first} signed={signed} meId={meId} />

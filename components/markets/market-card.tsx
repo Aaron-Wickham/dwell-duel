@@ -56,6 +56,9 @@ export interface MarketCardProps {
   domId?: string
   // The page's render time, for the "Closes in 2h" chip on a market closing within a day.
   now?: number
+  // Create market's live preview: a market not made yet, so its title leads nowhere and its close
+  // time may still be blank.
+  preview?: boolean
 }
 
 export function MarketCard({
@@ -72,6 +75,7 @@ export function MarketCard({
   chart,
   domId,
   now,
+  preview = false,
 }: MarketCardProps) {
   // Every outcome has a seed pool (0041), so only a market that closed before seeding, with no
   // bets on it, has no odds.
@@ -82,17 +86,20 @@ export function MarketCard({
   const titleId = domId ? `${domId}-title` : undefined
 
   return (
-    <article {...focusTarget(domId, titleId)} className={cn(cardClass, 'flex min-w-0 flex-col gap-3 p-[18px]')}>
+    <article {...focusTarget(domId, titleId)} className={cn(cardClass, 'relative flex min-w-0 flex-col gap-3 p-[18px]', !preview && 'pressable hover-lift')}>
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</StatusChip>
         {status === 'open' && now !== undefined && <ClosesSoonChip closeAt={closeAt} now={now} />}
         {kind === 'over_under' && line !== null && <StatusChip tone="void">O/U {formatLine(line)}</StatusChip>}
         <span className="text-sm text-ink2">
-          {status === 'open' && (
-            <>
-              Closes <LocalTime iso={closeAt} format="dateTime" />
-            </>
-          )}
+          {status === 'open' &&
+            (closeAt ? (
+              <>
+                Closes <LocalTime iso={closeAt} format="dateTime" />
+              </>
+            ) : (
+              'No close time yet'
+            ))}
           {status === 'resolved' && resolvedAt ? (
             <>
               Resolved <LocalTime iso={resolvedAt} format="day" />
@@ -106,9 +113,13 @@ export function MarketCard({
         </span>
       </div>
       <h3 id={titleId} className="break-words text-[18px] font-extrabold leading-[1.3] tracking-[-0.01em]">
-        <Link href={`/markets/${id}`} transitionTypes={['nav-forward']} className="hit-area">
-          {title}
-        </Link>
+        {preview ? (
+          title
+        ) : (
+          <Link href={`/markets/${id}`} transitionTypes={['nav-forward']} className="stretched-link">
+            {title}
+          </Link>
+        )}
       </h3>
       {hasBets ? (
         <>

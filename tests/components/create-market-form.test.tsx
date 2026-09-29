@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 const { createMarketAction } = vi.hoisted(() => ({ createMarketAction: vi.fn() }))
@@ -12,6 +12,33 @@ import { nextWeeklyClose } from '@/lib/markets/weekly-close'
 beforeEach(() => {
   createMarketAction.mockReset()
   createMarketAction.mockResolvedValue(undefined)
+})
+
+describe('CreateMarketForm preview', () => {
+  const preview = () => screen.getByRole('region', { name: 'Preview' })
+
+  it('shows the market card as it is typed, with a new market’s equal odds', async () => {
+    const user = userEvent.setup()
+    render(<CreateMarketForm />)
+    expect(within(preview()).getByRole('heading', { level: 3 })).toHaveTextContent('Your market’s title')
+
+    await user.type(screen.getByLabelText('Title'), 'Will it snow?')
+    expect(within(preview()).getByRole('heading', { level: 3, name: 'Will it snow?' })).toBeInTheDocument()
+    expect(within(preview()).getAllByText('50%')).toHaveLength(2)
+    expect(within(preview()).queryByRole('link')).toBeNull()
+
+    await user.click(screen.getByRole('radio', { name: 'Multiple choice' }))
+    await user.type(screen.getByLabelText('Outcome 1'), 'Red')
+    await user.click(screen.getByRole('button', { name: 'Add outcome' }))
+    expect(within(preview()).getByText('Red')).toBeInTheDocument()
+    expect(within(preview()).getByText('Outcome 2')).toBeInTheDocument()
+    expect(within(preview()).getAllByText('33%')).toHaveLength(3)
+
+    await user.click(screen.getByRole('radio', { name: 'Over/Under' }))
+    await user.type(screen.getByLabelText('Line'), '3.5')
+    expect(within(preview()).getByText('Over 3.5')).toBeInTheDocument()
+    expect(within(preview()).getByText('Under 3.5')).toBeInTheDocument()
+  })
 })
 
 describe('CreateMarketForm', () => {

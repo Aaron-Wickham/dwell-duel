@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { browserClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Message } from '@/components/ui/message'
 import { LeafLoader } from '@/components/brand/leaf-loader'
@@ -16,6 +15,8 @@ export function SignInButton() {
   async function signIn() {
     if (redirecting) return
     setRedirecting(true)
+    // Loaded on tap rather than imported, so the sign-in page doesn't ship the Supabase client.
+    const { browserClient } = await import('@/lib/supabase/client')
     const supabase = browserClient()
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',

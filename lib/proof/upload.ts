@@ -1,6 +1,11 @@
-import { browserClient } from '@/lib/supabase/client'
 import { downscaleImage } from './downscale'
 import { PROOF_MAX_BYTES, type ProofDraft, type ProofRecord } from './types'
+
+// Loaded at upload time, so the pages with a proof picker don't ship the Supabase client up front.
+async function proofBucket() {
+  const { browserClient } = await import('@/lib/supabase/client')
+  return browserClient().storage.from('proof')
+}
 
 function safeName(name: string): string {
   return name.replace(/[^A-Za-z0-9._-]+/g, '-').slice(-80) || 'file'
@@ -10,7 +15,7 @@ function safeName(name: string): string {
 // action's body is capped at 1MB), then hands back the records the RPC checks and stores. If any
 // upload fails, the ones that went up are removed again and the error is thrown.
 export async function uploadProof(drafts: ProofDraft[], prefix: string): Promise<ProofRecord[]> {
-  const supabase = browserClient()
+  const bucket = await proofBucket()
   const uploaded: string[] = []
   const records: ProofRecord[] = []
   try {
@@ -22,19 +27,19 @@ export async function uploadProof(drafts: ProofDraft[], prefix: string): Promise
       const file = draft.kind === 'image' ? await downscaleImage(draft.file) : draft.file
       if (file.size > PROOF_MAX_BYTES) throw new Error(`${draft.file.name} is over 10 MB.`)
       const path = `${prefix}${crypto.randomUUID()}/${safeName(file.name)}`
-      const { error } = await supabase.storage.from('proof').upload(path, file, { contentType: file.type || undefined })
+      const { error } = await bucket.upload(path, file, { contentType: file.type || undefined })
       if (error) throw new Error(`${draft.file.name} didn’t upload: ${error.message}`)
       uploaded.push(path)
       records.push({ kind: draft.kind, storage_path: path, file_name: draft.file.name, size_bytes: file.size })
     }
     return records
   } catch (error) {
-    if (uploaded.length) await supabase.storage.from('proof').remove(uploaded)
+    if (uploaded.length) await bucket.remove(uploaded)
     throw error
   }
 }
 
 export async function discardProof(records: ProofRecord[]): Promise<void> {
   const paths = records.flatMap((r) => (r.kind === 'link' ? [] : [r.storage_path]))
-  if (paths.length) await browserClient().storage.from('proof').remove(paths)
+  if (paths.length) await (await proofBucket()).remove(paths)
 }

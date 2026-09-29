@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { MotionConfig, motion } from 'motion/react'
+import { LazyMotion, MotionConfig } from 'motion/react'
+import * as m from 'motion/react-m'
 import { BookOpen, ChartColumn, CircleDot, MessageSquareText, ShieldCheck, Ticket, Trophy, type LucideIcon } from 'lucide-react'
 import { AnimatedNumber } from '@/components/ui/animated-number'
 import { BetaBadge } from '@/components/brand/beta-badge'
@@ -14,6 +15,8 @@ import { haptics } from '@/lib/haptics'
 import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS, activeNavId, type NavId } from './nav-items'
+
+const loadMotionFeatures = () => import('@/lib/ui/motion-features').then((mod) => mod.default)
 
 const ICONS: Record<NavId, LucideIcon> = {
   markets: ChartColumn,
@@ -95,7 +98,7 @@ function DesktopLink({
       )}
     >
       {active && (
-        <motion.span
+        <m.span
           layoutId="nav-pill"
           aria-hidden="true"
           className="absolute inset-0 -z-10 rounded-full bg-primary"
@@ -118,120 +121,122 @@ export function AppNav({ balance, adminHref, me }: { balance: number; adminHref:
   const active = onMyProfile ? null : activeNavId(pathname)
 
   return (
-    <MotionConfig reducedMotion={motionReduced ? 'always' : 'user'}>
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:flex focus:min-h-11 focus:items-center focus:rounded-control focus:bg-surface focus:px-4 focus:py-3 focus:text-ink focus:shadow-card"
-      >
-        Skip to content
-      </a>
-      <header
-        style={{ viewTransitionName: 'app-header' }}
-        className="no-callout sticky top-(--safe-top) z-30 hidden h-[72px] shrink-0 items-center gap-3 border-b border-line bg-surface px-6 md:flex xl:gap-5 xl:px-10"
-      >
-        <div className="flex shrink-0 items-center gap-2">
-          <Wordmark symbolBelowLg current={pathname === '/'} />
-          <BetaBadge />
-        </div>
-        <nav aria-label="Primary" className="flex items-center gap-0.5">
-          {NAV_ITEMS.map((item) => (
-            <DesktopLink
-              key={item.id}
-              href={item.href}
-              label={item.label}
-              icon={ICONS[item.id]}
-              active={active === item.id}
-            />
-          ))}
-          {adminHref && (
-            <>
-              <span aria-hidden="true" className="mx-1.5 h-6 w-px bg-line" />
+    <LazyMotion features={loadMotionFeatures} strict>
+      <MotionConfig reducedMotion={motionReduced ? 'always' : 'user'}>
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:flex focus:min-h-11 focus:items-center focus:rounded-control focus:bg-surface focus:px-4 focus:py-3 focus:text-ink focus:shadow-card"
+        >
+          Skip to content
+        </a>
+        <header
+          style={{ viewTransitionName: 'app-header' }}
+          className="no-callout sticky top-(--safe-top) z-30 hidden h-[72px] shrink-0 items-center gap-3 border-b border-line bg-surface px-6 md:flex xl:gap-5 xl:px-10"
+        >
+          <div className="flex shrink-0 items-center gap-2">
+            <Wordmark symbolBelowLg current={pathname === '/'} />
+            <BetaBadge />
+          </div>
+          <nav aria-label="Primary" className="flex items-center gap-0.5">
+            {NAV_ITEMS.map((item) => (
               <DesktopLink
-                href={adminHref}
-                label="Admin"
-                active={active === 'admin'}
-                icon={ShieldCheck}
-                iconWithLabel
-                transitionTypes={['nav-forward']}
+                key={item.id}
+                href={item.href}
+                label={item.label}
+                icon={ICONS[item.id]}
+                active={active === item.id}
               />
-            </>
-          )}
-        </nav>
-        <span className="grow" />
-        <BalanceChip balance={balance} active={active === 'bets'} />
-        <ProfileLink me={me} active={onMyProfile} />
-      </header>
-
-      <header
-        style={{ viewTransitionName: 'app-topbar' }}
-        className="no-callout sticky top-(--safe-top) z-30 flex h-16 shrink-0 items-center gap-1 border-b border-line bg-surface pr-2 pl-3 md:hidden"
-      >
-        {/* At 375px with a five-digit balance there's no width to spare beside the wordmark, so the
-            badge tucks under its right end instead. It's decorative, so taps pass through to the link.
-            Below 360px an admin's extra button leaves room only for the symbol, and the badge goes too. */}
-        <div className="relative shrink-0">
-          <Wordmark size="sm" current={pathname === '/'} symbolOnNarrow={Boolean(adminHref)} />
-          <BetaBadge
-            className={cn(
-              'pointer-events-none absolute right-1 -bottom-1.5 h-3.5 px-1.5 text-[9px]',
-              adminHref && 'max-[359px]:hidden',
+            ))}
+            {adminHref && (
+              <>
+                <span aria-hidden="true" className="mx-1.5 h-6 w-px bg-line" />
+                <DesktopLink
+                  href={adminHref}
+                  label="Admin"
+                  active={active === 'admin'}
+                  icon={ShieldCheck}
+                  iconWithLabel
+                  transitionTypes={['nav-forward']}
+                />
+              </>
             )}
-          />
-        </div>
-        <span className="grow" />
-        <BalanceChip balance={balance} active={active === 'bets'} />
-        {adminHref && (
-          <Link
-            href={adminHref}
-            transitionTypes={['nav-forward']}
-            aria-label="Admin"
-            aria-current={active === 'admin' ? 'page' : undefined}
-            className={cn(
-              'pressable relative inline-flex size-11 shrink-0 items-center justify-center rounded-control no-underline',
-              active === 'admin' ? 'bg-lime text-on-lime' : 'text-ink hover:bg-sunk',
-            )}
-          >
-            <ShieldCheck aria-hidden="true" className="size-[22px]" />
-            <NavPendingHint className="inset-x-3 bottom-1 h-0.5" />
-          </Link>
-        )}
-        <ProfileLink me={me} active={onMyProfile} />
-      </header>
+          </nav>
+          <span className="grow" />
+          <BalanceChip balance={balance} active={active === 'bets'} />
+          <ProfileLink me={me} active={onMyProfile} />
+        </header>
 
-      <nav
-        aria-label="Primary"
-        style={{ viewTransitionName: 'app-tabbar' }}
-        className="no-callout fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-[calc(12px+var(--safe-bottom))] md:hidden"
-      >
-        {NAV_ITEMS.map((item) => {
-          const Icon = ICONS[item.id]
-          const isActive = active === item.id
-          return (
-            <Link
-              key={item.id}
-              href={item.href}
-              aria-current={isActive ? 'page' : undefined}
-              aria-label={item.shortLabel === item.label ? undefined : item.label}
-              onClick={haptics.tap}
+        <header
+          style={{ viewTransitionName: 'app-topbar' }}
+          className="no-callout sticky top-(--safe-top) z-30 flex h-16 shrink-0 items-center gap-1 border-b border-line bg-surface pr-2 pl-3 md:hidden"
+        >
+          {/* At 375px with a five-digit balance there's no width to spare beside the wordmark, so the
+              badge tucks under its right end instead. It's decorative, so taps pass through to the link.
+              Below 360px an admin's extra button leaves room only for the symbol, and the badge goes too. */}
+          <div className="relative shrink-0">
+            <Wordmark size="sm" current={pathname === '/'} symbolOnNarrow={Boolean(adminHref)} />
+            <BetaBadge
               className={cn(
-                'pressable relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-[14px] text-xs leading-[1.1] no-underline',
-                isActive ? 'font-extrabold text-ink' : 'font-bold text-ink2',
+                'pointer-events-none absolute right-1 -bottom-1.5 h-3.5 px-1.5 text-[9px]',
+                adminHref && 'max-[359px]:hidden',
+              )}
+            />
+          </div>
+          <span className="grow" />
+          <BalanceChip balance={balance} active={active === 'bets'} />
+          {adminHref && (
+            <Link
+              href={adminHref}
+              transitionTypes={['nav-forward']}
+              aria-label="Admin"
+              aria-current={active === 'admin' ? 'page' : undefined}
+              className={cn(
+                'pressable relative inline-flex size-11 shrink-0 items-center justify-center rounded-control no-underline',
+                active === 'admin' ? 'bg-lime text-on-lime' : 'text-ink hover:bg-sunk',
               )}
             >
-              <span
+              <ShieldCheck aria-hidden="true" className="size-[22px]" />
+              <NavPendingHint className="inset-x-3 bottom-1 h-0.5" />
+            </Link>
+          )}
+          <ProfileLink me={me} active={onMyProfile} />
+        </header>
+
+        <nav
+          aria-label="Primary"
+          style={{ viewTransitionName: 'app-tabbar' }}
+          className="no-callout fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-[calc(12px+var(--safe-bottom))] md:hidden"
+        >
+          {NAV_ITEMS.map((item) => {
+            const Icon = ICONS[item.id]
+            const isActive = active === item.id
+            return (
+              <Link
+                key={item.id}
+                href={item.href}
+                aria-current={isActive ? 'page' : undefined}
+                aria-label={item.shortLabel === item.label ? undefined : item.label}
+                onClick={haptics.tap}
                 className={cn(
-                  'relative flex h-[30px] w-[52px] items-center justify-center rounded-full',
-                  isActive && 'bg-lime text-on-lime',
+                  'pressable relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-[14px] text-xs leading-[1.1] no-underline',
+                  isActive ? 'font-extrabold text-ink' : 'font-bold text-ink2',
                 )}
               >
-                <Icon aria-hidden="true" className="size-[22px]" />
-              </span>
-              <span>{item.shortLabel}</span>
-              <NavPendingHint className="bottom-0.5 left-1/2 h-0.5 w-5 -translate-x-1/2" />
-            </Link>
-          )
-        })}
-      </nav>
-    </MotionConfig>
+                <span
+                  className={cn(
+                    'relative flex h-[30px] w-[52px] items-center justify-center rounded-full',
+                    isActive && 'bg-lime text-on-lime',
+                  )}
+                >
+                  <Icon aria-hidden="true" className="size-[22px]" />
+                </span>
+                <span>{item.shortLabel}</span>
+                <NavPendingHint className="bottom-0.5 left-1/2 h-0.5 w-5 -translate-x-1/2" />
+              </Link>
+            )
+          })}
+        </nav>
+      </MotionConfig>
+    </LazyMotion>
   )
 }

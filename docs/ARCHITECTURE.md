@@ -36,7 +36,7 @@ itself.
 | Framework | Next.js 16 (App Router, React 19, server actions, `proxy.ts`) |
 | Language | TypeScript, strict |
 | Styling | Tailwind v4 with CSS-variable tokens (`app/globals.css`), light and dark |
-| UI pieces | Base UI (dialogs, drawers), lucide-react icons, Motion, NumberFlow, Recharts, sonner toasts |
+| UI pieces | Base UI (dialogs, drawers), lucide-react icons, Motion (loaded lazily), NumberFlow, Recharts (the market page's chart; cards draw plain SVG), sonner toasts |
 | Data | Supabase: Postgres, Auth, Realtime, Storage (`@supabase/ssr`) |
 | Hosting | Vercel (production only, plus a daily cron) |
 | Tests | Vitest (unit, component, DB against local Supabase), Playwright (e2e) |
@@ -164,7 +164,9 @@ title is fixed once anyone else has bet), `member_emails` (admin only:
 members can't select `profiles.email`), `stray_proof_objects` (service role:
 the daily cron deletes proof files nothing attached),
 `set_member_role`, `delete_market`, `delete_task` and `remove_bet` (owner
-only), `update_my_profile`, `record_proof`, `market_sparklines`,
+only), `update_my_profile`, `record_proof`, `market_sparklines` (the
+cards' 40-point sparklines and the market chart's 200 points, sampled in
+SQL so no page reads every bet),
 `my_at_stake` and `parlay_limits`.
 
 ### Migrations
@@ -183,6 +185,7 @@ after it ships. They roughly follow the project's history:
 | 0040–0045 | Roles, seeded odds, proof, Over/Under and market edits, My bets, At stake |
 | 0046 | Security: parlay odds without your own stakes, no resolving with a stake, no self-review, a 500 DC task cap, hidden emails |
 | 0047 | Attempt keys, so a retried slip or balance adjustment never acts twice |
+| 0048 | Indexes for the markets list, a market's resolutions, a member's coin history and unindexed foreign keys |
 
 Merging a migration to `main` runs the **Deploy Production Database**
 workflow. It runs in parallel with Vercel's deploy, so a build that needs
@@ -202,7 +205,9 @@ of picks (`lib/parlays/slip.ts`). `SlipProvider` in the signed-in layout
 holds those picks, each marked Solo or Parlay, with optimistic add, remove
 and mode switches. Stakes live only in client state. The floating
 `SlipSheet` sends everything to `place_slip` in one call; it either all
-succeeds or nothing is placed. Bets are never optimistic. Each place sends
+succeeds or nothing is placed. Only its button is in every page's first
+load: the drawer (`SlipDrawer`) loads the first time the slip opens, or
+when the button is pointed at or focused. Bets are never optimistic. Each place sends
 an attempt key, kept until a place succeeds: if the bets commit but the
 answer is lost, the slip says so, and tapping Place again returns the first
 result instead of placing twice (0047). `adjust_balance` takes a key the

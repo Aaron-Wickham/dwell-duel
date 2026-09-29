@@ -237,19 +237,6 @@ describe('ProbabilityChart', () => {
     expect(container.querySelector('.recharts-wrapper')).not.toBeInTheDocument()
   })
 
-  it('draws the compact card chart with no axes, ranges, tooltip or end labels', () => {
-    const { container } = render(<ProbabilityChart outcomes={yesNo} points={spread} now={NOW} compact />)
-    expect(screen.getByRole('img', { name: 'Chance over time. Now: Yes 75%, No 25%.' })).toBeInTheDocument()
-    expect(container.querySelectorAll('.recharts-line-curve')).toHaveLength(2)
-    expect(screen.queryByRole('group')).not.toBeInTheDocument()
-    expect(screen.queryByText('75%')).not.toBeInTheDocument()
-    expect(screen.queryByText('Now')).not.toBeInTheDocument()
-    expect(screen.queryByText('3 bets')).not.toBeInTheDocument()
-
-    fireEvent.mouseMove(container.querySelector('.recharts-wrapper') as HTMLElement, { clientX: WIDTH - 1, clientY: 40 })
-    expect(container.querySelector('.recharts-tooltip-wrapper')).not.toBeInTheDocument()
-  })
-
   it('server-renders the summary and labels in UTC, leaving the lines until the browser can measure', () => {
     const html = renderToString(
       <ProbabilityChart

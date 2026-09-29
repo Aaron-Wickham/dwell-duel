@@ -5,8 +5,9 @@ export type RangeKey = '1D' | '1W' | 'All'
 const DAY_MS = 24 * 60 * 60 * 1000
 export const RANGE_MS: Record<Exclude<RangeKey, 'All'>, number> = { '1D': DAY_MS, '1W': 7 * DAY_MS }
 
-// Pools start at the market's seed (0041), so a seeded market's line starts at an even split
-// at `startAt`, when it opened, rather than jumping to 100% on its first bet.
+// The reference for market_sparklines, which charts and sparklines read (the DB tests hold the two
+// equal). Pools start at the market's seed (0041), so a seeded market's line starts at an even
+// split at `startAt`, when it opened, rather than jumping to 100% on its first bet.
 export function buildProbabilitySeries(
   outcomeIds: string[],
   bets: ChartBet[],

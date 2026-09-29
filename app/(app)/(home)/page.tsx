@@ -7,7 +7,7 @@ import { adminHref, atLeast, getRole } from '@/lib/auth/roles'
 import { countOpenMarkets } from '@/lib/markets/list-markets'
 import { getAtStake } from '@/lib/home/at-stake'
 import { getMemberStanding } from '@/lib/social/leaderboard'
-import { listMyTaskCompletions, listPendingTaskCompletions } from '@/lib/tasks/list-task-completions'
+import { countPendingTaskCompletions, getMyPendingRewards } from '@/lib/tasks/list-task-completions'
 import { Page, PageHeader } from '@/components/ui/page'
 import { HomeHero } from '@/components/home/home-hero'
 import { HomeTiles, type HomeTile } from '@/components/home/home-tiles'
@@ -20,20 +20,18 @@ export default async function Home() {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const [role, openMarketCount, standing, myCompletions, pendingApprovals, atStake] = await Promise.all([
+  const [role, openMarketCount, standing, pendingReviews, pendingApprovals, atStake] = await Promise.all([
     getRole(supabase),
     countOpenMarkets(supabase),
     getMemberStanding(supabase, user.id),
-    listMyTaskCompletions(supabase, user.id),
-    getRole(supabase).then((r) => (atLeast(r, 'reviewer') ? listPendingTaskCompletions(supabase) : [])),
+    getMyPendingRewards(supabase, user.id),
+    getRole(supabase).then((r) => (atLeast(r, 'reviewer') ? countPendingTaskCompletions(supabase) : 0)),
     getAtStake(supabase),
   ])
   const adminLink = adminHref(role)
 
   const rank = standing?.rank ?? 0
   const memberCount = standing?.memberCount ?? 0
-  const pendingReviews = myCompletions.filter((c) => c.status === 'pending')
-  const pendingDc = pendingReviews.reduce((sum, c) => sum + c.rewardAmount, 0)
 
   const tiles: HomeTile[] = [
     { id: 'markets', href: '/markets', icon: ChartColumn, title: 'Markets', subtitle: marketsTileSubtitle(openMarketCount) },
@@ -54,7 +52,7 @@ export default async function Home() {
       href: adminLink,
       icon: ShieldCheck,
       title: 'Admin',
-      subtitle: adminTileSubtitle(pendingApprovals.length),
+      subtitle: adminTileSubtitle(pendingApprovals),
     })
   }
   tiles.push({
@@ -75,8 +73,8 @@ export default async function Home() {
         memberCount={memberCount}
         atStakeDc={atStake.dc}
         atStakeWagers={atStake.wagers}
-        pendingCount={pendingReviews.length}
-        pendingDc={pendingDc}
+        pendingCount={pendingReviews.count}
+        pendingDc={pendingReviews.dc}
       />
       <HomeTiles tiles={tiles} />
       <InstallCard />

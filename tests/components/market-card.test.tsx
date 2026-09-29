@@ -3,21 +3,19 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MarketCard } from '@/components/markets/market-card'
 
-vi.mock('@/components/markets/probability-chart', () => ({
-  ProbabilityChart: (props: {
+vi.mock('@/components/markets/market-sparkline', () => ({
+  MarketSparkline: (props: {
     outcomes: { label: string }[]
     points: unknown[]
     now: number
-    closedAt?: string | null
+    closedAt: string
     resolvedLabel?: string | null
-    compact?: boolean
   }) => (
     <div
       data-testid="chart"
-      data-compact={String(!!props.compact)}
       data-now={props.now}
       data-points={props.points.length}
-      data-closed-at={props.closedAt ?? ''}
+      data-closed-at={props.closedAt}
       data-resolved-label={props.resolvedLabel ?? ''}
     >
       {props.outcomes.map((o) => o.label).join(',')}
@@ -137,7 +135,7 @@ describe('MarketCard', () => {
     expect(dots[1]).toHaveClass('bg-s1')
   })
 
-  it('renders a compact chart above the outcome list when bets exist and chart data is given', () => {
+  it('renders a sparkline above the outcome list when bets exist and chart data is given', () => {
     const { container } = render(
       <MarketCard
         id="m5"
@@ -162,7 +160,6 @@ describe('MarketCard', () => {
       />,
     )
     const chart = screen.getByTestId('chart')
-    expect(chart).toHaveAttribute('data-compact', 'true')
     expect(chart).toHaveAttribute('data-now', '2000')
     expect(chart).toHaveAttribute('data-points', '1')
     expect(chart).toHaveAttribute('data-closed-at', '2026-10-04T16:30:00.000Z')
@@ -175,7 +172,7 @@ describe('MarketCard', () => {
     expect(chartIndex).toBeLessThan(listIndex)
   })
 
-  it('passes the close time and winning outcome to a resolved market\'s compact chart', () => {
+  it('passes the close time and winning outcome to a resolved market\'s sparkline', () => {
     render(
       <MarketCard
         id="m7"
@@ -204,7 +201,7 @@ describe('MarketCard', () => {
     expect(chart).toHaveAttribute('data-resolved-label', 'Yes')
   })
 
-  it('shows the resolution time, not the close time, on a compact chart for a market resolved before it closed', () => {
+  it('shows the resolution time, not the close time, on a sparkline for a market resolved before it closed', () => {
     render(
       <MarketCard
         id="m8"

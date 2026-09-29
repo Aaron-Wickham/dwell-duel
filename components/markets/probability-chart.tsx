@@ -6,10 +6,11 @@ import { Toggle } from '@base-ui/react/toggle'
 import { ToggleGroup } from '@base-ui/react/toggle-group'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { useTimeZone } from '@/components/ui/local-time'
-import { SERIES_BG } from '@/components/markets/series-classes'
+import { SERIES_BG, SERIES_HALO } from '@/components/markets/series-classes'
+import { chartWindow, initialRange, xPercent as windowXPercent } from '@/lib/markets/chart-window'
 import { formatDay } from '@/lib/markets/format-date'
 import type { Series } from '@/lib/markets/outcome-series'
-import { RANGE_MS, availableRanges, sliceRange, type RangeKey, type SeriesPoint } from '@/lib/markets/probability-series'
+import { availableRanges, type RangeKey, type SeriesPoint } from '@/lib/markets/probability-series'
 import { cn } from '@/lib/utils'
 
 export type ChartOutcome = { id: string; label: string; series: Series }
@@ -23,26 +24,11 @@ const SERIES_TEXT: Record<Series, string> = {
   6: 'text-s6',
 }
 
-const SERIES_HALO: Record<Series, string> = {
-  1: 'ring-s1/22',
-  2: 'ring-s2/22',
-  3: 'ring-s3/22',
-  4: 'ring-s4/22',
-  5: 'ring-s5/22',
-  6: 'ring-s6/22',
-}
-
 const HOUR_MS = 60 * 60 * 1000
 const DAY_MS = 24 * HOUR_MS
-// Only guards a zero or negative span (a bet stamped at, or a clock tick after, `now`). A young
-// market's chart starts at its first bet, however recent; ticks that would repeat a
-// minute-precise label are dropped instead of padding the span out with empty time.
-const MIN_SPAN_MS = 1000
 const TIME_TICKS_UNDER_MS = 36 * HOUR_MS
 // Below a day of spacing between ticks, a date-only label repeats, so pack date+time instead.
 const DATE_TICKS_UNDER_MS = 4 * DAY_MS
-// The mockup gives a closed market's shaded zone 14% of the plot, however long ago it closed.
-const ZONE_SHARE = 0.14
 const TICK_FRACTIONS = [0, 0.25, 0.5, 0.75, 1]
 const GRID = [100, 75, 50, 25, 0]
 // Plot heights and label spacing per breakpoint, from the phone and desktop artboards.
@@ -65,11 +51,6 @@ function formatWeekday(t: number, timeZone?: string): string {
 
 function percent(share: number | undefined): number {
   return Math.round((share ?? 0) * 100)
-}
-
-// Nothing moves after the close, so a closed market opens on its whole history.
-function initialRange(ranges: RangeKey[], closed: boolean): RangeKey {
-  return !closed && ranges.includes('1W') ? '1W' : 'All'
 }
 
 // Pushes end labels apart so they never overlap, keeping each as close to its line as it can.
@@ -102,7 +83,6 @@ export function ProbabilityChart({
   now,
   closedAt = null,
   resolvedLabel = null,
-  compact = false,
   betCount = points.length,
 }: {
   outcomes: ChartOutcome[]
@@ -110,7 +90,6 @@ export function ProbabilityChart({
   now: number
   closedAt?: string | null
   resolvedLabel?: string | null
-  compact?: boolean
   // A seeded market's series opens with a point before any bet (0041), so the caption counts bets, not points.
   betCount?: number
 }) {
@@ -119,28 +98,22 @@ export function ProbabilityChart({
   const closedMs = closedAt ? Date.parse(closedAt) : null
   const closed = closedMs !== null && closedMs <= now
   const [picked, setPicked] = useState<RangeKey>(() => initialRange(ranges, closed))
-  const range = !compact && ranges.includes(picked) ? picked : initialRange(ranges, closed)
+  const range = ranges.includes(picked) ? picked : initialRange(ranges, closed)
 
-  const plotRight = compact ? 'right-0' : 'right-[76px] md:right-[128px]'
-  const boxHeight = compact ? 'h-[84px]' : 'h-[220px] md:h-[300px]'
-  const grid = compact ? [50] : GRID
-
-  const gridLines = grid.map((p) => (
+  const gridLines = GRID.map((p) => (
     <div key={p} aria-hidden="true" className="absolute inset-x-0 border-t border-dashed border-line" style={{ top: `${100 - p}%` }} />
   ))
 
   const last = points.at(-1)
-  if (!last) {
+  // Ticks that would repeat a minute-precise label are dropped below, instead of padding a young
+  // market's span out with empty time.
+  const plot = chartWindow(points, range, now, closedMs)
+  if (!last || !plot) {
     return (
-      <div className={cn('relative', boxHeight)}>
-        <div className={cn('absolute inset-y-0 left-0', plotRight)}>
+      <div className="relative h-[220px] md:h-[300px]">
+        <div className="absolute inset-y-0 right-[76px] left-0 md:right-[128px]">
           {gridLines}
-          <p
-            className={cn(
-              'absolute inset-0 flex items-center justify-center px-4 text-center font-bold text-ink2',
-              compact ? 'text-xs' : 'text-sm',
-            )}
-          >
+          <p className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm font-bold text-ink2">
             {EMPTY_TEXT}
           </p>
         </div>
@@ -148,14 +121,8 @@ export function ProbabilityChart({
     )
   }
 
-  const visible = sliceRange(points, range, now)
-  const lastVisibleT = visible.at(-1)?.t ?? last.t
-  const lineEnd = Math.max(closed ? closedMs : now, lastVisibleT)
-  let start = range === 'All' ? (visible[0]?.t ?? last.t) : now - RANGE_MS[range]
-  let end = now
-  if (range === 'All' && closed) end = Math.min(now, lineEnd + ((lineEnd - start) * ZONE_SHARE) / (1 - ZONE_SHARE))
-  if (end - start < MIN_SPAN_MS) start = end - MIN_SPAN_MS
-  const xPercent = (t: number) => Math.min(100, Math.max(0, ((t - start) / (end - start)) * 100))
+  const { visible, start, end, lineEnd } = plot
+  const xPercent = (t: number) => windowXPercent(plot, t)
 
   const keys = outcomes.map((_, index) => `o${index}`)
   const config: ChartConfig = Object.fromEntries(
@@ -219,33 +186,31 @@ export function ProbabilityChart({
 
   return (
     <div className="flex flex-col gap-3">
-      {!compact && (
-        <div className="flex min-h-11 flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-ink2">{betCount === 1 ? '1 bet' : `${betCount} bets`}</p>
-          {ranges.length > 1 && (
-            <ToggleGroup
-              aria-label="Time range"
-              value={[range]}
-              onValueChange={(value) => {
-                if (value[0]) setPicked(value[0])
-              }}
-              className="flex gap-0.5 rounded-control bg-sunk p-[3px]"
-            >
-              {ranges.map((key) => (
-                <Toggle
-                  key={key}
-                  value={key}
-                  className="pressable min-h-11 min-w-[52px] cursor-pointer rounded-[9px] px-3 text-sm font-extrabold text-ink2 data-pressed:bg-surface data-pressed:text-ink data-pressed:shadow-tab"
-                >
-                  {key}
-                </Toggle>
-              ))}
-            </ToggleGroup>
-          )}
-        </div>
-      )}
-      <div className={cn('relative', boxHeight)}>
-        <div role="img" aria-label={summary} className={cn('absolute inset-y-0 left-0', plotRight, !compact && 'cursor-crosshair')}>
+      <div className="flex min-h-11 flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-ink2">{betCount === 1 ? '1 bet' : `${betCount} bets`}</p>
+        {ranges.length > 1 && (
+          <ToggleGroup
+            aria-label="Time range"
+            value={[range]}
+            onValueChange={(value) => {
+              if (value[0]) setPicked(value[0])
+            }}
+            className="flex gap-0.5 rounded-control bg-sunk p-[3px]"
+          >
+            {ranges.map((key) => (
+              <Toggle
+                key={key}
+                value={key}
+                className="pressable min-h-11 min-w-[52px] cursor-pointer rounded-[9px] px-3 text-sm font-extrabold text-ink2 data-pressed:bg-surface data-pressed:text-ink data-pressed:shadow-tab"
+              >
+                {key}
+              </Toggle>
+            ))}
+          </ToggleGroup>
+        )}
+      </div>
+      <div className="relative h-[220px] md:h-[300px]">
+        <div role="img" aria-label={summary} className="absolute inset-y-0 right-[76px] left-0 cursor-crosshair md:right-[128px]">
           {gridLines}
           <ChartContainer config={config} initialDimension={{ width: -1, height: -1 }} className="absolute inset-0" aria-hidden="true">
             <LineChart data={rows} margin={{ top: 0, right: 0, bottom: 0, left: 0 }} accessibilityLayer={false}>
@@ -253,25 +218,23 @@ export function ProbabilityChart({
               <YAxis type="number" domain={[0, 100]} hide />
               {closed && <ReferenceArea x1={closedMs} x2={end} fill="var(--sunk)" fillOpacity={1} stroke="none" />}
               {closed && <ReferenceLine x={closedMs} stroke="var(--line-s)" strokeWidth={2} strokeDasharray="6 4" />}
-              {!compact && (
-                <ChartTooltip
-                  isAnimationActive={false}
-                  position={{ y: 8 }}
-                  offset={14}
-                  cursor={{ stroke: 'var(--line-s)', strokeWidth: 1.5 }}
-                  content={<ChartTooltipContent labelFormatter={(t) => formatHover(Number(t))} valueFormatter={(v) => `${Math.round(v)}%`} />}
-                />
-              )}
+              <ChartTooltip
+                isAnimationActive={false}
+                position={{ y: 8 }}
+                offset={14}
+                cursor={{ stroke: 'var(--line-s)', strokeWidth: 1.5 }}
+                content={<ChartTooltipContent labelFormatter={(t) => formatHover(Number(t))} valueFormatter={(v) => `${Math.round(v)}%`} />}
+              />
               {keys.map((key) => (
                 <Line
                   key={key}
                   dataKey={key}
                   type="stepAfter"
                   stroke={`var(--color-${key})`}
-                  strokeWidth={compact ? 1.75 : 2.25}
+                  strokeWidth={2.25}
                   strokeLinejoin="round"
                   dot={false}
-                  activeDot={compact ? false : { r: 6, fill: `var(--color-${key})`, stroke: 'var(--surface)', strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: `var(--color-${key})`, stroke: 'var(--surface)', strokeWidth: 2 }}
                   isAnimationActive={false}
                 />
               ))}
@@ -291,58 +254,53 @@ export function ProbabilityChart({
               key={outcome.id}
               aria-hidden="true"
               className={cn(
-                'absolute -translate-1/2 rounded-full',
+                'absolute size-2.5 -translate-1/2 rounded-full ring-5',
                 SERIES_BG[outcome.series],
                 SERIES_HALO[outcome.series],
-                compact ? 'size-2 ring-3' : 'size-2.5 ring-5',
               )}
               style={{ left: `${xPercent(lineEnd)}%`, top: `${100 - (last.shares[outcome.id] ?? 0) * 100}%` }}
             />
           ))}
         </div>
-        {!compact && (
-          <div aria-hidden="true" className="absolute inset-y-0 right-0 w-[76px] md:w-[128px]">
-            {outcomes.map((outcome, index) => (
-              <div
-                key={outcome.id}
-                className={cn(
-                  'absolute left-3.5 top-(--label-top) -translate-y-1/2 leading-[1.05] md:top-(--label-top-md)',
-                  SERIES_TEXT[outcome.series],
-                )}
-                style={{ '--label-top': `${phoneTops[index]}px`, '--label-top-md': `${desktopTops[index]}px` } as CSSProperties}
-              >
-                {/* Bounded so `truncate` has a width to cut off at -- the 76px/128px gutter minus this label's left-3.5 inset. */}
-                <div className="w-[62px] truncate text-[13px] font-bold md:w-[114px]">{outcome.label}</div>
-                <div className="text-xl font-extrabold tracking-[-0.02em] tabular-nums md:text-[26px]">
-                  {percent(last.shares[outcome.id])}%
-                </div>
-              </div>
-            ))}
-            {GRID.map((p) => (
-              <span
-                key={p}
-                className="absolute right-0 hidden -translate-y-1/2 text-[11px] font-bold text-ink2 md:block"
-                style={{ top: `${100 - p}%` }}
-              >
-                {p}%
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-      {!compact && (
-        <div data-slot="ticks" aria-hidden="true" className="relative mr-[76px] h-5 text-xs font-bold text-ink2 md:mr-[128px]">
-          {ticks.map((tick) => (
-            <span
-              key={tick.key}
-              className={cn('absolute top-0 whitespace-nowrap', tick.shift, !tick.phone && 'hidden md:block')}
-              style={{ left: `${tick.left}%` }}
+        <div aria-hidden="true" className="absolute inset-y-0 right-0 w-[76px] md:w-[128px]">
+          {outcomes.map((outcome, index) => (
+            <div
+              key={outcome.id}
+              className={cn(
+                'absolute left-3.5 top-(--label-top) -translate-y-1/2 leading-[1.05] md:top-(--label-top-md)',
+                SERIES_TEXT[outcome.series],
+              )}
+              style={{ '--label-top': `${phoneTops[index]}px`, '--label-top-md': `${desktopTops[index]}px` } as CSSProperties}
             >
-              {tick.label}
+              {/* Bounded so `truncate` has a width to cut off at -- the 76px/128px gutter minus this label's left-3.5 inset. */}
+              <div className="w-[62px] truncate text-[13px] font-bold md:w-[114px]">{outcome.label}</div>
+              <div className="text-xl font-extrabold tracking-[-0.02em] tabular-nums md:text-[26px]">
+                {percent(last.shares[outcome.id])}%
+              </div>
+            </div>
+          ))}
+          {GRID.map((p) => (
+            <span
+              key={p}
+              className="absolute right-0 hidden -translate-y-1/2 text-[11px] font-bold text-ink2 md:block"
+              style={{ top: `${100 - p}%` }}
+            >
+              {p}%
             </span>
           ))}
         </div>
-      )}
+      </div>
+      <div data-slot="ticks" aria-hidden="true" className="relative mr-[76px] h-5 text-xs font-bold text-ink2 md:mr-[128px]">
+        {ticks.map((tick) => (
+          <span
+            key={tick.key}
+            className={cn('absolute top-0 whitespace-nowrap', tick.shift, !tick.phone && 'hidden md:block')}
+            style={{ left: `${tick.left}%` }}
+          >
+            {tick.label}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }

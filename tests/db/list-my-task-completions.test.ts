@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { listMyTaskCompletions } from '@/lib/tasks/list-task-completions'
+import { countPendingTaskCompletions, getMyPendingRewards, listMyTaskCompletions } from '@/lib/tasks/list-task-completions'
 import { serviceClient } from './helpers'
 import { seedMembers, clientFor, ensureInvited, createTestTask, type Member } from './fixtures'
 
@@ -46,5 +46,31 @@ describe('listMyTaskCompletions', () => {
     expect(completions).toContainEqual(
       expect.objectContaining({ taskId, status: 'rejected', reviewNote: 'Please write a full paragraph.' }),
     )
+  })
+})
+
+describe("Home's pending counts (#68)", () => {
+  it('equal what the full history gave: pending only, with their rewards', async () => {
+    const pendingTask = await createTestTask(alice, { rewardAmount: 30 })
+    const otherPending = await createTestTask(alice, { rewardAmount: 15 })
+    const rejectedTask = await createTestTask(alice, { rewardAmount: 99 })
+    await submitAsAlice(pendingTask.taskId)
+    await submitAsAlice(otherPending.taskId)
+    const rejectedId = await submitAsAlice(rejectedTask.taskId)
+
+    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    const adminClient = await clientFor(bob)
+    await ensureInvited(adminClient)
+    expect((await adminClient.rpc('reject_task_completion', { p_completion_id: rejectedId })).error).toBeNull()
+
+    const aliceClient = await clientFor(alice)
+    const history = await listMyTaskCompletions(aliceClient, alice.id)
+    const pending = history.filter((c) => c.status === 'pending')
+    expect(await getMyPendingRewards(aliceClient, alice.id)).toEqual({
+      count: pending.length,
+      dc: pending.reduce((sum, c) => sum + c.rewardAmount, 0),
+    })
+    expect(await getMyPendingRewards(aliceClient, alice.id)).toEqual({ count: 2, dc: 45 })
+    expect(await countPendingTaskCompletions(adminClient)).toBe(2)
   })
 })

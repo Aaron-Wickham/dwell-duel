@@ -13,21 +13,23 @@ export const pageSubscriptions = {
       { table: 'parlay_legs', filter: `market_id=eq.${marketId}` },
     ]
   },
+  // Every card's odds move with every bet, so this page does follow them all; LiveRefresh's
+  // debounce keeps a busy spell to one refresh every couple of seconds.
   markets(): LiveSubscription[] {
     return [{ table: 'markets' }, { table: 'bets' }, { table: 'cancelled_bets' }]
   },
   // The HomeHero's pending-review count and the admin tile's pending-approvals count both only
   // change via task_completions -- a rejection moves no balance, so bets/profiles don't cover it.
-  // An admin needs every submission; a member only needs their own. profiles is unfiltered so the
-  // rank and member count (getMemberStanding) refresh when any member's balance changes, not just
-  // this member's own.
+  // An admin needs every submission; a member only needs their own.
+  // profiles isn't watched here: every bet moves some balance, so watching all of them refreshed
+  // every open Home on every bet (#68). The layout's base channel already follows this member's
+  // own profile; the rank catches up on the next visit.
   // The hero's At stake moves when the member bets, cancels or places a parlay, and when a market
   // or parlay settles (markets, and parlays' own status).
   home({ me, admin }: { me: string; admin: boolean }): LiveSubscription[] {
     return [
       { table: 'markets' },
       { table: 'tasks' },
-      { table: 'profiles' },
       { table: 'bets', filter: `profile_id=eq.${me}` },
       { table: 'cancelled_bets', filter: `profile_id=eq.${me}` },
       { table: 'parlays', filter: `profile_id=eq.${me}` },
@@ -37,15 +39,15 @@ export const pageSubscriptions = {
   leaderboard(): LiveSubscription[] {
     return [{ table: 'profiles' }]
   },
-  // profiles is unfiltered, not id=eq.<memberId>: this page also shows the member's live rank
-  // (getMemberStanding), which moves whenever any other member's balance does. activity_events
-  // carries every kind this page shows, task approvals and resolutions included.
+  // Only this member's profile (#68): their balance and name stay live, and their rank, which
+  // other members' bets can move, catches up on the next visit. activity_events carries every kind
+  // this page shows, task approvals and resolutions included.
   member(memberId: string): LiveSubscription[] {
     return [
       { table: 'activity_events', filter: `actor_id=eq.${memberId}` },
       // A cancelled bet's event is deleted by cascade, which the filtered channel above can't see.
       { table: 'cancelled_bets', filter: `profile_id=eq.${memberId}` },
-      { table: 'profiles' },
+      { table: 'profiles', filter: `id=eq.${memberId}` },
     ]
   },
   // Every feed kind is a row in activity_events now, so it's the only table to watch.

@@ -42,36 +42,24 @@ export interface PendingCompletion {
   proof: ProofView[]
 }
 
-// `withProof` signs the attachments' URLs for the review queue; Home only needs the count.
-export async function listPendingTaskCompletions(
-  supabase: DbClient,
-  { withProof = false }: { withProof?: boolean } = {},
-): Promise<PendingCompletion[]> {
+// The review queue, oldest first, with each submission's proof signed for this viewer.
+export async function listPendingTaskCompletions(supabase: DbClient): Promise<PendingCompletion[]> {
   const { data, error } = await supabase
     .from('task_completions')
     .select(
-      `id, profile_id, reward_amount, submitted_at, note, tasks(title), profiles!task_completions_profile_id_fkey(display_name)${withProof ? `, proof_attachments(${PROOF_COLUMNS})` : ''}`,
+      `id, profile_id, reward_amount, submitted_at, note, tasks(title), profiles!task_completions_profile_id_fkey(display_name), proof_attachments(${PROOF_COLUMNS})`,
     )
     .eq('status', 'pending')
     .order('submitted_at', { ascending: true })
 
   if (error) throw error
 
-  // The proof embed is optional, so the select is a runtime string the generated types can't follow.
-  const rows = (data ?? []) as unknown as {
-    id: string
-    profile_id: string
-    reward_amount: number
-    submitted_at: string
-    note: string | null
-    tasks: { title: string } | null
-    profiles: { display_name: string } | null
-    proof_attachments?: ProofRow[]
-  }[]
-  const proof = withProof ? await toProofViews(supabase, rows.flatMap((c) => c.proof_attachments ?? [])) : []
+  const rows = data ?? []
+  // proof_attachments.kind is a CHECK-constrained text column, so the generated type says string.
+  const proof = await toProofViews(supabase, rows.flatMap((c) => c.proof_attachments) as ProofRow[])
 
   return rows.map((c) => {
-    const ids = new Set((c.proof_attachments ?? []).map((p) => p.id))
+    const ids = new Set(c.proof_attachments.map((p) => p.id))
     return {
       id: c.id,
       taskTitle: c.tasks?.title ?? 'Unknown task',
@@ -83,4 +71,25 @@ export async function listPendingTaskCompletions(
       proof: proof.filter((p) => ids.has(p.id)),
     }
   })
+}
+
+// Home's counts (#68): only the pending rows, and only the columns the counts need.
+export async function getMyPendingRewards(supabase: DbClient, profileId: string): Promise<{ count: number; dc: number }> {
+  const { data, error } = await supabase
+    .from('task_completions')
+    .select('reward_amount')
+    .eq('profile_id', profileId)
+    .eq('status', 'pending')
+  if (error) throw error
+  const rows = data ?? []
+  return { count: rows.length, dc: rows.reduce((sum, r) => sum + r.reward_amount, 0) }
+}
+
+export async function countPendingTaskCompletions(supabase: DbClient): Promise<number> {
+  const { count, error } = await supabase
+    .from('task_completions')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+  if (error) throw error
+  return count ?? 0
 }

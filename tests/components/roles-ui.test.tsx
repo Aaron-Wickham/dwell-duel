@@ -29,7 +29,7 @@ import { MemberIdentity } from '@/app/(app)/admin/members/member-identity'
 import { TaskCatalogItem } from '@/app/(app)/admin/tasks/task-catalog-item'
 import { BetList } from '@/components/markets/bet-list'
 
-const BEN: MemberSummary = { id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, role: 'reviewer' }
+const BEN: MemberSummary = { id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, role: 'reviewer', joinedAt: null, lastSignInAt: null }
 const TASK: TaskSummary = {
   id: 't1',
   title: 'Read Genesis 1-3',
@@ -95,9 +95,9 @@ describe('RoleForm confirmation (#65)', () => {
 
 describe('MemberIdentity', () => {
   it('badges every role but member', () => {
-    const { rerender } = render(<MemberIdentity member={BEN} />)
+    const { rerender } = render(<MemberIdentity member={BEN} now={0} />)
     expect(screen.getByText('Reviewer')).toBeInTheDocument()
-    rerender(<MemberIdentity member={{ ...BEN, role: 'member' }} />)
+    rerender(<MemberIdentity member={{ ...BEN, role: 'member' }} now={0} />)
     expect(screen.queryByText('Member')).not.toBeInTheDocument()
   })
 })

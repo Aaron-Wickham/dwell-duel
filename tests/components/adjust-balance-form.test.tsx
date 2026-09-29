@@ -11,18 +11,22 @@ const member: MemberSummary = {
   email: 'bob@example.com',
   balance: 90,
   role: 'member',
+  joinedAt: '2026-09-01T12:00:00Z',
+  lastSignInAt: null,
 }
+
+const NOW = Date.parse('2026-09-28T12:00:00Z')
 
 describe('AdjustBalanceForm', () => {
   it('links the member name to their profile with a 44px tap target', () => {
-    render(<AdjustBalanceForm member={member} />)
+    render(<AdjustBalanceForm member={member} now={NOW} />)
     const link = screen.getByRole('link', { name: 'Bob' })
     expect(link).toHaveAttribute('href', '/members/member-1')
     expect(link).toHaveClass('hit-area')
   })
 
   it('keeps the name bold and shows the balance beside it', () => {
-    render(<AdjustBalanceForm member={member} />)
+    render(<AdjustBalanceForm member={member} now={NOW} />)
     expect(screen.getByRole('link', { name: 'Bob' })).toHaveClass('font-extrabold')
     expect(screen.getByText('90 DC')).toBeInTheDocument()
   })

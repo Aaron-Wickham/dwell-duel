@@ -12,7 +12,7 @@ import { toast } from 'sonner'
 import { haptics } from '@/lib/haptics'
 import { MemberIdentity } from './member-identity'
 
-export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
+export function AdjustBalanceForm({ member, now }: { member: MemberSummary; now: number }) {
   const [amount, setAmount] = useState('')
   const [reason, setReason] = useState('')
   const confirm = useConfirmSubmit()
@@ -56,7 +56,7 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
         }}
         className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4"
       >
-        <MemberIdentity member={member} />
+        <MemberIdentity member={member} now={now} />
         <div className="flex min-w-0 grow flex-col gap-3 md:flex-row md:items-end md:gap-2">
           <div className="flex min-w-0 grow items-end gap-2">
             <Field label="Amount" htmlFor={amountId} className="w-[108px] shrink-0 md:w-[150px]">

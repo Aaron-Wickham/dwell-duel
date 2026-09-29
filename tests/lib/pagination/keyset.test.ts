@@ -60,10 +60,11 @@ function matches(term: string, row: Row): boolean {
   }
 }
 
-function fakeTable(rows: Row[]) {
-  const sorted = [...rows].sort((a, b) =>
+function fakeTable(rows: Row[], ascending = false) {
+  const newestFirst = [...rows].sort((a, b) =>
     a.created_at === b.created_at ? (a.id < b.id ? 1 : -1) : a.created_at < b.created_at ? 1 : -1,
   )
+  const sorted = ascending ? newestFirst.reverse() : newestFirst
   const calls: { filter: string | null; limit: number }[] = []
   const keyCalls: { filter: string; limit: number }[] = []
   const select = (filter: string | null, limit: number) =>
@@ -277,6 +278,46 @@ describe('readKeyset', () => {
     expect(page.windowed).toBe(false)
     expect(page.rows).toEqual(table.sorted.slice(0, 50))
     expect(table.calls[0]).toEqual({ filter: null, limit: 50 })
+  })
+})
+
+describe('readKeyset, earliest first', () => {
+  const ASC: KeyColumns = { ...COLS, ascending: true }
+  const FIRST: PageParams = { top: null, bottom: null }
+
+  it('builds the range and probe filters the other way round', () => {
+    const c: Cursor = { ts: '2026-09-26T10:15:30.123456+00:00', id: '99' }
+    const t: Cursor = { ts: '2026-09-26T08:00:00+00:00', id: '7' }
+    expect(rangeFilter(ASC, { top: t, bottom: null })).toBe(rangeFilter(COLS, { top: null, bottom: t }))
+    expect(rangeFilter(ASC, { top: null, bottom: c })).toBe(rangeFilter(COLS, { top: c, bottom: null }))
+    expect(rangeFilter(ASC, { top: t, bottom: c })).toBe(
+      `and(${rangeFilter(COLS, { top: c, bottom: null })},${rangeFilter(COLS, { top: null, bottom: t })})`,
+    )
+  })
+
+  it('pages earliest first through ties to the end, then windows past the cap, with nothing skipped or repeated', async () => {
+    const table = fakeTable(makeRows(600), true)
+    let params = FIRST
+    let page = await readKeyset(params, ASC, table.fetchRows, keyOf, table.fetchKeys)
+    expect(page.rows).toEqual(table.sorted.slice(0, 50))
+    expect(table.keyCalls[0].filter).toBe(newerThanFilter(ASC, keyOf(table.sorted[49])))
+
+    while (page.next?.kind === 'extend') {
+      params = pageFrom(page, params)
+      page = await readKeyset(params, ASC, table.fetchRows, keyOf, table.fetchKeys)
+    }
+    expect(page.rows).toEqual(table.sorted.slice(0, 500))
+    expect(page.next).toEqual({ kind: 'window', cursor: encodeCursor(keyOf(table.sorted[500])), firstId: table.sorted[500].id })
+
+    params = pageFrom(page, params)
+    page = await readKeyset(params, ASC, table.fetchRows, keyOf, table.fetchKeys)
+    expect(page.windowed).toBe(true)
+    expect(page.rows).toEqual(table.sorted.slice(500, 550))
+
+    params = pageFrom(page, params)
+    page = await readKeyset(params, ASC, table.fetchRows, keyOf, table.fetchKeys)
+    expect(page.rows).toEqual(table.sorted.slice(500))
+    expect(page.next).toBeNull()
   })
 })
 

@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
+import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
-import { Ticket, Trophy } from 'lucide-react'
+import { CopyPlus, Ticket, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
@@ -20,6 +21,7 @@ import { legOddsBp } from '@/lib/parlays/odds'
 import { MAX_SLIP_PICKS } from '@/lib/parlays/parse-slip'
 import { addToSlipAction, removeFromSlipAction } from '@/lib/parlays/slip-actions'
 import { BackLink } from '@/components/ui/back-link'
+import { buttonVariants } from '@/components/ui/button'
 import { LoadingStatus } from '@/components/ui/loading-status'
 import { LocalTime } from '@/components/ui/local-time'
 import { Message } from '@/components/ui/message'
@@ -35,6 +37,7 @@ import { ResolveForm } from './resolve-form'
 import { describeCreatorStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
 import { DeleteMarketButton } from './delete-market-button'
 import { EditMarketDialog } from './edit-market-dialog'
+import { ShareButton } from './share-button'
 import { listMarketEdits } from '@/lib/markets/market-edits'
 import { formatLine } from '@/lib/markets/kind'
 import { VoidButton } from './void-button'
@@ -144,7 +147,19 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
             </ol>
           </details>
         )}
-        {canEdit && <EditMarketDialog marketId={market.id} title={market.title} description={market.description} />}
+        <div className="flex flex-wrap gap-2">
+          {canEdit && <EditMarketDialog marketId={market.id} title={market.title} description={market.description} />}
+          <ShareButton marketId={market.id} title={market.title} />
+          {/* Every member can create markets, so anyone can start a copy; nothing exists until it's submitted. */}
+          <Link
+            href={`/markets/new?from=${market.id}`}
+            transitionTypes={['nav-forward']}
+            className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+          >
+            <CopyPlus aria-hidden="true" className="size-[18px]" />
+            Duplicate
+          </Link>
+        </div>
         {market.status === 'resolved' && market.resolvedOutcomeLabel && (
           <Message tone="ok" icon={Trophy} className="self-start">
             {market.actualValue !== null && <>Actual: {market.actualValue} · </>}

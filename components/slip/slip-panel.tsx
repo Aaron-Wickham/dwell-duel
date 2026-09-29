@@ -31,6 +31,43 @@ function placedMessage(placed: NonNullable<NonNullable<PlaceSlipState>['placed']
   return `Placed ${parts.join(' and ')}.`
 }
 
+const QUICK_STAKES = [5, 10, 25]
+
+// What a stake can use: the balance, less every other stake the slip already holds. A solo pick's
+// chips leave out its own stake, and the parlay's leave out the parlay's.
+function availableFor(
+  except: string | 'parlay',
+  { balance, picks, stakes, parlayStake }: { balance: number; picks: SlipPick[]; stakes: Record<string, string>; parlayStake: string },
+): number {
+  const solos = picks
+    .filter((p) => !p.parlay && p.outcomeId !== except)
+    .reduce((sum, p) => sum + (wholeDc(stakes[p.outcomeId]) ?? 0), 0)
+  const parlay = except !== 'parlay' && picks.some((p) => p.parlay) ? (wholeDc(parlayStake) ?? 0) : 0
+  return Math.max(0, balance - solos - parlay)
+}
+
+function StakeChips({ label, available, onPick }: { label: string; available: number; onPick: (value: string) => void }) {
+  const chipClass = cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'px-2 tabular-nums')
+  return (
+    <div role="group" aria-label={label} className="grid grid-cols-4 gap-2">
+      {QUICK_STAKES.map((amount) => (
+        <button key={amount} type="button" disabled={amount > available} className={chipClass} onClick={() => onPick(String(amount))}>
+          {amount}
+        </button>
+      ))}
+      <button
+        type="button"
+        disabled={available < 1}
+        aria-label={`Max, ${available} DC`}
+        className={chipClass}
+        onClick={() => onPick(String(available))}
+      >
+        Max
+      </button>
+    </div>
+  )
+}
+
 const segmentClass = (on: boolean) =>
   cn(
     'pressable min-h-11 cursor-pointer rounded-[10px] px-3 text-[15px] font-bold disabled:cursor-not-allowed disabled:opacity-50',
@@ -38,7 +75,8 @@ const segmentClass = (on: boolean) =>
   )
 
 function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
-  const { remove, setMode, stakes, setStake } = useSlip()
+  const slip = useSlip()
+  const { remove, setMode, stakes, setStake } = slip
   const [removing, startRemove] = useTransition()
   const stakeId = `slip-stake-${pick.outcomeId}`
   const errorId = `slip-pick-error-${pick.outcomeId}`
@@ -96,29 +134,36 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
             </button>
           </div>
           {!pick.parlay && (
-            <div className="flex flex-wrap items-center gap-3">
-              <label htmlFor={stakeId} className="text-[15px] font-bold">
-                Stake (DC)
-              </label>
-              <Input
-                id={stakeId}
-                name={`stake:${pick.outcomeId}`}
-                type="number"
-                inputMode="numeric"
-                min="1"
-                step="1"
-                value={stakes[pick.outcomeId] ?? ''}
-                onChange={(e) => setStake(pick.outcomeId, e.target.value)}
-                className="w-28"
-                aria-invalid={Boolean(error)}
-                aria-describedby={error ? errorId : undefined}
+            <>
+              <div className="flex flex-wrap items-center gap-3">
+                <label htmlFor={stakeId} className="text-[15px] font-bold">
+                  Stake (DC)
+                </label>
+                <Input
+                  id={stakeId}
+                  name={`stake:${pick.outcomeId}`}
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  step="1"
+                  value={stakes[pick.outcomeId] ?? ''}
+                  onChange={(e) => setStake(pick.outcomeId, e.target.value)}
+                  className="w-28"
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? errorId : undefined}
+                />
+                {stake !== null && (
+                  <span className="text-sm text-ink2">
+                    Pays ~{soloPayout(stake, pick.outcomePool, pick.totalPool)} DC if it wins
+                  </span>
+                )}
+              </div>
+              <StakeChips
+                label={`Quick stakes for ${name}`}
+                available={availableFor(pick.outcomeId, slip)}
+                onPick={(value) => setStake(pick.outcomeId, value)}
               />
-              {stake !== null && (
-                <span className="text-sm text-ink2">
-                  Pays ~{soloPayout(stake, pick.outcomePool, pick.totalPool)} DC if it wins
-                </span>
-              )}
-            </div>
+            </>
           )}
         </>
       )}
@@ -132,7 +177,8 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
 }
 
 export function SlipPanel() {
-  const { picks, parlayStake, setParlayStake, stakes, clearStakes, setOpen } = useSlip()
+  const slip = useSlip()
+  const { picks, parlayStake, setParlayStake, stakes, clearStakes, setOpen } = slip
   // One key per slip, kept across retries until a place succeeds: if a place commits but its
   // response is lost, tapping again returns that result instead of placing twice (#61).
   const attemptKey = useRef<string | null>(null)
@@ -207,7 +253,10 @@ export function SlipPanel() {
         </span>
       </div>
       <p className="text-sm text-ink2">
-        Each pick is a Solo bet with its own stake, or part of one Parlay that pays only if all its picks win.
+        Each pick is a Solo bet with its own stake, or part of one Parlay that pays only if all its picks win.{' '}
+        <Link href="/how-it-works#the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']}>
+          How parlays pay
+        </Link>
       </p>
       <ul className="flex flex-col divide-y divide-line border-y border-line">
         {picks.map((pick) => (
@@ -251,6 +300,9 @@ export function SlipPanel() {
                 <span className="text-sm text-ink2">Pays {potentialPayout(parlayStakeDc, legBps)} DC if every pick wins</span>
               )}
             </div>
+          )}
+          {!legNote && (
+            <StakeChips label="Quick stakes for the parlay" available={availableFor('parlay', slip)} onPick={setParlayStake} />
           )}
           {parlayError && (
             <Message tone="error" id="slip-parlay-error">

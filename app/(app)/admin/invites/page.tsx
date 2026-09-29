@@ -9,6 +9,7 @@ import { ContentReveal } from '@/components/nav/page-transition'
 import { InviteListItem } from '@/components/admin/invite-list-item'
 import { AddInviteForm } from './add-invite-form'
 import { RevokeInviteButton } from './revoke-invite-button'
+import { CopyInviteButton } from './copy-invite-button'
 
 export default async function AdminInvitesPage() {
   const { supabase, user } = await requireUser()
@@ -31,7 +32,16 @@ export default async function AdminInvitesPage() {
           ) : (
             <ul className="flex flex-col divide-y divide-line">
               {invites.map((invite) => (
-                <InviteListItem key={invite.email} invite={invite} revoke={<RevokeInviteButton email={invite.email} />} />
+                <InviteListItem
+                  key={invite.email}
+                  invite={invite}
+                  actions={
+                    <>
+                      <CopyInviteButton email={invite.email} />
+                      <RevokeInviteButton email={invite.email} />
+                    </>
+                  }
+                />
               ))}
             </ul>
           )}

@@ -26,7 +26,7 @@ describe('addInvite length limit', () => {
 
     const result = await addInvite(client, 'admin-1', `  ${AT_LIMIT.toUpperCase()}  `)
 
-    expect(result).toEqual({ ok: true })
+    expect(result).toEqual({ ok: true, email: AT_LIMIT })
     expect(insert).toHaveBeenCalledWith({ email: AT_LIMIT, invited_by: 'admin-1' })
   })
 })

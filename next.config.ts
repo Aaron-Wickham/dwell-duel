@@ -28,6 +28,10 @@ const nextConfig: NextConfig = {
   experimental: {
     useOffline: true,
   },
+  // /how-it-works renders docs/HOW-IT-WORKS.md, read from disk (lib/docs/how-it-works.ts).
+  outputFileTracingIncludes: {
+    '/how-it-works': ['./docs/HOW-IT-WORKS.md'],
+  },
   // Next has no built-in way to read a deployment id from client code (deploymentId itself only
   // affects asset URLs and headers Next sets internally), so the per-deploy id is threaded
   // through as its own build-time env var. ServiceWorkerRegistration appends it to /sw.js's

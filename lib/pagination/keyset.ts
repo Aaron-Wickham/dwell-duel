@@ -2,7 +2,9 @@ import { PAGE_SIZE, WINDOW_CAP, encodeCursor, type Cursor, type NextPage, type P
 
 // isId guards the id's column type: Postgres rejects `id.lt."abc"` on a bigint column with an
 // error, so a cursor whose id can't be that column's is dropped, like any other bad cursor.
-export type KeyColumns = { ts: string; id: string; isId?: (id: string) => boolean }
+// `ascending` lists earliest first (the Open markets list, soonest to close); the default is newest
+// first. Either way `top` is where a window starts and `bottom` where an extended range ends.
+export type KeyColumns = { ts: string; id: string; isId?: (id: string) => boolean; ascending?: boolean }
 export type KeysetPage<T> = { rows: T[]; next: NextPage | null; windowed: boolean }
 
 const BIGINT_ID = /^\d{1,18}$/
@@ -28,9 +30,11 @@ function atOrNewer(cols: KeyColumns, c: Cursor): string {
 // Every value is quoted, and a validated cursor can't contain a quote (see decodeCursor).
 export function rangeFilter(cols: KeyColumns, page: PageParams): string | null {
   const { top, bottom } = page
-  if (top && bottom) return `and(${atOrNewer(cols, bottom)},${atOrOlder(cols, top)})`
-  if (bottom) return atOrNewer(cols, bottom)
-  if (top) return atOrOlder(cols, top)
+  const fromTop = cols.ascending ? atOrNewer : atOrOlder
+  const toBottom = cols.ascending ? atOrOlder : atOrNewer
+  if (top && bottom) return `and(${toBottom(cols, bottom)},${fromTop(cols, top)})`
+  if (bottom) return toBottom(cols, bottom)
+  if (top) return fromTop(cols, top)
   return null
 }
 
@@ -89,7 +93,7 @@ export async function readKeyset<Row>(
   const valid = (c: Cursor | null) => (c && (!cols.isId || cols.isId(c.id)) ? c : null)
   const order: KeysetOrder<Cursor> = {
     range: (page) => rangeFilter(cols, page),
-    after: (key) => olderThanFilter(cols, key),
+    after: (key) => (cols.ascending ? newerThanFilter(cols, key) : olderThanFilter(cols, key)),
     encode: encodeCursor,
   }
   return readOrdered({ top: valid(rawPage.top), bottom: valid(rawPage.bottom) }, order, fetchRows, keyOf, fetchKeys)

@@ -4,6 +4,8 @@ import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 export interface AddInviteResult {
   ok: boolean
   formError?: string
+  /** The address as stored, trimmed and lowercased, for the invite message. */
+  email?: string
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -36,5 +38,5 @@ export async function addInvite(
     return { ok: false, formError: 'Could not add that invite.' }
   }
 
-  return { ok: true }
+  return { ok: true, email }
 }

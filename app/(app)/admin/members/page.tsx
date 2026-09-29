@@ -20,6 +20,10 @@ export default async function AdminMembersPage() {
   const isOwner = role === 'owner'
 
   const members = await listMembers(supabase)
+  // A Server Component renders once per request, so the purity rule's re-render worry doesn't
+  // apply; passing this down keeps "2h ago" the same on the server and at hydration.
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now()
 
   return (
     <ContentReveal>
@@ -35,7 +39,7 @@ export default async function AdminMembersPage() {
           <ul className="flex flex-col divide-y divide-line">
             {members.map((m) => (
               <li key={m.id} className="flex flex-col gap-3 py-4">
-                {isOwner ? <AdjustBalanceForm member={m} /> : <MemberIdentity member={m} />}
+                {isOwner ? <AdjustBalanceForm member={m} now={now} /> : <MemberIdentity member={m} now={now} />}
                 {isOwner && m.role !== 'owner' && <RoleForm member={m} />}
               </li>
             ))}

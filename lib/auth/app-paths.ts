@@ -1,4 +1,4 @@
-const APP_SECTIONS = new Set(['markets', 'bets', 'parlays', 'tasks', 'feed', 'leaderboard', 'members', 'profile', 'settings', 'admin'])
+const APP_SECTIONS = new Set(['markets', 'bets', 'parlays', 'tasks', 'feed', 'leaderboard', 'members', 'profile', 'settings', 'how-it-works', 'admin'])
 
 // The signed-in routes under app/(app)/. Everything else (sign-in, the auth callback,
 // not-invited, the cron route, the manifest, the service worker, offline) stays public.

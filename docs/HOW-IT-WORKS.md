@@ -1,3 +1,6 @@
+<!-- The app renders this file as its How it works page (/how-it-works), so write it for
+members. Links to other repo files show there as plain text. -->
+
 # How DwellDuel works
 
 DwellDuel is an invite-only app for a church friend group. Members bet
@@ -5,8 +8,7 @@ DwellDuel is an invite-only app for a church friend group. Members bet
 noon?") and earn DC by completing Bible-study tasks. DC is play money: it
 can't be bought or cashed out.
 
-This page explains the rules. For how the code implements them, see
-[ARCHITECTURE.md](ARCHITECTURE.md).
+This page explains the rules.
 
 ## Getting in
 
@@ -32,6 +34,21 @@ While a market is open, its creator (or an admin) can reword the title and
 description. Everyone can see every past version under "Edited". The
 outcomes, the closing time and the line can never change, because
 changing them would change the bet.
+
+The Markets page lists open markets **soonest to close first**, so one
+closing within the hour is at the top. A market closing within a day
+says so ("Closes in 2h"). Closed markets still waiting for a result are
+grouped under Awaiting resolution, and resolved and voided markets
+follow, newest first.
+
+For a question that comes round every week, **Duplicate** on any market
+opens Create market already filled in with its question, description,
+kind and outcomes (or line). The closing time moves on by one or more
+whole weeks, keeping the same local time, until it's in the future. Nothing is created until
+you tap Create market, so you can change anything first.
+
+**Share** sends a market's link through your phone's share sheet, or
+copies it where there isn't one. Only signed-in members can open it.
 
 ## Betting: shared pools with a seed
 
@@ -69,8 +86,10 @@ same formula as the real payout.
 ## The slip, solo bets and parlays
 
 Every bet goes through the **slip**. Tap "Add to slip" on outcomes from
-any number of markets, then open the slip to set stakes. Each pick is
-either:
+any number of markets, then open the slip to set stakes. Type a stake,
+or tap a quick stake: 5, 10, 25 or Max. Max is your balance less the
+other stakes already in the slip, and a chip for more than that is
+greyed out. Each pick is either:
 
 - **Solo:** a normal pool bet on that outcome.
 - **Parlay:** combined with your other Parlay picks into one bet that
@@ -112,6 +131,12 @@ bet what on each market, and bets and parlays also appear in the feed.
   files or links as proof. The reason and proof show on the market page
   and in the feed. Before anything is paid, the app asks them to confirm,
   naming the winner ("Yes wins").
+- **Reminders:** bettors' DC and parlays wait on a closed market until
+  it's resolved, so Home shows **Markets to resolve** to whoever should
+  do it. A creator sees their own closed markets as soon as they close
+  (unless they have money on one). Reviewers and admins see any market
+  still unresolved 48 hours after closing, and straight away one whose
+  creator has money on it, since the creator can't resolve that one.
 - **Overrides:** an admin can change a result. The original payouts are
   taken back and the new winners paid; the confirmation says so first. If a past winner has already spent
   their winnings, the override is blocked and names who, so an admin can
@@ -144,13 +169,15 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
 ## Around the app
 
 - **Home:** your balance, rank, DC at stake and pending rewards, plus
-  links to everything else.
+  links to everything else. New members also get a **Getting started**
+  card: add your photo, place your first bet and try a task. It goes away
+  once you've done all three, or when you dismiss it.
 - **Feed:** everyone's bets, parlays, new markets, results, wins and
   approved tasks, updated live.
 - **Leaderboard and profiles:** ranks by balance. Tap your avatar (top
   right) for your profile, where Edit profile and Settings live.
 - **Settings:** theme (System, Light or Dark), vibration on taps (Android),
-  reduced animations, and sign out.
+  reduced animations, this How it works page, and sign out.
 - **Install it:** add DwellDuel to your Home Screen for a full-screen app
   with a launch animation. It shows an offline page when you lose
   connection.

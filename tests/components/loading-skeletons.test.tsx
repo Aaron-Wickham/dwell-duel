@@ -14,6 +14,7 @@ import BetsLoading from '@/app/(app)/bets/loading'
 import TasksLoading from '@/app/(app)/tasks/loading'
 import ProfileLoading from '@/app/(app)/profile/loading'
 import SettingsLoading from '@/app/(app)/settings/loading'
+import HowItWorksLoading from '@/app/(app)/how-it-works/loading'
 import FeedLoading from '@/app/(app)/feed/loading'
 import LeaderboardLoading from '@/app/(app)/leaderboard/loading'
 import AdminInvitesLoading from '@/app/(app)/admin/invites/loading'
@@ -29,6 +30,7 @@ const SKELETONS: [string, ComponentType][] = [
   ['tasks', TasksLoading],
   ['profile', ProfileLoading],
   ['settings', SettingsLoading],
+  ['how-it-works', HowItWorksLoading],
   ['feed', FeedLoading],
   ['leaderboard', LeaderboardLoading],
   ['admin-invites', AdminInvitesLoading],

@@ -49,10 +49,10 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 
 | Route | What it is |
 |---|---|
-| `/` | Home: greeting, balance hero (balance, rank, At stake, Pending), tiles |
-| `/markets` | Open markets as cards with sparklines, paged |
-| `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under |
-| `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, resolve/void/edit, resolution proof |
+| `/` | Home: greeting, balance hero (balance, rank, At stake, Pending), a new member's Getting started card, Markets to resolve, tiles |
+| `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then resolved and voided newest first, each paged |
+| `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under. `?from=<id>` pre-fills it from a market (Duplicate) |
+| `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, resolve/void/edit, share and duplicate, resolution proof |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together (`?tab=`) |
 | `/parlays` | Redirects to `/bets` (kept for old links) |
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
@@ -60,7 +60,8 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/leaderboard` | Balance ranks |
 | `/members/[id]` | A member's profile and activity; your own adds Edit profile and Settings |
 | `/profile` | Edit your name, photo and bio |
-| `/settings` | Theme, haptics, reduced motion, sign out |
+| `/settings` | Theme, haptics, reduced motion, How it works, sign out |
+| `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`) |
 | `/admin/invites` · `/admin/tasks` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
@@ -93,7 +94,9 @@ the task catalogue and invite list, which are allowed by policy.
 
 **People**
 
-- `allowed_emails`: the invite list. Only invited Google accounts get in.
+- `allowed_emails`: the invite list. Only invited Google accounts get in. Adding one
+  sends nothing: Admin → Invites offers a "Copy invite message" to send
+  the invitee yourself (`lib/invites/invite-message.ts`).
 - `profiles`: one per member. Display name, bio, `avatar_path`, `balance`
   and `role` (owner › admin › reviewer › member). A trigger creates it on
   first sign-in and grants 100 DC.
@@ -161,12 +164,18 @@ the task catalogue and invite list, which are allowed by policy.
 
 Also: `create_market`, `update_market` (creator or admin, before close; the
 title is fixed once anyone else has bet), `member_emails` (admin only:
-members can't select `profiles.email`), `stray_proof_objects` (service role:
+members can't select `profiles.email`), `member_activity` (admin only, 0050:
+each member's join date, `profiles.created_at`, and last sign-in from
+`auth.users`, for Admin → Members), `stray_proof_objects` (service role:
 the daily cron deletes proof files nothing attached),
 `set_member_role`, `delete_market`, `delete_task` and `remove_bet` (owner
 only), `update_my_profile`, `record_proof`, `market_sparklines` (the
 cards' 40-point sparklines and the market chart's 200 points, sampled in
 SQL so no page reads every bet),
+`markets_to_resolve` (0049, security invoker: the closed, unresolved
+markets waiting on the caller, capped at 10 with an uncapped `total`; a
+creator's own at once, and for reviewers and admins any left 48 hours or
+whose creator has a stake, always filtered through `can_resolve_market`),
 `my_at_stake` and `parlay_limits`.
 
 ### Migrations
@@ -186,6 +195,8 @@ after it ships. They roughly follow the project's history:
 | 0046 | Security: parlay odds without your own stakes, no resolving with a stake, no self-review, a 500 DC task cap, hidden emails |
 | 0047 | Attempt keys, so a retried slip or balance adjustment never acts twice |
 | 0048 | Indexes for the markets list, a market's resolutions, a member's coin history and unindexed foreign keys |
+| 0049 | Closing soon: `markets (status, close_at, id)` for the Open list's close-time order, and `markets_to_resolve()` for Home's nudge |
+| 0050 | `member_activity`: join and last sign-in dates for Admin → Members, admins only |
 
 Merging a migration to `main` runs the **Deploy Production Database**
 workflow. It runs in parallel with Vercel's deploy, so a build that needs
@@ -203,7 +214,9 @@ itself is down.
 **Betting through the slip.** An outcome's "Add to slip" writes a cookie
 of picks (`lib/parlays/slip.ts`). `SlipProvider` in the signed-in layout
 holds those picks, each marked Solo or Parlay, with optimistic add, remove
-and mode switches. Stakes live only in client state. The floating
+and mode switches. Stakes live only in client state. The layout also
+hands it the member's balance, for the quick-stake chips' Max (the balance
+less the slip's other stakes). The floating
 `SlipSheet` sends everything to `place_slip` in one call; it either all
 succeeds or nothing is placed. Only its button is in every page's first
 load: the drawer (`SlipDrawer`) loads the first time the slip opens, or
@@ -212,6 +225,14 @@ an attempt key, kept until a place succeeds: if the bets commit but the
 answer is lost, the slip says so, and tapping Place again returns the first
 result instead of placing twice (0047). `adjust_balance` takes a key the
 same way.
+
+**Duplicating a market.** Duplicate links to `/markets/new?from=<id>`. The
+page reads that market with the member's own client, so RLS decides what
+can be copied, and an unknown or unreadable id opens a blank form. The
+form moves the original close time on by at least one whole week in the viewer's own
+time zone (`lib/markets/weekly-close.ts`), so a weekly market keeps its
+local time across a DST change. Nothing is written until the form is
+submitted through `create_market` as usual.
 
 **Odds.** Pari-mutuel with a seed. A parlay leg locks its odds from
 everyone's money but the bettor's own (0046), and the slip previews the
@@ -259,6 +280,13 @@ each signed-in route has a skeleton.
 layout renders them as attributes on `<html>` (`data-theme`,
 `data-haptics`, `data-motion`), so they apply before any script runs.
 `motion-reduce:` in CSS covers both the device setting and the app's own.
+
+**Getting started.** Home's onboarding card (`components/home/onboarding-card.tsx`)
+reads its three steps from real data in `lib/home/onboarding.ts`, with
+head-only counts: a photo (`profiles.avatar_path`), any bet or parlay
+(`bets`, `cancelled_bets`, `parlays`) and any task submission. It hides
+itself once all three are done. Dismissing it sets the `onboarding`
+cookie, which skips those reads, so it never flashes back.
 
 ## Environments and deploys
 

@@ -26,7 +26,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
 
   return (
     <LiveTablesProvider userId={user.id}>
-      <SlipProvider view={slipView}>
+      <SlipProvider view={slipView} balance={profile?.balance ?? 0}>
         <NavDepthTracker />
         {/* A missing profile row still gets the nav and <main>, so the page isn't stranded without them. */}
         <AppNav

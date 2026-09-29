@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { LogOut, UserRound } from 'lucide-react'
+import { BookOpenText, LogOut, UserRound } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { signOut } from '@/lib/auth/sign-out'
 import { resolvePreferences } from '@/lib/preferences/preferences'
@@ -54,6 +54,17 @@ export default async function SettingsPage() {
         )}
         <SectionCard title="Haptics & motion" titleId="settings-motion">
           <MotionSettings haptics={prefs.haptics} reduceMotion={prefs.reduceMotion} />
+        </SectionCard>
+        <SectionCard title="Help" titleId="settings-help">
+          <p className="text-ink2">Odds, payouts, parlays, results and tasks, explained.</p>
+          <Link
+            href="/how-it-works"
+            transitionTypes={['nav-forward']}
+            className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'self-start no-underline')}
+          >
+            <BookOpenText aria-hidden="true" className="size-[18px]" />
+            How it works
+          </Link>
         </SectionCard>
         <SectionCard title="Account" titleId="settings-account">
           <form action={signOut}>

@@ -7,6 +7,7 @@ const { createMarketAction } = vi.hoisted(() => ({ createMarketAction: vi.fn() }
 vi.mock('@/lib/markets/create-market', () => ({ createMarketAction }))
 
 import { CreateMarketForm } from '@/app/(app)/markets/new/create-market-form'
+import { nextWeeklyClose } from '@/lib/markets/weekly-close'
 
 beforeEach(() => {
   createMarketAction.mockReset()
@@ -182,5 +183,57 @@ describe('CreateMarketForm keeps what was filled in (#63)', () => {
     expect(screen.getByLabelText('Line')).toHaveValue(42.5)
     expect(screen.getByLabelText('Title')).toHaveValue('Minutes the sermon runs')
     expect(screen.getByRole('radio', { name: 'Over/Under' })).toBeChecked()
+  })
+})
+
+describe('CreateMarketForm duplicating a market (#88)', () => {
+  const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const base = {
+    title: 'Minutes the sermon runs',
+    description: 'This Sunday',
+    closeAt: '2026-09-06T23:00:00.000Z',
+    now: Date.parse('2026-09-28T12:00:00Z'),
+  }
+
+  it('fills in an over/under with its line and a close time moved on by whole weeks', () => {
+    const { container } = render(
+      <CreateMarketForm initial={{ ...base, kind: 'over_under', outcomes: ['Over 42.5', 'Under 42.5'], line: '42.5' }} />,
+    )
+    expect(screen.getByLabelText('Title')).toHaveValue('Minutes the sermon runs')
+    expect(screen.getByLabelText('Description')).toHaveValue('This Sunday')
+    expect(screen.getByRole('radio', { name: 'Over/Under' })).toBeChecked()
+    expect(screen.getByLabelText('Line')).toHaveValue(42.5)
+
+    const close = nextWeeklyClose(base.closeAt, base.now, localZone)
+    expect(screen.getByLabelText('Close time')).toHaveValue(close)
+    expect(new Date(close).getTime()).toBeGreaterThan(base.now)
+    expect(container.querySelector<HTMLInputElement>('input[name="close_at"]')!.value).toBe(new Date(close).toISOString())
+  })
+
+  it('fills in a multiple-choice market’s outcomes', () => {
+    render(<CreateMarketForm initial={{ ...base, kind: 'multiple_choice', outcomes: ['Pat', 'Sam', 'Lee'], line: '' }} />)
+    expect(screen.getByRole('radio', { name: 'Multiple choice' })).toBeChecked()
+    expect(screen.getByLabelText('Outcome 1')).toHaveValue('Pat')
+    expect(screen.getByLabelText('Outcome 2')).toHaveValue('Sam')
+    expect(screen.getByLabelText('Outcome 3')).toHaveValue('Lee')
+  })
+
+  it('creates nothing until submitted, then sends what was filled in and keeps an edited close time', async () => {
+    createMarketAction.mockResolvedValue({ formError: 'Choose a close time in the future.', field: 'close_at' })
+    const user = userEvent.setup()
+    render(<CreateMarketForm initial={{ ...base, kind: 'binary', outcomes: ['Yes', 'No'], line: '' }} />)
+    expect(createMarketAction).not.toHaveBeenCalled()
+    expect(screen.getByRole('radio', { name: 'Binary (Yes/No)' })).toBeChecked()
+
+    await user.clear(screen.getByLabelText('Close time'))
+    await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
+    await user.click(screen.getByRole('button', { name: 'Create market' }))
+    await screen.findByRole('alert')
+
+    const sent = createMarketAction.mock.calls[0][1] as FormData
+    expect(sent.get('title')).toBe('Minutes the sermon runs')
+    expect(sent.getAll('outcome_labels')).toEqual(['Yes', 'No'])
+    expect(screen.getByLabelText('Close time')).toHaveValue('2030-01-01T10:00')
+    expect(screen.getByLabelText('Title')).toHaveValue('Minutes the sermon runs')
   })
 })

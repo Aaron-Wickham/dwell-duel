@@ -85,8 +85,9 @@ await run(
   from generate_series(1, ${MEMBERS}) n;
 
   -- on_profile_created grants each one the 100 DC starting grant.
-  insert into public.profiles (id, email, display_name, is_admin)
-  select id, email, 'Scale member ' || split_part(split_part(email, '@', 1), '-', 3), email = ${adminEmail}
+  insert into public.profiles (id, email, display_name, role)
+  select id, email, 'Scale member ' || split_part(split_part(email, '@', 1), '-', 3),
+    case when email = ${adminEmail} then 'admin' else 'member' end
   from auth.users where email like ${memberEmails};
 
   insert into public.allowed_emails (email, claimed_by)
@@ -241,7 +242,9 @@ await run(
       if v_market.rn <= ${RESOLVED} then
         perform public.resolve_market(
           v_market.id,
-          (select o.id from public.market_outcomes o where o.market_id = v_market.id order by random() limit 1)
+          (select o.id from public.market_outcomes o where o.market_id = v_market.id order by random() limit 1),
+          'Scale seed result',
+          '[]'::jsonb
         );
         if v_market.rn <= ${OVERRIDDEN} then
           perform public.resolve_market(
@@ -253,7 +256,9 @@ await run(
               join public.market_resolutions r on r.id = m.current_resolution_id
               where o.market_id = v_market.id and o.id <> r.outcome_id
               order by random() limit 1
-            )
+            ),
+            'Scale seed override',
+            '[]'::jsonb
           );
         end if;
       elsif v_market.rn <= ${RESOLVED + VOIDED} then

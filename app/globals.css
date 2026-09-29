@@ -81,6 +81,18 @@
   }
 }
 
+/* In the installed iPhone app the viewport is only as tall as the page, up to the screen: a page
+   shorter than the screen gets a viewport 62pt short, and the tab bar, the launch overlay and every
+   other fixed element follow it up the screen. min-height: 100% can't help, because it is measured
+   against that same shrinking viewport. The large viewport height is the screen's, so the page is
+   always at least that tall. Kept to standalone: in a browser tab it would make every page scroll a
+   little as the toolbars collapse. Unlayered on purpose, so it beats Tailwind's min-h-full. */
+@media (display-mode: standalone) {
+  body {
+    min-height: 100lvh;
+  }
+}
+
 /* The same dark values appear twice: once for an explicit choice, once for the system fallback. */
 [data-theme="dark"] {
   color-scheme: dark;

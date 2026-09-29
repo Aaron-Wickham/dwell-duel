@@ -97,6 +97,13 @@ a line to `CHANGELOG.md` under the next release.
   change one and you change the other. Favicons come from
   `scripts/generate-favicons.mjs`. A full-page wait with no skeleton shows
   `LeafLoader` beside words saying what's happening.
+- **In the installed iPhone app, the viewport is only as tall as the
+  page** (up to the screen), so a short page gets a viewport 62pt short and
+  every fixed element, the tab bar and launch overlay included, floats above
+  the bottom. `globals.css` makes `body` at least `100lvh` tall in
+  `display-mode: standalone`; `min-height: 100%` can't do it, because it is
+  measured against that shrinking viewport. Don't remove it, and check
+  changes to the shell in the simulator's installed app, not just Safari.
 - **The `pressable` and `no-callout` utilities,** plus the `--safe-top` /
   `--safe-bottom` tokens, which are non-zero only in standalone mode.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.

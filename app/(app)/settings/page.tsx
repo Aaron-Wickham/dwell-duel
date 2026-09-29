@@ -79,10 +79,6 @@ export default async function SettingsPage() {
             <BookOpenText aria-hidden="true" className="size-[18px]" />
             How it works
           </Link>
-          {/* Temporary, for measuring the installed app's viewport (#127, #128); goes with /shell-lab. */}
-          <Link href="/shell-lab" className="self-start text-sm">
-            Shell lab (temporary)
-          </Link>
         </SectionCard>
         <SectionCard title="Account" titleId="settings-account">
           <form action={signOut}>

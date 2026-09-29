@@ -44,14 +44,14 @@ function Row({
   return (
     <li
       {...focusTarget(domId, titleId)}
-      className="flex items-start justify-between gap-3 py-3 lg:flex-col lg:justify-start lg:rounded-[14px] lg:border lg:border-line lg:p-4"
+      className="pressable hover-lift-row relative flex items-start justify-between gap-3 py-3 lg:hover-lift lg:before:hidden lg:flex-col lg:justify-start lg:rounded-[14px] lg:border lg:border-line lg:p-4"
     >
       <div className="flex min-w-0 flex-col gap-1">
         <Link
           id={titleId}
           href={`/markets/${marketId}`}
           transitionTypes={['nav-forward']}
-          className="hit-area font-bold break-words"
+          className="stretched-link font-bold break-words"
         >
           {marketTitle}
         </Link>
@@ -87,7 +87,9 @@ export function WagerRows({ wagers, rowIdPrefix }: { wagers: Wager[]; rowIdPrefi
               <>
                 <ResultChip result={b.result} />
                 {b.result.kind === 'open' && (
-                  <CancelBetButton betId={b.id} amount={b.amount} outcomeLabel={b.outcomeLabel} />
+                  <div className="relative z-[1]">
+                    <CancelBetButton betId={b.id} amount={b.amount} outcomeLabel={b.outcomeLabel} />
+                  </div>
                 )}
               </>
             }

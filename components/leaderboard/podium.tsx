@@ -18,9 +18,9 @@ const BLOCK = { 1: 'h-[72px] bg-lime text-on-lime', 2: 'h-[48px] bg-sunk text-in
 function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean; meId: string }) {
   const place = Math.min(member.rank, 3) as 1 | 2 | 3
   return (
-    <li className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
+    <li className="pressable hover-lift relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-t-[10px] text-center">
       <Avatar name={member.name} src={member.avatarSrc} size={place === 1 ? 'lg' : 'md'} />
-      <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="hit-area max-w-full truncate text-[15px] font-extrabold">
+      <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="stretched-link max-w-full truncate text-[15px] font-extrabold">
         {member.name}
       </Link>
       {member.id === meId && <span className="-mt-1 text-xs font-bold text-ink2">you</span>}

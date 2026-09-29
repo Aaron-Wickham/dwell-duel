@@ -9,7 +9,7 @@ import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import { useIsDesktop } from '@/lib/ui/use-is-desktop'
 import { cn } from '@/lib/utils'
 
-const EASE = 'transition-transform duration-[450ms] ease-[cubic-bezier(0.32,0.72,0,1)] data-swiping:select-none data-swiping:duration-0 data-ending-style:duration-[calc(var(--drawer-swipe-strength)*400ms)] motion-reduce:transition-none'
+const EASE = 'transition-transform duration-(--duration-sheet) ease-ios data-swiping:select-none data-swiping:duration-0 data-ending-style:duration-[calc(var(--drawer-swipe-strength)*400ms)] motion-reduce:transition-none'
 
 // The slip itself, as a bottom sheet on a phone and a panel from the right on desktop. SlipSheet
 // loads it the first time the slip opens, keeping it off every page's first load.
@@ -53,7 +53,7 @@ export function SlipDrawer({
     >
       <Drawer.VirtualKeyboardProvider>
         <Drawer.Portal>
-          <Drawer.Backdrop className="fixed inset-0 z-40 bg-scrim opacity-[calc(1-var(--drawer-swipe-progress))] transition-opacity duration-[450ms] ease-[cubic-bezier(0.32,0.72,0,1)] data-ending-style:opacity-0 data-starting-style:opacity-0 data-swiping:duration-0 data-ending-style:duration-[calc(var(--drawer-swipe-strength)*400ms)] motion-reduce:transition-none" />
+          <Drawer.Backdrop className="fixed inset-0 z-40 bg-scrim opacity-[calc(1-var(--drawer-swipe-progress))] transition-opacity duration-(--duration-sheet) ease-ios data-ending-style:opacity-0 data-starting-style:opacity-0 data-swiping:duration-0 data-ending-style:duration-[calc(var(--drawer-swipe-strength)*400ms)] motion-reduce:transition-none" />
           <Drawer.Viewport className={cn('fixed inset-0 z-40 flex', isDesktop ? 'justify-end' : 'items-end justify-center')}>
             <Drawer.Popup
               aria-labelledby="slip-title"

@@ -479,6 +479,20 @@ card says to install first.
 layout renders them as attributes on `<html>` (`data-theme`,
 `data-haptics`, `data-motion`), so they apply before any script runs.
 `motion-reduce:` in CSS covers both the device setting and the app's own.
+Sonner only hears the device setting, so `globals.css` stills its toasts
+under `data-motion="reduce"` itself.
+
+**Motion.** Every curve and duration is a token in `globals.css`'s
+`@theme static` block (`--ease-ios`, `--ease-pop`, `--duration-press` …
+`--duration-sheet`), and `lib/ui/motion.ts` mirrors them for Motion and
+WAAPI; `tests/lib/ui/motion.test.ts` keeps the two equal and rejects a
+`cubic-bezier` anywhere else. The sliding pills (the desktop nav's and the
+phone tab bar's, each a Motion `layoutId`, and SubNav's WAAPI one) share one
+slide, `PILL_SLIDE` / `PILL_TRANSITION`: 280ms on the iOS curve.
+The three dialogs share `components/ui/dialog-classes.ts`. `pressable`
+shrinks every control on press and, under a mouse only, grows it; a
+tappable card or row adds `hover-lift` and lifts onto `--lift-shadow`
+instead (`hover-lift-row` for a divided list's row, onto a wider panel), its one link covering it through `stretched-link`.
 
 **Getting started.** Home's onboarding card (`components/home/onboarding-card.tsx`)
 reads its three steps from real data in `lib/home/onboarding.ts`, with
@@ -519,6 +533,17 @@ leaves out empty lines and hides when every one is empty.
   the push; then a POST to the Vercel deploy hook in the
   `VERCEL_DEPLOY_HOOK_URL` repository secret. Redeploy by hand with
   "Run workflow" on it.
+- **Checking the installed app** (`npm run check:ios`,
+  `scripts/ios-standalone-check.mjs`): Playwright has no standalone mode,
+  so the installed iPhone app is checked in the iOS Simulator by hand before
+  a release. The script builds and serves the app behind a small proxy that
+  adds a measuring script to each page, points the simulator's installed
+  DwellDuel web app (a `.webclip` whose URL is a plist value) at `--path`,
+  cold-launches it with `simctl launch com.apple.webapp -webClipIdentifier`,
+  and fails when the viewport is shorter than the screen (the 812 vs 874pt
+  bug of #127). `--video` records the launch and writes ffmpeg contact
+  sheets. Install the web app once from the simulator's Safari (Share ›
+  Add to Home Screen); the script opens Safari and says how when it's missing.
 - **Typed queries:** `lib/supabase/database.types.ts` is generated from the
   migrations and never edited; `lib/supabase/database.ts` wraps it
   (`Database`, `DbClient`) and marks the few function arguments that take a

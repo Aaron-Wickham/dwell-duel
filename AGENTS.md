@@ -107,9 +107,29 @@ a line to `CHANGELOG.md` under the next release.
   the bottom. `globals.css` makes `body` at least `100lvh` tall in
   `display-mode: standalone`; `min-height: 100%` can't do it, because it is
   measured against that shrinking viewport. Don't remove it, and check
-  changes to the shell in the simulator's installed app, not just Safari.
+  changes to the shell in the simulator's installed app, not just Safari:
+  `npm run check:ios` cold-launches the installed app on a booted
+  simulator and fails on a short viewport (`--video` records the launch).
 - **The `pressable` and `no-callout` utilities,** plus the `--safe-top` /
   `--safe-bottom` tokens, which are non-zero only in standalone mode.
+  Every tap target is `pressable`. A card or row that one link makes
+  tappable as a whole is `relative pressable`, and its link carries
+  `stretched-link` (its `::after` covers the card); any other control in
+  the card sits in a `relative z-[1]` wrapper. `press-feedback.test.tsx`
+  guards the listed components. Under a mouse (`(hover: hover) and
+  (pointer: fine)`), `pressable` also grows a control to 103%; a card or
+  row adds `hover-lift` to lift onto `--lift-shadow` instead (a row in a
+  divided list, with no side padding, takes `hover-lift-row`, which lifts
+  onto a panel a little wider than itself). Both drop the
+  movement under reduced motion, and `pressable` carries the transition
+  for both, so a colour hover on a `pressable` eases on its own.
+- **Motion tokens.** Curves and durations are the `--ease-*` /
+  `--duration-*` tokens in `globals.css`'s `@theme static` block (`ease-ios`,
+  `duration-(--duration-fast)` in markup), mirrored for script by
+  `lib/ui/motion.ts` (`EASE`, `DURATION`, `PILL_SLIDE`, `PILL_TRANSITION`);
+  a test keeps them equal and fails on a `cubic-bezier` anywhere else.
+  Every sliding pill uses the pill slide, and every dialog takes
+  `components/ui/dialog-classes.ts`.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.
 - **Retry-safe money actions.** The slip and the balance adjustment send
   an attempt key (0047), held in a ref until the action succeeds and kept

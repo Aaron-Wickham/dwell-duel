@@ -4,10 +4,11 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useNavDepth } from '@/lib/nav/nav-depth'
 import { BACK_SWIPE_EDGE, BACK_SWIPE_SLOP, backSwipeDecision, logicalParent } from '@/lib/nav/back-swipe'
+import { DURATION, cssEase } from '@/lib/ui/motion'
 import { reducedMotion } from '@/lib/ui/reduced-motion'
 
-const SETTLE_MS = 280
-const SETTLE_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
+const SETTLE_MS = DURATION.slide
+const SETTLE_EASE = cssEase('ios')
 // Release velocity comes from the last 100ms of movement; a finger that stopped before lifting has none.
 const VELOCITY_WINDOW_MS = 100
 // If the navigation never unmounts this page (a failed or offline push), give the page back.

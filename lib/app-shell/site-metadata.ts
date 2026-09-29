@@ -45,9 +45,14 @@ export const siteMetadata: Metadata = {
 
 // viewport-fit=cover lets the page run under the notch and home indicator; the --safe-* tokens
 // in globals.css put the chrome back inside the safe area. resizes-content makes the keyboard
-// shrink the layout viewport instead of covering a focused field.
+// shrink the layout viewport instead of covering a focused field. Zoom is locked: a pinch-zoomed
+// installed app leaves the fixed top and tab bars displaced from the screen edges.
 export const siteViewport: Viewport = {
   themeColor: BRAND_TEAL,
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: 'cover',
   interactiveWidget: 'resizes-content',
 }

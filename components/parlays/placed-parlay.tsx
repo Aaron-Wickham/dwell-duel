@@ -29,8 +29,8 @@ export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: st
   const multiplier = `${formatOdds(parlay.multiplierBp)}×`
 
   return (
-    <li {...focusTarget(domId, titleId)} className="py-3">
-      <div className="pressable relative flex flex-col gap-3 rounded-[14px] border border-line p-3.5 md:p-4">
+    <li {...focusTarget(domId, titleId)} className="py-3 lg:py-0">
+      <div className="pressable relative flex flex-col gap-3 rounded-[14px] border border-line p-3.5 md:p-4 lg:h-full">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-0.5">
             <Link

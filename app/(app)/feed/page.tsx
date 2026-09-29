@@ -24,7 +24,7 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
   const backToNewestHref = newestHref('/feed', searchParams, 'before')
 
   return (
-    <Page transition="tab">
+    <Page transition="tab" width="reading">
       <PageHeader title="Feed" description="Everything that’s happened in DwellDuel, newest first." />
       <LiveTables subscriptions={pageSubscriptions.feed()} />
       <ShowMoreFocus />

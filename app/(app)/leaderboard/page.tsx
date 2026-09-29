@@ -20,6 +20,7 @@ import { Awards } from '@/components/leaderboard/awards'
 import { PastChampions } from '@/components/leaderboard/past-champions'
 import { Podium } from '@/components/leaderboard/podium'
 import { RaceChart } from '@/components/leaderboard/race-chart'
+import { cn } from '@/lib/utils'
 import { getAwards, getPastChampions, getRace, getRecords } from '@/lib/social/leaderboard-extras'
 
 const PATH = '/leaderboard'
@@ -78,11 +79,16 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
       </EmptyState>
     )
   } else {
+    const hasSide = showMonthExtras && (race.length > 0 || awards.length > 0)
+    const hasChampions = board === 'month' && !page.windowed && champions.length > 0
+    // At lg the month's extras move into a side column beside the rankings; on a phone they keep
+    // their order around it, which is why the race and awards sit in a wrapper that is only a box at lg.
+    const split = listed.length > 0 && (hasSide || hasChampions)
     const rankings = listed.length > 0 && (
       <SectionCard
         title={<span className="sr-only">{board === 'all' ? 'Net worth rankings' : 'This month’s rankings'}</span>}
         titleId="leaderboard-rankings"
-        className="max-w-[820px] gap-0 py-1.5 px-2 md:py-1.5 md:px-3"
+        className={cn('gap-0 py-1.5 px-2 md:py-1.5 md:px-3', split && 'lg:col-start-1 lg:row-span-2 lg:row-start-1')}
       >
         {page.windowed && (
           <div className="flex flex-col px-2.5 py-2.5 md:px-3.5">
@@ -125,10 +131,21 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
             meId={user.id}
           />
         )}
-        {showMonthExtras && <RaceChart series={race} />}
-        {showMonthExtras && <Awards awards={awards} />}
-        {rankings}
-        {board === 'month' && !page.windowed && <PastChampions champions={champions} />}
+        <div
+          className={cn(
+            'flex flex-col gap-5 md:gap-7',
+            split && 'lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_1fr] lg:items-start',
+          )}
+        >
+          {hasSide && (
+            <div className="contents lg:col-start-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-7">
+              <RaceChart series={race} />
+              <Awards awards={awards} />
+            </div>
+          )}
+          {rankings}
+          {hasChampions && <PastChampions champions={champions} className="lg:col-start-2" />}
+        </div>
       </>
     )
   }

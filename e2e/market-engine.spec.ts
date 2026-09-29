@@ -11,7 +11,7 @@ test('create a market, place a bet, and resolve it as admin', async ({ page }) =
   await page.getByRole('button', { name: 'Create market' }).click()
 
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)
-  await expect(page.getByRole('heading', { name: 'Will it rain tomorrow?' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Will it rain tomorrow?' })).toBeVisible()
 
   await placeSolo(page, 'Yes', 20)
 

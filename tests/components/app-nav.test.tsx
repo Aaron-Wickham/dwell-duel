@@ -278,6 +278,12 @@ describe('AppNav', () => {
     expect(admin).toHaveTextContent('3')
   })
 
+  it('keeps the desktop Admin link’s name plain too, with the count as its description', () => {
+    render(<Nav balance={120} isAdmin attention={3} />)
+    const desktop = within(screen.getAllByRole('banner')[0]).getByRole('link', { name: 'Admin' })
+    expect(desktop).toHaveAccessibleDescription('3 waiting')
+  })
+
   it('caps the badge at 9+', () => {
     render(<Nav balance={120} isAdmin attention={14} />)
     const admin = within(screen.getAllByRole('banner')[1]).getByRole('link', { name: 'Admin' })

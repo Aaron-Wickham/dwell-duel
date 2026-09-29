@@ -93,6 +93,7 @@ function DesktopLink({
       href={href}
       transitionTypes={transitionTypes}
       aria-current={active ? 'page' : undefined}
+      aria-label={label}
       aria-describedby={attention > 0 ? 'admin-attention-desktop' : undefined}
       title={label}
       className={cn(

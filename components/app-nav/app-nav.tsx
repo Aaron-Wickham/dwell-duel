@@ -12,6 +12,7 @@ import { AnimatedText } from '@/components/ui/animated-text'
 import { Avatar } from '@/components/ui/avatar'
 import { NavPendingHint } from '@/components/nav/nav-pending-hint'
 import { haptics } from '@/lib/haptics'
+import { PILL_TRANSITION } from '@/lib/ui/motion'
 import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS, activeNavId, type NavId } from './nav-items'
@@ -106,7 +107,7 @@ function DesktopLink({
           layoutId="nav-pill"
           aria-hidden="true"
           className="absolute inset-0 -z-10 rounded-full bg-primary"
-          transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
+          transition={PILL_TRANSITION}
         />
       )}
       <Icon aria-hidden="true" className={cn('size-5 xl:size-[18px]', !iconWithLabel && 'xl:hidden')} />

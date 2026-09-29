@@ -106,6 +106,13 @@ a line to `CHANGELOG.md` under the next release.
   changes to the shell in the simulator's installed app, not just Safari.
 - **The `pressable` and `no-callout` utilities,** plus the `--safe-top` /
   `--safe-bottom` tokens, which are non-zero only in standalone mode.
+- **Motion tokens.** Curves and durations are the `--ease-*` /
+  `--duration-*` tokens in `globals.css`'s `@theme static` block (`ease-ios`,
+  `duration-(--duration-fast)` in markup), mirrored for script by
+  `lib/ui/motion.ts` (`EASE`, `DURATION`, `PILL_SLIDE`, `PILL_TRANSITION`);
+  a test keeps them equal and fails on a `cubic-bezier` anywhere else.
+  Every sliding pill uses the pill slide, and every dialog takes
+  `components/ui/dialog-classes.ts`.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.
 - **Retry-safe money actions.** The slip and the balance adjustment send
   an attempt key (0047), held in a ref until the action succeeds and kept

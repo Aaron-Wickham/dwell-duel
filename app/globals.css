@@ -224,6 +224,23 @@
   --shadow-overlay: var(--overlay-shadow);
 }
 
+/* Motion tokens: every curve and duration the app moves with. lib/ui/motion.ts mirrors them for
+   script (Motion's springs and tweens, WAAPI), and tests/lib/ui/motion.test.ts keeps the two equal.
+   Static, so each is a variable on :root even when no utility uses it. */
+@theme static {
+  /* The iOS curve: fast out, long settle. Sliding pills, sheets, page moves, the back-swipe. */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  /* A small overshoot, for things that grow in: the launch screen's leaves. */
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-press: 120ms;
+  --duration-fast: 150ms;
+  --duration-hover: 180ms;
+  --duration-enter: 210ms;
+  --duration-slide: 280ms;
+  --duration-page: 360ms;
+  --duration-sheet: 450ms;
+}
+
 /* Chrome that is tapped, never read: a long press shouldn't select it or open iOS's callout menu.
    Text content stays selectable. */
 @utility no-callout {
@@ -237,7 +254,7 @@
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
-  transition: scale 120ms ease-out;
+  transition: scale var(--duration-press) ease-out;
 
   &:active:not(:disabled, [aria-disabled="true"]) {
     scale: 0.97;
@@ -385,9 +402,9 @@
    classes: nav-forward / nav-back from a link's transitionTypes, page-enter / page-exit for
    everything else. */
 :root {
-  --vt-exit: 150ms;
-  --vt-enter: 210ms;
-  --vt-move: 360ms;
+  --vt-exit: var(--duration-fast);
+  --vt-enter: var(--duration-enter);
+  --vt-move: var(--duration-page);
 }
 
 /* The overlay would otherwise swallow every tap made while a transition runs. */
@@ -414,25 +431,25 @@
   --vt-offset: -60px;
   animation:
     var(--vt-exit) ease-in both vt-fade reverse,
-    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x reverse;
+    var(--vt-move) var(--ease-ios) both vt-slide-x reverse;
 }
 ::view-transition-new(.nav-forward) {
   --vt-offset: 60px;
   animation:
     var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
-    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x;
+    var(--vt-move) var(--ease-ios) both vt-slide-x;
 }
 ::view-transition-old(.nav-back) {
   --vt-offset: 60px;
   animation:
     var(--vt-exit) ease-in both vt-fade reverse,
-    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x reverse;
+    var(--vt-move) var(--ease-ios) both vt-slide-x reverse;
 }
 ::view-transition-new(.nav-back) {
   --vt-offset: -60px;
   animation:
     var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
-    var(--vt-move) cubic-bezier(0.32, 0.72, 0, 1) both vt-slide-x;
+    var(--vt-move) var(--ease-ios) both vt-slide-x;
 }
 
 ::view-transition-old(.page-exit) {
@@ -488,7 +505,7 @@
 }
 .nav-pending-hint[data-pending] {
   animation:
-    vt-hint-in 150ms ease-out 120ms forwards,
+    vt-hint-in var(--duration-fast) ease-out 120ms forwards,
     vt-hint-pulse 1s ease-in-out 270ms infinite;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -534,7 +551,7 @@
   transform-origin: 50% 100%;
   scale: 0;
   rotate: -25deg;
-  animation: launch-leaf 420ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: launch-leaf 420ms var(--ease-pop) forwards;
 }
 @keyframes launch-leaf {
   to {
@@ -583,4 +600,11 @@
 }
 :root[data-motion="reduce"] .leaf-pulse {
   animation: none;
+}
+
+/* Sonner stills its toasts for the device setting on its own; this does the same for Settings'
+   "Reduce animations", which Sonner can't see. */
+:root[data-motion="reduce"] :is(.sonner-loading-bar, [data-sonner-toast], [data-sonner-toast] > *) {
+  transition: none !important;
+  animation: none !important;
 }

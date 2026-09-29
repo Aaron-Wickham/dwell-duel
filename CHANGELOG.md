@@ -13,6 +13,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Parlays open into a breakdown:** each parlay on My bets is one tappable card (stake, multiplier, what it pays, a progress bar of its picks) leading to a new page with every pick's locked odds and result, and how the multiplier adds up (#120).
 
 ### Fixes
+- **Settings' "Reduce animations" stills toasts too:** they used to slide and fade unless the device itself asked for reduced motion (#157).
 - **The tab bar and launch animation sit right in iPhone's installed app.** On a page too short to scroll, the app gave the page a viewport about 62pt short, so the tab bar floated above the bottom and jumped when a page finished loading, and the launch animation left a bar at the bottom. The page is now always at least screen-tall there, and the launch overlay is sized to the whole screen from its first frame, which also stops its D flashing doubled and jumping before the leaves grow (#127, #128).
 - **Sub-tabs slide like the main nav:** the active pill on My bets, Leaderboard, Markets and Admin's tabs glides to the new tab, and stays still with reduced motion (#117).
 - **Cancel and Remove sit at the status chip's height** on My bets and market pages, instead of a full-size button beside a small chip (#118).
@@ -27,6 +28,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ### Under the hood
 - **Migrations apply on merge with no approval step,** so keep them additive; the workflow no longer waits on the `production-db` environment (#138).
 - **A GitHub Actions schedule** (`closing-alerts.yml`, every ten minutes, needs the `CRON_SECRET` repository secret) calls `/api/cron/closing-alerts`, because Vercel's Hobby cron runs once a day. The daily cron still sends the same alerts as a backstop (#123).
+- **Shared motion tokens:** every curve and duration comes from one set of `--ease-*` / `--duration-*` tokens in `globals.css`, mirrored for script in `lib/ui/motion.ts`, and a test fails on a hard-coded curve. The desktop nav's pill and the sub-tabs' pill now slide the same way, and the three dialogs share one animation (#157).
 - **The coin-history index test no longer fails at random:** it asserts that the keyset bound lands in an index condition, whichever ledger index the planner picks (#139).
 - The rules doc, which the How it works page renders, now covers the markets filter, the parlay breakdown and review alerts.
 - Upgraded Vitest 5 and the CI actions (checkout 7, setup-node 7, cache 6, upload-artifact 7, Supabase setup-cli 3) from Dependabot #92–#97. TypeScript moves to 6.0 (#114) and stays below 7, and ESLint stays on 9, until typescript-eslint and eslint-config-next's plugins support TS 7 and ESLint 10, and @types/node stays on Node 22's line (#98–#100).

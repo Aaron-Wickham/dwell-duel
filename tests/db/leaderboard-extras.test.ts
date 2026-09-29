@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { combineOdds, formatOdds, lockedOddsToBp } from '@/lib/parlays/odds'
+import { getParlayDetail } from '@/lib/parlays/get-parlay'
+import { readMemberStats } from '@/lib/members/stats'
 import { serviceClient } from './helpers'
 import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
 
@@ -101,6 +104,36 @@ describe('leaderboard_awards', () => {
     // Bob and Carol have one bet each and Carol a parlay, so Carol is most active.
     expect(award(rows, 'most_active')).toMatchObject({ profile_id: carol.id })
     expect(Number(award(rows, 'most_active')?.value)).toBe(2)
+  })
+
+  it('gives best parlay the multiplier the parlay page and the Stats card show, not the floored payout over the stake', async () => {
+    // Bob's 30 on Yes leaves it 50 of 70 seeded: 1.40×. The other leg is 2.00×, and a third is voided
+    // and drops out. 3 DC at 2.80× pays floor(8.4) = 8, which is only 2.66× the stake.
+    const skewed = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    await bet(bobClient, skewed, 0, 30)
+    const even = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    const voided = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    const { data: parlayId, error } = await carolClient.rpc('place_parlay', {
+      p_outcome_ids: [skewed.outcomeIds[0], even.outcomeIds[0], voided.outcomeIds[0]],
+      p_stake: 3,
+    })
+    if (error) throw error
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId })
+    if (voidErr) throw voidErr
+    await resolve(skewed, 0)
+    await resolve(even, 0)
+
+    const detail = await getParlayDetail(carolClient, parlayId as string)
+    expect(detail).toMatchObject({ status: 'won', credited: 8 })
+    const shown = combineOdds(detail!.legs.filter((l) => l.status !== 'voided').map((l) => l.lockedOddsBp)).multiplierBp
+    expect(shown).toBe(detail!.multiplierBp)
+    expect(formatOdds(shown)).toBe('2.80')
+
+    const best = award(await awards(aliceClient), 'best_parlay')
+    expect(best).toMatchObject({ profile_id: carol.id })
+    expect(lockedOddsToBp(best!.value)).toBe(shown)
+    const stats = await readMemberStats(bobClient, carol.id)
+    expect(stats.bestParlay?.multiplierBp).toBe(shown)
   })
 
   it('gives sharpshooter to the best hit rate over at least five decided bets, and takes back an overridden win', async () => {

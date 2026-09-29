@@ -339,6 +339,7 @@ after it ships. They roughly follow the project's history:
 | 0058 | Review alerts (#123): `notification_prefs.review_alerts`, `push_task_alerts`, `push_market_alerts`, the `market_alert` kind in `push_log`, and `my_review_counts` for the Admin badge |
 | 0057 | Push notifications: `push_subscriptions`, `notification_prefs`, `push_log`, `save_push_subscription` and the service-role `push_*` recipient functions |
 | 0059 | Leaderboard extras (#121): `leaderboard_race`, `leaderboard_awards`, `member_records` (security definer, invited members only, aggregates only) |
+| 0060 | Best parlay award (#146): `leaderboard_awards` computes Best parlay's multiplier as `member_stats` does (resolved legs' locked odds multiplied, capped), not credited / stake |
 | 0062 | `leaderboard_race_steps` (#145): the race from the month's first settled bet, step by step, replacing `leaderboard_race`'s day-by-day points (a new function, so the old one keeps working during the deploy) |
 
 Every merge to `main` runs the **Deploy Production** workflow, with no

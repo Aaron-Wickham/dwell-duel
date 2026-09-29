@@ -114,6 +114,8 @@ describe('push_subscriptions RLS', () => {
       ['push_resolve_reminders', undefined],
       ['push_market_result', { p_market_id: '00000000-0000-0000-0000-000000000000' }],
       ['push_task_reviews', { p_completion_ids: [] }],
+      ['push_task_alerts', { p_completion_id: '00000000-0000-0000-0000-000000000000' }],
+      ['push_market_alerts', undefined],
       ['push_new_market', { p_market_id: '00000000-0000-0000-0000-000000000000' }],
       ['push_wants', { p_profile_id: alice.id, p_kind: 'results' }],
     ] as const) {
@@ -131,16 +133,17 @@ describe('notification_prefs', () => {
     expect(await wants('results')).toBe(true)
     expect(await wants('task_reviews')).toBe(true)
     expect(await wants('new_markets')).toBe(false)
+    expect(await wants('review_alerts')).toBe(true)
   })
 
   it('fills in the same defaults on a new row', async () => {
     const { data, error } = await aliceClient
       .from('notification_prefs')
       .insert({ profile_id: alice.id })
-      .select('resolve_reminders, results, task_reviews, new_markets')
+      .select('resolve_reminders, results, task_reviews, new_markets, review_alerts')
       .single()
     if (error) throw error
-    expect(data).toEqual({ resolve_reminders: true, results: true, task_reviews: true, new_markets: false })
+    expect(data).toEqual({ resolve_reminders: true, results: true, task_reviews: true, new_markets: false, review_alerts: true })
   })
 
   it("lets a member read and change only their own row", async () => {
@@ -296,5 +299,109 @@ describe('recipients', () => {
     expect(await rpcOk(serviceClient(), 'push_new_market', { p_market_id: market.marketId })).toEqual([
       { profile_id: bob.id, title: 'Sermon past noon?' },
     ])
+  })
+})
+
+async function setRole(m: Member, role: 'reviewer' | 'admin' | 'owner'): Promise<void> {
+  const { error } = await serviceClient().from('profiles').update({ role }).eq('id', m.id)
+  if (error) throw error
+}
+
+// A reviewer on the invite list, as a real one always is: push_wants skips anyone who isn't.
+async function makeReviewer(name: string): Promise<{ member: Member; client: SupabaseClient }> {
+  const member = await makeMember(name)
+  await setRole(member, 'reviewer')
+  const client = await clientFor(member)
+  await ensureInvited(client)
+  return { member, client }
+}
+
+async function submitTask(m: Member, taskId: string): Promise<string> {
+  const { data, error } = await serviceClient()
+    .from('task_completions')
+    .insert({ task_id: taskId, profile_id: m.id, reward_amount: 10, period_key: 'once' })
+    .select('id')
+    .single()
+  if (error) throw error
+  return data.id as string
+}
+
+describe('review alerts (0058)', () => {
+  it('tells reviewers and above about a submission, never the submitter or a plain member', async () => {
+    const { member: reviewer } = await makeReviewer('Rae')
+    const { taskId } = await createTestTask(admin, { title: 'Read Psalm 23' })
+    const completion = await submitTask(alice, taskId)
+    for (const m of [alice, bob, reviewer, admin]) await subscribe(m)
+
+    const rows = await rpcOk<{ profile_id: string; task_title: string; submitter_name: string }[]>(serviceClient(), 'push_task_alerts', {
+      p_completion_id: completion,
+    })
+    expect(rows.map((r) => r.profile_id).sort()).toEqual([reviewer.id, admin.id].sort())
+    expect(rows[0]).toMatchObject({ task_title: 'Read Psalm 23', submitter_name: alice.displayName })
+  })
+
+  it('leaves out a submitter who is themselves a reviewer, and a reviewer who turned alerts off', async () => {
+    const { member: reviewer } = await makeReviewer('Rae')
+    await setRole(alice, 'reviewer')
+    const { taskId } = await createTestTask(admin)
+    const completion = await submitTask(alice, taskId)
+    for (const m of [alice, reviewer, admin]) await subscribe(m)
+    await setPrefs(reviewer, { review_alerts: false })
+
+    const rows = await rpcOk<{ profile_id: string }[]>(serviceClient(), 'push_task_alerts', { p_completion_id: completion })
+    expect(rows.map((r) => r.profile_id)).toEqual([admin.id])
+  })
+
+  it('sends nothing for a submission that has already been reviewed', async () => {
+    const { taskId } = await createTestTask(admin)
+    const completion = await submitTask(alice, taskId)
+    await subscribe(admin)
+    await rpcOk(adminClient, 'approve_task_completion', { p_completion_id: completion })
+    expect(await rpcOk(serviceClient(), 'push_task_alerts', { p_completion_id: completion })).toEqual([])
+  })
+
+  it('alerts admins, not reviewers or the creator, once per closed market', async () => {
+    const { member: reviewer } = await makeReviewer('Rae')
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Sermon past noon?' })
+    await closeNow(market.marketId)
+    for (const m of [alice, reviewer, admin]) await subscribe(m)
+
+    const rows = await rpcOk<{ market_id: string; title: string; profile_id: string }[]>(serviceClient(), 'push_market_alerts')
+    expect(rows).toEqual([{ market_id: market.marketId, title: 'Sermon past noon?', profile_id: admin.id }])
+    expect(await rpcOk(serviceClient(), 'push_market_alerts')).toEqual([])
+  })
+
+  it('does not alert for a market that is still open, and tells the admin who made it only through the reminder', async () => {
+    const open = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Still open' })
+    const own = await createTestMarket(adminClient, ['Yes', 'No'], { title: 'Admin made it' })
+    await closeNow(own.marketId)
+    await subscribe(admin)
+
+    expect(open.marketId).not.toBe(own.marketId)
+    expect(await rpcOk(serviceClient(), 'push_market_alerts')).toEqual([])
+  })
+
+  it('holds a market alert until an admin has notifications on', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Due' })
+    await closeNow(market.marketId)
+    expect(await rpcOk(serviceClient(), 'push_market_alerts')).toEqual([])
+    await subscribe(admin)
+    expect(await rpcOk<unknown[]>(serviceClient(), 'push_market_alerts')).toHaveLength(1)
+  })
+
+  it('counts what is waiting on the caller by role', async () => {
+    const { client: reviewerClient } = await makeReviewer('Rae')
+    const { taskId } = await createTestTask(admin)
+    await submitTask(alice, taskId)
+    await submitTask(admin, (await createTestTask(admin, { title: 'Another' })).taskId)
+    const closed = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await closeNow(closed.marketId)
+    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Not closed yet' })
+
+    const counts = async (c: SupabaseClient) => (await rpcOk<{ tasks: number; markets: number }[]>(c, 'my_review_counts'))[0]
+    expect(await counts(aliceClient)).toEqual({ tasks: 0, markets: 0 })
+    expect(await counts(reviewerClient)).toEqual({ tasks: 2, markets: 0 })
+    // The admin's own submission never counts for them.
+    expect(await counts(adminClient)).toEqual({ tasks: 1, markets: 1 })
   })
 })

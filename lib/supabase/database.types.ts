@@ -632,6 +632,7 @@ export type Database = {
           profile_id: string
           resolve_reminders: boolean
           results: boolean
+          review_alerts: boolean
           task_reviews: boolean
           updated_at: string
         }
@@ -640,6 +641,7 @@ export type Database = {
           profile_id: string
           resolve_reminders?: boolean
           results?: boolean
+          review_alerts?: boolean
           task_reviews?: boolean
           updated_at?: string
         }
@@ -648,6 +650,7 @@ export type Database = {
           profile_id?: string
           resolve_reminders?: boolean
           results?: boolean
+          review_alerts?: boolean
           task_reviews?: boolean
           updated_at?: string
         }
@@ -1148,6 +1151,17 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_invited: { Args: never; Returns: boolean }
+      leaderboard_awards: {
+        Args: never
+        Returns: {
+          avatar_path: string
+          detail: string
+          display_name: string
+          kind: string
+          profile_id: string
+          value: number
+        }[]
+      }
       leaderboard_month: {
         Args: never
         Returns: {
@@ -1168,6 +1182,15 @@ export type Database = {
           id: string
           rank: number
           score: number
+        }[]
+      }
+      leaderboard_race: {
+        Args: { p_top?: number }
+        Returns: {
+          day: string
+          display_name: string
+          profile_id: string
+          profit: number
         }[]
       }
       market_sparklines: {
@@ -1201,6 +1224,14 @@ export type Database = {
           id: string
         }[]
       }
+      member_records: {
+        Args: { p_ids: string[] }
+        Returns: {
+          lost: number
+          profile_id: string
+          won: number
+        }[]
+      }
       member_stats: {
         Args: { p_profile_id: string }
         Returns: {
@@ -1225,6 +1256,13 @@ export type Database = {
         Returns: {
           dc: number
           wagers: number
+        }[]
+      }
+      my_review_counts: {
+        Args: never
+        Returns: {
+          markets: number
+          tasks: number
         }[]
       }
       my_role: { Args: never; Returns: string }
@@ -1264,6 +1302,14 @@ export type Database = {
         }
         Returns: string
       }
+      push_market_alerts: {
+        Args: never
+        Returns: {
+          market_id: string
+          profile_id: string
+          title: string
+        }[]
+      }
       push_market_result: {
         Args: { p_market_id: string }
         Returns: {
@@ -1290,6 +1336,14 @@ export type Database = {
           market_id: string
           profile_id: string
           title: string
+        }[]
+      }
+      push_task_alerts: {
+        Args: { p_completion_id: string }
+        Returns: {
+          profile_id: string
+          submitter_name: string
+          task_title: string
         }[]
       }
       push_task_reviews: {

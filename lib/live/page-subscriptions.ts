@@ -75,6 +75,15 @@ export const pageSubscriptions = {
       { table: 'markets' },
     ]
   },
+  // A parlay's page: its own row (status, credit), its legs, and every market, since a leg's
+  // result comes from the market resolving.
+  parlay(parlayId: string): LiveSubscription[] {
+    return [
+      { table: 'parlays', filter: `id=eq.${parlayId}` },
+      { table: 'parlay_legs', filter: `parlay_id=eq.${parlayId}` },
+      { table: 'markets' },
+    ]
+  },
   // coin_transactions isn't published for realtime, but every row in it moves the member's own
   // balance in the same transaction, so their profile row changes whenever their history does.
   myCoins(userId: string): LiveSubscription[] {

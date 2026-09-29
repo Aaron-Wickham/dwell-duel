@@ -9,11 +9,18 @@ vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
 )
 
-const { getLeaderboardPage, requestShowMoreFocus } = vi.hoisted(() => ({
+const { getLeaderboardPage, requestShowMoreFocus, getRecords, getRace, getAwards, getPastChampions } = vi.hoisted(() => ({
   getLeaderboardPage: vi.fn(),
   requestShowMoreFocus: vi.fn(),
+  getRecords: vi.fn(),
+  getRace: vi.fn(),
+  getAwards: vi.fn(),
+  getPastChampions: vi.fn(),
 }))
 vi.mock('@/lib/social/leaderboard', () => ({ getLeaderboardPage }))
+vi.mock('@/lib/social/leaderboard-extras', () => ({ getRecords, getRace, getAwards, getPastChampions }))
+// Recharts needs layout jsdom doesn't have; the chart has its own test.
+vi.mock('@/components/leaderboard/race-chart', () => ({ RaceChart: ({ series }: { series: unknown[] }) => <div data-testid="race">{series.length}</div> }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase: {}, user: { id: 'p-me' } }) }))
 vi.mock('@/components/live/live-tables', () => ({ LiveTables: () => null }))
 vi.mock('@/components/ui/show-more-focus', () => ({ ShowMoreFocus: () => null, requestShowMoreFocus }))
@@ -59,6 +66,10 @@ async function renderPage(board: KeysetPage<LeaderboardEntry>, searchParams: Rec
 beforeEach(() => {
   getLeaderboardPage.mockReset()
   requestShowMoreFocus.mockReset()
+  getRecords.mockReset().mockResolvedValue(new Map())
+  getRace.mockReset().mockResolvedValue([])
+  getAwards.mockReset().mockResolvedValue([])
+  getPastChampions.mockReset().mockResolvedValue([])
 })
 
 describe('LeaderboardPage', () => {
@@ -70,20 +81,21 @@ describe('LeaderboardPage', () => {
 
   it('shows Show more under the ranks, keeping the scroll position, and moves focus to the first new member', async () => {
     await renderPage({
-      rows: [member(1, 50, 1), member(2, 50, 1), member(3, 40, 3)],
-      next: { kind: 'extend', cursor: 'NEXT', firstId: member(4, 30, 4).id },
+      rows: [member(1, 50, 1), member(2, 50, 1), member(3, 40, 3), member(4, 30, 4), member(5, 30, 4)],
+      next: { kind: 'extend', cursor: 'NEXT', firstId: member(6, 20, 6).id },
       windowed: false,
     })
 
-    expect(screen.getByRole('listitem', { name: /Rank 1.*Member 1/ })).toHaveAttribute('id', `member-${member(1, 50, 1).id}`)
-    expect(screen.getAllByText('Rank 1', { exact: false })).toHaveLength(2)
+    // The top three stand on the podium; the list carries on from fourth place, ties sharing a rank.
+    expect(screen.getByRole('listitem', { name: /Rank 4.*Member 4/ })).toHaveAttribute('id', `member-${member(4, 30, 4).id}`)
+    expect(screen.getAllByText('Rank 4', { exact: false })).toHaveLength(2)
     expect(screen.queryByRole('link', { name: 'Back to newest' })).toBeNull()
     const showMore = screen.getByRole('link', { name: 'Show more' })
     expect(showMore).toHaveAttribute('href', '/leaderboard?before=NEXT')
     expect(showMore).toHaveAttribute('data-scroll', 'false')
 
     fireEvent.click(showMore)
-    expect(requestShowMoreFocus).toHaveBeenCalledWith(`member-${member(4, 30, 4).id}`)
+    expect(requestShowMoreFocus).toHaveBeenCalledWith(`member-${member(6, 20, 6).id}`)
   })
 
   it('starts a fresh window at the top of the page, with Back to newest above it', async () => {
@@ -149,5 +161,70 @@ describe('LeaderboardPage', () => {
   it('shows a month board of one, since one bettor is still a board', async () => {
     await renderPage({ rows: [member(1, 12, 1)], next: null, windowed: false }, { tab: 'month' })
     expect(screen.getByText('+12 DC')).toBeInTheDocument()
+  })
+
+  it('stands the top three on a podium, winner in the middle, and lists the rest', async () => {
+    await renderPage({
+      rows: [member(1, 90, 1), member(2, 80, 2), member(3, 70, 3), member(4, 60, 4)],
+      next: null,
+      windowed: false,
+    })
+    const podium = screen.getByRole('region', { name: 'Top three' })
+    const names = within(podium).getAllByRole('link').map((link) => link.textContent)
+    expect(names).toEqual(['Member 2', 'Member 1', 'Member 3'])
+    expect(within(podium).getByText('90 DC')).toBeInTheDocument()
+    expect(screen.getAllByRole('listitem', { name: /Member/ })).toHaveLength(1)
+  })
+
+  it('has no podium for fewer than three, or inside a window part-way down the board', async () => {
+    await renderPage({ rows: [member(1, 90, 1), member(2, 80, 2)], next: null, windowed: false })
+    expect(screen.queryByRole('region', { name: 'Top three' })).toBeNull()
+    expect(screen.getAllByRole('listitem', { name: /Member/ })).toHaveLength(2)
+  })
+
+  it('shows win-loss records on the rows that have settled bets', async () => {
+    getRecords.mockResolvedValue(new Map([[member(4, 60, 4).id, { won: 6, lost: 3 }]]))
+    await renderPage({
+      rows: [member(1, 90, 1), member(2, 80, 2), member(3, 70, 3), member(4, 60, 4), member(5, 50, 5)],
+      next: null,
+      windowed: false,
+    })
+    const rows = screen.getAllByRole('listitem', { name: /Member/ })
+    expect(within(rows[0]).getByText('6-3')).toBeInTheDocument()
+    expect(within(rows[0]).getByText('6 won, 3 lost')).toBeInTheDocument()
+    expect(within(rows[1]).queryByText(/-/)).toBeNull()
+  })
+
+  it('adds the race, awards and past champions to This month, and only the podium and records to Net worth', async () => {
+    getRace.mockResolvedValue([{ id: 'a', name: 'Aaron', points: [], final: 5 }])
+    getAwards.mockResolvedValue([{ kind: 'biggest_win', memberId: 'a', name: 'Aaron', avatarSrc: null, value: 64, detail: 'Will it rain?' }])
+    getPastChampions.mockResolvedValue([{ season: '2026-08', memberId: 'a', name: 'Aaron', profit: 140 }])
+    const board = { rows: [member(1, 90, 1), member(2, 80, 2), member(3, 70, 3)], next: null, windowed: false }
+
+    await renderPage(board, { tab: 'month' })
+    expect(screen.getByTestId('race')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'This month’s awards' })).toBeInTheDocument()
+    expect(screen.getByText('+64 DC')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Past champions' })).toBeInTheDocument()
+    expect(screen.getByText('+140 DC')).toBeInTheDocument()
+  })
+
+  it('reads none of the month’s extras for the Net worth board', async () => {
+    await renderPage({ rows: [member(1, 90, 1), member(2, 80, 2), member(3, 70, 3)], next: null, windowed: false })
+    expect(getRace).not.toHaveBeenCalled()
+    expect(getAwards).not.toHaveBeenCalled()
+    expect(getPastChampions).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('race')).toBeNull()
+  })
+
+  it('leaves the race and awards out of a window part-way down This month', async () => {
+    await renderPage(
+      { rows: [member(11, 5, 11), member(12, 4, 12), member(13, 3, 13)], next: null, windowed: true },
+      { tab: 'month', before_from: 'OLD' },
+    )
+    expect(getRace).not.toHaveBeenCalled()
+    expect(getAwards).not.toHaveBeenCalled()
+    expect(screen.queryByRole('region', { name: 'Top three' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Past champions' })).toBeNull()
   })
 })

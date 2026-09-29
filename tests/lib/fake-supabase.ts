@@ -64,6 +64,10 @@ export function fakeSupabase(respond: (query: RecordedQuery, index: number) => F
           query.order.push([column, options])
           return builder
         },
+        // A single-row read answers with whatever `respond` gives, so it hands back the row itself.
+        maybeSingle() {
+          return builder
+        },
         limit(count: number) {
           query.limit = count
           return builder

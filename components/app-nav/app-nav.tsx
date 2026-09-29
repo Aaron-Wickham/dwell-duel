@@ -78,6 +78,7 @@ function DesktopLink({
   icon: Icon,
   iconWithLabel = false,
   transitionTypes,
+  attention = 0,
 }: {
   href: string
   label: string
@@ -85,12 +86,15 @@ function DesktopLink({
   icon: LucideIcon
   iconWithLabel?: boolean
   transitionTypes?: string[]
+  attention?: number
 }) {
   return (
     <Link
       href={href}
       transitionTypes={transitionTypes}
       aria-current={active ? 'page' : undefined}
+      aria-label={label}
+      aria-describedby={attention > 0 ? 'admin-attention-desktop' : undefined}
       title={label}
       className={cn(
         'pressable relative isolate inline-flex min-h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap rounded-full text-[15px] font-bold no-underline xl:px-3.5',
@@ -107,13 +111,52 @@ function DesktopLink({
       )}
       <Icon aria-hidden="true" className={cn('size-5 xl:size-[18px]', !iconWithLabel && 'xl:hidden')} />
       <span className="max-xl:sr-only">{label}</span>
+      <AttentionNote id="admin-attention-desktop" count={attention} />
+      <AttentionBadge count={attention} className="-top-1 -right-1" />
       <NavPendingHint className="inset-x-3.5 bottom-1 h-0.5" />
     </Link>
   )
 }
 
 // adminHref is null for members; reviewers land on the approval queue, admins on invites.
-export function AppNav({ balance, adminHref, me }: { balance: number; adminHref: string | null; me: NavMember }) {
+// A count on the Admin button for what waits on the viewer (tasks to review, markets to resolve).
+// Decorative to assistive tech: the button's own name carries the number.
+function AttentionBadge({ count, className }: { count: number; className?: string }) {
+  if (count <= 0) return null
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'pointer-events-none absolute flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-loss px-1 text-[11px] leading-none font-extrabold text-on-primary tabular-nums ring-2 ring-surface',
+        className,
+      )}
+    >
+      {count > 9 ? '9+' : count}
+    </span>
+  )
+}
+
+// Read after the button's name, which stays plain "Admin" so it's found the same way with or without work waiting.
+function AttentionNote({ id, count }: { id: string; count: number }) {
+  if (count <= 0) return null
+  return (
+    <span id={id} className="sr-only">
+      {`${count} waiting`}
+    </span>
+  )
+}
+
+export function AppNav({
+  balance,
+  adminHref,
+  adminAttention = 0,
+  me,
+}: {
+  balance: number
+  adminHref: string | null
+  adminAttention?: number
+  me: NavMember
+}) {
   const pathname = usePathname()
   const motionReduced = useMotionSettingReduced()
   // Your own profile belongs to the avatar, not the Leaderboard tab.
@@ -157,6 +200,7 @@ export function AppNav({ balance, adminHref, me }: { balance: number; adminHref:
                   icon={ShieldCheck}
                   iconWithLabel
                   transitionTypes={['nav-forward']}
+                  attention={adminAttention}
                 />
               </>
             )}
@@ -189,6 +233,7 @@ export function AppNav({ balance, adminHref, me }: { balance: number; adminHref:
               href={adminHref}
               transitionTypes={['nav-forward']}
               aria-label="Admin"
+              aria-describedby={adminAttention > 0 ? 'admin-attention-mobile' : undefined}
               aria-current={active === 'admin' ? 'page' : undefined}
               className={cn(
                 'pressable relative inline-flex size-11 shrink-0 items-center justify-center rounded-control no-underline',
@@ -196,6 +241,8 @@ export function AppNav({ balance, adminHref, me }: { balance: number; adminHref:
               )}
             >
               <ShieldCheck aria-hidden="true" className="size-[22px]" />
+              <AttentionNote id="admin-attention-mobile" count={adminAttention} />
+              <AttentionBadge count={adminAttention} className="top-1 right-1" />
               <NavPendingHint className="inset-x-3 bottom-1 h-0.5" />
             </Link>
           )}

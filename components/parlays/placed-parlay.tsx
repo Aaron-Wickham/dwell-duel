@@ -1,85 +1,80 @@
+import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { LocalTime } from '@/components/ui/local-time'
-import { StatusChip } from '@/components/ui/status-chip'
-import type { LegStatus } from '@/lib/parlays/leg-status'
-import type { ParlayView } from '@/lib/parlays/list-parlays'
 import { formatOdds, MAX_MULTIPLIER } from '@/lib/parlays/odds'
+import type { ParlayView } from '@/lib/parlays/list-parlays'
 import { focusTarget } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
+import { FIGURE_TONE, LegPill, ParlayProgress, ParlayStatusChip, outcomeFigure } from './parlay-parts'
 
-const LEG_PILL: Record<LegStatus, string> = {
-  pending: 'bg-gold-soft text-gold',
-  won: 'bg-acc-soft text-acc-text',
-  lost: 'bg-loss-soft text-loss',
-  voided: 'bg-sunk text-ink2',
+// A card shows this many picks; the rest are one tap away on the parlay's page.
+const PREVIEW_LEGS = 3
+
+function Figure({ label, value, className }: { label: string; value: string; className?: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="text-xs text-ink2">{label}</span>
+      <span className={cn('text-[19px] leading-tight font-extrabold tabular-nums', className)}>{value}</span>
+    </div>
+  )
 }
 
-const LEG_LABEL: Record<LegStatus, string> = {
-  pending: 'Open',
-  won: 'Won',
-  lost: 'Lost',
-  voided: 'Voided',
-}
-
-function StatusBadge({ parlay }: { parlay: ParlayView }) {
-  switch (parlay.status) {
-    case 'pending':
-      return <StatusChip tone="open">Open</StatusChip>
-    case 'won':
-      return <StatusChip tone="done">Won {parlay.credited} DC</StatusChip>
-    case 'lost':
-      return <StatusChip tone="lost">Lost</StatusChip>
-    case 'refunded':
-      return <StatusChip tone="void">Refunded</StatusChip>
-  }
-}
-
-function terms(p: ParlayView): string {
-  if (p.status === 'refunded') return `${p.stake} DC returned`
-  const odds = `${p.stake} DC at ${formatOdds(p.multiplierBp)}×${p.capped ? ` (capped at ${MAX_MULTIPLIER}×)` : ''}`
-  return p.status === 'pending' ? `${odds} · pays ${p.potentialPayout} DC if every pick wins` : odds
-}
-
-// A parlay in My bets' list: a card inside the row, so it reads as one wager with its legs.
+// A parlay in My bets' list: one card, tappable as a whole (the title link stretches over it),
+// leading to its breakdown. Its picks are plain text here, so no link sits inside another.
 export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: string }) {
   const titleId = domId ? `${domId}-title` : undefined
+  const figure = outcomeFigure(parlay)
+  const shown = parlay.legs.slice(0, PREVIEW_LEGS)
+  const hidden = parlay.legs.length - shown.length
+  const multiplier = `${formatOdds(parlay.multiplierBp)}×`
+
   return (
     <li {...focusTarget(domId, titleId)} className="py-3">
-      <div className="flex flex-col gap-2 rounded-[14px] border border-line p-3.5 md:p-4">
+      <div className="pressable relative flex flex-col gap-3 rounded-[14px] border border-line p-3.5 md:p-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1">
-            <p id={titleId} className="font-bold">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <Link
+              id={titleId}
+              href={`/parlays/${parlay.id}`}
+              transitionTypes={['nav-forward']}
+              className="font-bold no-underline after:absolute after:inset-0 after:rounded-[14px] after:content-['']"
+            >
               Parlay · {parlay.legs.length} picks
-            </p>
+            </Link>
             <p className="text-sm text-ink2">
-              {terms(parlay)} · Placed <LocalTime iso={parlay.createdAt} format="dateTime" />
+              Placed <LocalTime iso={parlay.createdAt} format="dateTime" />
             </p>
           </div>
           <div className="shrink-0">
-            <StatusBadge parlay={parlay} />
+            <ParlayStatusChip parlay={parlay} />
           </div>
         </div>
+
+        <div className="grid grid-cols-3 items-end gap-2">
+          <Figure label="Stake" value={`${parlay.stake} DC`} />
+          <Figure label={parlay.capped ? `Multiplier (max ${MAX_MULTIPLIER}×)` : 'Multiplier'} value={multiplier} />
+          <Figure label={figure.label} value={figure.value} className={FIGURE_TONE[figure.tone]} />
+        </div>
+
+        <ParlayProgress legs={parlay.legs} />
+
         <ul className="flex flex-col divide-y divide-line border-t border-line">
-          {parlay.legs.map((leg) => (
+          {shown.map((leg) => (
             <li key={leg.marketId} className="flex items-center justify-between gap-3 py-2 text-[15px]">
               <span className="min-w-0 grow break-words">
-                <Link href={`/markets/${leg.marketId}`} transitionTypes={['nav-forward']} className="hit-area">
-                  {leg.marketTitle}
-                </Link>
+                {leg.marketTitle}
                 {' — '}
                 <strong>{leg.outcomeLabel}</strong>
               </span>
-              <span
-                className={cn(
-                  'inline-flex h-6 items-center whitespace-nowrap rounded-full px-[9px] text-xs font-extrabold',
-                  LEG_PILL[leg.status],
-                )}
-              >
-                {LEG_LABEL[leg.status]}
-              </span>
+              <LegPill status={leg.status} />
             </li>
           ))}
         </ul>
+
+        <p aria-hidden="true" className="flex items-center justify-between text-sm font-bold text-ink2">
+          <span>{hidden > 0 ? `+${hidden} more ${hidden === 1 ? 'pick' : 'picks'} · View breakdown` : 'View breakdown'}</span>
+          <ChevronRight className="size-4" />
+        </p>
       </div>
     </li>
   )

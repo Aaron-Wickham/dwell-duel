@@ -10,6 +10,7 @@ export function LeaderboardRow({
   avatarSrc = null,
   score,
   signed = false,
+  record,
   isMe,
   href,
   domId,
@@ -20,6 +21,8 @@ export function LeaderboardRow({
   score: number
   // A month's profit shows its sign; net worth never goes below zero.
   signed?: boolean
+  // Settled wins and losses, all time; a member who hasn't had a bet settle has none to show.
+  record?: { won: number; lost: number }
   isMe: boolean
   href: string
   domId?: string
@@ -45,6 +48,12 @@ export function LeaderboardRow({
         </Link>
         {isMe && <span className="font-semibold text-ink2"> (you)</span>}
       </span>
+      {record && record.won + record.lost > 0 && (
+        <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-sunk px-2 text-xs font-extrabold text-ink2 tabular-nums">
+          <span aria-hidden="true">{record.won}-{record.lost}</span>
+          <span className="sr-only">{record.won} won, {record.lost} lost</span>
+        </span>
+      )}
       <span className="shrink-0 whitespace-nowrap text-[17px] font-extrabold tabular-nums">{signed ? signedDc(score) : `${score} DC`}</span>
     </li>
   )

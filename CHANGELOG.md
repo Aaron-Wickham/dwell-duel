@@ -32,6 +32,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **"Closes in" rounds to the nearest hour or minute,** so 1h 59m reads "2h", not "1h" (#112).
 
 ### Under the hood
+- **Admins are told if closing alerts stop.** Each successful run of the ten-minute schedule is recorded (`cron_heartbeats`), and the Admin pages show admins and the owner a warning once none has landed for 30 minutes. The workflow reads the app's address from the `APP_URL` repository variable instead of a hard-coded URL, and fails if it isn't set (#149).
 - **`npm run check:ios` checks the installed iPhone app** in the iOS Simulator: it cold-launches the Home Screen web app on a page and fails when the viewport is shorter than the screen, the bug behind #127 and #128, which no browser test can see. `--video` records the launch as contact sheets (#147).
 - **The app deploys only after its migrations.** Vercel's own Git deploys are off for `main`; the Deploy Production workflow (was Deploy Production Database) pushes any new migrations, then triggers Vercel through a deploy hook. A failed migration blocks the deploy (#148).
 - **Migrations apply on merge with no approval step,** so keep them additive; the workflow no longer waits on the `production-db` environment (#138).

@@ -11,20 +11,20 @@ const rpcClient = (data: unknown, error: unknown = null) => {
 describe('getRace', () => {
   it('groups the rows into one series per member, best final total first', async () => {
     const { client, rpc } = rpcClient([
-      { profile_id: 'a', display_name: 'Ada', day: '2026-09-01', profit: 0 },
-      { profile_id: 'a', display_name: 'Ada', day: '2026-09-02', profit: '5' },
-      { profile_id: 'b', display_name: 'Ben', day: '2026-09-01', profit: 0 },
-      { profile_id: 'b', display_name: 'Ben', day: '2026-09-02', profit: 12 },
+      { profile_id: 'a', display_name: 'Ada', step: 0, at: '2026-09-03T14:00:00+00:00', profit: 0 },
+      { profile_id: 'a', display_name: 'Ada', step: 1, at: '2026-09-03T14:00:00+00:00', profit: '5' },
+      { profile_id: 'b', display_name: 'Ben', step: 0, at: '2026-09-03T14:00:00+00:00', profit: 0 },
+      { profile_id: 'b', display_name: 'Ben', step: 1, at: '2026-09-03T14:00:00+00:00', profit: 12 },
     ])
     const race = await getRace(client, 2)
-    expect(rpc).toHaveBeenCalledWith('leaderboard_race', { p_top: 2 })
+    expect(rpc).toHaveBeenCalledWith('leaderboard_race_steps', { p_top: 2 })
     expect(race.map((s) => [s.name, s.final])).toEqual([
       ['Ben', 12],
       ['Ada', 5],
     ])
     expect(race[1].points).toEqual([
-      { day: '2026-09-01', profit: 0 },
-      { day: '2026-09-02', profit: 5 },
+      { at: '2026-09-03T14:00:00+00:00', profit: 0 },
+      { at: '2026-09-03T14:00:00+00:00', profit: 5 },
     ])
   })
 

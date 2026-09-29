@@ -79,7 +79,8 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
       </EmptyState>
     )
   } else {
-    const hasSide = showMonthExtras && (race.length > 0 || awards.length > 0)
+    // The race always shows on the month's board, saying so when no bet has settled yet.
+    const hasSide = showMonthExtras
     const hasChampions = board === 'month' && !page.windowed && champions.length > 0
     // At lg the month's extras move into a side column beside the rankings; on a phone they keep
     // their order around it, which is why the race and awards sit in a wrapper that is only a box at lg.

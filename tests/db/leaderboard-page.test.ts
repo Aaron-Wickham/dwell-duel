@@ -3,7 +3,6 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient, deleteAuthUser } from './helpers'
 import { seedMembers, makeMember, clientFor, ensureInvited } from './fixtures'
 import { getLeaderboardPage } from '@/lib/social/leaderboard'
-import { assignRanks } from '@/lib/social/ranking'
 import { showMoreHref } from '@/lib/pagination/cursor'
 import { encodeRankCursor, readRankPageParams, type RankCursor } from '@/lib/pagination/rank-cursor'
 
@@ -26,7 +25,12 @@ let bobClient: SupabaseClient
 const extras: string[] = []
 let board: (Profile & { rank: number })[]
 
-const keyOf = (p: Profile): RankCursor => ({ balance: p.balance, name: p.display_name, id: p.id })
+const keyOf = (p: Profile): RankCursor => ({ score: p.balance, name: p.display_name, id: p.id })
+
+// Competition ranks over a board already in order: a tie shares the rank of its first member.
+function withRanks(sorted: Profile[]): (Profile & { rank: number })[] {
+  return sorted.map((p) => ({ ...p, rank: sorted.findIndex((q) => q.balance === p.balance) + 1 }))
+}
 const summary = (rows: { id: string; rank: number }[]) => rows.map((m) => [m.id, m.rank])
 
 beforeAll(async () => {
@@ -60,7 +64,7 @@ beforeAll(async () => {
     .order('display_name', { ascending: true })
     .order('id', { ascending: true })
   if (error) throw error
-  board = assignRanks(data as Profile[])
+  board = withRanks(data as Profile[])
 }, 60_000)
 
 afterAll(async () => {
@@ -82,13 +86,13 @@ describe('getLeaderboardPage', () => {
   })
 
   it('pages 50 at a time, and Show more ranks the tie the same on both sides of the boundary', async () => {
-    const first = await getLeaderboardPage(bobClient, { top: null, bottom: null })
+    const first = await getLeaderboardPage(bobClient, 'all', { top: null, bottom: null })
     expect(summary(first.rows)).toEqual(summary(board.slice(0, 50)))
     expect(first.rows.slice(TIE_START).map((m) => m.rank)).toEqual([48, 48, 48])
     expect(first.next).toMatchObject({ kind: 'extend', firstId: board[50].id })
 
     const href = new URL(showMoreHref('/leaderboard', {}, 'before', first.next!), 'http://localhost')
-    const second = await getLeaderboardPage(bobClient, readRankPageParams(Object.fromEntries(href.searchParams), 'before'))
+    const second = await getLeaderboardPage(bobClient, 'all', readRankPageParams(Object.fromEntries(href.searchParams), 'before'))
     expect(second.windowed).toBe(false)
     expect(summary(second.rows)).toEqual(summary(board))
     expect(second.rows.slice(50, 54).map((m) => m.rank)).toEqual([48, 48, 48, 54])
@@ -96,7 +100,7 @@ describe('getLeaderboardPage', () => {
   })
 
   it('ranks a fresh window that starts inside the tie against the whole board', async () => {
-    const page = await getLeaderboardPage(bobClient, readRankPageParams({ before_from: encodeRankCursor(keyOf(board[50])) }, 'before'))
+    const page = await getLeaderboardPage(bobClient, 'all', readRankPageParams({ before_from: encodeRankCursor(keyOf(board[50])) }, 'before'))
     expect(page.windowed).toBe(true)
     expect(summary(page.rows)).toEqual(summary(board.slice(50)))
     expect(page.rows.map((m) => m.rank)).toEqual([48, 48, 48, 54, 55, 56, 57, 58, 59, 60])
@@ -104,33 +108,31 @@ describe('getLeaderboardPage', () => {
   })
 
   it('ranks a fresh window that starts just past the tie from the members above it', async () => {
-    const page = await getLeaderboardPage(bobClient, readRankPageParams({ before_from: encodeRankCursor(keyOf(board[53])) }, 'before'))
+    const page = await getLeaderboardPage(bobClient, 'all', readRankPageParams({ before_from: encodeRankCursor(keyOf(board[53])) }, 'before'))
     expect(page.rows.map((m) => m.rank)).toEqual([54, 55, 56, 57, 58, 59, 60])
   })
 
   it('reads a window past the last member as empty, and a garbage cursor as the first page', async () => {
-    const pastTheEnd: RankCursor = { balance: 0, name: '', id: 'ffffffff-ffff-4fff-bfff-ffffffffffff' }
-    expect(await getLeaderboardPage(bobClient, readRankPageParams({ before_from: encodeRankCursor(pastTheEnd) }, 'before'))).toEqual({
+    const pastTheEnd: RankCursor = { score: 0, name: '', id: 'ffffffff-ffff-4fff-bfff-ffffffffffff' }
+    expect(await getLeaderboardPage(bobClient, 'all', readRankPageParams({ before_from: encodeRankCursor(pastTheEnd) }, 'before'))).toEqual({
       rows: [],
       next: null,
       windowed: true,
     })
 
-    const garbage = await getLeaderboardPage(bobClient, readRankPageParams({ before: 'garbage', before_from: '!!' }, 'before'))
+    const garbage = await getLeaderboardPage(bobClient, 'all', readRankPageParams({ before: 'garbage', before_from: '!!' }, 'before'))
     expect(garbage.windowed).toBe(false)
     expect(summary(garbage.rows)).toEqual(summary(board.slice(0, 50)))
   })
 
-  // profiles.balance is `integer` (int4). A tampered cursor with a balance past its range must be
-  // rejected by decodeRankCursor, the same as any other malformed cursor -- otherwise it would
-  // reach the range filter and PostgREST would answer 22003 "out of range for type integer",
-  // throwing instead of falling back to the first page.
-  it('reads a raw cursor with a balance past int4 range as the first page, not an error', async () => {
+  // The board's score is a bigint, so a cursor past a JS safe integer is the only out-of-range one:
+  // decodeRankCursor rejects it like any other malformed cursor, and the page falls back to the top.
+  it('reads a raw cursor with a score past a safe integer as the first page, not an error', async () => {
     // ASCII-only JSON, so plain btoa (rather than rank-cursor.ts's UTF-8 path) is enough here.
     const encodeRaw = (json: string) => btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-    const overflow = encodeRaw(`[2147483648,"A","${board[0].id}"]`)
+    const overflow = encodeRaw(`[99999999999999999999,"A","${board[0].id}"]`)
 
-    const page = await getLeaderboardPage(bobClient, readRankPageParams({ before_from: overflow }, 'before'))
+    const page = await getLeaderboardPage(bobClient, 'all', readRankPageParams({ before_from: overflow }, 'before'))
     expect(page.windowed).toBe(false)
     expect(summary(page.rows)).toEqual(summary(board.slice(0, 50)))
   })

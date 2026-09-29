@@ -58,5 +58,13 @@ export async function GET(request: Request) {
     return new NextResponse('Key cleanup failed', { status: 502 })
   }
 
-  return NextResponse.json({ ok: true, strayProofRemoved: names.length })
+  // Last month's champion goes to the feed (#77). Every day, not just the 1st, so a missed run
+  // still posts it; settle_season writes the event at most once per month.
+  const { data: champion, error: seasonErr } = await db.rpc('settle_season')
+  if (seasonErr) {
+    console.error(seasonErr)
+    return new NextResponse('Season settle failed', { status: 502 })
+  }
+
+  return NextResponse.json({ ok: true, strayProofRemoved: names.length, seasonChampion: champion ?? null })
 }

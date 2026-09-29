@@ -41,7 +41,7 @@ describe('transition types on links', () => {
           resolvedOutcomeLabel={null}
         />
         <ol>
-          <LeaderboardRow rank={1} name="Bob" balance={120} isMe={false} href="/members/b" />
+          <LeaderboardRow rank={1} name="Bob" score={120} isMe={false} href="/members/b" />
         </ol>
         <ul>
           <FeedItem icon={Target} segments={[{ text: 'Carol', href: '/members/c' }]} age="1m ago" />

@@ -857,6 +857,13 @@ export type Database = {
         }
         Relationships: []
       }
+      stakes_riding: {
+        Row: {
+          amount: number | null
+          profile_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       adjust_balance: {
@@ -904,6 +911,35 @@ export type Database = {
       }
       delete_market: { Args: { p_market_id: string }; Returns: undefined }
       delete_task: { Args: { p_task_id: string }; Returns: undefined }
+      economy_flows: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          added: number
+          removed: number
+          source: string
+        }[]
+      }
+      economy_summary: {
+        Args: { p_month_start: string }
+        Returns: {
+          all_time_added: number
+          all_time_removed: number
+          balances: number
+          bets_at_stake: number
+          house_parlays_added: number
+          house_parlays_removed: number
+          month_end: string
+          month_start: string
+          owner_adjustments_added: number
+          owner_adjustments_removed: number
+          parlays_at_stake: number
+          seed_payouts_added: number
+          seed_payouts_removed: number
+          starting_grants_added: number
+          task_rewards_added: number
+          unclassified: number
+        }[]
+      }
       finish_idempotent: {
         Args: { p_key: string; p_result: Json }
         Returns: undefined
@@ -915,6 +951,28 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_invited: { Args: never; Returns: boolean }
+      leaderboard_month: {
+        Args: never
+        Returns: {
+          avatar_path: string
+          display_name: string
+          id: string
+          rank: number
+          score: number
+        }[]
+      }
+      leaderboard_net_worth: {
+        Args: never
+        Returns: {
+          at_stake: number
+          avatar_path: string
+          balance: number
+          display_name: string
+          id: string
+          rank: number
+          score: number
+        }[]
+      }
       market_sparklines: {
         Args: { p_market_ids: string[]; p_points?: number }
         Returns: {
@@ -1023,11 +1081,20 @@ export type Database = {
         }[]
       }
       role_rank: { Args: { p_role: string }; Returns: number }
+      season_profits: {
+        Args: { p_month: string }
+        Returns: {
+          last_at: string
+          profile_id: string
+          profit: number
+        }[]
+      }
       set_member_role: {
         Args: { p_profile_id: string; p_role: string }
         Returns: undefined
       }
       settle_parlay: { Args: { p_parlay_id: string }; Returns: undefined }
+      settle_season: { Args: { p_month?: string }; Returns: string }
       stray_proof_objects: {
         Args: { p_limit?: number }
         Returns: {

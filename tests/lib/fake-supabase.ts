@@ -2,7 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 // A stand-in for the query builder: it records each query's chain, and answers it when awaited.
 export type RecordedQuery = {
+  // The table, or for an rpc() the function, whose result the chain filters.
   table: string
+  rpc?: boolean
   select?: string
   selectOptions?: unknown
   eq: [string, unknown][]
@@ -19,6 +21,11 @@ export type FakeResponse = { data?: unknown; count?: number | null; error?: unkn
 export function fakeSupabase(respond: (query: RecordedQuery, index: number) => FakeResponse) {
   const queries: RecordedQuery[] = []
   const client = {
+    rpc(fn: string) {
+      const builder = client.from(fn)
+      queries[queries.length - 1].rpc = true
+      return builder
+    },
     from(table: string) {
       const query: RecordedQuery = { table, eq: [], gt: [], is: [], in: [], or: [], order: [] }
       const index = queries.push(query) - 1

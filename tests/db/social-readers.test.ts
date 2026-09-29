@@ -121,15 +121,15 @@ describe('listFeed', () => {
 })
 
 describe('getLeaderboardPage', () => {
-  it('ranks every member by balance, sharing ranks on ties', async () => {
+  it('ranks every member by net worth, sharing ranks on ties', async () => {
     const carol = await makeMember('Carol')
     const db = serviceClient()
     await db.from('profiles').update({ balance: 150 }).eq('id', alice.id)
     await db.from('profiles').update({ balance: 150 }).eq('id', bob.id)
     await db.from('profiles').update({ balance: 90 }).eq('id', carol.id)
 
-    const board = await getLeaderboardPage(bobClient, { top: null, bottom: null })
-    expect(board.rows.map((m) => [m.displayName, m.balance, m.rank])).toEqual([
+    const board = await getLeaderboardPage(bobClient, 'all', { top: null, bottom: null })
+    expect(board.rows.map((m) => [m.displayName, m.score, m.rank])).toEqual([
       ['Alice', 150, 1],
       ['Bob', 150, 1],
       ['Carol', 90, 3],
@@ -140,12 +140,13 @@ describe('getLeaderboardPage', () => {
   it('is empty for an uninvited session', async () => {
     const carol = await makeMember('Carol')
     const carolClient = await clientFor(carol)
-    expect(await getLeaderboardPage(carolClient, { top: null, bottom: null })).toEqual({ rows: [], next: null, windowed: false })
+    expect(await getLeaderboardPage(carolClient, 'all', { top: null, bottom: null })).toEqual({ rows: [], next: null, windowed: false })
+    expect(await getLeaderboardPage(carolClient, 'month', { top: null, bottom: null })).toEqual({ rows: [], next: null, windowed: false })
   })
 })
 
 describe('getMemberStanding', () => {
-  it('computes rank from members strictly above, and the total membership', async () => {
+  it('ranks on the net-worth board, and counts the total membership', async () => {
     const carol = await makeMember('Carol')
     const db = serviceClient()
     await db.from('profiles').update({ balance: 150 }).eq('id', alice.id)
@@ -153,7 +154,7 @@ describe('getMemberStanding', () => {
     await db.from('profiles').update({ balance: 90 }).eq('id', carol.id)
 
     const standing = await getMemberStanding(bobClient, bob.id)
-    expect(standing).toMatchObject({ id: bob.id, displayName: 'Bob', balance: 90, rank: 2, memberCount: 3 })
+    expect(standing).toMatchObject({ id: bob.id, displayName: 'Bob', balance: 90, score: 90, rank: 2, memberCount: 3 })
   })
 
   it('returns null for a well-formed id that matches no profile — the member page’s real 404', async () => {

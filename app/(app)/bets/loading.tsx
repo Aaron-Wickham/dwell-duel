@@ -1,12 +1,12 @@
 import { pageClass } from '@/components/ui/page'
 import { Skeleton, SkeletonCard, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
 
-// Mirrors My bets: the status tabs, then one tab's list.
+// Mirrors My bets: the tabs (three bet statuses and Coins), then one tab's list.
 export default function Loading() {
   return (
     <SkeletonScreen name="bets" className={pageClass}>
       <SkeletonPageHeader description />
-      <Skeleton className="h-[52px] w-full rounded-[14px] md:w-80" />
+      <Skeleton className="h-[52px] w-full rounded-[14px] md:w-96" />
       <SkeletonCard className="max-w-[820px] gap-1">
         <Skeleton className="h-6 w-24" />
         <div className="flex flex-col divide-y divide-line">

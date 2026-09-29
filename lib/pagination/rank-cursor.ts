@@ -3,18 +3,13 @@ import type { SearchParams } from '@/lib/pagination/cursor'
 import type { KeysetOrder } from '@/lib/pagination/keyset'
 import { isUuid } from '@/lib/uuid'
 
-// The leaderboard's position: balance desc, display_name asc, id asc, the same order its read uses.
-export type RankCursor = { balance: number; name: string; id: string }
+// A leaderboard's position: score desc, display_name asc, id asc, the same order its read uses.
+// The score is net worth on the main board and the month's profit on This month.
+export type RankCursor = { score: number; name: string; id: string }
 export type RankPageParams = { top: RankCursor | null; bottom: RankCursor | null }
 
 // Long enough for the longest valid cursor: 80 code points of JSON-escaped name plus the rest.
 const BASE64URL = /^[A-Za-z0-9_-]{1,1000}$/
-
-// profiles.balance is `integer` (int4). A balance outside this range would make the range filter
-// reach PostgREST as a literal Postgres can't store, which answers 22003 "out of range for type
-// integer" instead of matching no rows -- so it's rejected here, like any other bad cursor, and a
-// tampered link falls back to the first page rather than the error page.
-const INT4_MAX = 2_147_483_647
 
 // A display name can be any text, so the JSON goes through UTF-8 before btoa, which only takes
 // single-byte characters. TextDecoder's fatal mode turns a tampered byte sequence into an error.
@@ -31,7 +26,7 @@ function fromBase64Url(raw: string): string {
 }
 
 export function encodeRankCursor(cursor: RankCursor): string {
-  return toBase64Url(JSON.stringify([cursor.balance, cursor.name, cursor.id]))
+  return toBase64Url(JSON.stringify([cursor.score, cursor.name, cursor.id]))
 }
 
 export function decodeRankCursor(raw: string | string[] | undefined | null): RankCursor | null {
@@ -43,11 +38,13 @@ export function decodeRankCursor(raw: string | string[] | undefined | null): Ran
     return null
   }
   if (!Array.isArray(parsed) || parsed.length !== 3) return null
-  const [balance, name, id] = parsed
-  if (typeof balance !== 'number' || !Number.isSafeInteger(balance) || balance < 0 || balance > INT4_MAX) return null
+  const [score, name, id] = parsed
+  // The score is a bigint, so any safe integer is a literal Postgres can store; a month's profit
+  // can be negative. Past that range a tampered link falls back to the first page, not an error.
+  if (typeof score !== 'number' || !Number.isSafeInteger(score)) return null
   if (typeof name !== 'string' || [...name].length > TEXT_LIMITS.displayName) return null
   if (typeof id !== 'string' || !isUuid(id)) return null
-  return { balance, name, id }
+  return { score, name, id }
 }
 
 export function readRankPageParams(searchParams: SearchParams, param: string): RankPageParams {
@@ -61,21 +58,16 @@ function quote(value: string | number): string {
 }
 
 // The members after c in the board's order (below) or before it, and c itself when inclusive.
-// Unlike keyset.ts these carry no redundant seek bound: profiles has no index in this order, and
-// the whole membership is a few hundred rows.
+// Unlike keyset.ts these carry no redundant seek bound: the boards are computed rows with no index
+// in this order, and the whole membership is a few hundred rows.
 function beside(c: RankCursor, below: boolean, inclusive: boolean): string {
-  const balance = below ? 'lt' : 'gt'
+  const score = below ? 'lt' : 'gt'
   const name = below ? 'gt' : 'lt'
   const id = `${below ? 'gt' : 'lt'}${inclusive ? 'e' : ''}`
   return (
-    `or(balance.${balance}.${quote(c.balance)},and(balance.eq.${quote(c.balance)},` +
+    `or(score.${score}.${quote(c.score)},and(score.eq.${quote(c.score)},` +
     `or(display_name.${name}.${quote(c.name)},and(display_name.eq.${quote(c.name)},id.${id}.${quote(c.id)}))))`
   )
-}
-
-// Every member ranked ahead of c: the count that fixes the rank a window's first row continues from.
-export function aheadOfRankFilter(c: RankCursor): string {
-  return beside(c, false, false)
 }
 
 export const RANK_ORDER: KeysetOrder<RankCursor> = {

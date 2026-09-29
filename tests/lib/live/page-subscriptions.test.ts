@@ -17,6 +17,7 @@ const declarations: Record<string, () => LiveSubscription[]> = {
   feed: () => pageSubscriptions.feed(),
   tasks: () => pageSubscriptions.tasks(MEMBER_ID),
   myBets: () => pageSubscriptions.myBets(MEMBER_ID),
+  myCoins: () => pageSubscriptions.myCoins(MEMBER_ID),
   adminTasks: () => pageSubscriptions.adminTasks(),
 }
 
@@ -116,6 +117,10 @@ describe('pageSubscriptions', () => {
       { table: 'tasks' },
       { table: 'task_completions', filter: `profile_id=eq.${MEMBER_ID}` },
     ])
+  })
+
+  it("myCoins watches only the member's own profile, whose balance moves with every coin row", () => {
+    expect(pageSubscriptions.myCoins(MEMBER_ID)).toEqual([{ table: 'profiles', filter: `id=eq.${MEMBER_ID}` }])
   })
 
   it('adminTasks watches every submission', () => {

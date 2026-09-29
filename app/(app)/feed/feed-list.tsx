@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { BookOpen, Flag, Layers, MessageSquareText, Plus, Target, Trophy, type LucideIcon } from 'lucide-react'
+import { BookOpen, Crown, Flag, Layers, MessageSquareText, Plus, Target, Trophy, type LucideIcon } from 'lucide-react'
 import { describeEvent, type FeedEvent, type FeedKind } from '@/lib/social/describe-event'
 import { ageLabel } from '@/lib/social/relative-time'
 import { SectionCard } from '@/components/ui/section-card'
@@ -16,6 +16,7 @@ const EVENT_ICONS: Record<FeedKind, LucideIcon> = {
   bet_won: Trophy,
   parlay_won: Trophy,
   task_completed: BookOpen,
+  season_champion: Crown,
 }
 
 export function FeedList({

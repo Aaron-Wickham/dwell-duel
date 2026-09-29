@@ -1,91 +1,81 @@
 import type { DbClient } from '@/lib/supabase/database'
 import { readOrdered, type KeysetPage } from '@/lib/pagination/keyset'
-import { RANK_ORDER, aheadOfRankFilter, type RankCursor, type RankPageParams } from '@/lib/pagination/rank-cursor'
+import { RANK_ORDER, type RankCursor, type RankPageParams } from '@/lib/pagination/rank-cursor'
 import { avatarUrl } from '@/lib/profile/avatar'
-import { assignRanks, type LeaderboardEntry } from './ranking'
 
-export type MemberStanding = LeaderboardEntry & { memberCount: number; bio: string | null }
+// `all` ranks net worth, balance plus DC riding on open bets; `month` ranks this calendar
+// month's net betting profit, in America/New_York.
+export type Board = 'all' | 'month'
 
-type ProfileRow = { id: string; display_name: string; balance: number; avatar_path: string | null }
+export interface LeaderboardEntry {
+  id: string
+  displayName: string
+  avatarSrc: string | null
+  score: number
+  rank: number
+}
 
-const rankKey = (p: ProfileRow): RankCursor => ({ balance: p.balance, name: p.display_name, id: p.id })
+export type MemberStanding = LeaderboardEntry & { balance: number; memberCount: number; bio: string | null }
 
-function boardQuery(supabase: DbClient, filter: string | null, limit: number) {
-  let query = supabase.from('profiles').select('id, display_name, balance, avatar_path')
+type BoardRow = { id: string; display_name: string; avatar_path: string | null; score: number; rank: number }
+
+const BOARD_FUNCTIONS = { all: 'leaderboard_net_worth', month: 'leaderboard_month' } as const
+
+const rankKey = (r: BoardRow): RankCursor => ({ score: r.score, name: r.display_name, id: r.id })
+
+function boardQuery(supabase: DbClient, board: Board, filter: string | null, limit: number) {
+  let query = supabase.rpc(BOARD_FUNCTIONS[board]).select('id, display_name, avatar_path, score, rank')
   if (filter) query = query.or(filter)
   return query
-    .order('balance', { ascending: false })
+    .order('score', { ascending: false })
     .order('display_name', { ascending: true })
     .order('id', { ascending: true })
     .limit(limit)
 }
 
-// Ranks are competition ranks over the whole board, whichever slice of it is on screen. A window
-// that starts mid-board counts two things about its first row: the members with more coins, whose
-// count fixes the rank of the first row's whole tie group, and every member ahead of it in the
-// order, which includes the start of a tie that straddles the boundary and so fixes where the
-// window's later groups rank. The key columns are the whole row, so the probe needs no fetchKeys.
-export async function getLeaderboardPage(supabase: DbClient, page: RankPageParams): Promise<KeysetPage<LeaderboardEntry>> {
+// Both boards rank in SQL, over every member, before a page's filters apply, so a window that
+// starts mid-board, even inside a tie, still shows each row's rank on the whole board. The key
+// columns are the whole row, so the probe needs no fetchKeys.
+export async function getLeaderboardPage(supabase: DbClient, board: Board, page: RankPageParams): Promise<KeysetPage<LeaderboardEntry>> {
   const result = await readOrdered(
     page,
     RANK_ORDER,
     async (filter, limit) => {
-      const { data, error } = await boardQuery(supabase, filter, limit)
+      const { data, error } = await boardQuery(supabase, board, filter, limit)
       if (error) throw error
-      return (data ?? []) as ProfileRow[]
+      return (data ?? []) as BoardRow[]
     },
     rankKey,
   )
-
-  const ranked = assignRanks(result.rows.map((p) => ({ id: p.id, displayName: p.display_name, avatarSrc: avatarUrl(p.avatar_path), balance: p.balance })))
-  if (!result.windowed || result.rows.length === 0) return { ...result, rows: ranked }
-
-  const first = result.rows[0]
-  // The row read and these counts are separate requests, not a snapshot, so a balance changing
-  // between them can briefly show an off-by-some rank; the page's live refresh on profile changes
-  // corrects it on the next read.
-  const [above, ahead] = await Promise.all([
-    supabase.from('profiles').select('id', { count: 'exact', head: true }).gt('balance', first.balance),
-    supabase.from('profiles').select('id', { count: 'exact', head: true }).or(aheadOfRankFilter(rankKey(first))),
-  ])
-  if (above.error) throw above.error
-  if (ahead.error) throw ahead.error
-
   return {
     ...result,
-    rows: ranked.map((m) => ({
-      ...m,
-      rank: m.balance === first.balance ? (above.count ?? 0) + 1 : (ahead.count ?? 0) + m.rank,
-    })),
+    rows: result.rows.map((r) => ({ id: r.id, displayName: r.display_name, avatarSrc: avatarUrl(r.avatar_path), score: r.score, rank: r.rank })),
   }
 }
 
-// Reads one profile, then counts rather than loading every member, so the member page's cost
-// doesn't grow with the membership. `isUuid(memberId)` must be checked by the caller first:
-// a malformed id reaches `.eq('id', …)` here, which errors instead of matching no rows.
+// The member's row on the net-worth board, so Home, the member page and the leaderboard agree.
+// `isUuid(memberId)` must be checked by the caller first: a malformed id reaches `.eq('id', …)`
+// here, which errors instead of matching no rows.
 export async function getMemberStanding(supabase: DbClient, memberId: string): Promise<MemberStanding | null> {
-  const { data: member, error } = await supabase
-    .from('profiles')
-    .select('id, display_name, balance, avatar_path, bio')
-    .eq('id', memberId)
-    .maybeSingle()
-  if (error) throw error
-  if (!member) return null
-
-  const [above, everyone] = await Promise.all([
-    supabase.from('profiles').select('id', { count: 'exact', head: true }).gt('balance', member.balance),
+  const [profile, standing, everyone] = await Promise.all([
+    supabase.from('profiles').select('id, display_name, balance, avatar_path, bio').eq('id', memberId).maybeSingle(),
+    supabase.rpc('leaderboard_net_worth').select('score, rank').eq('id', memberId).maybeSingle(),
     supabase.from('profiles').select('id', { count: 'exact', head: true }),
   ])
-  if (above.error) throw above.error
+  if (profile.error) throw profile.error
+  if (standing.error) throw standing.error
   if (everyone.error) throw everyone.error
+  const member = profile.data
+  if (!member || !standing.data) return null
 
   return {
-    id: member.id as string,
-    displayName: member.display_name as string,
-    avatarSrc: avatarUrl(member.avatar_path as string | null),
-    bio: member.bio as string | null,
-    balance: member.balance as number,
-    rank: (above.count ?? 0) + 1,
+    id: member.id,
+    displayName: member.display_name,
+    avatarSrc: avatarUrl(member.avatar_path),
+    bio: member.bio,
+    balance: member.balance,
+    score: standing.data.score,
+    rank: standing.data.rank,
     memberCount: everyone.count ?? 0,
   }
 }

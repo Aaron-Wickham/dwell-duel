@@ -18,6 +18,7 @@ const event: FeedEvent = {
   taskTitle: null,
   resolutionNote: null,
   creatorStake: null,
+  season: null,
 }
 
 describe('FeedList', () => {
@@ -112,5 +113,23 @@ describe('FeedList', () => {
     )
     expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
     expect(screen.queryByText('Nothing yet.')).toBeNull()
+  })
+
+  it("renders a month's champion linking to their profile, with no market", () => {
+    const champion: FeedEvent = {
+      ...event,
+      id: 'season:2026-08',
+      kind: 'season_champion',
+      occurredAt: '2026-09-01T04:00:00Z',
+      marketId: null,
+      marketTitle: null,
+      outcomeLabel: null,
+      amount: 140,
+      season: '2026-08',
+    }
+    render(<FeedList events={[champion]} heading="Recent activity" headingId="recent-activity" />)
+    expect(screen.getByRole('listitem')).toHaveTextContent(/Alice was August( 2026)?’s champion with \+140 DC/)
+    expect(screen.getByRole('link', { name: 'Alice' })).toHaveAttribute('href', '/members/a1')
+    expect(screen.getAllByRole('link')).toHaveLength(1)
   })
 })

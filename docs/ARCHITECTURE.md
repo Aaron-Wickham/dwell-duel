@@ -53,22 +53,23 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then resolved and voided newest first, each paged |
 | `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under. `?from=<id>` pre-fills it from a market (Duplicate) |
 | `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, resolve/void/edit, share and duplicate, resolution proof |
-| `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together (`?tab=`) |
+| `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
 | `/parlays` | Redirects to `/bets` (kept for old links) |
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
 | `/feed` | Everyone's activity, live |
-| `/leaderboard` | Balance ranks |
+| `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`) |
 | `/members/[id]` | A member's profile and activity; your own adds Edit profile and Settings |
 | `/profile` | Edit your name, photo and bio |
 | `/settings` | Theme, haptics, reduced motion, How it works, sign out |
 | `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`) |
-| `/admin/invites` · `/admin/tasks` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role |
+| `/admin/invites` · `/admin/tasks` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role; the ledger opens with the owner's Economy card |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/not-invited` and `/offline`. The API has one route,
 `/api/cron/keep-alive`, which a daily Vercel cron calls so the free
 Supabase project never pauses. It also deletes unattached proof files and
-attempt keys older than a day.
+attempt keys older than a day, and calls `settle_season()` to post last
+month's champion to the feed (a no-op once it's posted).
 
 ## Code layout
 
@@ -79,7 +80,7 @@ components/     UI by area: app-nav, brand, feed, home, markets, parlays, proof,
                 Button, Field, SubNav, ShowMore, EmptyState, Skeleton…)
 lib/            logic by area: auth, markets, bets, parlays, tasks, proof, social,
                 live, pagination, preferences, theme, forms, env, nav…
-supabase/       migrations/0001…0045, config.toml
+supabase/       migrations/0001…0052, config.toml
 tests/          components/, lib/, db/ (Vitest), plus e2e/ (Playwright)
 scripts/        generate-splash.mjs, generate-favicons.mjs
 public/         sw.js (service worker), icons, favicons, iOS splash screens
@@ -102,9 +103,14 @@ the task catalogue and invite list, which are allowed by policy.
   first sign-in and grants 100 DC.
 - `coin_transactions`: the ledger. Every balance change is a row
   (`starting_grant`, `bet_placed`, `bet_won`, `bet_voided_refund`,
-  `bet_cancelled`, `resolution_reversed`, `parlay_placed`, `parlay_won`,
+  `bet_refunded`, `bet_cancelled`, `resolution_reversed`, `parlay_placed`, `parlay_won`,
   `parlay_refunded`, `parlay_reversed`, `task_completed`,
-  `admin_adjustment`), written only by `apply_coin_transaction`.
+  `admin_adjustment`), written only by `apply_coin_transaction`. Admins
+  read it all at `/admin/ledger`; a member reads their own under My bets
+  → Coins (`lib/ledger/my-transactions.ts`), keyset-paged on
+  `coin_transactions_profile_created_idx` and worded for them. It isn't
+  published for realtime, so that tab follows the member's own `profiles`
+  row, whose balance moves with every coin row.
 
 **Markets and bets**
 
@@ -138,7 +144,11 @@ the task catalogue and invite list, which are allowed by policy.
 
 - `activity_events`: one row per feed item (bets, parlays, new markets,
   results, wins and approved tasks), kept in step by triggers (0035). The
-  feed and member activity read only this table.
+  feed and member activity read only this table. `season_champion` (0051)
+  is the one kind no trigger writes: `settle_season` inserts it, keyed
+  `season:YYYY-MM`, so it has no source row and the DB tests' equivalence
+  check against `activity_feed` leaves it out. `actor_id` cascades, so a
+  champion's events go with their profile.
 - `activity_feed` (view): the old computed feed. It is kept only as the
   DB tests' oracle; members can't read it.
 
@@ -146,6 +156,9 @@ the task catalogue and invite list, which are allowed by policy.
 
 - `my_wagers`: keys for My bets, solo bets and parlays together
   (`bet:<id>`, `parlay:<uuid>`), bucketed open or settled.
+- `stakes_riding` (0051, security invoker): one row per live stake, solo
+  bets on open markets and pending parlays. `my_at_stake` (Home's At
+  stake) and `leaderboard_net_worth` both read it, so they can't disagree.
 
 ### The functions that move coins
 
@@ -178,9 +191,43 @@ creator's own at once, and for reviewers and admins any left 48 hours or
 whose creator has a stake, always filtered through `can_resolve_market`),
 `my_at_stake` and `parlay_limits`.
 
+The leaderboard (0051) reads two boards through `rpc()`, each returning
+`id, display_name, avatar_path, score, rank` with a competition rank over
+every member, computed before PostgREST applies the page's filters, and
+paged by `readOrdered` with `RANK_ORDER` on `(score desc, display_name,
+id)`. `leaderboard_net_worth` (security invoker) scores balance plus
+`stakes_riding`, summed once for the board; the member page and Home's rank
+read the same function through `getMemberStanding`. `leaderboard_month`
+(security definer, invited members only) scores this month's
+`season_profits`: the net of the betting ledger types (`bet_*`,
+`parlay_*`, `resolution_reversed`) between midnights in America/New_York,
+leaving out `starting_grant`, `task_completed`, `admin_adjustment` and any
+type added later. `settle_season(p_month default last month)` (service role
+only) posts a finished month's top positive profit as a `season_champion`
+event, ties going to whoever reached the total first.
+
+**The economy panel** (0052, #86). `economy_summary(p_month_start)` is owner
+only and backs the Economy card above Admin → Ledger's list
+(`lib/economy/summary.ts`, `components/admin/economy-card.tsx`). It reports
+the DC in circulation (balances, plus stakes in open markets' bets and
+pending parlays) and, for the America/New_York month holding
+`p_month_start`, the DC added and removed by source: starting grants, task
+rewards, seed payouts, house-paid parlays and owner adjustments. Stakes,
+cancels, voids and remove-bet refunds only move DC between a balance and
+"at stake", so they count nowhere. A market's seed effect is measured at
+each resolution: payouts less the real stakes at the first one, and new
+payouts less the reversed ones at an override; it can be negative, since
+the seed keeps part of the losers' stakes when they outweigh it, and
+`floor()` keeps the fractions. A parlay's is its credit less its stake, so
+a lost parlay removes its stake. `economy_flows` (callable by no member)
+holds that classification, with every `coin_transactions` type listed in
+the migration. The panel also checks the identity *all DC ever added less
+all removed = in circulation*, and says so if it fails or if the ledger
+holds a type it doesn't know.
+
 ### Migrations
 
-Migrations are numbered in order, `0001`–`0045`, and none is ever edited
+Migrations are numbered in order, `0001`–`0052`, and none is ever edited
 after it ships. They roughly follow the project's history:
 
 | Range | What they add |
@@ -197,6 +244,8 @@ after it ships. They roughly follow the project's history:
 | 0048 | Indexes for the markets list, a market's resolutions, a member's coin history and unindexed foreign keys |
 | 0049 | Closing soon: `markets (status, close_at, id)` for the Open list's close-time order, and `markets_to_resolve()` for Home's nudge |
 | 0050 | `member_activity`: join and last sign-in dates for Admin → Members, admins only |
+| 0051 | Net worth and seasons: `stakes_riding` (shared with `my_at_stake`), `leaderboard_net_worth`, `season_profits`, `leaderboard_month`, `settle_season` and the `season_champion` feed kind |
+| 0052 | `economy_summary`: the owner's economy panel on Admin → Ledger (supply in circulation, and this month's DC added and removed by source) |
 
 Merging a migration to `main` runs the **Deploy Production Database**
 workflow. It runs in parallel with Vercel's deploy, so a build that needs

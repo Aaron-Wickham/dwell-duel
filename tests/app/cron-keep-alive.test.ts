@@ -2,13 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const profiles = vi.fn()
 const rpc = vi.fn()
+const settleSeason = vi.fn()
 const remove = vi.fn()
 const pruneKeys = vi.fn()
 vi.mock('@/lib/supabase/service-role', () => ({
   serviceRoleClient: () => ({
     from: (table: string) =>
       table === 'idempotency_keys' ? { delete: () => ({ lt: pruneKeys }) } : { select: () => ({ limit: profiles }) },
-    rpc,
+    rpc: (fn: string, args?: unknown) => (fn === 'settle_season' ? settleSeason(args) : rpc(fn, args)),
     storage: { from: () => ({ remove }) },
   }),
 }))
@@ -23,6 +24,7 @@ beforeEach(() => {
   rpc.mockReset().mockResolvedValue({ data: [], error: null })
   remove.mockReset().mockResolvedValue({ error: null })
   pruneKeys.mockReset().mockResolvedValue({ error: null })
+  settleSeason.mockReset().mockResolvedValue({ data: null, error: null })
 })
 
 describe('keep-alive cron', () => {
@@ -36,14 +38,14 @@ describe('keep-alive cron', () => {
     rpc.mockResolvedValue({ data: [{ name: 'task/u/1/a.txt' }, { name: 'task/u/2/b.jpg' }], error: null })
     const res = await GET(authorized())
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ ok: true, strayProofRemoved: 2 })
+    expect(await res.json()).toEqual({ ok: true, strayProofRemoved: 2, seasonChampion: null })
     expect(rpc).toHaveBeenCalledWith('stray_proof_objects', { p_limit: 500 })
     expect(remove).toHaveBeenCalledWith(['task/u/1/a.txt', 'task/u/2/b.jpg'])
   })
 
   it('skips the Storage call when nothing is stray', async () => {
     const res = await GET(authorized())
-    expect(await res.json()).toEqual({ ok: true, strayProofRemoved: 0 })
+    expect(await res.json()).toEqual({ ok: true, strayProofRemoved: 0, seasonChampion: null })
     expect(remove).not.toHaveBeenCalled()
   })
 
@@ -65,6 +67,19 @@ describe('keep-alive cron', () => {
 
   it('reports a failed key prune as a 502', async () => {
     pruneKeys.mockResolvedValue({ error: new Error('down') })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect((await GET(authorized())).status).toBe(502)
+  })
+
+  it("settles last month's season every run, with no month so the database picks it", async () => {
+    settleSeason.mockResolvedValue({ data: 'champion-id', error: null })
+    const res = await GET(authorized())
+    expect(settleSeason).toHaveBeenCalledWith(undefined)
+    expect(await res.json()).toMatchObject({ ok: true, seasonChampion: 'champion-id' })
+  })
+
+  it('reports a failed season settle as a 502', async () => {
+    settleSeason.mockResolvedValue({ data: null, error: new Error('down') })
     vi.spyOn(console, 'error').mockImplementation(() => {})
     expect((await GET(authorized())).status).toBe(502)
   })

@@ -71,7 +71,7 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   }
 
   await page.goto('/bets')
-  await page.getByRole('navigation', { name: 'Bet status' }).getByRole('link', { name: 'Settled' }).click()
+  await page.getByRole('navigation', { name: 'My bets sections' }).getByRole('link', { name: 'Settled' }).click()
   await expect(page).toHaveURL(/\/bets\?tab=settled$/)
   const won = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: 'Parlay leg one?' }).first()
   await expect(won.getByText('Won 28 DC')).toBeVisible()

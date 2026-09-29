@@ -22,6 +22,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Supabase CLI-generated local artifacts (gitignored, not our code).
     "supabase/.temp/**",
+    // Claude Code's git worktrees: whole other checkouts, linted in their own right.
+    ".claude/worktrees/**",
   ]),
 ]);
 

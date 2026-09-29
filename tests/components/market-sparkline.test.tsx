@@ -78,6 +78,16 @@ describe('MarketSparkline', () => {
     expect(html).toContain('aria-label="Chance over time. Now: Yes 75%, No 25%."')
   })
 
+  it('draws a seeded market nobody has bet on as a flat even line from its opening', () => {
+    const { container } = render(
+      <MarketSparkline outcomes={yesNo} points={[point(NOW - 3 * DAY, 0.5, 0.5)]} now={NOW} closedAt={OPEN_CLOSE} />,
+    )
+    const paths = [...container.querySelectorAll('path')].map((p) => p.getAttribute('d'))
+    // An open market with days of history opens on the last week, so the line starts where the market opened.
+    expect(paths).toEqual(['M57.14 50H100V50', 'M57.14 50H100V50'])
+    expect(screen.getByRole('img', { name: 'Chance over time. Now: Yes 50%, No 50%.' })).toBeInTheDocument()
+  })
+
   it('says so when there is nothing to draw', () => {
     render(<MarketSparkline outcomes={yesNo} points={[]} now={NOW} closedAt={OPEN_CLOSE} />)
     expect(screen.getByText('No bets were placed on this market.')).toBeInTheDocument()

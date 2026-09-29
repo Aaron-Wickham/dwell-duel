@@ -308,7 +308,7 @@ describe('MarketCard', () => {
         now={now}
       />
     )
-    const { rerender } = render(card('open', '2026-10-04T16:30:00.000Z'))
+    const { rerender } = render(card('open', '2026-10-04T16:20:00.000Z'))
     expect(screen.getByText('Closes in 2h')).toBeInTheDocument()
 
     rerender(card('open', '2026-10-06T16:30:00.000Z'))

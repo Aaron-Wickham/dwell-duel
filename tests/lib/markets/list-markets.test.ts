@@ -46,6 +46,7 @@ describe('listOpenMarkets', () => {
         kind: 'binary',
         status: 'open',
         closeAt: '2026-09-20T09:00:00+00:00',
+        createdAt: '2026-09-19T09:00:00.123456+00:00',
         resolvedOutcomeLabel: null,
         resolvedAt: null,
         line: null,

@@ -48,8 +48,8 @@ describe('keep-alive cron: resolve reminders', () => {
     expect(await res.json()).toMatchObject({ ok: true, resolveReminders: 2 })
     expect(rpc).toHaveBeenCalledWith('push_resolve_reminders')
     expect(sendPush.mock.calls[0][0]).toEqual([
-      { profileId: 'alice', payload: { title: 'DwellDuel', body: 'Will it rain? has closed. Please resolve it.', url: '/markets/m-1' } },
-      { profileId: 'bob', payload: { title: 'DwellDuel', body: 'Sermon past noon? has closed. Please resolve it.', url: '/markets/m-2' } },
+      { profileId: 'alice', payload: { title: 'Time to resolve', body: 'Will it rain? has closed', url: '/markets/m-1' } },
+      { profileId: 'bob', payload: { title: 'Time to resolve', body: 'Sermon past noon? has closed', url: '/markets/m-2' } },
     ])
   })
 

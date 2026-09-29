@@ -3,6 +3,7 @@ import {
   availableRanges,
   buildProbabilitySeries,
   sliceRange,
+  withSeededStart,
   type ChartBet,
   type SeriesPoint,
 } from '@/lib/markets/probability-series'
@@ -166,5 +167,33 @@ describe('buildProbabilitySeries with a seed', () => {
 
   it('draws no opening point for an unseeded market', () => {
     expect(buildProbabilitySeries(['y', 'n'], [], { seed: 0, startAt: '2026-09-01T00:00:00Z' })).toEqual([])
+  })
+})
+
+describe('withSeededStart', () => {
+  const market = { seedPerOutcome: 20, createdAt: '2026-09-01T00:00:00Z', outcomeIds: ['y', 'n', 'm'] }
+  const later = { t: Date.parse('2026-09-02T00:00:00Z'), shares: { y: 0.5, n: 0.25, m: 0.25 } }
+
+  it('prepends an even split at the opening, whatever the number of outcomes', () => {
+    expect(withSeededStart([later], market)).toEqual([
+      { t: Date.parse('2026-09-01T00:00:00Z'), shares: { y: 1 / 3, n: 1 / 3, m: 1 / 3 } },
+      later,
+    ])
+  })
+
+  it('gives a seeded market with no bets just the opening point', () => {
+    expect(withSeededStart([], market)).toHaveLength(1)
+  })
+
+  it('leaves an unseeded market, or one with no outcomes, as it was', () => {
+    expect(withSeededStart([later], { ...market, seedPerOutcome: 0 })).toEqual([later])
+    expect(withSeededStart([], { ...market, outcomeIds: [] })).toEqual([])
+  })
+
+  it('matches the reference series built from the same bets', () => {
+    const bets = [{ outcomeId: 'y', amount: 10, createdAt: '2026-09-02T00:00:00Z' }]
+    const reference = buildProbabilitySeries(['y', 'n'], bets, { seed: 20, startAt: '2026-09-01T00:00:00Z' })
+    const fromBets = reference.slice(1)
+    expect(withSeededStart(fromBets, { seedPerOutcome: 20, createdAt: '2026-09-01T00:00:00Z', outcomeIds: ['y', 'n'] })).toEqual(reference)
   })
 })

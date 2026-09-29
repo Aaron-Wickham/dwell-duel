@@ -51,3 +51,6 @@ next-env.d.ts
 
 # Scratch scripts run from e2e/ (screenshots, one-off checks); never committed.
 /e2e/.*.ts
+
+# Claude Code's git worktrees
+/.claude/worktrees/

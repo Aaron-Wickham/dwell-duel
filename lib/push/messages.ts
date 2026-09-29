@@ -4,14 +4,11 @@ export interface PushPayload {
   url: string
 }
 
-// Every notification says who it's from and nothing private: the body is what the member already
-// sees in the app.
-const TITLE = 'DwellDuel'
-
-const payload = (body: string, url: string): PushPayload => ({ title: TITLE, body, url })
+// The OS already names the app above every notification, so the title says what happened and the
+// body carries the detail. Nothing private: the body is what the member already sees in the app.
 
 export function resolveReminderPayload(market: { marketId: string; title: string }): PushPayload {
-  return payload(`${market.title} has closed. Please resolve it.`, `/markets/${market.marketId}`)
+  return { title: 'Time to resolve', body: `${market.title} has closed`, url: `/markets/${market.marketId}` }
 }
 
 export interface MarketResultRow {
@@ -30,14 +27,14 @@ export function marketResultPayload(marketId: string, row: MarketResultRow): Pus
   const url = `/markets/${marketId}`
   const { title } = row
   if (row.status === 'voided') {
-    return payload(row.hasSolo ? `${title} was voided, your stake is refunded` : `${title} was voided and dropped from your parlay`, url)
+    const body = row.hasSolo ? `${title}: your stake is refunded` : `${title} was dropped from your parlay`
+    return { title: 'Market voided', body, url }
   }
-  const result = row.isOverride ? `${title} changed to ${row.outcomeLabel}` : `${title} resolved: ${row.outcomeLabel}`
-  if (row.hasSolo && row.won > 0) {
-    return payload(row.isOverride ? `${result}. You won ${row.won} DC` : `You won ${row.won} DC on ${title}`, url)
-  }
-  if (row.hasSolo && row.refunded > 0) return payload(`${result}, your stake is refunded`, url)
-  return payload(result, url)
+  const result = row.isOverride ? `${title} changed to ${row.outcomeLabel}` : `${title}: ${row.outcomeLabel}`
+  if (row.hasSolo && row.won > 0) return { title: `You won ${row.won} DC`, body: result, url }
+  const heading = row.isOverride ? 'Result changed' : 'Market resolved'
+  if (row.hasSolo && row.refunded > 0) return { title: heading, body: `${result}. Your stake is refunded`, url }
+  return { title: heading, body: result, url }
 }
 
 export interface TaskReviewRow {
@@ -48,12 +45,13 @@ export interface TaskReviewRow {
 }
 
 export function taskReviewPayload(row: TaskReviewRow): PushPayload {
-  const task = `Your task “${row.taskTitle}”`
-  if (row.status === 'approved') return payload(`${task} was approved: +${row.rewardAmount} DC`, '/tasks')
+  if (row.status === 'approved') {
+    return { title: 'Task approved', body: `${row.taskTitle}: +${row.rewardAmount} DC`, url: '/tasks' }
+  }
   const reason = row.reviewNote?.trim()
-  return payload(reason ? `${task} was rejected: ${reason}` : `${task} was rejected`, '/tasks')
+  return { title: 'Task not approved', body: reason ? `${row.taskTitle}: ${reason}` : row.taskTitle, url: '/tasks' }
 }
 
 export function newMarketPayload(market: { marketId: string; title: string }): PushPayload {
-  return payload(`New market: ${market.title}`, `/markets/${market.marketId}`)
+  return { title: 'New market', body: market.title, url: `/markets/${market.marketId}` }
 }

@@ -240,7 +240,7 @@ hear about, and your choices apply on every device:
 | Notification | When | Starts |
 |---|---|---|
 | **Markets to resolve** | A market you made has closed and is waiting for you to resolve it (once per market, sent once a day) | On |
-| **Results** | A market you bet on, solo or as a parlay leg, is resolved ("You won 26 DC on Will it rain?"), changed by an override or voided | On |
+| **Results** | A market you bet on, solo or as a parlay leg, is resolved ("You won 26 DC", then the market and its result), changed by an override or voided | On |
 | **Task reviews** | Your task submission is approved or rejected, with the reviewer's reason | On |
 | **New markets** | Someone else creates a market | Off |
 

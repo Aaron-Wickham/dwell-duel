@@ -51,7 +51,12 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
   ]
   const sparklinesByMarket = await readSparklines(
     supabase,
-    markets.map(([m]) => m.id),
+    markets.map(([m]) => ({
+      id: m.id,
+      seedPerOutcome: m.seedPerOutcome,
+      createdAt: m.createdAt,
+      outcomeIds: m.outcomes.map((o) => o.id),
+    })),
   )
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now()

@@ -23,7 +23,7 @@ const linkClass = cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'self
 // link itself leaves the page or moves, so focus would otherwise fall back to the document; the
 // page's ShowMoreFocus moves it to that row once it renders.
 // `description` names the list when a page has more than one "Show more" (the markets list's open
-// and closed lists), so they're distinguishable out of context while their name stays "Show more".
+// and resolved lists), so they're distinguishable out of context while their name stays "Show more".
 export function ShowMore({
   href,
   fresh = false,

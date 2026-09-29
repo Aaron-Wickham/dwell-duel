@@ -38,14 +38,15 @@ changing them would change the bet.
 
 The Markets page lists open markets **soonest to close first**, so one
 closing within the hour is at the top. A market closing within a day
-says so ("Closes in 2h"). Closed markets still waiting for a result are
-grouped under Awaiting resolution, and resolved and voided markets
+says so ("Closes in 2h"). Markets past their close time with no result
+yet are grouped under Awaiting resolution, and resolved and voided markets
 follow, newest first.
 
 The tabs above the list narrow it: **All** (the default), **Open** (still
-taking bets), **Pending** (closed, waiting for a result) and **Closed**
-(resolved or voided). The choice is in the page's address, so a
-reload or a shared link keeps it.
+taking bets), **Awaiting** (past the close time, waiting to be resolved)
+and **Resolved** (has a result; voided markets are here too, marked
+Voided). The choice is in the page's address, so a reload or a shared
+link keeps it.
 
 For a question that comes round every week, **Duplicate** on any market
 opens Create market already filled in with its question, description,
@@ -128,7 +129,8 @@ bet what on each market, and bets and parlays also appear in the feed.
 
 Tap a parlay to open its **breakdown**: its stake, multiplier and what it
 pays (or paid), each pick with the odds locked when you placed it and
-where its market stands, and a short sum showing how the multiplier adds
+where its market stands (Open, Awaiting resolution, Won, Lost or
+Voided), and a short sum showing how the multiplier adds
 up. A voided pick is shown as left out, and the rest carry on.
 
 Its **Coins** tab is your coin history: every DC that came in or went
@@ -148,9 +150,9 @@ full ledger) can see it.
   files or links as proof. The reason and proof show on the market page
   and in the feed. Before anything is paid, the app asks them to confirm,
   naming the winner ("Yes wins").
-- **Reminders:** bettors' DC and parlays wait on a closed market until
-  it's resolved, so Home shows **Markets to resolve** to whoever should
-  do it. A creator sees their own closed markets as soon as they close
+- **Reminders:** bettors' DC and parlays wait on a market awaiting
+  resolution until it's resolved, so Home shows **Markets to resolve** to
+  whoever should do it. A creator sees their own markets as soon as they close
   (unless they have money on one). Reviewers and admins see any market
   still unresolved 48 hours after closing, and straight away one whose
   creator has money on it, since the creator can't resolve that one.
@@ -187,7 +189,7 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
 
 - **Net worth** (the main board) ranks everyone by **balance plus the DC
   riding on open bets**: solo bets on markets that haven't resolved yet
-  and parlays still pending. Placing a bet doesn't move you down; losing
+  and parlays not yet settled. Placing a bet doesn't move you down; losing
   it does. Home and your profile show your rank on this board.
 - **This month** ranks **net betting profit** for the calendar month, on
   Eastern time (America/New_York): winnings, refunds and cancelled-bet

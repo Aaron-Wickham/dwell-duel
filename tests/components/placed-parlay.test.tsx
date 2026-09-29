@@ -15,8 +15,8 @@ function parlay(overrides: Partial<ParlayView>): ParlayView {
     potentialPayout: 80,
     createdAt: '2026-09-25T12:00:00Z',
     legs: [
-      { marketId: 'm1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'pending' },
-      { marketId: 'm2', marketTitle: 'Who wins trivia night?', outcomeLabel: 'Grace', lockedOddsBp: 40_000, status: 'pending' },
+      { marketId: 'm1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'open' },
+      { marketId: 'm2', marketTitle: 'Who wins trivia night?', outcomeLabel: 'Grace', lockedOddsBp: 40_000, status: 'open' },
     ],
     ...overrides,
   }
@@ -84,14 +84,27 @@ describe('PlacedParlay', () => {
       parlay({
         legs: [
           { marketId: 'm1', marketTitle: 'A?', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'won' },
-          { marketId: 'm2', marketTitle: 'B?', outcomeLabel: 'No', lockedOddsBp: 40_000, status: 'pending' },
-          { marketId: 'm3', marketTitle: 'C?', outcomeLabel: 'No', lockedOddsBp: 40_000, status: 'pending' },
+          { marketId: 'm2', marketTitle: 'B?', outcomeLabel: 'No', lockedOddsBp: 40_000, status: 'open' },
+          { marketId: 'm3', marketTitle: 'C?', outcomeLabel: 'No', lockedOddsBp: 40_000, status: 'open' },
         ],
       }),
     )
     const progress = screen.getByRole('img', { name: '1 won · 2 open' })
     expect(progress.children).toHaveLength(3)
     expect(screen.getByText('1 won · 2 open')).toBeInTheDocument()
+  })
+
+  it('says a pick whose market is past its close time is awaiting resolution, like a solo bet', () => {
+    renderParlay(
+      parlay({
+        legs: [
+          { marketId: 'm1', marketTitle: 'A?', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'awaiting' },
+          { marketId: 'm2', marketTitle: 'B?', outcomeLabel: 'No', lockedOddsBp: 40_000, status: 'open' },
+        ],
+      }),
+    )
+    expect(screen.getByText('Awaiting resolution')).toHaveClass('h-6', 'rounded-full')
+    expect(screen.getByRole('img', { name: '1 open · 1 awaiting' })).toBeInTheDocument()
   })
 
   it('lists the picks as plain text with the picked outcome and a status pill, so the whole card is one link', () => {
@@ -118,7 +131,7 @@ describe('PlacedParlay', () => {
       marketTitle: `Market ${i}?`,
       outcomeLabel: 'Yes',
       lockedOddsBp: 20_000,
-      status: 'pending' as const,
+      status: 'open' as const,
     }))
     renderParlay(parlay({ legs }))
     expect(screen.getByText(/Market 2\?/)).toBeInTheDocument()

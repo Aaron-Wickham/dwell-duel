@@ -8,8 +8,10 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ### Features
 - **Alerts for reviewers and admins:** a task submission pushes to reviewers and above (not the submitter), a market that has closed with no result pushes to admins and above, and the Admin button shows a badge with what is waiting on you. A new "Tasks to review" choice in Settings covers reviewers; admins use "Markets to resolve" (#123).
+- **Filter the markets page** by All, Open, Pending (closed but not yet resolved) or Closed (resolved and voided); the choice is in the URL (#124).
 
 ### Fixes
+- **Mobile page can't zoom or scroll sideways:** the viewport is locked and the page is clipped to the screen's width, which stops the top bar and tab bar being pulled off the screen edges in the installed app (#127, #128, #129). Pinch-zoom is gone with it.
 - **Notifications don't repeat the app's name:** each one's title says what happened ("New market", "You won 26 DC", "Time to resolve", "Task approved"), with the detail underneath (#109).
 - **Market cards' sparklines start at the seeded 50/50,** like the market page's chart, and a seeded market nobody has bet on shows a flat line (#110).
 - **Home's Markets to resolve card appears when a market closes,** without a manual refresh (#111).

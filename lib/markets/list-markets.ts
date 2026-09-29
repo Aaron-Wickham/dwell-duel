@@ -67,6 +67,9 @@ const CLOSED_KEYS: MarketKeys = { ts: 'created_at', id: 'id', isId: isUuid }
 // A key probe selects only the id and the list's own timestamp column.
 type KeyRow = { id: string } & Partial<Record<MarketKeys['ts'], string>>
 
+// Open markets split at their close time: still taking bets, or past it and waiting on a resolver.
+export type CloseBound = { upcoming: boolean; at: string }
+
 // The range read and its key probe share one builder, so the two can't drift apart on filters. Its column list is a runtime string, so
 // the generated types can't follow it, and each reader casts its rows.
 function marketsQuery(
@@ -76,8 +79,11 @@ function marketsQuery(
   columns: string,
   filter: string | null,
   limit: number,
+  bound?: CloseBound,
 ) {
   let query = supabase.from('markets').select(columns).in('status', statuses)
+  // A plain bound ANDed onto the cursor's OR, as the keyset filters do, keeps the Index Cond.
+  if (bound) query = bound.upcoming ? query.gt('close_at', bound.at) : query.lte('close_at', bound.at)
   if (filter) query = query.or(filter)
   const ascending = keys.ascending ?? false
   return query.order(keys.ts, { ascending }).order(keys.id, { ascending }).limit(limit)
@@ -88,13 +94,14 @@ async function listMarkets(
   statuses: MarketSummary['status'][],
   keys: MarketKeys,
   page: PageParams,
+  bound?: CloseBound,
 ): Promise<KeysetPage<MarketSummary>> {
   const keyOf = (m: KeyRow): Cursor => ({ ts: m[keys.ts] as string, id: m.id })
   const result = await readKeyset(
     page,
     keys,
     async (filter, limit) => {
-      const { data, error } = await marketsQuery(supabase, statuses, keys, SUMMARY_SELECT, filter, limit)
+      const { data, error } = await marketsQuery(supabase, statuses, keys, SUMMARY_SELECT, filter, limit, bound)
         // Same tiebreak as getMarket: insertion time, then label, so outcome order (and
         // therefore colour assignment) is stable across requests.
         .order('created_at', { referencedTable: 'market_outcomes' })
@@ -104,7 +111,7 @@ async function listMarkets(
     },
     keyOf,
     async (filter, limit) => {
-      const { data, error } = await marketsQuery(supabase, statuses, keys, `id, ${keys.ts}`, filter, limit)
+      const { data, error } = await marketsQuery(supabase, statuses, keys, `id, ${keys.ts}`, filter, limit, bound)
       if (error) throw error
       return ((data ?? []) as unknown as KeyRow[]).map(keyOf)
     },
@@ -113,9 +120,13 @@ async function listMarkets(
 }
 
 // Open markets include those past their close time and awaiting resolution, which come first in
-// this order; the page splits them into their own group.
-export async function listOpenMarkets(supabase: DbClient, page: PageParams): Promise<KeysetPage<MarketSummary>> {
-  return listMarkets(supabase, ['open'], OPEN_KEYS, page)
+// this order; the page splits them into their own group, or passes a bound to read just one side.
+export async function listOpenMarkets(
+  supabase: DbClient,
+  page: PageParams,
+  bound?: CloseBound,
+): Promise<KeysetPage<MarketSummary>> {
+  return listMarkets(supabase, ['open'], OPEN_KEYS, page, bound)
 }
 
 // Resolved and voided markets are one list, one "Show more", shown in their two groups.

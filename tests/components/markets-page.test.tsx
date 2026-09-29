@@ -76,9 +76,10 @@ async function renderPage(
   render(await MarketsPage({ params: Promise.resolve({}), searchParams: Promise.resolve(searchParams) }))
 }
 
-// The order the page lays its landmarks out in, top to bottom: group headings and paging links.
+// The order the page lays its landmarks out in, top to bottom: group headings and paging links
+// (not the filter tabs, whose "Open" would read as a group heading).
 function outline(): string[] {
-  return [...document.querySelectorAll('h2, a')]
+  return [...document.querySelectorAll('h2, a:not(nav a)')]
     .map((el) => el.textContent ?? '')
     .filter((text) => ['Open', 'Awaiting resolution', 'Resolved', 'Voided', 'Show more', 'Back to newest'].includes(text))
 }
@@ -104,6 +105,37 @@ describe('MarketsPage', () => {
     expect(listClosedMarkets).toHaveBeenCalledWith({}, { top: null, bottom: closedEnd })
     const facts = (m: MarketSummary) => ({ id: m.id, seedPerOutcome: 20, createdAt: '2026-09-01T10:00:00Z', outcomeIds: [] })
     expect(readSparklines).toHaveBeenCalledWith({}, [market(1, 'open'), market(2, 'open'), market(9, 'voided')].map(facts))
+  })
+
+  it('reads only the pending side of the open list for the pending filter, and skips the closed list', async () => {
+    await renderPage({ rows: [market(2, 'open', -DAY)], next: null, windowed: false }, { rows: [], next: null, windowed: false }, { status: 'pending' })
+    expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: null, bottom: null }, { upcoming: false, at: expect.any(String) })
+    expect(listClosedMarkets).not.toHaveBeenCalled()
+    expect(screen.getByRole('link', { name: 'Pending' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('reads only upcoming markets for the open filter', async () => {
+    await renderPage({ rows: [market(1, 'open')], next: null, windowed: false }, { rows: [], next: null, windowed: false }, { status: 'open' })
+    expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: null, bottom: null }, { upcoming: true, at: expect.any(String) })
+    expect(listClosedMarkets).not.toHaveBeenCalled()
+  })
+
+  it('reads only the closed list for the closed filter', async () => {
+    await renderPage({ rows: [], next: null, windowed: false }, { rows: [market(9, 'voided')], next: null, windowed: false }, { status: 'closed' })
+    expect(listOpenMarkets).not.toHaveBeenCalled()
+    expect(listClosedMarkets).toHaveBeenCalledTimes(1)
+    expect(outline()).toEqual(['Voided'])
+  })
+
+  it('names the filter in its empty state', async () => {
+    await renderPage({ rows: [], next: null, windowed: false }, { rows: [], next: null, windowed: false }, { status: 'pending' })
+    expect(screen.getByText('Nothing waiting to be resolved.')).toBeInTheDocument()
+  })
+
+  it('treats an unknown status as All', async () => {
+    await renderPage({ rows: [market(1, 'open')], next: null, windowed: false }, { rows: [], next: null, windowed: false }, { status: 'bogus' })
+    expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: null, bottom: null })
+    expect(screen.getByRole('link', { name: 'All' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('puts the open list’s Show more under its groups and the closed list’s under theirs', async () => {

@@ -16,6 +16,11 @@ import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { SubNav } from '@/components/ui/sub-nav'
 import { LeaderboardRow } from '@/components/leaderboard/leaderboard-row'
+import { Awards } from '@/components/leaderboard/awards'
+import { PastChampions } from '@/components/leaderboard/past-champions'
+import { Podium } from '@/components/leaderboard/podium'
+import { RaceChart } from '@/components/leaderboard/race-chart'
+import { getAwards, getPastChampions, getRace, getRecords } from '@/lib/social/leaderboard-extras'
 
 const PATH = '/leaderboard'
 const ROW_ID_PREFIX = 'member'
@@ -42,6 +47,19 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
 
   const board = readBoard(searchParams.tab)
   const page = await getLeaderboardPage(supabase, board, readRankPageParams(searchParams, 'before'))
+  // The month's extras show only above the top of the board, never inside a window part-way down it.
+  const showMonthExtras = board === 'month' && !page.windowed && page.rows.length > 0
+  const [records, race, awards, champions] = await Promise.all([
+    getRecords(
+      supabase,
+      page.rows.map((r) => r.id),
+    ),
+    showMonthExtras ? getRace(supabase) : [],
+    showMonthExtras ? getAwards(supabase) : [],
+    board === 'month' ? getPastChampions(supabase) : [],
+  ])
+  const podium = !page.windowed && page.rows.length >= 3 ? page.rows.slice(0, 3) : null
+  const listed = podium ? page.rows.slice(3) : page.rows
   const backToNewestHref = newestHref(PATH, searchParams, 'before')
 
   let body
@@ -60,7 +78,7 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
       </EmptyState>
     )
   } else {
-    body = (
+    const rankings = listed.length > 0 && (
       <SectionCard
         title={<span className="sr-only">{board === 'all' ? 'Net worth rankings' : 'This month’s rankings'}</span>}
         titleId="leaderboard-rankings"
@@ -72,7 +90,7 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
           </div>
         )}
         <ol className="flex flex-col">
-          {page.rows.map((member) => (
+          {listed.map((member) => (
             <LeaderboardRow
               key={member.id}
               rank={member.rank}
@@ -80,6 +98,7 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
               avatarSrc={member.avatarSrc}
               score={member.score}
               signed={board === 'month'}
+              record={records.get(member.id)}
               isMe={member.id === user.id}
               href={`/members/${member.id}`}
               domId={rowDomId(ROW_ID_PREFIX, member.id)}
@@ -96,6 +115,21 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
           </div>
         )}
       </SectionCard>
+    )
+    body = (
+      <>
+        {podium && (
+          <Podium
+            members={podium.map((m) => ({ id: m.id, name: m.displayName, avatarSrc: m.avatarSrc, score: m.score, rank: m.rank }))}
+            signed={board === 'month'}
+            meId={user.id}
+          />
+        )}
+        {showMonthExtras && <RaceChart series={race} />}
+        {showMonthExtras && <Awards awards={awards} />}
+        {rankings}
+        {board === 'month' && !page.windowed && <PastChampions champions={champions} />}
+      </>
     )
   }
 

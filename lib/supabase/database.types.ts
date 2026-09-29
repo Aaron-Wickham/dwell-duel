@@ -1151,6 +1151,17 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_invited: { Args: never; Returns: boolean }
+      leaderboard_awards: {
+        Args: never
+        Returns: {
+          avatar_path: string
+          detail: string
+          display_name: string
+          kind: string
+          profile_id: string
+          value: number
+        }[]
+      }
       leaderboard_month: {
         Args: never
         Returns: {
@@ -1171,6 +1182,15 @@ export type Database = {
           id: string
           rank: number
           score: number
+        }[]
+      }
+      leaderboard_race: {
+        Args: { p_top?: number }
+        Returns: {
+          day: string
+          display_name: string
+          profile_id: string
+          profit: number
         }[]
       }
       market_sparklines: {
@@ -1202,6 +1222,14 @@ export type Database = {
         Returns: {
           email: string
           id: string
+        }[]
+      }
+      member_records: {
+        Args: { p_ids: string[] }
+        Returns: {
+          lost: number
+          profile_id: string
+          won: number
         }[]
       }
       member_stats: {

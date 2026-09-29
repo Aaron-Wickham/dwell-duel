@@ -1,0 +1,53 @@
+import Link from 'next/link'
+import { Avatar } from '@/components/ui/avatar'
+import { cardClass } from '@/components/ui/card'
+import { signedDc } from '@/lib/social/season'
+import { cn } from '@/lib/utils'
+
+export interface PodiumMember {
+  id: string
+  name: string
+  avatarSrc: string | null
+  score: number
+  rank: number
+}
+
+// Block heights by finishing place, so the winner stands tallest; ties share a place, and so a height.
+const BLOCK = { 1: 'h-[72px] bg-lime text-on-lime', 2: 'h-[48px] bg-sunk text-ink', 3: 'h-[34px] bg-sunk text-ink' } as const
+
+function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean; meId: string }) {
+  const place = Math.min(member.rank, 3) as 1 | 2 | 3
+  return (
+    <li className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
+      <Avatar name={member.name} src={member.avatarSrc} size={place === 1 ? 'lg' : 'md'} />
+      <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="hit-area max-w-full truncate text-[15px] font-extrabold">
+        {member.name}
+      </Link>
+      {member.id === meId && <span className="-mt-1 text-xs font-bold text-ink2">you</span>}
+      <span className="text-sm font-bold whitespace-nowrap text-ink2 tabular-nums">
+        {signed ? signedDc(member.score) : `${member.score} DC`}
+      </span>
+      <span
+        className={cn('mt-1 flex w-full items-start justify-center rounded-t-[10px] pt-1.5 text-lg font-extrabold tabular-nums', BLOCK[place])}
+      >
+        <span aria-hidden="true">{member.rank}</span>
+        <span className="sr-only">Rank {member.rank}</span>
+      </span>
+    </li>
+  )
+}
+
+// The top three, second and third flanking the winner. Only for the top of a board of at least
+// three: a window that starts mid-board has no podium.
+export function Podium({ members, signed, meId }: { members: PodiumMember[]; signed: boolean; meId: string }) {
+  const [first, second, third] = members
+  return (
+    <section aria-label="Top three" className={cn(cardClass, 'max-w-[820px] p-4 md:p-6')}>
+      <ol className="flex items-end justify-center gap-3 md:gap-6">
+        <Place member={second} signed={signed} meId={meId} />
+        <Place member={first} signed={signed} meId={meId} />
+        <Place member={third} signed={signed} meId={meId} />
+      </ol>
+    </section>
+  )
+}

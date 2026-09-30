@@ -23,20 +23,20 @@ export const pageSubscriptions = {
   },
   // The HomeHero's pending-review count and the admin tile's pending-approvals count both only
   // change via task_completions -- a rejection moves no balance, so bets/profiles don't cover it.
-  // An admin needs every submission; a member only needs their own.
+  // A reviewer or above needs every submission; a member only needs their own.
   // profiles isn't watched here: every bet moves some balance, so watching all of them refreshed
   // every open Home on every bet (#68). The layout's base channel already follows this member's
   // own profile; the rank catches up on the next visit.
   // The hero's At stake moves when the member bets, cancels or places a parlay, and when a market
   // or parlay settles (markets, and parlays' own status).
-  home({ me, admin }: { me: string; admin: boolean }): LiveSubscription[] {
+  home({ me, reviewer }: { me: string; reviewer: boolean }): LiveSubscription[] {
     return [
       { topic: 'markets' },
       { topic: 'tasks' },
       { table: 'bets', filter: `profile_id=eq.${me}` },
       { table: 'cancelled_bets', filter: `profile_id=eq.${me}` },
       { table: 'parlays', filter: `profile_id=eq.${me}` },
-      admin ? { topic: 'reviews' } : { table: 'task_completions', filter: `profile_id=eq.${me}` },
+      reviewer ? { topic: 'reviews' } : { table: 'task_completions', filter: `profile_id=eq.${me}` },
     ]
   },
   // Not profiles (#205): apply_coin_transaction updates a balance on every bet, win, task and parlay,

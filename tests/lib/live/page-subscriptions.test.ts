@@ -10,8 +10,8 @@ const MEMBER_ID = '22222222-2222-4222-8222-222222222222'
 const declarations: Record<string, () => LiveSubscription[]> = {
   marketDetail: () => pageSubscriptions.marketDetail(MARKET_ID),
   markets: () => pageSubscriptions.markets(),
-  'home (member)': () => pageSubscriptions.home({ me: MEMBER_ID, admin: false }),
-  'home (admin)': () => pageSubscriptions.home({ me: MEMBER_ID, admin: true }),
+  'home (member)': () => pageSubscriptions.home({ me: MEMBER_ID, reviewer: false }),
+  'home (reviewer)': () => pageSubscriptions.home({ me: MEMBER_ID, reviewer: true }),
   leaderboard: () => pageSubscriptions.leaderboard(),
   member: () => pageSubscriptions.member(MEMBER_ID),
   feed: () => pageSubscriptions.feed(),
@@ -58,7 +58,7 @@ describe('pageSubscriptions', () => {
   })
 
   it('home, for a member, filters task_completions to their own submissions', () => {
-    expect(pageSubscriptions.home({ me: MEMBER_ID, admin: false })).toEqual([
+    expect(pageSubscriptions.home({ me: MEMBER_ID, reviewer: false })).toEqual([
       { topic: 'markets' },
       { topic: 'tasks' },
       { table: 'bets', filter: `profile_id=eq.${MEMBER_ID}` },
@@ -68,8 +68,8 @@ describe('pageSubscriptions', () => {
     ])
   })
 
-  it('home, for an admin, follows the review queue so pending-approvals stay live', () => {
-    expect(pageSubscriptions.home({ me: MEMBER_ID, admin: true })).toEqual([
+  it('home, for a reviewer or above, follows the review queue so pending-approvals stay live', () => {
+    expect(pageSubscriptions.home({ me: MEMBER_ID, reviewer: true })).toEqual([
       { topic: 'markets' },
       { topic: 'tasks' },
       { table: 'bets', filter: `profile_id=eq.${MEMBER_ID}` },
@@ -101,8 +101,8 @@ describe('pageSubscriptions', () => {
     const betWrites = new Set(['bets', 'profiles', 'activity_events', 'parlays', 'parlay_legs'])
     const betTopics = new Set(['pools', 'activity'])
     for (const subs of [
-      pageSubscriptions.home({ me: MEMBER_ID, admin: false }),
-      pageSubscriptions.home({ me: MEMBER_ID, admin: true }),
+      pageSubscriptions.home({ me: MEMBER_ID, reviewer: false }),
+      pageSubscriptions.home({ me: MEMBER_ID, reviewer: true }),
       pageSubscriptions.member(MEMBER_ID),
     ]) {
       const hears = subs.filter((s) =>

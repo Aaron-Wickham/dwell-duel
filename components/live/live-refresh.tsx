@@ -44,9 +44,20 @@ export const DEBOUNCE_MS = 400
 export const MAX_WAIT_MS = 2000
 // Mirrors public.live_ping_interval_ms(); a DB test keeps them equal.
 export const LIVE_PING_INTERVAL_MS = 5000
-// A topic's refresh waits out the database's throttle window, plus a second for a held-back
-// transaction to commit, so it reads every change the throttle kept from pinging.
-export const TOPIC_REFRESH_DELAY_MS = LIVE_PING_INTERVAL_MS + 1000
+// How long after a topic's latest ping its refresh may come. The database only holds a change back
+// when it commits within LIVE_PING_INTERVAL_MS of the ping before it, so a refresh at least that
+// long (plus a second's margin) after the latest ping reads everything the throttle kept quiet.
+const MIN_TOPIC_DELAY_MS = LIVE_PING_INTERVAL_MS + 1000
+export const TOPIC_REFRESH_DELAY_MS: Record<LiveTopic, number> = {
+  markets: MIN_TOPIC_DELAY_MS,
+  // Every bet moves a pool and writes a feed row, and /markets and the feed are the pages most
+  // often open, so a longer wait folds more bets into each refresh (#251).
+  pools: 15_000,
+  activity: 15_000,
+  reactions: MIN_TOPIC_DELAY_MS,
+  tasks: MIN_TOPIC_DELAY_MS,
+  reviews: MIN_TOPIC_DELAY_MS,
+}
 // A tab hidden this long gives up its channels, and with them its Realtime connection; coming back
 // reopens them and refreshes. A quick app switch keeps them.
 export const HIDDEN_CLOSE_MS = 60_000
@@ -57,7 +68,7 @@ type ChannelStatus = 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR'
 
 type Scheduler = {
   refresh: () => void
-  topicPing: () => void
+  topicPing: (topic: LiveTopic) => void
   status: (key: string, status: ChannelStatus) => void
   gone: (key: string) => void
 }
@@ -132,7 +143,7 @@ export function LiveRefresh(): null {
   useEffect(() => {
     let debounceTimer: ReturnType<typeof setTimeout> | undefined
     let maxWaitTimer: ReturnType<typeof setTimeout> | undefined
-    let topicTimer: ReturnType<typeof setTimeout> | undefined
+    const topicTimers = new Map<LiveTopic, { timer: ReturnType<typeof setTimeout>; followUpAt: number }>()
     let hiddenTimer: ReturnType<typeof setTimeout> | undefined
     let pollTimer: ReturnType<typeof setInterval> | undefined
     let reportedPause = false
@@ -157,13 +168,26 @@ export function LiveRefresh(): null {
       if (maxWaitTimer === undefined) maxWaitTimer = setTimeout(flush, MAX_WAIT_MS)
     }
 
-    // Later pings inside the window fold into the refresh already waiting.
-    function topicPing() {
-      if (topicTimer !== undefined) return
-      topicTimer = setTimeout(() => {
-        topicTimer = undefined
-        refresh()
-      }, TOPIC_REFRESH_DELAY_MS)
+    // A ping while its topic's refresh is waiting folds into it, and books one follow-up for the
+    // latest ping's own delay: under a steady stream a topic refreshes once per delay, and there is
+    // always a refresh at least one delay after the latest ping.
+    function scheduleTopic(topic: LiveTopic, at: number) {
+      const entry = {
+        followUpAt: 0,
+        timer: setTimeout(() => {
+          topicTimers.delete(topic)
+          refresh()
+          if (entry.followUpAt > 0) scheduleTopic(topic, entry.followUpAt)
+        }, at - Date.now()),
+      }
+      topicTimers.set(topic, entry)
+    }
+
+    function topicPing(topic: LiveTopic) {
+      const at = Date.now() + TOPIC_REFRESH_DELAY_MS[topic]
+      const pending = topicTimers.get(topic)
+      if (pending) pending.followUpAt = at
+      else scheduleTopic(topic, at)
     }
 
     function updatePolling() {
@@ -214,7 +238,7 @@ export function LiveRefresh(): null {
       schedulerRef.current = IDLE_SCHEDULER
       clearTimeout(debounceTimer)
       clearTimeout(maxWaitTimer)
-      clearTimeout(topicTimer)
+      for (const { timer } of topicTimers.values()) clearTimeout(timer)
       clearTimeout(hiddenTimer)
       clearInterval(pollTimer)
       document.removeEventListener('visibilitychange', onVisibilityChange)
@@ -293,12 +317,12 @@ export function LiveRefresh(): null {
 
     loadClient()
       .then(async (supabase) => {
-        for (const topic of topicsKey.split(',')) {
+        for (const topic of topicsKey.split(',') as LiveTopic[]) {
           const name = `live:${topic}`
           await closingTopics.get(name)
           if (cancelled) return
           const channel = supabase.channel(name, { config: { private: true } })
-          channel.on('broadcast', { event: 'changed' }, () => scheduler().topicPing())
+          channel.on('broadcast', { event: 'changed' }, () => scheduler().topicPing(topic))
           subscribeChannel(channel, name, scheduler)
           teardowns.push(() => {
             scheduler().gone(name)

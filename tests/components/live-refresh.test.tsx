@@ -93,6 +93,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => mocks.router }))
 import {
   DEBOUNCE_MS,
   HIDDEN_CLOSE_MS,
+  LIVE_PING_INTERVAL_MS,
   LIVE_TABLES,
   LiveRefresh,
   POLL_MS,
@@ -163,7 +164,7 @@ async function mount(subscriptions?: LiveSubscription[]) {
     await act(() => vi.dynamicImportSettled())
   }
 
-  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
   return { ...view, ...channels() }
 }
 
@@ -515,20 +516,53 @@ describe('LiveRefresh', () => {
     }
   })
 
-  it('refreshes once the database throttle window has passed after a ping, folding later pings into it', async () => {
-    await mount([{ topic: 'markets' }, { topic: 'pools' }])
+  it('refreshes a topic once its delay has passed after a ping, folding a later ping into it', async () => {
+    await mount([{ topic: 'markets' }])
+    const markets = currentTopicChannel('markets')!
 
-    fireChange(currentTopicChannel('markets')!, 'broadcast:changed')
-    vi.advanceTimersByTime(1000)
-    fireChange(currentTopicChannel('pools')!, 'broadcast:changed')
-    fireChange(currentTopicChannel('markets')!, 'broadcast:changed')
-
-    vi.advanceTimersByTime(TOPIC_REFRESH_DELAY_MS - 1000 + DEBOUNCE_MS - 1)
+    fireChange(markets, 'broadcast:changed')
+    vi.advanceTimersByTime(TOPIC_REFRESH_DELAY_MS.markets + DEBOUNCE_MS - 1)
     expect(mocks.refresh).not.toHaveBeenCalled()
     vi.advanceTimersByTime(1)
     expect(mocks.refresh).toHaveBeenCalledTimes(1)
 
-    vi.advanceTimersByTime(TOPIC_REFRESH_DELAY_MS * 2)
+    vi.advanceTimersByTime(TOPIC_REFRESH_DELAY_MS.markets * 3)
+    expect(mocks.refresh).toHaveBeenCalledTimes(1)
+  })
+
+  // The database may hold back changes for an interval after any ping it sends, so the latest ping
+  // needs a refresh of its own at least one delay later, even while an earlier one is waiting.
+  it('books a follow-up refresh one delay after the latest ping in a burst', async () => {
+    await mount([{ topic: 'markets' }])
+    const markets = currentTopicChannel('markets')!
+    const delay = TOPIC_REFRESH_DELAY_MS.markets
+
+    fireChange(markets, 'broadcast:changed')
+    vi.advanceTimersByTime(delay - 500)
+    fireChange(markets, 'broadcast:changed')
+    vi.advanceTimersByTime(500 + DEBOUNCE_MS)
+    expect(mocks.refresh).toHaveBeenCalledTimes(1)
+
+    vi.advanceTimersByTime(delay - 500 - 1)
+    expect(mocks.refresh).toHaveBeenCalledTimes(1)
+    vi.advanceTimersByTime(1)
+    expect(mocks.refresh).toHaveBeenCalledTimes(2)
+
+    vi.advanceTimersByTime(delay * 3)
+    expect(mocks.refresh).toHaveBeenCalledTimes(2)
+  })
+
+  it('waits longer for the busy pools and activity topics than for markets', async () => {
+    expect(TOPIC_REFRESH_DELAY_MS.pools).toBe(15_000)
+    expect(TOPIC_REFRESH_DELAY_MS.activity).toBe(15_000)
+    expect(TOPIC_REFRESH_DELAY_MS.markets).toBe(LIVE_PING_INTERVAL_MS + 1000)
+    for (const delay of Object.values(TOPIC_REFRESH_DELAY_MS)) expect(delay).toBeGreaterThan(LIVE_PING_INTERVAL_MS)
+
+    await mount([{ topic: 'pools' }])
+    fireChange(currentTopicChannel('pools')!, 'broadcast:changed')
+    vi.advanceTimersByTime(TOPIC_REFRESH_DELAY_MS.pools + DEBOUNCE_MS - 1)
+    expect(mocks.refresh).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1)
     expect(mocks.refresh).toHaveBeenCalledTimes(1)
   })
 
@@ -591,7 +625,7 @@ describe('LiveRefresh', () => {
 
   it('closes its channels a while after mounting in a hidden tab', async () => {
     setVisibility('hidden')
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
     render(<Harness />)
     await act(() => vi.dynamicImportSettled())
     const base = currentBaseChannel()

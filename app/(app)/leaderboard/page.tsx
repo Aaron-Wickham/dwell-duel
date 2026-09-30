@@ -3,7 +3,7 @@ import { CalendarDays, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { getLeaderboardPage, type Board } from '@/lib/social/leaderboard'
+import { getLeaderboardPage, getYourStanding, type Board } from '@/lib/social/leaderboard'
 import { currentSeasonName } from '@/lib/social/season'
 import { newestHref, showMoreHref, type SearchParams } from '@/lib/pagination/cursor'
 import { readRankPageParams } from '@/lib/pagination/rank-cursor'
@@ -19,6 +19,7 @@ import { LeaderboardRow } from '@/components/leaderboard/leaderboard-row'
 import { Awards } from '@/components/leaderboard/awards'
 import { PastChampions } from '@/components/leaderboard/past-champions'
 import { Podium } from '@/components/leaderboard/podium'
+import { YourStandingCard } from '@/components/leaderboard/your-standing'
 import { RaceChart } from '@/components/leaderboard/race-chart-lazy'
 import { cn } from '@/lib/utils'
 import { getAwards, getPastChampions, getRace, getRecords } from '@/lib/social/leaderboard-extras'
@@ -50,7 +51,10 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
   const page = await getLeaderboardPage(supabase, board, readRankPageParams(searchParams, 'before'))
   // The month's extras show only above the top of the board, never inside a window part-way down it.
   const showMonthExtras = board === 'month' && !page.windowed && page.rows.length > 0
-  const [records, race, awards, champions] = await Promise.all([
+  // On a wide screen the net-worth board fills its side column with your own standing; it needs
+  // rankings beside it, so it's read only when there are rows below the podium.
+  const showStanding = board === 'all' && page.rows.length > 1 && (page.windowed || page.rows.length > 3)
+  const [records, race, awards, champions, standing, myRecords] = await Promise.all([
     getRecords(
       supabase,
       page.rows.map((r) => r.id),
@@ -58,6 +62,8 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
     showMonthExtras ? getRace(supabase) : [],
     showMonthExtras ? getAwards(supabase) : [],
     board === 'month' ? getPastChampions(supabase) : [],
+    showStanding ? getYourStanding(supabase, user.id) : null,
+    showStanding ? getRecords(supabase, [user.id]) : new Map(),
   ])
   const podium = !page.windowed && page.rows.length >= 3 ? page.rows.slice(0, 3) : null
   const listed = podium ? page.rows.slice(3) : page.rows
@@ -84,7 +90,7 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
     const hasChampions = board === 'month' && !page.windowed && champions.length > 0
     // At lg the month's extras move into a side column beside the rankings; on a phone they keep
     // their order around it, which is why the race and awards sit in a wrapper that is only a box at lg.
-    const split = listed.length > 0 && (hasSide || hasChampions)
+    const split = listed.length > 0 && (hasSide || hasChampions || showStanding)
     const rankings = listed.length > 0 && (
       <SectionCard
         title={<span className="sr-only">{board === 'all' ? 'Net worth rankings' : 'This month’s rankings'}</span>}
@@ -145,6 +151,9 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
             </div>
           )}
           {rankings}
+          {showStanding && listed.length > 0 && (
+            <YourStandingCard standing={standing} record={myRecords.get(user.id)} className="hidden lg:col-start-2 lg:row-start-1 lg:flex" />
+          )}
           {hasChampions && <PastChampions champions={champions} className="lg:col-start-2" />}
         </div>
       </>

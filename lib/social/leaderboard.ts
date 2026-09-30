@@ -78,3 +78,46 @@ export async function getMemberStanding(supabase: DbClient, memberId: string): P
     memberCount: standing.data.member_count,
   }
 }
+
+export type YourStanding = {
+  rank: number
+  memberCount: number
+  score: number
+  // Others sharing this rank, so a tie reads as one.
+  tiedWith: number
+  // The nearest member with a higher net worth; null for first place.
+  above: { name: string; gap: number } | null
+}
+
+// The signed-in member's place on the net-worth board, for the desktop side card. The member
+// above is the nearest higher score, read with one limited query rather than from the page's
+// rows, which may be a window part-way down the board.
+export async function getYourStanding(supabase: DbClient, memberId: string): Promise<YourStanding | null> {
+  const standing = await supabase.rpc('member_standing', { p_profile_id: memberId }).maybeSingle()
+  if (standing.error) throw standing.error
+  if (!standing.data) return null
+  const { rank, score, member_count: memberCount } = standing.data
+
+  const [sharing, higher] = await Promise.all([
+    supabase.rpc('leaderboard_net_worth').select('id').eq('rank', rank).limit(2),
+    rank > 1
+      ? supabase
+          .rpc('leaderboard_net_worth')
+          .select('display_name, score')
+          .gt('score', score)
+          .order('score', { ascending: true })
+          .order('display_name', { ascending: true })
+          .limit(1)
+      : null,
+  ])
+  if (sharing.error) throw sharing.error
+  if (higher?.error) throw higher.error
+  const nearest = higher?.data?.[0]
+  return {
+    rank,
+    memberCount,
+    score,
+    tiedWith: Math.max(0, (sharing.data?.length ?? 0) - 1),
+    above: nearest ? { name: nearest.display_name, gap: nearest.score - score } : null,
+  }
+}

@@ -100,7 +100,7 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 |---|---|---|
 | Markets | wide | Three columns of market cards. |
 | Market | wide | Chart and outcomes (7fr) beside betting, resolution and the rest (5fr). |
-| Leaderboard | wide | Podium across the top. This month: rankings (7fr) beside the race chart, the awards as a 2×2 grid and past champions (5fr). Net worth: podium and rankings at full width. |
+| Leaderboard | wide | Podium across the top. This month: rankings (7fr) beside the race chart, the awards as a 2×2 grid and past champions (5fr). Net worth: rankings (7fr) beside a "Your standing" card (5fr); on a phone the card is hidden. |
 | Feed | reading | One centred stream. |
 | My bets | wide | Open, Settled and Cancelled show bets as cards in three columns (a solo bet's status sits at the bottom of its card); Coins stays a list. |
 | Member | wide | Photo, name, bio and a two-column Stats card (5fr) beside Recent activity (7fr). |

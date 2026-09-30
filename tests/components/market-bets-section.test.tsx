@@ -68,6 +68,7 @@ const market: MarketDetail = {
   resolvedOutcomeId: null,
   resolvedOutcomeLabel: null,
   resolvedAt: null,
+  settledAt: null,
   outcomes: [
     { id: 'o-yes', label: 'Yes', poolTotal: 10 },
     { id: 'o-no', label: 'No', poolTotal: 5 },

@@ -113,6 +113,30 @@ describe('MarketCard', () => {
     expect(screen.getByText('No bets were placed.')).toBeInTheDocument()
   })
 
+  it('dates a void from when it was voided, and ends the chart there when that came before the close (#221)', () => {
+    const { container } = render(
+      <MarketCard
+        id="m2v"
+        title="Who brings the best dessert?"
+        status="voided"
+        kind="binary"
+        closeAt="2026-10-04T12:00:00.000Z"
+        resolvedAt={null}
+        settledAt="2026-10-01T09:00:00.000Z"
+        outcomes={[
+          { id: 'a', label: 'Yes', pct: 50 },
+          { id: 'b', label: 'No', pct: 50 },
+        ]}
+        resolvedOutcomeLabel={null}
+        chart={{ outcomes: [], points: [{ t: Date.parse('2026-09-30T09:00:00.000Z'), shares: { a: 0.5, b: 0.5 } }], now: Date.parse('2026-10-05T09:00:00.000Z') }}
+      />,
+    )
+    // The chip and the meta line ("Voided <time>") both read "Voided" as their own text.
+    expect(screen.getAllByText('Voided')).toHaveLength(2)
+    expect(container.querySelector('time')).toHaveAttribute('datetime', '2026-10-01T09:00:00.000Z')
+    expect(screen.getByTestId('chart')).toHaveAttribute('data-closed-at', '2026-10-01T09:00:00.000Z')
+  })
+
   it('shows the resolved winner line when the market has a winning outcome', () => {
     const { container } = render(
       <MarketCard
@@ -233,6 +257,7 @@ describe('MarketCard', () => {
         kind="binary"
         closeAt="2026-10-04T12:00:00.000Z"
         resolvedAt="2026-10-01T09:00:00.000Z"
+        settledAt="2026-10-01T09:00:00.000Z"
         outcomes={[
           { id: 'a', label: 'Yes', pct: 70 },
           { id: 'b', label: 'No', pct: 30 },

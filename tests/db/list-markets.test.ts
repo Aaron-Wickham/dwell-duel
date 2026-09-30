@@ -168,45 +168,56 @@ describe('listResolvedMarkets', () => {
     expect(rows.find((m) => m.id === marketId)?.resolvedOutcomeLabel).toBe('No')
   })
 
-  it('lists resolved and voided markets as one list, newest first, and no open ones', async () => {
+  it('lists resolved and voided markets as one list, newest settled first, and no open ones', async () => {
+    // Created in one order, settled in another: the list follows the settling (#221).
+    const voided = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Voided' })
     const resolved = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Resolved' })
+    const overridden = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Overridden' })
+    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Still open' })
+    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+    await resolve(overridden.marketId, overridden.outcomeIds[0])
     await closeNow(resolved.marketId)
     await resolve(resolved.marketId, resolved.outcomeIds[0])
-    const voided = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Voided' })
     await voidMarket(voided.marketId)
-    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Still open' })
+    // An override re-dates the resolution, not the settling, so Overridden stays oldest.
+    await resolve(overridden.marketId, overridden.outcomeIds[1])
 
     const page = await listResolvedMarkets(bobClient, FIRST)
 
     expect(page.rows.map((m) => [m.title, m.status, m.resolvedOutcomeLabel])).toEqual([
       ['Voided', 'voided', null],
       ['Resolved', 'resolved', 'Yes'],
+      ['Overridden', 'resolved', 'No'],
     ])
+    expect(page.rows.map((m) => m.settledAt !== null)).toEqual([true, true, true])
+    expect(Date.parse(page.rows[2].resolvedAt!)).toBeGreaterThan(Date.parse(page.rows[2].settledAt!))
     expect(page.next).toBeNull()
   })
 
   it('pages 50 at a time, with nothing skipped or repeated across a tie', async () => {
     const start = Date.parse('2026-09-01T00:00:00.000Z')
     // Inserted directly: sixty create/void round trips are slow, and the list never reads outcomes'
-    // pools. Pairs share a created_at, offset by one, so the 50th/51st tie and the id breaks it.
+    // pools. Pairs share a settled_at, offset by one, so the 50th/51st tie and the id breaks it;
+    // each created_at runs the other way, so the list can't pass by reading creation order.
     const rows = Array.from({ length: 60 }, (_, i) => ({
       created_by: alice.id,
       title: `Closed ${String(i).padStart(2, '0')}`,
       kind: 'binary',
       status: 'voided',
       close_at: new Date(start).toISOString(),
-      created_at: `${new Date(start + Math.floor((i + 1) / 2) * 60_000).toISOString().slice(0, 19)}.000456+00:00`,
+      created_at: new Date(start - (60 - i) * 60_000).toISOString(),
+      settled_at: `${new Date(start + Math.floor((i + 1) / 2) * 60_000).toISOString().slice(0, 19)}.000456+00:00`,
     }))
     const { error } = await serviceClient().from('markets').insert(rows)
     if (error) throw error
     const { data: all, error: allErr } = await serviceClient()
       .from('markets')
-      .select('id, created_at')
-      .order('created_at', { ascending: false })
+      .select('id, settled_at')
+      .order('settled_at', { ascending: false })
       .order('id', { ascending: false })
     if (allErr) throw allErr
     const everything = all.map((m) => m.id as string)
-    expect(all[49].created_at).toBe(all[50].created_at)
+    expect(all[49].settled_at).toBe(all[50].settled_at)
 
     const first = await listResolvedMarkets(bobClient, FIRST)
     expect(first.rows.map((m) => m.id)).toEqual(everything.slice(0, 50))

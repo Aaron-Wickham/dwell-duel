@@ -46,9 +46,11 @@ describe('resolve_market (first resolution)', () => {
     const { data: bobProfile } = await db.from('profiles').select('balance').eq('id', bob.id).single()
     expect(bobProfile?.balance).toBe(100 - 30)
 
-    const { data: market } = await db.from('markets').select('status, current_resolution_id').eq('id', marketId).single()
+    const { data: market } = await db.from('markets').select('status, current_resolution_id, settled_at').eq('id', marketId).single()
     expect(market?.status).toBe('resolved')
     expect(market?.current_resolution_id).not.toBeNull()
+    const { data: resolution } = await db.from('market_resolutions').select('resolved_at').eq('id', market!.current_resolution_id!).single()
+    expect(market?.settled_at).toBe(resolution?.resolved_at)
   })
 
   it('refunds everyone when the winning outcome has no bets', async () => {
@@ -149,6 +151,11 @@ describe('resolve_market (admin override)', () => {
     expect(resolutions?.[0].reversed_at).not.toBeNull()
     expect(resolutions?.[1].outcome_id).toBe(outcomeIds[1])
     expect(resolutions?.[1].reversed_at).toBeNull()
+
+    // settled_at (0066) stays the first resolution's instant; the override only re-dates the resolution.
+    const { data: market } = await db.from('markets').select('settled_at').eq('id', marketId).single()
+    const { data: first } = await db.from('market_resolutions').select('resolved_at').eq('market_id', marketId).order('resolved_at').limit(1).single()
+    expect(market?.settled_at).toBe(first?.resolved_at)
   })
 
   it('refuses an override to the outcome that already won, leaving the ledger alone (#198)', async () => {

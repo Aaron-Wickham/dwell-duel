@@ -97,6 +97,10 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
       <>
         Resolved <LocalTime iso={market.resolvedAt} format="day" /> ·{' '}
       </>
+    ) : market.status === 'voided' && market.settledAt ? (
+      <>
+        Voided <LocalTime iso={market.settledAt} format="day" /> ·{' '}
+      </>
     ) : market.status === 'open' ? (
       <>
         {isPastClose ? 'Closed' : 'Closes'} <LocalTime iso={market.closeAt} format="dateTime" /> ·{' '}
@@ -252,7 +256,7 @@ async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: 
           points={chart.points}
           betCount={chart.betCount}
           now={now}
-          closedAt={chartClosedAt(market.status, market.closeAt, market.resolvedAt)}
+          closedAt={chartClosedAt(market.status, market.closeAt, market.settledAt)}
           resolvedLabel={market.status === 'resolved' ? market.resolvedOutcomeLabel : null}
         />
       </SectionCard>

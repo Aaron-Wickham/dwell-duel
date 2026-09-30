@@ -127,15 +127,47 @@ describe('PendingApprovals', () => {
     for (const box of rowCheckboxes()) expect(box).toBeChecked()
   })
 
-  it('sends only the checked ids with Approve selected, then shows the summary', async () => {
+  it('sends only the checked ids with Approve selected once confirmed, then shows the summary', async () => {
     bulkApproveTaskCompletionsAction.mockResolvedValue({ summary: '1 approved.' })
     render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Ben’s submission' }))
     await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Approve and pay' }))
 
     expect(await screen.findByRole('status')).toHaveTextContent('1 approved.')
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
     const [, formData] = bulkApproveTaskCompletionsAction.mock.calls[0]
     expect(formData.getAll('completionIds')).toEqual(['c2'])
+  })
+
+  it('asks before Approve selected pays out, saying how many and how much, and pays nothing on Cancel (#221)', async () => {
+    render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select all' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
+
+    const dialog = await screen.findByRole('alertdialog', { name: 'Approve 2 submissions?' })
+    expect(dialog).toHaveAccessibleDescription('Pays 35 DC in rewards straight away.')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    expect(bulkApproveTaskCompletionsAction).not.toHaveBeenCalled()
+    expect(screen.getByRole('checkbox', { name: 'Select Ben’s submission' })).toBeChecked()
+  })
+
+  it('does not ask before Reject selected, or before an Approve selected with nothing ticked', async () => {
+    bulkRejectTaskCompletionsAction.mockResolvedValue({ summary: '1 rejected.' })
+    bulkApproveTaskCompletionsAction.mockResolvedValue({ formError: 'Select at least one completion.' })
+    render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Select at least one completion.')
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Alice’s submission' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('1 rejected.')
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect((bulkRejectTaskCompletionsAction.mock.calls[0][1] as FormData).getAll('completionIds')).toEqual(['c1'])
   })
 
   it('shows the empty state, and no bulk controls, when nothing is pending', () => {

@@ -388,9 +388,15 @@ async function MarketActions({
                   marketTitle: market.title,
                   parlay: false,
                   open: canBet,
-                  oddsBp,
+                  // A new pick starts Solo and shows only until the slip's own read (getSlipView)
+                  // replaces it, so its parlay figures are the plain pool's, not a quote.
+                  oddsBp: legOddsBp(totalPool, o.poolTotal) ?? 10_000,
+                  legBlock: null,
                   outcomePool: effective.pool,
                   totalPool: effective.total,
+                  realPool: o.poolTotal,
+                  realTotal: totalPool,
+                  opposing: totalPool - o.poolTotal,
                 }}
                 addAction={addToSlipAction.bind(null, o.outcomeId)}
                 removeAction={removeFromSlipAction.bind(null, o.outcomeId)}

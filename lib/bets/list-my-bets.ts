@@ -37,7 +37,7 @@ interface MarketEmbed {
   status: 'open' | 'resolved' | 'voided'
   close_at: string
   seed_per_outcome: number
-  current_resolution: { outcome_id: string } | null
+  current_resolution: { outcome_id: string; opposing_stake: number | null } | null
   market_outcomes: { id: string; pool_total: number }[]
 }
 
@@ -50,8 +50,9 @@ export interface BetRow {
   markets: MarketEmbed
 }
 
-// The same arithmetic as resolve_market, seed included (0041), from pools that can't move once a
-// market resolves.
+// The same arithmetic as resolve_market_core, from pools that can't move once a market resolves:
+// the seeded payout (0041), limited to the real pool plus the resolution's opposing stake (0074; a
+// resolution before then has none and paid the seeded payout).
 export function betResult(bet: { outcomeId: string; amount: number }, market: MarketEmbed, now: number): MyBetResult {
   if (market.status === 'voided') return { kind: 'refunded', reason: 'voided' }
   if (market.status === 'open') return Date.parse(market.close_at) > now ? { kind: 'open' } : { kind: 'awaiting' }
@@ -61,11 +62,14 @@ export function betResult(bet: { outcomeId: string; amount: number }, market: Ma
   if (winner !== bet.outcomeId) return { kind: 'lost' }
   const realTotal = market.market_outcomes.reduce((sum, o) => sum + o.pool_total, 0)
   const { pool, total } = effectivePools(winningPool, realTotal, market.seed_per_outcome, market.market_outcomes.length)
-  return { kind: 'won', payout: Math.floor((bet.amount * total) / pool) }
+  const seeded = Math.floor((bet.amount * total) / pool)
+  const opposing = market.current_resolution?.opposing_stake
+  const limit = opposing == null ? seeded : Math.floor((bet.amount * (realTotal + Number(opposing))) / winningPool)
+  return { kind: 'won', payout: Math.min(seeded, limit) }
 }
 
 export const BET_COLUMNS =
-  'id, outcome_id, amount, created_at, market_outcomes(label), markets!inner(id, title, status, close_at, seed_per_outcome, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id), market_outcomes(id, pool_total))'
+  'id, outcome_id, amount, created_at, market_outcomes(label), markets!inner(id, title, status, close_at, seed_per_outcome, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, opposing_stake), market_outcomes(id, pool_total))'
 
 export function toMyBet(b: BetRow, now: number): MyBet {
   return {

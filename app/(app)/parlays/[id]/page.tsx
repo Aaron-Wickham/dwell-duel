@@ -13,7 +13,7 @@ import { SectionCard } from '@/components/ui/section-card'
 import { requireUser } from '@/lib/auth/require-user'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { getParlayDetail, getParlayHead, type ParlayLegDetail } from '@/lib/parlays/get-parlay'
-import { formatOdds, MAX_MULTIPLIER } from '@/lib/parlays/odds'
+import { formatOdds, LOCKED_ODDS_MAX_MULTIPLIER, MAX_PAYOUT } from '@/lib/parlays/odds'
 import { cardClass } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +21,11 @@ import { cn } from '@/lib/utils'
 // or unreadable id still gets a real 404 status. The header comes from a cheap read of the parlay's
 // own row; the summary, picks and maths stream in behind their skeletons, as the market page's
 // sections do.
+// A leg's odds once they're set; before its market closes, what its pool would give it now.
+function legOdds(leg: ParlayLegDetail): string {
+  return leg.oddsKnown ? `${formatOdds(leg.oddsBp)}×` : `~${formatOdds(leg.oddsBp)}×`
+}
+
 function legDetail(leg: ParlayLegDetail) {
   if (leg.marketStatus === 'voided') return 'Market voided. This pick drops out and the rest carry on.'
   if (leg.marketStatus === 'resolved') return `Resolved: ${leg.winningLabel ?? 'unknown'}`
@@ -76,6 +81,8 @@ export async function ParlayBody({ id }: { id: string }) {
   const figure = outcomeFigure(parlay)
   const counted = parlay.legs.filter((leg) => leg.status !== 'voided')
   const dropped = parlay.legs.length - counted.length
+  const multiplier = `${parlay.estimated ? '~' : ''}${formatOdds(parlay.multiplierBp)}×`
+  const lockedAtPlacement = parlay.maxMultiplier === LOCKED_ODDS_MAX_MULTIPLIER
 
   return (
     <ContentReveal>
@@ -92,8 +99,8 @@ export async function ParlayBody({ id }: { id: string }) {
             {figure.value}
           </span>
           <span className="text-sm text-hero-2">
-            {parlay.stake} DC stake · {formatOdds(parlay.multiplierBp)}× multiplier
-            {parlay.capped ? ` (capped at ${MAX_MULTIPLIER}×)` : ''}
+            {parlay.stake} DC stake · {multiplier} multiplier
+            {parlay.capped ? ` (capped at ${parlay.maxMultiplier}×)` : ''}
           </span>
         </div>
         <ParlayProgress legs={parlay.legs} />
@@ -116,7 +123,7 @@ export async function ParlayBody({ id }: { id: string }) {
                   <LegPill status={leg.status} />
                 </div>
                 <p className="text-sm text-ink2">
-                  Pick: <strong className="text-ink">{leg.outcomeLabel}</strong> · locked at {formatOdds(leg.lockedOddsBp)}×
+                  Pick: <strong className="text-ink">{leg.outcomeLabel}</strong> · {legOdds(leg)}
                 </p>
                 <p className="text-sm text-ink2">
                   {note ?? (
@@ -138,8 +145,8 @@ export async function ParlayBody({ id }: { id: string }) {
             <dd className="font-bold">{parlay.stake} DC</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="min-w-0 break-words">{counted.map((leg) => `${formatOdds(leg.lockedOddsBp)}×`).join(' · ')}</dt>
-            <dd className="shrink-0 font-bold whitespace-nowrap">= {formatOdds(parlay.multiplierBp)}×</dd>
+            <dt className="min-w-0 break-words">{counted.map(legOdds).join(' · ')}</dt>
+            <dd className="shrink-0 font-bold whitespace-nowrap">= {multiplier}</dd>
           </div>
           <div className="flex justify-between gap-3 border-t border-line pt-2">
             <dt className="font-bold">{parlay.status === 'pending' ? 'Pays if every pick wins' : figure.label}</dt>
@@ -147,8 +154,11 @@ export async function ParlayBody({ id }: { id: string }) {
           </div>
         </dl>
         <p className="text-sm text-ink2">
-          Each pick’s odds were locked when the parlay was placed, and they multiply together
-          {parlay.capped ? `, up to a ${MAX_MULTIPLIER}× cap` : ''}.
+          {lockedAtPlacement
+            ? 'Each pick’s odds were locked when the parlay was placed'
+            : 'Each pick’s odds are set when its market closes, from the other members’ money on it (a ~ marks one still open)'}
+          , and they multiply together{parlay.capped ? `, up to a ${parlay.maxMultiplier}× cap` : ''}. A win pays at most{' '}
+          {MAX_PAYOUT} DC.
           {dropped > 0 ? ` ${dropped} voided ${dropped === 1 ? 'pick was' : 'picks were'} left out and the rest carried on.` : ''}
         </p>
       </SectionCard>

@@ -13,7 +13,18 @@ import { Message } from '@/components/ui/message'
 import { h2Class } from '@/components/ui/page'
 import { StatusChip } from '@/components/ui/status-chip'
 import type { SlipPick } from '@/lib/parlays/get-slip'
-import { combineOdds, formatOdds, MAX_MULTIPLIER, MAX_PICKS, potentialPayout, soloPayout } from '@/lib/parlays/odds'
+import {
+  combineOdds,
+  formatOdds,
+  legOddsBp,
+  MAX_MULTIPLIER,
+  MAX_PAYOUT,
+  MAX_PICKS,
+  MIN_LEG_BETTORS,
+  MIN_LEG_POOL,
+  potentialPayout,
+  soloPayout,
+} from '@/lib/parlays/odds'
 import { placeSlipAction, type PlaceSlipState } from '@/lib/parlays/place-slip'
 import { removeFromSlipAction } from '@/lib/parlays/slip-actions'
 import { haptics } from '@/lib/haptics'
@@ -27,7 +38,7 @@ function wholeDc(value: string | undefined): number | null {
 function placedMessage(placed: NonNullable<NonNullable<PlaceSlipState>['placed']>): string {
   const parts: string[] = []
   if (placed.solos > 0) parts.push(`${placed.solos} solo bet${placed.solos === 1 ? '' : 's'}`)
-  if (placed.parlay) parts.push(`a ${placed.parlay.legs}-leg parlay at ${formatOdds(placed.parlay.multiplierBp)}×`)
+  if (placed.parlay) parts.push(`a ${placed.parlay.legs}-leg parlay at ~${formatOdds(placed.parlay.multiplierBp)}×`)
   if (placed.replayed) {
     return parts.length > 0
       ? `Your earlier attempt already went through: ${parts.join(' and ')}.`
@@ -85,6 +96,19 @@ const segmentClass = (on: boolean) =>
     on ? 'bg-surface text-ink shadow-tab' : 'text-ink2',
   )
 
+const LEG_BLOCK_NOTE: Record<NonNullable<SlipPick['legBlock']>, string> = {
+  own_market: 'You created this market, so it can’t be in a parlay. Switch it to Solo.',
+  floor: `A parlay pick needs at least ${MIN_LEG_POOL} DC from ${MIN_LEG_BETTORS} other members on its market. Switch it to Solo, or add it once more members have bet.`,
+}
+
+// A Solo pick shows the market's odds; a Parlay pick shows what its leg would be priced at if the
+// market closed now, which is only an estimate until it does.
+function pickOdds(pick: SlipPick): string | null {
+  if (pick.parlay) return `~${formatOdds(pick.oddsBp)}×`
+  const bp = legOddsBp(pick.totalPool, pick.outcomePool)
+  return bp === null ? null : `${formatOdds(bp)}×`
+}
+
 function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
   const slip = useSlip()
   const { remove, setMode, stakes, setStake } = slip
@@ -93,6 +117,8 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
   const errorId = `slip-pick-error-${pick.outcomeId}`
   const stake = wholeDc(stakes[pick.outcomeId])
   const name = `${pick.outcomeLabel}, ${pick.marketTitle}`
+  const odds = pickOdds(pick)
+  const blockId = `slip-pick-block-${pick.outcomeId}`
 
   return (
     <li className="flex flex-col gap-3 py-4">
@@ -105,7 +131,7 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
           <span className="text-[17px] font-extrabold leading-[1.3]">{pick.outcomeLabel}</span>
         </div>
         {pick.open ? (
-          pick.oddsBp !== null && <span className="text-lg font-extrabold tabular-nums">{formatOdds(pick.oddsBp)}×</span>
+          odds !== null && <span className="text-lg font-extrabold tabular-nums">{odds}</span>
         ) : (
           <StatusChip tone="lost">No longer available</StatusChip>
         )}
@@ -165,7 +191,13 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
                 />
                 {stake !== null && (
                   <span className="text-sm text-ink2">
-                    Pays ~{soloPayout(stake, pick.outcomePool, pick.totalPool)} DC if it wins
+                    Pays ~
+                    {soloPayout(
+                      stake,
+                      { pool: pick.outcomePool, total: pick.totalPool },
+                      { pool: pick.realPool, total: pick.realTotal, opposing: pick.opposing },
+                    )}{' '}
+                    DC if it wins
                   </span>
                 )}
               </div>
@@ -175,6 +207,11 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
                 onPick={(value) => setStake(pick.outcomeId, value)}
               />
             </>
+          )}
+          {pick.parlay && pick.legBlock && (
+            <Message tone="gold" id={blockId}>
+              {LEG_BLOCK_NOTE[pick.legBlock]}
+            </Message>
           )}
         </>
       )}
@@ -238,10 +275,14 @@ export function SlipPanel() {
 
   const solos = picks.filter((p) => !p.parlay)
   const legs = picks.filter((p) => p.parlay)
-  const legBps = legs.flatMap((p) => (p.oddsBp !== null ? [p.oddsBp] : []))
+  const legBps = legs.map((p) => p.oddsBp)
   const { multiplierBp, capped } = combineOdds(legBps)
   const parlayStakeDc = wholeDc(parlayStake)
-  const parlayReady = legs.length === 0 || (legs.length >= 2 && legs.length <= MAX_PICKS && legBps.length === legs.length && parlayStakeDc !== null)
+  const legsBlocked = legs.some((p) => p.legBlock !== null)
+  const parlayReady =
+    legs.length === 0 ||
+    (legs.length >= 2 && legs.length <= MAX_PICKS && !legsBlocked && parlayStakeDc !== null && parlayStakeDc <= MAX_PAYOUT)
+  const parlayPays = parlayStakeDc !== null ? potentialPayout(parlayStakeDc, legBps) : null
   const solosReady = solos.every((p) => wholeDc(stakes[p.outcomeId]) !== null)
   const allOpen = picks.every((p) => p.open)
   const betCount = solos.length + (legs.length > 0 ? 1 : 0)
@@ -282,12 +323,16 @@ export function SlipPanel() {
             <h3 id="slip-parlay-title" className="font-extrabold">
               Parlay · {legs.length} {legs.length === 1 ? 'pick' : 'picks'}
             </h3>
-            {legs.length >= 2 && legBps.length === legs.length && (
+            {legs.length >= 2 && !legsBlocked && (
               <span className="font-extrabold tabular-nums">
-                {formatOdds(multiplierBp)}×{capped && ` (capped at ${MAX_MULTIPLIER}×)`}
+                ~{formatOdds(multiplierBp)}×{capped && ` (capped at ${MAX_MULTIPLIER}×)`}
               </span>
             )}
           </div>
+          <p className="text-sm text-ink2">
+            Each pick’s odds are set when its market closes, from other members’ money on it, so these
+            are estimates until then.
+          </p>
           {legNote ? (
             <p className="text-sm text-ink2">{legNote}</p>
           ) : (
@@ -301,6 +346,7 @@ export function SlipPanel() {
                 type="number"
                 inputMode="numeric"
                 min="1"
+                max={MAX_PAYOUT}
                 step="1"
                 value={parlayStake}
                 onChange={(e) => setParlayStake(e.target.value)}
@@ -308,13 +354,24 @@ export function SlipPanel() {
                 aria-invalid={Boolean(parlayError)}
                 aria-describedby={parlayError ? 'slip-parlay-error' : undefined}
               />
-              {parlayStakeDc !== null && (
-                <span className="text-sm text-ink2">Pays {potentialPayout(parlayStakeDc, legBps)} DC if every pick wins</span>
+              {parlayStakeDc !== null && parlayStakeDc > MAX_PAYOUT ? (
+                <span className="text-sm text-ink2">A parlay pays at most {MAX_PAYOUT} DC, so stake at most {MAX_PAYOUT} DC.</span>
+              ) : (
+                parlayPays !== null &&
+                !legsBlocked && (
+                  <span className="text-sm text-ink2">
+                    Pays ~{parlayPays} DC if every pick wins{parlayPays === MAX_PAYOUT && ', the most a parlay pays'}
+                  </span>
+                )
               )}
             </div>
           )}
           {!legNote && (
-            <StakeChips label="Quick stakes for the parlay" available={availableFor('parlay', slip)} onPick={setParlayStake} />
+            <StakeChips
+              label="Quick stakes for the parlay"
+              available={Math.min(availableFor('parlay', slip), MAX_PAYOUT)}
+              onPick={setParlayStake}
+            />
           )}
           {parlayError && (
             <Message tone="error" id="slip-parlay-error">

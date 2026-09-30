@@ -19,8 +19,12 @@ const pick: SlipPick = {
   parlay: false,
   open: true,
   oddsBp: 20_000,
+  legBlock: null,
   outcomePool: 10,
   totalPool: 20,
+  realPool: 10,
+  realTotal: 20,
+  opposing: 0,
 }
 const viewOf = (...picks: SlipPick[]): SlipView => ({ picks, legBps: [], multiplierBp: 10_000, capped: false })
 

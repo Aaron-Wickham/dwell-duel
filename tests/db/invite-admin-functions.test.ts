@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, clientForEmail, makeAuthUserWithoutProfile, type Member } from './fixtures'
+import { seedMembers, clientFor, clientForEmail, makeAuthUserWithoutProfile, type Member, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -37,7 +37,7 @@ describe('is_admin', () => {
   })
 
   it('is true once the profile row is promoted', async () => {
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const client = await clientFor(bob)
 
     const { data } = await client.rpc('is_admin')

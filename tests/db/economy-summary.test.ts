@@ -10,8 +10,7 @@ import {
   createTestMarket,
   createTestTask,
   type Member,
-  type TestMarket,
-} from './fixtures'
+  type TestMarket, giveRole } from './fixtures'
 
 // 0052 (#86): the owner's economy panel.
 let alice: Member
@@ -43,7 +42,7 @@ type Summary = {
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
   olive = await makeMember('Olive')
-  await serviceClient().from('profiles').update({ role: 'owner' }).eq('id', olive.id)
+  await giveRole(olive, 'owner')
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   oliveClient = await clientFor(olive)
@@ -167,7 +166,7 @@ async function playScenario(): Promise<void> {
 describe('economy_summary', () => {
   it('refuses an admin who isn’t the owner', async () => {
     const ada = await makeMember('Ada')
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', ada.id)
+    await giveRole(ada, 'admin')
     const adaClient = await clientFor(ada)
     const { data, error } = await adaClient.rpc('economy_summary', { p_month_start: new Date().toISOString() })
     expect(error?.message).toBe('only the owner can see the economy')

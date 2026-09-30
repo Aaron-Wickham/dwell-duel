@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { countPendingTaskCompletions, getMyPendingRewards, listMyTaskCompletions } from '@/lib/tasks/list-task-completions'
-import { serviceClient } from './helpers'
-import { seedMembers, clientFor, ensureInvited, createTestTask, type Member } from './fixtures'
+import { seedMembers, clientFor, ensureInvited, createTestTask, type Member, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -32,7 +31,7 @@ describe('listMyTaskCompletions', () => {
     const { taskId } = await createTestTask(alice)
     const completionId = await submitAsAlice(taskId)
 
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const adminClient = await clientFor(bob)
     const { error } = await adminClient.rpc('reject_task_completion', {
       p_completion_id: completionId,
@@ -58,7 +57,7 @@ describe("Home's pending counts (#68)", () => {
     await submitAsAlice(otherPending.taskId)
     const rejectedId = await submitAsAlice(rejectedTask.taskId)
 
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const adminClient = await clientFor(bob)
     await ensureInvited(adminClient)
     expect((await adminClient.rpc('reject_task_completion', { p_completion_id: rejectedId })).error).toBeNull()

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { lockedOddsToBp, potentialPayout } from '@/lib/parlays/odds'
 
 let alice: Member
@@ -16,7 +16,7 @@ beforeEach(async () => {
   await ensureInvited(bobClient)
   // Alice creates, seeds, resolves, overrides, and voids every market; as
   // an admin she can resolve before close_at and override a resolution.
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+  await giveRole(alice, 'admin')
 })
 
 // Every market is seeded 5 on its first outcome and 15 on its second:

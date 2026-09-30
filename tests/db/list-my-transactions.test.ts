@@ -4,7 +4,7 @@ import { listMyTransactions, type MyCoinEntry } from '@/lib/ledger/my-transactio
 import { readPageParams, showMoreHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
 import type { KeysetPage } from '@/lib/pagination/keyset'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, ensureInvited, createTestMarket, createTestTask, type Member } from './fixtures'
+import { seedMembers, clientFor, ensureInvited, createTestMarket, createTestTask, type Member, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -14,7 +14,7 @@ const FIRST: PageParams = { top: null, bottom: null }
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+  await giveRole(alice, 'admin')
   bobClient = await clientFor(bob)
   await ensureInvited(bobClient)
 })

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
 import { decodeCursor } from '@/lib/pagination/cursor'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { listMyCancelledBets } from '@/lib/bets/list-my-bets'
 import { listMyWagers, type Wager, type WagerBucket } from '@/lib/bets/list-my-wagers'
 
@@ -25,7 +25,7 @@ beforeEach(async () => {
   bobClient = await clientFor(bob)
   for (const client of [aliceClient, bobClient]) await ensureInvited(client)
   // Alice bets and resolves in these tests; only an admin may resolve a market they've bet on (0046).
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+  await giveRole(alice, 'admin')
 })
 
 async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<number> {

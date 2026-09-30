@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
 import { pgQuery } from './pg-query'
-import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, createTestTask, ensureInvited, type Member } from './fixtures'
+import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, createTestTask, ensureInvited, type Member, giveRole } from './fixtures'
 import { isPushEndpoint, PUSH_HOSTS } from '@/lib/push/subscription'
 
 let alice: Member
@@ -21,8 +21,7 @@ beforeEach(async () => {
   carol = await makeMember('Carol')
   dave = await makeMember('Dave')
   admin = await makeMember('Ada')
-  const { error } = await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', admin.id)
-  if (error) throw error
+  await giveRole(admin, 'admin')
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   carolClient = await clientFor(carol)
@@ -360,8 +359,7 @@ describe('recipients', () => {
 })
 
 async function setRole(m: Member, role: 'reviewer' | 'admin' | 'owner'): Promise<void> {
-  const { error } = await serviceClient().from('profiles').update({ role }).eq('id', m.id)
-  if (error) throw error
+  await giveRole(m, role)
 }
 
 // A reviewer on the invite list, as a real one always is: push_wants skips anyone who isn't.

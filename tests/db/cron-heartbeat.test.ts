@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, anonClient, ensureInvited, type Member } from './fixtures'
+import { seedMembers, clientFor, anonClient, ensureInvited, type Member, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -11,8 +11,7 @@ let bobClient: SupabaseClient
 let job: string
 
 async function setRole(m: Member, role: 'member' | 'reviewer' | 'admin' | 'owner'): Promise<void> {
-  const { error } = await serviceClient().from('profiles').update({ role }).eq('id', m.id)
-  if (error) throw error
+  await giveRole(m, role)
 }
 
 async function readAs(client: SupabaseClient): Promise<{ name: string; last_run_at: string }[]> {

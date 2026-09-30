@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, makeMember, clientFor, anonClient, ensureInvited, type Member } from './fixtures'
+import { seedMembers, makeMember, clientFor, anonClient, ensureInvited, type Member, giveRole } from './fixtures'
 import { listMembers } from '@/lib/members/list-members'
 
 // 0050 (#85): joined and last-signed-in dates for Admin -> Members, admins only.
@@ -19,7 +19,7 @@ beforeEach(async () => {
 
 async function withRole(name: string, role: 'reviewer' | 'admin'): Promise<SupabaseClient> {
   const m = await makeMember(name)
-  await serviceClient().from('profiles').update({ role }).eq('id', m.id)
+  await giveRole(m, role)
   const client = await clientFor(m)
   await ensureInvited(client)
   return client

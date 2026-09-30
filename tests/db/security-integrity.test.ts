@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { describeCreatorStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
@@ -35,7 +35,7 @@ async function close(market: TestMarket): Promise<void> {
 
 async function member(name: string, role: 'member' | 'reviewer' | 'admin'): Promise<{ member: Member; client: SupabaseClient }> {
   const m = await makeMember(name)
-  if (role !== 'member') await serviceClient().from('profiles').update({ role }).eq('id', m.id)
+  if (role !== 'member') await giveRole(m, role)
   const client = await clientFor(m)
   await ensureInvited(client)
   return { member: m, client }

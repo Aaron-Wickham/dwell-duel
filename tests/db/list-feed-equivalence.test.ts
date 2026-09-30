@@ -9,8 +9,7 @@ import {
   createTestTask,
   ensureInvited,
   type Member,
-  type TestMarket,
-} from './fixtures'
+  type TestMarket, giveRole } from './fixtures'
 import { listFeed } from '@/lib/social/list-feed'
 import { readKeyset, type KeysetPage } from '@/lib/pagination/keyset'
 import { readPageParams, showMoreHref, type PageParams } from '@/lib/pagination/cursor'
@@ -113,8 +112,7 @@ beforeEach(async () => {
   carolClient = await clientFor(carol)
   for (const client of [aliceClient, bobClient, carolClient]) await ensureInvited(client)
   // Alice is an admin so she can resolve before close_at, override and void.
-  const { error } = await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
-  if (error) throw error
+  await giveRole(alice, 'admin')
 })
 
 async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {

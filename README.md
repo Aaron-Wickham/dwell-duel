@@ -196,14 +196,6 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
   `select vault.create_secret('<CRON_SECRET>', 'cron_secret');`. The backup
   GitHub workflow (`.github/workflows/closing-alerts.yml`) needs the
   `CRON_SECRET` repository secret and the `APP_URL` repository variable.
-- **CI's Docker Hub login:** GitHub's runners share Docker Hub's anonymous
-  pull limit, and `supabase start` pulls seven images per job. Create a
-  free Docker Hub account, make a read-only access token (Account settings
-  → Personal access tokens, permissions: Public repo read-only), and add
-  it under Settings → Secrets and variables → Actions as the
-  `DOCKERHUB_TOKEN` secret, with the account name as the
-  `DOCKERHUB_USERNAME` variable. Until then CI pulls anonymously, and a
-  fork's PR always does.
 - **Hearing about failed deploys and pings:** under GitHub → Settings →
   Notifications → Actions, turn on "Send notifications for failed workflows
   only", so a failed migration, deploy, or closing-alerts backup ping is an

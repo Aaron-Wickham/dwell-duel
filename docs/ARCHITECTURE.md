@@ -603,9 +603,10 @@ leaves out empty lines and hides when every one is empty.
   build with `.next/cache` restored, Playwright against its own local
   Supabase). `ci-ok` needs all three and is the ruleset's one required
   check. Both Supabase jobs start the stack through
-  `.github/actions/local-supabase`, which logs in to Docker Hub first when
-  the `DOCKERHUB_TOKEN` secret is set, so image pulls don't hit the
-  anonymous limit GitHub's runners share. Every third-party action is
+  `.github/actions/local-supabase`, which keeps Supabase's images in the
+  Actions cache per CLI version (loaded before `supabase start`, saved
+  after a miss): they come from AWS's public registry, whose anonymous data
+  limit GitHub's runners share and hit (#238). Every third-party action is
   pinned to a commit SHA with its tag in a trailing comment
   (`uses: actions/checkout@<sha> # v7`); Dependabot's `github-actions`
   ecosystem (`.github/dependabot.yml`) keeps the SHA pins up to date in its

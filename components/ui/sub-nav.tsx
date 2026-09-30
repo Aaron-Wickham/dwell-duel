@@ -82,7 +82,7 @@ export function SubNav({ label, items }: { label: string; items: SubNavItem[] })
           href={href}
           aria-current={current ? 'page' : undefined}
           className={cn(
-            'pressable relative inline-flex min-h-11 grow items-center justify-center rounded-[10px] px-2 text-[15px] font-bold no-underline md:grow-0 md:px-4',
+            'pressable relative inline-flex min-h-11 grow items-center justify-center rounded-[10px] px-1.5 text-[15px] font-bold no-underline sm:px-2 md:grow-0 md:px-4',
             current
               ? 'bg-surface text-ink shadow-tab group-data-[ready]/subnav:bg-transparent group-data-[ready]/subnav:shadow-none'
               : 'text-ink2 hover:text-ink',

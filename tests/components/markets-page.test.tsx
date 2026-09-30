@@ -62,6 +62,7 @@ function market(n: number, status: MarketSummary['status'], closeInMs = DAY): Ma
     edited: false,
     resolvedOutcomeLabel: status === 'resolved' ? 'Yes' : null,
     resolvedAt: status === 'resolved' ? new Date(Date.now() - DAY).toISOString() : null,
+    settledAt: status === 'open' ? null : new Date(Date.now() - DAY).toISOString(),
     outcomes: [],
     sparkline: null,
   }

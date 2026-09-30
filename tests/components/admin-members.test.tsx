@@ -32,6 +32,16 @@ describe('AdjustBalanceForm', () => {
     expect(screen.getByRole('button', { name: 'Adjust Ben' })).toHaveAttribute('type', 'submit')
   })
 
+  it('shows the member’s email under their name, so an admin can match a Google account (#195)', () => {
+    render(<AdjustBalanceForm member={BEN} now={NOW} />)
+    const email = screen.getByText('ben@example.com')
+    expect(email).toHaveClass('text-sm', 'text-ink2', 'wrap-anywhere')
+    // An unpadded block in a card lifts onto a panel wider than itself (#220).
+    expect(email.closest('.pressable')).toHaveClass('relative', 'hover-lift-row')
+    expect(email.closest('.pressable')).not.toHaveClass('hover-lift')
+    expect(screen.getByRole('link', { name: 'Ben' }).compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('spaces the member block from the fields at 12px on phone and 16px on desktop, keeping 12px/8px before the button', () => {
     render(<AdjustBalanceForm member={BEN} now={NOW} />)
 

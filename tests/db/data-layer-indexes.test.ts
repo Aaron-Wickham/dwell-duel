@@ -24,6 +24,8 @@ const INDEXES: Record<string, string> = {
     'CREATE INDEX market_resolutions_resolved_by_idx ON public.market_resolutions USING btree (resolved_by)',
   markets_current_resolution_id_idx:
     'CREATE INDEX markets_current_resolution_id_idx ON public.markets USING btree (current_resolution_id)',
+  markets_status_settled_idx:
+    'CREATE INDEX markets_status_settled_idx ON public.markets USING btree (status, settled_at DESC, id DESC)',
 }
 
 interface PlanNode {
@@ -250,20 +252,24 @@ describe('0033 indexes', () => {
 })
 
 describe('0048 indexes (#67)', () => {
-  it('lists resolved and voided markets newest first from the status index', async () => {
+  it('lists resolved and voided markets newest settled first from a status index (0066)', async () => {
     const nodes = await planNodes(
-      `select id, created_at from public.markets where status in ('resolved', 'voided') order by created_at desc, id desc limit 51`,
+      `select id, settled_at from public.markets where status in ('resolved', 'voided') order by settled_at desc, id desc limit 51`,
     )
-    // Two statuses can't be walked in created_at order from one index range, so at this fixture's
-    // few rows the planner may as well take 0049's status index and sort; either is index-based.
-    expect(indexesUsed(nodes).some((name) => ['markets_status_created_idx', 'markets_status_close_idx'].includes(name))).toBe(true)
+    // Two statuses can't be walked in settled_at order from one index range, so at this fixture's
+    // few rows the planner may as well take another status index and sort; either is index-based.
+    expect(
+      indexesUsed(nodes).some((name) => ['markets_status_settled_idx', 'markets_status_created_idx', 'markets_status_close_idx'].includes(name)),
+    ).toBe(true)
     expect(seqScanned(nodes)).toEqual([])
   })
 
   it('counts open markets from the status index', async () => {
     const nodes = await planNodes(`select count(*) from public.markets where status = 'open'`)
-    // 0049's (status, close_at, id) leads with status too, and serves the count as well.
-    expect(indexesUsed(nodes).some((name) => ['markets_status_created_idx', 'markets_status_close_idx'].includes(name))).toBe(true)
+    // 0049's (status, close_at, id) and 0066's (status, settled_at, id) lead with status too, and serve the count as well.
+    expect(
+      indexesUsed(nodes).some((name) => ['markets_status_created_idx', 'markets_status_close_idx', 'markets_status_settled_idx'].includes(name)),
+    ).toBe(true)
     expect(seqScanned(nodes)).toEqual([])
   })
 

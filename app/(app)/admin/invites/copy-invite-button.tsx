@@ -29,7 +29,7 @@ export function CopyInviteButton({ email, className }: { email: string; classNam
       aria-label={`Copy invite message for ${email}`}
       onClick={copy}
     >
-      <Copy aria-hidden className="size-4" />
+      <Copy aria-hidden className="size-[18px]" />
       Copy invite message
     </Button>
   )

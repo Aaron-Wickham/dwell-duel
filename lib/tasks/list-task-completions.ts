@@ -79,12 +79,3 @@ export async function getMyPendingRewards(supabase: DbClient, profileId: string)
   const rows = data ?? []
   return { count: rows.length, dc: rows.reduce((sum, r) => sum + r.reward_amount, 0) }
 }
-
-export async function countPendingTaskCompletions(supabase: DbClient): Promise<number> {
-  const { count, error } = await supabase
-    .from('task_completions')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'pending')
-  if (error) throw error
-  return count ?? 0
-}

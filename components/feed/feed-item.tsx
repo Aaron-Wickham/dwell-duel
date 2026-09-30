@@ -15,7 +15,8 @@ export function FeedItem({
 }: {
   icon: LucideIcon
   segments: Segment[]
-  age: string
+  // "5m ago" while it's recent, a date once it isn't (isOldEntry).
+  age: ReactNode
   // A quieter second line, like a resolution's reason.
   detail?: string | null
   // A plain fact under it, like what a market's creator had riding on it.
@@ -35,7 +36,7 @@ export function FeedItem({
         <Icon aria-hidden="true" className="size-5" />
       </span>
       <div className="flex min-w-0 grow flex-col gap-1 pt-[5px]">
-        <p id={labelId} className="text-base">
+        <p id={labelId} className="text-base break-words">
           {segments.map((segment, i) =>
             typeof segment === 'string' ? (
               <span key={i}>{segment}</span>

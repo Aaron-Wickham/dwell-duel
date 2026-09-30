@@ -19,11 +19,12 @@ export default function Loading() {
               <Skeleton className="h-11 w-32" />
             </div>
           </SkeletonCard>
-          <SkeletonCard className="gap-4">
-            <Skeleton className="h-7 w-28" />
+          <SkeletonCard className="gap-3">
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-5 w-72 max-w-full" />
             <div className="flex items-center gap-5">
               <Skeleton className="size-20 shrink-0 rounded-full" />
-              <Skeleton className="h-10 w-40" />
+              <Skeleton className="h-11 w-56 max-w-full" />
             </div>
           </SkeletonCard>
         </div>

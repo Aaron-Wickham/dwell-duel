@@ -24,6 +24,8 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
     alongside: (ids) => getReactions(supabase, ids),
   })
   const reactions = feed.alongside
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now()
   const backToNewestHref = newestHref('/feed', searchParams, 'before')
 
   return (
@@ -34,6 +36,7 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
       <FeedList
         events={feed.rows}
         reactions={reactions}
+        now={now}
         heading="Events"
         headingId="feed-events"
         headingHidden

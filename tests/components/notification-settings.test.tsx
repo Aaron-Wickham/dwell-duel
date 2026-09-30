@@ -24,6 +24,14 @@ function keyBuffer(): ArrayBuffer {
   return Uint8Array.from(raw, (c) => c.charCodeAt(0)).buffer
 }
 
+function deferredSave() {
+  let resolve!: (value: { error?: string }) => void
+  const promise = new Promise<{ error?: string }>((r) => {
+    resolve = r
+  })
+  return { promise, resolve }
+}
+
 function fakeSubscription(endpoint = ENDPOINT) {
   return {
     endpoint,
@@ -158,6 +166,28 @@ describe('NotificationSettings', () => {
     expect(await screen.findByText('Notifications are off on this device.')).toBeInTheDocument()
     expect(deletePushSubscriptionAction).toHaveBeenCalledWith(ENDPOINT)
     expect(subscription.unsubscribe).toHaveBeenCalled()
+  })
+
+  it('keeps the button focusable while busy and moves focus to the button that replaces it', async () => {
+    stubBrowser()
+    renderCard()
+    permission = 'granted'
+    const turnOn = await screen.findByRole('button', { name: 'Turn on notifications' })
+    const saving = deferredSave()
+    savePushSubscriptionAction.mockReturnValue(saving.promise)
+
+    await userEvent.click(turnOn)
+    // aria-disabled, never the disabled attribute: a disabled button drops focus to <body>.
+    await waitFor(() => expect(turnOn).toHaveAttribute('aria-disabled', 'true'))
+    expect(turnOn).not.toBeDisabled()
+    expect(turnOn).toHaveFocus()
+    await userEvent.click(turnOn)
+    expect(pushManager.subscribe).toHaveBeenCalledTimes(1)
+
+    saving.resolve({})
+    const turnOff = await screen.findByRole('button', { name: 'Turn off on this device' })
+    expect(turnOff).toHaveFocus()
+    expect(turnOff).not.toHaveAttribute('aria-disabled')
   })
 
   it('is off when this device is subscribed for someone else', async () => {

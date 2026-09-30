@@ -15,7 +15,11 @@ Thanks for helping. DwellDuel is a small, invite-only app, and every merge to
 5. **Merging needs:**
    - an approval from [@Aaron-Wickham](https://github.com/Aaron-Wickham)
      (the code owner). A new push after approval asks for a fresh review.
-   - CI's `test` check passing (lint, unit and DB tests, build, e2e);
+   - CI's `ci-ok` check passing (lint, unit and DB tests, build, e2e);
+   - the branch up to date with `main`. After another PR merges, update
+     yours ("Update branch", or `gh pr update-branch <n>`) and CI runs
+     again, so what was tested is what merges. CI runs on PRs only, and a
+     merge to `main` deploys straight away;
    - every review conversation resolved.
 6. Once it's merged, the **Deploy Production** workflow applies any new
    migrations, then deploys the app through Vercel.

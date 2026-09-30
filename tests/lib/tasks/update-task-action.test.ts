@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { supabase, update, eq } = vi.hoisted(() => {
-  const eq = vi.fn()
+const { supabase, update, eq, select } = vi.hoisted(() => {
+  const select = vi.fn()
+  const eq = vi.fn(() => ({ select }))
   const update = vi.fn(() => ({ eq }))
-  return { update, eq, supabase: { from: vi.fn(() => ({ update })) } }
+  return { update, eq, select, supabase: { from: vi.fn(() => ({ update })) } }
 })
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase, user: { id: 'admin-1' } }) }))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
@@ -22,8 +23,9 @@ function taskForm(title: string, description = '') {
 beforeEach(() => {
   supabase.from.mockClear()
   update.mockClear()
-  eq.mockReset()
-  eq.mockResolvedValue({ error: null })
+  eq.mockClear()
+  select.mockReset()
+  select.mockResolvedValue({ data: [{ id: 't1' }], error: null })
 })
 
 describe('updateTaskAction length limits', () => {
@@ -66,7 +68,8 @@ describe('updateTaskAction length limits', () => {
 
 describe('updateTaskAction database errors', () => {
   it('rewords a constraint violation', async () => {
-    eq.mockResolvedValue({
+    select.mockResolvedValue({
+      data: null,
       error: { code: '23514', message: 'new row for relation "tasks" violates check constraint "tasks_title_length"' },
     })
 
@@ -77,11 +80,24 @@ describe('updateTaskAction database errors', () => {
 
   it('hides an unknown error behind a generic message', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
-    eq.mockResolvedValue({ error: { code: 'XX000', message: 'internal error' } })
+    select.mockResolvedValue({ data: null, error: { code: 'XX000', message: 'internal error' } })
 
     const state = await updateTaskAction('t1', undefined, taskForm('Read Genesis 1-3'))
 
     expect(state).toEqual({ formError: 'Something went wrong. Try again.' })
     log.mockRestore()
+  })
+})
+
+describe('updateTaskAction refused by RLS', () => {
+  // The tasks policy hides rows a non-admin may not edit, and an unknown id matches nothing, so
+  // the update reports no error and no rows (#221). That must not read as saved.
+  it('reports the refusal instead of pretending the edit saved', async () => {
+    select.mockResolvedValue({ data: [], error: null })
+
+    const state = await updateTaskAction('t1', undefined, taskForm('Read Genesis 1-3'))
+
+    expect(state).toEqual({ formError: 'Only an admin can create or edit tasks.' })
+    expect(select).toHaveBeenCalledWith('id')
   })
 })

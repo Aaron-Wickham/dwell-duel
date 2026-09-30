@@ -240,6 +240,44 @@ describe('ResolveForm confirmation (#64)', () => {
     expect(resolveMarketAction).not.toHaveBeenCalled()
   })
 
+  it('offers every outcome but the current result when overriding, and says why (#198)', async () => {
+    render(<ResolveForm marketId="m1" outcomes={outcomes} override currentOutcomeId="o-yes" />)
+    const select = screen.getByRole('combobox', { name: 'Winning outcome' })
+    expect(screen.getByRole('option', { name: 'Yes (current result)' })).toBeDisabled()
+    expect(screen.getByRole('option', { name: 'No' })).toBeEnabled()
+    expect(select).toHaveAccessibleDescription('Yes is the current result, so an override names a different outcome.')
+  })
+
+  it('offers every outcome when resolving for the first time', () => {
+    render(<ResolveForm marketId="m1" outcomes={outcomes} />)
+    expect(screen.getByRole('option', { name: 'Yes' })).toBeEnabled()
+    expect(screen.getByRole('option', { name: 'No' })).toBeEnabled()
+  })
+
+  it('refuses an over/under number that lands on the current side when overriding (#198)', async () => {
+    render(
+      <ResolveForm
+        marketId="m1"
+        outcomes={[{ id: 'o', label: 'Over 3.5' }, { id: 'u', label: 'Under 3.5' }]}
+        line={3.5}
+        override
+        currentOutcomeId="o"
+      />,
+    )
+    await userEvent.type(screen.getByLabelText('Actual result'), '5')
+    await userEvent.type(screen.getByLabelText('Why did this outcome win?'), 'Recount')
+    expect(screen.getByText('Over 3.5 is already the result.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Override resolution' }))
+
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(screen.getByLabelText('Actual result')).toBeInvalid()
+
+    await userEvent.clear(screen.getByLabelText('Actual result'))
+    await userEvent.type(screen.getByLabelText('Actual result'), '2')
+    expect(screen.getByText('Under 3.5 wins.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Actual result')).toBeValid()
+  })
+
   it('names the over/under side the actual result makes the winner', async () => {
     render(<ResolveForm marketId="m1" outcomes={[{ id: 'o', label: 'Over 42.5' }, { id: 'u', label: 'Under 42.5' }]} line={42.5} />)
     await userEvent.type(screen.getByLabelText('Actual result'), '47')

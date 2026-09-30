@@ -21,41 +21,61 @@ const event: FeedEvent = {
   season: null,
 }
 
+const NOW = Date.parse('2026-09-25T12:05:00Z')
+
 describe('FeedList', () => {
   it('lists each event under a visible heading, with no extra list padding', () => {
-    render(<FeedList events={[event]} heading="Recent activity" headingId="recent-activity" />)
+    render(<FeedList now={NOW} events={[event]} heading="Recent activity" headingId="recent-activity" />)
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument()
     expect(screen.getByRole('listitem')).toHaveTextContent('Alice bet 5 DC on Yes in Social layer market')
     expect(screen.getByRole('list')).not.toHaveClass('px-[18px]')
   })
 
   it('trims the card to a 4px bottom padding under a visible heading, leaving the rows to supply the rest', () => {
-    render(<FeedList events={[event]} heading="Recent activity" headingId="recent-activity" />)
+    render(<FeedList now={NOW} events={[event]} heading="Recent activity" headingId="recent-activity" />)
     const card = screen.getByRole('heading', { name: 'Recent activity' }).closest('section')
     expect(card).toHaveClass('pb-1', 'md:pb-1', 'md:pt-[18px]')
   })
 
   it('renders the empty state inside the card, under a visible heading', () => {
-    render(<FeedList events={[]} heading="Recent activity" headingId="recent-activity" />)
+    render(<FeedList now={NOW} events={[]} heading="Recent activity" headingId="recent-activity" />)
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument()
     expect(screen.getByText('Nothing yet.')).toBeInTheDocument()
   })
 
-  it('renders a bare empty state with no card when the heading is hidden and there are no events', () => {
-    render(<FeedList events={[]} heading="Events" headingId="feed-events" headingHidden />)
-    expect(screen.getByText('Nothing yet.')).toBeInTheDocument()
-    expect(screen.queryByRole('heading')).toBeNull()
+  it('keeps the empty state in the card, with a body, when the heading is hidden', () => {
+    render(<FeedList now={NOW} events={[]} heading="Events" headingId="feed-events" headingHidden />)
+    const card = screen.getByRole('region', { name: 'Events' })
+    expect(card).toHaveClass('p-[18px]')
+    expect(card).not.toHaveClass('px-0')
+    expect(card).toHaveTextContent('Nothing yet.')
+    expect(card).toHaveTextContent('Bets, new markets, results and finished tasks show up here as they happen.')
+    expect(screen.getByRole('heading', { name: 'Events' }).firstElementChild).toHaveClass('sr-only')
+  })
+
+  it('shows a relative age for a recent event and a date once it is over a week old', () => {
+    render(
+      <FeedList
+        now={NOW}
+        events={[event, { ...event, id: '2', occurredAt: '2026-09-01T12:00:00Z' }]}
+        heading="Events"
+        headingId="feed-events"
+      />,
+    )
+    expect(screen.getByText('5m ago')).toBeInTheDocument()
+    expect(screen.queryByText('24d ago')).toBeNull()
+    expect(screen.getByText('Sep 1')).toBeInTheDocument()
   })
 
   it('lists events padded inside a zero-padded card when the heading is hidden', () => {
-    render(<FeedList events={[event]} heading="Events" headingId="feed-events" headingHidden />)
+    render(<FeedList now={NOW} events={[event]} heading="Events" headingId="feed-events" headingHidden />)
     expect(screen.getByRole('listitem')).toHaveTextContent('Alice bet 5 DC on Yes in Social layer market')
     expect(screen.getByRole('list')).toHaveClass('px-[18px]')
   })
 
   it('renders aboveList before the list and belowList after it, inside the visible-heading card', () => {
     render(
-      <FeedList
+      <FeedList now={NOW}
         events={[event]}
         heading="Recent activity"
         headingId="recent-activity"
@@ -74,7 +94,7 @@ describe('FeedList', () => {
 
   it('renders aboveList and belowList around a hidden-heading empty state', () => {
     render(
-      <FeedList
+      <FeedList now={NOW}
         events={[]}
         heading="Events"
         headingId="feed-events"
@@ -89,13 +109,13 @@ describe('FeedList', () => {
   })
 
   it('omits the slots entirely when neither is passed', () => {
-    render(<FeedList events={[event]} heading="Recent activity" headingId="recent-activity" />)
+    render(<FeedList now={NOW} events={[event]} heading="Recent activity" headingId="recent-activity" />)
     expect(screen.queryByRole('link', { name: 'Back to newest' })).toBeNull()
     expect(screen.queryByRole('link', { name: 'Show more' })).toBeNull()
   })
 
   it('gives each event a focus target named from its content, from the row id prefix', () => {
-    render(<FeedList events={[{ ...event, id: 'bet:9' }]} heading="Events" headingId="feed-events" headingHidden rowIdPrefix="feed" />)
+    render(<FeedList now={NOW} events={[{ ...event, id: 'bet:9' }]} heading="Events" headingId="feed-events" headingHidden rowIdPrefix="feed" />)
     // jsdom's name computation drops the spaces between inline elements that a browser keeps.
     const row = screen.getByRole('listitem', { name: /Social layer market/ })
     expect(row).toHaveAttribute('id', 'feed-bet_003a9')
@@ -104,7 +124,7 @@ describe('FeedList', () => {
 
   it('shows the given empty state instead of its own when there are no events', () => {
     render(
-      <FeedList
+      <FeedList now={NOW}
         events={[]}
         heading="Recent activity"
         headingId="recent-activity"
@@ -127,7 +147,7 @@ describe('FeedList', () => {
       amount: 140,
       season: '2026-08',
     }
-    render(<FeedList events={[champion]} heading="Recent activity" headingId="recent-activity" />)
+    render(<FeedList now={NOW} events={[champion]} heading="Recent activity" headingId="recent-activity" />)
     expect(screen.getByRole('listitem')).toHaveTextContent(/Alice was August( 2026)?’s champion with \+140 DC/)
     expect(screen.getByRole('link', { name: 'Alice' })).toHaveAttribute('href', '/members/a1')
     expect(screen.getAllByRole('link')).toHaveLength(1)

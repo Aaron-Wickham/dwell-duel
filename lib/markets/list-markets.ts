@@ -17,6 +17,8 @@ export interface MarketSummary {
   edited: boolean
   resolvedOutcomeLabel: string | null
   resolvedAt: string | null
+  // When it stopped being open (0066): the first resolution or the void; null while open.
+  settledAt: string | null
   outcomes: { id: string; label: string; poolTotal: number }[]
   // The card's 40-point series, cached by 0070 once the market resolves or voids; null while open.
   sparkline: SeriesPoint[] | null
@@ -26,7 +28,7 @@ export interface MarketSummary {
 // second `.in()` whose URL would grow with the list. The hint names the foreign key because
 // market_resolutions also points back at markets through market_id.
 const SUMMARY_SELECT =
-  'id, title, kind, status, close_at, created_at, seed_per_outcome, line, edited_at, sparkline, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at), market_outcomes(id, label, pool_total)'
+  'id, title, kind, status, close_at, created_at, settled_at, seed_per_outcome, line, edited_at, sparkline, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at), market_outcomes(id, label, pool_total)'
 
 type SummaryRow = {
   id: string
@@ -35,6 +37,7 @@ type SummaryRow = {
   status: MarketSummary['status']
   close_at: string
   created_at: string
+  settled_at: string | null
   seed_per_outcome: number
   line: number | null
   edited_at: string | null
@@ -58,19 +61,22 @@ function toSummary(m: SummaryRow): MarketSummary {
     edited: m.edited_at !== null,
     resolvedOutcomeLabel: resolution ? (outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null) : null,
     resolvedAt: resolution?.resolved_at ?? null,
+    settledAt: m.settled_at,
     outcomes,
     sparkline: m.sparkline ? m.sparkline.map((p) => ({ t: Date.parse(p.t), shares: p.shares })) : null,
   }
 }
 
 // Open markets list soonest to close first, so one closing within the hour isn't buried under
-// newer ones; resolved and voided markets list newest first.
-type MarketKeys = KeyColumns & { ts: 'close_at' | 'created_at' }
+// newer ones; resolved and voided markets list newest settled first (0066's settled_at, which
+// every resolved or voided market has).
+type MarketKeys = KeyColumns & { ts: 'close_at' | 'settled_at' }
 const OPEN_KEYS: MarketKeys = { ts: 'close_at', id: 'id', isId: isUuid, ascending: true }
-const RESOLVED_KEYS: MarketKeys = { ts: 'created_at', id: 'id', isId: isUuid }
+const RESOLVED_KEYS: MarketKeys = { ts: 'settled_at', id: 'id', isId: isUuid }
 
-// A key probe selects only the id and the list's own timestamp column.
-type KeyRow = { id: string } & Partial<Record<MarketKeys['ts'], string>>
+// A key probe selects only the id and the list's own timestamp column. settled_at is null only
+// while a market is open, which the resolved list never reads.
+type KeyRow = { id: string } & Partial<Record<MarketKeys['ts'], string | null>>
 
 // Open markets split at their close time: still taking bets, or past it and waiting on a resolver.
 export type CloseBound = { upcoming: boolean; at: string }

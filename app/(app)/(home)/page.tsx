@@ -14,7 +14,8 @@ import { RefreshAt } from '@/components/home/refresh-at'
 import { getWeeklyRecap } from '@/lib/home/recap'
 import { WeeklyRecapCard } from '@/components/home/weekly-recap-card'
 import { getMemberStanding } from '@/lib/social/leaderboard'
-import { countPendingTaskCompletions, getMyPendingRewards } from '@/lib/tasks/list-task-completions'
+import { getMyPendingRewards } from '@/lib/tasks/list-task-completions'
+import { getReviewCounts } from '@/lib/admin/review-counts'
 import { Page, PageHeader } from '@/components/ui/page'
 import { HomeHero } from '@/components/home/home-hero'
 import { HomeTiles, type HomeTile } from '@/components/home/home-tiles'
@@ -32,7 +33,7 @@ export default async function Home() {
     openMarketCount,
     standing,
     pendingReviews,
-    pendingApprovals,
+    reviewCounts,
     atStake,
     marketsToResolve,
     nextResolveCheck,
@@ -43,7 +44,8 @@ export default async function Home() {
     countOpenMarkets(supabase),
     getMemberStanding(supabase, user.id),
     getMyPendingRewards(supabase, user.id),
-    getRole(supabase).then((r) => (atLeast(r, 'reviewer') ? countPendingTaskCompletions(supabase) : 0)),
+    // The same count as the Admin badge: other members' submissions, never the viewer's own (#221).
+    getRole(supabase).then((r) => getReviewCounts(supabase, r)),
     getAtStake(supabase),
     getMarketsToResolve(supabase),
     getRole(supabase).then((r) => nextResolveCheckAt(supabase, user.id, atLeast(r, 'reviewer'))),
@@ -74,7 +76,7 @@ export default async function Home() {
       href: adminLink,
       icon: ShieldCheck,
       title: 'Admin',
-      subtitle: adminTileSubtitle(pendingApprovals),
+      subtitle: adminTileSubtitle(reviewCounts.tasks),
     })
   }
   tiles.push({

@@ -76,9 +76,16 @@ attempt keys older than a day, calls `settle_season()` to post last
 month's champion to the feed (a no-op once it's posted), and sends the
 push reminders to resolve closed markets (`sendClosingAlerts`). Both cron
 routes declare `maxDuration = 60`.
+It runs at 05:15 UTC (`vercel.json`), not midnight: `settle_season`
+defaults to the month before today's *Eastern* date, and midnight UTC is
+still the previous evening in Eastern time, so a run then settled the
+month before last and September's champion only posted on October 2
+(#197). Any hour from 05:00 UTC is past midnight Eastern under EST and
+EDT alike; `tests/lib/deploy/keep-alive-schedule.test.ts` guards it.
 The other, `/api/cron/closing-alerts`, sends the same closing alerts every
 minute a market closes, from Supabase's `pg_cron`, and records a heartbeat (see
-Notifications).
+Notifications). A second `pg_cron` job, `cron-history-cleanup` (0065), prunes
+`cron.job_run_details` older than a week each morning.
 
 ## Code layout
 
@@ -126,7 +133,9 @@ the task catalogue and invite list, which are allowed by policy.
 - `markets`: title, description, kind (`binary`, `multiple_choice`,
   `over_under`), `line` (Over/Under only), `close_at`, status (`open`,
   `resolved`, `voided`), `seed_per_outcome` (20 DC by default),
-  `current_resolution_id`, `edited_at` and `sparkline` (0070): the card's
+  `current_resolution_id`, `edited_at`, `settled_at` (0066: when it
+  left `open`; the Resolved list's order and a voided chart's shaded zone) and
+  `sparkline` (0070): the card's
   40-point series, written by a trigger the moment the market resolves or
   voids (`cache_market_sparkline`, so `resolve_market_core` and
   `void_market` needn't know), null while it's open. `/markets` reads it for
@@ -224,22 +233,24 @@ the task catalogue and invite list, which are allowed by policy.
 | `place_slip` | member | Places every solo bet and the parlay in the slip, all or nothing |
 | `place_bet` / `place_parlay` | member | The single-bet and single-parlay versions `place_slip` builds on |
 | `cancel_bet` | bettor | Refunds a bet before its market closes |
-| `resolve_market` | after close, the creator or a reviewer with no stake; an admin any time | Needs a note; may take proof; pays winners from the seeded pool; an admin override reverses the old payouts first and is blocked if a past winner has already spent them. Nobody but an admin resolves a market they have a stake in (`has_stake_in_market`, 0046); `can_resolve_market` answers the same question for the page |
+| `resolve_market` | after close, the creator or a reviewer with no stake; an admin any time | Needs a note; may take proof; pays winners from the seeded pool (everyone is refunded when the winning pool is empty); an admin override must name a different outcome (0066), reverses the old payouts first and is blocked if a past winner has already spent them. Stamps `settled_at` on the first resolution only. Nobody but an admin resolves a market they have a stake in (`has_stake_in_market`, 0046); `can_resolve_market` answers the same question for the page |
 | `resolve_over_under` | same | Picks Over or Under from the actual number, then resolves |
-| `void_market` | creator or admin | Refunds every bet; parlays drop the voided leg |
+| `void_market` | creator or admin | Refunds every bet; parlays drop the voided leg; stamps `settled_at` |
 | `settle_parlay` | trigger | Runs when a leg's market resolves or voids |
 | `submit_task_completion` | member | Submits a task with an optional note and proof |
 | `approve_task_completion`, `reject_task_completion`, `review_task_completions` | reviewer+, never on their own submission | Pays or rejects submissions, one at a time or in bulk |
 | `adjust_balance` | owner | A manual correction, with a required reason |
 
 Also: `create_market`, `update_market` (creator or admin, before close; the
-title is fixed once anyone else has bet), `member_emails` (admin only:
+title is fixed once anyone else has bet, solo or as a parlay leg, 0065), `member_emails` (admin only:
 members can't select `profiles.email`), `member_activity` (admin only, 0050:
 each member's join date, `profiles.created_at`, and last sign-in from
 `auth.users`, for Admin → Members), `stray_proof_objects` (service role:
 the daily cron deletes proof files nothing attached),
-`set_member_role`, `delete_market`, `delete_task` and `remove_bet` (owner
-only), `update_my_profile`, `record_proof`, `market_sparklines` (the
+`set_member_role`, `delete_market` (refuses a market with any bet, cancelled
+bet or parlay leg; the market page shows the button only when the pool is
+empty and `lib/markets/bet-history.ts`'s two head counts find nothing),
+`delete_task` and `remove_bet` (owner only), `update_my_profile`, `record_proof`, `market_sparklines` (the
 cards' 40-point sparklines and the market chart's 200 points, sampled in
 SQL so no page reads every bet; both prepend a seeded market's even
 opening split through `withSeededStart`, since the function returns points
@@ -368,6 +379,8 @@ after it ships. They roughly follow the project's history:
 | 0061 | Cron heartbeat (#149): `cron_heartbeats` (service-role writes, admin reads) and `record_cron_heartbeat`, stamped by `/api/cron/closing-alerts` |
 | 0062 | `leaderboard_race_steps` (#145): the race from the month's first settled bet, step by step, replacing `leaderboard_race`'s day-by-day points (a new function, so the old one keeps working during the deploy) |
 | 0063 | Drops 0059's `leaderboard_race` (#176), unused since 0062 |
+| 0065 | `update_market` counts other members' parlay legs as bets (#221); the daily `cron-history-cleanup` job, pruning `cron.job_run_details` older than a week (#210) |
+| 0066 | `markets.settled_at` (#221), backfilled and indexed `(status, settled_at desc, id desc)`, stamped by `resolve_market_core` (first resolution) and `void_market`; `resolve_market_core` refuses an override to the current outcome (#198) |
 | 0070 | Speed at scale (#204, #205): `markets.sparkline` filled by the `cache_market_sparkline` trigger when a market resolves or voids (backfilled), `market_outcomes` in the realtime publication, and `parlays_pending_profile_idx` for `stakes_riding` |
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 
@@ -562,17 +575,30 @@ leaves out empty lines and hides when every one is empty.
   `supabase/.env` (`docs/GETTING-STARTED.md`); CI sets none and doesn't sign in.
 - **Production:** one Vercel project and one hosted Supabase project.
   Vercel preview deploys are off on purpose (see the README).
-- **CI** (`.github/workflows/ci.yml`): lint, the type check, a
-  generated-types drift check, Vitest (the `unit` project in parallel, the
-  `db` project serially), a production build and Playwright on every push
-  and PR, all against a throwaway local Supabase.
+- **CI** (`.github/workflows/ci.yml`) runs on every PR (not on `main`: the
+  ruleset requires a PR to be up to date, so the tested head is the merge
+  result) as three parallel jobs: `static` (lint, the type check), `db`
+  (a throwaway local Supabase, the generated-types drift check, Vitest's
+  `db` project, serially) and `web` (Vitest's `unit` project, a production
+  build with `.next/cache` restored, Playwright against its own local
+  Supabase). `ci-ok` needs all three and is the ruleset's one required
+  check. Both Supabase jobs start the stack through
+  `.github/actions/local-supabase`, which logs in to Docker Hub first when
+  the `DOCKERHUB_TOKEN` secret is set, so image pulls don't hit the
+  anonymous limit GitHub's runners share.
 - **Deploys** (`.github/workflows/deploy-production.yml`): Vercel's Git
   integration is off for `main` (`vercel.json`'s `git.deploymentEnabled`).
   Each push to `main` runs the workflow instead, one at a time and with no
   approval step: when `supabase/migrations/` changed, a dry run and then
   the push; then a POST to the Vercel deploy hook in the
-  `VERCEL_DEPLOY_HOOK_URL` repository secret. Redeploy by hand with
-  "Run workflow" on it.
+  `VERCEL_DEPLOY_HOOK_URL` repository secret. With a `VERCEL_TOKEN` secret
+  the run then polls Vercel's deployments API for this commit's production
+  deployment and fails when it ends in ERROR or CANCELED, or isn't live
+  within 15 minutes; without the token it says so and stops at the hook,
+  and only Vercel's own email reports a failed build. GitHub's
+  "failed workflows only" notification is what turns a failed migration,
+  hook call, build or closing-alerts backup ping into an email. Redeploy by
+  hand with "Run workflow" on it.
 - **Checking the installed app** (`npm run check:ios`,
   `scripts/ios-standalone-check.mjs`): Playwright has no standalone mode,
   so the installed iPhone app is checked in the iOS Simulator by hand before

@@ -40,7 +40,9 @@ The Markets page lists open markets **soonest to close first**, so one
 closing within the hour is at the top. A market closing within a day
 says so ("Closes in 2h"). Markets past their close time with no result
 yet are grouped under Awaiting resolution, and resolved and voided markets
-follow, newest first.
+follow, most recently settled first: the order they were resolved or
+voided in, not the order they were created in. A voided market shows the
+day it was voided.
 
 The tabs above the list narrow it: **All** (the default), **Open** (still
 taking bets), **Awaiting** (past the close time, waiting to be resolved)
@@ -88,7 +90,7 @@ same formula as the real payout.
 - **Cancelling:** you can cancel a bet for a full refund until the market
   closes. Cancelled bets appear under My bets → Cancelled.
 - **No winners:** if nobody bet on the winning outcome, everyone is
-  refunded.
+  refunded. My bets marks such a bet "Refunded · no winners".
 
 ## The slip, solo bets and parlays
 
@@ -156,7 +158,8 @@ full ledger) can see it.
   (unless they have money on one). Reviewers and admins see any market
   still unresolved 48 hours after closing, and straight away one whose
   creator has money on it, since the creator can't resolve that one.
-- **Overrides:** an admin can change a result. The original payouts are
+- **Overrides:** an admin can change a result to a different outcome; the
+  outcome that already won can't be chosen again. The original payouts are
   taken back and the new winners paid; the confirmation says so first. If a past winner has already spent
   their winnings, the override is blocked and names who, so an admin can
   sort out balances first.
@@ -173,9 +176,10 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   Monday, and so on.
 - You submit a task once per period, with an optional note. Some tasks
   **require proof**: a photo, file or link.
-- A **reviewer** approves it, which pays the reward, or rejects it with a
-  reason. After a rejection you can submit again. Nobody reviews their own
-  submission, and a task can reward at most 500 DC.
+- A **reviewer** approves it, which pays the reward, or rejects it,
+  optionally saying why. Your row then says "Not approved", with the
+  reason if they gave one, and you can submit again. Nobody reviews their
+  own submission, and a task can reward at most 500 DC.
 - Your Home screen shows DC that's **Pending** review.
 - **Streaks:** do a repeating task in back-to-back periods and its row
   shows your streak, like "🔥 5-week streak", from two in a row. Only
@@ -225,8 +229,8 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   more of what's counted, then the name.
 - **Past champions** lists the months already crowned.
 - **Monthly champion:** when a month ends, whoever finished it with the
-  top profit is posted to the feed ("Alice was October's champion with
-  +140 DC"). If two finish level, it goes to whoever reached that total
+  top profit is posted to the feed early on the 1st, Eastern time ("Alice
+  was October's champion with +140 DC"). If two finish level, it goes to whoever reached that total
   first. A month where nobody bet, or nobody came out ahead, has no
   champion.
 
@@ -277,7 +281,7 @@ hear about, and your choices apply on every device:
 |---|---|---|
 | **Markets to resolve** | A market you made has closed and is waiting for you to resolve it. Admins and the owner also hear about every closed market that has no result, once each. Sent within about a minute of closing, with a daily backup if that's missed | On |
 | **Results** | A market you bet on, solo or as a parlay leg, is resolved ("You won 26 DC", then the market and its result), changed by an override or voided | On |
-| **Task reviews** | Your task submission is approved or rejected, with the reviewer's reason | On |
+| **Task reviews** | Your task submission is approved or rejected, with the reviewer's reason, if they gave one | On |
 | **Tasks to review** (reviewers and above only) | A member submits a task waiting for review. Never your own | On |
 | **New markets** | Someone else creates a market | Off |
 

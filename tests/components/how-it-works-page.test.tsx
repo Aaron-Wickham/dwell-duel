@@ -43,6 +43,22 @@ describe('the How it works page', () => {
     }
   })
 
+  it('points every in-body link at a section on the page, with the headings kept clear of the bar at every width', () => {
+    const { container } = render(<HowItWorksPage />)
+    const nav = screen.getByRole('navigation', { name: 'Contents' })
+    const inBody = [...container.querySelectorAll('a[href^="#"]')].filter((a) => !nav.contains(a))
+    expect(inBody.length).toBeGreaterThan(0)
+    for (const link of inBody) {
+      const target = container.querySelector(link.getAttribute('href')!)
+      expect(target, link.outerHTML).not.toBeNull()
+      expect(target?.tagName).toBe('H2')
+    }
+    const body = container.querySelector('h2[id^="how-"]')!.closest('[class*="scroll-mt"]')!
+    expect(body.className).toMatch(/(^|\s)\[&_h2\]:scroll-mt-\[calc\(64px\+var\(--safe-top\)\+40px\)\]/)
+    expect(body.className).toMatch(/md:\[&_h2\]:scroll-mt-\[calc\(72px\+var\(--safe-top\)\+48px\)\]/)
+    expect(body.className).not.toMatch(/lg:\[&_h2\]:scroll-mt/)
+  })
+
   it('renders tables with column headers and links nothing to repo files', () => {
     const { container } = render(<HowItWorksPage />)
     expect(screen.getByRole('columnheader', { name: 'Kind' })).toBeInTheDocument()
@@ -60,5 +76,12 @@ describe('Markdown links', () => {
     expect(container).toHaveTextContent('the code')
     expect(container.querySelector('a[href="/markets"]')).not.toBeNull()
     expect(container.querySelector('a[href="https://example.com"]')).not.toBeNull()
+  })
+
+  it('points a doc anchor at the page’s section id, and leaves one already pointed there alone', async () => {
+    const { InlineContent } = await import('@/components/docs/markdown')
+    const { parseInline } = await import('@/lib/docs/markdown')
+    const { container } = render(<p><InlineContent nodes={parseInline('[board](#the-leaderboard), [same](#how-the-leaderboard)')} /></p>)
+    expect([...container.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(['#how-the-leaderboard', '#how-the-leaderboard'])
   })
 })

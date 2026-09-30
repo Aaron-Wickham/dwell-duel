@@ -25,6 +25,8 @@ export async function MemberActivity({
   const { supabase } = await requireUser()
   const activity = await listFeed(supabase, { actorId: memberId, page, alongside: (ids) => getReactions(supabase, ids) })
   const reactions = activity.alongside
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now()
   const pathname = `/members/${memberId}`
   const backToNewestHref = newestHref(pathname, searchParams, 'activity')
 
@@ -34,6 +36,7 @@ export async function MemberActivity({
       <FeedList
         events={activity.rows}
         reactions={reactions}
+        now={now}
         heading="Recent activity"
         headingId="recent-activity"
         rowIdPrefix={ROW_ID_PREFIX}

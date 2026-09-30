@@ -17,7 +17,7 @@ export function RevokeInviteButton({ email }: { email: string }) {
       trigger="Revoke"
       triggerLabel={`Revoke ${email}`}
       triggerSize="sm"
-      className="shrink-0 items-end"
+      className="shrink-0 items-start md:items-end"
       title="Revoke this invite?"
       description={`${email} won’t be able to join with this invite. You can invite them again later.`}
       confirmLabel="Revoke invite"

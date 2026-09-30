@@ -46,23 +46,10 @@ jobs:
 
       - run: npm ci
 
-      # The same CLI version as deploy-production.yml, so migrations are tested with the tool that ships them.
-      - uses: supabase/setup-cli@v3
+      - uses: ./.github/actions/local-supabase
         with:
-          version: 2.117.0
-
-      # Only what the tests use: Postgres, Auth, the REST and Storage APIs, Realtime, Kong and
-      # postgres-meta (tests/db/pg-query.ts).
-      - name: Start local Supabase
-        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,mailpit
-
-      # The same kind of keys production uses: publishable and secret, not the legacy JWT keys.
-      - name: Write .env.local from the local Supabase instance
-        run: |
-          STATUS=$(supabase status -o json)
-          echo "NEXT_PUBLIC_SUPABASE_URL=$(echo "$STATUS" | jq -r .API_URL)" >> .env.local
-          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(echo "$STATUS" | jq -r .PUBLISHABLE_KEY)" >> .env.local
-          echo "SUPABASE_SECRET_KEY=$(echo "$STATUS" | jq -r .SECRET_KEY)" >> .env.local
+          dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
+          dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # The generated types must match the migrations (#71).
       - name: Check database types are up to date
@@ -88,19 +75,10 @@ jobs:
       - run: npx vitest run --project unit
 
       # Playwright's global setup seeds the database, so this job needs its own local Supabase too.
-      - uses: supabase/setup-cli@v3
+      - uses: ./.github/actions/local-supabase
         with:
-          version: 2.117.0
-
-      - name: Start local Supabase
-        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,mailpit
-
-      - name: Write .env.local from the local Supabase instance
-        run: |
-          STATUS=$(supabase status -o json)
-          echo "NEXT_PUBLIC_SUPABASE_URL=$(echo "$STATUS" | jq -r .API_URL)" >> .env.local
-          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(echo "$STATUS" | jq -r .PUBLISHABLE_KEY)" >> .env.local
-          echo "SUPABASE_SECRET_KEY=$(echo "$STATUS" | jq -r .SECRET_KEY)" >> .env.local
+          dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
+          dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # Next's build cache, so an unchanged page isn't compiled again; the fallback key restores the
       # newest cache for the same dependencies when the source changed.

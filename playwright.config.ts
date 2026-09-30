@@ -6,6 +6,8 @@ export default defineConfig({
   globalSetup: './e2e/global-setup.ts',
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  // The github reporter annotates the run's summary, so a flake rescued by a retry is still seen.
+  reporter: process.env.CI ? [['list'], ['github']] : 'list',
   // Every spec file shares the one seeded, admin-promoted session
   // global-setup.ts injects -- including that profile's coin balance.
   // Under parallel workers, one file's in-flight balance mutation (e.g. a

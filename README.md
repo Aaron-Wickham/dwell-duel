@@ -193,6 +193,22 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
   `/api/cron/closing-alerts` within a minute of a market closing:
   `select vault.create_secret('https://www.dwellduel.com', 'app_url');` and
   `select vault.create_secret('<CRON_SECRET>', 'cron_secret');`.
+- **CI's Docker Hub login:** GitHub's runners share Docker Hub's anonymous
+  pull limit, and `supabase start` pulls seven images per job. Create a
+  free Docker Hub account, make a read-only access token (Account settings
+  → Personal access tokens, permissions: Public repo read-only), and add
+  it under Settings → Secrets and variables → Actions as the
+  `DOCKERHUB_TOKEN` secret, with the account name as the
+  `DOCKERHUB_USERNAME` variable. Until then CI pulls anonymously, and a
+  fork's PR always does.
+- **Hearing about failed deploys and pings:** under GitHub → Settings →
+  Notifications → Actions, turn on "Send notifications for failed workflows
+  only", so a failed migration, deploy, or closing-alerts backup ping is an
+  email. For a failed Vercel build to count too, add a `VERCEL_TOKEN`
+  repository secret (Vercel → Account settings → Tokens; it only needs to
+  read deployments), which lets Deploy Production watch the build to READY;
+  if the project belongs to a Vercel team, also set the team's id as the
+  `VERCEL_TEAM_ID` variable. Keep Vercel's own failed-build email on as well.
 - **Before your first sign-in,** invite yourself in the SQL editor:
   `insert into public.allowed_emails (email) values ('you@gmail.com');`
 - **After it,** make yourself the owner, keyed off the verified
@@ -203,12 +219,14 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
 
 ## CI
 
-Every push to `main` and every pull request runs lint, the type check, a
-check that the generated database types match the migrations, the Vitest
-suite, a production build and the Playwright suite
-(`.github/workflows/ci.yml`), against a throwaway local Supabase, never the
-production database. Dependabot opens weekly update PRs for npm packages and
-GitHub Actions (`.github/dependabot.yml`).
+Every pull request runs lint, the type check, a check that the generated
+database types match the migrations, the Vitest suite, a production build
+and the Playwright suite (`.github/workflows/ci.yml`) as three parallel
+jobs behind one required check, `ci-ok`, against a throwaway local
+Supabase, never the production database. A PR must be up to date with
+`main` to merge, so `main` itself isn't tested again: merging deploys.
+Dependabot opens weekly update PRs for npm packages and GitHub Actions
+(`.github/dependabot.yml`).
 
 ## Releases
 

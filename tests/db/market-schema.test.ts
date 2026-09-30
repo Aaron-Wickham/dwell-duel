@@ -1,19 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { deleteAllAuthUsers, serviceClient } from './helpers'
+import { serviceClient, wipeDatabase } from './helpers'
 import { makeMember, type Member } from './fixtures'
 
 let creator: Member
 
 beforeAll(async () => {
-  const db = serviceClient()
-  await db.from('bets').delete().gte('id', 0)
-  await db.from('market_resolutions').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  await db.from('market_outcomes').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  await db.from('markets').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  await db.from('coin_transactions').delete().gte('id', 0)
-  await db.from('allowed_emails').delete().neq('email', '')
-  await db.from('profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  await deleteAllAuthUsers(db)
+  await wipeDatabase()
 
   creator = await makeMember('Carla')
 })

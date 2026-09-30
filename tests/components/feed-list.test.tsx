@@ -52,6 +52,20 @@ describe('FeedList', () => {
     expect(item).toHaveTextContent('The picnic moved indoors.')
   })
 
+  it('leaves out a kind it doesn’t know, keeping the rest', () => {
+    const unknown = { ...event, id: 'future:1', kind: 'market_renamed' as FeedEvent['kind'] }
+    render(<FeedList now={NOW} events={[unknown, event]} heading="Recent activity" headingId="recent-activity" />)
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    expect(screen.getByRole('listitem')).toHaveTextContent('Alice bet 5 DC on Yes in Social layer market')
+  })
+
+  it('shows the empty state when every event is of a kind it doesn’t know', () => {
+    const unknown = { ...event, id: 'future:1', kind: 'market_renamed' as FeedEvent['kind'] }
+    render(<FeedList now={NOW} events={[unknown]} heading="Recent activity" headingId="recent-activity" />)
+    expect(screen.queryByRole('listitem')).toBeNull()
+    expect(screen.getByText('Nothing yet.')).toBeInTheDocument()
+  })
+
   it('renders the empty state inside the card, under a visible heading', () => {
     render(<FeedList now={NOW} events={[]} heading="Recent activity" headingId="recent-activity" />)
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument()

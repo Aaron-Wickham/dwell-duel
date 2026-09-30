@@ -49,6 +49,10 @@ describe('describeEvent', () => {
     ])
   })
 
+  it('describes a kind it doesn’t know as nothing, rather than throwing', () => {
+    expect(describeEvent({ ...base, kind: 'market_renamed' as FeedEvent['kind'] })).toEqual([])
+  })
+
   it('describes a bet win', () => {
     expect(describeEvent({ ...base, kind: 'bet_won', amount: 45 })).toEqual([sarah, ' won 45 DC on ', market])
   })

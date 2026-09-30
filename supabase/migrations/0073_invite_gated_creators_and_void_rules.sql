@@ -6,7 +6,8 @@
 -- 2. remove_member also ends the member's Auth sessions (refresh tokens go with them), so their
 --    devices are signed out and can't renew a token.
 -- 3. An admin deletes only an unclaimed invite. A claimed invite is a member's, and removing a
---    member is the owner's alone (remove_member).
+--    member is the owner's alone (remove_member). An admin inserts only an invite's email, with
+--    themselves as the inviter.
 -- 4. Voiding follows the settle rules: before close, the creator (while invited) or an admin; once
 --    the market has closed, an admin only. Every void says why (markets.void_reason), and the void
 --    is posted to the feed as a market_voided event.
@@ -357,6 +358,17 @@ $$;
 drop policy admin_delete_invites on public.allowed_emails;
 create policy admin_delete_invites on public.allowed_emails for delete to authenticated
   using ((select is_admin()) and claimed_by is null);
+
+-- An admin's invite names only the email and themselves as the inviter: claimed_by is written by
+-- the profile trigger alone, and invited_by defaults to, and must equal, the caller. The previous
+-- build sends invited_by as its own verified id, so it keeps working while this deploys.
+revoke insert on public.allowed_emails from authenticated;
+grant insert (email, invited_by) on public.allowed_emails to authenticated;
+alter table public.allowed_emails alter column invited_by set default auth.uid();
+
+drop policy admin_insert_invites on public.allowed_emails;
+create policy admin_insert_invites on public.allowed_emails for insert to authenticated
+  with check ((select is_admin()) and invited_by = (select auth.uid()));
 
 -- ─── 4. Voids follow the settle rules and say why ────────────────────────────
 

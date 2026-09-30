@@ -3,11 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-const { resolveMarketAction } = vi.hoisted(() => ({
+const { resolveMarketAction, uploadProof, discardProof } = vi.hoisted(() => ({
   resolveMarketAction: vi.fn(),
+  uploadProof: vi.fn(),
+  discardProof: vi.fn(),
 }))
 vi.mock('@/lib/markets/resolve-market', () => ({ resolveMarketAction }))
-vi.mock('@/lib/proof/upload', () => ({ uploadProof: async () => [], discardProof: async () => {} }))
+vi.mock('@/lib/proof/upload', () => ({ uploadProof, discardProof }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 
 import { ResolveForm } from '@/app/(app)/markets/[id]/resolve-form'
@@ -24,6 +26,8 @@ const outcomes = [
 
 beforeEach(() => {
   resolveMarketAction.mockReset()
+  uploadProof.mockReset().mockResolvedValue([])
+  discardProof.mockReset().mockResolvedValue(undefined)
 })
 
 describe('ResolveForm', () => {
@@ -150,6 +154,47 @@ describe('ResolveForm confirmation (#64)', () => {
     await waitFor(() => expect(resolveMarketAction).toHaveBeenCalledOnce())
     expect(resolveMarketAction.mock.calls[0][2].get('outcome_id')).toBe('o-yes')
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+  })
+
+  it('closes the dialog and shows the error when an attachment fails to upload (#199)', async () => {
+    uploadProof.mockRejectedValue(new Error('proof.jpg is too large.'))
+    render(<ResolveForm marketId="m1" outcomes={outcomes} />)
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Winning outcome' }), 'Yes')
+    await userEvent.type(screen.getByLabelText('Why did this outcome win?'), 'Sunny all day')
+    await resolveAndConfirm()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('proof.jpg is too large.')
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    expect(resolveMarketAction).not.toHaveBeenCalled()
+    expect(screen.getByRole('combobox', { name: 'Winning outcome' })).toHaveValue('o-yes')
+    expect(screen.getByLabelText('Why did this outcome win?')).toHaveValue('Sunny all day')
+  })
+
+  it('still shows the server error when cleaning up the uploaded proof fails (#199)', async () => {
+    uploadProof.mockResolvedValue([{ kind: 'image', storage_path: 'resolution/m1/a.jpg', file_name: 'a.jpg', size_bytes: 1 }])
+    discardProof.mockRejectedValue(new Error('storage is down'))
+    resolveMarketAction.mockResolvedValue({ formError: 'Two members are 12 DC short.', field: 'outcome' })
+    render(<ResolveForm marketId="m1" outcomes={outcomes} />)
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Winning outcome' }), 'Yes')
+    await userEvent.type(screen.getByLabelText('Why did this outcome win?'), 'Sunny all day')
+    await resolveAndConfirm()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Two members are 12 DC short.')
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    expect(discardProof).toHaveBeenCalledOnce()
+  })
+
+  it('clears the winner and the reason once an override goes through, ready for the next one (#221)', async () => {
+    resolveMarketAction.mockResolvedValue(undefined)
+    render(<ResolveForm marketId="m1" outcomes={outcomes} override />)
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Winning outcome' }), 'No')
+    await userEvent.type(screen.getByLabelText('Why did this outcome win?'), 'Recount')
+    await userEvent.click(screen.getByRole('button', { name: 'Override resolution' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Confirm outcome' }))
+
+    await waitFor(() => expect(resolveMarketAction).toHaveBeenCalledOnce())
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Winning outcome' })).toHaveValue(''))
+    expect(screen.getByLabelText('Why did this outcome win?')).toHaveValue('')
   })
 
   it('does not open the confirmation until the form is filled in', async () => {

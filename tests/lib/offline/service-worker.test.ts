@@ -17,9 +17,12 @@ type Listener = (event: unknown) => void
 
 const keyOf = (input: string | FakeRequest) => new URL(typeof input === 'string' ? input : input.url, ORIGIN).href
 
-function loadWorker(network: (url: string) => Promise<Response>, options: { locationHref?: string } = {}) {
+type Storage = Map<string, Map<string, Response>>
+
+// `storage` can be shared between workers, as the browser's Cache Storage is between deploys.
+function loadWorker(network: (url: string) => Promise<Response>, options: { locationHref?: string; storage?: Storage } = {}) {
   const listeners: Record<string, Listener> = {}
-  const storage = new Map<string, Map<string, Response>>()
+  const storage: Storage = options.storage ?? new Map()
   const fetchCalls: Array<{ url: string; init?: RequestInit }> = []
   const fetch = vi.fn((input: string | FakeRequest, init?: RequestInit) => {
     fetchCalls.push({ url: keyOf(input), init })
@@ -102,8 +105,17 @@ function loadWorker(network: (url: string) => Promise<Response>, options: { loca
   }
 
   const cached = (name: string) => [...(storage.get(name)?.keys() ?? [])].map((key) => key.replace(ORIGIN, ''))
+  const deployCaches = () => [...storage.keys()].filter((name) => name !== 'dwellduel-meta')
 
-  return { fetch, fetchCalls, storage, scope, lifecycle, request, cached }
+  return { fetch, fetchCalls, storage, scope, lifecycle, request, cached, deployCaches }
+}
+
+// The caches a deploy leaves behind after installing and activating over `storage`.
+async function deploy(version: string, storage: Storage) {
+  const worker = loadWorker(onlineNetwork, { locationHref: `${ORIGIN}/sw.js?v=${version}`, storage })
+  await worker.lifecycle('install')
+  await worker.lifecycle('activate')
+  return worker
 }
 
 const ok = (body: string) => Promise.resolve(new Response(body, { status: 200 }))
@@ -169,14 +181,50 @@ describe('public/sw.js', () => {
     expect(worker.cached('dwellduel-dev')).toContain('/offline')
   })
 
-  it('deletes caches from older versions on activate and claims open pages', async () => {
+  // #209: a tab still on the old build lazy-loads chunks Vercel no longer serves; they must still
+  // be in a cache, so the previous deploy's cache survives one more deploy.
+  it("keeps the previous deploy's cache on activate, deletes the ones before it and claims open pages", async () => {
     const worker = loadWorker(onlineNetwork)
+    worker.storage.set('dwellduel-v-1', new Map())
     worker.storage.set('dwellduel-v0', new Map())
     await worker.lifecycle('install')
     await worker.lifecycle('activate')
 
-    expect([...worker.storage.keys()]).toEqual(['dwellduel-v1'])
+    expect(worker.deployCaches().sort()).toEqual(['dwellduel-v0', 'dwellduel-v1'])
     expect((worker.scope.clients as { claim: () => void }).claim).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps exactly the newest two deploys across a run of deploys, in activation order not name order', async () => {
+    const storage: Storage = new Map()
+    await deploy('zulu', storage)
+    await deploy('alpha', storage)
+    expect([...storage.keys()].filter((k) => k !== 'dwellduel-meta').sort()).toEqual(['dwellduel-alpha', 'dwellduel-zulu'])
+    const third = await deploy('mike', storage)
+    expect(third.deployCaches().sort()).toEqual(['dwellduel-alpha', 'dwellduel-mike'])
+    const fourth = await deploy('bravo', storage)
+    expect(fourth.deployCaches().sort()).toEqual(['dwellduel-bravo', 'dwellduel-mike'])
+  })
+
+  it("serves a chunk the previous deploy cached to a tab still running that build, without going to the network", async () => {
+    const storage: Storage = new Map()
+    const old = await deploy('old', storage)
+    await old.request('/_next/static/chunks/slip-old.js')
+    const current = await deploy('new', storage)
+
+    const response = await current.request('/_next/static/chunks/slip-old.js')
+    expect(await response!.text()).toBe(`body of ${ORIGIN}/_next/static/chunks/slip-old.js`)
+    expect(current.fetchCalls.map((c) => c.url)).not.toContain(`${ORIGIN}/_next/static/chunks/slip-old.js`)
+  })
+
+  it("answers an offline navigation with this deploy's offline page, not the kept older one", async () => {
+    const storage: Storage = new Map()
+    const old = await deploy('old', storage)
+    old.storage.get('dwellduel-old')!.set(`${ORIGIN}/offline`, new Response('stale offline page'))
+    const current = await deploy('new', storage)
+    current.fetch.mockImplementation(offlineNetwork)
+
+    const response = await current.request('/markets', { mode: 'navigate' })
+    expect(await response!.text()).toBe(OFFLINE_HTML)
   })
 
   it('enables navigation preload on activate', async () => {

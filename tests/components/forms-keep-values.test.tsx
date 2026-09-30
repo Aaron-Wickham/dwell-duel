@@ -296,6 +296,7 @@ describe('PendingApprovals Select all (#65)', () => {
     render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Ben’s submission' }))
     await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Approve and pay' }))
 
     await screen.findByRole('alert')
     expect(screen.getByRole('checkbox', { name: 'Select Ben’s submission' })).toBeChecked()

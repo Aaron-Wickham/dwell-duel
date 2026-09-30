@@ -60,7 +60,11 @@ a line to `CHANGELOG.md` under the next release.
   `ConfirmActionButton`. A form that must ask first (resolve, balance,
   role) keeps its own button and fields, passes `useConfirmSubmit()`'s
   `onSubmit`, and renders `ConfirmSubmitDialog`, whose button submits the
-  form through its `form` attribute.
+  form through its `form` attribute. A form with several submit buttons
+  passes `useConfirmSubmit` a predicate naming which ones ask. The one
+  exception is approving a single task submission from its row, which
+  stays a direct button (the e2e suite clicks the first "Approve");
+  "Approve selected" confirms, saying how many it approves and what it pays.
 - **Controls.** Every control is a real `<button>`, `<a>` or `<label>`ed
   input, at least 44px tall. Selects and checkboxes stay native. When a
   form shows a server error, wire `aria-invalid` and `aria-describedby`

@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { EmptyState } from '@/components/ui/empty-state'
+import { ConfirmSubmitDialog, useConfirmSubmit } from '@/components/ui/confirm-submit-dialog'
 import { keepCheckedOnReset } from '@/lib/forms/keep-on-reset'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { ProofList } from '@/components/proof/proof-list'
@@ -27,7 +28,22 @@ export type PendingRow = PendingCompletion & { submittedAge: string }
 // viewerId: a reviewer never reviews their own submission (0046), so those rows show why instead.
 export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[]; viewerId: string }) {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
-  const [approveState, approveAction, isApprovePending] = useActionState<BulkActionState | undefined, FormData>(bulkApproveTaskCompletionsAction, undefined)
+  // Worked out from the rows on screen, so Select all follows rows that leave the list once reviewed.
+  const selectable = pending.filter((c) => c.submitterId !== viewerId).map((c) => c.id)
+  const selectedCount = selectable.filter((id) => selected.has(id)).length
+  const selectedDc = pending.filter((c) => selected.has(c.id) && c.submitterId !== viewerId).reduce((sum, c) => sum + c.rewardAmount, 0)
+  // Approve selected pays every reward at once, so it asks first; a row's Approve stays direct
+  // (AGENTS.md). Reject selected moves no coins, and an empty selection goes straight to the
+  // server's "Select at least one" error rather than a dialog about nothing.
+  const confirm = useConfirmSubmit((submitter) => !submitter?.hasAttribute('data-bulk-reject') && selectedCount > 0)
+  const [approveState, approveAction, isApprovePending] = useActionState<BulkActionState | undefined, FormData>(
+    async (prev, formData) => {
+      const next = await bulkApproveTaskCompletionsAction(prev, formData)
+      confirm.setOpen(false)
+      return next
+    },
+    undefined,
+  )
   // Controlled, so a refused reject keeps the shared reason; cleared once a reject goes through.
   const [reason, setReason] = useState('')
   const [rejectState, rejectAction, isRejectPending] = useActionState<BulkActionState | undefined, FormData>(
@@ -43,9 +59,6 @@ export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[];
   const [lastBulk, setLastBulk] = useState<'approve' | 'reject' | null>(null)
   const bulkReasonInvalid = lastBulk === 'reject' && !isRejectPending && rejectState?.field === 'reason'
 
-  // Worked out from the rows on screen, so Select all follows rows that leave the list once reviewed.
-  const selectable = pending.filter((c) => c.submitterId !== viewerId).map((c) => c.id)
-  const selectedCount = selectable.filter((id) => selected.has(id)).length
   const allSelected = selectable.length > 0 && selectedCount === selectable.length
   const someSelected = selectedCount > 0 && !allSelected
 
@@ -142,7 +155,9 @@ export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[];
               />
               Select all
             </label>
-            <form id={BULK_FORM_ID} className="flex flex-col gap-2 md:flex-row md:items-center">
+            {/* The form's own action is the approve, so the confirm dialog's button (which submits through
+                its form attribute) runs it; Reject selected carries its own formAction. */}
+            <form id={BULK_FORM_ID} action={approveAction} onSubmit={confirm.onSubmit} className="flex flex-col gap-2 md:flex-row md:items-center">
               <label htmlFor="bulk-reason" className="sr-only">
                 Shared reason (optional)
               </label>
@@ -160,7 +175,6 @@ export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[];
               <div className="flex flex-wrap shrink-0 gap-2">
                 <FormSubmitButton
                   size="sm"
-                  formAction={approveAction}
                   className="grow"
                   onClick={() => setLastBulk('approve')}
                   aria-describedby={
@@ -173,6 +187,7 @@ export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[];
                   size="sm"
                   variant="secondary"
                   formAction={rejectAction}
+                  data-bulk-reject=""
                   className="grow"
                   onClick={() => setLastBulk('reject')}
                   aria-describedby={
@@ -183,6 +198,15 @@ export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[];
                 </FormSubmitButton>
               </div>
             </form>
+            <ConfirmSubmitDialog
+              formId={BULK_FORM_ID}
+              open={confirm.open}
+              onOpenChange={confirm.setOpen}
+              pending={isApprovePending}
+              title={`Approve ${selectedCount} ${selectedCount === 1 ? 'submission' : 'submissions'}?`}
+              description={`Pays ${selectedDc} DC in rewards straight away.`}
+              confirmLabel="Approve and pay"
+            />
           </div>
         </>
       )}

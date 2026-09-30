@@ -73,7 +73,9 @@ export function ResolveForm({
     ),
     undefined,
   )
-  const outcomeError = state?.formError && state.field !== 'note'
+  // Only an error about the winner marks the winner's field: a lost attachment or a sign-in problem
+  // shows as a message on its own (#219).
+  const outcomeError = state?.field === 'outcome'
   const actualNumber = actual.trim() === '' ? NaN : Number(actual)
   const winner =
     line !== null

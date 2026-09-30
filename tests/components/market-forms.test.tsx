@@ -39,8 +39,8 @@ describe('ResolveForm', () => {
     expect(screen.getByRole('option', { name: 'Choose the winner…' })).toBeDisabled()
   })
 
-  it('ties a server error to the outcome select', async () => {
-    resolveMarketAction.mockResolvedValue({ formError: 'market not found' })
+  it('ties a server error about the winner to the outcome select', async () => {
+    resolveMarketAction.mockResolvedValue({ formError: 'market not found', field: 'outcome' })
     render(<ResolveForm marketId="m1" outcomes={outcomes} />)
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Winning outcome' }), 'Yes')
     await userEvent.type(screen.getByLabelText('Why did this outcome win?'), 'Final score 3–1')
@@ -65,6 +65,30 @@ describe('ResolveForm', () => {
     await screen.findByRole('alert')
     expect(screen.getByLabelText('Why did this outcome win?')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByRole('combobox', { name: 'Winning outcome' })).toHaveAttribute('aria-invalid', 'false')
+  })
+
+  it('marks neither field for an error that is about neither (#219)', async () => {
+    resolveMarketAction.mockResolvedValue({ formError: 'Your attachments didn’t come through. Try again.' })
+    render(<ResolveForm marketId="m1" outcomes={outcomes} />)
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Winning outcome' }), 'Yes')
+    await userEvent.type(screen.getByLabelText('Why did this outcome win?'), 'Final score 3–1')
+    await resolveAndConfirm()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your attachments didn’t come through. Try again.')
+    expect(screen.getByRole('combobox', { name: 'Winning outcome' })).toHaveAttribute('aria-invalid', 'false')
+    expect(screen.getByLabelText('Why did this outcome win?')).toHaveAttribute('aria-invalid', 'false')
+  })
+
+  it('marks neither field of an over/under for an error that is about neither (#219)', async () => {
+    resolveMarketAction.mockResolvedValue({ formError: 'Not signed in.' })
+    render(<ResolveForm marketId="m1" outcomes={[{ id: 'o', label: 'Over 3.5' }, { id: 'u', label: 'Under 3.5' }]} line={3.5} />)
+    await userEvent.type(screen.getByLabelText('Actual result'), '4')
+    await userEvent.type(screen.getByLabelText('Why did this outcome win?'), 'Counted')
+    await resolveAndConfirm()
+
+    await screen.findByRole('alert')
+    expect(screen.getByLabelText('Actual result')).toHaveAttribute('aria-invalid', 'false')
+    expect(screen.getByLabelText('Why did this outcome win?')).toHaveAttribute('aria-invalid', 'false')
   })
 })
 

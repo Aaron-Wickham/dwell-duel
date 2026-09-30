@@ -225,7 +225,7 @@ the task catalogue and invite list, which are allowed by policy.
 
 | Function | Who | What it does |
 |---|---|---|
-| `place_slip` | member | Places every solo bet and the parlay in the slip, all or nothing |
+| `place_slip_v2` | member | Places every solo bet and the parlay in the slip, all or nothing, and returns what it placed and whether the call was a replay (`place_slip` wraps it for the previous build) |
 | `place_bet` / `place_parlay` | member | The single-bet and single-parlay versions `place_slip` builds on |
 | `cancel_bet` | bettor | Refunds a bet before its market closes |
 | `resolve_market` | after close, the creator or a reviewer with no stake; an admin any time | Needs a note; may take proof; pays winners from the seeded pool (everyone is refunded when the winning pool is empty); an admin override must name a different outcome (0066), reverses the old payouts first and is blocked if a past winner has already spent them. Stamps `settled_at` on the first resolution only. Nobody but an admin resolves a market they have a stake in (`has_stake_in_market`, 0046); `can_resolve_market` answers the same question for the page |
@@ -364,6 +364,7 @@ after it ships. They roughly follow the project's history:
 | 0063 | Drops 0059's `leaderboard_race` (#176), unused since 0062 |
 | 0065 | `update_market` counts other members' parlay legs as bets (#221); the daily `cron-history-cleanup` job, pruning `cron.job_run_details` older than a week (#210) |
 | 0066 | `markets.settled_at` (#221), backfilled and indexed `(status, settled_at desc, id desc)`, stamped by `resolve_market_core` (first resolution) and `void_market`; `resolve_market_core` refuses an override to the current outcome (#198) |
+| 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
 
 Every merge to `main` runs the **Deploy Production** workflow, with no
 approval step: a dry run and the push when the merge touched
@@ -387,7 +388,7 @@ holds those picks, each marked Solo or Parlay, with optimistic add, remove
 and mode switches. Stakes live only in client state. The layout also
 hands it the member's balance, for the quick-stake chips' Max (the balance
 less the slip's other stakes). The floating
-`SlipSheet` sends everything to `place_slip` in one call; it either all
+`SlipSheet` sends everything to `place_slip_v2` in one call; it either all
 succeeds or nothing is placed. Only its button is in every page's first
 load: the drawer (`SlipDrawer`) loads the first time the slip opens, or
 when the button is pointed at or focused. Bets are never optimistic. Each place sends

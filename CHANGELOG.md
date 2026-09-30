@@ -7,6 +7,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ## Unreleased
 
 ### Fixes
+- **A retried slip reports what was actually placed.** After a lost response, tapping Place again used to toast the slip's *current* picks and clear any added since; now it says your earlier attempt already went through, names what it placed, and keeps the picks that weren't part of it (#226).
 - **A bet nobody could win says "Refunded · no winners", not "Lost".** When nobody backs the winning outcome, every stake is refunded, but My bets called such a bet Lost; it now matches the Coins tab and the Stats card (#193).
 - **An override must name a different outcome.** An admin could override a resolution to the outcome that had already won, which reversed and re-paid every win under a new date, pushed a "changed by an override" alert to the winners and moved the leaderboard's Biggest win. The database now refuses it, and the form disables the current result and says why (#198).
 - **Resolved markets list in the order they settled,** most recent first, as How it works says, instead of the order they were created in. A voided market shows the day it was voided, and one voided before its close time no longer draws as live until a close it never reached (#221).

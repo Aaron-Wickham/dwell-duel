@@ -7,12 +7,23 @@ import { combineOdds, lockedOddsToBp, potentialPayout } from './odds'
 import { parseSlipError } from './slip-errors'
 import { readSlip, writeSlip } from './slip'
 
+// What place_slip_v2 (0072) returns: what was placed, and whether this call replayed an earlier
+// attempt's key. A key claimed by the build before 0072 stored only the parlay id, so `solos` and
+// `picks` can be missing on a replay.
+type SlipSummary = { parlay_id: string | null; solos?: number; picks?: string[]; replayed: boolean }
+
 export type PlaceSlipState =
   | {
       formError?: string
       pickErrors?: Record<string, string>
       parlayError?: string
-      placed?: { solos: number; parlay: { legs: number; multiplierBp: number; potentialPayout: number } | null }
+      placed?: {
+        solos: number
+        parlay: { legs: number; multiplierBp: number; potentialPayout: number } | null
+        // True when this was a retry of a slip that had already gone through (#226): the counts are
+        // what that earlier attempt placed, not what the slip holds now.
+        replayed?: boolean
+      }
     }
   | undefined
 
@@ -59,7 +70,7 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
   if (Object.keys(pickErrors).length > 0 || parlayError) return { pickErrors, parlayError }
 
   const attemptKey = String(formData.get('idempotency_key') ?? '')
-  const { data: parlayId, error } = await supabase.rpc('place_slip', {
+  const { data, error } = await supabase.rpc('place_slip_v2', {
     p_singles: singles,
     p_parlay_outcome_ids: legs,
     p_parlay_stake: parlayStake,
@@ -73,15 +84,30 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
     return parseSlipError(error.message)
   }
 
-  await writeSlip([])
+  const summary = (data ?? { parlay_id: null, replayed: false }) as SlipSummary
+  const parlayId = summary.parlay_id
+
+  // A fresh place took everything in the slip. A replay took only what the earlier attempt held, so
+  // any pick added since stays for the member to place; an old-format key can't say, so it clears.
+  if (summary.replayed && summary.picks) {
+    const placedIds = new Set(summary.picks)
+    await writeSlip((await readSlip()).filter((e) => !placedIds.has(e.outcomeId)))
+  } else {
+    await writeSlip([])
+  }
   // Refreshes the shared layout too, so the balance, the slip and every bet list stay current.
   revalidatePath('/', 'layout')
 
   let parlay: NonNullable<NonNullable<PlaceSlipState>['placed']>['parlay'] = null
   if (parlayId) {
-    const { data: lockedLegs } = await supabase.from('parlay_legs').select('locked_odds').eq('parlay_id', parlayId as string)
+    const { data: lockedLegs } = await supabase.from('parlay_legs').select('locked_odds').eq('parlay_id', parlayId)
     const legBps = (lockedLegs ?? []).map((l) => lockedOddsToBp(l.locked_odds))
-    parlay = { legs: legs.length, multiplierBp: combineOdds(legBps).multiplierBp, potentialPayout: potentialPayout(parlayStake, legBps) }
+    const { data: stakeRow } = summary.replayed
+      ? await supabase.from('parlays').select('stake').eq('id', parlayId).maybeSingle()
+      : { data: null }
+    const stake = stakeRow?.stake ?? parlayStake
+    parlay = { legs: legBps.length, multiplierBp: combineOdds(legBps).multiplierBp, potentialPayout: potentialPayout(stake, legBps) }
   }
-  return { placed: { solos: singles.length, parlay } }
+  const solos = summary.replayed ? (summary.solos ?? 0) : singles.length
+  return { placed: { solos, parlay, ...(summary.replayed ? { replayed: true } : {}) } }
 }

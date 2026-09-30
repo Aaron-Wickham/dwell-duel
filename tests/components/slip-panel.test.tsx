@@ -127,6 +127,16 @@ describe('SlipPanel', () => {
     await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet and a 2-leg parlay at 4.00×.'))
   })
 
+  it('says the earlier attempt went through when the place was a replay (#226)', async () => {
+    placeSlipAction.mockResolvedValue({ placed: { solos: 1, parlay: null, replayed: true } })
+    renderPanel(viewOf(pick(1)))
+
+    await userEvent.type(screen.getAllByLabelText('Stake (DC)')[0], '10')
+    await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 10 DC' }))
+
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Your earlier attempt already went through: 1 solo bet.'))
+  })
+
   it("ties a failed pick's error to that pick's stake", async () => {
     placeSlipAction.mockResolvedValue({ pickErrors: { [pick(1).outcomeId]: 'Market is not open for betting.' } })
     renderPanel(viewOf(pick(1)))

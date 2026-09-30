@@ -190,10 +190,14 @@ the task catalogue and invite list, which are allowed by policy.
 - `push_subscriptions`: one row per subscribed device: `endpoint`
   (unique, https, at most 1024 characters), the device's `p256dh` and
   `auth` keys, `user_agent`, `created_at` and `last_success_at`. A member
-  reads, inserts and deletes only their own rows; Settings saves through
-  `save_push_subscription`, which also hands a shared device's row to
-  whoever saves it with the same keys (the keys never leave the device).
-  Endpoints must be on a known push service (`lib/push/subscription.ts`).
+  reads and deletes only their own rows and has no insert grant (0067);
+  Settings saves through `save_push_subscription`, the only writer, which
+  also hands a shared device's row to whoever saves it with the same keys
+  (the keys never leave the device). An endpoint must be on a known push
+  service: the `push_subscriptions_endpoint_push_service` check calls
+  `is_push_endpoint`, whose hosts (`push_hosts()`) mirror
+  `lib/push/subscription.ts`'s `PUSH_HOSTS`, a DB test keeping them
+  equal, and `sendPush` checks again before every send.
 - `notification_prefs`: one row per member, `resolve_reminders`,
   `results` and `task_reviews` (default on) and `new_markets` (default
   off). No row means the defaults. Own row only, select, insert and update.
@@ -233,8 +237,10 @@ members can't select `profiles.email`), `member_activity` (admin only, 0050:
 each member's join date, `profiles.created_at`, and last sign-in from
 `auth.users`, for Admin → Members), `stray_proof_objects` (service role:
 the daily cron deletes proof files nothing attached),
-`set_member_role`, `delete_market`, `delete_task` and `remove_bet` (owner
-only), `update_my_profile`, `record_proof`, `market_sparklines` (the
+`set_member_role`, `delete_market`, `delete_task`, `remove_bet` and
+`remove_member` (owner only; 0068: back to member, `allowed_emails` row
+and push subscriptions gone, coins and bets untouched), `update_my_profile`,
+`record_proof`, `market_sparklines` (the
 cards' 40-point sparklines and the market chart's 200 points, sampled in
 SQL so no page reads every bet; both prepend a seeded market's even
 opening split through `withSeededStart`, since the function returns points
@@ -351,6 +357,8 @@ after it ships. They roughly follow the project's history:
 | 0061 | Cron heartbeat (#149): `cron_heartbeats` (service-role writes, admin reads) and `record_cron_heartbeat`, stamped by `/api/cron/closing-alerts` |
 | 0062 | `leaderboard_race_steps` (#145): the race from the month's first settled bet, step by step, replacing `leaderboard_race`'s day-by-day points (a new function, so the old one keeps working during the deploy) |
 | 0063 | Drops 0059's `leaderboard_race` (#176), unused since 0062 |
+| 0067 | Push endpoints allowlisted in SQL (#201): `push_hosts()`, `push_endpoint_host`, `is_push_endpoint` and the `push_subscriptions_endpoint_push_service` check; the direct INSERT grant on `push_subscriptions` goes, so `save_push_subscription` is the only writer |
+| 0068 | Roles need an invite (#202): `my_role()` answers `member` unless `is_invited()`, so `has_role`, `is_admin` and every gate on them follow; `remove_member` (owner only) |
 
 Every merge to `main` runs the **Deploy Production** workflow, with no
 approval step: a dry run and the push when the merge touched

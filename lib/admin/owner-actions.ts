@@ -36,6 +36,11 @@ export async function removeBetAction(betId: number, _prev: ConfirmActionState, 
   return run('remove_bet', { p_bet_id: betId })
 }
 
+// remove_member (0068): back to member, invite gone, devices unsubscribed; coins and bets untouched.
+export async function removeMemberAction(profileId: string, _prev: ConfirmActionState, _formData: FormData) {
+  return run('remove_member', { p_profile_id: profileId })
+}
+
 export type SetRoleState = { formError?: string; saved?: boolean } | undefined
 
 export async function setMemberRoleAction(profileId: string, _prev: SetRoleState, formData: FormData): Promise<SetRoleState> {

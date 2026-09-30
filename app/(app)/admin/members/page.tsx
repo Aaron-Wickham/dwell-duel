@@ -9,6 +9,7 @@ import { ContentReveal } from '@/components/nav/page-transition'
 import { cn } from '@/lib/utils'
 import { AdjustBalanceForm } from './adjust-balance-form'
 import { MemberIdentity } from './member-identity'
+import { RemoveMemberButton } from './remove-member-button'
 import { RoleForm } from './role-form'
 
 const memberCardClass = 'lg:rounded-card lg:border lg:border-line lg:bg-surface lg:p-6 lg:shadow-card'
@@ -51,6 +52,7 @@ export default async function AdminMembersPage() {
               <li key={m.id} className={cn('flex flex-col gap-3 py-4', memberCardClass)}>
                 {isOwner ? <AdjustBalanceForm member={m} now={now} /> : <MemberIdentity member={m} now={now} />}
                 {isOwner && m.role !== 'owner' && <RoleForm member={m} />}
+                {isOwner && m.role !== 'owner' && m.id !== user.id && <RemoveMemberButton member={m} />}
               </li>
             ))}
           </ul>

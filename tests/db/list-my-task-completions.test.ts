@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { getMyPendingRewards, listMyTaskCompletions } from '@/lib/tasks/list-task-completions'
+import { serviceClient } from './helpers'
 import { seedMembers, clientFor, ensureInvited, createTestTask, type Member, giveRole } from './fixtures'
 
 let alice: Member

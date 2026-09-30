@@ -389,10 +389,10 @@ after it ships. They roughly follow the project's history:
 | 0066 | `markets.settled_at` (#221), backfilled and indexed `(status, settled_at desc, id desc)`, stamped by `resolve_market_core` (first resolution) and `void_market`; `resolve_market_core` refuses an override to the current outcome (#198) |
 | 0067 | Push endpoints allowlisted in SQL (#201): `push_hosts()`, `push_endpoint_host`, `is_push_endpoint` and the `push_subscriptions_endpoint_push_service` check; the direct INSERT grant on `push_subscriptions` goes, so `save_push_subscription` is the only writer |
 | 0068 | Roles need an invite (#202): `my_role()` answers `member` unless `is_invited()`, so `has_role`, `is_admin` and every gate on them follow; `remove_member` (owner only) |
-
-No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 | 0070 | Speed at scale (#204, #205): `markets.sparkline` filled by the `cache_market_sparkline` trigger when a market resolves or voids (backfilled), `market_outcomes` in the realtime publication, and `parlays_pending_profile_idx` for `stakes_riding` |
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
+
+No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
 Every merge to `main` runs the **Deploy Production** workflow, with no
 approval step: a dry run and the push when the merge touched

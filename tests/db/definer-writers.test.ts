@@ -28,6 +28,15 @@ const DELEGATING: Record<string, string> = {
 // Writes to a table, or through a public function (apply_coin_transaction, record_proof and the like).
 const WRITES = String.raw`\m(insert\s+into|update\s+public\.|delete\s+from|perform\s+public\.)`
 
+// These tests read function bodies as text. They prove a guard call is present, and (below) that the
+// first one comes before the first write, with comments stripped. They don't prove the guard's result
+// decides every path to the write: a function that computed is_invited() and then ignored it would
+// pass. The behavioural tests (remove-member, void-market, roles, security-integrity) cover that for
+// the functions that exist today; these catch a new writer that forgets the guard or checks it late.
+const GUARD = /\b(is_invited|has_role|is_admin|my_role)\s*\(/i
+const WRITE = /\b(insert\s+into|update\s+public\.|delete\s+from|perform\s+public\.)/i
+const withoutComments = (src: string) => src.replace(/--[^\n]*/g, '')
+
 describe('security definer writers', () => {
   it('check the invite themselves, or are role-gated or delegating by name', async () => {
     const rows = await pgQuery<{ proname: string; src: string }>(`
@@ -51,6 +60,31 @@ describe('security definer writers', () => {
       } else {
         expect(src, proname).toMatch(/\b(has_role|is_admin)\s*\(/)
       }
+    }
+  })
+
+  it('check their guard before their first write', async () => {
+    const rows = await pgQuery<{ proname: string; src: string }>(`
+      select p.proname, p.prosrc as src
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.prosecdef
+        and p.prokind = 'f'
+        and p.prorettype <> 'trigger'::regtype
+        and has_function_privilege('authenticated', p.oid, 'execute')
+        and p.prosrc ~* '${WRITES}'
+      order by 1
+    `)
+    expect(rows.length).toBeGreaterThan(Object.keys(DELEGATING).length)
+
+    for (const { proname, src } of rows) {
+      if (proname in DELEGATING) continue
+      const body = withoutComments(src)
+      const guard = body.search(GUARD)
+      const write = body.search(WRITE)
+      expect(guard, `${proname} has a guard`).toBeGreaterThanOrEqual(0)
+      expect(guard, `${proname} guards before it writes`).toBeLessThan(write)
     }
   })
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useRef, useTransition } from 'react'
+import { useActionState, useTransition } from 'react'
 import Link from 'next/link'
 import { Ticket, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -33,6 +33,12 @@ function placedMessage(placed: NonNullable<NonNullable<PlaceSlipState>['placed']
 
 const QUICK_STAKES = [5, 10, 25]
 
+// A parlay stake only counts once there's a parlay to place: a lone Parlay pick has no stake field,
+// so a stake typed earlier shouldn't hold back the solo picks' chips or the button's total.
+function placeableParlayStake(picks: SlipPick[], parlayStake: string): number {
+  return picks.filter((p) => p.parlay).length >= 2 ? (wholeDc(parlayStake) ?? 0) : 0
+}
+
 // What a stake can use: the balance, less every other stake the slip already holds. A solo pick's
 // chips leave out its own stake, and the parlay's leave out the parlay's.
 function availableFor(
@@ -42,7 +48,7 @@ function availableFor(
   const solos = picks
     .filter((p) => !p.parlay && p.outcomeId !== except)
     .reduce((sum, p) => sum + (wholeDc(stakes[p.outcomeId]) ?? 0), 0)
-  const parlay = except !== 'parlay' && picks.some((p) => p.parlay) ? (wholeDc(parlayStake) ?? 0) : 0
+  const parlay = except !== 'parlay' ? placeableParlayStake(picks, parlayStake) : 0
   return Math.max(0, balance - solos - parlay)
 }
 
@@ -176,25 +182,25 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
   )
 }
 
+const LOST_RESPONSE = 'We couldn’t confirm your bets. Check your connection and tap Place again. Nothing will be placed twice.'
+
 export function SlipPanel() {
   const slip = useSlip()
-  const { picks, parlayStake, setParlayStake, stakes, clearStakes, setOpen } = slip
-  // One key per slip, kept across retries until a place succeeds: if a place commits but its
-  // response is lost, tapping again returns that result instead of placing twice (#61).
-  const attemptKey = useRef<string | null>(null)
+  const { picks, parlayStake, setParlayStake, stakes, attemptKeyRef, lostResponse, setLostResponse, clearStakes, setOpen } = slip
   const [state, formAction] = useActionState<PlaceSlipState, FormData>(async (prev, formData) => {
-    attemptKey.current ??= crypto.randomUUID()
-    formData.set('idempotency_key', attemptKey.current)
+    attemptKeyRef.current ??= crypto.randomUUID()
+    formData.set('idempotency_key', attemptKeyRef.current)
     let next: PlaceSlipState
     try {
       next = await placeSlipAction(prev, formData)
     } catch {
       // The bets may have gone through with only the answer lost. Keeping the slip, and its key,
       // makes tapping Place again safe either way.
-      return { formError: 'We couldn’t confirm your bets. Check your connection and tap Place again. Nothing will be placed twice.' }
+      setLostResponse(true)
+      return undefined
     }
+    setLostResponse(false)
     if (next?.placed) {
-      attemptKey.current = null
       toast.success(placedMessage(next.placed))
       haptics.success()
       clearStakes()
@@ -202,6 +208,7 @@ export function SlipPanel() {
     }
     return next
   }, undefined)
+  const formError = lostResponse ? LOST_RESPONSE : state?.formError
 
   if (picks.length === 0) {
     return (
@@ -233,7 +240,7 @@ export function SlipPanel() {
   const solosReady = solos.every((p) => wholeDc(stakes[p.outcomeId]) !== null)
   const allOpen = picks.every((p) => p.open)
   const betCount = solos.length + (legs.length > 0 ? 1 : 0)
-  const total = solos.reduce((sum, p) => sum + (wholeDc(stakes[p.outcomeId]) ?? 0), 0) + (legs.length > 0 ? parlayStakeDc ?? 0 : 0)
+  const total = solos.reduce((sum, p) => sum + (wholeDc(stakes[p.outcomeId]) ?? 0), 0) + placeableParlayStake(picks, parlayStake)
   const parlayError = state?.parlayError
   const legNote =
     legs.length === 1
@@ -317,15 +324,15 @@ export function SlipPanel() {
           Remove the picks that are no longer available to place your slip.
         </Message>
       )}
-      {state?.formError && (
+      {formError && (
         <Message tone="error" id="slip-error">
-          {state.formError}
+          {formError}
         </Message>
       )}
       <FormSubmitButton
         block
         disabled={!allOpen || !solosReady || !parlayReady}
-        aria-describedby={!allOpen ? 'slip-blocked' : state?.formError ? 'slip-error' : undefined}
+        aria-describedby={!allOpen ? 'slip-blocked' : formError ? 'slip-error' : undefined}
       >
         {`Place ${betCount} ${betCount === 1 ? 'bet' : 'bets'}${total > 0 ? ` · ${total} DC` : ''}`}
       </FormSubmitButton>

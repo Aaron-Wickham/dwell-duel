@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, startTransition, useContext, useOptimistic, useState, type ReactNode } from 'react'
+import { createContext, startTransition, useContext, useOptimistic, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { SlipPick, SlipView } from '@/lib/parlays/get-slip'
 import { setPickModeAction } from '@/lib/parlays/slip-actions'
 
@@ -35,6 +35,13 @@ type Slip = {
   setStake: (outcomeId: string, value: string) => void
   parlayStake: string
   setParlayStake: (value: string) => void
+  // One key per slip, kept across retries until a place succeeds: if a place commits but its
+  // response is lost, tapping again returns that result instead of placing twice (#61). It lives
+  // here, not in the panel, because the sheet unmounts the panel when it closes (#192).
+  attemptKeyRef: RefObject<string | null>
+  // Whether the last place's answer was lost, so the panel can still say so after reopening.
+  lostResponse: boolean
+  setLostResponse: (lost: boolean) => void
   clearStakes: () => void
   open: boolean
   setOpen: (open: boolean) => void
@@ -51,6 +58,9 @@ const SlipContext = createContext<Slip>({
   setStake: () => {},
   parlayStake: '',
   setParlayStake: () => {},
+  attemptKeyRef: { current: null },
+  lostResponse: false,
+  setLostResponse: () => {},
   clearStakes: () => {},
   open: false,
   setOpen: () => {},
@@ -62,6 +72,8 @@ export function SlipProvider({ view, balance = 0, children }: { view: SlipView; 
   const [picks, change] = useOptimistic(view.picks, applyChange)
   const [stakes, setStakes] = useState<Record<string, string>>({})
   const [parlayStake, setParlayStake] = useState('')
+  const attemptKeyRef = useRef<string | null>(null)
+  const [lostResponse, setLostResponse] = useState(false)
   const [open, setOpen] = useState(false)
 
   const slip: Slip = {
@@ -78,9 +90,14 @@ export function SlipProvider({ view, balance = 0, children }: { view: SlipView; 
     setStake: (outcomeId, value) => setStakes((prev) => ({ ...prev, [outcomeId]: value })),
     parlayStake,
     setParlayStake,
+    attemptKeyRef,
+    lostResponse,
+    setLostResponse,
     clearStakes: () => {
       setStakes({})
       setParlayStake('')
+      attemptKeyRef.current = null
+      setLostResponse(false)
     },
     open,
     setOpen,

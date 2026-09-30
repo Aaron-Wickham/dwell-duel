@@ -14,6 +14,7 @@ vi.mock('next/cache', () => ({ revalidatePath }))
 vi.mock('@/lib/parlays/slip', () => ({ readSlip, writeSlip }))
 
 import { addToSlipAction, removeFromSlipAction, setPickModeAction } from '@/lib/parlays/slip-actions'
+import { SLIP_FULL_MESSAGE } from '@/lib/parlays/parse-slip'
 
 const solo = (outcomeId: string) => ({ outcomeId, parlay: false })
 const leg = (outcomeId: string) => ({ outcomeId, parlay: true })
@@ -58,13 +59,22 @@ describe('addToSlipAction', () => {
     expect(writeSlip).not.toHaveBeenCalled()
   })
 
-  it('returns false when the slip is already full', async () => {
+  it('says why when the slip is already full, since the page may have been drawn before it filled (#221)', async () => {
     const ids = Array.from({ length: 10 }, (_, i) => `o${i}`)
     readSlip.mockResolvedValue(ids.map(solo))
     outcomesTable([...ids.map((id, i) => ({ id, market_id: `m${i}` })), { id: 'o99', market_id: 'm99' }])
 
-    expect(await addToSlipAction('o99', new FormData())).toBe(false)
+    expect(await addToSlipAction('o99', new FormData())).toEqual({ error: SLIP_FULL_MESSAGE })
     expect(writeSlip).not.toHaveBeenCalled()
+  })
+
+  it("still replaces the same market's pick when the slip is full", async () => {
+    const ids = Array.from({ length: 10 }, (_, i) => `o${i}`)
+    readSlip.mockResolvedValue(ids.map(solo))
+    outcomesTable([...ids.map((id, i) => ({ id, market_id: `m${i}` })), { id: 'o99', market_id: 'm0' }])
+
+    expect(await addToSlipAction('o99', new FormData())).toBe(true)
+    expect(writeSlip).toHaveBeenCalledWith([...ids.slice(1).map(solo), solo('o99')])
   })
 
   it('adds the pick as Solo, keeping the others and their modes, and revalidates', async () => {

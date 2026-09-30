@@ -23,8 +23,8 @@ jobs:
           APP_URL: ${{ vars.APP_URL }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
-            echo "CRON_SECRET is not set for this repository; skipping."
-            exit 0
+            echo "::error::The CRON_SECRET repository secret is not set, so the backup can't call the app."
+            exit 1
           fi
           if [ -z "$APP_URL" ]; then
             echo "::error::The APP_URL repository variable is not set, so there is no app to call."

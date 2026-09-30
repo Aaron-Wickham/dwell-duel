@@ -72,7 +72,7 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
             <Suspense
               fallback={
                 <SkeletonScreen name="member-activity" announce={false}>
-                  <FeedListSkeleton />
+                  <FeedListSkeleton reactions />
                 </SkeletonScreen>
               }
             >

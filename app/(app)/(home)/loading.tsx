@@ -1,7 +1,8 @@
 import { pageClass } from '@/components/ui/page'
 import { Skeleton, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
 
-// Mirrors Home: greeting, balance hero, and the tile list (a grid from lg).
+// Mirrors Home: greeting, balance hero with its one usual stat tile (a second appears only with a
+// task waiting on review), and the six tiles every member sees (a grid from lg).
 export default function Loading() {
   return (
     <SkeletonScreen name="home" className={pageClass}>
@@ -14,13 +15,12 @@ export default function Loading() {
           </div>
           <Skeleton className="h-8 w-28 rounded-full bg-hero-inset" />
         </div>
-        <div className="grid grid-cols-2 gap-2.5 lg:grow">
-          <Skeleton className="h-[62px] rounded-[14px] bg-hero-inset md:h-[72px]" />
+        <div className="grid grid-cols-1 gap-2.5 lg:grow">
           <Skeleton className="h-[62px] rounded-[14px] bg-hero-inset md:h-[72px]" />
         </div>
       </div>
       <div className="flex flex-col divide-y divide-line rounded-card border border-line bg-surface px-1 lg:grid lg:grid-cols-3 lg:gap-5 lg:divide-y-0 lg:border-0 lg:bg-transparent lg:px-0">
-        {Array.from({ length: 5 }, (_, i) => (
+        {Array.from({ length: 6 }, (_, i) => (
           <div
             key={i}
             className="flex min-h-[72px] items-center gap-3.5 px-4 py-3 lg:min-h-24 lg:rounded-card lg:border lg:border-line lg:bg-surface lg:p-5 lg:shadow-card"

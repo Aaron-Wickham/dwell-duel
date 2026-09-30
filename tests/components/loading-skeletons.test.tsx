@@ -71,3 +71,66 @@ describe('skeletons of reading-width pages', () => {
     expect(container.querySelector(`[data-skeleton="${name}"]`)).toHaveClass('max-w-[980px]', 'mx-auto')
   })
 })
+
+// Each skeleton draws the same rows and columns as its loaded page, so nothing jumps when the
+// content lands (#218).
+describe('skeletons match their pages', () => {
+  const withClass = (container: HTMLElement, cls: string) =>
+    [...container.querySelectorAll<HTMLElement>('.skeleton')].filter((b) => b.classList.contains(cls))
+
+  it('the markets skeleton stands in for the filter tabs above the cards', () => {
+    const { container } = render(<MarketsLoading />)
+    const bar = withClass(container, 'h-[52px]')
+    expect(bar).toHaveLength(1)
+    expect(bar[0]).toHaveClass('rounded-[14px]', 'md:w-80')
+    expect(container.querySelector('.lg\\:grid-cols-3')).not.toBeNull()
+  })
+
+  it('the leaderboard skeleton stands a three-place podium above the rankings', () => {
+    const { container } = render(<LeaderboardLoading />)
+    const podium = container.querySelector('.items-end.justify-center')!
+    expect(podium.children).toHaveLength(3)
+    // Drawn in DOM order first, second, third and placed second, first, third, as the podium is.
+    expect([...podium.children].map((place) => place.className)).toEqual([
+      expect.stringContaining('order-2'),
+      expect.stringContaining('order-1'),
+      expect.stringContaining('order-3'),
+    ])
+    expect(withClass(container, 'h-[72px]')).toHaveLength(1)
+    expect(container.querySelectorAll('.min-h-\\[60px\\]')).toHaveLength(6)
+  })
+
+  it('the home skeleton draws one stat tile and the six tiles every member sees', () => {
+    const { container } = render(<HomeLoading />)
+    expect(container.querySelector('.grid-cols-1')?.children).toHaveLength(1)
+    expect(container.querySelector('.grid-cols-2')).toBeNull()
+    expect(container.querySelectorAll('.min-h-\\[72px\\]')).toHaveLength(6)
+  })
+
+  it('the feed skeleton draws four reaction pills under every row', () => {
+    const { container } = render(<FeedLoading />)
+    const rows = container.querySelectorAll('[data-skeleton-reactions]')
+    expect(rows).toHaveLength(6)
+    for (const row of rows) expect(row.querySelectorAll('.skeleton.rounded-full.h-11')).toHaveLength(4)
+  })
+
+  it('the settings skeleton draws the theme legend and hint, and every notification kind', () => {
+    const { container } = render(<SettingsLoading />)
+    const cards = container.querySelectorAll('.rounded-card')
+    const segmented = cards[0].querySelector('.h-\\[52px\\]')!
+    expect(segmented.previousElementSibling).toHaveClass('mb-1.5')
+    expect(segmented.nextElementSibling).toHaveClass('h-5')
+    const notifications = cards[3]
+    expect(notifications.querySelectorAll('.size-\\[22px\\]')).toHaveLength(4)
+    // The device status button and the save button.
+    expect(notifications.querySelectorAll('.skeleton.h-11')).toHaveLength(2)
+  })
+
+  it('the edit-profile skeleton previews a heading, its description and a name as wide as a name', () => {
+    const { container } = render(<ProfileLoading />)
+    const preview = container.querySelectorAll('.rounded-card')[1]
+    expect(preview.querySelector('.h-6')).not.toBeNull()
+    expect(preview.querySelector('.h-5.w-72')).not.toBeNull()
+    expect(preview.querySelector('.size-20 + .h-11.w-56')).not.toBeNull()
+  })
+})

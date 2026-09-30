@@ -316,6 +316,21 @@ export type Database = {
         }
         Relationships: []
       }
+      cron_leases: {
+        Row: {
+          lease_until: string
+          name: string
+        }
+        Insert: {
+          lease_until: string
+          name: string
+        }
+        Update: {
+          lease_until?: string
+          name?: string
+        }
+        Relationships: []
+      }
       feed_reactions: {
         Row: {
           created_at: string
@@ -866,6 +881,27 @@ export type Database = {
           },
         ]
       }
+      push_attempts: {
+        Row: {
+          attempts: number
+          first_tried_at: string
+          kind: string
+          ref: string
+        }
+        Insert: {
+          attempts?: number
+          first_tried_at?: string
+          kind: string
+          ref: string
+        }
+        Update: {
+          attempts?: number
+          first_tried_at?: string
+          kind?: string
+          ref?: string
+        }
+        Relationships: []
+      }
       push_log: {
         Row: {
           kind: string
@@ -1103,6 +1139,10 @@ export type Database = {
       betting_ledger_types: { Args: never; Returns: string[] }
       can_resolve_market: { Args: { p_market_id: string }; Returns: boolean }
       cancel_bet: { Args: { p_bet_id: number }; Returns: undefined }
+      claim_cron_lease: {
+        Args: { p_name: string; p_seconds: number }
+        Returns: boolean
+      }
       claim_idempotency_key: {
         Args: { p_action: string; p_key: string }
         Returns: Json
@@ -1458,6 +1498,10 @@ export type Database = {
         }
         Returns: number
       }
+      record_push_failures: {
+        Args: { p_kind: string; p_refs: string[] }
+        Returns: number
+      }
       record_push_results: {
         Args: { p_delivered: string[]; p_failed: string[] }
         Returns: number
@@ -1466,6 +1510,7 @@ export type Database = {
         Args: { p_completion_id: string; p_reason?: string }
         Returns: undefined
       }
+      release_cron_lease: { Args: { p_name: string }; Returns: undefined }
       remove_bet: { Args: { p_bet_id: number }; Returns: undefined }
       remove_member: { Args: { p_profile_id: string }; Returns: undefined }
       resolve_market: {

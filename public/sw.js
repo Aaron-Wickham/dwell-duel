@@ -160,8 +160,10 @@ self.addEventListener('pushsubscriptionchange', (event) => {
   event.waitUntil(
     (async () => {
       const key = event.oldSubscription?.options?.applicationServerKey
-      const subscription =
-        event.newSubscription ?? (key ? await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }) : null)
+      // Firefox often gives neither subscription, so look for one the browser already made, and only
+      // then make one with the old key.
+      let subscription = event.newSubscription ?? (await self.registration.pushManager.getSubscription())
+      if (!subscription && key) subscription = await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
       if (!subscription) return
       const { endpoint, keys } = subscription.toJSON()
       await fetch('/api/push/resync', {

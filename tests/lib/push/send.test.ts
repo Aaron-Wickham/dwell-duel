@@ -95,16 +95,29 @@ describe('sendPush', () => {
     expect(touched).toEqual(['s3'])
   })
 
-  it('keeps a subscription after any other failure, logging it instead of throwing', async () => {
+  it('keeps a subscription after a failure that is not its fault, logging it instead of throwing', async () => {
     const { db, deleted, failures } = fakeDb([sub('s1', 'alice')])
     sendNotification.mockRejectedValue(Object.assign(new Error('Too many'), { statusCode: 429 }))
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     expect(await sendPush([{ profileId: 'alice', payload }], db)).toEqual({ sent: 0, removed: 0, failed: 1 })
     expect(deleted).toEqual([])
-    // The failure is counted against the device; the database prunes it once it keeps failing (0076).
-    expect(failures).toEqual(['s1'])
+    // A 429 is the push service's doing, so it is reported but never counted against the device.
+    expect(failures).toEqual([])
     expect(log).toHaveBeenCalled()
+  })
+
+  it('counts a failure against the device only for a 4xx the device caused (#257)', async () => {
+    const { db, failures, deleted } = fakeDb([sub('s400', 'alice'), sub('s403', 'alice'), sub('s413', 'alice'), sub('s429', 'alice'), sub('s503', 'alice'), sub('snone', 'alice')])
+    const statuses: Record<string, number | undefined> = { s400: 400, s403: 403, s413: 413, s429: 429, s503: 503, snone: undefined }
+    sendNotification.mockImplementation(async ({ endpoint }: { endpoint: string }) => {
+      throw Object.assign(new Error('nope'), { statusCode: statuses[endpoint.split('/').pop()!] })
+    })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    expect(await sendPush([{ profileId: 'alice', payload }], db)).toEqual({ sent: 0, removed: 0, failed: 6 })
+    expect(failures.sort()).toEqual(['s400', 's403', 's413'])
+    expect(deleted).toEqual([])
   })
 
   it('never POSTs to an endpoint that isn’t a push service, whatever the table holds (#201)', async () => {

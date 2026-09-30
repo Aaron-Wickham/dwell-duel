@@ -216,7 +216,9 @@ the task catalogue and invite list, which are allowed by policy.
   sends. `record_push_results(delivered, failed)` (service role) resets a
   delivered device's streak, extends a failed one's, and deletes a device
   that has failed five sends in a row with the first over 24 hours ago, or
-  failing with no delivery for 60 days. A member
+  is failing with no delivery for 60 days and its first failure is over 24
+  hours old too; a batch with no delivery and three or more failures prunes
+  nothing. One failure counts per market attempt, not per run. A member
   reads and deletes only their own rows and has no insert grant (0067);
   Settings saves through `save_push_subscription`, the only writer, which
   also hands a shared device's row to whoever saves it with the same keys
@@ -405,7 +407,7 @@ after it ships. They roughly follow the project's history:
 | 0070 | Speed at scale (#204, #205): `markets.sparkline` filled by the `cache_market_sparkline` trigger when a market resolves or voids (backfilled), `market_outcomes` in the realtime publication, and `parlays_pending_profile_idx` for `stakes_riding` |
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
-| 0076 | Push failure pruning (#257): `push_subscriptions.failure_count` and `first_failed_at`, the service-role `record_push_results()`, and `save_push_subscription` resetting the streak |
+| 0076 | Push failure pruning (#257): `push_subscriptions.failure_count` and `first_failed_at`, the service-role `record_push_results()`, `save_push_subscription` resetting the streak, and the closing-alerts lease (`cron_leases`, `claim_cron_lease`, `release_cron_lease`) and give-up counter (`push_attempts`, `record_push_failures`) |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
@@ -521,8 +523,9 @@ never sees the last one's notifications. Its four checkboxes save `notification_
 server-only (`lib/push/send.ts`, `web-push`): it reads the recipients'
 subscriptions with the service-role client, sends up to six at a time, and
 deletes a subscription whose push service answers 404 or 410, and reports
-every other outcome through `record_push_results` (0076), which prunes a
-device that keeps failing. It never throws; failures are logged. Resolving, overriding, voiding, approving
+failures to `record_push_results` (0076), which prunes a device that keeps
+failing. Only a 4xx other than 404, 410 and 429 counts against a device;
+no status (our own network or key trouble), 429 and 5xx are logged only. It never throws; failures are logged. Resolving, overriding, voiding, approving
 or rejecting a task and creating a market call `afterAction()`
 (`lib/push/notify.ts`), which runs the send through Next's `after()`, so
 the member's action never waits on it; the recipients are read from the
@@ -545,8 +548,13 @@ daily keep-alive calls `sendClosingAlerts` itself as the last backstop. Each
 call that read its queue stamps `cron_heartbeats` (#149), whether or not its
 pushes were delivered: a failed push is logged and counted in the response
 (`failed`), not a 502 and not a missing stamp, so one broken device can't keep
-the warning below on or make the backup workflow email (#257); the device is
-pruned after enough failures (`record_push_results`, 0076). The
+the warning below on or make the backup workflow email (#257). A run that
+delivered nothing while three or more pushes failed is systemic: it returns
+502 and leaves the stamp alone. `sendClosingAlerts` also takes a lease
+(`claim_cron_lease`, 120 seconds, table `cron_leases`) so overlapping callers
+never double-send, and `deliverPerMarket` records a market whose devices all
+failed in `push_attempts` (`record_push_failures`), which claims it in
+`push_log` once its first failure is over 24 hours old. The
 Admin layout shows admins and the owner a warning (`ClosingAlertsWarning`,
 `lib/admin/cron-health.ts`) once the last stamp is over 30 minutes old or
 missing. Only this route stamps it: the daily keep-alive doesn't,

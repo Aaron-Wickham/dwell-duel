@@ -15,11 +15,15 @@ import { CLOSING_ALERTS_JOB } from '@/lib/admin/cron-health'
 // last one is too old, so the warning means "the schedule is dead". A push that failed is logged and
 // counted in the response instead, since one broken device would otherwise keep the warning on, and
 // the backup workflow failing, for as long as it stayed subscribed (#257); a device that keeps
-// failing is pruned by record_push_results (0076).
+// failing is pruned by record_push_results (0076). A run that delivered nothing while three or more
+// pushes failed is systemic, so it fails and leaves the heartbeat alone. One run at a time: a caller
+// that finds another's lease returns at once.
 //
 // Five database calls and the sends themselves can take a while: fine under Fluid compute, fatal
 // under the legacy 10s limit.
 export const maxDuration = 60
+
+const SYSTEMIC_FAILURES = 3
 
 export async function GET(request: Request) {
   if (!cronAuthorized(request.headers.get('authorization'), process.env.CRON_SECRET)) {
@@ -31,6 +35,14 @@ export async function GET(request: Request) {
   if ('error' in result) {
     console.error(result.error)
     return new NextResponse('Closing alerts failed', { status: 502 })
+  }
+  if (result.busy) return NextResponse.json({ ok: true, ...result })
+  // Devices failing one at a time are pruned by the database and are no alarm. Nothing delivered
+  // while several devices failed is systemic (keys, our network, the push service), and it must not
+  // look healthy, so the run fails and leaves the heartbeat alone (#257).
+  if (result.sent === 0 && result.failed >= SYSTEMIC_FAILURES) {
+    console.error(`Closing alerts: nothing delivered, ${result.failed} pushes failed`)
+    return new NextResponse('Push delivery failed', { status: 502 })
   }
   if (result.failed > 0) console.error(`Closing alerts: ${result.failed} push(es) failed, ${result.sent} sent`)
 

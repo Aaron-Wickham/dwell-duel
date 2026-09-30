@@ -7,8 +7,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ## Unreleased
 
 ### Fixes
-- **One broken notification device no longer raises the closing-alerts alarm.** A failed push is logged and counted instead of failing the run, so the Admin warning and the backup workflow only mean "the schedule stopped". Every send now records its outcome per device, and a device that has failed five sends in a row over more than a day, or has had no delivery for 60 days while failing, is pruned (#257).
-- **Notifications re-sync themselves.** On load, a device that turned notifications on re-makes a subscription the browser dropped or made with an old key, and saves a rotated one; the service worker also handles `pushsubscriptionchange` (#257).
+- **One broken notification device no longer raises the closing-alerts alarm, and a systemic failure still does.** A failed push is logged and counted instead of failing the run, so one dead device can't keep the Admin warning on or make the backup workflow email. A run that delivers nothing while three or more pushes fail returns 502 and leaves the heartbeat alone. Only a 4xx the device caused (not 404/410, which delete at once, and not 429, 5xx or our own errors) counts against a device, which is pruned after five such failures spanning more than a day, or after 60 days without a delivery once it has also been failing for a day; a batch that delivered nothing prunes nobody (#257).
+- **Closing alerts run one at a time, and stop retrying a market nobody can be reached about.** A lease stops pg_cron and the GitHub backup sending the same alert twice, and a market whose pushes have failed for 24 hours is given up on instead of retried for ever (#257).
+- **Notifications re-sync themselves.** On load, a device that turned notifications on re-makes a subscription the browser dropped or made with an old key, and saves a rotated one; the service worker also handles `pushsubscriptionchange` (#257). A device subscribed before this ships re-syncs after its member next opens Settings; if the server already deleted its row, the member taps "Turn on" there.
 
 ## v0.5.2-beta — 2026-09-30
 

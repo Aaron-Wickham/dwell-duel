@@ -2,6 +2,7 @@ import 'server-only'
 import { after } from 'next/server'
 import type { DbClient } from '@/lib/supabase/database'
 import { serviceRoleClient } from '@/lib/supabase/service-role'
+import { CLOSING_ALERTS_JOB } from '@/lib/admin/cron-health'
 import { vapidKeys } from './config'
 import {
   marketAlertPayload,
@@ -81,6 +82,8 @@ export async function notifyNewMarket(marketId: string, db: DbClient = serviceRo
   return sendPush(data.map((row) => ({ profileId: row.profile_id, payload: newMarketPayload({ marketId, title: row.title }) })), db)
 }
 
+const CLOSING_ALERTS_LEASE_SECONDS = 120
+
 export type ClosingAlertsDelivery = { sent: number; failed: number }
 type ClosingAlertsResult<K extends string> = { error: unknown } | ({ [P in K]: number } & ClosingAlertsDelivery)
 
@@ -100,6 +103,7 @@ async function deliverPerMarket(
   for (const { marketId, ...message } of messages) byMarket.set(marketId, [...(byMarket.get(marketId) ?? []), message])
 
   const delivered: string[] = []
+  const unreachable: string[] = []
   let sent = 0
   let failed = 0
   for (const [marketId, group] of byMarket) {
@@ -107,6 +111,13 @@ async function deliverPerMarket(
     sent += result.sent
     failed += result.failed
     if (result.sent > 0) delivered.push(marketId)
+    else if (result.failed > 0) unreachable.push(marketId)
+  }
+  // A market nobody could be reached about is tried again next run, until the database gives up on
+  // it after 24 hours (record_push_failures, 0076). Losing this count only delays giving up.
+  if (unreachable.length > 0) {
+    const { error } = await db.rpc('record_push_failures', { p_kind: kind, p_refs: unreachable })
+    if (error) console.error('Recording failed push attempts failed', error)
   }
   if (delivered.length === 0) return { markets: 0, sent, failed }
 
@@ -174,15 +185,27 @@ export async function sendMarketAlerts(db: DbClient): Promise<ClosingAlertsResul
 // count devices, so a caller can tell a quiet run from one that delivered nothing it tried.
 export async function sendClosingAlerts(
   db: DbClient,
-): Promise<{ error: unknown } | ({ reminded: number; alerted: number } & ClosingAlertsDelivery)> {
-  const reminders = await sendResolveReminders(db)
-  if ('error' in reminders) return reminders
-  const alerts = await sendMarketAlerts(db)
-  if ('error' in alerts) return alerts
-  return {
-    reminded: reminders.reminded,
-    alerted: alerts.alerted,
-    sent: reminders.sent + alerts.sent,
-    failed: reminders.failed + alerts.failed,
+): Promise<{ error: unknown } | ({ reminded: number; alerted: number; busy?: true } & ClosingAlertsDelivery)> {
+  if (!vapidKeys()) return { reminded: 0, alerted: 0, sent: 0, failed: 0 }
+  // Another run (pg_cron and the GitHub backup can overlap, and a run with slow sends can outlast a
+  // minute) would read the same due markets and send every alert twice, so one run at a time; the
+  // lease expires on its own if a run dies holding it (0076).
+  const lease = await db.rpc('claim_cron_lease', { p_name: CLOSING_ALERTS_JOB, p_seconds: CLOSING_ALERTS_LEASE_SECONDS })
+  if (lease.error) return { error: lease.error }
+  if (!lease.data) return { reminded: 0, alerted: 0, sent: 0, failed: 0, busy: true }
+  try {
+    const reminders = await sendResolveReminders(db)
+    if ('error' in reminders) return reminders
+    const alerts = await sendMarketAlerts(db)
+    if ('error' in alerts) return alerts
+    return {
+      reminded: reminders.reminded,
+      alerted: alerts.alerted,
+      sent: reminders.sent + alerts.sent,
+      failed: reminders.failed + alerts.failed,
+    }
+  } finally {
+    const { error } = await db.rpc('release_cron_lease', { p_name: CLOSING_ALERTS_JOB })
+    if (error) console.error('Releasing the closing-alerts lease failed', error)
   }
 }

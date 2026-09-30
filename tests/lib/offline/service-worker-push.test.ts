@@ -19,12 +19,13 @@ function loadWorker(windows: FakeWindow[] = []) {
   const matchAll = vi.fn(async () => windows)
   const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => ({ ok: true }))
   const subscribe = vi.fn(async (_options: unknown) => newSub('https://fcm.googleapis.com/fcm/send/fresh'))
+  const getSubscription = vi.fn(async (): Promise<ReturnType<typeof newSub> | null> => null)
   const scope: Record<string, unknown> = {
     URL,
     Promise,
     location: { origin: ORIGIN, href: `${ORIGIN}/sw.js?v=v1` },
     fetch: fetchMock,
-    registration: { showNotification, pushManager: { subscribe } },
+    registration: { showNotification, pushManager: { subscribe, getSubscription } },
     clients: { matchAll, openWindow, claim: vi.fn() },
     addEventListener: (type: string, listener: Listener) => {
       listeners[type] = listener
@@ -39,7 +40,7 @@ function loadWorker(windows: FakeWindow[] = []) {
     await done
   }
 
-  return { dispatch, showNotification, openWindow, matchAll, fetchMock, subscribe }
+  return { dispatch, showNotification, openWindow, matchAll, fetchMock, subscribe, getSubscription }
 }
 
 const pushData = (value: unknown) => ({ json: () => value, text: () => JSON.stringify(value) })
@@ -105,5 +106,19 @@ describe('public/sw.js push', () => {
     await worker.dispatch('pushsubscriptionchange', { newSubscription: newSub('https://fcm.googleapis.com/fcm/send/made') })
     expect(worker.subscribe).not.toHaveBeenCalled()
     expect(worker.fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('falls back to the subscription the browser already holds when the event names none', async () => {
+    const worker = loadWorker()
+    worker.getSubscription.mockResolvedValue(newSub('https://fcm.googleapis.com/fcm/send/held'))
+    await worker.dispatch('pushsubscriptionchange', { oldSubscription: null, newSubscription: null })
+    expect(worker.subscribe).not.toHaveBeenCalled()
+    expect(JSON.parse(worker.fetchMock.mock.calls[0][1].body as string).endpoint).toBe('https://fcm.googleapis.com/fcm/send/held')
+  })
+
+  it('does nothing when there is no subscription and no key to make one with', async () => {
+    const worker = loadWorker()
+    await worker.dispatch('pushsubscriptionchange', { oldSubscription: null, newSubscription: null })
+    expect(worker.fetchMock).not.toHaveBeenCalled()
   })
 })

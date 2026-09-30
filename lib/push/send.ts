@@ -85,7 +85,9 @@ export async function sendPush(messages: PushMessage[], client?: DbClient): Prom
           gone.add(subscription.id)
         } else {
           failed++
-          failedIds.add(subscription.id)
+          // Only a device-specific rejection counts against the device. No status (our own network
+          // or key trouble), 429 and 5xx are the service's or ours, and must never prune anyone.
+          if (status !== undefined && status >= 400 && status < 500 && status !== 429) failedIds.add(subscription.id)
           console.error('Push send failed', status ?? error)
         }
       }

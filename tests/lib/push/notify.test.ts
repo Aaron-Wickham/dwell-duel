@@ -139,6 +139,8 @@ describe('notify', () => {
     sendPush.mockResolvedValue({ sent: 0, removed: 0, failed: 1 })
     expect(await sendResolveReminders({ rpc } as unknown as DbClient)).toEqual({ reminded: 0, sent: 0, failed: 1 })
     expect(rpc).not.toHaveBeenCalledWith('claim_push_log', expect.anything())
+    // The database counts the try, and gives up on the market after 24 hours (0076).
+    expect(rpc).toHaveBeenCalledWith('record_push_failures', { p_kind: 'resolve_reminder', p_refs: ['m-1'] })
   })
 
   it('reports a failed claim, since the next run would otherwise repeat a push it can’t remember', async () => {
@@ -209,5 +211,16 @@ describe('notify', () => {
     )
     sendPush.mockResolvedValueOnce({ sent: 1, removed: 0, failed: 1 }).mockResolvedValueOnce({ sent: 2, removed: 0, failed: 0 })
     expect(await sendClosingAlerts({ rpc } as unknown as DbClient)).toEqual({ reminded: 1, alerted: 1, sent: 3, failed: 1 })
+  })
+
+  it('skips the whole run while another holds the lease, and releases it afterwards', async () => {
+    const busy = vi.fn(async () => ({ data: false, error: null }))
+    expect(await sendClosingAlerts({ rpc: busy } as unknown as DbClient)).toEqual({ reminded: 0, alerted: 0, sent: 0, failed: 0, busy: true })
+    expect(busy).toHaveBeenCalledTimes(1)
+
+    const rpc = vi.fn(async (): Promise<{ data: unknown; error: null }> => ({ data: [], error: null }))
+    rpc.mockImplementationOnce(async () => ({ data: true, error: null }))
+    await sendClosingAlerts({ rpc } as unknown as DbClient)
+    expect(rpc).toHaveBeenLastCalledWith('release_cron_lease', { p_name: 'closing-alerts' })
   })
 })

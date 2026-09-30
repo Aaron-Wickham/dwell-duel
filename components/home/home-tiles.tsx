@@ -36,6 +36,7 @@ function TileBody({ icon: Icon, title, subtitle }: Pick<HomeTile, 'icon' | 'titl
 export function HomeTiles({ tiles }: { tiles: HomeTile[] }) {
   return (
     <nav aria-label="Everything in DwellDuel">
+      <h2 className="sr-only">Go to</h2>
       <div className="flex flex-col divide-y divide-line rounded-card border border-line bg-surface px-1 lg:grid lg:grid-cols-3 lg:gap-5 lg:divide-y-0 lg:border-0 lg:bg-transparent lg:px-0">
         {tiles.map((tile) =>
           // The mail app opens outside DwellDuel, so this is a real <a>, not a routed <Link> --

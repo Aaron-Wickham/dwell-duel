@@ -79,9 +79,9 @@ export function ParlayProgress({ legs, className }: { legs: { status: LegStatus 
   const summary = tallySummary(legTally(legs))
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
-      <div role="img" aria-label={summary} className="flex gap-[3px]">
+      <div aria-hidden="true" className="flex gap-[3px]">
         {legs.map((leg, i) => (
-          <span key={i} aria-hidden="true" className={cn('h-1.5 flex-1 rounded-full', SEGMENT[leg.status])} />
+          <span key={i} className={cn('h-1.5 flex-1 rounded-full', SEGMENT[leg.status])} />
         ))}
       </div>
       <p className="text-sm text-ink2">{summary}</p>

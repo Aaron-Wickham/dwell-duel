@@ -201,13 +201,15 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
             {active !== null && (
               <div aria-hidden="true" data-testid="race-key-readout">
                 <div className="absolute inset-y-0 w-[1.5px] -translate-x-1/2 bg-line-s" style={{ left: `${xPercent(active)}%` }} />
-                {/* The hover readout's look, on the side of the cursor with room. */}
+                {/* The hover readout's look, beside the cursor while there's room to its right and
+                    pinned to the plot's right edge once there isn't, so on a narrow phone it never
+                    runs under the label column. */}
                 <div
                   className={cn(
                     'absolute top-2 flex min-w-[150px] flex-col gap-1.5 rounded-control border border-line bg-surface px-3 py-2.5 text-ink shadow-card',
-                    xPercent(active) > 50 ? '-translate-x-full -ml-3.5' : 'ml-3.5',
+                    xPercent(active) > 40 ? 'right-0' : 'ml-3.5',
                   )}
-                  style={{ left: `${xPercent(active)}%` }}
+                  style={xPercent(active) > 40 ? undefined : { left: `${xPercent(active)}%` }}
                 >
                   <span className="whitespace-nowrap text-xs font-bold text-ink2">{momentLabel(active)}</span>
                   {standings(active).map(({ i, name, profit }) => (

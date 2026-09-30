@@ -48,9 +48,12 @@ export function HomeHero({
 }) {
   return (
     <section
-      aria-label="Your balance"
+      aria-labelledby="home-hero-heading"
       className="flex flex-col gap-4 rounded-[22px] bg-hero p-[18px] text-on-hero md:p-7 lg:flex-row lg:items-center lg:gap-6"
     >
+      <h2 id="home-hero-heading" className="sr-only">
+        Your balance
+      </h2>
       <div className="flex items-end justify-between gap-3 lg:shrink-0 lg:flex-col lg:items-start lg:gap-2.5">
         <div className="flex flex-col gap-1">
           <p className={cn(eyebrowClass, 'text-hero-2')}>Dwell Coin</p>

@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
-import { CopyPlus, Ticket, Trophy } from 'lucide-react'
+import { ChevronDown, CopyPlus, Ticket, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
@@ -128,9 +128,16 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
         )}
         {market.description && <p className="max-w-[68ch] whitespace-pre-line text-ink2">{market.description}</p>}
         {edits.length > 0 && (
-          <details className="max-w-[68ch] text-sm text-ink2">
-            <summary className="pressable inline-flex min-h-11 cursor-pointer items-center font-bold">
-              Edited <LocalTime iso={edits[0].editedAt} format="dateTime" />
+          <details className="group max-w-[68ch] text-sm text-ink2">
+            {/* inline-flex drops the browser's disclosure marker, so the chevron says this opens. */}
+            <summary className="pressable inline-flex min-h-11 cursor-pointer items-center gap-1 font-bold">
+              <span>
+                Edited <LocalTime iso={edits[0].editedAt} format="dateTime" />
+              </span>
+              <ChevronDown
+                aria-hidden="true"
+                className="size-4 shrink-0 transition-transform duration-(--duration-fast) group-open:rotate-180 motion-reduce:transition-none"
+              />
             </summary>
             <ol className="mt-1 flex flex-col gap-3">
               {edits.map((e) => (

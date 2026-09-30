@@ -239,8 +239,10 @@ members can't select `profiles.email`), `member_activity` (admin only, 0050:
 each member's join date, `profiles.created_at`, and last sign-in from
 `auth.users`, for Admin → Members), `stray_proof_objects` (service role:
 the daily cron deletes proof files nothing attached),
-`set_member_role`, `delete_market`, `delete_task` and `remove_bet` (owner
-only), `update_my_profile`, `record_proof`, `market_sparklines` (the
+`set_member_role`, `delete_market` (refuses a market with any bet, cancelled
+bet or parlay leg; the market page shows the button only when the pool is
+empty and `lib/markets/bet-history.ts`'s two head counts find nothing),
+`delete_task` and `remove_bet` (owner only), `update_my_profile`, `record_proof`, `market_sparklines` (the
 cards' 40-point sparklines and the market chart's 200 points, sampled in
 SQL so no page reads every bet; both prepend a seeded market's even
 opening split through `withSeededStart`, since the function returns points

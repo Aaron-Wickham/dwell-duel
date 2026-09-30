@@ -17,11 +17,12 @@ Next.js 16 on Vercel ── proxy.ts: signed-out requests → /sign-in
 Supabase (one hosted project: production)
   ├─ Auth: Google only, invite-gated
   ├─ Postgres: tables + RLS + security-definer RPCs (all money moves here)
-  ├─ Realtime: 12 published tables drive live page refreshes
+  ├─ Realtime: 13 published tables drive live page refreshes
   └─ Storage: `avatars` (public), `proof` (private, signed URLs)
 
-Web push: server actions and the daily cron → web-push (VAPID) → the
-browser's push service → public/sw.js shows the notification
+Web push: server actions, pg_cron (every minute, via pg_net) and the daily
+cron → web-push (VAPID) → the browser's push service → public/sw.js shows
+the notification
 ```
 
 The rule that shapes everything else is that **all business logic that
@@ -39,9 +40,9 @@ itself.
 | Framework | Next.js 16 (App Router, React 19, server actions, `proxy.ts`) |
 | Language | TypeScript, strict |
 | Styling | Tailwind v4 with CSS-variable tokens (`app/globals.css`), light and dark |
-| UI pieces | Base UI (dialogs, drawers), lucide-react icons, Motion (loaded lazily), NumberFlow, Recharts (the market page's chart; cards draw plain SVG), sonner toasts |
+| UI pieces | Base UI (dialogs, drawers), lucide-react icons, Motion (loaded lazily), NumberFlow, Recharts (the market page's chart and the leaderboard's race chart; cards draw plain SVG), sonner toasts |
 | Data | Supabase: Postgres, Auth, Realtime, Storage (`@supabase/ssr`) |
-| Hosting | Vercel (production only, plus a daily cron) |
+| Hosting | Vercel (production only, plus a daily cron), with `@vercel/analytics` and `@vercel/speed-insights` |
 | Tests | Vitest (unit, component, DB against local Supabase), Playwright (e2e) |
 
 ## Routes
@@ -58,13 +59,13 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
 | `/parlays` | Redirects to `/bets` (kept for old links) |
-| `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its locked odds and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`, so an unknown id is a real 404 |
+| `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its locked odds and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`: the page checks the parlay exists first (so an unknown id is a real 404), then streams the body behind `<Suspense>` with `ParlayDetailSkeleton` |
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
 | `/feed` | Everyone's activity, with reactions, live |
 | `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`) |
 | `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings |
 | `/profile` | Edit your name, photo and bio |
-| `/settings` | Theme, haptics, reduced motion, notifications, How it works, sign out |
+| `/settings` | Theme, your profile, haptics, reduced motion, notifications, How it works, sign out |
 | `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`) |
 | `/admin/invites` · `/admin/tasks` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role; the ledger opens with the owner's Economy card |
 
@@ -73,32 +74,39 @@ return), `/not-invited` and `/offline`. The API has two routes.
 `/api/cron/keep-alive`, which a daily Vercel cron calls so the free
 Supabase project never pauses. It also deletes unattached proof files and
 attempt keys older than a day, calls `settle_season()` to post last
-month's champion to the feed (a no-op once it's posted), and sends the
-push reminders to resolve closed markets (`sendClosingAlerts`). Both cron
-routes declare `maxDuration = 60`.
+month's champion to the feed (a no-op once it's posted), and runs
+`sendClosingAlerts`, the daily backstop for the closing alerts: both the
+creator's reminder to resolve and the admins' alert for a closed market
+with no result. Both cron routes declare `maxDuration = 60`.
 It runs at 05:15 UTC (`vercel.json`), not midnight: `settle_season`
 defaults to the month before today's *Eastern* date, and midnight UTC is
 still the previous evening in Eastern time, so a run then settled the
 month before last and September's champion only posted on October 2
 (#197). Any hour from 05:00 UTC is past midnight Eastern under EST and
 EDT alike; `tests/lib/deploy/keep-alive-schedule.test.ts` guards it.
-The other, `/api/cron/closing-alerts`, sends the same closing alerts every
-minute a market closes, from Supabase's `pg_cron`, and records a heartbeat (see
-Notifications). A second `pg_cron` job, `cron-history-cleanup` (0065), prunes
-`cron.job_run_details` older than a week each morning.
+The other, `/api/cron/closing-alerts`, sends the same closing alerts from
+Supabase's `pg_cron`: within a minute of a market closing, and at least every
+ten minutes otherwise (the heartbeat, see Notifications). A second `pg_cron`
+job, `cron-history-cleanup` (0065), prunes `cron.job_run_details` older than
+a week each morning.
 
 ## Code layout
 
 ```
 app/            routes (see above), globals.css, manifest, error pages
-components/     UI by area: app-nav, brand, feed, home, markets, parlays, proof,
-                slip, tasks, live, offline, ui (shared primitives: Page, SectionCard,
-                Button, Field, SubNav, ShowMore, EmptyState, Skeleton…)
-lib/            logic by area: auth, markets, bets, parlays, tasks, proof, social,
-                live, pagination, preferences, push, theme, forms, env, nav…
-supabase/       migrations/0001…0057, config.toml
+components/     UI by area: admin, app-nav, app-shell, brand, docs, feed, home,
+                leaderboard, live, markets, members, nav, not-found, offline,
+                parlays, proof, slip, tasks, ui (shared primitives: Page,
+                SectionCard, Button, Field, SubNav, ShowMore, EmptyState,
+                Skeleton…)
+lib/            logic by area: admin, app-shell, auth, bets, docs, economy, env,
+                errors, forms, home, invites, ledger, live, markets, members, nav,
+                offline, pagination, parlays, preferences, profile, proof, push,
+                social, supabase, tasks, theme, toast, ui…
+supabase/       migrations/0001…0071, config.toml
 tests/          components/, lib/, db/ (Vitest), plus e2e/ (Playwright)
-scripts/        generate-splash.mjs, generate-favicons.mjs
+scripts/        generate-splash.mjs, generate-favicons.mjs, ios-standalone-check.mjs
+                (npm run check:ios), seed-scale.mjs
 public/         sw.js (service worker), icons, favicons, iOS splash screens
 docs/           this file, HOW-IT-WORKS, design handoff, dated specs and plans
 ```
@@ -354,7 +362,7 @@ subquery per row, so 0055 adds no index.
 
 ### Migrations
 
-Migrations are numbered in order, `0001`–`0057`, and none is ever edited
+Migrations are numbered in order, `0001`–`0071`, and none is ever edited
 after it ships. They roughly follow the project's history:
 
 | Range | What they add |
@@ -377,14 +385,14 @@ after it ships. They roughly follow the project's history:
 | 0054 | Task periods in US Eastern time: `group_time_zone()`, `compute_period_key` read in that zone, stored keys recomputed from `submitted_at` where the one-active-per-period index allows; task streaks: `period_index`, `my_task_streaks` and an approved-only `(profile_id, task_id, period_key)` index |
 | 0055 | Member stats: `member_stats` for the profile's Stats card, and `betting_ledger_types()`, 0051's betting types named once and shared with `season_profits` |
 | 0056 | `weekly_recap(p_week)`: Home's weekly recap, one row of date-bounded aggregates for the Eastern week holding `p_week` |
-| 0058 | Review alerts (#123): `notification_prefs.review_alerts`, `push_task_alerts`, `push_market_alerts`, the `market_alert` kind in `push_log`, and `my_review_counts` for the Admin badge |
 | 0057 | Push notifications: `push_subscriptions`, `notification_prefs`, `push_log`, `save_push_subscription` and the service-role `push_*` recipient functions |
+| 0058 | Review alerts (#123): `notification_prefs.review_alerts`, `push_task_alerts`, `push_market_alerts`, the `market_alert` kind in `push_log`, and `my_review_counts` for the Admin badge |
 | 0059 | Leaderboard extras (#121): `leaderboard_race`, `leaderboard_awards`, `member_records` (security definer, invited members only, aggregates only) |
 | 0060 | Best parlay award (#146): `leaderboard_awards` computes Best parlay's multiplier as `member_stats` does (resolved legs' locked odds multiplied, capped), not credited / stake |
-| 0064 | Closing alerts from `pg_cron` (#189): `pg_cron` and `pg_net`, `ping_closing_alerts()` (service role only) and the `closing-alerts` job every minute, calling the app only when a market has just closed or the heartbeat is over nine minutes old |
 | 0061 | Cron heartbeat (#149): `cron_heartbeats` (service-role writes, admin reads) and `record_cron_heartbeat`, stamped by `/api/cron/closing-alerts` |
 | 0062 | `leaderboard_race_steps` (#145): the race from the month's first settled bet, step by step, replacing `leaderboard_race`'s day-by-day points (a new function, so the old one keeps working during the deploy) |
 | 0063 | Drops 0059's `leaderboard_race` (#176), unused since 0062 |
+| 0064 | Closing alerts from `pg_cron` (#189): `pg_cron` and `pg_net`, `ping_closing_alerts()` (service role only) and the `closing-alerts` job every minute, calling the app only when a market has just closed or the heartbeat is over nine minutes old |
 | 0065 | `update_market` counts other members' parlay legs as bets (#221); the daily `cron-history-cleanup` job, pruning `cron.job_run_details` older than a week (#210) |
 | 0066 | `markets.settled_at` (#221), backfilled and indexed `(status, settled_at desc, id desc)`, stamped by `resolve_market_core` (first resolution) and `void_market`; `resolve_market_core` refuses an override to the current outcome (#198) |
 | 0067 | Push endpoints allowlisted in SQL (#201): `push_hosts()`, `push_endpoint_host`, `is_push_endpoint` and the `push_subscriptions_endpoint_push_service` check; the direct INSERT grant on `push_subscriptions` goes, so `save_push_subscription` is the only writer |
@@ -490,7 +498,9 @@ each signed-in route has a skeleton.
 subscribes this device's service worker with the VAPID public key, and
 saves the subscription (`lib/push/actions.ts`); its "on" state is this
 device's `pushManager.getSubscription()` matching one of the member's
-saved endpoints. Its four checkboxes save `notification_prefs`. Sending is
+saved endpoints. Signing out deletes this device's subscription first
+(`app/(app)/settings/sign-out-button.tsx`), so a shared phone's next member
+never sees the last one's notifications. Its four checkboxes save `notification_prefs`. Sending is
 server-only (`lib/push/send.ts`, `web-push`): it reads the recipients'
 subscriptions with the service-role client, sends up to six at a time, and
 deletes a subscription whose push service answers 404 or 410. It never
@@ -498,8 +508,7 @@ throws; failures are logged. Resolving, overriding, voiding, approving
 or rejecting a task and creating a market call `afterAction()`
 (`lib/push/notify.ts`), which runs the send through Next's `after()`, so
 the member's action never waits on it; the recipients are read from the
-database once the RPC has committed. The daily cron sends the reminders
-to resolve. Submitting a task alerts reviewers at once (`notifyTaskSubmitted`).
+database once the RPC has committed. Submitting a task alerts reviewers at once (`notifyTaskSubmitted`).
 A market closing is only the clock passing, so `/api/cron/closing-alerts`
 (`sendClosingAlerts`: the creator's reminder and the admins' alert) is called
 by the database (0064, #189): every minute `pg_cron`'s `closing-alerts` job
@@ -513,8 +522,8 @@ ten-minute scheduled workflow, so `.github/workflows/closing-alerts.yml`
 (the `CRON_SECRET` repository secret and the `APP_URL` repository variable)
 is only a backup now; the route claims each market in `push_log` once a
 device has its push (`claim_push_log`'s `on conflict do nothing`), so two
-callers never repeat a push. Vercel Hobby cron runs once a day, and the
-daily keep-alive still calls the same function as a backstop. Each
+callers never repeat a push. Vercel Hobby cron runs once a day, so the
+daily keep-alive calls `sendClosingAlerts` itself as the last backstop. Each
 successful call stamps `cron_heartbeats` (#149); a run whose every push
 failed returns 502 and leaves the stamp alone, so the warning below covers
 a dead push service too (#207). The
@@ -595,7 +604,11 @@ leaves out empty lines and hides when every one is empty.
   check. Both Supabase jobs start the stack through
   `.github/actions/local-supabase`, which logs in to Docker Hub first when
   the `DOCKERHUB_TOKEN` secret is set, so image pulls don't hit the
-  anonymous limit GitHub's runners share.
+  anonymous limit GitHub's runners share. Every third-party action is
+  pinned to a commit SHA with its tag in a trailing comment
+  (`uses: actions/checkout@<sha> # v7`); Dependabot's `github-actions`
+  ecosystem (`.github/dependabot.yml`) keeps the SHA pins up to date in its
+  weekly PR, so don't bump one by hand to a bare tag.
 - **Deploys** (`.github/workflows/deploy-production.yml`): Vercel's Git
   integration is off for `main` (`vercel.json`'s `git.deploymentEnabled`).
   Each push to `main` runs the workflow instead, one at a time and with no
@@ -625,8 +638,9 @@ leaves out empty lines and hides when every one is empty.
   (`Database`, `DbClient`) and marks the few function arguments that take a
   real null. Every client and helper uses `DbClient`.
 - **Security headers** (`next.config.ts`): a Content Security Policy that
-  only allows scripts and connections to the app itself and its Supabase
-  project, plus `X-Frame-Options: DENY`, `nosniff` and a referrer policy. A
+  only allows scripts from the app itself (and `va.vercel-scripts.com`, for
+  Vercel Analytics and Speed Insights) and connections to the app and its
+  Supabase project, plus `X-Frame-Options: DENY`, `nosniff` and a referrer policy. A
   new third-party origin (analytics, an image host) has to be added to the
   CSP there.
 - **Required env vars** are checked at boot (`lib/env/required.ts`):

@@ -36,7 +36,9 @@ test('a place whose response is lost can be retried without placing twice', asyn
   await place.click()
   // Next replays an action whose fetch failed as if it never reached the server; if it doesn't,
   // the slip says it couldn't confirm and the member taps Place again. Either way, one bet.
-  const placed = page.getByText('Placed 1 solo bet.').first()
+  // The dropped first call already claimed the key, so the answer the member sees is a replay of
+  // it (#226): "Your earlier attempt already went through: 1 solo bet."
+  const placed = page.getByText(/Placed 1 solo bet\.|already went through: 1 solo bet\./).first()
   const unconfirmed = sheet.getByText(/couldn’t confirm your bets/)
   await expect(placed.or(unconfirmed)).toBeVisible()
   if (await unconfirmed.isVisible()) {

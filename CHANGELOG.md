@@ -8,6 +8,8 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ### Fixes
 - **A cut-off line in the leaderboard race always keeps its label** on a phone, where only five fit: a runaway last place among eight used to be the first label dropped, hiding the only place its true total shows (#186).
+### Under the hood
+- **CI keeps Supabase's images in its own cache.** They come from AWS's public registry, not Docker Hub, and that registry's anonymous data limit was failing image pulls (run 36750361148 got through only on retries), so #213's Docker Hub login never applied. The images are now cached per Supabase CLI version and loaded before the stack starts; the Docker Hub login and its setup steps are gone (#238).
 
 ## v0.5.0-beta — 2026-09-30
 

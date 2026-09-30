@@ -70,7 +70,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role; Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); the ledger opens with the owner's Economy card |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
-return), `/not-invited` and `/offline`. The API has two routes.
+return), `/not-invited` and `/offline`. The API has three routes.
 `/api/cron/keep-alive`, which a daily Vercel cron calls so the free
 Supabase project never pauses. It also deletes unattached proof files and
 attempt keys older than a day, calls `settle_season()` to post last
@@ -89,6 +89,16 @@ Supabase's `pg_cron`: within a minute of a market closing, and at least every
 ten minutes otherwise (the heartbeat, see Notifications). A second `pg_cron`
 job, `cron-history-cleanup` (0065), prunes `cron.job_run_details` older than
 a week each morning.
+The third, `/api/health`, is for an external uptime monitor: one service-role
+read of one row, `200 {"ok":true}` when Supabase answers and `503` when it
+doesn't, `Cache-Control: no-store`, no member data, and outside the proxy
+(`proxy.ts`'s matcher) so it doesn't depend on Auth.
+
+The daily keep-alive runs its steps independently (database touch, proof
+cleanup, key cleanup, season settle, resolve reminders): a failing step is
+logged, captured and named in the response, the rest still run, and the
+route answers 502 at the end if any failed (#259). It then pings the
+heartbeat, below.
 
 ## Code layout
 
@@ -586,6 +596,43 @@ from the `bet_won` and `market_resolved` events in `activity_events`, so an
 overridden result doesn't count; the most approved `task_completions`; and
 open markets closing the following week (first three and a total). The card
 leaves out empty lines and hides when every one is empty.
+
+## Observability (#256)
+
+Vercel Hobby keeps runtime logs for one hour, so prod errors go elsewhere.
+Everything here is optional and off when its variable is unset, so a missing
+value never stops production booting.
+
+- **Sentry** (free tier; errors only, no tracing, replay or default PII).
+  `NEXT_PUBLIC_SENTRY_DSN` turns it on; a DSN is public by design, which is
+  why one variable serves server and browser, and it's inlined at build, so
+  redeploy after setting it. Server: `instrumentation.ts` initialises the SDK
+  on the Node runtime and exports `onRequestError`, capturing every
+  uncaught error in a component, route, action or the proxy. Browser:
+  `instrumentation-client.ts` loads the SDK lazily (global handlers only),
+  and `useReportError` sends the render errors the error boundaries catch.
+  Handled errors go through `reportError` (`lib/observability/report.ts`):
+  `console.error` plus a capture, which `friendlyError`, the resolve and slip
+  actions, the cron steps, the health route, the Admin health read and the
+  sign-in callback use. `scrubEvent` removes the user, cookies, request body,
+  headers and query string from every event. There are no source maps
+  (no build plugin, no auth token). The CSP's `connect-src` allows
+  `https://*.sentry.io`.
+- **Raw database errors.** An RPC's own refusals are `raise exception`
+  (SQLSTATE `P0001`, `isDeliberateRaise`) and reach the member as written;
+  any other error from `resolve_market` / `resolve_over_under` /
+  `place_slip_v2` (a timeout, a constraint, an aborted fetch) is reported
+  and shown as "Something went wrong. Try again."
+- **Admin health read.** `readClosingAlertsHealth` returns `{ unknown: true }`
+  on a failed read; the banner then says it couldn't check, and every
+  Admin page still renders.
+- **Uptime.** Point an external monitor (UptimeRobot or Better Stack free,
+  5-minute interval) at `/api/health` and at `/`.
+- **Heartbeat.** `HEALTHCHECKS_KEEP_ALIVE_URL` is a healthchecks.io check's
+  ping URL; the daily cron GETs it after its steps, or `<url>/fail` when any
+  step failed, and healthchecks emails when a ping is late or fails. A failed
+  ping never fails the cron. Give the check a 1-day period and a few hours'
+  grace.
 
 ## Environments and deploys
 

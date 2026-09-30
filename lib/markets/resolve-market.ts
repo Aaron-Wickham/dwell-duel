@@ -3,6 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
+import { GENERIC_ERROR } from '@/lib/errors/friendly-error'
+import { isDeliberateRaise } from '@/lib/errors/deliberate-raise'
+import { reportError } from '@/lib/observability/report'
 import { clawbackMessage, parseClawbackError } from '@/lib/markets/clawback'
 import { afterAction, notifyMarketResult } from '@/lib/push/notify'
 import type { ProofRecord } from '@/lib/proof/types'
@@ -49,7 +52,13 @@ export async function resolveMarketAction(
   if (error) {
     if (error.message === SAME_OUTCOME) return { formError: SAME_OUTCOME_MESSAGE, field: 'outcome' }
     const short = parseClawbackError(error.message)
-    return { formError: (short && clawbackMessage(short)) ?? error.message, field: 'outcome' }
+    const clawback = short && clawbackMessage(short)
+    if (clawback) return { formError: clawback, field: 'outcome' }
+    if (!isDeliberateRaise(error)) {
+      reportError('resolve failed', error)
+      return { formError: GENERIC_ERROR, field: 'outcome' }
+    }
+    return { formError: error.message, field: 'outcome' }
   }
 
   afterAction(() => notifyMarketResult(marketId))

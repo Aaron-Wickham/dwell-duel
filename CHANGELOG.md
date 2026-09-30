@@ -6,6 +6,12 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Reliability
+- **Production errors are captured, and there's a health route and a cron heartbeat.** Uncaught server errors and browser crashes go to Sentry (errors only, PII scrubbed) when `NEXT_PUBLIC_SENTRY_DSN` is set; `/api/health` answers 200 only while Supabase is reachable, for an uptime monitor; and the daily cron pings healthchecks.io (`HEALTHCHECKS_KEEP_ALIVE_URL`), with a fail ping when a step failed. All three are off when unset (#256).
+- **Unexpected database errors in resolve and slip placement** are logged and shown as "Something went wrong" instead of raw text, and the sign-in callback logs why it failed (#256).
+- **A failed read of the closing-alerts health no longer takes down Admin.** The banner says it couldn't check and every Admin page still loads (#256).
+- **The daily cron runs every step even when one fails.** A Storage error in proof cleanup no longer skips key pruning, the champion post or the reminders; the failures are listed at the end with a 502 (#259).
+
 ## v0.5.2-beta — 2026-09-30
 
 An Admin › Markets tab for the markets waiting on a result, with tab counts that add up to the Admin badge, and rows inside cards that tint on hover instead of floating like a button inside a button.

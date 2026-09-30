@@ -52,9 +52,11 @@ describe('readClosingAlertsHealth', () => {
     expect(await readClosingAlertsHealth(client, 'owner', NOW, PUSH)).toEqual({ stale: true, lastRunAt: null })
   })
 
-  it('throws when the read fails, rather than hiding the warning', async () => {
+  it('degrades to unknown when the read fails, and logs it, instead of throwing through every Admin page', async () => {
     const failure = new Error('db down')
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { client } = clientReturning(null, failure)
-    await expect(readClosingAlertsHealth(client, 'owner', NOW, PUSH)).rejects.toBe(failure)
+    expect(await readClosingAlertsHealth(client, 'owner', NOW, PUSH)).toEqual({ stale: false, unknown: true })
+    expect(log).toHaveBeenCalledWith('Reading the closing-alerts heartbeat failed', failure)
   })
 })

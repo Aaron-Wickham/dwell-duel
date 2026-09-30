@@ -10,6 +10,11 @@ import { h1Class } from '@/components/ui/page'
 export function useReportError(error: Error & { digest?: string }): void {
   useEffect(() => {
     console.error(error, { digest: error.digest })
+    // Server-rendered errors are captured by onRequestError; this is the member's browser, which no
+    // server ever sees. The SDK exists only when a DSN is set, so it's loaded only then.
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      void import('@sentry/nextjs').then((Sentry) => Sentry.captureException(error)).catch(() => {})
+    }
   }, [error])
 }
 

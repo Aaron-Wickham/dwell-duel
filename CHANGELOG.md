@@ -6,6 +6,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Fixes
+- **The task review queue pages.** Admin › Tasks lists the oldest 50 pending submissions with "Show more", signs proof files only for the rows on screen, and takes its "waiting" badge from the whole queue instead of the page shown (#255).
+
 ## v0.5.2-beta — 2026-09-30
 
 An Admin › Markets tab for the markets waiting on a result, with tab counts that add up to the Admin badge, and rows inside cards that tint on hover instead of floating like a button inside a button.

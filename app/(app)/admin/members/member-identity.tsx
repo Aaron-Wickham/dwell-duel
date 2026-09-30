@@ -18,6 +18,8 @@ export function MemberIdentity({ member, now }: { member: MemberSummary; now: nu
           </Link>
           {member.role !== 'member' && <StatusChip tone={ROLE_TONE[member.role]}>{ROLE_LABELS[member.role]}</StatusChip>}
         </span>
+        {/* The only way an admin can match a Google account to a member (#195). */}
+        {member.email && <span className="text-sm text-ink2 wrap-anywhere">{member.email}</span>}
         <span className="text-sm text-ink2 tabular-nums">{member.balance} DC</span>
         <MemberActivity joinedAt={member.joinedAt} lastSignInAt={member.lastSignInAt} now={now} />
       </div>

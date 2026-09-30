@@ -13,7 +13,9 @@ This page explains the rules.
 ## Getting in
 
 - **Invites only.** An admin adds your Google email under Admin → Invites.
-  Only admins can see members' email addresses.
+  Only admins can see members' email addresses. An admin can take back an
+  invite nobody has used yet; once someone has signed in with it, only the
+  owner can remove them (see [Roles](#roles)).
   Sign in with that Google account; any other account lands on a "not
   invited" page.
 - **Everyone starts with 100 DC.** Every coin you gain or spend is a line
@@ -168,8 +170,11 @@ full ledger) can see it.
   taken back and the new winners paid; the confirmation says so first. If a past winner has already spent
   their winnings, the override is blocked and names who, so an admin can
   sort out balances first.
-- **Voids:** the creator or an admin can void an unresolved market, and
-  every bet on it is refunded.
+- **Voids:** until a market closes, its creator or an admin can void it;
+  once it has closed, only an admin can, the same way nobody with money on a
+  market settles it. Every void **must say why**, and the reason shows on
+  the market page and in the feed. Every bet on it is refunded, and a
+  parlay leg on it drops out.
 
 ## Tasks
 
@@ -314,7 +319,7 @@ sign back in. Your other devices keep theirs.
 
 | Role | Can also…
 |---|---|
-| **Member** | Bet, create and resolve their own markets, submit tasks |
+| **Member** | Bet, create and resolve their own markets (and void them before they close), submit tasks |
 | **Reviewer** | Approve and reject task submissions (not their own), and resolve closed markets they have no stake in |
 | **Admin** | Invite people, manage tasks, resolve, override or void any market, delete any comment, view members and the full ledger |
 | **Owner** (exactly one) | Adjust balances, grant and remove roles, remove a member, remove anyone's bet while its market is open (with a refund), and delete a market or task that hasn't been used |
@@ -323,9 +328,12 @@ Reviewers and above get a red count on the **Admin** button for what is
 waiting on them: other members' task submissions (reviewers and above) and
 closed markets with no result (admins and above). It disappears at zero.
 
-A role only counts while you're invited. The owner can **remove a member**
+A role only counts while you're invited, and so does what you can do with
+your own markets and comments. The owner can **remove a member**
 from Admin → Members: they go back to plain member, their invite is
-revoked and their devices stop getting notifications, straight away. Their
+revoked, they're signed out on every device and their devices stop getting
+notifications, straight away. They can no longer resolve, void or edit the
+markets they created, or delete their comments. Their
 coins, bets and history stay where they are. If they sign in again they
 land on the not-invited page, and inviting them again brings them back as
 a member.
@@ -347,8 +355,8 @@ a member.
   whoever got there first); and the markets closing in the week ahead.
   A line with nothing to report is left out, and a quiet week shows no
   recap at all.
-- **Feed:** everyone's bets, parlays, new markets, results, wins,
-  approved tasks and each month's champion, with their reactions, updated
+- **Feed:** everyone's bets, parlays, new markets, results, voids (with
+  their reason), wins, approved tasks and each month's champion, with their reactions, updated
   live. See [Reactions and comments](#reactions-and-comments).
 - **Leaderboard and profiles:** see [The leaderboard](#the-leaderboard)
   and [Profile stats](#profile-stats).

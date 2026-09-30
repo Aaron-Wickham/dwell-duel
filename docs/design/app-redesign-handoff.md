@@ -82,12 +82,14 @@ Every text pairing above passes WCAG AA; I checked them with a script.
 |---|---|---|---|
 | H1 | 28 | 40 | 800 |
 | H2 | 19 | 21 | 800 |
+| Row title (`rowTitleClass`: a tile, task or leaderboard row) | 17 | 17 | 800 |
 | Body | 16 | 16 | normal |
 | Caption | 14 | 14 | normal |
 
 - **Real elements only:** `<button>`, `<a>`, and `<label>` paired with its input. No clickable divs.
 - **Icon-only buttons** get an `aria-label`.
-- **Press and hover (#153):** every control shrinks to 97% on press. Under a mouse (not on touch), buttons, chips, tabs and nav items grow to 103% and change colour; tappable cards and rows lift 2px onto a shadow instead. Reduced motion keeps the colour changes (and the lift's shadow) and drops the movement. Curves and durations come from the motion tokens in `globals.css`.
+- **Press and hover (#153):** every control shrinks to 97% on press. Under a mouse (not on touch), buttons, chips, tabs and nav items grow to 103% and change colour; tappable cards and rows lift 2px onto a shadow instead. A card lifts as itself (`hover-lift`); a row in a divided list, or any transparent row such as a home tile below `lg:` or a podium place, lifts onto a panel a little wider than itself (`hover-lift-row`), so the shadow never draws around nothing. Reduced motion keeps the colour changes (and the lift's shadow) and drops the movement. Curves and durations come from the motion tokens in `globals.css`.
+- **Section cards:** a `SectionCard`'s `description` slot puts a caption line right under its heading (the weekly recap's date range); the card's body follows at the usual gap.
 - **Sliding pills:** the desktop nav's, the phone tab bar's and the sub-tabs' active pill all slide to the new tab the same way: 280ms on the iOS curve. On the tab bar the new tab's icon pops (to 118% and back) over the same 280ms, and its label's weight eases from bold to extrabold.
 
 ## Desktop layouts (#158)

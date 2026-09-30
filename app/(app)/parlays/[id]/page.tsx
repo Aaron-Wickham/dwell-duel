@@ -139,7 +139,7 @@ export async function ParlayBody({ id }: { id: string }) {
           </div>
           <div className="flex justify-between gap-3">
             <dt className="min-w-0 break-words">{counted.map((leg) => `${formatOdds(leg.lockedOddsBp)}×`).join(' · ')}</dt>
-            <dd className="font-bold">= {formatOdds(parlay.multiplierBp)}×</dd>
+            <dd className="shrink-0 font-bold whitespace-nowrap">= {formatOdds(parlay.multiplierBp)}×</dd>
           </div>
           <div className="flex justify-between gap-3 border-t border-line pt-2">
             <dt className="font-bold">{parlay.status === 'pending' ? 'Pays if every pick wins' : figure.label}</dt>

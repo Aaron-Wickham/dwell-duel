@@ -35,8 +35,11 @@ export function WeeklyRecapCard({ recap }: { recap: WeeklyRecap | null }) {
   const { me, bestCall, upset, topTasker, closing } = recap
   const more = closing.total - closing.markets.length
   return (
-    <SectionCard title={recap.mode === 'so-far' ? 'This week so far' : 'Last week'} titleId="weekly-recap-title">
-      <p className="-mt-2 text-sm text-ink2">{weekRangeLabel(recap)}</p>
+    <SectionCard
+      title={recap.mode === 'so-far' ? 'This week so far' : 'Last week'}
+      titleId="weekly-recap-title"
+      description={weekRangeLabel(recap)}
+    >
       <dl className="flex flex-col divide-y divide-line">
         {me && me.bettingMoves > 0 && (
           <Row term="Your betting">

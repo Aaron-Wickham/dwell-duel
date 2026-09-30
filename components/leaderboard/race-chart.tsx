@@ -24,6 +24,12 @@ const SERIES_BG = ['bg-s1', 'bg-s2', 'bg-s3', 'bg-s4', 'bg-s5', 'bg-s6'] as cons
 
 type Row = { step: number } & Record<string, number>
 
+// The end labels have room for about eight characters, so they carry the first name; the readout
+// and the slider's label keep the whole name.
+function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0]
+}
+
 function formatMoment(iso: string, timeZone?: string): string {
   const time = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone }).format(new Date(iso))
   return `${formatDay(iso, timeZone)}, ${time}`
@@ -246,7 +252,7 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
                   )}
                   style={{ '--label-top': `${phoneTop ?? 0}px`, '--label-top-md': `${desktopTop ?? 0}px` } as CSSProperties}
                 >
-                  <span className="truncate text-[13px] font-bold">{s.name}</span>
+                  <span className="truncate text-sm font-bold">{firstName(s.name)}</span>
                   <span className="flex items-center gap-0.5 text-base font-extrabold tabular-nums md:text-lg">
                     {s.final > high && <ArrowUp data-testid="race-off-top" strokeWidth={3} className="size-3.5 shrink-0" />}
                     {s.final < low && <ArrowDown data-testid="race-off-bottom" strokeWidth={3} className="size-3.5 shrink-0" />}

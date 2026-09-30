@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
 import { Check, Clock } from 'lucide-react'
+import { rowTitleClass } from '@/components/ui/page'
 import { StatusChip } from '@/components/ui/status-chip'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
 import { MIN_STREAK_SHOWN } from '@/lib/tasks/streak-label'
+import { cn } from '@/lib/utils'
 import { StreakBadge } from './streak-badge'
-
-const h3Class = 'text-[17px] font-extrabold leading-[1.3] tracking-[-0.01em]'
 
 export function PendingReviewChip() {
   return (
@@ -42,8 +42,8 @@ export function TaskRow({
 }) {
   return (
     <li className="flex flex-col gap-3 py-[18px] md:flex-row md:items-center md:gap-5 md:py-[22px]">
-      <div className="flex grow flex-col gap-1">
-        <p className={h3Class}>
+      <div className="flex min-w-0 grow flex-col gap-1">
+        <p className={cn(rowTitleClass, 'break-words')}>
           {title} — <span className="text-gold">{rewardAmount} DC</span>
         </p>
         {(description || cadence || proofRequired || (streak && streak.count >= MIN_STREAK_SHOWN)) && (

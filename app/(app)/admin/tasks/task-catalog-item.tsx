@@ -7,13 +7,12 @@ import { PERIOD_LABEL } from '@/lib/tasks/period-label'
 import { Button } from '@/components/ui/button'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { StatusChip } from '@/components/ui/status-chip'
 import { cn } from '@/lib/utils'
 import { ConfirmActionButton } from '@/components/ui/confirm-action-button'
 import { deleteTaskAction } from '@/lib/admin/owner-actions'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { EditTaskForm } from './edit-task-form'
-
-const pillClass = 'inline-flex h-6 items-center whitespace-nowrap rounded-full px-[9px] text-xs font-extrabold'
 
 // `canDelete` is the owner's: delete_task (0040) only removes a task nobody has submitted yet.
 export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary; canDelete?: boolean }) {
@@ -34,9 +33,9 @@ export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary
           {task.title} — {task.rewardAmount} DC
         </p>
         <span className="flex flex-wrap gap-1.5">
-          {task.isRepeatable && task.period && <span className={cn(pillClass, 'bg-sunk text-ink2')}>{PERIOD_LABEL[task.period]}</span>}
-          {task.proofRequired && <span className={cn(pillClass, 'bg-sunk text-ink2')}>Proof required</span>}
-          {!task.isActive && <span className={cn(pillClass, 'bg-gold-soft text-gold')}>Inactive</span>}
+          {task.isRepeatable && task.period && <StatusChip tone="void">{PERIOD_LABEL[task.period]}</StatusChip>}
+          {task.proofRequired && <StatusChip tone="void">Proof required</StatusChip>}
+          {!task.isActive && <StatusChip tone="wait">Inactive</StatusChip>}
         </span>
       </div>
       <div className="flex gap-2">

@@ -11,7 +11,7 @@ export function LedgerRow({ entry, domId }: { entry: LedgerEntry; domId?: string
 
   return (
     <li {...focusTarget(domId)} className="flex items-start gap-3 py-3.5">
-      <p className="min-w-0 grow">
+      <p className="min-w-0 grow break-words">
         <Link href={`/members/${entry.profileId}`} transitionTypes={['nav-forward']}>{entry.memberName}</Link>:{' '}
         <span className={cn('font-extrabold tabular-nums', amountClass)}>
           {sign}

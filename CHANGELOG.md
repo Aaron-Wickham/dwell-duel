@@ -9,6 +9,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ### Fixes
 - **Closing alerts arrive within a minute.** GitHub was dropping most runs of the ten-minute schedule (the Admin warning from #149 caught it), so the timer now lives in Supabase: every minute `pg_cron` checks for a market that has just closed and, if there is one, calls the app through `pg_net` with the address and secret from Vault; it also calls at least every ten minutes to keep the heartbeat honest. The GitHub schedule stays as a backup, and the Admin warning names both (#189).
 
+### Polish
+- **Pages stop jumping as they load, and every screen reads right.** Each skeleton now draws the same rows as its page (the markets filter tabs, the leaderboard's podium, the feed's reaction bars, Home's tiles, Settings' choices, Edit profile's preview), and a parlay's page streams its sections behind skeletons instead of waiting blank (#218). Screen readers meet the podium in rank order, focus lands somewhere sensible after submitting a task, editing a task or switching notifications on, toasts follow dark mode, the market page's "Edited" line shows it opens, and the race chart's keyboard readout keeps clear of its labels on a small phone (#219). Long names and titles wrap instead of pushing rows out at 320px, a market's page and card use the same words for its state and kind ("Over/Under", "Awaiting resolution", "No more bets"), a parlay whose markets have all closed says so, row titles share one size, and the feed shows a date once an event is over a week old (#220).
+
 ### Under the hood
 - Local testing: after `npm run db:reset`, file uploads in the DB tests can fail with `42P10` until the local stack is restarted (`npx supabase stop && npx supabase start`); AGENTS.md says so.
 

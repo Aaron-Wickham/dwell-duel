@@ -87,28 +87,30 @@ function BlockContent({ block }: { block: Block }) {
     }
     case 'table':
       return (
-        <table className="w-full border-collapse text-left text-[15px]">
-          <thead>
-            <tr>
-              {block.head.map((cell, i) => (
-                <th key={i} scope="col" className={`${cellClass} border-line-s font-extrabold`}>
-                  <InlineContent nodes={cell} />
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {block.rows.map((row, r) => (
-              <tr key={r}>
-                {row.map((cell, i) => (
-                  <td key={i} className={`${cellClass} break-words`}>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left text-[15px]">
+            <thead>
+              <tr>
+                {block.head.map((cell, i) => (
+                  <th key={i} scope="col" className={`${cellClass} border-line-s font-extrabold`}>
                     <InlineContent nodes={cell} />
-                  </td>
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {block.rows.map((row, r) => (
+                <tr key={r}>
+                  {row.map((cell, i) => (
+                    <td key={i} className={`${cellClass} break-words`}>
+                      <InlineContent nodes={cell} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )
   }
 }

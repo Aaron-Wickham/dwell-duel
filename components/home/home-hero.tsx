@@ -54,7 +54,7 @@ export function HomeHero({
       <h2 id="home-hero-heading" className="sr-only">
         Your balance
       </h2>
-      <div className="flex items-end justify-between gap-3 lg:shrink-0 lg:flex-col lg:items-start lg:gap-2.5">
+      <div className="flex flex-wrap items-end justify-between gap-3 lg:shrink-0 lg:flex-col lg:items-start lg:gap-2.5">
         <div className="flex flex-col gap-1">
           <p className={cn(eyebrowClass, 'text-hero-2')}>Dwell Coin</p>
           <p>

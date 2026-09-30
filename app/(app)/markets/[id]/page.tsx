@@ -12,7 +12,7 @@ import { ProofList } from '@/components/proof/proof-list'
 import { getChartSeries } from '@/lib/markets/chart-series'
 import { computeOdds, effectivePools, type OutcomeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
-import { chartClosedAt } from '@/lib/markets/market-status'
+import { chartClosedAt, marketCardStatus } from '@/lib/markets/market-status'
 import { rowState } from '@/lib/markets/row-state'
 import { readPageParams } from '@/lib/pagination/cursor'
 import { isUuid } from '@/lib/uuid'
@@ -35,6 +35,7 @@ import {
   MarketChartSkeleton,
   MarketCommentsSkeleton,
 } from '@/components/markets/market-detail-skeletons'
+import { STATUS_LABEL, STATUS_TONE } from '@/components/markets/market-card'
 import { OutcomeRow } from '@/components/markets/outcome-row'
 import { ProbabilityChart } from '@/components/markets/probability-chart'
 import { MarketBets } from './market-bets'
@@ -89,8 +90,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // update_market (0043): the creator or an admin, while the market still takes bets.
   const canEdit = canBet && (isCreator || atLeast(role, 'admin'))
 
-  const statusTone =
-    market.status === 'resolved' ? 'done' : market.status === 'voided' ? 'void' : isPastClose ? 'wait' : 'open'
+  const cardStatus = marketCardStatus(market.status, market.closeAt, new Date(now))
 
   const when =
     market.status === 'resolved' && market.resolvedAt ? (
@@ -110,9 +110,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <StatusChip tone={statusTone}>
-            Status: {market.status === 'open' && isPastClose ? 'awaiting resolution' : market.status}
-          </StatusChip>
+          <StatusChip tone={STATUS_TONE[cardStatus]}>{STATUS_LABEL[cardStatus]}</StatusChip>
           {market.kind === 'over_under' && market.line !== null && (
             <StatusChip tone="void">Over/Under {formatLine(market.line)}</StatusChip>
           )}
@@ -126,7 +124,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
             {isCreator ? creatorStake.replace('Creator has', 'You have').replace('Creator had', 'You had') : creatorStake}
           </p>
         )}
-        {market.description && <p className="max-w-[68ch] whitespace-pre-line text-ink2">{market.description}</p>}
+        {market.description && <p className="max-w-[68ch] whitespace-pre-line break-words text-ink2">{market.description}</p>}
         {edits.length > 0 && (
           <details className="group max-w-[68ch] text-sm text-ink2">
             {/* inline-flex drops the browser's disclosure marker, so the chevron says this opens. */}
@@ -146,7 +144,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
                     {e.editorName}, <LocalTime iso={e.editedAt} format="dateTime" />
                   </span>
                   {e.oldTitle !== e.newTitle && (
-                    <span>
+                    <span className="break-words">
                       Title was: <span className="text-ink">“{e.oldTitle}”</span>
                     </span>
                   )}
@@ -401,7 +399,7 @@ async function MarketActions({
             </p>
           </SectionCard>
         ) : (
-          <SectionCard title="Betting closed" titleId="closed-title" className="gap-2">
+          <SectionCard title="No more bets" titleId="closed-title" className="gap-2">
             <p className="text-ink2">{closedCopy}</p>
           </SectionCard>
         )}

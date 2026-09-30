@@ -17,6 +17,7 @@ const actions = vi.hoisted(() => ({
   bulkApproveTaskCompletionsAction: vi.fn(),
   bulkRejectTaskCompletionsAction: vi.fn(),
   rejectTaskCompletionAction: vi.fn(),
+  addInviteAction: vi.fn(),
 }))
 const { success } = vi.hoisted(() => ({ success: vi.fn() }))
 vi.mock('sonner', () => ({ toast: { success } }))
@@ -26,6 +27,7 @@ vi.mock('@/lib/markets/update-market', () => ({ updateMarketAction: actions.upda
 vi.mock('@/lib/tasks/create-task', () => ({ createTaskAction: actions.createTaskAction }))
 vi.mock('@/lib/tasks/update-task', () => ({ updateTaskAction: actions.updateTaskAction }))
 vi.mock('@/lib/profile/update-profile', () => ({ updateProfileAction: actions.updateProfileAction }))
+vi.mock('@/lib/invites/actions', () => ({ addInviteAction: actions.addInviteAction, revokeInviteAction: vi.fn() }))
 vi.mock('@/lib/tasks/review-task-completion', () => ({
   approveTaskCompletionAction: vi.fn(),
   rejectTaskCompletionAction: actions.rejectTaskCompletionAction,
@@ -41,6 +43,7 @@ import { TaskCatalogItem } from '@/app/(app)/admin/tasks/task-catalog-item'
 import { ProfileForm } from '@/app/(app)/profile/profile-form'
 import { PendingApprovals } from '@/app/(app)/admin/tasks/pending-approvals'
 import { ReviewButtons } from '@/app/(app)/admin/tasks/review-buttons'
+import { AddInviteForm } from '@/app/(app)/admin/invites/add-invite-form'
 
 const GENESIS: TaskSummary = {
   id: 't1',
@@ -343,5 +346,29 @@ describe('Reject reasons (#200)', () => {
     await screen.findByRole('status')
     expect((actions.bulkRejectTaskCompletionsAction.mock.calls[0][1] as FormData).get('reason')).toBe('Try again next week')
     await waitFor(() => expect(screen.getByLabelText('Shared reason (optional)')).toHaveValue(''))
+  })
+})
+
+describe('AddInviteForm (#221)', () => {
+  it('keeps the email after the server refuses it', async () => {
+    actions.addInviteAction.mockResolvedValue({ formError: 'That email is already invited.' })
+    render(<AddInviteForm />)
+    await userEvent.type(screen.getByLabelText('Email'), 'sarah@example.com')
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+
+    await screen.findByRole('alert')
+    expect(screen.getByLabelText('Email')).toHaveValue('sarah@example.com')
+    expect(success).not.toHaveBeenCalled()
+  })
+
+  it('clears the email once the invite is added', async () => {
+    actions.addInviteAction.mockResolvedValue({ addedEmail: 'sarah@example.com' })
+    render(<AddInviteForm />)
+    await userEvent.type(screen.getByLabelText('Email'), 'sarah@example.com')
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Invite added.'))
+    expect((actions.addInviteAction.mock.calls[0][1] as FormData).get('email')).toBe('sarah@example.com')
+    await waitFor(() => expect(screen.getByLabelText('Email')).toHaveValue(''))
   })
 })

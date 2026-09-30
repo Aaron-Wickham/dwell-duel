@@ -1,7 +1,7 @@
 'use client'
 
-import { useActionState } from 'react'
-import { addInviteAction } from '@/lib/invites/actions'
+import { useActionState, useState } from 'react'
+import { addInviteAction, type AddInviteFormState } from '@/lib/invites/actions'
 import { Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
@@ -10,8 +10,18 @@ import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { CopyInviteButton } from './copy-invite-button'
 
 export function AddInviteForm() {
+  // Controlled, so a refused email stays put; cleared once the invite is added.
+  const [email, setEmail] = useState('')
   const [state, formAction] = useActionState(
-    withSuccessToast(addInviteAction, (s) => Boolean(s?.formError), 'Invite added.'),
+    withSuccessToast(
+      async (prev: AddInviteFormState | undefined, formData: FormData) => {
+        const next = await addInviteAction(prev, formData)
+        if (!next?.formError) setEmail('')
+        return next
+      },
+      (s) => Boolean(s?.formError),
+      'Invite added.',
+    ),
     undefined,
   )
 
@@ -28,6 +38,8 @@ export function AddInviteForm() {
           required
           maxLength={TEXT_LIMITS.inviteEmail}
           placeholder="friend@gmail.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           className="min-w-0"
           aria-invalid={Boolean(state?.formError)}
           aria-describedby={state?.formError ? 'invite-email-hint add-invite-error' : 'invite-email-hint'}

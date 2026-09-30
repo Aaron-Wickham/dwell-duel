@@ -42,6 +42,40 @@ const slip = (key: string | undefined, stake = 6) => ({
   p_idempotency_key: key,
 })
 
+// #226: v2 says what was placed and whether the call was a replay, so a retry after a lost response
+// reports the earlier attempt instead of whatever the slip holds now.
+describe('place_slip_v2', () => {
+  type Summary = { parlay_id: string | null; solos: number; picks: string[]; replayed: boolean }
+
+  it('returns what it placed, and the same summary marked as a replay on a repeat of the key', async () => {
+    const key = randomUUID()
+    const first = await bobClient.rpc('place_slip_v2', slip(key))
+    expect(first.error).toBeNull()
+    const placed = first.data as Summary
+    expect(placed.replayed).toBe(false)
+    expect(placed.solos).toBe(1)
+    expect([...placed.picks].sort()).toEqual([a.outcomeIds[0], a.outcomeIds[1], b.outcomeIds[0]].sort())
+    expect(placed.parlay_id).toEqual(expect.any(String))
+
+    // A different slip under the same key still replays the first one, and places nothing.
+    const second = await bobClient.rpc('place_slip_v2', { ...slip(key), p_singles: [{ outcome_id: b.outcomeIds[1], amount: 3 }] })
+    expect(second.error).toBeNull()
+    expect(second.data).toEqual({ ...placed, replayed: true })
+    expect(await countFor(bob)).toEqual({ bets: 1, parlays: 1 })
+  })
+
+  it('shares keys with place_slip, which still returns the parlay id for the build before 0072', async () => {
+    const key = randomUUID()
+    const old = await bobClient.rpc('place_slip', slip(key))
+    expect(old.error).toBeNull()
+    const replay = await bobClient.rpc('place_slip_v2', slip(key))
+    expect(replay.error).toBeNull()
+    expect((replay.data as Summary).replayed).toBe(true)
+    expect((replay.data as Summary).parlay_id).toBe(old.data)
+    expect(await countFor(bob)).toEqual({ bets: 1, parlays: 1 })
+  })
+})
+
 describe('place_slip with an attempt key', () => {
   it('places once when the same key is sent twice, and returns the same parlay id', async () => {
     const key = randomUUID()

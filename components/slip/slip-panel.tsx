@@ -28,6 +28,11 @@ function placedMessage(placed: NonNullable<NonNullable<PlaceSlipState>['placed']
   const parts: string[] = []
   if (placed.solos > 0) parts.push(`${placed.solos} solo bet${placed.solos === 1 ? '' : 's'}`)
   if (placed.parlay) parts.push(`a ${placed.parlay.legs}-leg parlay at ${formatOdds(placed.parlay.multiplierBp)}×`)
+  if (placed.replayed) {
+    return parts.length > 0
+      ? `Your earlier attempt already went through: ${parts.join(' and ')}.`
+      : 'Your earlier attempt already went through.'
+  }
   return `Placed ${parts.join(' and ')}.`
 }
 

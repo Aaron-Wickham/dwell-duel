@@ -1372,6 +1372,15 @@ export type Database = {
         }
         Returns: string
       }
+      place_slip_v2: {
+        Args: {
+          p_idempotency_key?: string
+          p_parlay_outcome_ids: string[]
+          p_parlay_stake: number
+          p_singles: Json
+        }
+        Returns: Json
+      }
       push_endpoint_host: { Args: { p_endpoint: string }; Returns: string }
       push_hosts: { Args: never; Returns: string[] }
       push_market_alerts: {

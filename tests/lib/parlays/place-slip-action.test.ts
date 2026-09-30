@@ -35,7 +35,7 @@ describe('placeSlipAction', () => {
     rpc.mockResolvedValue({ data: null, error: null })
     const key = '11111111-2222-4333-8444-555555555555'
     await placeSlipAction(undefined, form([['pick', `${A}:solo`], ['stake:' + A, '3'], ['idempotency_key', key]]))
-    expect(rpc).toHaveBeenCalledWith('place_slip', expect.objectContaining({ p_idempotency_key: key }))
+    expect(rpc).toHaveBeenCalledWith('place_slip_v2', expect.objectContaining({ p_idempotency_key: key }))
   })
 
   it('ignores an attempt key that isn\'t a uuid', async () => {
@@ -44,8 +44,8 @@ describe('placeSlipAction', () => {
     expect(rpc.mock.calls[0][1].p_idempotency_key).toBeUndefined()
   })
 
-  it('sends solo stakes and the parlay legs to place_slip, then empties the slip', async () => {
-    rpc.mockResolvedValue({ data: 'parlay-1', error: null })
+  it('sends solo stakes and the parlay legs to place_slip_v2, then empties the slip', async () => {
+    rpc.mockResolvedValue({ data: { parlay_id: 'parlay-1', solos: 1, picks: [A, B, C], replayed: false }, error: null })
     from.mockReturnValue({
       select: () => ({ eq: async () => ({ data: [{ locked_odds: '2.0000' }, { locked_odds: '3.0000' }] }) }),
     })
@@ -61,7 +61,7 @@ describe('placeSlipAction', () => {
       ]),
     )
 
-    expect(rpc).toHaveBeenCalledWith('place_slip', {
+    expect(rpc).toHaveBeenCalledWith('place_slip_v2', {
       p_singles: [{ outcome_id: A, amount: 10 }],
       p_parlay_outcome_ids: [B, C],
       p_parlay_stake: 5,
@@ -69,6 +69,28 @@ describe('placeSlipAction', () => {
     expect(writeSlip).toHaveBeenCalledWith([])
     expect(revalidatePath).toHaveBeenCalledWith('/', 'layout')
     expect(result).toEqual({ placed: { solos: 1, parlay: { legs: 2, multiplierBp: 60_000, potentialPayout: 30 } } })
+  })
+
+  it('on a replay, reports what the earlier attempt placed and keeps picks added since (#226)', async () => {
+    readSlip.mockResolvedValue([A, B, C].map((outcomeId) => ({ outcomeId, parlay: false })))
+    rpc.mockResolvedValue({ data: { parlay_id: null, solos: 1, picks: [A], replayed: true }, error: null })
+
+    const result = await placeSlipAction(
+      undefined,
+      form([['pick', `${A}:solo`], ['stake:' + A, '3'], ['pick', `${B}:solo`], ['stake:' + B, '4']]),
+    )
+
+    expect(writeSlip).toHaveBeenCalledWith([B, C].map((outcomeId) => ({ outcomeId, parlay: false })))
+    expect(result).toEqual({ placed: { solos: 1, parlay: null, replayed: true } })
+  })
+
+  it("on a replay of a key stored before 0072, which can't say what it placed, clears the slip", async () => {
+    rpc.mockResolvedValue({ data: { parlay_id: null, replayed: true }, error: null })
+
+    const result = await placeSlipAction(undefined, form([['pick', `${A}:solo`], ['stake:' + A, '3']]))
+
+    expect(writeSlip).toHaveBeenCalledWith([])
+    expect(result).toEqual({ placed: { solos: 0, parlay: null, replayed: true } })
   })
 
   it('flags each solo pick with a missing or bad stake, and a one-pick parlay, without calling the database', async () => {
@@ -93,7 +115,7 @@ describe('placeSlipAction', () => {
     rpc.mockResolvedValue({ data: null, error: null })
 
     await placeSlipAction(undefined, form([['pick', `${A}:solo`], ['stake:' + A, '3'], ['pick', `${B}:solo`], ['stake:' + B, '3']]))
-    expect(rpc).toHaveBeenCalledWith('place_slip', { p_singles: [{ outcome_id: A, amount: 3 }], p_parlay_outcome_ids: [], p_parlay_stake: 0 })
+    expect(rpc).toHaveBeenCalledWith('place_slip_v2', { p_singles: [{ outcome_id: A, amount: 3 }], p_parlay_outcome_ids: [], p_parlay_stake: 0 })
   })
 
   it("points a database failure at the pick it names, and keeps the slip", async () => {

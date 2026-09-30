@@ -384,6 +384,21 @@ export type Database = {
           },
         ]
       }
+      live_pings: {
+        Row: {
+          sent_at: string
+          topic: string
+        }
+        Insert: {
+          sent_at?: string
+          topic: string
+        }
+        Update: {
+          sent_at?: string
+          topic?: string
+        }
+        Relationships: []
+      }
       market_comments: {
         Row: {
           body: string
@@ -1236,6 +1251,7 @@ export type Database = {
           step: number
         }[]
       }
+      live_ping_interval_ms: { Args: never; Returns: number }
       market_sparklines: {
         Args: { p_market_ids: string[]; p_points?: number }
         Returns: {
@@ -1506,6 +1522,7 @@ export type Database = {
           profit: number
         }[]
       }
+      send_live_ping: { Args: { p_topic: string }; Returns: undefined }
       set_member_role: {
         Args: { p_profile_id: string; p_role: string }
         Returns: undefined

@@ -1,7 +1,7 @@
 'use client'
 
 import { useLayoutEffect, useRef } from 'react'
-import Link from 'next/link'
+import { IntentLink } from '@/components/ui/intent-link'
 import { PILL_SLIDE } from '@/lib/ui/motion'
 import { reducedMotion } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
@@ -77,7 +77,8 @@ export function SubNav({ label, items }: { label: string; items: SubNavItem[] })
         className="pointer-events-none absolute top-1 bottom-1 rounded-[10px] bg-surface opacity-0 shadow-tab group-data-[ready]/subnav:opacity-100"
       />
       {items.map(({ href, label: itemLabel, current }) => (
-        <Link
+        <IntentLink
+          prefetchOnTouch
           key={href}
           href={href}
           aria-current={current ? 'page' : undefined}
@@ -89,7 +90,7 @@ export function SubNav({ label, items }: { label: string; items: SubNavItem[] })
           )}
         >
           {itemLabel}
-        </Link>
+        </IntentLink>
       ))}
     </nav>
   )

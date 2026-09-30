@@ -1,5 +1,5 @@
 import { formatLine, type MarketKind } from '@/lib/markets/kind'
-import Link from 'next/link'
+import { IntentLink } from '@/components/ui/intent-link'
 import { Trophy } from 'lucide-react'
 import { cardClass } from '@/components/ui/card'
 import { StatusChip } from '@/components/ui/status-chip'
@@ -124,9 +124,9 @@ export function MarketCard({
         {preview ? (
           title
         ) : (
-          <Link href={`/markets/${id}`} transitionTypes={['nav-forward']} className="stretched-link no-underline">
+          <IntentLink href={`/markets/${id}`} transitionTypes={['nav-forward']} className="stretched-link no-underline">
             {title}
-          </Link>
+          </IntentLink>
         )}
       </h3>
       {hasBets ? (

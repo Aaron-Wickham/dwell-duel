@@ -121,7 +121,10 @@ a line to `CHANGELOG.md` under the next release.
   `--safe-bottom` tokens, which are non-zero only in standalone mode.
   Every tap target is `pressable`. A card or row that one link makes
   tappable as a whole is `relative pressable`, and its link carries
-  `stretched-link` (its `::after` covers the card); any other control in
+  `stretched-link` (its `::after` covers the card on touch; under a mouse
+  the cover is off so text can be selected, and `CardLinkClick` in the
+  signed-in layout opens the card on click instead, unless the click hit
+  another control or finished a text selection); any other control in
   the card sits in a `relative z-[1]` wrapper. `press-feedback.test.tsx`
   guards the listed components. Under a mouse (`(hover: hover) and
   (pointer: fine)`), `pressable` also grows a control to 103%; a card or

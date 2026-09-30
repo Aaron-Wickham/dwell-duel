@@ -16,6 +16,10 @@ import { sendClosingAlerts } from '@/lib/push/notify'
  * isn't Vercel's own scheduler. cronAuthorized refuses an unset secret
  * outright and compares in constant time.
  */
+// Five database calls, a Storage remove of up to 500 objects, settle_season and the pushes can
+// take tens of seconds: fine under Fluid compute, fatal under the legacy 10s limit.
+export const maxDuration = 60
+
 export async function GET(request: Request) {
   if (!cronAuthorized(request.headers.get('authorization'), process.env.CRON_SECRET)) {
     return new NextResponse('Unauthorized', { status: 401 })

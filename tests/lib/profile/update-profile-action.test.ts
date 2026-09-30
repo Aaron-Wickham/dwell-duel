@@ -52,7 +52,7 @@ describe('updateProfileAction', () => {
 
     expect(state).toEqual({ saved: true })
     expect(supabase.storage.from).toHaveBeenCalledWith('avatars')
-    expect(upload).toHaveBeenCalledWith(expect.stringMatching(NEW_PATH), expect.any(File), { contentType: 'image/jpeg' })
+    expect(upload).toHaveBeenCalledWith(expect.stringMatching(NEW_PATH), expect.any(File), { contentType: 'image/jpeg', cacheControl: '31536000' })
     const newPath = upload.mock.calls[0][0]
     expect(supabase.rpc).toHaveBeenCalledWith('update_my_profile', {
       p_display_name: 'Priscilla',

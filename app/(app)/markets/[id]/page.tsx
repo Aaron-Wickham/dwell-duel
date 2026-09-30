@@ -37,7 +37,7 @@ import {
 } from '@/components/markets/market-detail-skeletons'
 import { STATUS_LABEL, STATUS_TONE } from '@/components/markets/market-card'
 import { OutcomeRow } from '@/components/markets/outcome-row'
-import { ProbabilityChart } from '@/components/markets/probability-chart'
+import { ProbabilityChart } from '@/components/markets/probability-chart-lazy'
 import { MarketBets } from './market-bets'
 import { MarketComments } from './market-comments'
 import { ResolveForm } from './resolve-form'

@@ -24,7 +24,9 @@ beforeEach(() => {
   vi.stubEnv('NEXT_PUBLIC_VAPID_PUBLIC_KEY', 'public-key')
   vi.stubEnv('VAPID_PRIVATE_KEY', 'private-key')
   reminders = { data: [], error: null }
-  rpc.mockReset().mockImplementation(async (fn: string) => (fn === 'push_resolve_reminders' ? reminders : { data: fn === 'settle_season' ? null : [], error: null }))
+  rpc.mockReset().mockImplementation(async (fn: string) =>
+    fn === 'due_resolve_reminders' ? reminders : { data: fn === 'settle_season' ? null : fn === 'claim_push_log' ? 1 : [], error: null },
+  )
   sendPush.mockReset().mockResolvedValue({ sent: 1, removed: 0, failed: 0 })
 })
 
@@ -34,7 +36,7 @@ afterEach(() => {
 })
 
 describe('keep-alive cron: resolve reminders', () => {
-  it('asks each creator to resolve the markets the database claims for reminding', async () => {
+  it('asks each creator to resolve the markets that are due, market by market, then claims them', async () => {
     reminders = {
       data: [
         { market_id: 'm-1', title: 'Will it rain?', profile_id: 'alice' },
@@ -46,18 +48,19 @@ describe('keep-alive cron: resolve reminders', () => {
 
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ ok: true, resolveReminders: 2 })
-    expect(rpc).toHaveBeenCalledWith('push_resolve_reminders')
-    expect(sendPush.mock.calls[0][0]).toEqual([
-      { profileId: 'alice', payload: { title: 'Time to resolve', body: 'Will it rain? has closed', url: '/markets/m-1' } },
-      { profileId: 'bob', payload: { title: 'Time to resolve', body: 'Sermon past noon? has closed', url: '/markets/m-2' } },
+    expect(rpc).toHaveBeenCalledWith('due_resolve_reminders')
+    expect(sendPush.mock.calls.map(([messages]) => messages)).toEqual([
+      [{ profileId: 'alice', payload: { title: 'Time to resolve', body: 'Will it rain? has closed', url: '/markets/m-1' } }],
+      [{ profileId: 'bob', payload: { title: 'Time to resolve', body: 'Sermon past noon? has closed', url: '/markets/m-2' } }],
     ])
+    expect(rpc).toHaveBeenCalledWith('claim_push_log', { p_kind: 'resolve_reminder', p_refs: ['m-1', 'm-2'] })
   })
 
   it('claims nothing when push isn’t set up, so no reminder is lost', async () => {
     vi.stubEnv('VAPID_PRIVATE_KEY', '')
     const res = await GET(authorized())
     expect(await res.json()).toMatchObject({ ok: true, resolveReminders: 0 })
-    expect(rpc).not.toHaveBeenCalledWith('push_resolve_reminders')
+    expect(rpc).not.toHaveBeenCalledWith('due_resolve_reminders')
     expect(sendPush).not.toHaveBeenCalled()
   })
 

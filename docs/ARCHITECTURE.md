@@ -74,7 +74,8 @@ return), `/not-invited` and `/offline`. The API has two routes.
 Supabase project never pauses. It also deletes unattached proof files and
 attempt keys older than a day, calls `settle_season()` to post last
 month's champion to the feed (a no-op once it's posted), and sends the
-push reminders to resolve closed markets (`push_resolve_reminders()`).
+push reminders to resolve closed markets (`sendClosingAlerts`). Both cron
+routes declare `maxDuration = 60`.
 It runs at 05:15 UTC (`vercel.json`), not midnight: `settle_season`
 defaults to the month before today's *Eastern* date, and midnight UTC is
 still the previous evening in Eastern time, so a run then settled the
@@ -132,9 +133,13 @@ the task catalogue and invite list, which are allowed by policy.
 - `markets`: title, description, kind (`binary`, `multiple_choice`,
   `over_under`), `line` (Over/Under only), `close_at`, status (`open`,
   `resolved`, `voided`), `seed_per_outcome` (20 DC by default),
-  `current_resolution_id`, `edited_at` and `settled_at` (0066: when it
-  left `open`, set once by the first resolution or by the void; the
-  Resolved list's order and the chart's shaded zone for a voided market).
+  `current_resolution_id`, `edited_at`, `settled_at` (0066: when it
+  left `open`; the Resolved list's order and a voided chart's shaded zone) and
+  `sparkline` (0070): the card's
+  40-point series, written by a trigger the moment the market resolves or
+  voids (`cache_market_sparkline`, so `resolve_market_core` and
+  `void_market` needn't know), null while it's open. `/markets` reads it for
+  settled markets and only computes open ones live (#204).
 - `market_outcomes`: labels and `pool_total`, the real DC bet on each.
 - `bets`: live stakes only. A cancelled bet moves to `cancelled_bets`.
 - `market_resolutions`: each resolution or override, with its required
@@ -262,7 +267,13 @@ creator's own at once, and for reviewers and admins any left 48 hours or
 whose creator has a stake, always filtered through `can_resolve_market`;
 a close fires no database change, so Home's `RefreshAt` refreshes it at
 the next moment the list could grow, from `nextResolveCheckAt`),
-`my_at_stake` and `parlay_limits`.
+`my_at_stake`, `parlay_limits`, and from 0071 (#206, #210)
+`my_current_task_completions()` (security invoker: the newest completion of
+the current period per task, filtered in SQL with `compute_period_key`, so
+the Tasks page reads O(tasks) rows and no period keys), `my_onboarding()`
+(Home's three checklist booleans in one row) and `member_standing(profile)`
+(one member's net worth, rank and the board's size, the same maths as
+`leaderboard_net_worth` without ranking the whole board).
 
 Push recipients (0057) come from service-role-only functions, so members
 can't call them: `push_wants(profile, kind)` (still invited, a device
@@ -276,6 +287,12 @@ creator who opted in). Review alerts (0058) add `push_task_alerts(completion)`
 (reviewers and above except the submitter, `review_alerts` on) and
 `push_market_alerts()` (admins and above except the market's creator, who has
 the reminder, `resolve_reminders` on; each market claimed once as `market_alert`).
+Since 0071 (#207) the closing alerts read `due_resolve_reminders()` and
+`due_market_alerts()` instead, which pick the same recipients but claim
+nothing; the route sends one market at a time and claims through
+`claim_push_log(kind, refs)` only the markets at least one device took, so
+a failed push is due again next run. The two claiming functions stay until a
+later migration drops them.
 `my_review_counts()` (security invoker) counts what waits on the caller: other
 members' pending task submissions for a reviewer and above, closed unresolved
 markets for an admin and above.
@@ -372,9 +389,10 @@ after it ships. They roughly follow the project's history:
 | 0066 | `markets.settled_at` (#221), backfilled and indexed `(status, settled_at desc, id desc)`, stamped by `resolve_market_core` (first resolution) and `void_market`; `resolve_market_core` refuses an override to the current outcome (#198) |
 | 0067 | Push endpoints allowlisted in SQL (#201): `push_hosts()`, `push_endpoint_host`, `is_push_endpoint` and the `push_subscriptions_endpoint_push_service` check; the direct INSERT grant on `push_subscriptions` goes, so `save_push_subscription` is the only writer |
 | 0068 | Roles need an invite (#202): `my_role()` answers `member` unless `is_invited()`, so `has_role`, `is_admin` and every gate on them follow; `remove_member` (owner only) |
+| 0070 | Speed at scale (#204, #205): `markets.sparkline` filled by the `cache_market_sparkline` trigger when a market resolves or voids (backfilled), `market_outcomes` in the realtime publication, and `parlays_pending_profile_idx` for `stakes_riding` |
+| 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
-
 
 Every merge to `main` runs the **Deploy Production** workflow, with no
 approval step: a dry run and the push when the merge touched
@@ -442,7 +460,9 @@ signed URLs made with the viewer's own session.
 a long-lived channel on the member's own profile, which carries their
 balance and avatar, plus a per-page channel. A change to a subscribed
 table triggers `router.refresh()`, so the server re-renders with fresh
-data. Twelve tables are published (`LIVE_TABLES`). A filtered channel never
+data. Thirteen tables are published (`LIVE_TABLES`; `market_outcomes`
+since 0070, so `/markets` follows pools rather than every bet, and the
+leaderboard follows only `markets`, never every profile, #204, #205). A filtered channel never
 receives a DELETE, so a page that must hear one either watches the table
 unfiltered (the feed and member activity watch `feed_reactions` that way,
 since taking a reaction back is a delete) or has the delete write
@@ -491,10 +511,13 @@ the app's origin and `CRON_SECRET` from Supabase Vault (`app_url`,
 them it does nothing, as locally and in CI). GitHub dropped most runs of a
 ten-minute scheduled workflow, so `.github/workflows/closing-alerts.yml`
 (the `CRON_SECRET` repository secret and the `APP_URL` repository variable)
-is only a backup now; the route claims each market in `push_log`, so two
+is only a backup now; the route claims each market in `push_log` once a
+device has its push (`claim_push_log`'s `on conflict do nothing`), so two
 callers never repeat a push. Vercel Hobby cron runs once a day, and the
 daily keep-alive still calls the same function as a backstop. Each
-successful call stamps `cron_heartbeats` (#149), and the
+successful call stamps `cron_heartbeats` (#149); a run whose every push
+failed returns 502 and leaves the stamp alone, so the warning below covers
+a dead push service too (#207). The
 Admin layout shows admins and the owner a warning (`ClosingAlertsWarning`,
 `lib/admin/cron-health.ts`) once the last stamp is over 30 minutes old or
 missing. Only this route stamps it: the daily keep-alive doesn't,

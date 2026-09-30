@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 import { LazyMotion, MotionConfig } from 'motion/react'
 import * as m from 'motion/react-m'
 import { BookOpen, ChartColumn, CircleDot, MessageSquareText, ShieldCheck, Ticket, Trophy, type LucideIcon } from 'lucide-react'
-import { AnimatedNumber } from '@/components/ui/animated-number'
 import { BetaBadge } from '@/components/brand/beta-badge'
 import { Wordmark } from '@/components/brand/wordmark'
 import { AnimatedText } from '@/components/ui/animated-text'
@@ -15,6 +14,7 @@ import { haptics } from '@/lib/haptics'
 import { ICON_POP, PILL_TRANSITION } from '@/lib/ui/motion'
 import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
+import { BalanceNumber } from './balance-number'
 import { NAV_ITEMS, activeNavId, type NavId } from './nav-items'
 
 const loadMotionFeatures = () => import('@/lib/ui/motion-features').then((mod) => mod.default)
@@ -39,7 +39,7 @@ function BalanceChip({ balance, active }: { balance: number; active: boolean }) 
       <span className="inline-flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-gold-soft pr-2.5 pl-1.5 text-[15px] font-extrabold tabular-nums text-gold md:gap-1.5 md:pr-3 md:pl-2">
         <CircleDot aria-hidden="true" className="size-4 md:size-[18px]" />
         <AnimatedText plainText={`Balance ${balance} DC, view my bets`}>
-          <AnimatedNumber value={balance} locales="en-US" format={{ useGrouping: false }} suffix=" DC" />
+          <BalanceNumber value={balance} />
         </AnimatedText>
       </span>
     </Link>

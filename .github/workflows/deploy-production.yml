@@ -92,7 +92,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      # The hook builds main's HEAD, not this run's commit (#208). If main has moved on, the push
+      # that moved it has its own run queued behind this one in the prod-db group, and that run
+      # deploys once its own migrations are in; firing the hook now would build the newer code
+      # before them.
+      - name: Is this commit still main's head?
+        id: head
+        run: |
+          head="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$head" != "$GITHUB_SHA" ]; then
+            echo "::notice::main has moved on from $GITHUB_SHA to $head; that push's own run deploys it."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Trigger the Vercel production deploy
+        if: steps.head.outputs.current == 'true'
         id: hook
         env:
           VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}

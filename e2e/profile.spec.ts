@@ -40,7 +40,7 @@ test('edit your display name, bio and photo', async ({ browser }) => {
   await expect(page.getByText('Tea after the late service.')).toBeVisible()
   const photo = page.locator(`main img[src$="/avatars/${saved.avatar_path}"]`)
   await expect(photo).toBeVisible()
-  expect(await photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(512)
+  expect(await photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(256)
 
   // Removing the photo deletes the stored file too.
   await page.goto('/profile')

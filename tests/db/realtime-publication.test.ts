@@ -17,6 +17,7 @@ describe('supabase_realtime publication', () => {
         'bets',
         'cancelled_bets',
         'markets',
+        'market_outcomes',
         'market_resolutions',
         'parlays',
         'parlay_legs',

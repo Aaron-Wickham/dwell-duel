@@ -1,6 +1,7 @@
 import { AVATAR_MAX_BYTES, AVATAR_TYPE } from '@/lib/profile/avatar'
 
-const SIZE = 512
+// Twice the largest box an avatar renders in (80px), so it's sharp on a 2x screen and small on the wire (#210).
+const SIZE = 256
 
 // A phone photo is often several megabytes, well past a server action's 1MB body limit, so it's
 // cropped to the centre square and shrunk here, before it ever leaves the browser. JPEG because

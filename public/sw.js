@@ -1,10 +1,17 @@
 // Hand-rolled on purpose: three routing rules don't need a library. The cache name comes from
 // the registration URL's ?v= query string (components/offline/service-worker-registration.tsx
 // registers "/sw.js?v=<build id>"), so every deploy gets its own cache automatically without a
-// hand-bumped version constant; activate deletes every other cache, which both rolls a caching
-// change out to installed phones and keeps old deploys' caches from accumulating.
+// hand-bumped version constant. Activate keeps this deploy's cache and the one before it (#209): a
+// tab or installed app still running the old build lazy-loads its chunks from the old cache, since
+// Vercel no longer serves them once the new build is live; anything older is deleted, which both
+// rolls a caching change out to installed phones and keeps old deploys' caches from accumulating.
 const CACHE_VERSION = new URL(self.location.href).searchParams.get('v') ?? 'dev'
 const CACHE_NAME = `dwellduel-${CACHE_VERSION}`
+// Cache names carry a build id, not anything sortable, so the order deploys activated in is kept
+// in a small cache of its own.
+const META_CACHE = 'dwellduel-meta'
+const ORDER_URL = '/__cache-order'
+const KEEP_CACHES = 2
 const OFFLINE_URL = '/offline'
 const STATIC_PREFIX = '/_next/static/'
 const STATIC_ASSET_URL = /\/_next\/static\/[^"'\s\\)]+/g
@@ -40,13 +47,38 @@ async function cacheFirst(event) {
 
 // Every page is live, per-member data, so a navigation is never answered from cache. Navigation
 // preload lets the browser start the real request in parallel with the worker's own startup
-// instead of waiting for it; the offline page is the only fallback when neither one answers.
+// instead of waiting for it; the offline page is the only fallback when neither one answers, and
+// it comes from this deploy's own cache, not the kept older one.
 async function networkFirstNavigation(event) {
   try {
     return (await event.preloadResponse) ?? (await fetch(event.request))
   } catch {
-    return (await caches.match(OFFLINE_URL)) ?? Response.error()
+    const cache = await caches.open(CACHE_NAME)
+    return (await cache.match(OFFLINE_URL)) ?? Response.error()
   }
+}
+
+// Deploys in activation order, this one last. A cache the order doesn't know (made before this
+// code shipped) counts as older than every one it does.
+async function readOrder(meta) {
+  try {
+    const stored = await meta.match(ORDER_URL)
+    const listed = stored ? await stored.json() : []
+    return Array.isArray(listed) ? listed.filter((name) => typeof name === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+async function pruneOldCaches() {
+  const meta = await caches.open(META_CACHE)
+  const keys = (await caches.keys()).filter((key) => key !== META_CACHE)
+  const listed = (await readOrder(meta)).filter((name) => keys.includes(name) && name !== CACHE_NAME)
+  const unlisted = keys.filter((key) => !listed.includes(key) && key !== CACHE_NAME)
+  const order = [...unlisted, ...listed, CACHE_NAME]
+  const keep = order.slice(-KEEP_CACHES)
+  await meta.put(ORDER_URL, new Response(JSON.stringify(keep), { headers: { 'content-type': 'application/json' } }))
+  await Promise.all(keys.filter((key) => !keep.includes(key)).map((key) => caches.delete(key)))
 }
 
 // Taking over at once means the first visit's tab gets the offline fallback from its next
@@ -56,12 +88,7 @@ self.addEventListener('install', (event) => {
 })
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    Promise.all([
-      caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))),
-      self.registration.navigationPreload?.enable(),
-    ]).then(() => self.clients.claim()),
-  )
+  event.waitUntil(Promise.all([pruneOldCaches(), self.registration.navigationPreload?.enable()]).then(() => self.clients.claim()))
 })
 
 // RSC fetches, server actions, Next's offline polling and Supabase get no respondWith at all,

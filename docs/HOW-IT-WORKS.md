@@ -292,6 +292,10 @@ open DwellDuel from there and turn them on in Settings. If you've blocked
 notifications for DwellDuel, allow them again in your browser's or
 phone's settings.
 
+**Signing out stops notifications on that device,** so on a shared phone
+the next person to sign in never sees yours. Turn them on again after you
+sign back in. Your other devices keep theirs.
+
 ## Roles
 
 | Role | Can also…
@@ -338,7 +342,8 @@ a member.
   Settings live.
 - **Settings:** theme (System, Light or Dark), vibration on taps (Android),
   reduced animations, [notifications](#notifications), this How it works
-  page, and sign out.
+  page, and sign out. Signing out only signs out the device you're on, and
+  stops its notifications; your other devices stay signed in.
 - **Install it:** add DwellDuel to your Home Screen for a full-screen app
   with a launch animation. It shows an offline page when you lose
   connection, and on iPhone and iPad it's how you get notifications.

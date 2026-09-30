@@ -36,7 +36,7 @@ import {
   MarketCommentsSkeleton,
 } from '@/components/markets/market-detail-skeletons'
 import { OutcomeRow } from '@/components/markets/outcome-row'
-import { ProbabilityChart } from '@/components/markets/probability-chart'
+import { ProbabilityChart } from '@/components/markets/probability-chart-lazy'
 import { MarketBets } from './market-bets'
 import { MarketComments } from './market-comments'
 import { ResolveForm } from './resolve-form'

@@ -46,8 +46,10 @@ describe('pageSubscriptions', () => {
     ])
   })
 
-  it('markets declares the open/resolved list tables', () => {
-    expect(pageSubscriptions.markets()).toEqual([{ table: 'markets' }, { table: 'bets' }, { table: 'cancelled_bets' }])
+  // A bet writes bets and market_outcomes.pool_total; the list hears the pool, never the bet row.
+  it('markets declares the list tables and follows pools through market_outcomes, not bets', () => {
+    expect(pageSubscriptions.markets()).toEqual([{ table: 'markets' }, { table: 'market_outcomes' }])
+    expect(pageSubscriptions.markets().map((s) => s.table)).not.toContain('bets')
   })
 
   it('home, for a member, filters task_completions to their own submissions', () => {
@@ -72,8 +74,12 @@ describe('pageSubscriptions', () => {
     ])
   })
 
-  it('leaderboard watches every profile', () => {
-    expect(pageSubscriptions.leaderboard()).toEqual([{ table: 'profiles' }])
+  // Every bet, win, task and parlay updates a profile's balance, so a profiles channel would refresh
+  // every leaderboard viewer on every coin movement (#205); resolutions, which reorder the board,
+  // arrive through markets.
+  it('leaderboard follows settled markets, never every profile', () => {
+    expect(pageSubscriptions.leaderboard()).toEqual([{ table: 'markets' }])
+    expect(pageSubscriptions.leaderboard().map((s) => s.table)).not.toContain('profiles')
   })
 
   it('member watches only that member, carrying their id through activity_events', () => {

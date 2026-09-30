@@ -170,7 +170,10 @@ a line to `CHANGELOG.md` under the next release.
 - **The service worker never caches** per-member HTML, RSC payloads,
   server actions or Supabase responses.
 - **A new live table** goes in both `LIVE_TABLES` and a
-  realtime-publication migration.
+  realtime-publication migration. Prefer the narrowest table that moves
+  with what the page shows (`/markets` follows `market_outcomes`, not
+  `bets`), and never subscribe a whole-group page to `profiles`: every coin
+  movement updates one.
 - **E2e specs await `serverActionSettled`** after an optimistic action,
   before navigating away.
 

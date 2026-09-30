@@ -16,6 +16,13 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ### Under the hood
 - `docs/GETTING-STARTED.md` walks a new collaborator from a fresh machine to a signed-in local app, a green test suite and a first pull request. Local Supabase now has Google sign-in enabled through each developer's own OAuth client (`supabase/.env`), so a real sign-in works locally.
 - Local testing: after `npm run db:reset`, file uploads in the DB tests can fail with `42P10` until the local stack is restarted (`npx supabase stop && npx supabase start`); AGENTS.md says so.
+- **The markets list at scale (#204).** A resolved or voided market's sparkline is written once to `markets.sparkline` by a trigger (0070) and read back, never recomputed; only open markets compute live. The list follows `market_outcomes` (now published for realtime) and `markets` instead of every `bets` row, so a bet elsewhere no longer refreshes every viewer.
+- **The leaderboard no longer watches every profile (#205),** which refreshed every viewer on every coin movement; it follows `markets`, and catches up on the next visit. A partial index on pending parlays serves `stakes_riding`.
+- **The Tasks page reads one row per task (#206):** `my_current_task_completions()` filters to the current period in SQL, with no separate period-key round trip.
+- **A failed push is retried (#207).** Closing alerts read what is due, send one market at a time, and claim only the markets a device took (`claim_push_log`); a run whose every push failed returns 502 without stamping the heartbeat, so the Admin warning shows.
+- **Deploys build the commit they ran for (#208):** the deploy job skips the Vercel hook when `main` has moved on, leaving the deploy to the later push's run, after its own migrations.
+- **A deploy no longer strands open tabs (#209).** The service worker keeps the previous deploy's cache alongside the new one, and the app's error boundary reloads once (a minute's cooldown) on a stale-chunk error.
+- **Reliability odds and ends (#210):** `maxDuration = 60` on both cron routes; a fetch timeout on the service-role client; missing VAPID keys warn at boot and switch push off instead of refusing to serve; avatars are 256px, lazy, sized and cached for a year; the Recharts plots load in their own chunk behind their skeletons; the nav balance is plain text until it first changes; Home's onboarding and standing each read one row (`my_onboarding`, `member_standing`); the feed's reactions load alongside the creator stakes.
 
 ## v0.4.0-beta — 2026-09-29
 

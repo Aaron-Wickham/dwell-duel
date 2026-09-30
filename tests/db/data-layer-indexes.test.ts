@@ -317,6 +317,33 @@ describe('0048 indexes (#67)', () => {
   })
 })
 
+describe('0070 index (#205)', () => {
+  it('creates the partial index stakes_riding reads pending parlays through', async () => {
+    const rows = await pgQuery<{ indexdef: string }>(
+      `select indexdef from pg_indexes where schemaname = 'public' and indexname = 'parlays_pending_profile_idx'`,
+    )
+    expect(rows.map((r) => r.indexdef)).toEqual([
+      "CREATE INDEX parlays_pending_profile_idx ON public.parlays USING btree (profile_id) WHERE (status = 'pending'::text)",
+    ])
+  })
+
+  it('reads the pending parlays riding on the board through an index, never a scan of every parlay', async () => {
+    // stakes_riding's parlay branch, as leaderboard_net_worth reads it (no profile filter) and as
+    // my_at_stake does (one profile). The fixture is a handful of rows, so which real index the
+    // planner ties on isn't asserted (#143); what must hold is that neither shape walks the table.
+    for (const query of [
+      `select profile_id, stake from public.parlays where status = 'pending'`,
+      `select profile_id, stake from public.parlays where status = 'pending' and profile_id = '${bob.id}'`,
+    ]) {
+      const nodes = await planNodes(query)
+      expect(seqScanned(nodes), query).toEqual([])
+      const scans = nodes.filter((n) => n['Relation Name'] === 'parlays')
+      expect(scans.length, query).toBeGreaterThan(0)
+      for (const scan of scans) expect(scanDetails(scan).indexNames.length, query).toBeGreaterThan(0)
+    }
+  })
+})
+
 describe('0049 index (#74)', () => {
   it('lists open markets soonest to close first from the close index', async () => {
     const nodes = await planNodes(

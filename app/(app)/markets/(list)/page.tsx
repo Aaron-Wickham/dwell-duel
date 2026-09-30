@@ -90,6 +90,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       seedPerOutcome: m.seedPerOutcome,
       createdAt: m.createdAt,
       outcomeIds: m.outcomes.map((o) => o.id),
+      sparkline: m.sparkline,
     })),
   )
 

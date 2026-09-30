@@ -1,4 +1,5 @@
 import type { MarketKind } from '@/lib/markets/kind'
+import type { SeriesPoint } from '@/lib/markets/probability-series'
 import type { DbClient } from '@/lib/supabase/database'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
@@ -17,13 +18,15 @@ export interface MarketSummary {
   resolvedOutcomeLabel: string | null
   resolvedAt: string | null
   outcomes: { id: string; label: string; poolTotal: number }[]
+  // The card's 40-point series, cached by 0070 once the market resolves or voids; null while open.
+  sparkline: SeriesPoint[] | null
 }
 
 // The resolution is embedded through the market's own current_resolution_id, not read with a
 // second `.in()` whose URL would grow with the list. The hint names the foreign key because
 // market_resolutions also points back at markets through market_id.
 const SUMMARY_SELECT =
-  'id, title, kind, status, close_at, created_at, seed_per_outcome, line, edited_at, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at), market_outcomes(id, label, pool_total)'
+  'id, title, kind, status, close_at, created_at, seed_per_outcome, line, edited_at, sparkline, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at), market_outcomes(id, label, pool_total)'
 
 type SummaryRow = {
   id: string
@@ -35,6 +38,7 @@ type SummaryRow = {
   seed_per_outcome: number
   line: number | null
   edited_at: string | null
+  sparkline: { t: string; shares: Record<string, number> }[] | null
   current_resolution: { outcome_id: string; resolved_at: string } | null
   market_outcomes: { id: string; label: string; pool_total: number }[] | null
 }
@@ -55,6 +59,7 @@ function toSummary(m: SummaryRow): MarketSummary {
     resolvedOutcomeLabel: resolution ? (outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null) : null,
     resolvedAt: resolution?.resolved_at ?? null,
     outcomes,
+    sparkline: m.sparkline ? m.sparkline.map((p) => ({ t: Date.parse(p.t), shares: p.shares })) : null,
   }
 }
 

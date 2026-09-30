@@ -593,6 +593,7 @@ export type Database = {
           kind: string
           line: number | null
           seed_per_outcome: number
+          sparkline: Json | null
           status: string
           title: string
         }
@@ -607,6 +608,7 @@ export type Database = {
           kind: string
           line?: number | null
           seed_per_outcome?: number
+          sparkline?: Json | null
           status?: string
           title: string
         }
@@ -621,6 +623,7 @@ export type Database = {
           kind?: string
           line?: number | null
           seed_per_outcome?: number
+          sparkline?: Json | null
           status?: string
           title?: string
         }
@@ -1095,6 +1098,10 @@ export type Database = {
         Args: { p_action: string; p_key: string }
         Returns: Json
       }
+      claim_push_log: {
+        Args: { p_kind: string; p_refs: string[] }
+        Returns: number
+      }
       compute_period_key: {
         Args: { p_at?: string; p_period: string }
         Returns: string
@@ -1116,6 +1123,22 @@ export type Database = {
         Returns: undefined
       }
       delete_task: { Args: { p_task_id: string }; Returns: undefined }
+      due_market_alerts: {
+        Args: never
+        Returns: {
+          market_id: string
+          profile_id: string
+          title: string
+        }[]
+      }
+      due_resolve_reminders: {
+        Args: never
+        Returns: {
+          market_id: string
+          profile_id: string
+          title: string
+        }[]
+      }
       economy_flows: {
         Args: { p_from: string; p_to: string }
         Returns: {
@@ -1248,6 +1271,14 @@ export type Database = {
           won: number
         }[]
       }
+      member_standing: {
+        Args: { p_profile_id: string }
+        Returns: {
+          member_count: number
+          rank: number
+          score: number
+        }[]
+      }
       member_stats: {
         Args: { p_profile_id: string }
         Returns: {
@@ -1272,6 +1303,24 @@ export type Database = {
         Returns: {
           dc: number
           wagers: number
+        }[]
+      }
+      my_current_task_completions: {
+        Args: never
+        Returns: {
+          proof_count: number
+          review_note: string
+          reward_amount: number
+          status: string
+          task_id: string
+        }[]
+      }
+      my_onboarding: {
+        Args: never
+        Returns: {
+          bet: boolean
+          photo: boolean
+          task: boolean
         }[]
       }
       my_review_counts: {

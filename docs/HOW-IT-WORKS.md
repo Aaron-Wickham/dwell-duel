@@ -226,8 +226,8 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   more of what's counted, then the name.
 - **Past champions** lists the months already crowned.
 - **Monthly champion:** when a month ends, whoever finished it with the
-  top profit is posted to the feed ("Alice was October's champion with
-  +140 DC"). If two finish level, it goes to whoever reached that total
+  top profit is posted to the feed early on the 1st, Eastern time ("Alice
+  was October's champion with +140 DC"). If two finish level, it goes to whoever reached that total
   first. A month where nobody bet, or nobody came out ahead, has no
   champion.
 

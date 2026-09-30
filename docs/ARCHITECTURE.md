@@ -75,6 +75,12 @@ Supabase project never pauses. It also deletes unattached proof files and
 attempt keys older than a day, calls `settle_season()` to post last
 month's champion to the feed (a no-op once it's posted), and sends the
 push reminders to resolve closed markets (`push_resolve_reminders()`).
+It runs at 05:15 UTC (`vercel.json`), not midnight: `settle_season`
+defaults to the month before today's *Eastern* date, and midnight UTC is
+still the previous evening in Eastern time, so a run then settled the
+month before last and September's champion only posted on October 2
+(#197). Any hour from 05:00 UTC is past midnight Eastern under EST and
+EDT alike; `tests/lib/deploy/keep-alive-schedule.test.ts` guards it.
 The other, `/api/cron/closing-alerts`, sends the same closing alerts every
 minute a market closes, from Supabase's `pg_cron`, and records a heartbeat (see
 Notifications).

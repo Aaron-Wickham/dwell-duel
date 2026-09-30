@@ -58,3 +58,12 @@ begin
   where id = p_market_id;
 end;
 $$;
+
+-- #210: 0064's every-minute job writes a cron.job_run_details row a minute, about 1,440 a day and
+-- 100 MB a year, and pg_cron never prunes them. A daily job keeps a week's worth. Named, so
+-- re-running this replaces rather than duplicates it.
+select cron.schedule(
+  'cron-history-cleanup',
+  '17 4 * * *',
+  $$delete from cron.job_run_details where end_time < now() - interval '7 days'$$
+);

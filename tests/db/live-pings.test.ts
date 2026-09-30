@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterEach } from 'vitest'
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js'
 import { pgQuery } from './pg-query'
-import { anonClient, clientFor, createTestMarket, ensureInvited, giveRole, seedMembers, type Member } from './fixtures'
+import { anonClient, clientFor, createTestMarket, ensureInvited, giveRole, makeMember, seedMembers, type Member } from './fixtures'
 import { LIVE_PING_INTERVAL_MS, LIVE_TOPICS } from '@/components/live/live-refresh'
 
 async function resetThrottle(): Promise<void> {
@@ -93,6 +93,39 @@ describe('live pings (0085)', () => {
     expect(await messagesSince('pools', since)).toBe(1)
   })
 
+  // The triggers are deferred, so the throttle looks at the commit, not at the first row written:
+  // a change the client's refresh after the earlier ping would come too soon to read still pings.
+  it('pings a change written inside the window but committed after it', async () => {
+    const { marketId } = await createTestMarket(await clientFor(alice), ['Yes', 'No'])
+    await pgQuery(
+      `update public.live_pings set sent_at = clock_timestamp() - interval '${LIVE_PING_INTERVAL_MS - 1000} milliseconds' where topic = 'markets'`,
+    )
+    const since = await dbNow()
+    await pgQuery(`update public.markets set title = title where id = '${marketId}'; select pg_sleep(1.5)`)
+    expect(await messagesSince('markets', since)).toBe(1)
+  })
+
+  it('holds back a change committed inside the window', async () => {
+    const { marketId } = await createTestMarket(await clientFor(alice), ['Yes', 'No'])
+    await pgQuery("update public.live_pings set sent_at = clock_timestamp() where topic = 'markets'")
+    const since = await dbNow()
+    await pgQuery(`update public.markets set title = title where id = '${marketId}'`)
+    expect(await messagesSince('markets', since)).toBe(0)
+  })
+
+  // Only a committed ping may hold a change back: the transaction holding the row could still roll back.
+  it('sends its own ping while another transaction holds the topic row', async () => {
+    await resetThrottle()
+    const since = await dbNow()
+    const holder = pgQuery(
+      "update public.live_pings set sent_at = clock_timestamp() where topic = 'reactions'; select pg_sleep(2)",
+    )
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    await pgQuery("select public.send_live_ping('reactions')")
+    await holder
+    expect(await messagesSince('reactions', since)).toBe(1)
+  })
+
   it("won't let members call the ping function themselves", async () => {
     const client = await clientFor(alice)
     const { error } = await client.rpc('send_live_ping', { p_topic: 'markets' })
@@ -114,6 +147,11 @@ describe('live pings (0085)', () => {
   it('lets a reviewer join the review queue', async () => {
     await giveRole(bob, 'reviewer')
     expect(await join(await clientFor(bob), 'reviews')).toBe('SUBSCRIBED')
+  })
+
+  it('refuses a signed-in user who was never invited', async () => {
+    const stranger = await makeMember('Carol')
+    expect(await join(await clientFor(stranger), 'markets')).toBe('CHANNEL_ERROR')
   })
 
   it('refuses a signed-out client', async () => {

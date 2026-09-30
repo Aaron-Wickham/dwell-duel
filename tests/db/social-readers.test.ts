@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, type Member } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, type Member, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 import { listFeed } from '@/lib/social/list-feed'
 import { getLeaderboardPage, getMemberStanding } from '@/lib/social/leaderboard'
@@ -87,7 +87,7 @@ describe('listFeed', () => {
       (await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]], p_stake: 10 })).error,
     ).toBeNull()
 
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+    await giveRole(alice, 'admin')
     const { taskId } = await createTestTask(alice, { title: 'Read Psalm 23', rewardAmount: 9 })
     const { data: completionId, error: submitErr } = await bobClient.rpc('submit_task_completion', { p_task_id: taskId })
     expect(submitErr).toBeNull()

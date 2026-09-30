@@ -1,0 +1,48 @@
+name: Start local Supabase
+description: >-
+  Starts the throwaway local Supabase stack CI tests against and writes its keys to .env.local.
+  Logs in to Docker Hub first when a token is given, so pulling its images doesn't count against
+  the anonymous pull limit GitHub's runners share (#213).
+
+inputs:
+  dockerhub-username:
+    description: Docker Hub username (the DOCKERHUB_USERNAME repository variable).
+    required: false
+    default: ''
+  dockerhub-token:
+    description: A read-only Docker Hub access token (the DOCKERHUB_TOKEN repository secret).
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    # Skipped on a fork's PR and until the secret is set (README, one-time setup); a failed login
+    # falls back to anonymous pulls rather than failing the run.
+    - name: Log in to Docker Hub
+      if: inputs.dockerhub-token != ''
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      continue-on-error: true
+      with:
+        username: ${{ inputs.dockerhub-username }}
+        password: ${{ inputs.dockerhub-token }}
+
+    # The same CLI version as deploy-production.yml, so migrations are tested with the tool that ships them.
+    - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
+      with:
+        version: 2.117.0
+
+    # Only what the tests use: Postgres, Auth, the REST and Storage APIs, Realtime, Kong and
+    # postgres-meta (tests/db/pg-query.ts).
+    - name: Start local Supabase
+      shell: bash
+      run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,mailpit
+
+    # The same kind of keys production uses: publishable and secret, not the legacy JWT keys.
+    - name: Write .env.local from the local Supabase instance
+      shell: bash
+      run: |
+        STATUS=$(supabase status -o json)
+        echo "NEXT_PUBLIC_SUPABASE_URL=$(echo "$STATUS" | jq -r .API_URL)" >> .env.local
+        echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(echo "$STATUS" | jq -r .PUBLISHABLE_KEY)" >> .env.local
+        echo "SUPABASE_SECRET_KEY=$(echo "$STATUS" | jq -r .SECRET_KEY)" >> .env.local

@@ -65,13 +65,39 @@ describe('TaskRow', () => {
           rewardAmount={5}
           description={null}
           cadence="Weekly"
-          state={{ kind: 'available', rejectionNote: 'Please write a full paragraph.' }}
+          state={{ kind: 'available', rejection: { note: 'Please write a full paragraph.' } }}
           action={<button type="button">I did this</button>}
         />
       </ul>,
     )
     expect(screen.getByRole('button', { name: 'I did this' })).toBeInTheDocument()
-    expect(screen.getByText(/Please write a full paragraph\./)).toBeInTheDocument()
+    expect(screen.getByText('Not approved — Please write a full paragraph.')).toBeInTheDocument()
+  })
+
+  it('still says the latest submission was turned down when the reviewer gave no reason (#200)', () => {
+    render(
+      <ul>
+        <TaskRow
+          title="Journal on Sunday’s sermon"
+          rewardAmount={5}
+          description={null}
+          cadence="Weekly"
+          state={{ kind: 'available', rejection: { note: null } }}
+          action={<button type="button">I did this</button>}
+        />
+      </ul>,
+    )
+    expect(screen.getByRole('button', { name: 'I did this' })).toBeInTheDocument()
+    expect(screen.getByText('Not approved')).toHaveTextContent(/^Not approved$/)
+  })
+
+  it('says nothing about a rejection when there is none', () => {
+    render(
+      <ul>
+        <TaskRow title="Read Genesis 1-3" rewardAmount={10} description={null} cadence={null} state={{ kind: 'available', rejection: null }} />
+      </ul>,
+    )
+    expect(screen.queryByText(/Not approved/)).toBeNull()
   })
 
   it('shows the cadence as a pill for a repeatable task', () => {

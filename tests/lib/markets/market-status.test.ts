@@ -30,8 +30,20 @@ describe('chartClosedAt', () => {
     expect(chartClosedAt('open', '2026-10-04T12:00:00.000Z', null)).toBe('2026-10-04T12:00:00.000Z')
   })
 
-  it('uses the close time for a voided market', () => {
+  it('uses the close time for a voided market with no settled time on record', () => {
     expect(chartClosedAt('voided', '2026-10-04T12:00:00.000Z', null)).toBe('2026-10-04T12:00:00.000Z')
+  })
+
+  it('uses the void time for a market voided before its close time (#221)', () => {
+    expect(chartClosedAt('voided', '2026-10-04T12:00:00.000Z', '2026-10-01T09:00:00.000Z')).toBe('2026-10-01T09:00:00.000Z')
+  })
+
+  it('uses the close time for a market voided after it closed', () => {
+    expect(chartClosedAt('voided', '2026-09-21T09:00:00.000Z', '2026-09-21T09:05:00.000Z')).toBe('2026-09-21T09:00:00.000Z')
+  })
+
+  it('ignores a settled time on an open market', () => {
+    expect(chartClosedAt('awaiting', '2026-09-21T09:00:00.000Z', '2026-09-20T09:00:00.000Z')).toBe('2026-09-21T09:00:00.000Z')
   })
 
   it('uses the close time for a resolved market that closed on schedule', () => {

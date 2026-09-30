@@ -403,3 +403,56 @@ describe('market_sparklines', () => {
     expect(indexNames).toContain('bets_market_created_idx')
   })
 })
+
+// #204: a settled market's series never changes again, so 0070 writes the card's 40 points onto
+// the row as it leaves 'open', and the list reads them instead of recomputing.
+describe('markets.sparkline cache (0070)', () => {
+  // An admin can resolve before the close time and override a result; the fixtures' markets close in an hour.
+  beforeEach(async () => {
+    const { error } = await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+    if (error) throw error
+  })
+
+  async function cached(marketId: string): Promise<SparklinePoint[] | null> {
+    const { data, error } = await bobClient.from('markets').select('sparkline').eq('id', marketId).single()
+    if (error) throw error
+    return data.sparkline as SparklinePoint[] | null
+  }
+
+  it('is null while a market is open, and holds exactly market_sparklines’ 40 points once it resolves', async () => {
+    const market = await createTestMarket(aliceClient, ['Red', 'Blue', 'Green'])
+    await insertBets(market, 60)
+    expect(await cached(market.marketId)).toBeNull()
+    const before = await pointsOf(bobClient, market)
+
+    const { error } = await aliceClient.rpc('resolve_market', { p_note: 'Done', p_market_id: market.marketId, p_outcome_id: market.outcomeIds[1] })
+    if (error) throw error
+
+    const points = await cached(market.marketId)
+    expect(points).toHaveLength(40)
+    expectSameSeries(points!, picked(await fullSeries(market), 40))
+    expect(points!.map((p) => Date.parse(p.t))).toEqual(before.map((p) => Date.parse(p.t)))
+  })
+
+  it('is filled by a void too, and is an empty list for a market nobody bet on', async () => {
+    const bet = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Bet on' })
+    const quiet = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Quiet' })
+    await placeBet(bobClient, bet, 0, 7)
+    for (const m of [bet, quiet]) {
+      const { error } = await aliceClient.rpc('void_market', { p_market_id: m.marketId })
+      if (error) throw error
+    }
+    expectSameSeries((await cached(bet.marketId))!, await fullSeries(bet))
+    expect(await cached(quiet.marketId)).toEqual([])
+  })
+
+  it('leaves the cache alone on an override, which changes the result but never the bets', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await placeBet(bobClient, market, 0, 5)
+    await aliceClient.rpc('resolve_market', { p_note: 'First', p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0] })
+    const first = await cached(market.marketId)
+    const { error } = await aliceClient.rpc('resolve_market', { p_note: 'Fixed', p_market_id: market.marketId, p_outcome_id: market.outcomeIds[1] })
+    if (error) throw error
+    expect(await cached(market.marketId)).toEqual(first)
+  })
+})

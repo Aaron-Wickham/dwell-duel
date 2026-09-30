@@ -13,6 +13,7 @@ function marketRow(overrides: Record<string, unknown> = {}) {
     status: 'resolved',
     close_at: '2026-09-20T09:00:00+00:00',
     created_at: '2026-09-19T09:00:00.123456+00:00',
+    settled_at: '2026-09-21T09:00:00+00:00',
     line: null,
     edited_at: null,
     current_resolution: { outcome_id: 'o-yes', resolved_at: '2026-09-21T09:00:00+00:00' },
@@ -26,7 +27,7 @@ function marketRow(overrides: Record<string, unknown> = {}) {
 
 describe('listOpenMarkets', () => {
   it('reads only open markets, 50 soonest to close first, with the resolution embedded in the same request', async () => {
-    const { client, queries } = fakeSupabase(() => ({ data: [marketRow({ status: 'open', current_resolution: null })] }))
+    const { client, queries } = fakeSupabase(() => ({ data: [marketRow({ status: 'open', current_resolution: null, settled_at: null })] }))
 
     const page = await listOpenMarkets(client, { top: null, bottom: null })
 
@@ -49,14 +50,24 @@ describe('listOpenMarkets', () => {
         createdAt: '2026-09-19T09:00:00.123456+00:00',
         resolvedOutcomeLabel: null,
         resolvedAt: null,
+        settledAt: null,
         line: null,
         edited: false,
         outcomes: [
           { id: 'o-no', label: 'No', poolTotal: 5 },
           { id: 'o-yes', label: 'Yes', poolTotal: 15 },
         ],
+        sparkline: null,
       },
     ])
+  })
+
+  it("carries a settled market's cached sparkline (0070) as series points, so the list never recomputes it", async () => {
+    const { client } = fakeSupabase(() => ({
+      data: [marketRow({ sparkline: [{ t: '2026-09-20T08:00:00+00:00', shares: { 'o-no': 0.25, 'o-yes': 0.75 } }] })],
+    }))
+    const page = await listResolvedMarkets(client, { top: null, bottom: null })
+    expect(page.rows[0].sparkline).toEqual([{ t: Date.parse('2026-09-20T08:00:00Z'), shares: { 'o-no': 0.25, 'o-yes': 0.75 } }])
   })
 
   it('probes only the keys of the next open markets, with the same filter and order', async () => {
@@ -130,17 +141,17 @@ describe('listResolvedMarkets', () => {
     const rows = Array.from({ length: 50 }, (_, i) =>
       marketRow({ id: `0b9c3f5e-8a1d-4c2b-9e7f-${String(1000 - i).padStart(12, '0')}` }),
     )
-    const probed = [marketRow({ id: '0b9c3f5e-8a1d-4c2b-9e7f-000000000001', created_at: '2026-09-18T09:00:00+00:00' })]
+    const probed = [marketRow({ id: '0b9c3f5e-8a1d-4c2b-9e7f-000000000001', settled_at: '2026-09-18T09:00:00+00:00' })]
     const { client, queries } = fakeSupabase((_query, index) => ({ data: index === 0 ? rows : probed }))
 
     const page = await listResolvedMarkets(client, { top: null, bottom: null })
 
     const [read, probe] = queries
     expect(read.select).toContain(RESOLUTION_EMBED)
-    expect(probe.select).toBe('id, created_at')
+    expect(probe.select).toBe('id, settled_at')
     expect(probe.in).toEqual(read.in)
     expect(probe.order).toEqual([
-      ['created_at', { ascending: false }],
+      ['settled_at', { ascending: false }],
       ['id', { ascending: false }],
     ])
     expect(read.order).toEqual([

@@ -18,7 +18,7 @@ chili cook-off?". They earn more DC by completing Bible-study tasks.
 Markets use shared-pool (pari-mutuel) odds; bets can be combined into
 parlays; and everything that happens shows up in a live feed.
 
-**Current release:** [v0.3.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.3.0-beta) · see the [changelog](CHANGELOG.md).
+**Current release:** [v0.5.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.5.0-beta) · see the [changelog](CHANGELOG.md).
 
 | Home | A market | The feed | Settings |
 |---|---|---|---|
@@ -78,6 +78,7 @@ model, the key flows and the migrations.
 
 | Doc | For |
 |---|---|
+| [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) | New here? Tools, local Supabase, sign-in, tests and your first PR, in order |
 | [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) | The rules: odds, payouts, parlays, results, tasks, roles |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code fits together |
 | [AGENTS.md](AGENTS.md) | Conventions every change follows (read this before contributing) |
@@ -112,6 +113,7 @@ npm run test:e2e  # Playwright: builds and serves the app on :3000, so free that
 npm run lint      # ESLint, with no warnings allowed
 npm run typecheck # TypeScript
 npm run build     # production build
+npm run check:ios # the installed iPhone app's viewport, in the iOS Simulator (scripts/ios-standalone-check.mjs)
 ```
 
 `npx vitest run --project unit` runs only the tests that don't need the
@@ -172,9 +174,9 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
 - **No staging, and Vercel previews are off on purpose.** There's one
   hosted Supabase project (production), and the free tier's two-project
   limit is already used. Vercel's Preview environment has no credentials
-  and `commandForIgnoringBuildStep` skips every non-production build, so
-  PRs are reviewed through the diff and CI. Local Docker Supabase is the
-  dev and test environment.
+  and the dashboard's Ignored Build Step setting skips every non-production
+  build, so previews are off and PRs are reviewed through the diff and CI.
+  Local Docker Supabase is the dev and test environment.
 
 ### One-time setup (outside the code)
 
@@ -188,10 +190,28 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
 - Add the app's redirect URLs (`http://localhost:3000/callback`, and the
   production one) to Supabase → Auth → URL Configuration.
 - **Closing alerts' timer** (0064): in the SQL editor, store the app's origin
-  and the same `CRON_SECRET` Vercel has in Vault, so `pg_cron` can call
+  and the same `CRON_SECRET` Vercel has, in Supabase Vault, so `pg_cron` can call
   `/api/cron/closing-alerts` within a minute of a market closing:
   `select vault.create_secret('https://www.dwellduel.com', 'app_url');` and
-  `select vault.create_secret('<CRON_SECRET>', 'cron_secret');`.
+  `select vault.create_secret('<CRON_SECRET>', 'cron_secret');`. The backup
+  GitHub workflow (`.github/workflows/closing-alerts.yml`) needs the
+  `CRON_SECRET` repository secret and the `APP_URL` repository variable.
+- **CI's Docker Hub login:** GitHub's runners share Docker Hub's anonymous
+  pull limit, and `supabase start` pulls seven images per job. Create a
+  free Docker Hub account, make a read-only access token (Account settings
+  → Personal access tokens, permissions: Public repo read-only), and add
+  it under Settings → Secrets and variables → Actions as the
+  `DOCKERHUB_TOKEN` secret, with the account name as the
+  `DOCKERHUB_USERNAME` variable. Until then CI pulls anonymously, and a
+  fork's PR always does.
+- **Hearing about failed deploys and pings:** under GitHub → Settings →
+  Notifications → Actions, turn on "Send notifications for failed workflows
+  only", so a failed migration, deploy, or closing-alerts backup ping is an
+  email. For a failed Vercel build to count too, add a `VERCEL_TOKEN`
+  repository secret (Vercel → Account settings → Tokens; it only needs to
+  read deployments), which lets Deploy Production watch the build to READY;
+  if the project belongs to a Vercel team, also set the team's id as the
+  `VERCEL_TEAM_ID` variable. Keep Vercel's own failed-build email on as well.
 - **Before your first sign-in,** invite yourself in the SQL editor:
   `insert into public.allowed_emails (email) values ('you@gmail.com');`
 - **After it,** make yourself the owner, keyed off the verified
@@ -202,17 +222,21 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
 
 ## CI
 
-Every push to `main` and every pull request runs lint, the type check, a
-check that the generated database types match the migrations, the Vitest
-suite, a production build and the Playwright suite
-(`.github/workflows/ci.yml`), against a throwaway local Supabase, never the
-production database. Dependabot opens weekly update PRs for npm packages and
-GitHub Actions (`.github/dependabot.yml`).
+Every pull request runs lint, the type check, a check that the generated
+database types match the migrations, the Vitest suite, a production build
+and the Playwright suite (`.github/workflows/ci.yml`) as three parallel
+jobs behind one required check, `ci-ok`, against a throwaway local
+Supabase, never the production database. A PR must be up to date with
+`main` to merge, so `main` itself isn't tested again: merging deploys.
+Dependabot opens weekly update PRs for npm packages and GitHub Actions
+(`.github/dependabot.yml`).
 
 ## Releases
 
 | Release | Date | Highlights |
 |---|---|---|
+| [v0.5.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.5.0-beta) | 2026-09-30 | The codebase review round: security fixes, slip and results bug fixes, loading that no longer jumps, faster live refresh, safer deploys, CI in half the time |
+| [v0.4.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.4.0-beta) | 2026-09-29 | Full-width desktop layouts, one motion language, review alerts, a markets filter, parlay breakdowns, a livelier leaderboard, deploys that wait for their migrations |
 | [v0.3.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.3.0-beta) | 2026-09-28 | Security fixes, retry-safe betting, a net-worth leaderboard with monthly champions, coin history, reactions and comments, streaks, profile stats, a weekly recap, push notifications, faster pages |
 | [v0.2.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.2.0-beta) | 2026-09-28 | Roles, seeded odds, 10-leg parlays, proof, Over/Under, market edits, My bets, Settings, a new Home, the launch animation |
 | [v0.1.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.1.0-beta) | 2026-09-27 | The first beta: markets, parlays, tasks, the coin ledger, the social layer, the installable app |

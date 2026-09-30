@@ -8,7 +8,8 @@ export type MyBetResult =
   | { kind: 'awaiting' }
   | { kind: 'won'; payout: number }
   | { kind: 'lost' }
-  | { kind: 'refunded' }
+  // A void refunds everyone; so does a resolution nobody backed (resolve_market_core, 0046).
+  | { kind: 'refunded'; reason: 'voided' | 'no_winners' }
 
 export interface MyBet {
   id: number
@@ -52,12 +53,13 @@ export interface BetRow {
 // The same arithmetic as resolve_market, seed included (0041), from pools that can't move once a
 // market resolves.
 export function betResult(bet: { outcomeId: string; amount: number }, market: MarketEmbed, now: number): MyBetResult {
-  if (market.status === 'voided') return { kind: 'refunded' }
+  if (market.status === 'voided') return { kind: 'refunded', reason: 'voided' }
   if (market.status === 'open') return Date.parse(market.close_at) > now ? { kind: 'open' } : { kind: 'awaiting' }
   const winner = market.current_resolution?.outcome_id
+  const winningPool = market.market_outcomes.find((o) => o.id === winner)?.pool_total ?? bet.amount
+  if (winningPool === 0) return { kind: 'refunded', reason: 'no_winners' }
   if (winner !== bet.outcomeId) return { kind: 'lost' }
   const realTotal = market.market_outcomes.reduce((sum, o) => sum + o.pool_total, 0)
-  const winningPool = market.market_outcomes.find((o) => o.id === winner)?.pool_total ?? bet.amount
   const { pool, total } = effectivePools(winningPool, realTotal, market.seed_per_outcome, market.market_outcomes.length)
   return { kind: 'won', payout: Math.floor((bet.amount * total) / pool) }
 }

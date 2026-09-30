@@ -11,6 +11,7 @@ import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { h2Class } from '@/components/ui/page'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
+import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import { discardProof, uploadProof } from '@/lib/proof/upload'
 import type { ProofDraft, ProofRecord } from '@/lib/proof/types'
 import { cn } from '@/lib/utils'
@@ -66,23 +67,27 @@ export function SubmitTaskDialog({
   const hintId = `${id}-hint`
 
   // TaskRow renders this only while the task is available; once the server has the submission the
-  // row shows its own chip in the same render that ends `submitting`.
-  if (submitting) return <PendingReviewChip />
-
+  // row shows its own chip in the same render that ends `submitting`. Until then the chip stands in
+  // for the trigger here, with the dialog still mounted and closed: unmounting it open would drop
+  // focus on <body>, and its trigger is gone, so the dialog hands focus to the page heading instead.
   return (
     <Dialog.Root
-      open={open}
+      open={open && !submitting}
       onOpenChange={(next) => {
         if (isPending && !next) return
         setOpen(next)
       }}
     >
-      <Dialog.Trigger className={buttonVariants({ size: 'sm' })}>
-        I did this<span className="sr-only">, {taskTitle}</span>
-      </Dialog.Trigger>
+      {submitting ? (
+        <PendingReviewChip />
+      ) : (
+        <Dialog.Trigger className={buttonVariants({ size: 'sm' })}>
+          I did this<span className="sr-only">, {taskTitle}</span>
+        </Dialog.Trigger>
+      )}
       <Dialog.Portal>
         <Dialog.Backdrop className={dialogBackdropClass} />
-        <Dialog.Popup className={cn(dialogPopupClass, 'max-w-[520px]')}>
+        <Dialog.Popup finalFocus={submitting ? focusPageHeading : true} className={cn(dialogPopupClass, 'max-w-[520px]')}>
           <div className="flex flex-col gap-2">
             <Dialog.Title className={h2Class}>Submit “{taskTitle}”</Dialog.Title>
             <Dialog.Description id={hintId} className="text-ink2">

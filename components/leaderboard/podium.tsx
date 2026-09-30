@@ -15,10 +15,14 @@ export interface PodiumMember {
 // Block heights by finishing place, so the winner stands tallest; ties share a place, and so a height.
 const BLOCK = { 1: 'h-[72px] bg-lime text-on-lime', 2: 'h-[48px] bg-sunk text-ink', 3: 'h-[34px] bg-sunk text-ink' } as const
 
+// Where each place stands: the winner in the middle, flanked by second and third. The list itself
+// stays in rank order, so a screen reader and the Tab key meet first place first.
+const PLACE_ORDER = { 1: 'order-2', 2: 'order-1', 3: 'order-3' } as const
+
 function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean; meId: string }) {
   const place = Math.min(member.rank, 3) as 1 | 2 | 3
   return (
-    <li className="pressable hover-lift relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-t-[10px] text-center">
+    <li className={cn('pressable hover-lift-row relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-t-[10px] text-center', PLACE_ORDER[place])}>
       <Avatar name={member.name} src={member.avatarSrc} size={place === 1 ? 'lg' : 'md'} />
       <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="stretched-link max-w-full truncate text-[15px] font-extrabold">
         {member.name}
@@ -40,13 +44,15 @@ function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean
 // The top three, second and third flanking the winner. Only for the top of a board of at least
 // three: a window that starts mid-board has no podium.
 export function Podium({ members, signed, meId }: { members: PodiumMember[]; signed: boolean; meId: string }) {
-  const [first, second, third] = members
   return (
-    <section aria-label="Top three" className={cn(cardClass, 'p-4 md:p-6')}>
+    <section aria-labelledby="podium-heading" className={cn(cardClass, 'p-4 md:p-6')}>
+      <h2 id="podium-heading" className="sr-only">
+        Top three
+      </h2>
       <ol className="flex items-end justify-center gap-3 md:gap-6">
-        <Place member={second} signed={signed} meId={meId} />
-        <Place member={first} signed={signed} meId={meId} />
-        <Place member={third} signed={signed} meId={meId} />
+        {members.slice(0, 3).map((member) => (
+          <Place key={member.id} member={member} signed={signed} meId={meId} />
+        ))}
       </ol>
     </section>
   )

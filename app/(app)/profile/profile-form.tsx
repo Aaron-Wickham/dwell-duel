@@ -98,7 +98,7 @@ export function ProfileForm({
                 />
                 <label
                   htmlFor="pf-photo"
-                  className={`${buttonVariants({ variant: 'secondary', size: 'sm' })} peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus`}
+                  className={`${buttonVariants({ variant: 'secondary', size: 'sm' })} peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus`}
                 >
                   {shownSrc ? 'Change photo' : 'Choose photo'}
                 </label>

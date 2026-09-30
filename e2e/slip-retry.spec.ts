@@ -6,6 +6,10 @@ import { serviceClient } from '../tests/db/helpers'
 // #61: the place commits, but its answer never reaches the phone. Retrying must show success
 // without placing the bet a second time.
 test('a place whose response is lost can be retried without placing twice', async ({ page }) => {
+  // This waits on Next replaying a failed action fetch, which can take a while on a loaded runner;
+  // it once hit the default 30s in a full local run while passing on its own and on CI. A wrong
+  // result still fails fast on the assertions; only a slow replay needs the room.
+  test.setTimeout(60_000)
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill('Lost response?')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
@@ -36,10 +40,21 @@ test('a place whose response is lost can be retried without placing twice', asyn
   await place.click()
   // Next replays an action whose fetch failed as if it never reached the server; if it doesn't,
   // the slip says it couldn't confirm and the member taps Place again. Either way, one bet.
-  const placed = page.getByText('Placed 1 solo bet.').first()
+  // The dropped first call already claimed the key, so the answer the member sees is a replay of
+  // it (#226): "Your earlier attempt already went through: 1 solo bet."
+  const placed = page.getByText(/Placed 1 solo bet\.|already went through: 1 solo bet\./).first()
   const unconfirmed = sheet.getByText(/couldn’t confirm your bets/)
   await expect(placed.or(unconfirmed)).toBeVisible()
-  if (await unconfirmed.isVisible()) await place.click()
+  if (await unconfirmed.isVisible()) {
+    // #192: closing the sheet unmounts the panel. The key and the message live in the provider,
+    // so reopening shows the same message, and Place returns the first result.
+    await sheet.getByRole('button', { name: 'Close slip' }).click()
+    await expect(sheet).toHaveCount(0)
+    const reopened = await openSlip(page)
+    await expect(reopened.getByText(/couldn’t confirm your bets/)).toBeVisible()
+    await expect(reopened.getByLabel('Stake (DC)')).toHaveValue('7')
+    await reopened.getByRole('button', { name: 'Place 1 bet · 7 DC' }).click()
+  }
   await expect(placed).toBeVisible()
   expect(dropped).toBe(true)
 

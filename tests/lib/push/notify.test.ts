@@ -105,8 +105,48 @@ describe('notify', () => {
   it("doesn't claim reminders it can't send", async () => {
     vi.stubEnv('VAPID_PRIVATE_KEY', '')
     const { db, rpc } = dbReturning([])
-    expect(await sendResolveReminders(db)).toEqual({ reminded: 0 })
+    expect(await sendResolveReminders(db)).toEqual({ reminded: 0, sent: 0, failed: 0 })
     expect(rpc).not.toHaveBeenCalled()
+  })
+
+  // #207: the claim follows the delivery, one market at a time.
+  it('reads the due reminders, sends each market’s on its own, and claims only the markets a device took', async () => {
+    const rpc = vi.fn(async (fn: string) =>
+      fn === 'due_resolve_reminders'
+        ? {
+            data: [
+              { market_id: 'm-1', title: 'A', profile_id: 'alice' },
+              { market_id: 'm-2', title: 'B', profile_id: 'bob' },
+              { market_id: 'm-3', title: 'C', profile_id: 'carol' },
+            ],
+            error: null,
+          }
+        : { data: 2, error: null },
+    )
+    const db = { rpc } as unknown as DbClient
+    sendPush
+      .mockResolvedValueOnce({ sent: 1, removed: 0, failed: 0 })
+      .mockResolvedValueOnce({ sent: 0, removed: 0, failed: 2 })
+      .mockResolvedValueOnce({ sent: 2, removed: 1, failed: 0 })
+
+    expect(await sendResolveReminders(db)).toEqual({ reminded: 2, sent: 3, failed: 2 })
+    expect(sendPush.mock.calls.map(([messages]) => messages.map((m: { profileId: string }) => m.profileId))).toEqual([['alice'], ['bob'], ['carol']])
+    expect(rpc).toHaveBeenCalledWith('claim_push_log', { p_kind: 'resolve_reminder', p_refs: ['m-1', 'm-3'] })
+  })
+
+  it('claims nothing when every send failed, so the market is due again next run', async () => {
+    const rpc = vi.fn(async () => ({ data: [{ market_id: 'm-1', title: 'A', profile_id: 'alice' }], error: null }))
+    sendPush.mockResolvedValue({ sent: 0, removed: 0, failed: 1 })
+    expect(await sendResolveReminders({ rpc } as unknown as DbClient)).toEqual({ reminded: 0, sent: 0, failed: 1 })
+    expect(rpc).not.toHaveBeenCalledWith('claim_push_log', expect.anything())
+  })
+
+  it('reports a failed claim, since the next run would otherwise repeat a push it can’t remember', async () => {
+    const failure = new Error('db down')
+    const rpc = vi.fn(async (fn: string) =>
+      fn === 'due_resolve_reminders' ? { data: [{ market_id: 'm-1', title: 'A', profile_id: 'alice' }], error: null } : { data: null, error: failure },
+    )
+    expect(await sendResolveReminders({ rpc } as unknown as DbClient)).toEqual({ error: failure })
   })
 
   it('tells the reviewers the database picks about a new submission', async () => {
@@ -125,20 +165,31 @@ describe('notify', () => {
     expect(sendPush).not.toHaveBeenCalled()
   })
 
-  it('alerts each admin once per market, counting markets not recipients', async () => {
-    const { db, rpc } = dbReturning([
-      { market_id: 'm-1', title: 'Will it rain?', profile_id: 'ada' },
-      { market_id: 'm-1', title: 'Will it rain?', profile_id: 'olive' },
-    ])
-    expect(await sendMarketAlerts(db)).toEqual({ alerted: 1 })
-    expect(rpc).toHaveBeenCalledWith('push_market_alerts')
+  it('alerts each admin once per market, sending a market’s admins together and counting markets not recipients', async () => {
+    const rpc = vi.fn(async (fn: string) =>
+      fn === 'due_market_alerts'
+        ? {
+            data: [
+              { market_id: 'm-1', title: 'Will it rain?', profile_id: 'ada' },
+              { market_id: 'm-1', title: 'Will it rain?', profile_id: 'olive' },
+            ],
+            error: null,
+          }
+        : { data: 1, error: null },
+    )
+    const db = { rpc } as unknown as DbClient
+    sendPush.mockResolvedValue({ sent: 2, removed: 0, failed: 0 })
+    expect(await sendMarketAlerts(db)).toEqual({ alerted: 1, sent: 2, failed: 0 })
+    expect(rpc).toHaveBeenCalledWith('due_market_alerts')
+    expect(sendPush).toHaveBeenCalledTimes(1)
     expect(sendPush.mock.calls[0][0]).toHaveLength(2)
+    expect(rpc).toHaveBeenCalledWith('claim_push_log', { p_kind: 'market_alert', p_refs: ['m-1'] })
   })
 
   it("doesn't claim market alerts it can't send", async () => {
     vi.stubEnv('VAPID_PRIVATE_KEY', '')
     const { db, rpc } = dbReturning([])
-    expect(await sendMarketAlerts(db)).toEqual({ alerted: 0 })
+    expect(await sendMarketAlerts(db)).toEqual({ alerted: 0, sent: 0, failed: 0 })
     expect(rpc).not.toHaveBeenCalled()
   })
 
@@ -148,12 +199,15 @@ describe('notify', () => {
     expect(await sendMarketAlerts(db)).toEqual({ error: failure })
   })
 
-  it('runs the creator reminders and the admin alerts together', async () => {
+  it('runs the creator reminders and the admin alerts together, adding up what the devices took', async () => {
     const rpc = vi.fn(async (fn: string) =>
-      fn === 'push_resolve_reminders'
+      fn === 'due_resolve_reminders'
         ? { data: [{ market_id: 'm-1', title: 'A', profile_id: 'alice' }], error: null }
-        : { data: [{ market_id: 'm-2', title: 'B', profile_id: 'ada' }], error: null },
+        : fn === 'due_market_alerts'
+          ? { data: [{ market_id: 'm-2', title: 'B', profile_id: 'ada' }], error: null }
+          : { data: 1, error: null },
     )
-    expect(await sendClosingAlerts({ rpc } as unknown as DbClient)).toEqual({ reminded: 1, alerted: 1 })
+    sendPush.mockResolvedValueOnce({ sent: 1, removed: 0, failed: 1 }).mockResolvedValueOnce({ sent: 2, removed: 0, failed: 0 })
+    expect(await sendClosingAlerts({ rpc } as unknown as DbClient)).toEqual({ reminded: 1, alerted: 1, sent: 3, failed: 1 })
   })
 })

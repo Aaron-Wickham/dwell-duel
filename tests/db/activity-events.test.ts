@@ -11,8 +11,7 @@ import {
   createTestTask,
   ensureInvited,
   type Member,
-  type TestMarket,
-} from './fixtures'
+  type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 
 let alice: Member
@@ -30,8 +29,7 @@ beforeEach(async () => {
   carolClient = await clientFor(carol)
   for (const client of [aliceClient, bobClient, carolClient]) await ensureInvited(client)
   // Alice is an admin so she can resolve before close_at, override, void and review tasks.
-  const { error } = await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
-  if (error) throw error
+  await giveRole(alice, 'admin')
 })
 
 async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
@@ -419,9 +417,12 @@ interface PlanNode {
 // both are priced out for the one statement: a plan that still reads activity_events in feed order
 // can only be walking an index that holds that order. `set local` ends with postgres-meta's
 // implicit transaction.
+// `analyze` first: every test file's setup wipes the tables in one statement (#214), and until
+// autovacuum catches up the planner's row estimates are left over from earlier files, so it could
+// pick a different index depending on file order (#233). Fresh stats make the plan deterministic.
 async function planNodes(query: string): Promise<PlanNode[]> {
   const [row] = await pgQuery<{ 'QUERY PLAN': [{ Plan: PlanNode }] }>(
-    `set local enable_seqscan = off; set local enable_bitmapscan = off; set local enable_sort = off; explain (format json) ${query}`,
+    `analyze; set local enable_seqscan = off; set local enable_bitmapscan = off; set local enable_sort = off; explain (format json) ${query}`,
   )
   const nodes: PlanNode[] = []
   const walk = (node: PlanNode) => {
@@ -451,7 +452,8 @@ describe('activity_events indexes', () => {
       .single()
     if (error) throw error
     newest = data
-    await pgQuery('vacuum (analyze) public.activity_events;')
+    // full, so the previous file's wiped rows can't leave a bloated heap that tips the planner to the feed index
+    await pgQuery('vacuum (full, analyze) public.activity_events;')
   })
 
   it('reads a feed page, and a range below a cursor, in order from activity_events_feed_idx', async () => {

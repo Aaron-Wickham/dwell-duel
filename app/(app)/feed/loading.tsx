@@ -6,7 +6,7 @@ export default function Loading() {
   return (
     <SkeletonScreen name="feed" className={pageClassFor('reading')}>
       <SkeletonPageHeader description />
-      <FeedListSkeleton headingHidden />
+      <FeedListSkeleton headingHidden reactions />
     </SkeletonScreen>
   )
 }

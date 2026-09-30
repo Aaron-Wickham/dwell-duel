@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, giveRole } from './fixtures'
 import { getAtStake } from '@/lib/home/at-stake'
 
 let alice: Member
@@ -14,7 +14,7 @@ beforeEach(async () => {
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   for (const c of [aliceClient, bobClient]) await ensureInvited(c)
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+  await giveRole(alice, 'admin')
 })
 
 describe('my_at_stake', () => {

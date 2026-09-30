@@ -10,13 +10,14 @@ const CONFIRMED = 'data-confirmed-submit'
 // Holds a form's submit until the member confirms it. Any submit (the form's own button, Enter in
 // a field) opens the dialog instead; only the dialog's button, which joins the form through its
 // `form` attribute from inside the portal, lets the form's action run. The form keeps its fields
-// and its action, so Cancel leaves everything exactly as filled in.
-export function useConfirmSubmit() {
+// and its action, so Cancel leaves everything exactly as filled in. A form with more than one
+// submit button passes `needsConfirm` to say which submitters ask first.
+export function useConfirmSubmit(needsConfirm: (submitter: HTMLElement | null) => boolean = () => true) {
   const [open, setOpen] = useState(false)
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     const submitter = (event.nativeEvent as SubmitEvent).submitter
-    if (submitter?.hasAttribute(CONFIRMED)) return
+    if (submitter?.hasAttribute(CONFIRMED) || !needsConfirm(submitter)) return
     event.preventDefault()
     setOpen(true)
   }

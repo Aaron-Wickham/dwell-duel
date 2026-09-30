@@ -187,11 +187,22 @@ describe('press feedback', () => {
     for (const label of kinds) expect(label).toHaveClass('pressable')
   })
 
-  it('lifts the home tiles, which are cards themselves', () => {
+  it('lifts the home tiles as rows of one card on a phone, and as cards of their own from lg', () => {
     const { container } = render(
       <HomeTiles tiles={[{ id: 'markets', href: '/markets', icon: ChartColumn, title: 'Markets', subtitle: 'Bet on it' }]} />,
     )
-    expect(container.querySelector('a')).toHaveClass('pressable', 'hover-lift')
+    expect(container.querySelector('a')).toHaveClass('pressable', 'relative', 'hover-lift-row', 'lg:hover-lift', 'lg:before:hidden')
+    expect(container.querySelector('a')).not.toHaveClass('hover-lift')
+  })
+
+  it('lifts the podium’s places onto a panel, since the places themselves are transparent', () => {
+    const { container } = render(
+      <Podium signed={false} meId="m9" members={[1, 2, 3].map((rank) => ({ ...MEMBER, id: `m${rank}`, name: `M ${rank}`, score: 9 - rank, rank }))} />,
+    )
+    for (const place of container.querySelectorAll('li')) {
+      expect(place).toHaveClass('pressable', 'relative', 'hover-lift-row')
+      expect(place).not.toHaveClass('hover-lift')
+    }
   })
 
   it('gives every Button variant a hover colour as well as the grow', () => {

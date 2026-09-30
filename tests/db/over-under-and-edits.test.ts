@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -13,7 +13,7 @@ let adminClient: SupabaseClient
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
   admin = await makeMember('Ada')
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', admin.id)
+  await giveRole(admin, 'admin')
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   adminClient = await clientFor(admin)
@@ -161,6 +161,24 @@ describe('update_market', () => {
     expect((await aliceClient.rpc('update_market', { p_market_id: m.marketId, p_title: 'Late', p_description: null })).error?.message).toBe(
       "this market has closed, so it can't be edited",
     )
+  })
+
+  it('fixes the title once another member has a parlay leg on the market, not just a solo bet (#221)', async () => {
+    const m = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Will it snow?', seed: 20 })
+    const other = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Other', seed: 20 })
+    const { error: parlayErr } = await bobClient.rpc('place_parlay', { p_outcome_ids: [m.outcomeIds[0], other.outcomeIds[0]], p_stake: 5 })
+    if (parlayErr) throw parlayErr
+
+    expect((await aliceClient.rpc('update_market', { p_market_id: m.marketId, p_title: 'Will it snow on Sunday?', p_description: null })).error?.message).toBe(
+      "others have bet on this market, so its title can't change",
+    )
+    // The description still changes, and the creator's own parlay never fixes the title.
+    expect((await aliceClient.rpc('update_market', { p_market_id: m.marketId, p_title: 'Will it snow?', p_description: 'Any flakes count.' })).error).toBeNull()
+
+    const own = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Mine', seed: 20 })
+    const { error: ownErr } = await aliceClient.rpc('place_parlay', { p_outcome_ids: [own.outcomeIds[0], other.outcomeIds[1]], p_stake: 5 })
+    if (ownErr) throw ownErr
+    expect((await aliceClient.rpc('update_market', { p_market_id: own.marketId, p_title: 'Mine, reworded', p_description: null })).error).toBeNull()
   })
 
   it('never changes outcomes, kind, close time or line, and members still can’t update markets directly', async () => {

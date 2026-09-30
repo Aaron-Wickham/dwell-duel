@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { getMarketsToResolve } from '@/lib/markets/markets-to-resolve'
 
 const HOUR = 3_600_000
@@ -19,13 +19,11 @@ beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
   reviewer = await makeMember('Rhoda')
   admin = await makeMember('Ada')
-  const db = serviceClient()
   for (const [m, role] of [
     [reviewer, 'reviewer'],
     [admin, 'admin'],
   ] as const) {
-    const { error } = await db.from('profiles').update({ role }).eq('id', m.id)
-    if (error) throw error
+    await giveRole(m, role)
   }
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)

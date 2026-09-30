@@ -45,7 +45,27 @@ describe.each<[string, ReactElement, string[]]>([
   })
 })
 
+describe('the market chart skeleton', () => {
+  it('draws the range row and the tick row around the plot, as the chart does', () => {
+    const { container } = render(<MarketChartSkeleton />)
+
+    const plot = container.querySelector('.skeleton.h-\\[220px\\]')!
+    expect(plot).toHaveClass('md:h-[300px]')
+    expect(plot.previousElementSibling).toHaveClass('min-h-11')
+    expect(plot.nextElementSibling).toHaveClass('skeleton', 'h-5')
+  })
+})
+
 describe('the market actions skeleton', () => {
+  it('draws the bet column as a heading and a short paragraph, with nothing to fill in', () => {
+    const { container } = render(<MarketActionsSkeleton outcomes={2} />)
+
+    const card = container.querySelector('[data-skeleton="market-bet-form"] .rounded-card')!
+    expect(card).toHaveClass('gap-2')
+    expect(card.querySelectorAll('.skeleton.h-12, .skeleton.h-11')).toHaveLength(0)
+    expect(card.querySelectorAll('.skeleton.h-5')).toHaveLength(2)
+  })
+
   it('stands in for the outcomes card and the bet column, each in its own grid cell', () => {
     const { container } = render(<MarketActionsSkeleton outcomes={2} />)
 

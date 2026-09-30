@@ -9,20 +9,12 @@ export const ONBOARDING_DISMISSED = 'dismissed'
 export type OnboardingSteps = { photo: boolean; bet: boolean; task: boolean }
 
 // Null once the member has dismissed the card; the card hides itself when every step is done.
-export async function getOnboarding(supabase: DbClient, userId: string): Promise<OnboardingSteps | null> {
+export async function getOnboarding(supabase: DbClient): Promise<OnboardingSteps | null> {
   const jar = await cookies()
   if (jar.get(ONBOARDING_COOKIE)?.value === ONBOARDING_DISMISSED) return null
 
-  // A cancelled bet still counts as a first bet, and cancelling moves it out of `bets` (0037).
-  const counts = await Promise.all([
-    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('id', userId).not('avatar_path', 'is', null),
-    supabase.from('bets').select('id', { count: 'exact', head: true }).eq('profile_id', userId),
-    supabase.from('cancelled_bets').select('id', { count: 'exact', head: true }).eq('profile_id', userId),
-    supabase.from('parlays').select('id', { count: 'exact', head: true }).eq('profile_id', userId),
-    supabase.from('task_completions').select('id', { count: 'exact', head: true }).eq('profile_id', userId),
-  ])
-  for (const { error } of counts) if (error) throw error
-  const [photo, bets, cancelled, parlays, tasks] = counts.map(({ count }) => (count ?? 0) > 0)
-
-  return { photo, bet: bets || cancelled || parlays, task: tasks }
+  // One row from my_onboarding (0071) for the signed-in member, in place of five count queries (#210).
+  const { data, error } = await supabase.rpc('my_onboarding').single()
+  if (error) throw error
+  return { photo: data.photo, bet: data.bet, task: data.task }
 }

@@ -88,14 +88,8 @@ const POLICIES_NOW: Expression[] = [
     qual: "((profile_id = ( SELECT auth.uid() AS uid)) OR has_role('reviewer'::text) OR ((status = 'approved'::text) AND is_invited()))",
     with_check: null,
   },
+  // No insert policy since 0067: save_push_subscription is the only writer.
   { tablename: 'push_subscriptions', policyname: 'delete_own_push_subscriptions', cmd: 'DELETE', qual: '(profile_id = ( SELECT auth.uid() AS uid))', with_check: null },
-  {
-    tablename: 'push_subscriptions',
-    policyname: 'insert_own_push_subscriptions',
-    cmd: 'INSERT',
-    qual: null,
-    with_check: '((profile_id = ( SELECT auth.uid() AS uid)) AND is_invited())',
-  },
   { tablename: 'push_subscriptions', policyname: 'select_own_push_subscriptions', cmd: 'SELECT', qual: '(profile_id = ( SELECT auth.uid() AS uid))', with_check: null },
   { tablename: 'tasks', policyname: 'admin_insert_tasks', cmd: 'INSERT', qual: null, with_check: 'is_admin()' },
   { tablename: 'tasks', policyname: 'admin_update_tasks', cmd: 'UPDATE', qual: 'is_admin()', with_check: 'is_admin()' },

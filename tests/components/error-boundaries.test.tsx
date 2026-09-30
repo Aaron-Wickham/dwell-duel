@@ -12,6 +12,9 @@ vi.mock('next/font/google', () => ({
   Manrope: () => ({ variable: 'mock-font-manrope' }),
 }))
 
+const { reloadOnceForStaleChunk } = vi.hoisted(() => ({ reloadOnceForStaleChunk: vi.fn() }))
+vi.mock('@/lib/offline/stale-chunk', () => ({ reloadOnceForStaleChunk }))
+
 function testError(): Error & { digest?: string } {
   const error = new Error('boom') as Error & { digest?: string }
   error.digest = 'digest-123'
@@ -40,6 +43,17 @@ describe.each([
     expect(screen.getByRole('heading', { level: 1, name: 'Something went wrong' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
     expect(consoleError).toHaveBeenCalledWith(error, { digest: 'digest-123' })
+  })
+})
+
+describe('app/(app)/error.tsx', () => {
+  // #209: a tab that outlived a deploy asks for chunks the new build no longer serves.
+  it('offers the stale-chunk reload every error it renders, which decides for itself', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const error = testError()
+    render(<AppSegmentError error={error} retry={vi.fn()} />)
+    expect(reloadOnceForStaleChunk).toHaveBeenCalledWith(error)
+    vi.restoreAllMocks()
   })
 })
 

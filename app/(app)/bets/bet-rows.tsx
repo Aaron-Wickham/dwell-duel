@@ -19,7 +19,7 @@ function ResultChip({ result }: { result: MyBet['result'] }) {
     case 'lost':
       return <StatusChip tone="lost">Lost</StatusChip>
     case 'refunded':
-      return <StatusChip tone="void">Refunded</StatusChip>
+      return <StatusChip tone="void">{result.reason === 'no_winners' ? 'Refunded · no winners' : 'Refunded'}</StatusChip>
   }
 }
 
@@ -57,7 +57,7 @@ function Row({
         </Link>
         <p className="text-sm text-ink2">{detail}</p>
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-2 lg:mt-auto lg:w-full lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+      <div className="flex min-w-0 max-w-full shrink-0 flex-col items-end gap-2 lg:mt-auto lg:w-full lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
         {aside}
       </div>
     </li>

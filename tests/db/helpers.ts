@@ -1,5 +1,6 @@
 import { createClient, isAuthRetryableFetchError, type SupabaseClient } from '@supabase/supabase-js'
 import { config } from 'dotenv'
+import { pgQuery } from './pg-query'
 
 config({ path: '.env.local', quiet: true })
 
@@ -31,20 +32,23 @@ export function serviceClient(): SupabaseClient {
 }
 
 /**
- * Deletes every auth user, a page at a time. `listUsers()` returns only the first page of 50, so
- * a suite that adds more than that and is killed before its own cleanup would otherwise leave the
- * rest behind for the next file's own delete-everything setup to trip over. Deleting shifts the
- * pages, so re-listing after each batch is always page 1 again.
+ * Wipes every table the suite touches and every auth user, in one round trip through
+ * postgres-meta (pgQuery refuses anything but localhost). Every DB test file starts this way,
+ * and going table by table through PostgREST and then user by user through Auth's admin API
+ * was most of the suite's time (#214). Deleting from auth.users takes identities, sessions and
+ * tokens with it through Auth's own foreign keys, the same rows the admin API deletes.
  */
-export async function deleteAllAuthUsers(db: SupabaseClient): Promise<void> {
-  // Bounded so a delete that reports success without taking effect fails loudly instead of spinning.
-  for (let pass = 0; pass < 100; pass++) {
-    const { data, error } = await db.auth.admin.listUsers()
-    if (error) throw error
-    if (data.users.length === 0) return
-    for (const u of data.users) await deleteAuthUser(db, u.id)
-  }
-  throw new Error('deleteAllAuthUsers: auth users remain after 100 passes')
+export async function wipeDatabase(): Promise<void> {
+  await pgQuery(`
+    delete from public.parlays;
+    delete from public.task_completions;
+    delete from public.tasks;
+    delete from public.markets;
+    delete from public.coin_transactions;
+    delete from public.allowed_emails;
+    delete from public.profiles;
+    delete from auth.users;
+  `)
 }
 
 // Local Auth's admin API occasionally answers a delete with a retryable "Database error deleting

@@ -1,7 +1,8 @@
 // The push services of the browsers that support web push: Chrome and other Chromium browsers
 // (FCM), Firefox, Safari and Edge. The server POSTs to a saved endpoint, so it must never be free
-// to name any URL at all.
-const PUSH_HOSTS = ['fcm.googleapis.com', 'android.googleapis.com', 'push.services.mozilla.com', 'push.apple.com', 'notify.windows.com']
+// to name any URL at all. The database enforces the same list, SQL `push_hosts()` (0067); a DB
+// test keeps the two equal.
+export const PUSH_HOSTS = ['fcm.googleapis.com', 'android.googleapis.com', 'push.services.mozilla.com', 'push.apple.com', 'notify.windows.com']
 
 export const SUBSCRIPTION_LIMITS = { endpoint: 1024, p256dh: 128, auth: 64, userAgent: 512 } as const
 

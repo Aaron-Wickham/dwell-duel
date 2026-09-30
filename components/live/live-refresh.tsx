@@ -6,13 +6,14 @@ import { subscriptionKey, useLiveBaseSubscription, usePageSubscriptions } from '
 
 // Every table a signed-in page reads its live numbers from. supabase/migrations/0032 and 0035
 // publish them to the realtime publication (0037 adds cancelled_bets, 0053 feed_reactions and
-// market_comments); Postgres Changes then only delivers rows the member's
+// market_comments, 0070 market_outcomes); Postgres Changes then only delivers rows the member's
 // RLS lets them read -- except DELETE events, which skip RLS and carry only the primary key.
 // LiveRefresh never reads payloads either way; it just triggers a refresh, which re-reads through RLS.
 export const LIVE_TABLES = [
   'bets',
   'cancelled_bets',
   'markets',
+  'market_outcomes',
   'market_resolutions',
   'parlays',
   'parlay_legs',

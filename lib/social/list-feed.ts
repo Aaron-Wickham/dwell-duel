@@ -57,10 +57,13 @@ function toFeedEvent(r: FeedRow): FeedEvent {
   }
 }
 
-export async function listFeed(
+// `alongside` runs with the page's ids as soon as the rows are read, in parallel with the creator
+// stake lookup below (#210): the feed's reactions don't depend on the stakes, so they no longer
+// wait for them. Its result comes back on the page as `alongside`.
+export async function listFeed<T = undefined>(
   supabase: DbClient,
-  opts: { actorId?: string; page: PageParams },
-): Promise<KeysetPage<FeedEvent>> {
+  opts: { actorId?: string; page: PageParams; alongside?: (eventIds: string[]) => Promise<T> },
+): Promise<KeysetPage<FeedEvent> & { alongside: T }> {
   // The range read and its key probe share one builder, so the two can't drift apart on filters. Its column
   // list is a runtime string, so the generated types can't follow it, and each reader casts its rows.
   const feedQuery = (columns: string, filter: string | null, limit: number) => {
@@ -99,11 +102,14 @@ export async function listFeed(
   const resolved = rows.flatMap((r) =>
     r.kind === 'market_resolved' && r.market_id && r.market ? [{ id: r.market_id, createdBy: r.market.created_by }] : [],
   )
-  const stakes = await getCreatorStakes(supabase, resolved)
+  const [stakes, alongside] = await Promise.all([
+    getCreatorStakes(supabase, resolved),
+    opts.alongside?.(rows.map((r) => r.id)),
+  ])
   const events = rows.map((r) => {
     const event = toFeedEvent(r)
     if (r.kind === 'market_resolved' && r.market_id) event.creatorStake = describeCreatorStake(stakes.get(r.market_id), 'had')
     return event
   })
-  return { rows: events, next, windowed }
+  return { rows: events, next, windowed, alongside: alongside as T }
 }

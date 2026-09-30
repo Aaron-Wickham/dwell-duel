@@ -5,29 +5,24 @@ import type { ProofView } from '@/lib/proof/types'
 export interface MyCompletion {
   taskId: string
   status: 'pending' | 'approved' | 'rejected'
-  periodKey: string
   rewardAmount: number
   reviewNote: string | null
   proofCount: number
 }
 
-export async function listMyTaskCompletions(supabase: DbClient, profileId: string): Promise<MyCompletion[]> {
-  const { data, error } = await supabase
-    .from('task_completions')
-    .select('task_id, status, period_key, reward_amount, review_note, proof_attachments(id)')
-    .eq('profile_id', profileId)
-    .order('submitted_at', { ascending: false })
-
+// The newest completion of the current period for each task the member has touched, filtered in
+// SQL against each task's period (0071), so the Tasks page reads O(tasks) rows however long the
+// member's history is, and never asks for the period keys in a round trip of its own (#206).
+export async function listMyTaskCompletions(supabase: DbClient): Promise<MyCompletion[]> {
+  const { data, error } = await supabase.rpc('my_current_task_completions')
   if (error) throw error
 
   return (data ?? []).map((c) => ({
     taskId: c.task_id,
     status: c.status as MyCompletion['status'], // a CHECK-constrained text column
-    periodKey: c.period_key,
     rewardAmount: c.reward_amount,
     reviewNote: c.review_note,
-    // Ids, not a (count) aggregate: Supabase ships with PostgREST's aggregates turned off.
-    proofCount: c.proof_attachments.length,
+    proofCount: c.proof_count,
   }))
 }
 
@@ -83,13 +78,4 @@ export async function getMyPendingRewards(supabase: DbClient, profileId: string)
   if (error) throw error
   const rows = data ?? []
   return { count: rows.length, dc: rows.reduce((sum, r) => sum + r.reward_amount, 0) }
-}
-
-export async function countPendingTaskCompletions(supabase: DbClient): Promise<number> {
-  const { count, error } = await supabase
-    .from('task_completions')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'pending')
-  if (error) throw error
-  return count ?? 0
 }

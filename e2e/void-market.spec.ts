@@ -27,12 +27,12 @@ test('void a market through the confirmation dialog', async ({ page }) => {
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)
   await expect(trigger).toBeFocused()
-  await expect(page.getByText('Status: open')).toBeVisible()
+  await expect(page.getByText('Open', { exact: true })).toBeVisible()
 
   await trigger.click()
   await dialog.getByRole('button', { name: 'Void market', exact: true }).click()
 
-  await expect(page.getByText('Status: voided')).toBeVisible()
+  await expect(page.getByText('Voided', { exact: true })).toBeVisible()
   // The void card unmounts on success; the toast must survive that.
   await expect(page.getByText('Market voided.')).toBeVisible()
   await expect(page.getByRole('alertdialog')).toHaveCount(0)

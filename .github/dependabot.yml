@@ -34,8 +34,15 @@ updates:
       # eslint-plugin-jsx-a11y only declare eslint ^9 peers. Drop this once they support 10.
       - dependency-name: eslint
         update-types: ['version-update:semver-major']
+  # The workflows, plus the composite action under .github/actions. One PR a week for all of them,
+  # each one a CI run.
   - package-ecosystem: github-actions
-    directory: /
+    directories:
+      - /
+      - /.github/actions/*
     schedule:
       interval: weekly
       day: monday
+    groups:
+      actions:
+        patterns: ['*']

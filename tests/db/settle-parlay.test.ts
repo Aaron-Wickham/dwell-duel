@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { lockedOddsToBp, potentialPayout } from '@/lib/parlays/odds'
 
 let alice: Member
@@ -16,7 +16,7 @@ beforeEach(async () => {
   await ensureInvited(bobClient)
   // Alice creates, seeds, resolves, overrides, and voids every market; as
   // an admin she can resolve before close_at and override a resolution.
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+  await giveRole(alice, 'admin')
 })
 
 // Every market is seeded 5 on its first outcome and 15 on its second:
@@ -309,7 +309,7 @@ describe('parlay settlement', () => {
     expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: displayed })
   })
 
-  it('writes no parlay transactions when a market is re-resolved to the same outcome', async () => {
+  it('refuses to re-resolve a market to the same outcome, leaving the parlay and its transactions alone (#198)', async () => {
     const a = await seededMarket('Market A')
     const b = await seededMarket('Market B')
     const id = await placeParlay([a.outcomeIds[0], b.outcomeIds[0]], 10)
@@ -317,7 +317,7 @@ describe('parlay settlement', () => {
     await resolve(b, 0)
     const before = await bobTransactions()
 
-    await resolve(a, 0)
+    await expect(resolve(a, 0)).rejects.toMatchObject({ message: 'that outcome is already the result' })
     expect(await bobTransactions()).toEqual(before)
     expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: 160 })
   })

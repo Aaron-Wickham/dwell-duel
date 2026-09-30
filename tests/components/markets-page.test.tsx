@@ -62,7 +62,9 @@ function market(n: number, status: MarketSummary['status'], closeInMs = DAY): Ma
     edited: false,
     resolvedOutcomeLabel: status === 'resolved' ? 'Yes' : null,
     resolvedAt: status === 'resolved' ? new Date(Date.now() - DAY).toISOString() : null,
+    settledAt: status === 'open' ? null : new Date(Date.now() - DAY).toISOString(),
     outcomes: [],
+    sparkline: null,
   }
 }
 
@@ -103,7 +105,7 @@ describe('MarketsPage', () => {
     )
     expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: openTop, bottom: null })
     expect(listResolvedMarkets).toHaveBeenCalledWith({}, { top: null, bottom: resolvedEnd })
-    const facts = (m: MarketSummary) => ({ id: m.id, seedPerOutcome: 20, createdAt: '2026-09-01T10:00:00Z', outcomeIds: [] })
+    const facts = (m: MarketSummary) => ({ id: m.id, seedPerOutcome: 20, createdAt: '2026-09-01T10:00:00Z', outcomeIds: [], sparkline: null })
     expect(readSparklines).toHaveBeenCalledWith({}, [market(1, 'open'), market(2, 'open'), market(9, 'voided')].map(facts))
   })
 

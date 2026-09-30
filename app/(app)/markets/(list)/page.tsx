@@ -90,6 +90,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       seedPerOutcome: m.seedPerOutcome,
       createdAt: m.createdAt,
       outcomeIds: m.outcomes.map((o) => o.id),
+      sparkline: m.sparkline,
     })),
   )
 
@@ -120,6 +121,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       edited: market.edited,
       closeAt: market.closeAt,
       resolvedAt: market.resolvedAt,
+      settledAt: market.settledAt,
       outcomes: odds.map((o) => ({
         id: o.outcomeId,
         label: o.label,

@@ -11,6 +11,7 @@ vi.mock('react', async (importOriginal) =>
 )
 
 const { listFeed, requestShowMoreFocus, getReactions } = vi.hoisted(() => ({
+  // The real listFeed runs `alongside` with the page's ids and hands its result back (#210).
   listFeed: vi.fn(),
   requestShowMoreFocus: vi.fn(),
   getReactions: vi.fn(),
@@ -68,7 +69,7 @@ const event = (id: string): FeedEvent => ({
 
 async function renderPage(feed: KeysetPage<FeedEvent>, searchParams: Record<string, string> = {}) {
   getReactions.mockResolvedValue(new Map())
-  listFeed.mockResolvedValue(feed)
+  listFeed.mockImplementation(feedReturning(feed))
   render(await FeedPage({ params: Promise.resolve({}), searchParams: Promise.resolve(searchParams) }))
 }
 
@@ -77,6 +78,12 @@ beforeEach(() => {
   requestShowMoreFocus.mockReset()
   getReactions.mockReset()
 })
+
+type Alongside = { alongside?: (ids: string[]) => Promise<unknown> }
+// What the real listFeed does with `alongside`: runs it with the page's ids and returns its result on the page.
+function feedReturning(page: KeysetPage<FeedEvent>) {
+  return async (_supabase: unknown, opts: Alongside) => ({ ...page, alongside: await opts.alongside?.(page.rows.map((e) => e.id)) })
+}
 
 describe('FeedPage', () => {
   it('says there is nothing older, not that nothing has happened, for a window past the end', async () => {
@@ -96,7 +103,7 @@ describe('FeedPage', () => {
     getReactions.mockImplementation(async () =>
       new Map([['bet:1', { ...noReactions(), fire: { count: 3, mine: true }, clap: { count: 1, mine: false } }]]),
     )
-    listFeed.mockResolvedValue({ rows: [event('bet:1'), event('bet:2')], next: null, windowed: false })
+    listFeed.mockImplementation(feedReturning({ rows: [event('bet:1'), event('bet:2')], next: null, windowed: false }))
     render(await FeedPage({ params: Promise.resolve({}), searchParams: Promise.resolve({}) }))
 
     expect(getReactions).toHaveBeenCalledTimes(1)

@@ -1,23 +1,23 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useRef, useState } from 'react'
 import { updateTaskAction, type ActionState } from '@/lib/tasks/update-task'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
 import { PERIOD_LABEL } from '@/lib/tasks/period-label'
 import { Button } from '@/components/ui/button'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { StatusChip } from '@/components/ui/status-chip'
 import { cn } from '@/lib/utils'
 import { ConfirmActionButton } from '@/components/ui/confirm-action-button'
 import { deleteTaskAction } from '@/lib/admin/owner-actions'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { EditTaskForm } from './edit-task-form'
 
-const pillClass = 'inline-flex h-6 items-center whitespace-nowrap rounded-full px-[9px] text-xs font-extrabold'
-
 // `canDelete` is the owner's: delete_task (0040) only removes a task nobody has submitted yet.
 export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary; canDelete?: boolean }) {
   const [editing, setEditing] = useState(false)
+  const editButton = useRef<HTMLButtonElement>(null)
   const boundUpdate = updateTaskAction.bind(null, task.id)
   const [toggleState, toggleAction] = useActionState<ActionState, FormData>(
     withSuccessToast(boundUpdate, (s) => Boolean(s?.formError), task.isActive ? 'Task deactivated.' : 'Task reactivated.'),
@@ -33,13 +33,14 @@ export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary
           {task.title} — {task.rewardAmount} DC
         </p>
         <span className="flex flex-wrap gap-1.5">
-          {task.isRepeatable && task.period && <span className={cn(pillClass, 'bg-sunk text-ink2')}>{PERIOD_LABEL[task.period]}</span>}
-          {task.proofRequired && <span className={cn(pillClass, 'bg-sunk text-ink2')}>Proof required</span>}
-          {!task.isActive && <span className={cn(pillClass, 'bg-gold-soft text-gold')}>Inactive</span>}
+          {task.isRepeatable && task.period && <StatusChip tone="void">{PERIOD_LABEL[task.period]}</StatusChip>}
+          {task.proofRequired && <StatusChip tone="void">Proof required</StatusChip>}
+          {!task.isActive && <StatusChip tone="wait">Inactive</StatusChip>}
         </span>
       </div>
       <div className="flex gap-2">
         <Button
+          ref={editButton}
           variant="secondary"
           size="sm"
           aria-expanded={editing}
@@ -85,7 +86,17 @@ export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary
           {toggleState.formError}
         </Message>
       )}
-      {editing && <EditTaskForm id={editFormId} task={task} onDone={() => setEditing(false)} />}
+      {/* Save and Cancel both unmount the form under the keyboard, so focus goes back to Edit. */}
+      {editing && (
+        <EditTaskForm
+          id={editFormId}
+          task={task}
+          onDone={() => {
+            setEditing(false)
+            editButton.current?.focus()
+          }}
+        />
+      )}
     </li>
   )
 }

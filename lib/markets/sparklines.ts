@@ -2,7 +2,9 @@ import type { DbClient } from '@/lib/supabase/database'
 import { withSeededStart, type SeededMarket, type SeriesPoint } from '@/lib/markets/probability-series'
 import { IN_CHUNK, chunk } from '@/lib/pagination/chunk'
 
-export type SparklineMarket = { id: string } & SeededMarket
+// `sparkline` is the series 0070 cached when the market resolved or voided (null while it's open),
+// so only open markets are computed live.
+export type SparklineMarket = { id: string; sparkline?: SeriesPoint[] | null } & SeededMarket
 
 type SparklineRow = { market_id: string; points: { t: string; shares: Record<string, number> }[] }
 
@@ -17,12 +19,12 @@ async function rpcSparklines(supabase: DbClient, marketIds: string[]): Promise<S
 export async function listSparklines(supabase: DbClient, markets: SparklineMarket[]): Promise<Map<string, SeriesPoint[]>> {
   const byMarket = new Map<string, SeriesPoint[]>()
   if (markets.length === 0) return byMarket
-  const marketIds = markets.map((m) => m.id)
+  const liveIds = markets.filter((m) => !m.sparkline).map((m) => m.id)
 
-  const chunks = await Promise.all(chunk(marketIds, IN_CHUNK).map((part) => rpcSparklines(supabase, part)))
+  const chunks = await Promise.all(chunk(liveIds, IN_CHUNK).map((part) => rpcSparklines(supabase, part)))
   const rows = new Map(chunks.flat().map((row) => [row.market_id, row.points]))
   for (const market of markets) {
-    const points = (rows.get(market.id) ?? []).map((point) => ({ t: Date.parse(point.t), shares: point.shares }))
+    const points = market.sparkline ?? (rows.get(market.id) ?? []).map((point) => ({ t: Date.parse(point.t), shares: point.shares }))
     byMarket.set(market.id, withSeededStart(points, market))
   }
   return byMarket

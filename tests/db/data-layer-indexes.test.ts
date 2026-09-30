@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 
 const INDEXES: Record<string, string> = {
@@ -24,6 +24,8 @@ const INDEXES: Record<string, string> = {
     'CREATE INDEX market_resolutions_resolved_by_idx ON public.market_resolutions USING btree (resolved_by)',
   markets_current_resolution_id_idx:
     'CREATE INDEX markets_current_resolution_id_idx ON public.markets USING btree (current_resolution_id)',
+  markets_status_settled_idx:
+    'CREATE INDEX markets_status_settled_idx ON public.markets USING btree (status, settled_at DESC, id DESC)',
 }
 
 interface PlanNode {
@@ -39,9 +41,12 @@ interface PlanNode {
 // The fixtures are a handful of rows, where a sequential scan is cheapest whatever the indexes,
 // so seq scans are priced out for the one statement: a plan that still uses one has no index to
 // use. `set local` ends with postgres-meta's implicit transaction.
+// `analyze` first: every test file's setup wipes the tables in one statement (#214), and until
+// autovacuum catches up the planner's row estimates are left over from earlier files, so it could
+// pick a different index depending on file order (#233). Fresh stats make the plan deterministic.
 async function planNodes(query: string): Promise<PlanNode[]> {
   const [row] = await pgQuery<{ 'QUERY PLAN': [{ Plan: PlanNode }] }>(
-    `set local enable_seqscan = off; explain (format json) ${query}`,
+    `analyze; set local enable_seqscan = off; explain (format json) ${query}`,
   )
   const nodes: PlanNode[] = []
   const walk = (node: PlanNode) => {
@@ -114,8 +119,7 @@ beforeAll(async () => {
   const [alice, member] = await seedMembers()
   bob = member
   const db = serviceClient()
-  const { error: adminErr } = await db.from('profiles').update({ role: 'admin' }).eq('id', alice.id)
-  if (adminErr) throw adminErr
+  await giveRole(alice, 'admin')
   const aliceClient = await clientFor(alice)
   const bobClient = await clientFor(bob)
   await ensureInvited(bobClient)
@@ -250,20 +254,24 @@ describe('0033 indexes', () => {
 })
 
 describe('0048 indexes (#67)', () => {
-  it('lists resolved and voided markets newest first from the status index', async () => {
+  it('lists resolved and voided markets newest settled first from a status index (0066)', async () => {
     const nodes = await planNodes(
-      `select id, created_at from public.markets where status in ('resolved', 'voided') order by created_at desc, id desc limit 51`,
+      `select id, settled_at from public.markets where status in ('resolved', 'voided') order by settled_at desc, id desc limit 51`,
     )
-    // Two statuses can't be walked in created_at order from one index range, so at this fixture's
-    // few rows the planner may as well take 0049's status index and sort; either is index-based.
-    expect(indexesUsed(nodes).some((name) => ['markets_status_created_idx', 'markets_status_close_idx'].includes(name))).toBe(true)
+    // Two statuses can't be walked in settled_at order from one index range, so at this fixture's
+    // few rows the planner may as well take another status index and sort; either is index-based.
+    expect(
+      indexesUsed(nodes).some((name) => ['markets_status_settled_idx', 'markets_status_created_idx', 'markets_status_close_idx'].includes(name)),
+    ).toBe(true)
     expect(seqScanned(nodes)).toEqual([])
   })
 
   it('counts open markets from the status index', async () => {
     const nodes = await planNodes(`select count(*) from public.markets where status = 'open'`)
-    // 0049's (status, close_at, id) leads with status too, and serves the count as well.
-    expect(indexesUsed(nodes).some((name) => ['markets_status_created_idx', 'markets_status_close_idx'].includes(name))).toBe(true)
+    // 0049's (status, close_at, id) and 0066's (status, settled_at, id) lead with status too, and serve the count as well.
+    expect(
+      indexesUsed(nodes).some((name) => ['markets_status_created_idx', 'markets_status_close_idx', 'markets_status_settled_idx'].includes(name)),
+    ).toBe(true)
     expect(seqScanned(nodes)).toEqual([])
   })
 
@@ -314,6 +322,33 @@ describe('0048 indexes (#67)', () => {
     expect(rows.map((r) => r.indexname).sort()).toEqual(
       ['idempotency_keys_profile_id_idx', 'market_resolutions_outcome_id_idx', 'markets_created_by_idx', 'parlay_legs_outcome_id_idx'],
     )
+  })
+})
+
+describe('0070 index (#205)', () => {
+  it('creates the partial index stakes_riding reads pending parlays through', async () => {
+    const rows = await pgQuery<{ indexdef: string }>(
+      `select indexdef from pg_indexes where schemaname = 'public' and indexname = 'parlays_pending_profile_idx'`,
+    )
+    expect(rows.map((r) => r.indexdef)).toEqual([
+      "CREATE INDEX parlays_pending_profile_idx ON public.parlays USING btree (profile_id) WHERE (status = 'pending'::text)",
+    ])
+  })
+
+  it('reads the pending parlays riding on the board through an index, never a scan of every parlay', async () => {
+    // stakes_riding's parlay branch, as leaderboard_net_worth reads it (no profile filter) and as
+    // my_at_stake does (one profile). The fixture is a handful of rows, so which real index the
+    // planner ties on isn't asserted (#143); what must hold is that neither shape walks the table.
+    for (const query of [
+      `select profile_id, stake from public.parlays where status = 'pending'`,
+      `select profile_id, stake from public.parlays where status = 'pending' and profile_id = '${bob.id}'`,
+    ]) {
+      const nodes = await planNodes(query)
+      expect(seqScanned(nodes), query).toEqual([])
+      const scans = nodes.filter((n) => n['Relation Name'] === 'parlays')
+      expect(scans.length, query).toBeGreaterThan(0)
+      for (const scan of scans) expect(scanDetails(scan).indexNames.length, query).toBeGreaterThan(0)
+    }
   })
 })
 

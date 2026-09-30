@@ -20,7 +20,7 @@ const { getLeaderboardPage, requestShowMoreFocus, getRecords, getRace, getAwards
 vi.mock('@/lib/social/leaderboard', () => ({ getLeaderboardPage }))
 vi.mock('@/lib/social/leaderboard-extras', () => ({ getRecords, getRace, getAwards, getPastChampions }))
 // Recharts needs layout jsdom doesn't have; the chart has its own test.
-vi.mock('@/components/leaderboard/race-chart', () => ({ RaceChart: ({ series }: { series: unknown[] }) => <div data-testid="race">{series.length}</div> }))
+vi.mock('@/components/leaderboard/race-chart-lazy', () => ({ RaceChart: ({ series }: { series: unknown[] }) => <div data-testid="race">{series.length}</div> }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase: {}, user: { id: 'p-me' } }) }))
 vi.mock('@/components/live/live-tables', () => ({ LiveTables: () => null }))
 vi.mock('@/components/ui/show-more-focus', () => ({ ShowMoreFocus: () => null, requestShowMoreFocus }))
@@ -170,8 +170,12 @@ describe('LeaderboardPage', () => {
       windowed: false,
     })
     const podium = screen.getByRole('region', { name: 'Top three' })
-    const names = within(podium).getAllByRole('link').map((link) => link.textContent)
-    expect(names).toEqual(['Member 2', 'Member 1', 'Member 3'])
+    // Read in rank order; the winner is moved to the middle visually, with CSS order, so a screen
+    // reader and the Tab key meet first place first.
+    const places = within(podium).getAllByRole('listitem')
+    expect(places.map((place) => within(place).getByRole('link').textContent)).toEqual(['Member 1', 'Member 2', 'Member 3'])
+    expect(places.map((place) => place.className.match(/order-\d/)?.[0])).toEqual(['order-2', 'order-1', 'order-3'])
+    expect(within(podium).getByRole('heading', { level: 2, name: 'Top three' })).toHaveClass('sr-only')
     expect(within(podium).getByText('90 DC')).toBeInTheDocument()
     expect(screen.getAllByRole('listitem', { name: /Member/ })).toHaveLength(1)
   })

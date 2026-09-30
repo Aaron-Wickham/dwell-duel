@@ -28,8 +28,10 @@ describe('void_market', () => {
     const { data: bobProfile } = await db.from('profiles').select('balance').eq('id', bob.id).single()
     expect(bobProfile?.balance).toBe(100)
 
-    const { data: market } = await db.from('markets').select('status').eq('id', marketId).single()
+    const { data: market } = await db.from('markets').select('status, settled_at').eq('id', marketId).single()
     expect(market?.status).toBe('voided')
+    // settled_at (0066) records the void itself, even before the close time.
+    expect(Math.abs(Date.parse(market!.settled_at!) - Date.now())).toBeLessThan(15_000)
   })
 
   it('rejects voiding an already-resolved market', async () => {

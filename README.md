@@ -113,6 +113,7 @@ npm run test:e2e  # Playwright: builds and serves the app on :3000, so free that
 npm run lint      # ESLint, with no warnings allowed
 npm run typecheck # TypeScript
 npm run build     # production build
+npm run check:ios # the installed iPhone app's viewport, in the iOS Simulator (scripts/ios-standalone-check.mjs)
 ```
 
 `npx vitest run --project unit` runs only the tests that don't need the
@@ -173,9 +174,9 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
 - **No staging, and Vercel previews are off on purpose.** There's one
   hosted Supabase project (production), and the free tier's two-project
   limit is already used. Vercel's Preview environment has no credentials
-  and `commandForIgnoringBuildStep` skips every non-production build, so
-  PRs are reviewed through the diff and CI. Local Docker Supabase is the
-  dev and test environment.
+  and the dashboard's Ignored Build Step setting skips every non-production
+  build, so previews are off and PRs are reviewed through the diff and CI.
+  Local Docker Supabase is the dev and test environment.
 
 ### One-time setup (outside the code)
 
@@ -189,10 +190,12 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
 - Add the app's redirect URLs (`http://localhost:3000/callback`, and the
   production one) to Supabase → Auth → URL Configuration.
 - **Closing alerts' timer** (0064): in the SQL editor, store the app's origin
-  and the same `CRON_SECRET` Vercel has in Vault, so `pg_cron` can call
+  and the same `CRON_SECRET` Vercel has, in Supabase Vault, so `pg_cron` can call
   `/api/cron/closing-alerts` within a minute of a market closing:
   `select vault.create_secret('https://www.dwellduel.com', 'app_url');` and
-  `select vault.create_secret('<CRON_SECRET>', 'cron_secret');`.
+  `select vault.create_secret('<CRON_SECRET>', 'cron_secret');`. The backup
+  GitHub workflow (`.github/workflows/closing-alerts.yml`) needs the
+  `CRON_SECRET` repository secret and the `APP_URL` repository variable.
 - **CI's Docker Hub login:** GitHub's runners share Docker Hub's anonymous
   pull limit, and `supabase start` pulls seven images per job. Create a
   free Docker Hub account, make a read-only access token (Account settings

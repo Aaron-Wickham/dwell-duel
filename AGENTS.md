@@ -142,9 +142,8 @@ a line to `CHANGELOG.md` under the next release.
   an attempt key (0047), held in a ref until the action succeeds and kept
   when the response is lost, so tapping again returns the first result.
   The slip's ref lives in `SlipProvider`, because the sheet unmounts the
-  panel when it closes. A
-  new action that moves coins and can be retried takes a key the same way,
-  through `claim_idempotency_key` and `finish_idempotent`.
+  panel when it closes. A new action that moves coins and can be retried
+  takes a key the same way, through `claim_idempotency_key` and `finish_idempotent`.
 - **Settings are cookies on `<html>`.** Theme (`data-theme`), haptics
   (`data-haptics="off"`) and reduced motion (`data-motion="reduce"`) are
   set by the root layout before any JS runs. `motion-reduce:` covers both

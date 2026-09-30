@@ -68,8 +68,8 @@ export async function GET(request: Request) {
   }
 
   // A creator whose market has closed is asked to resolve it, and admins are told, once per market
-  // (#80, #123). Vercel Hobby runs this cron once a day, so it's the backstop: closing-alerts,
-  // called every few minutes from GitHub Actions, is what normally sends them.
+  // (#80, #123). Vercel Hobby runs this cron once a day, so it's the daily backstop: closing-alerts,
+  // called by Supabase's pg_cron within a minute of a market closing, is what normally sends them.
   const alerts = await sendClosingAlerts(db)
   if ('error' in alerts) {
     console.error(alerts.error)

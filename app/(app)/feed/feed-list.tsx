@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { BookOpen, Crown, Flag, Layers, MessageSquareText, Plus, Target, Trophy, type LucideIcon } from 'lucide-react'
+import { Ban, BookOpen, Crown, Flag, Layers, MessageSquareText, Plus, Target, Trophy, type LucideIcon } from 'lucide-react'
 import { describeEvent, type FeedEvent, type FeedKind } from '@/lib/social/describe-event'
 import { isOldEntry, relativeTime } from '@/lib/social/relative-time'
 import { SectionCard } from '@/components/ui/section-card'
@@ -16,6 +16,7 @@ const EVENT_ICONS: Record<FeedKind, LucideIcon> = {
   parlay_placed: Layers,
   market_created: Plus,
   market_resolved: Flag,
+  market_voided: Ban,
   bet_won: Trophy,
   parlay_won: Trophy,
   task_completed: BookOpen,
@@ -62,7 +63,7 @@ export function FeedList({
             icon={EVENT_ICONS[e.kind]}
             segments={describeEvent(e)}
             age={isOldEntry(e.occurredAt, now) ? <LocalTime iso={e.occurredAt} format="day" /> : relativeTime(e.occurredAt, now)}
-            detail={e.kind === 'market_resolved' ? e.resolutionNote : null}
+            detail={e.kind === 'market_resolved' ? e.resolutionNote : e.kind === 'market_voided' ? e.voidReason : null}
             note={e.kind === 'market_resolved' ? e.creatorStake : null}
             reactions={reactions && <ReactionBar eventId={e.id} reactions={reactions.get(e.id) ?? noReactions()} />}
             domId={rowIdPrefix && rowDomId(rowIdPrefix, e.id)}

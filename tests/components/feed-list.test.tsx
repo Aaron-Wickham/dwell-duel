@@ -17,6 +17,7 @@ const event: FeedEvent = {
   legCount: null,
   taskTitle: null,
   resolutionNote: null,
+  voidReason: null,
   creatorStake: null,
   season: null,
 }
@@ -35,6 +36,20 @@ describe('FeedList', () => {
     render(<FeedList now={NOW} events={[event]} heading="Recent activity" headingId="recent-activity" />)
     const card = screen.getByRole('heading', { name: 'Recent activity' }).closest('section')
     expect(card).toHaveClass('pb-1', 'md:pb-1', 'md:pt-[18px]')
+  })
+
+  it('shows a void with its reason under it', () => {
+    render(
+      <FeedList
+        now={NOW}
+        events={[{ ...event, id: 'void:m1', kind: 'market_voided', outcomeLabel: null, amount: null, voidReason: 'The picnic moved indoors.' }]}
+        heading="Recent activity"
+        headingId="recent-activity"
+      />,
+    )
+    const item = screen.getByRole('listitem')
+    expect(item).toHaveTextContent('Alice voided Social layer market')
+    expect(item).toHaveTextContent('The picnic moved indoors.')
   })
 
   it('renders the empty state inside the card, under a visible heading', () => {

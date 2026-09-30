@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
+import { pgQuery } from './pg-query'
 import {
   seedMembers,
   makeMember,
@@ -57,6 +58,7 @@ function legacyToFeedEvent(r: LegacyFeedRow): FeedEvent {
     legCount: r.leg_count,
     taskTitle: r.task_title,
     resolutionNote: null,
+    voidReason: null,
     creatorStake: null,
     season: null,
   }
@@ -160,8 +162,14 @@ describe('listFeed vs the pre-activity_events view', () => {
     // Resolve A to Yes: bob's leg wins.
     await resolve(a, 0)
     // Void B: both parlays settle on A alone -- bob's parlay wins, carol's loses.
-    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: b.marketId })
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: b.marketId, p_reason: 'Voided in a test' })
     expect(voidErr).toBeNull()
+    // The legacy view predates void events (0073), so this one is dropped to compare the rest like
+    // for like; tests/db/void-market.test.ts reads it through listFeed.
+    const [dropped] = await pgQuery<{ n: number }>(
+      `with d as (delete from public.activity_events where kind = 'market_voided' returning 1) select count(*)::integer as n from d`,
+    )
+    expect(dropped.n).toBe(1)
     // Override A to No: claws back A's payouts and reverses bob's parlay win; carol's parlay,
     // whose A leg now wins, wins in its place.
     await resolve(a, 1)

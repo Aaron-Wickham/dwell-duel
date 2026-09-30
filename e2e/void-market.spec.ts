@@ -12,6 +12,11 @@ test('void a market through the confirmation dialog', async ({ page }) => {
   const trigger = page.getByRole('button', { name: 'Void this market', exact: true })
   const dialog = page.getByRole('alertdialog', { name: 'Void this market?' })
 
+  // Every void says why: with no reason the browser holds the submit and no dialog opens.
+  await trigger.click()
+  await expect(dialog).toHaveCount(0)
+  await page.getByLabel('Why void this market?').fill('The potluck was moved to next month.')
+
   await trigger.click()
   await expect(dialog).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused()
@@ -37,4 +42,5 @@ test('void a market through the confirmation dialog', async ({ page }) => {
   await expect(page.getByText('Market voided.')).toBeVisible()
   await expect(page.getByRole('alertdialog')).toHaveCount(0)
   await expect(trigger).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Why it was voided' })).toHaveText('The potluck was moved to next month.')
 })

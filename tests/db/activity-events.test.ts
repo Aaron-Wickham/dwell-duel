@@ -417,9 +417,12 @@ interface PlanNode {
 // both are priced out for the one statement: a plan that still reads activity_events in feed order
 // can only be walking an index that holds that order. `set local` ends with postgres-meta's
 // implicit transaction.
+// `analyze` first: every test file's setup wipes the tables in one statement (#214), and until
+// autovacuum catches up the planner's row estimates are left over from earlier files, so it could
+// pick a different index depending on file order (#233). Fresh stats make the plan deterministic.
 async function planNodes(query: string): Promise<PlanNode[]> {
   const [row] = await pgQuery<{ 'QUERY PLAN': [{ Plan: PlanNode }] }>(
-    `set local enable_seqscan = off; set local enable_bitmapscan = off; set local enable_sort = off; explain (format json) ${query}`,
+    `analyze; set local enable_seqscan = off; set local enable_bitmapscan = off; set local enable_sort = off; explain (format json) ${query}`,
   )
   const nodes: PlanNode[] = []
   const walk = (node: PlanNode) => {

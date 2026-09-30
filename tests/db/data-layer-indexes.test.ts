@@ -41,9 +41,12 @@ interface PlanNode {
 // The fixtures are a handful of rows, where a sequential scan is cheapest whatever the indexes,
 // so seq scans are priced out for the one statement: a plan that still uses one has no index to
 // use. `set local` ends with postgres-meta's implicit transaction.
+// `analyze` first: every test file's setup wipes the tables in one statement (#214), and until
+// autovacuum catches up the planner's row estimates are left over from earlier files, so it could
+// pick a different index depending on file order (#233). Fresh stats make the plan deterministic.
 async function planNodes(query: string): Promise<PlanNode[]> {
   const [row] = await pgQuery<{ 'QUERY PLAN': [{ Plan: PlanNode }] }>(
-    `set local enable_seqscan = off; explain (format json) ${query}`,
+    `analyze; set local enable_seqscan = off; explain (format json) ${query}`,
   )
   const nodes: PlanNode[] = []
   const walk = (node: PlanNode) => {

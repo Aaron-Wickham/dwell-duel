@@ -262,7 +262,7 @@ await run(
           );
         end if;
       elsif v_market.rn <= ${RESOLVED + VOIDED} then
-        perform public.void_market(v_market.id);
+        perform public.void_market(v_market.id, 'Scale seed void');
       end if;
     end loop;
   end

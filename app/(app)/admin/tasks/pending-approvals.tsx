@@ -28,7 +28,16 @@ export type PendingRow = PendingCompletion & { submittedAge: string }
 export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[]; viewerId: string }) {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   const [approveState, approveAction, isApprovePending] = useActionState<BulkActionState | undefined, FormData>(bulkApproveTaskCompletionsAction, undefined)
-  const [rejectState, rejectAction, isRejectPending] = useActionState<BulkActionState | undefined, FormData>(bulkRejectTaskCompletionsAction, undefined)
+  // Controlled, so a refused reject keeps the shared reason; cleared once a reject goes through.
+  const [reason, setReason] = useState('')
+  const [rejectState, rejectAction, isRejectPending] = useActionState<BulkActionState | undefined, FormData>(
+    async (prev, formData) => {
+      const next = await bulkRejectTaskCompletionsAction(prev, formData)
+      if (!next?.formError) setReason('')
+      return next
+    },
+    undefined,
+  )
   // Only the most recently clicked bulk action's result stays visible — otherwise an
   // approve followed by a reject would leave both summaries on screen at once.
   const [lastBulk, setLastBulk] = useState<'approve' | 'reject' | null>(null)
@@ -141,6 +150,8 @@ export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[];
                 id="bulk-reason"
                 name="reason"
                 placeholder="Shared reason (optional)"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
                 maxLength={TEXT_LIMITS.reviewNote}
                 className="md:grow"
                 aria-invalid={bulkReasonInvalid}

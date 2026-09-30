@@ -19,7 +19,8 @@ export function PendingReviewChip() {
 export type TaskRowState =
   | { kind: 'pending'; proofCount?: number }
   | { kind: 'approved' }
-  | { kind: 'available'; rejectionNote?: string | null }
+  // rejection: the latest submission was turned down; the reason is optional (#200).
+  | { kind: 'available'; rejection?: { note: string | null } | null }
 
 export function TaskRow({
   title,
@@ -83,7 +84,11 @@ export function TaskRow({
         {state.kind === 'available' && (
           <>
             {action}
-            {state.rejectionNote && <p className="max-w-[220px] text-sm text-ink2">Not approved — {state.rejectionNote}</p>}
+            {state.rejection && (
+              <p className="max-w-[220px] text-sm text-ink2">
+                Not approved{state.rejection.note && ` — ${state.rejection.note}`}
+              </p>
+            )}
           </>
         )}
       </div>

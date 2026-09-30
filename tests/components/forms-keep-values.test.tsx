@@ -16,6 +16,7 @@ const actions = vi.hoisted(() => ({
   updateProfileAction: vi.fn(),
   bulkApproveTaskCompletionsAction: vi.fn(),
   bulkRejectTaskCompletionsAction: vi.fn(),
+  rejectTaskCompletionAction: vi.fn(),
 }))
 const { success } = vi.hoisted(() => ({ success: vi.fn() }))
 vi.mock('sonner', () => ({ toast: { success } }))
@@ -27,7 +28,7 @@ vi.mock('@/lib/tasks/update-task', () => ({ updateTaskAction: actions.updateTask
 vi.mock('@/lib/profile/update-profile', () => ({ updateProfileAction: actions.updateProfileAction }))
 vi.mock('@/lib/tasks/review-task-completion', () => ({
   approveTaskCompletionAction: vi.fn(),
-  rejectTaskCompletionAction: vi.fn(),
+  rejectTaskCompletionAction: actions.rejectTaskCompletionAction,
   bulkApproveTaskCompletionsAction: actions.bulkApproveTaskCompletionsAction,
   bulkRejectTaskCompletionsAction: actions.bulkRejectTaskCompletionsAction,
 }))
@@ -39,6 +40,7 @@ import { EditTaskForm } from '@/app/(app)/admin/tasks/edit-task-form'
 import { TaskCatalogItem } from '@/app/(app)/admin/tasks/task-catalog-item'
 import { ProfileForm } from '@/app/(app)/profile/profile-form'
 import { PendingApprovals } from '@/app/(app)/admin/tasks/pending-approvals'
+import { ReviewButtons } from '@/app/(app)/admin/tasks/review-buttons'
 
 const GENESIS: TaskSummary = {
   id: 't1',
@@ -295,5 +297,51 @@ describe('PendingApprovals Select all (#65)', () => {
     await screen.findByRole('alert')
     expect(screen.getByRole('checkbox', { name: 'Select Ben’s submission' })).toBeChecked()
     expect(selectAll()).toBePartiallyChecked()
+  })
+})
+
+describe('Reject reasons (#200)', () => {
+  it('keeps a row’s reason after the server refuses the reject', async () => {
+    actions.rejectTaskCompletionAction.mockResolvedValue({ formError: 'Could not reject that submission.' })
+    render(<ReviewButtons completionId="c1" submitterName="Alice" taskTitle="Read Genesis 1-3" />)
+    await userEvent.type(screen.getByLabelText('Reason for rejecting (optional)'), 'Needs a photo')
+    await userEvent.click(screen.getByRole('button', { name: /^Reject/ }))
+
+    await screen.findByRole('alert')
+    expect(screen.getByLabelText('Reason for rejecting (optional)')).toHaveValue('Needs a photo')
+    expect(success).not.toHaveBeenCalled()
+  })
+
+  it('clears a row’s reason once the reject goes through', async () => {
+    actions.rejectTaskCompletionAction.mockResolvedValue(undefined)
+    render(<ReviewButtons completionId="c1" submitterName="Alice" taskTitle="Read Genesis 1-3" />)
+    await userEvent.type(screen.getByLabelText('Reason for rejecting (optional)'), 'Needs a photo')
+    await userEvent.click(screen.getByRole('button', { name: /^Reject/ }))
+
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Submission rejected.'))
+    expect((actions.rejectTaskCompletionAction.mock.calls[0][2] as FormData).get('reason')).toBe('Needs a photo')
+    await waitFor(() => expect(screen.getByLabelText('Reason for rejecting (optional)')).toHaveValue(''))
+  })
+
+  it('keeps the shared reason after a bulk reject fails', async () => {
+    actions.bulkRejectTaskCompletionsAction.mockResolvedValue({ formError: 'Select at least one completion.' })
+    render(<PendingApprovals viewerId="viewer-1" pending={[pendingRow('c1', 'p-alice', 'Alice')]} />)
+    await userEvent.type(screen.getByLabelText('Shared reason (optional)'), 'Try again next week')
+    await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }))
+
+    await screen.findByRole('alert')
+    expect(screen.getByLabelText('Shared reason (optional)')).toHaveValue('Try again next week')
+  })
+
+  it('clears the shared reason once a bulk reject goes through', async () => {
+    actions.bulkRejectTaskCompletionsAction.mockResolvedValue({ summary: '1 rejected.' })
+    render(<PendingApprovals viewerId="viewer-1" pending={[pendingRow('c1', 'p-alice', 'Alice')]} />)
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Alice’s submission' }))
+    await userEvent.type(screen.getByLabelText('Shared reason (optional)'), 'Try again next week')
+    await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }))
+
+    await screen.findByRole('status')
+    expect((actions.bulkRejectTaskCompletionsAction.mock.calls[0][1] as FormData).get('reason')).toBe('Try again next week')
+    await waitFor(() => expect(screen.getByLabelText('Shared reason (optional)')).toHaveValue(''))
   })
 })

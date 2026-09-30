@@ -48,7 +48,7 @@ export default async function TasksPage() {
                   ? { kind: 'pending', proofCount: current.proofCount }
                   : current?.status === 'approved'
                     ? { kind: 'approved' }
-                    : { kind: 'available', rejectionNote: current?.status === 'rejected' ? current.reviewNote : null }
+                    : { kind: 'available', rejection: current?.status === 'rejected' ? { note: current.reviewNote } : null }
 
               return (
                 <TaskRow

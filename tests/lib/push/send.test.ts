@@ -104,6 +104,19 @@ describe('sendPush', () => {
     expect(log).toHaveBeenCalled()
   })
 
+  it('never POSTs to an endpoint that isn’t a push service, whatever the table holds (#201)', async () => {
+    const evil = { ...sub('s2', 'alice'), endpoint: 'https://evil.example.com/collect' }
+    const { db, deleted, touched } = fakeDb([sub('s1', 'alice'), evil])
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    expect(await sendPush([{ profileId: 'alice', payload }], db)).toEqual({ sent: 1, removed: 0, failed: 0 })
+    expect(sendNotification).toHaveBeenCalledTimes(1)
+    expect(sendNotification.mock.calls[0][0].endpoint).toBe('https://fcm.googleapis.com/fcm/send/s1')
+    expect(deleted).toEqual([])
+    expect(touched).toEqual(['s1'])
+    expect(log).toHaveBeenCalledWith('Skipping push subscriptions with non-push endpoints', ['s2'])
+  })
+
   it('never throws when reading subscriptions fails', async () => {
     const db = {
       from: () => ({ select: () => ({ in: async () => ({ data: null, error: new Error('db down') }) }) }),

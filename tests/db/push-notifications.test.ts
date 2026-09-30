@@ -112,6 +112,9 @@ describe('push_subscriptions RLS', () => {
     expect(log ?? []).toEqual([])
     for (const [fn, args] of [
       ['push_resolve_reminders', undefined],
+      ['due_resolve_reminders', undefined],
+      ['due_market_alerts', undefined],
+      ['claim_push_log', { p_kind: 'market_alert', p_refs: [] }],
       ['push_market_result', { p_market_id: '00000000-0000-0000-0000-000000000000' }],
       ['push_task_reviews', { p_completion_ids: [] }],
       ['push_task_alerts', { p_completion_id: '00000000-0000-0000-0000-000000000000' }],
@@ -325,6 +328,57 @@ async function submitTask(m: Member, taskId: string): Promise<string> {
   if (error) throw error
   return data.id as string
 }
+
+// #207: the read no longer claims; the route claims a market once a device has taken its push.
+describe('due reads and claims (0071)', () => {
+  it('lists a due reminder as often as it is asked, until the market is claimed', async () => {
+    await subscribe(alice)
+    const due = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Due' })
+    await closeNow(due.marketId)
+    const row = { market_id: due.marketId, title: 'Due', profile_id: alice.id }
+
+    expect(await rpcOk(serviceClient(), 'due_resolve_reminders')).toEqual([row])
+    expect(await rpcOk(serviceClient(), 'due_resolve_reminders')).toEqual([row])
+    expect(await rpcOk(serviceClient(), 'claim_push_log', { p_kind: 'resolve_reminder', p_refs: [due.marketId] })).toBe(1)
+    expect(await rpcOk(serviceClient(), 'due_resolve_reminders')).toEqual([])
+    // Claiming again is a no-op, as a second caller racing the first would find.
+    expect(await rpcOk(serviceClient(), 'claim_push_log', { p_kind: 'resolve_reminder', p_refs: [due.marketId] })).toBe(0)
+  })
+
+  it('picks the same reminder recipients push_resolve_reminders did, and the same alert recipients push_market_alerts did', async () => {
+    const { member: reviewer } = await makeReviewer('Rae')
+    for (const m of [alice, bob, reviewer, admin]) await subscribe(m)
+    const due = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Due' })
+    const staked = await createTestMarket(bobClient, ['Yes', 'No'], { title: 'Creator bet on it' })
+    await rpcOk(bobClient, 'place_bet', { p_market_id: staked.marketId, p_outcome_id: staked.outcomeIds[0], p_amount: 5 })
+    const own = await createTestMarket(adminClient, ['Yes', 'No'], { title: 'Admin made it' })
+    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Still open' })
+    for (const m of [due, staked, own]) await closeNow(m.marketId)
+
+    expect(await rpcOk(serviceClient(), 'due_resolve_reminders')).toEqual(
+      [
+        { market_id: due.marketId, title: 'Due', profile_id: alice.id },
+        { market_id: own.marketId, title: 'Admin made it', profile_id: admin.id },
+      ].sort((a, b) => a.market_id.localeCompare(b.market_id)),
+    )
+    expect(await rpcOk(serviceClient(), 'due_market_alerts')).toEqual(
+      [
+        { market_id: due.marketId, title: 'Due', profile_id: admin.id },
+        { market_id: staked.marketId, title: 'Creator bet on it', profile_id: admin.id },
+      ].sort((a, b) => a.market_id.localeCompare(b.market_id)),
+    )
+
+    expect(await rpcOk(serviceClient(), 'claim_push_log', { p_kind: 'market_alert', p_refs: [due.marketId, staked.marketId] })).toBe(2)
+    expect(await rpcOk(serviceClient(), 'due_market_alerts')).toEqual([])
+    // A claim of one kind leaves the other kind due.
+    expect(await rpcOk<unknown[]>(serviceClient(), 'due_resolve_reminders')).toHaveLength(2)
+  })
+
+  it('only takes the two kinds push_log allows', async () => {
+    const { error } = await serviceClient().rpc('claim_push_log', { p_kind: 'party', p_refs: ['x'] })
+    expect(error?.message).toContain('push_log_kind_check')
+  })
+})
 
 describe('review alerts (0058)', () => {
   it('tells reviewers and above about a submission, never the submitter or a plain member', async () => {

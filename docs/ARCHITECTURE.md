@@ -123,7 +123,9 @@ the task catalogue and invite list, which are allowed by policy.
   sends nothing: Admin → Invites offers a "Copy invite message" to send
   the invitee yourself (`lib/invites/invite-message.ts`). An admin may delete
   only an unclaimed row (`admin_delete_invites`, 0073); a claimed one goes
-  only through `remove_member`.
+  only through `remove_member`. Members' insert grant covers only `email` and
+  `invited_by`, which defaults to and must equal the caller; `claimed_by` is
+  the profile trigger's alone.
 - `profiles`: one per member. Display name, bio, `avatar_path`, `balance`
   and `role` (owner › admin › reviewer › member). A trigger creates it on
   first sign-in and grants 100 DC.
@@ -200,7 +202,8 @@ the task catalogue and invite list, which are allowed by policy.
   keyed `void:<market id>`, with the reason read from `markets.void_reason`.
   Neither has a row in `activity_feed`, so the DB tests' equivalence check
   leaves them out. `actor_id` cascades, so a champion's events go with
-  their profile.
+  their profile. `FeedList` skips any kind missing from its `EVENT_ICONS`,
+  so a kind added by a migration can't break a build that predates it.
 - `feed_reactions` (0053): one row per member, event and kind (`fire`,
   `pray`, `laugh`, `clap`), keyed `(event_id, profile_id, kind)` and
   cascading with the event and the member. Members insert and delete their
@@ -412,7 +415,7 @@ after it ships. They roughly follow the project's history:
 | 0070 | Speed at scale (#204, #205): `markets.sparkline` filled by the `cache_market_sparkline` trigger when a market resolves or voids (backfilled), `market_outcomes` in the realtime publication, and `parlays_pending_profile_idx` for `stakes_riding` |
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
-| 0073 | Permissions (#288, #289, #290): own-row branches of `resolve_market_core`, `can_resolve_market`, `void_market`, `update_market` and `delete_market_comment` need `is_invited()`; `remove_member` deletes the member's `auth.sessions`; `admin_delete_invites` only for unclaimed invites; `void_market(p_market_id, p_reason)` needs a reason (`markets.void_reason`, 500-character check), is admin-only after close and posts a `market_voided` feed event |
+| 0073 | Permissions (#288, #289, #290): own-row branches of `resolve_market_core`, `can_resolve_market`, `void_market`, `update_market` and `delete_market_comment` need `is_invited()`; `remove_member` deletes the member's `auth.sessions`; `admin_delete_invites` only for unclaimed invites, and the invite insert grant narrowed to `email` and `invited_by` (the caller); `void_market(p_market_id, p_reason)` needs a reason (`markets.void_reason`, 500-character check), is admin-only after close and posts a `market_voided` feed event |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 

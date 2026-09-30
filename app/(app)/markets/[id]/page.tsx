@@ -43,6 +43,7 @@ import { MarketComments } from './market-comments'
 import { ResolveForm } from './resolve-form'
 import { describeCreatorStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
 import { DeleteMarketButton } from './delete-market-button'
+import { hasBetHistory } from '@/lib/markets/bet-history'
 import { EditMarketDialog } from './edit-market-dialog'
 import { ShareButton } from './share-button'
 import { listMarketEdits } from '@/lib/markets/market-edits'
@@ -299,8 +300,9 @@ async function MarketActions({
   const canResolve = market.status === 'open' && resolvable.data === true
   const canOverride = market.status === 'resolved' && admin
   const canVoid = market.status === 'open' && (isCreator || admin)
-  // delete_market (0040) refuses a market with bets; an empty pool is the cheap signal for the button.
-  const canDelete = role === 'owner' && totalPool === 0
+  // delete_market (0040) refuses a market with bets, cancelled bets or parlay legs. An empty pool is
+  // the cheap first check; only the owner of an empty market pays for the other two (#221).
+  const canDelete = role === 'owner' && totalPool === 0 && !(await hasBetHistory(supabase, market.id))
   const showResolve = canResolve || canOverride
 
   const marketInSlip = market.outcomes.some((o) => slip.includes(o.id))

@@ -31,12 +31,16 @@ export async function updateTaskAction(taskId: string, _prevState: ActionState, 
   const rewardProblem = rewardError(rewardAmount)
   if (rewardProblem) return { formError: rewardProblem, field: 'reward_amount' }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('tasks')
     .update({ title, description: description || null, reward_amount: rewardAmount, is_active: isActive, proof_required: proofRequired })
     .eq('id', taskId)
+    .select('id')
 
   if (error) return friendlyError(error, TASK_ERRORS, 'Updating a task failed')
+  // RLS hides a row a non-admin may not edit (and an unknown id) instead of refusing it: the
+  // update matches nothing and reports no error, so an empty result is the refusal (#221).
+  if (!data?.length) return { formError: 'Only an admin can create or edit tasks.' }
 
   revalidatePath('/admin/tasks')
   return undefined

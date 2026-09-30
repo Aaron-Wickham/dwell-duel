@@ -123,14 +123,14 @@ describe('AddInviteForm', () => {
     const input = screen.getByLabelText('Email')
     expect(input).toHaveAttribute('placeholder', 'friend@gmail.com')
     expect(input).toHaveAccessibleDescription('They can sign in with this Google account right away.')
-    expect(screen.getByRole('button', { name: 'Add' })).toHaveAttribute('type', 'submit')
+    expect(screen.getByRole('button', { name: 'Add invite' })).toHaveAttribute('type', 'submit')
   })
 
   it('ties a server error to the email input', async () => {
     addInviteAction.mockResolvedValue({ formError: 'That email is already invited.' })
     render(<AddInviteForm />)
     await userEvent.type(screen.getByLabelText('Email'), 'sarah@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add invite' }))
 
     const error = await screen.findByRole('alert')
     expect(error).toHaveTextContent('That email is already invited.')
@@ -193,7 +193,7 @@ describe('AddInviteForm after adding (#85)', () => {
     addInviteAction.mockResolvedValue({ addedEmail: 'newfriend@example.com' })
     render(<AddInviteForm />)
     await userEvent.type(screen.getByLabelText('Email'), 'NewFriend@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add invite' }))
 
     expect(await screen.findByRole('status')).toHaveTextContent('Invite added. Send them the invite message so they know to sign in.')
     expect(screen.getByRole('button', { name: 'Copy invite message for newfriend@example.com' })).toBeInTheDocument()

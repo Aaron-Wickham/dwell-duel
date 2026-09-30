@@ -176,9 +176,10 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   Monday, and so on.
 - You submit a task once per period, with an optional note. Some tasks
   **require proof**: a photo, file or link.
-- A **reviewer** approves it, which pays the reward, or rejects it with a
-  reason. After a rejection you can submit again. Nobody reviews their own
-  submission, and a task can reward at most 500 DC.
+- A **reviewer** approves it, which pays the reward, or rejects it,
+  optionally saying why. Your row then says "Not approved", with the
+  reason if they gave one, and you can submit again. Nobody reviews their
+  own submission, and a task can reward at most 500 DC.
 - Your Home screen shows DC that's **Pending** review.
 - **Streaks:** do a repeating task in back-to-back periods and its row
   shows your streak, like "🔥 5-week streak", from two in a row. Only
@@ -228,8 +229,8 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   more of what's counted, then the name.
 - **Past champions** lists the months already crowned.
 - **Monthly champion:** when a month ends, whoever finished it with the
-  top profit is posted to the feed ("Alice was October's champion with
-  +140 DC"). If two finish level, it goes to whoever reached that total
+  top profit is posted to the feed early on the 1st, Eastern time ("Alice
+  was October's champion with +140 DC"). If two finish level, it goes to whoever reached that total
   first. A month where nobody bet, or nobody came out ahead, has no
   champion.
 
@@ -280,7 +281,7 @@ hear about, and your choices apply on every device:
 |---|---|---|
 | **Markets to resolve** | A market you made has closed and is waiting for you to resolve it. Admins and the owner also hear about every closed market that has no result, once each. Sent within about a minute of closing, with a daily backup if that's missed | On |
 | **Results** | A market you bet on, solo or as a parlay leg, is resolved ("You won 26 DC", then the market and its result), changed by an override or voided | On |
-| **Task reviews** | Your task submission is approved or rejected, with the reviewer's reason | On |
+| **Task reviews** | Your task submission is approved or rejected, with the reviewer's reason, if they gave one | On |
 | **Tasks to review** (reviewers and above only) | A member submits a task waiting for review. Never your own | On |
 | **New markets** | Someone else creates a market | Off |
 

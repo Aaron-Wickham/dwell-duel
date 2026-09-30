@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient, type TestClient, type SlipSummary } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, backLeg } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -18,10 +18,11 @@ beforeEach(async () => {
   a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'A' })
   b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'B' })
   c = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'C' })
-  // Parlay legs need a pool on their outcome to lock odds against.
+  // Parlay legs need other members' money on their outcome to be priced at close, and the floor.
   for (const m of [b, c]) {
     const { error } = await aliceClient.rpc('place_bet', { p_market_id: m.marketId, p_outcome_id: m.outcomeIds[0], p_amount: 5 })
     if (error) throw error
+    await backLeg(m, 1)
   }
 })
 

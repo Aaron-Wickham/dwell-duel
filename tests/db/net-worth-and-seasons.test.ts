@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient, type TestClient, setBalanceViaLedger } from './helpers'
-import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backLeg } from './fixtures'
 import { pgQuery } from './pg-query'
 import { getLeaderboardPage, getMemberStanding } from '@/lib/social/leaderboard'
 import { listFeed } from '@/lib/social/list-feed'
@@ -88,6 +88,7 @@ describe('leaderboard_net_worth', () => {
     let bobRow = (await netWorth()).get(bob.id)!
     expect(bobRow).toMatchObject({ balance: 70, at_stake: 30, score: 100 })
 
+    for (const market of [a, b]) await backLeg(market, 1)
     const { error: parlayErr } = await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]], p_stake: 10 })
     if (parlayErr) throw parlayErr
     bobRow = (await netWorth()).get(bob.id)!

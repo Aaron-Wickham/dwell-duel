@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { type TestClient, setBalanceViaLedger } from './helpers'
-import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, type Member, giveRole } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, type Member, giveRole, backLeg } from './fixtures'
 import { pgQuery } from './pg-query'
 import { listFeed } from '@/lib/social/list-feed'
 import { getLeaderboardPage, getMemberStanding } from '@/lib/social/leaderboard'
@@ -82,6 +82,7 @@ describe('listFeed', () => {
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Parlay market B' })
     expect((await aliceClient.rpc('place_bet', { p_market_id: a.marketId, p_outcome_id: a.outcomeIds[0], p_amount: 5 })).error).toBeNull()
     expect((await aliceClient.rpc('place_bet', { p_market_id: b.marketId, p_outcome_id: b.outcomeIds[0], p_amount: 5 })).error).toBeNull()
+    for (const market of [a, b]) await backLeg(market, 1)
     expect(
       (await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]], p_stake: 10 })).error,
     ).toBeNull()

@@ -9,7 +9,7 @@ import {
   createTestTask,
   ensureInvited,
   type Member,
-  type TestMarket, giveRole } from './fixtures'
+  type TestMarket, giveRole, backers, backLeg } from './fixtures'
 import { pgQuery } from './pg-query'
 
 let alice: Member
@@ -110,6 +110,7 @@ describe('activity_feed', () => {
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Market B' })
     await bet(aliceClient, a, 0, 5)
     await bet(aliceClient, b, 0, 5)
+    for (const m of [a, b]) await backLeg(m, 1)
     const { error } = await bobClient.rpc('place_parlay', {
       p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]],
       p_stake: 10,
@@ -186,9 +187,13 @@ describe('activity_feed', () => {
   it('shows a won parlay with its payout', async () => {
     const a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Market A' })
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Market B' })
+    // 13 on Yes and 39 on No from Alice and the backers: Yes prices at 4x at close.
+    const [first, second] = await backers()
     for (const m of [a, b]) {
       await bet(aliceClient, m, 0, 5)
       await bet(aliceClient, m, 1, 15)
+      await bet(first.client, m, 0, 8)
+      await bet(second.client, m, 1, 24)
     }
     const { error } = await bobClient.rpc('place_parlay', {
       p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]],
@@ -274,6 +279,7 @@ describe('activity_feed', () => {
     for (const m of [a, b]) {
       await bet(aliceClient, m, 0, 5)
       await bet(aliceClient, m, 1, 15)
+      await backLeg(m, 1)
     }
     const { data: parlayId, error: parlayErr } = await bobClient.rpc('place_parlay', {
       p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]],

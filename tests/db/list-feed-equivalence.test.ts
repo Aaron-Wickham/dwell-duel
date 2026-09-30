@@ -9,7 +9,7 @@ import {
   createTestTask,
   ensureInvited,
   type Member,
-  type TestMarket, giveRole } from './fixtures'
+  type TestMarket, giveRole, backLeg } from './fixtures'
 import { listFeed } from '@/lib/social/list-feed'
 import { readKeyset, type KeysetPage } from '@/lib/pagination/keyset'
 import { readPageParams, showMoreHref, type PageParams } from '@/lib/pagination/cursor'
@@ -146,6 +146,7 @@ describe('listFeed vs the pre-activity_events view', () => {
     await bet(carolClient, a, 1, 30)
     await bet(bobClient, b, 0, 4)
     await bet(carolClient, b, 1, 6)
+    for (const m of [a, b]) await backLeg(m, 1)
 
     const { error: parlayBobErr } = await bobClient.rpc('place_parlay', {
       p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]],

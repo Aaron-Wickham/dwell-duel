@@ -4,7 +4,7 @@ import { getParlayDetail } from '@/lib/parlays/get-parlay'
 import { readMemberStats } from '@/lib/members/stats'
 import { rpcLoose, serviceClient, type TestClient, expectError, reconcileBalances } from './helpers'
 import { pgQuery } from './pg-query'
-import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
+import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backers, backLeg } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -77,15 +77,23 @@ describe('leaderboard_awards', () => {
   })
 
   it('names the biggest win, best parlay, sharpshooter and most active member of the month', async () => {
-    // Bob's 20 on Yes against Carol's 30 pays floor(20 × 50 / 20) = 50: a gain of 30.
+    // Bob's 20 on Yes against Carol's 60 pays floor(20 × 80 / 20) = 80: a gain of 60, more than
+    // Backer1's 40 on the parlay's first leg.
     const big = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Bob wins this one' })
     await bet(bobClient, big, 0, 20)
-    await bet(carolClient, big, 1, 30)
+    await bet(carolClient, big, 1, 60)
     await resolve(big, 0)
 
-    // A parlay at 3.00× and 2.00×, seeded, so 6.00×, paying 60 on 10.
+    // A parlay at 3.00× and 2.00× (the backers' money at close), so 6.00×, paying 60 on 10.
+    // Carol also puts 1 DC on C, so she is the most active with three.
     const three = await createTestMarket(aliceClient, ['A', 'B', 'C'], { seed: 20 })
     const two = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    const [first, second] = await backers()
+    await bet(first.client, three, 0, 20)
+    await bet(second.client, three, 1, 40)
+    await bet(first.client, two, 0, 25)
+    await bet(second.client, two, 1, 25)
+    await bet(carolClient, three, 2, 1)
     const { error } = await carolClient.rpc('place_parlay', { p_outcome_ids: [three.outcomeIds[0], two.outcomeIds[0]], p_stake: 10 })
     if (error) throw error
     await resolve(three, 0)
@@ -93,23 +101,30 @@ describe('leaderboard_awards', () => {
 
     const rows = await awards(aliceClient)
     expect(award(rows, 'biggest_win')).toMatchObject({ profile_id: bob.id, display_name: 'Bob', detail: 'Bob wins this one' })
-    expect(Number(award(rows, 'biggest_win')?.value)).toBe(30)
+    expect(Number(award(rows, 'biggest_win')?.value)).toBe(60)
     expect(award(rows, 'best_parlay')).toMatchObject({ profile_id: carol.id })
     expect(Number(award(rows, 'best_parlay')?.value)).toBe(6)
     // Nobody has five decided bets yet.
     expect(award(rows, 'sharpshooter')).toBeUndefined()
-    // Bob and Carol have one bet each and Carol a parlay, so Carol is most active.
+    // Bob has one bet, each backer two, and Carol two and a parlay, so Carol is most active.
     expect(award(rows, 'most_active')).toMatchObject({ profile_id: carol.id })
-    expect(Number(award(rows, 'most_active')?.value)).toBe(2)
+    expect(Number(award(rows, 'most_active')?.value)).toBe(3)
   })
 
   it('gives best parlay the multiplier the parlay page and the Stats card show, not the floored payout over the stake', async () => {
-    // Bob's 30 on Yes leaves it 50 of 70 seeded: 1.40×. The other leg is 2.00×, and a third is voided
-    // and drops out. 3 DC at 2.80× pays floor(8.4) = 8, which is only 2.66× the stake.
+    // Bob's 30 and Backer1's 20 on Yes against Backer2's 20 on No: 70 / 50 = 1.40× at close. The
+    // other leg is 2.00×, and a third is voided and drops out. 3 DC at 2.80× pays floor(8.4) = 8,
+    // which is only 2.66× the stake.
+    const [first, second] = await backers()
     const skewed = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     await bet(bobClient, skewed, 0, 30)
+    await bet(first.client, skewed, 0, 20)
+    await bet(second.client, skewed, 1, 20)
     const even = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    await bet(first.client, even, 0, 25)
+    await bet(second.client, even, 1, 25)
     const voided = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    await backLeg(voided, 1)
     const { data: parlayId, error } = await carolClient.rpc('place_parlay', {
       p_outcome_ids: [skewed.outcomeIds[0], even.outcomeIds[0], voided.outcomeIds[0]],
       p_stake: 3,
@@ -122,7 +137,7 @@ describe('leaderboard_awards', () => {
 
     const detail = await getParlayDetail(carolClient, parlayId as string)
     expect(detail).toMatchObject({ status: 'won', credited: 8 })
-    const shown = combineOdds(detail!.legs.filter((l) => l.status !== 'voided').map((l) => l.lockedOddsBp)).multiplierBp
+    const shown = combineOdds(detail!.legs.filter((l) => l.status !== 'voided').map((l) => l.oddsBp)).multiplierBp
     expect(shown).toBe(detail!.multiplierBp)
     expect(formatOdds(shown)).toBe('2.80')
 

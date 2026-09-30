@@ -128,11 +128,16 @@ async function playScenario(): Promise<void> {
   await bet(bobClient, m1, 1, 10)
   await resolve(m1, 0)
 
-  // Two parlays on two unbet seeded markets, every leg locked at (0 + 40) / (0 + 20) = 2x.
-  // Bob's Yes-Yes wins 10 x 4 = 40 (the house adds 30); his No-No loses its 5 at the first
-  // resolution (the house removes 5).
+  // Two parlays on two seeded markets where Alice has 25 on No and Olive 25 on Yes, the parlay
+  // floor, so every leg prices at 50 / 25 = 2x at close. Bob's Yes-Yes wins 10 x 4 = 40 (the house
+  // adds 30); his No-No loses its 5 at the first resolution (the house removes 5). Olive's Yes
+  // pays her floor(25 x 90 / 45) = 50, the real pool, so the seed adds nothing on either market.
   const m2 = await createTestMarket(oliveClient, ['Yes', 'No'], { title: 'Leg one', seed: 20 })
   const m3 = await createTestMarket(oliveClient, ['Yes', 'No'], { title: 'Leg two', seed: 20 })
+  for (const m of [m2, m3]) {
+    await bet(aliceClient, m, 1, 25)
+    await bet(oliveClient, m, 0, 25)
+  }
   await parlay([m2.outcomeIds[0], m3.outcomeIds[0]], 10)
   await parlay([m2.outcomeIds[1], m3.outcomeIds[1]], 5)
   await resolve(m2, 0)
@@ -155,10 +160,14 @@ async function playScenario(): Promise<void> {
   const { error: voidErr } = await oliveClient.rpc('void_market', { p_market_id: m4.marketId, p_reason: 'Voided in a test' })
   if (voidErr) throw voidErr
 
-  // Still at stake: Alice's 12 on an open market and Bob's pending 4 DC parlay.
+  // Still at stake: 100 DC of solo bets on two open markets (Alice's 12 and Olive's 38 on one,
+  // Alice's 1 and Olive's 49 on the other, the parlay floor) and Bob's pending 4 DC parlay.
   const m5 = await createTestMarket(oliveClient, ['Yes', 'No'], { title: 'Open one', seed: 20 })
   const m6 = await createTestMarket(oliveClient, ['Yes', 'No'], { title: 'Open two', seed: 20 })
   await bet(aliceClient, m5, 0, 12)
+  await bet(oliveClient, m5, 0, 38)
+  await bet(aliceClient, m6, 1, 1)
+  await bet(oliveClient, m6, 1, 49)
   await parlay([m5.outcomeIds[1], m6.outcomeIds[0]], 4)
 }
 
@@ -210,11 +219,11 @@ describe('economy_summary', () => {
     expect(s.owner_adjustments_added).toBe(25)
     expect(s.owner_adjustments_removed).toBe(5)
 
-    expect(s.bets_at_stake).toBe(12)
+    expect(s.bets_at_stake).toBe(100)
     expect(s.parlays_at_stake).toBe(4)
-    // Alice 100 - 30 + 48 + 25 - 48 - 7 + 7 - 12 = 83; Bob 100 + 10 - 10 - 10 - 5 + 40 - 5 + 26
-    // - 3 + 3 - 4 = 142; Olive 100.
-    expect(s.balances).toBe(325)
+    // Alice 100 - 30 + 48 - 25 - 25 + 25 - 48 - 7 + 7 - 12 - 1 = 32; Bob 100 + 10 - 10 - 10 - 5
+    // + 40 - 5 + 26 - 3 + 3 - 4 = 142; Olive 100 - 25 - 25 + 50 + 50 - 38 - 49 = 63.
+    expect(s.balances).toBe(237)
     expect(s.unclassified).toBe(0)
   })
 

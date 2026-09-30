@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient, type TestClient } from './helpers'
-import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
+import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, insertLockedParlay } from './fixtures'
 import { getMarketsToResolve } from '@/lib/markets/markets-to-resolve'
 
 const HOUR = 3_600_000
@@ -96,11 +96,13 @@ describe('markets_to_resolve', () => {
   })
 
   it('counts a creator parlay leg as a stake that needs someone else', async () => {
-    // Seeded, so a leg has odds to lock before anyone has bet.
+    // A creator can't put their own market in a parlay since 0074; one placed before still counts.
     const legA = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Creator parlay leg', seed: 20 })
     const legB = await createTestMarket(bobClient, ['Yes', 'No'], { title: 'Other leg', seed: 20 })
-    const { error } = await aliceClient.rpc('place_parlay', { p_outcome_ids: [legA.outcomeIds[0], legB.outcomeIds[0]], p_stake: 5 })
-    if (error) throw error
+    await insertLockedParlay(alice.id, 5, [
+      { market: legA, outcomeIndex: 0, lockedOdds: 2 },
+      { market: legB, outcomeIndex: 0, lockedOdds: 2 },
+    ])
     await closedAgo(legA.marketId, HOUR)
 
     expect(await titles(reviewerClient)).toEqual(['Creator parlay leg'])

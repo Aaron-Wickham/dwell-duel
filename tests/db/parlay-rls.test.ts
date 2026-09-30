@@ -26,8 +26,8 @@ async function seedParlays(): Promise<SeededParlays> {
   const { data: parlays, error } = await db
     .from('parlays')
     .insert([
-      { profile_id: alice.id, stake: 10 },
-      { profile_id: bob.id, stake: 10 },
+      { profile_id: alice.id, stake: 10, max_multiplier: 20 },
+      { profile_id: bob.id, stake: 10, max_multiplier: 20 },
     ])
     .select('id, profile_id')
   if (error) throw error
@@ -82,7 +82,7 @@ describe('parlays / parlay_legs select policies', () => {
 describe('direct table writes', () => {
   it('rejects a direct insert into parlays', async () => {
     const aliceClient = await clientFor(alice)
-    const { error } = await aliceClient.from('parlays').insert({ profile_id: alice.id, stake: 10 })
+    const { error } = await aliceClient.from('parlays').insert({ profile_id: alice.id, stake: 10, max_multiplier: 20 })
     expect(error?.code).toBe('42501')
 
     const { count } = await serviceClient().from('parlays').select('*', { count: 'exact', head: true })

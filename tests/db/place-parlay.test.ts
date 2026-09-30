@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient, type TestClient, expectError } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backers } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -15,16 +15,18 @@ beforeEach(async () => {
   await ensureInvited(bobClient)
 })
 
-// Alice creates each market and seeds its pools; Bob places every parlay.
+// Alice creates each market; Backer1 stakes `yes` on Yes and Backer2 `no` on No; Bob places every
+// parlay.
 async function seededMarket(title: string, yes: number, no: number): Promise<TestMarket> {
   const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title })
-  const seeds: [string, number][] = [
-    [market.outcomeIds[0], yes],
-    [market.outcomeIds[1], no],
+  const [first, second] = await backers()
+  const seeds: [TestClient, string, number][] = [
+    [first.client, market.outcomeIds[0], yes],
+    [second.client, market.outcomeIds[1], no],
   ]
-  for (const [outcomeId, amount] of seeds) {
+  for (const [client, outcomeId, amount] of seeds) {
     if (amount === 0) continue
-    const { error } = await aliceClient.rpc('place_bet', {
+    const { error } = await client.rpc('place_bet', {
       p_market_id: market.marketId,
       p_outcome_id: outcomeId,
       p_amount: amount,
@@ -32,6 +34,15 @@ async function seededMarket(title: string, yes: number, no: number): Promise<Tes
     if (error) throw error
   }
   return market
+}
+
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
+  const { error } = await client.rpc('place_bet', {
+    p_market_id: market.marketId,
+    p_outcome_id: market.outcomeIds[outcomeIndex],
+    p_amount: amount,
+  })
+  if (error) throw error
 }
 
 async function bobBalance(): Promise<number> {
@@ -49,10 +60,16 @@ async function expectNothingPlaced(): Promise<void> {
   expect(await bobBalance()).toBe(100)
 }
 
+async function expectRefused(outcomeIds: string[], message: string): Promise<void> {
+  const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: outcomeIds, p_stake: 10 })
+  expectError(error, message)
+  await expectNothingPlaced()
+}
+
 describe('place_parlay', () => {
-  it("locks each leg's odds, debits the stake once, and leaves every pool untouched", async () => {
-    const a = await seededMarket('Market A', 5, 15) // Yes locks at 20 / 5 = 4
-    const b = await seededMarket('Market B', 10, 10) // Yes locks at 20 / 10 = 2
+  it('leaves each leg unpriced until its market closes, debits the stake once, and leaves every pool untouched', async () => {
+    const a = await seededMarket('Market A', 15, 45)
+    const b = await seededMarket('Market B', 30, 30)
 
     const { data: parlayId, error } = await bobClient.rpc('place_parlay', {
       p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]],
@@ -63,19 +80,17 @@ describe('place_parlay', () => {
     const db = serviceClient()
     const { data: parlay } = await db
       .from('parlays')
-      .select('profile_id, stake, status, credited')
+      .select('profile_id, stake, status, credited, max_multiplier')
       .eq('id', parlayId as string)
       .single()
-    expect(parlay).toEqual({ profile_id: bob.id, stake: 10, status: 'pending', credited: 0 })
+    expect(parlay).toEqual({ profile_id: bob.id, stake: 10, status: 'pending', credited: 0, max_multiplier: 20 })
 
     const { data: legs } = await db
       .from('parlay_legs')
       .select('market_id, outcome_id, locked_odds')
       .eq('parlay_id', parlayId as string)
     expect(legs).toHaveLength(2)
-    const oddsByMarket = new Map(legs!.map((l) => [l.market_id, Number(l.locked_odds)]))
-    expect(oddsByMarket.get(a.marketId)).toBe(4)
-    expect(oddsByMarket.get(b.marketId)).toBe(2)
+    expect(legs!.map((l) => l.locked_odds)).toEqual([null, null])
 
     expect(await bobBalance()).toBe(90)
     // Every fixture member also has a starting_grant row from the new-profile trigger.
@@ -91,14 +106,14 @@ describe('place_parlay', () => {
       .select('id, pool_total')
       .in('id', [...a.outcomeIds, ...b.outcomeIds])
     const poolById = new Map(pools!.map((p) => [p.id, p.pool_total]))
-    expect(poolById.get(a.outcomeIds[0])).toBe(5)
-    expect(poolById.get(a.outcomeIds[1])).toBe(15)
-    expect(poolById.get(b.outcomeIds[0])).toBe(10)
-    expect(poolById.get(b.outcomeIds[1])).toBe(10)
+    expect(poolById.get(a.outcomeIds[0])).toBe(15)
+    expect(poolById.get(a.outcomeIds[1])).toBe(45)
+    expect(poolById.get(b.outcomeIds[0])).toBe(30)
+    expect(poolById.get(b.outcomeIds[1])).toBe(30)
   })
 
   it('rejects fewer than 2 picks', async () => {
-    const a = await seededMarket('Market A', 5, 15)
+    const a = await seededMarket('Market A', 25, 25)
     const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0]], p_stake: 10 })
     expect(error?.message).toContain('a parlay needs 2 to 10 picks')
     await expectNothingPlaced()
@@ -112,14 +127,14 @@ describe('place_parlay', () => {
   })
 
   it('rejects two picks from the same market', async () => {
-    const a = await seededMarket('Market A', 5, 15)
+    const a = await seededMarket('Market A', 25, 25)
     const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: a.outcomeIds, p_stake: 10 })
     expect(error?.message).toContain('each pick must be from a different market')
     await expectNothingPlaced()
   })
 
   it('rejects the same outcome picked twice', async () => {
-    const a = await seededMarket('Market A', 5, 15)
+    const a = await seededMarket('Market A', 25, 25)
     const { error } = await bobClient.rpc('place_parlay', {
       p_outcome_ids: [a.outcomeIds[0], a.outcomeIds[0]],
       p_stake: 10,
@@ -129,7 +144,7 @@ describe('place_parlay', () => {
   })
 
   it('rejects an unknown outcome', async () => {
-    const a = await seededMarket('Market A', 5, 15)
+    const a = await seededMarket('Market A', 25, 25)
     const { error } = await bobClient.rpc('place_parlay', {
       p_outcome_ids: [a.outcomeIds[0], randomUUID()],
       p_stake: 10,
@@ -139,8 +154,8 @@ describe('place_parlay', () => {
   })
 
   it('rejects a market past its close time', async () => {
-    const a = await seededMarket('Market A', 5, 15)
-    const b = await seededMarket('Market B', 5, 15)
+    const a = await seededMarket('Market A', 25, 25)
+    const b = await seededMarket('Market B', 25, 25)
     await serviceClient()
       .from('markets')
       .update({ close_at: new Date(Date.now() - 1000).toISOString() })
@@ -155,8 +170,8 @@ describe('place_parlay', () => {
   })
 
   it('rejects a voided market', async () => {
-    const a = await seededMarket('Market A', 5, 15)
-    const b = await seededMarket('Market B', 5, 15)
+    const a = await seededMarket('Market A', 25, 25)
+    const b = await seededMarket('Market B', 25, 25)
     const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: b.marketId, p_reason: 'Voided in a test' })
     expect(voidErr).toBeNull()
 
@@ -169,8 +184,8 @@ describe('place_parlay', () => {
   })
 
   it('rejects a resolved market', async () => {
-    const a = await seededMarket('Market A', 5, 15)
-    const b = await seededMarket('Market B', 5, 15)
+    const a = await seededMarket('Market A', 25, 25)
+    const b = await seededMarket('Market B', 25, 25)
     await giveRole(alice, 'admin')
     const { error: resolveErr } = await aliceClient.rpc('resolve_market', {
       p_note: 'Resolved in a test',
@@ -187,21 +202,57 @@ describe('place_parlay', () => {
     await expectNothingPlaced()
   })
 
-  it('rejects an outcome nobody has bet on yet', async () => {
-    const a = await seededMarket('Market A', 5, 15)
-    const b = await seededMarket('Market B', 0, 10)
+  it('refuses a leg whose market has under 50 DC from other members', async () => {
+    const a = await seededMarket('Market A', 25, 25)
+    const b = await seededMarket('Market B', 24, 25)
+    await expectRefused([a.outcomeIds[0], b.outcomeIds[0]], "'Market B' needs at least 50 DC from 2 other members before it can be a parlay pick")
+  })
 
-    const { error } = await bobClient.rpc('place_parlay', {
-      p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]],
-      p_stake: 10,
-    })
-    expect(error?.message).toContain("'Yes' has no bets yet")
+  it('refuses a leg whose market has 50 DC from only one other member', async () => {
+    const a = await seededMarket('Market A', 25, 25)
+    const b = await seededMarket('Market B', 60, 0)
+    await expectRefused([a.outcomeIds[0], b.outcomeIds[0]], "'Market B' needs at least 50 DC from 2 other members before it can be a parlay pick")
+  })
+
+  it('leaves the bettor’s own stakes out of the floor', async () => {
+    const a = await seededMarket('Market A', 25, 25)
+    const b = await seededMarket('Market B', 20, 0)
+    // Bob's own 40 would make 60 DC from two members, but only other members' money counts.
+    await bet(bobClient, b, 1, 40)
+    const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]], p_stake: 10 })
+    expectError(error, "'Market B' needs at least 50 DC from 2 other members")
+    const { count } = await serviceClient().from('parlays').select('*', { count: 'exact', head: true })
+    expect(count).toBe(0)
+  })
+
+  it('accepts a leg on an outcome nobody else has backed, once the market meets the floor', async () => {
+    const a = await seededMarket('Market A', 25, 25)
+    const b = await seededMarket('Market B', 0, 0)
+    await bet(aliceClient, b, 1, 25)
+    await bet((await backers())[1].client, b, 1, 25)
+    const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]], p_stake: 10 })
+    expect(error).toBeNull()
+  })
+
+  it('refuses a leg on a market the bettor created', async () => {
+    const a = await seededMarket('Market A', 25, 25)
+    const own = await createTestMarket(bobClient, ['Yes', 'No'], { title: 'Bob’s market' })
+    await bet(aliceClient, own, 0, 30)
+    await bet((await backers())[0].client, own, 1, 30)
+    await expectRefused([a.outcomeIds[0], own.outcomeIds[0]], "'Bob’s market' is your own market, so it can't be a parlay pick")
+  })
+
+  it('refuses a stake over the 1,000 DC payout cap', async () => {
+    const a = await seededMarket('Market A', 25, 25)
+    const b = await seededMarket('Market B', 25, 25)
+    const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]], p_stake: 1001 })
+    expectError(error, 'a parlay pays at most 1000 DC, so its stake can be at most 1000 DC')
     await expectNothingPlaced()
   })
 
   it('rejects a non-positive stake', async () => {
-    const a = await seededMarket('Market A', 5, 15)
-    const b = await seededMarket('Market B', 5, 15)
+    const a = await seededMarket('Market A', 25, 25)
+    const b = await seededMarket('Market B', 25, 25)
     const { error } = await bobClient.rpc('place_parlay', {
       p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]],
       p_stake: 0,
@@ -211,8 +262,8 @@ describe('place_parlay', () => {
   })
 
   it('rejects a stake larger than the balance', async () => {
-    const a = await seededMarket('Market A', 5, 15)
-    const b = await seededMarket('Market B', 5, 15)
+    const a = await seededMarket('Market A', 25, 25)
+    const b = await seededMarket('Market B', 25, 25)
     const { error } = await bobClient.rpc('place_parlay', {
       p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]],
       p_stake: 101,
@@ -222,8 +273,8 @@ describe('place_parlay', () => {
   })
 
   it('rejects a caller who is not invited', async () => {
-    const a = await seededMarket('Market A', 5, 15)
-    const b = await seededMarket('Market B', 5, 15)
+    const a = await seededMarket('Market A', 25, 25)
+    const b = await seededMarket('Market B', 25, 25)
     await serviceClient().from('allowed_emails').delete().eq('email', bob.email)
 
     const { error } = await bobClient.rpc('place_parlay', {

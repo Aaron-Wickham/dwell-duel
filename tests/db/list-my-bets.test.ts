@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient, type TestClient } from './helpers'
 import { decodeCursor } from '@/lib/pagination/cursor'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backLeg } from './fixtures'
 import { listMyCancelledBets } from '@/lib/bets/list-my-bets'
 import { listMyWagers, type Wager, type WagerBucket } from '@/lib/bets/list-my-wagers'
 
@@ -167,6 +167,8 @@ describe('listMyWagers: bets and parlays together', () => {
     const a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'A', seed: 20 })
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'B', seed: 20 })
     await bet(bobClient, a, 0, 5)
+    await backLeg(a, 1)
+    await backLeg(b, 0)
     const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[1]], p_stake: 4 })
     if (error) throw error
     await bet(bobClient, b, 0, 3)
@@ -187,6 +189,7 @@ describe('listMyWagers: bets and parlays together', () => {
   it('pages across both kinds with Show more, and ignores a cursor that names neither', async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     const other = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    for (const m of [market, other]) await backLeg(m, 1)
     const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [market.outcomeIds[0], other.outcomeIds[0]], p_stake: 2 })
     if (error) throw error
     for (let i = 0; i < 50; i++) await bet(bobClient, market, i % 2, 1)

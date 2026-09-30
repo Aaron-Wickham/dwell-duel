@@ -606,7 +606,9 @@ leaves out empty lines and hides when every one is empty.
   `.github/actions/local-supabase`, which keeps Supabase's images in the
   Actions cache per CLI version (loaded before `supabase start`, saved
   after a miss): they come from AWS's public registry, whose anonymous data
-  limit GitHub's runners share and hit (#238). Every third-party action is
+  limit GitHub's runners share and hit (#238). A cache saved on a PR is scoped to that PR, so
+  `.github/workflows/warm-caches.yml` saves it on `main` (when the setup
+  changes, weekly, and by hand) for every PR to restore. Every third-party action is
   pinned to a commit SHA with its tag in a trailing comment
   (`uses: actions/checkout@<sha> # v7`); Dependabot's `github-actions`
   ecosystem (`.github/dependabot.yml`) keeps the SHA pins up to date in its

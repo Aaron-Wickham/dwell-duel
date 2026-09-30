@@ -31,16 +31,18 @@ description and a closing time, and it comes in one of three kinds:
 | **Multiple choice** | 2 to 6 outcomes you name |
 | **Over/Under** | A number with a line ending in .5 (for example "Minutes the sermon runs, 42.5"). The outcomes are Over 42.5 and Under 42.5, and it can never tie. |
 
-While a market is open, its creator (or an admin) can reword the title and
-description. Everyone can see every past version under "Edited". The
+While a market is open, its creator (or an admin) can edit the
+description, and can reword the title until someone else has bet on it,
+solo or as a parlay pick. Everyone can see every past version under
+"Edited". The
 outcomes, the closing time and the line can never change, because
 changing them would change the bet.
 
 The Markets page lists open markets **soonest to close first**, so one
 closing within the hour is at the top. A market closing within a day
 says so ("Closes in 2h"). Markets past their close time with no result
-yet are grouped under Awaiting resolution, and resolved and voided markets
-follow, most recently settled first: the order they were resolved or
+yet are grouped under Awaiting resolution, and Resolved and Voided markets
+follow as two groups, each most recently settled first: the order they were resolved or
 voided in, not the order they were created in. A voided market shows the
 day it was voided.
 
@@ -90,7 +92,9 @@ same formula as the real payout.
 - **Cancelling:** you can cancel a bet for a full refund until the market
   closes. Cancelled bets appear under My bets → Cancelled.
 - **No winners:** if nobody bet on the winning outcome, everyone is
-  refunded. My bets marks such a bet "Refunded · no winners".
+  refunded. My bets marks such a bet "Refunded · no winners". (A parlay
+  pick on that outcome still counts as won, because parlays don't go into
+  the pool.)
 
 ## The slip, solo bets and parlays
 
@@ -146,8 +150,9 @@ full ledger) can see it.
 - **Who resolves:** once a market has closed, its creator or any
   reviewer, or an admin at any time. **Nobody but an admin resolves a
   market they have money on** (a bet or a parlay leg), so a creator who bet
-  leaves it to a reviewer. Every market shows what its creator has riding
-  on it ("Creator has 40 DC on Yes"), and so does its result in the feed. The resolver picks the winner (or, for an Over/Under,
+  leaves it to a reviewer. A market whose creator has money on it shows
+  what, bets and parlay picks alike ("Creator has 40 DC on Yes"), and so does
+  its result in the feed. The resolver picks the winner (or, for an Over/Under,
   types the actual number) and **must say why**. They can attach photos,
   files or links as proof. The reason and proof show on the market page
   and in the feed. Before anything is paid, the app asks them to confirm,
@@ -155,7 +160,7 @@ full ledger) can see it.
 - **Reminders:** bettors' DC and parlays wait on a market awaiting
   resolution until it's resolved, so Home shows **Markets to resolve** to
   whoever should do it. A creator sees their own markets as soon as they close
-  (unless they have money on one). Reviewers and admins see any market
+  (unless they have money on one and aren't an admin). Reviewers and admins see any market
   still unresolved 48 hours after closing, and straight away one whose
   creator has money on it, since the creator can't resolve that one.
 - **Overrides:** an admin can change a result to a different outcome; the
@@ -204,8 +209,8 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   this month, and its winnings count next month. Only members who've bet
   or been paid this month appear.
 - **Ties share a rank** on both boards ("1, 1, 3").
-- **Podium and records:** the top three of either board stand on a
-  podium above the list. Each row shows a win-loss record (like 6-3):
+- **Podium and records:** once three members are ranked, the top three
+  of either board stand on a podium above the list. Each row shows a win-loss record (like 6-3):
   your settled solo bets and parlays, all time. Bets on a voided market,
   or on one that resolved to an outcome nobody backed, are refunds and
   count as neither, and open bets don't count yet.
@@ -225,8 +230,10 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   the same figure its parlay page and the profile's Stats card show),
   **Sharpshooter** (the best solo hit rate over markets resolved this
   month, with at least five decided bets) and **Most active** (the most
-  solo bets and parlays placed this month). A tie goes to whoever has
-  more of what's counted, then the name.
+  solo bets and parlays placed this month). A tie on Biggest win goes to
+  the payout that came first, and on Best parlay to the parlay that paid
+  more. Sharpshooter and Most active go to whoever has more of what's
+  counted, then the name.
 - **Past champions** lists the months already crowned.
 - **Monthly champion:** when a month ends, whoever finished it with the
   top profit is posted to the feed early on the 1st, Eastern time ("Alice
@@ -288,13 +295,17 @@ hear about, and your choices apply on every device:
 A parlay only pays once all its legs are settled, so if your only stake
 in a market is a parlay leg, the notification just gives the result. A
 cancelled bet gets no notification. Tapping a notification opens the
-market or your tasks.
+market, your tasks, or (for Task to review) the review queue.
 
 **On iPhone and iPad,** notifications only work once DwellDuel is on
 your Home Screen (iOS 16.4 or later): tap Share, then Add to Home Screen,
 open DwellDuel from there and turn them on in Settings. If you've blocked
 notifications for DwellDuel, allow them again in your browser's or
 phone's settings.
+
+**Signing out stops notifications on that device,** so on a shared phone
+the next person to sign in never sees yours. Turn them on again after you
+sign back in. Your other devices keep theirs.
 
 ## Roles
 
@@ -303,11 +314,18 @@ phone's settings.
 | **Member** | Bet, create and resolve their own markets, submit tasks |
 | **Reviewer** | Approve and reject task submissions (not their own), and resolve closed markets they have no stake in |
 | **Admin** | Invite people, manage tasks, resolve, override or void any market, delete any comment, view members and the full ledger |
-| **Owner** (exactly one) | Adjust balances, grant and remove roles, and delete a market or task that hasn't been used |
+| **Owner** (exactly one) | Adjust balances, grant and remove roles, remove a member, remove anyone's bet while its market is open (with a refund), and delete a market or task that hasn't been used |
 
 Reviewers and above get a red count on the **Admin** button for what is
 waiting on them: other members' task submissions (reviewers and above) and
 closed markets with no result (admins and above). It disappears at zero.
+
+A role only counts while you're invited. The owner can **remove a member**
+from Admin → Members: they go back to plain member, their invite is
+revoked and their devices stop getting notifications, straight away. Their
+coins, bets and history stay where they are. If they sign in again they
+land on the not-invited page, and inviting them again brings them back as
+a member.
 
 ## Around the app
 
@@ -334,8 +352,9 @@ closed markets with no result (admins and above). It disappears at zero.
   Tap your avatar (top right) for your profile, where Edit profile and
   Settings live.
 - **Settings:** theme (System, Light or Dark), vibration on taps (Android),
-  reduced animations, [notifications](#notifications), this How it works
-  page, and sign out.
+  reduced animations, your profile (photo and name), [notifications](#notifications), this How it works
+  page, and sign out. Signing out only signs out the device you're on, and
+  stops its notifications; your other devices stay signed in.
 - **Install it:** add DwellDuel to your Home Screen for a full-screen app
   with a launch animation. It shows an offline page when you lose
   connection, and on iPhone and iPad it's how you get notifications.

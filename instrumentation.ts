@@ -1,5 +1,6 @@
-import { assertRequiredEnv } from '@/lib/env/required'
+import { assertRequiredEnv, warnMissingEnv } from '@/lib/env/required'
 
 export function register() {
   assertRequiredEnv()
+  warnMissingEnv()
 }

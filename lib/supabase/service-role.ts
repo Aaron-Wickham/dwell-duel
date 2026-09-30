@@ -1,6 +1,7 @@
 import 'server-only'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database'
+import { fetchWithTimeout, SERVER_FETCH_TIMEOUT_MS } from '@/lib/supabase/timeout-fetch'
 
 /**
  * Bypasses RLS entirely. Only for server-side code with no Supabase
@@ -16,5 +17,7 @@ export function serviceRoleClient(): SupabaseClient<Database> {
       'serviceRoleClient: missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SECRET_KEY',
     )
   }
-  return createClient<Database>(url, key, { auth: { persistSession: false } })
+  // The same bound the request-time clients have: a cron route waiting on a hung Supabase
+  // connection would otherwise run until Vercel killed it.
+  return createClient<Database>(url, key, { auth: { persistSession: false }, global: { fetch: fetchWithTimeout(SERVER_FETCH_TIMEOUT_MS) } })
 }

@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, createTestTask, ensureInvited, type Member } from './fixtures'
+import { pgQuery } from './pg-query'
+import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, createTestTask, ensureInvited, type Member, giveRole } from './fixtures'
+import { isPushEndpoint, PUSH_HOSTS } from '@/lib/push/subscription'
 
 let alice: Member
 let bob: Member
@@ -19,8 +21,7 @@ beforeEach(async () => {
   carol = await makeMember('Carol')
   dave = await makeMember('Dave')
   admin = await makeMember('Ada')
-  const { error } = await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', admin.id)
-  if (error) throw error
+  await giveRole(admin, 'admin')
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   carolClient = await clientFor(carol)
@@ -58,16 +59,11 @@ async function rpcOk<T>(client: SupabaseClient, fn: string, args?: Record<string
 }
 
 describe('push_subscriptions RLS', () => {
-  it('lets a member read, add and delete only their own subscriptions', async () => {
+  it('lets a member read and delete only their own subscriptions, saved through the RPC', async () => {
     await subscribe(bob)
     const own = { endpoint: endpointFor(alice), p256dh: 'k', auth: 'a' }
 
-    const { error: insertErr } = await aliceClient.from('push_subscriptions').insert({ profile_id: alice.id, ...own })
-    expect(insertErr).toBeNull()
-    const { error: forOther } = await aliceClient
-      .from('push_subscriptions')
-      .insert({ profile_id: bob.id, endpoint: endpointFor(bob, 'tablet'), p256dh: 'k', auth: 'a' })
-    expect(forOther).not.toBeNull()
+    await rpcOk(aliceClient, 'save_push_subscription', { p_endpoint: own.endpoint, p_p256dh: own.p256dh, p_auth: own.auth })
 
     const { data: seen } = await aliceClient.from('push_subscriptions').select('endpoint')
     expect(seen).toEqual([{ endpoint: own.endpoint }])
@@ -88,11 +84,71 @@ describe('push_subscriptions RLS', () => {
     expect(data ?? []).toEqual([])
   })
 
-  it('only takes an https endpoint', async () => {
+  it('refuses a direct INSERT: save_push_subscription is the only writer (#201)', async () => {
     const { error } = await aliceClient
       .from('push_subscriptions')
-      .insert({ profile_id: alice.id, endpoint: 'http://example.com/push', p256dh: 'k', auth: 'a' })
+      .insert({ profile_id: alice.id, endpoint: endpointFor(alice), p256dh: 'k', auth: 'a' })
+    expect(error?.code).toBe('42501')
+    const { count } = await serviceClient().from('push_subscriptions').select('id', { count: 'exact', head: true })
+    expect(count).toBe(0)
+  })
+
+  it('only takes an https endpoint', async () => {
+    const { error } = await aliceClient.rpc('save_push_subscription', { p_endpoint: 'http://example.com/push', p_p256dh: 'k', p_auth: 'a' })
     expect(error?.message).toContain('push_subscriptions_endpoint_https')
+  })
+
+  describe('push-service endpoints only (#201)', () => {
+    const ACCEPTED = [
+      'https://fcm.googleapis.com/fcm/send/abc',
+      'https://android.googleapis.com/gcm/send/abc',
+      'https://updates.push.services.mozilla.com/wpush/v2/abc',
+      'https://web.push.apple.com/abc',
+      'https://wns2-bl2p.notify.windows.com/w/?token=abc',
+      'https://FCM.googleapis.com:443/fcm/send/abc',
+    ]
+    const REFUSED = [
+      'https://evil.example.com/collect',
+      'https://fcm.googleapis.com.evil.example.com/collect',
+      'https://evil.example.com/fcm.googleapis.com/send',
+      'https://fcm.googleapis.com@evil.example.com/collect',
+      'https://evil.example.com\\@fcm.googleapis.com/collect',
+      'https://evil.example.com?x=fcm.googleapis.com',
+      'https://evil.example.com#fcm.googleapis.com',
+      'https://notfcm.googleapis.com/send',
+      'https://fcm.googleapis.com./send',
+    ]
+
+    it('accepts an FCM, Apple, Mozilla or WNS endpoint through the RPC', async () => {
+      for (const endpoint of ACCEPTED) {
+        const { error } = await aliceClient.rpc('save_push_subscription', { p_endpoint: endpoint, p_p256dh: 'k', p_auth: 'a' })
+        expect(error, endpoint).toBeNull()
+      }
+    })
+
+    it('refuses any other host through the RPC and a direct service-role insert alike', async () => {
+      for (const endpoint of REFUSED) {
+        const { error } = await aliceClient.rpc('save_push_subscription', { p_endpoint: endpoint, p_p256dh: 'k', p_auth: 'a' })
+        expect(error?.message, endpoint).toContain('push_subscriptions_endpoint_push_service')
+        const { error: direct } = await serviceClient()
+          .from('push_subscriptions')
+          .insert({ profile_id: alice.id, endpoint, p256dh: 'k', auth: 'a' })
+        expect(direct?.message, endpoint).toContain('push_subscriptions_endpoint_push_service')
+      }
+      const { count } = await serviceClient().from('push_subscriptions').select('id', { count: 'exact', head: true })
+      expect(count).toBe(0)
+    })
+
+    it('agrees with the app’s isPushEndpoint on every one of them, and names the same hosts', async () => {
+      const urls = [...ACCEPTED, ...REFUSED]
+      const rows = await pgQuery<{ endpoint: string; ok: boolean }>(
+        `select u as endpoint, public.is_push_endpoint(u) as ok from unnest(array[${urls.map((u) => `'${u}'`).join(', ')}]) as u`,
+      )
+      expect(rows.map((r) => [r.endpoint, r.ok])).toEqual(urls.map((u) => [u, isPushEndpoint(u)]))
+
+      const [{ hosts }] = await pgQuery<{ hosts: string[] }>('select public.push_hosts() as hosts')
+      expect(hosts).toEqual(PUSH_HOSTS)
+    })
   })
 
   it('hands a shared device to whoever saves it with the same keys, and refuses different keys', async () => {
@@ -112,6 +168,9 @@ describe('push_subscriptions RLS', () => {
     expect(log ?? []).toEqual([])
     for (const [fn, args] of [
       ['push_resolve_reminders', undefined],
+      ['due_resolve_reminders', undefined],
+      ['due_market_alerts', undefined],
+      ['claim_push_log', { p_kind: 'market_alert', p_refs: [] }],
       ['push_market_result', { p_market_id: '00000000-0000-0000-0000-000000000000' }],
       ['push_task_reviews', { p_completion_ids: [] }],
       ['push_task_alerts', { p_completion_id: '00000000-0000-0000-0000-000000000000' }],
@@ -303,8 +362,7 @@ describe('recipients', () => {
 })
 
 async function setRole(m: Member, role: 'reviewer' | 'admin' | 'owner'): Promise<void> {
-  const { error } = await serviceClient().from('profiles').update({ role }).eq('id', m.id)
-  if (error) throw error
+  await giveRole(m, role)
 }
 
 // A reviewer on the invite list, as a real one always is: push_wants skips anyone who isn't.
@@ -325,6 +383,57 @@ async function submitTask(m: Member, taskId: string): Promise<string> {
   if (error) throw error
   return data.id as string
 }
+
+// #207: the read no longer claims; the route claims a market once a device has taken its push.
+describe('due reads and claims (0071)', () => {
+  it('lists a due reminder as often as it is asked, until the market is claimed', async () => {
+    await subscribe(alice)
+    const due = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Due' })
+    await closeNow(due.marketId)
+    const row = { market_id: due.marketId, title: 'Due', profile_id: alice.id }
+
+    expect(await rpcOk(serviceClient(), 'due_resolve_reminders')).toEqual([row])
+    expect(await rpcOk(serviceClient(), 'due_resolve_reminders')).toEqual([row])
+    expect(await rpcOk(serviceClient(), 'claim_push_log', { p_kind: 'resolve_reminder', p_refs: [due.marketId] })).toBe(1)
+    expect(await rpcOk(serviceClient(), 'due_resolve_reminders')).toEqual([])
+    // Claiming again is a no-op, as a second caller racing the first would find.
+    expect(await rpcOk(serviceClient(), 'claim_push_log', { p_kind: 'resolve_reminder', p_refs: [due.marketId] })).toBe(0)
+  })
+
+  it('picks the same reminder recipients push_resolve_reminders did, and the same alert recipients push_market_alerts did', async () => {
+    const { member: reviewer } = await makeReviewer('Rae')
+    for (const m of [alice, bob, reviewer, admin]) await subscribe(m)
+    const due = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Due' })
+    const staked = await createTestMarket(bobClient, ['Yes', 'No'], { title: 'Creator bet on it' })
+    await rpcOk(bobClient, 'place_bet', { p_market_id: staked.marketId, p_outcome_id: staked.outcomeIds[0], p_amount: 5 })
+    const own = await createTestMarket(adminClient, ['Yes', 'No'], { title: 'Admin made it' })
+    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Still open' })
+    for (const m of [due, staked, own]) await closeNow(m.marketId)
+
+    expect(await rpcOk(serviceClient(), 'due_resolve_reminders')).toEqual(
+      [
+        { market_id: due.marketId, title: 'Due', profile_id: alice.id },
+        { market_id: own.marketId, title: 'Admin made it', profile_id: admin.id },
+      ].sort((a, b) => a.market_id.localeCompare(b.market_id)),
+    )
+    expect(await rpcOk(serviceClient(), 'due_market_alerts')).toEqual(
+      [
+        { market_id: due.marketId, title: 'Due', profile_id: admin.id },
+        { market_id: staked.marketId, title: 'Creator bet on it', profile_id: admin.id },
+      ].sort((a, b) => a.market_id.localeCompare(b.market_id)),
+    )
+
+    expect(await rpcOk(serviceClient(), 'claim_push_log', { p_kind: 'market_alert', p_refs: [due.marketId, staked.marketId] })).toBe(2)
+    expect(await rpcOk(serviceClient(), 'due_market_alerts')).toEqual([])
+    // A claim of one kind leaves the other kind due.
+    expect(await rpcOk<unknown[]>(serviceClient(), 'due_resolve_reminders')).toHaveLength(2)
+  })
+
+  it('only takes the two kinds push_log allows', async () => {
+    const { error } = await serviceClient().rpc('claim_push_log', { p_kind: 'party', p_refs: ['x'] })
+    expect(error?.message).toContain('push_log_kind_check')
+  })
+})
 
 describe('review alerts (0058)', () => {
   it('tells reviewers and above about a submission, never the submitter or a plain member', async () => {

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 
 // #61: a repeat of an attempt key returns the first call's result instead of acting again.
 let alice: Member
@@ -136,7 +136,7 @@ describe('place_slip with an attempt key', () => {
 
 describe('adjust_balance with an attempt key', () => {
   it('adjusts once when the same key is sent twice', async () => {
-    await serviceClient().from('profiles').update({ role: 'owner' }).eq('id', alice.id)
+    await giveRole(alice, 'owner')
     const owner = await clientFor(alice)
     const key = randomUUID()
     const args = { p_profile_id: bob.id, p_amount: 25, p_reason: 'Prize', p_idempotency_key: key }

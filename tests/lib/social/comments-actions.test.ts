@@ -59,11 +59,16 @@ describe('deleteCommentAction', () => {
     expect(refresh).toHaveBeenCalled()
   })
 
-  it("passes on the database's refusal", async () => {
+  it("words the database's refusal, and hides anything it doesn't know (#203)", async () => {
     rpc.mockResolvedValue({ error: { message: 'only the comment\'s author or an admin can delete it' } })
     expect(await deleteCommentAction(7, undefined, new FormData())).toEqual({
-      formError: 'Only the comment\'s author or an admin can delete it.',
+      formError: 'Only the comment’s author or an admin can delete it.',
     })
     expect(refresh).not.toHaveBeenCalled()
+
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    rpc.mockResolvedValue({ error: { message: 'permission denied for table market_comments' } })
+    expect(await deleteCommentAction(7, undefined, new FormData())).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(log).toHaveBeenCalled()
   })
 })

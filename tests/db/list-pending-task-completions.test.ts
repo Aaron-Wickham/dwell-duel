@@ -1,14 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { listPendingTaskCompletions } from '@/lib/tasks/list-task-completions'
-import { serviceClient } from './helpers'
-import { seedMembers, clientFor, ensureInvited, createTestTask, type Member } from './fixtures'
+import { seedMembers, clientFor, ensureInvited, createTestTask, type Member, giveRole } from './fixtures'
 
 let admin: Member
 let alice: Member
 
 beforeEach(async () => {
   ;[alice, admin] = await seedMembers()
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', admin.id)
+  await giveRole(admin, 'admin')
 })
 
 describe('listPendingTaskCompletions', () => {

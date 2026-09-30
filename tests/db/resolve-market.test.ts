@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, giveRole } from './fixtures'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 let alice: Member
@@ -15,7 +15,7 @@ beforeEach(async () => {
 // they've bet on, so the tests where Alice bets have this referee resolve instead.
 async function referee(): Promise<SupabaseClient> {
   const carol = await makeMember('Carol')
-  await serviceClient().from('profiles').update({ role: 'reviewer' }).eq('id', carol.id)
+  await giveRole(carol, 'reviewer')
   const client = await clientFor(carol)
   await ensureInvited(client)
   return client
@@ -100,7 +100,7 @@ describe('resolve_market (first resolution)', () => {
     const aliceClient = await clientFor(alice)
     const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'], { closeInMs: 60_000 })
 
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const bobClient = await clientFor(bob)
 
     const { error } = await bobClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
@@ -130,7 +130,7 @@ describe('resolve_market (admin override)', () => {
     expect(aliceAfterFirst?.balance).toBe(100 - 20 + 50)
 
     // Admin override: it was actually "No" that won.
-    await db.from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const adminClient = await clientFor(bob)
     const { error } = await adminClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[1] })
     expect(error).toBeNull()
@@ -171,7 +171,7 @@ describe('resolve_market (admin override)', () => {
     await (await referee()).rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
 
     const db = serviceClient()
-    await db.from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const adminClient = await clientFor(bob)
     const { error } = await adminClient.rpc('resolve_market', { p_note: 'Same again', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
     expect(error?.message).toBe('that outcome is already the result')
@@ -229,7 +229,7 @@ describe('resolve_market (admin override)', () => {
       p_type: 'test_spend',
     })
 
-    await db.from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const adminClient = await clientFor(bob)
     const { error } = await adminClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[1] })
     expect(error?.code).toBe('P0001')
@@ -266,7 +266,7 @@ describe('resolve_market (admin override)', () => {
     await (await referee()).rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
 
     const db = serviceClient()
-    await db.from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const adminClient = await clientFor(bob)
 
     // First override: Red -> Blue. Pool is 30 (10 + 20); Red's reversal

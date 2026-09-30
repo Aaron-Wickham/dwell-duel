@@ -15,10 +15,12 @@ export const pageSubscriptions = {
       { table: 'market_comments', filter: `market_id=eq.${marketId}` },
     ]
   },
-  // Every card's odds move with every bet, so this page does follow them all; LiveRefresh's
+  // Every card's odds move with every bet, and every bet (or cancellation) moves its outcome's
+  // pool_total, so the list follows market_outcomes rather than every bets and cancelled_bets row
+  // (#204): one update per bet, from a table that changes for no other reason. LiveRefresh's
   // debounce keeps a busy spell to one refresh every couple of seconds.
   markets(): LiveSubscription[] {
-    return [{ table: 'markets' }, { table: 'bets' }, { table: 'cancelled_bets' }]
+    return [{ table: 'markets' }, { table: 'market_outcomes' }]
   },
   // The HomeHero's pending-review count and the admin tile's pending-approvals count both only
   // change via task_completions -- a rejection moves no balance, so bets/profiles don't cover it.
@@ -38,8 +40,13 @@ export const pageSubscriptions = {
       admin ? { table: 'task_completions' } : { table: 'task_completions', filter: `profile_id=eq.${me}` },
     ]
   },
+  // Not profiles (#205): apply_coin_transaction updates a balance on every bet, win, task and parlay,
+  // so watching every profile refreshed every open leaderboard on every coin movement, as Home once
+  // did (#68). A bet moves nobody's net worth (balance down, riding up), and a settled market is
+  // what really reorders both boards, so only markets is followed; the rest catches up on the next
+  // visit, or when the tab returns to the foreground.
   leaderboard(): LiveSubscription[] {
-    return [{ table: 'profiles' }]
+    return [{ table: 'markets' }]
   },
   // Only this member's profile (#68): their balance and name stay live, and their rank, which
   // other members' bets can move, catches up on the next visit. activity_events carries every kind

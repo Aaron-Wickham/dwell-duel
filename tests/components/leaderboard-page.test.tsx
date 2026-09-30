@@ -20,7 +20,7 @@ const { getLeaderboardPage, requestShowMoreFocus, getRecords, getRace, getAwards
 vi.mock('@/lib/social/leaderboard', () => ({ getLeaderboardPage }))
 vi.mock('@/lib/social/leaderboard-extras', () => ({ getRecords, getRace, getAwards, getPastChampions }))
 // Recharts needs layout jsdom doesn't have; the chart has its own test.
-vi.mock('@/components/leaderboard/race-chart', () => ({ RaceChart: ({ series }: { series: unknown[] }) => <div data-testid="race">{series.length}</div> }))
+vi.mock('@/components/leaderboard/race-chart-lazy', () => ({ RaceChart: ({ series }: { series: unknown[] }) => <div data-testid="race">{series.length}</div> }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase: {}, user: { id: 'p-me' } }) }))
 vi.mock('@/components/live/live-tables', () => ({ LiveTables: () => null }))
 vi.mock('@/components/ui/show-more-focus', () => ({ ShowMoreFocus: () => null, requestShowMoreFocus }))

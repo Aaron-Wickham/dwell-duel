@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, type Member } from './fixtures'
+import { seedMembers, clientFor, type Member, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -21,14 +21,14 @@ describe('adjust_balance', () => {
   })
 
   it('rejects an admin who is not the owner', async () => {
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const bobClient = await clientFor(bob)
     const { error } = await bobClient.rpc('adjust_balance', { p_profile_id: alice.id, p_amount: 10, p_reason: 'test' })
     expect(error?.message).toBe('only the owner can adjust a balance')
   })
 
   it('rejects a zero amount', async () => {
-    await serviceClient().from('profiles').update({ role: 'owner' }).eq('id', bob.id)
+    await giveRole(bob, 'owner')
     const adminClient = await clientFor(bob)
     const { error } = await adminClient.rpc('adjust_balance', {
       p_profile_id: alice.id,
@@ -39,7 +39,7 @@ describe('adjust_balance', () => {
   })
 
   it('rejects a missing reason', async () => {
-    await serviceClient().from('profiles').update({ role: 'owner' }).eq('id', bob.id)
+    await giveRole(bob, 'owner')
     const adminClient = await clientFor(bob)
     const { error } = await adminClient.rpc('adjust_balance', {
       p_profile_id: alice.id,
@@ -50,7 +50,7 @@ describe('adjust_balance', () => {
   })
 
   it('rejects a blank (whitespace-only) reason', async () => {
-    await serviceClient().from('profiles').update({ role: 'owner' }).eq('id', bob.id)
+    await giveRole(bob, 'owner')
     const adminClient = await clientFor(bob)
     const { error } = await adminClient.rpc('adjust_balance', {
       p_profile_id: alice.id,
@@ -61,7 +61,7 @@ describe('adjust_balance', () => {
   })
 
   it('credits a balance through the real ledger', async () => {
-    await serviceClient().from('profiles').update({ role: 'owner' }).eq('id', bob.id)
+    await giveRole(bob, 'owner')
     const adminClient = await clientFor(bob)
 
     const { data: before } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
@@ -91,7 +91,7 @@ describe('adjust_balance', () => {
   })
 
   it('debits a balance through the real ledger', async () => {
-    await serviceClient().from('profiles').update({ role: 'owner' }).eq('id', bob.id)
+    await giveRole(bob, 'owner')
     const adminClient = await clientFor(bob)
 
     const { data: before } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
@@ -108,7 +108,7 @@ describe('adjust_balance', () => {
   })
 
   it('rejects a debit that would take the balance negative', async () => {
-    await serviceClient().from('profiles').update({ role: 'owner' }).eq('id', bob.id)
+    await giveRole(bob, 'owner')
     const adminClient = await clientFor(bob)
 
     const { data: before } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()

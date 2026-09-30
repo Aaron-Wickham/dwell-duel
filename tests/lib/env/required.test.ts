@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { ALWAYS_REQUIRED, PRODUCTION_REQUIRED, assertRequiredEnv, missingEnv } from '@/lib/env/required'
+import { describe, it, expect, vi } from 'vitest'
+import { ALWAYS_REQUIRED, PRODUCTION_REQUIRED, PRODUCTION_WARNED, assertRequiredEnv, missingEnv, missingWarnedEnv, warnMissingEnv } from '@/lib/env/required'
 
 const BASE = {
   NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
@@ -48,15 +48,24 @@ describe('assertRequiredEnv', () => {
 
   it('throws naming every missing var', () => {
     expect(() => assertRequiredEnv({ ...BASE, VERCEL_ENV: 'production', SUPABASE_SECRET_KEY: 'x' })).toThrow(
-      'Missing required environment variables: CRON_SECRET, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY',
+      'Missing required environment variables: CRON_SECRET',
     )
   })
 
-  it('requires both push keys in production', () => {
+  // #210: push degrades on its own without its keys, so they can't take the whole site down.
+  it('boots production without the push keys, warning about each missing one instead', () => {
     const { VAPID_PRIVATE_KEY: _private, ...withoutPrivate } = PRODUCTION
-    expect(missingEnv(withoutPrivate)).toEqual(['VAPID_PRIVATE_KEY'])
-    const { NEXT_PUBLIC_VAPID_PUBLIC_KEY: _public, ...withoutPublic } = PRODUCTION
-    expect(missingEnv(withoutPublic)).toEqual(['NEXT_PUBLIC_VAPID_PUBLIC_KEY'])
+    expect(missingEnv(withoutPrivate)).toEqual([])
+    expect(missingWarnedEnv(withoutPrivate)).toEqual(['VAPID_PRIVATE_KEY'])
+    const { NEXT_PUBLIC_VAPID_PUBLIC_KEY: _public, VAPID_PRIVATE_KEY: _key, ...withoutBoth } = PRODUCTION
+    expect(missingWarnedEnv(withoutBoth)).toEqual([...PRODUCTION_WARNED])
+    expect(missingWarnedEnv({ ...BASE, VERCEL_ENV: 'preview' })).toEqual([])
+
+    const warn = vi.fn()
+    warnMissingEnv(withoutPrivate, warn)
+    expect(warn).toHaveBeenCalledWith('Missing environment variables: VAPID_PRIVATE_KEY. Push notifications are off until they are set.')
+    warnMissingEnv(PRODUCTION, warn)
+    expect(warn).toHaveBeenCalledTimes(1)
   })
 
   it("never includes a variable's value in the message", () => {

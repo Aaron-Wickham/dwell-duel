@@ -24,7 +24,7 @@ jobs:
     outputs:
       migrations: ${{ steps.diff.outputs.migrations }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -52,10 +52,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # The same version as ci.yml; 2.117.0 is the first release that accepts fine-grained sbp_v0_ tokens.
-      - uses: supabase/setup-cli@v3
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
         with:
           version: 2.117.0
 
@@ -69,9 +69,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: supabase/setup-cli@v3
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
         with:
           version: 2.117.0
 
@@ -90,9 +90,30 @@ jobs:
       (needs.push-migrations.result == 'success' ||
        (needs.changes.outputs.migrations == 'false' && needs.push-migrations.result == 'skipped'))
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 20
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+
+      # The hook builds main's HEAD, not this run's commit (#208). If main has moved on, the push
+      # that moved it has its own run queued behind this one in the prod-db group, and that run
+      # deploys once its own migrations are in; firing the hook now would build the newer code
+      # before them.
+      - name: Is this commit still main's head?
+        id: head
+        run: |
+          head="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$head" != "$GITHUB_SHA" ]; then
+            echo "::notice::main has moved on from $GITHUB_SHA to $head; that push's own run deploys it."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Trigger the Vercel production deploy
+        if: steps.head.outputs.current == 'true'
+        id: hook
         env:
           VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
         run: |
@@ -100,5 +121,52 @@ jobs:
             echo "::error::The VERCEL_DEPLOY_HOOK_URL repository secret is not set, so nothing was deployed."
             exit 1
           fi
-          curl --fail --silent --show-error --max-time 30 -X POST "$VERCEL_DEPLOY_HOOK_URL" > /dev/null
-          echo "Vercel is building the production deploy of $GITHUB_SHA."
+          SINCE=$(date +%s000)
+          RESPONSE=$(curl --fail --silent --show-error --max-time 30 -X POST "$VERCEL_DEPLOY_HOOK_URL")
+          echo "Vercel accepted the hook (job $(echo "$RESPONSE" | jq -r '.job.id // "unknown"')) and is building $GITHUB_SHA."
+          echo "since=$(echo "$RESPONSE" | jq -r --arg since "$SINCE" '.job.createdAt // $since')" >> "$GITHUB_OUTPUT"
+
+      # Vercel accepting the hook says nothing about the build (#216): this watches the deployment
+      # of this commit until it is live, and fails the run, and so notifies, when Vercel gives up on
+      # it. Without a token there is nothing to watch with; Vercel's own email is then the only alert.
+      - name: Wait for the Vercel build
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          # Only when the project belongs to a Vercel team rather than the token's own account.
+          VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
+          SINCE: ${{ steps.hook.outputs.since }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::notice::The VERCEL_TOKEN repository secret is not set, so this run can't watch the Vercel build; a failed build only reaches Vercel's own email."
+            exit 0
+          fi
+          QUERY="app=dwell-duel&target=production&limit=10"
+          if [ -n "$VERCEL_TEAM_ID" ]; then QUERY="$QUERY&teamId=$VERCEL_TEAM_ID"; fi
+          DEADLINE=$((SECONDS + 15 * 60))
+          while [ "$SECONDS" -lt "$DEADLINE" ]; do
+            DEPLOYMENT=$(curl --fail --silent --show-error --max-time 30 \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v6/deployments?$QUERY" |
+              jq -c --arg sha "$GITHUB_SHA" --argjson since "$SINCE" \
+                '[.deployments[] | select(.createdAt >= $since and (.meta.githubCommitSha // $sha) == $sha)] | first // empty')
+            STATE=$(echo "$DEPLOYMENT" | jq -r '.readyState // .state // empty')
+            case "$STATE" in
+              READY)
+                echo "Live: https://$(echo "$DEPLOYMENT" | jq -r .url)"
+                exit 0
+                ;;
+              ERROR | CANCELED)
+                echo "::error::Vercel's production deploy of $GITHUB_SHA ended $STATE: https://$(echo "$DEPLOYMENT" | jq -r .url). The previous deploy is still live."
+                exit 1
+                ;;
+              '')
+                echo "Waiting for Vercel to list the deployment of $GITHUB_SHA..."
+                ;;
+              *)
+                echo "Vercel: $STATE"
+                ;;
+            esac
+            sleep 20
+          done
+          echo "::error::Vercel's deploy of $GITHUB_SHA was still not live after 15 minutes."
+          exit 1

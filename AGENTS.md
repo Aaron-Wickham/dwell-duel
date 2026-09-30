@@ -142,9 +142,8 @@ a line to `CHANGELOG.md` under the next release.
   an attempt key (0047), held in a ref until the action succeeds and kept
   when the response is lost, so tapping again returns the first result.
   The slip's ref lives in `SlipProvider`, because the sheet unmounts the
-  panel when it closes. A
-  new action that moves coins and can be retried takes a key the same way,
-  through `claim_idempotency_key` and `finish_idempotent`.
+  panel when it closes. A new action that moves coins and can be retried
+  takes a key the same way, through `claim_idempotency_key` and `finish_idempotent`.
 - **Settings are cookies on `<html>`.** Theme (`data-theme`), haptics
   (`data-haptics="off"`) and reduced motion (`data-motion="reduce"`) are
   set by the root layout before any JS runs. `motion-reduce:` covers both
@@ -177,7 +176,10 @@ a line to `CHANGELOG.md` under the next release.
 - **The service worker never caches** per-member HTML, RSC payloads,
   server actions or Supabase responses.
 - **A new live table** goes in both `LIVE_TABLES` and a
-  realtime-publication migration.
+  realtime-publication migration. Prefer the narrowest table that moves
+  with what the page shows (`/markets` follows `market_outcomes`, not
+  `bets`), and never subscribe a whole-group page to `profiles`: every coin
+  movement updates one.
 - **E2e specs await `serverActionSettled`** after an optimistic action,
   before navigating away.
 
@@ -279,6 +281,11 @@ a line to `CHANGELOG.md` under the next release.
   tests (`tests/db/`) refuse to run against anything but localhost. If
   storage uploads then fail with `42P10` (the local Storage service holds
   stale state after a reset), run `npx supabase stop && npx supabase start`.
+- **CI runs on pull requests only,** as three parallel jobs (`static`,
+  `db`, `web`) summed up by the one required check, `ci-ok`. A PR must be
+  up to date with `main` to merge: after another PR lands, run
+  `gh pr update-branch <n>` and let CI run again. Merging to `main` only
+  deploys, so nothing tests the merge commit separately.
 
 ## Migrations
 

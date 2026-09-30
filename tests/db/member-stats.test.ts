@@ -10,8 +10,7 @@ import {
   createTestTask,
   ensureInvited,
   type Member,
-  type TestMarket,
-} from './fixtures'
+  type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 import { readMemberStats, type MemberStats } from '@/lib/members/stats'
 
@@ -30,8 +29,7 @@ beforeEach(async () => {
   carolClient = await clientFor(carol)
   for (const client of [aliceClient, bobClient, carolClient]) await ensureInvited(client)
   // An admin, so she can resolve before close and override.
-  const { error } = await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
-  if (error) throw error
+  await giveRole(alice, 'admin')
 })
 
 async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<number> {

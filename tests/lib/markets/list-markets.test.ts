@@ -57,8 +57,17 @@ describe('listOpenMarkets', () => {
           { id: 'o-no', label: 'No', poolTotal: 5 },
           { id: 'o-yes', label: 'Yes', poolTotal: 15 },
         ],
+        sparkline: null,
       },
     ])
+  })
+
+  it("carries a settled market's cached sparkline (0070) as series points, so the list never recomputes it", async () => {
+    const { client } = fakeSupabase(() => ({
+      data: [marketRow({ sparkline: [{ t: '2026-09-20T08:00:00+00:00', shares: { 'o-no': 0.25, 'o-yes': 0.75 } }] })],
+    }))
+    const page = await listResolvedMarkets(client, { top: null, bottom: null })
+    expect(page.rows[0].sparkline).toEqual([{ t: Date.parse('2026-09-20T08:00:00Z'), shares: { 'o-no': 0.25, 'o-yes': 0.75 } }])
   })
 
   it('probes only the keys of the next open markets, with the same filter and order', async () => {

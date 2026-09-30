@@ -54,17 +54,16 @@ export async function getLeaderboardPage(supabase: DbClient, board: Board, page:
 }
 
 // The member's row on the net-worth board, so Home, the member page and the leaderboard agree.
-// `isUuid(memberId)` must be checked by the caller first: a malformed id reaches `.eq('id', …)`
-// here, which errors instead of matching no rows.
+// member_standing (0071) computes just that row and the board's size, instead of ranking and
+// returning the whole board to pick one from (#210). `isUuid(memberId)` must be checked by the
+// caller first: a malformed id errors here instead of matching no rows.
 export async function getMemberStanding(supabase: DbClient, memberId: string): Promise<MemberStanding | null> {
-  const [profile, standing, everyone] = await Promise.all([
+  const [profile, standing] = await Promise.all([
     supabase.from('profiles').select('id, display_name, balance, avatar_path, bio').eq('id', memberId).maybeSingle(),
-    supabase.rpc('leaderboard_net_worth').select('score, rank').eq('id', memberId).maybeSingle(),
-    supabase.from('profiles').select('id', { count: 'exact', head: true }),
+    supabase.rpc('member_standing', { p_profile_id: memberId }).maybeSingle(),
   ])
   if (profile.error) throw profile.error
   if (standing.error) throw standing.error
-  if (everyone.error) throw everyone.error
   const member = profile.data
   if (!member || !standing.data) return null
 
@@ -76,6 +75,6 @@ export async function getMemberStanding(supabase: DbClient, memberId: string): P
     balance: member.balance,
     score: standing.data.score,
     rank: standing.data.rank,
-    memberCount: everyone.count ?? 0,
+    memberCount: standing.data.member_count,
   }
 }

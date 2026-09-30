@@ -1,9 +1,10 @@
 name: CI
 
+# Pull requests only: the main ruleset requires a PR to be up to date before it merges, so the
+# tested head is the merge result, and a merge to main goes straight to Deploy Production (#212).
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,14 +14,16 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Three jobs run side by side after their own `npm ci`, and `ci-ok` sums them up, so the ruleset
+# needs one required check and the wall time is the slowest job's, not the total (#215).
 jobs:
-  test:
+  static:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
@@ -31,23 +34,23 @@ jobs:
 
       - run: npm run typecheck
 
-      # The same CLI version as deploy-production.yml, so migrations are tested with the tool that ships them.
-      - uses: supabase/setup-cli@v3
+  db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          version: 2.117.0
+          node-version-file: '.nvmrc'
+          cache: 'npm'
 
-      # Only what the tests use: Postgres, Auth, the REST and Storage APIs, Realtime, Kong and
-      # postgres-meta (tests/db/pg-query.ts).
-      - name: Start local Supabase
-        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,mailpit
+      - run: npm ci
 
-      # The same kind of keys production uses: publishable and secret, not the legacy JWT keys.
-      - name: Write .env.local from the local Supabase instance
-        run: |
-          STATUS=$(supabase status -o json)
-          echo "NEXT_PUBLIC_SUPABASE_URL=$(echo "$STATUS" | jq -r .API_URL)" >> .env.local
-          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(echo "$STATUS" | jq -r .PUBLISHABLE_KEY)" >> .env.local
-          echo "SUPABASE_SECRET_KEY=$(echo "$STATUS" | jq -r .SECRET_KEY)" >> .env.local
+      - uses: ./.github/actions/local-supabase
+        with:
+          dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
+          dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # The generated types must match the migrations (#71).
       - name: Check database types are up to date
@@ -55,12 +58,43 @@ jobs:
           supabase gen types typescript --local > lib/supabase/database.types.ts
           git diff --exit-code lib/supabase/database.types.ts
 
-      - run: npm test
+      - run: npx vitest run --project db
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: npx vitest run --project unit
+
+      # Playwright's global setup seeds the database, so this job needs its own local Supabase too.
+      - uses: ./.github/actions/local-supabase
+        with:
+          dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
+          dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Next's build cache, so an unchanged page isn't compiled again; the fallback key restores the
+      # newest cache for the same dependencies when the source changed.
+      - name: Cache the Next.js build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('app/**', 'components/**', 'lib/**') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
 
       - run: npm run build
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -71,9 +105,24 @@ jobs:
       # playwright.config.ts serves the build above in CI, rather than building again.
       - run: npx playwright test
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: failure()
         with:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # The one check the main ruleset requires. `if: always()` makes it run when a job fails or is
+  # cancelled, so it can fail rather than never report.
+  ci-ok:
+    needs: [static, db, web]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Every job succeeded
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          test "$(echo "$RESULTS" | jq -r '[.[].result] | all(. == "success")')" = "true"

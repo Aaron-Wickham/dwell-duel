@@ -2,6 +2,7 @@
 
 import { refresh } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
+import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { isUuid } from '@/lib/uuid'
 
@@ -32,13 +33,19 @@ export async function postCommentAction(marketId: string, _prev: CommentState, f
 
 export type DeleteCommentState = { formError?: string } | undefined
 
+// delete_market_comment's raises (0053).
+const DELETE_COMMENT_ERRORS: readonly KnownError<never>[] = [
+  { match: 'comment not found', formError: 'This comment is already gone.' },
+  { match: "only the comment's author or an admin can delete it", formError: 'Only the comment’s author or an admin can delete it.' },
+]
+
 // delete_market_comment (0053) decides who may: the author, or an admin or the owner.
 export async function deleteCommentAction(commentId: number, _prev: DeleteCommentState, _formData: FormData): Promise<DeleteCommentState> {
   const { supabase, user } = await requireUser()
   if (!user) return { formError: 'Not signed in.' }
 
   const { error } = await supabase.rpc('delete_market_comment', { p_comment_id: commentId })
-  if (error) return { formError: error.message.charAt(0).toUpperCase() + error.message.slice(1) + '.' }
+  if (error) return friendlyError(error, DELETE_COMMENT_ERRORS, 'delete_market_comment failed')
 
   refresh()
   return undefined

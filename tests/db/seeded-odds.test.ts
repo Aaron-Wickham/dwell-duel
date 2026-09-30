@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 import { buildProbabilitySeries } from '@/lib/markets/probability-series'
 import { computeOdds, effectivePools } from '@/lib/markets/odds'
@@ -20,7 +20,7 @@ beforeEach(async () => {
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   for (const c of [aliceClient, bobClient]) await ensureInvited(c)
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+  await giveRole(alice, 'admin')
 })
 
 async function bet(client: SupabaseClient, m: TestMarket, i: number, amount: number) {

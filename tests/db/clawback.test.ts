@@ -8,8 +8,7 @@ import {
   ensureInvited,
   makeMember,
   type Member,
-  type TestMarket,
-} from './fixtures'
+  type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 import { CLAWBACK_PREFIX } from '@/lib/markets/clawback'
 
@@ -24,7 +23,7 @@ beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
   carol = await makeMember('Carol')
   // Alice creates, resolves and overrides every market; as an admin she can resolve before close_at.
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+  await giveRole(alice, 'admin')
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   carolClient = await clientFor(carol)

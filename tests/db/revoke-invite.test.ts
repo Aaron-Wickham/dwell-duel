@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { revokeInvite } from '@/lib/invites/revoke-invite'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, type Member } from './fixtures'
+import { seedMembers, clientFor, type Member, giveRole } from './fixtures'
 
 let admin: Member
 
 beforeEach(async () => {
   ;[admin] = await seedMembers()
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', admin.id)
+  await giveRole(admin, 'admin')
 })
 
 describe('revokeInvite', () => {
@@ -27,7 +27,8 @@ describe('revokeInvite', () => {
   })
 
   it('leaves a claimed invite in place', async () => {
-    await serviceClient().from('allowed_emails').insert({ email: admin.email, claimed_by: admin.id })
+    // giveRole already invited the admin; mark that invite claimed.
+    await serviceClient().from('allowed_emails').update({ claimed_by: admin.id }).eq('email', admin.email)
     const adminClient = await clientFor(admin)
 
     await revokeInvite(adminClient, admin.email)

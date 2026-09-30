@@ -594,6 +594,7 @@ export type Database = {
           line: number | null
           seed_per_outcome: number
           settled_at: string | null
+          sparkline: Json | null
           status: string
           title: string
         }
@@ -609,6 +610,7 @@ export type Database = {
           line?: number | null
           seed_per_outcome?: number
           settled_at?: string | null
+          sparkline?: Json | null
           status?: string
           title: string
         }
@@ -624,6 +626,7 @@ export type Database = {
           line?: number | null
           seed_per_outcome?: number
           settled_at?: string | null
+          sparkline?: Json | null
           status?: string
           title?: string
         }
@@ -1098,6 +1101,10 @@ export type Database = {
         Args: { p_action: string; p_key: string }
         Returns: Json
       }
+      claim_push_log: {
+        Args: { p_kind: string; p_refs: string[] }
+        Returns: number
+      }
       compute_period_key: {
         Args: { p_at?: string; p_period: string }
         Returns: string
@@ -1119,6 +1126,22 @@ export type Database = {
         Returns: undefined
       }
       delete_task: { Args: { p_task_id: string }; Returns: undefined }
+      due_market_alerts: {
+        Args: never
+        Returns: {
+          market_id: string
+          profile_id: string
+          title: string
+        }[]
+      }
+      due_resolve_reminders: {
+        Args: never
+        Returns: {
+          market_id: string
+          profile_id: string
+          title: string
+        }[]
+      }
       economy_flows: {
         Args: { p_from: string; p_to: string }
         Returns: {
@@ -1169,6 +1192,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_invited: { Args: never; Returns: boolean }
+      is_push_endpoint: { Args: { p_endpoint: string }; Returns: boolean }
       leaderboard_awards: {
         Args: never
         Returns: {
@@ -1251,6 +1275,14 @@ export type Database = {
           won: number
         }[]
       }
+      member_standing: {
+        Args: { p_profile_id: string }
+        Returns: {
+          member_count: number
+          rank: number
+          score: number
+        }[]
+      }
       member_stats: {
         Args: { p_profile_id: string }
         Returns: {
@@ -1275,6 +1307,24 @@ export type Database = {
         Returns: {
           dc: number
           wagers: number
+        }[]
+      }
+      my_current_task_completions: {
+        Args: never
+        Returns: {
+          proof_count: number
+          review_note: string
+          reward_amount: number
+          status: string
+          task_id: string
+        }[]
+      }
+      my_onboarding: {
+        Args: never
+        Returns: {
+          bet: boolean
+          photo: boolean
+          task: boolean
         }[]
       }
       my_review_counts: {
@@ -1331,6 +1381,8 @@ export type Database = {
         }
         Returns: Json
       }
+      push_endpoint_host: { Args: { p_endpoint: string }; Returns: string }
+      push_hosts: { Args: never; Returns: string[] }
       push_market_alerts: {
         Args: never
         Returns: {
@@ -1405,6 +1457,7 @@ export type Database = {
         Returns: undefined
       }
       remove_bet: { Args: { p_bet_id: number }; Returns: undefined }
+      remove_member: { Args: { p_profile_id: string }; Returns: undefined }
       resolve_market: {
         Args: {
           p_attachments?: Json

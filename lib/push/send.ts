@@ -5,6 +5,7 @@ import { serviceRoleClient } from '@/lib/supabase/service-role'
 import { chunk, IN_CHUNK } from '@/lib/pagination/chunk'
 import { VAPID_SUBJECT, vapidKeys } from './config'
 import type { PushPayload } from './messages'
+import { isPushEndpoint } from './subscription'
 
 export interface PushMessage {
   profileId: string
@@ -53,8 +54,14 @@ export async function sendPush(messages: PushMessage[], client?: DbClient): Prom
       subscriptions.push(...data)
     }
 
+    // The database only stores push-service endpoints (0067); this is the second line, so the
+    // service role never POSTs anywhere else even if a row somehow got past the first.
+    const stray = subscriptions.filter((s) => !isPushEndpoint(s.endpoint))
+    if (stray.length > 0) console.error('Skipping push subscriptions with non-push endpoints', stray.map((s) => s.id))
+    const sendable = subscriptions.filter((s) => isPushEndpoint(s.endpoint))
+
     const jobs = messages.flatMap((message) =>
-      subscriptions.filter((s) => s.profile_id === message.profileId).map((subscription) => ({ subscription, message })),
+      sendable.filter((s) => s.profile_id === message.profileId).map((subscription) => ({ subscription, message })),
     )
     const delivered = new Set<string>()
     const gone = new Set<string>()

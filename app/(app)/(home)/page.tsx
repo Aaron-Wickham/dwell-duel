@@ -49,7 +49,7 @@ export default async function Home() {
     getAtStake(supabase),
     getMarketsToResolve(supabase),
     getRole(supabase).then((r) => nextResolveCheckAt(supabase, user.id, atLeast(r, 'reviewer'))),
-    getOnboarding(supabase, user.id),
+    getOnboarding(supabase),
     getWeeklyRecap(supabase),
   ])
   const adminLink = adminHref(role)

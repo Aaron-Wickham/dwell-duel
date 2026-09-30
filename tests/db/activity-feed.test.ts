@@ -10,8 +10,7 @@ import {
   createTestTask,
   ensureInvited,
   type Member,
-  type TestMarket,
-} from './fixtures'
+  type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 
 let alice: Member
@@ -26,7 +25,7 @@ beforeEach(async () => {
   await ensureInvited(aliceClient)
   await ensureInvited(bobClient)
   // Alice is an admin so she can resolve before close_at, override, and review tasks.
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+  await giveRole(alice, 'admin')
 })
 
 interface FeedRow {

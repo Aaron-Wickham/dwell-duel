@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
-import { deleteAllAuthUsers, serviceClient } from './helpers'
+import { serviceClient, wipeDatabase } from './helpers'
 
 export interface Member {
   id: string
@@ -43,17 +43,7 @@ export async function makeMember(displayName: string): Promise<Member> {
 
 /** Wipes every table this suite touches and every auth user, then creates two fresh members. */
 export async function seedMembers(): Promise<[Member, Member]> {
-  const db = serviceClient()
-
-  await db.from('parlays').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  await db.from('task_completions').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  await db.from('tasks').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  await db.from('markets').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  await db.from('coin_transactions').delete().gte('id', 0)
-  await db.from('allowed_emails').delete().neq('email', '')
-  await db.from('profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-
-  await deleteAllAuthUsers(db)
+  await wipeDatabase()
 
   const alice = await makeMember('Alice')
   const bob = await makeMember('Bob')
@@ -185,6 +175,22 @@ export async function ensureInvited(client: SupabaseClient): Promise<void> {
     .from('allowed_emails')
     .upsert({ email: user.email.toLowerCase() }, { onConflict: 'email', ignoreDuplicates: true })
   if (error) throw error
+}
+
+/**
+ * Gives a fixture member a role and the invite that makes it count: since
+ * 0068, my_role() answers 'member' for anyone without an allowed_emails row,
+ * however profiles.role reads. Same upsert as ensureInvited, so a test that
+ * inserts its own row for this email afterwards should update it instead.
+ */
+export async function giveRole(member: Member, role: 'owner' | 'admin' | 'reviewer' | 'member'): Promise<void> {
+  const db = serviceClient()
+  const { error } = await db.from('profiles').update({ role }).eq('id', member.id)
+  if (error) throw error
+  const { error: inviteErr } = await db
+    .from('allowed_emails')
+    .upsert({ email: member.email.toLowerCase() }, { onConflict: 'email', ignoreDuplicates: true })
+  if (inviteErr) throw inviteErr
 }
 
 /**

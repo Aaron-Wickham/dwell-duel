@@ -136,7 +136,9 @@ a line to `CHANGELOG.md` under the next release.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.
 - **Retry-safe money actions.** The slip and the balance adjustment send
   an attempt key (0047), held in a ref until the action succeeds and kept
-  when the response is lost, so tapping again returns the first result. A
+  when the response is lost, so tapping again returns the first result.
+  The slip's ref lives in `SlipProvider`, because the sheet unmounts the
+  panel when it closes. A
   new action that moves coins and can be retried takes a key the same way,
   through `claim_idempotency_key` and `finish_idempotent`.
 - **Settings are cookies on `<html>`.** Theme (`data-theme`), haptics

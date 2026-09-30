@@ -2,6 +2,7 @@
 
 | Doc | What's in it |
 |---|---|
+| [GETTING-STARTED.md](GETTING-STARTED.md) | Onboarding: install the tools, run local Supabase and the app, sign in, run the tests, ship a PR |
 | [HOW-IT-WORKS.md](HOW-IT-WORKS.md) | The rules members play by: odds and payouts (with worked examples), the slip and parlays, results, tasks, roles |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How the app fits together: routes, code layout, data model, the functions that move coins, migrations, key flows, environments |
 | [design/app-redesign-handoff.md](design/app-redesign-handoff.md) | The visual source of truth: the design canvas, tokens, brand, navigation and components |

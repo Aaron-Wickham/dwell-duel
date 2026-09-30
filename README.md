@@ -78,6 +78,7 @@ model, the key flows and the migrations.
 
 | Doc | For |
 |---|---|
+| [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) | New here? Tools, local Supabase, sign-in, tests and your first PR, in order |
 | [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) | The rules: odds, payouts, parlays, results, tasks, roles |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code fits together |
 | [AGENTS.md](AGENTS.md) | Conventions every change follows (read this before contributing) |

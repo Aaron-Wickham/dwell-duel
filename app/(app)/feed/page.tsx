@@ -19,8 +19,11 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
-  const feed = await listFeed(supabase, { page: readPageParams(searchParams, 'before') })
-  const reactions = await getReactions(supabase, feed.rows.map((e) => e.id))
+  const feed = await listFeed(supabase, {
+    page: readPageParams(searchParams, 'before'),
+    alongside: (ids) => getReactions(supabase, ids),
+  })
+  const reactions = feed.alongside
   const backToNewestHref = newestHref('/feed', searchParams, 'before')
 
   return (

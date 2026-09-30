@@ -18,6 +18,10 @@ import { sendClosingAlerts } from '@/lib/push/notify'
  * "Bearer undefined", which a request sending that exact header would
  * otherwise match.
  */
+// Five database calls, a Storage remove of up to 500 objects, settle_season and the pushes can
+// take tens of seconds: fine under Fluid compute, fatal under the legacy 10s limit.
+export const maxDuration = 60
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   const secret = process.env.CRON_SECRET

@@ -38,7 +38,8 @@ export async function updateProfileAction(_prevState: ActionState, formData: For
   let nextPath = removeAvatar ? null : oldPath
   if (newPhoto) {
     nextPath = avatarPathFor(user.id)
-    const { error } = await supabase.storage.from('avatars').upload(nextPath, newPhoto, { contentType: AVATAR_TYPE })
+    // Each upload gets a fresh path (avatarPathFor), so the bytes at one URL never change and can be cached for a year.
+    const { error } = await supabase.storage.from('avatars').upload(nextPath, newPhoto, { contentType: AVATAR_TYPE, cacheControl: '31536000' })
     if (error) return { formError: `Your photo didn’t upload: ${error.message}`, field: 'avatar' }
   }
 

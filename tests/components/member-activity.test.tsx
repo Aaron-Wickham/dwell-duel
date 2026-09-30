@@ -10,6 +10,7 @@ vi.mock('react', async (importOriginal) =>
 )
 
 const { listFeed, requestShowMoreFocus, getReactions } = vi.hoisted(() => ({
+  // The real listFeed runs `alongside` with the page's ids and hands its result back (#210).
   listFeed: vi.fn(),
   requestShowMoreFocus: vi.fn(),
   getReactions: vi.fn(),
@@ -68,7 +69,7 @@ const event = (id: string): FeedEvent => ({
 
 async function renderActivity(activity: KeysetPage<FeedEvent>, searchParams: Record<string, string> = {}) {
   getReactions.mockResolvedValue(new Map())
-  listFeed.mockResolvedValue(activity)
+  listFeed.mockImplementation(feedReturning(activity))
   render(
     await MemberActivity({
       memberId: 'p-bob',
@@ -83,6 +84,12 @@ beforeEach(() => {
   requestShowMoreFocus.mockReset()
   getReactions.mockReset()
 })
+
+type Alongside = { alongside?: (ids: string[]) => Promise<unknown> }
+// What the real listFeed does with `alongside`: runs it with the page's ids and returns its result on the page.
+function feedReturning(page: KeysetPage<FeedEvent>) {
+  return async (_supabase: unknown, opts: Alongside) => ({ ...page, alongside: await opts.alongside?.(page.rows.map((e) => e.id)) })
+}
 
 describe('MemberActivity', () => {
   it('says there is nothing older, not that nothing has happened, for a window past the end', async () => {

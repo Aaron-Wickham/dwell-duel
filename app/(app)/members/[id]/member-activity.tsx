@@ -23,8 +23,8 @@ export async function MemberActivity({
   searchParams: SearchParams
 }) {
   const { supabase } = await requireUser()
-  const activity = await listFeed(supabase, { actorId: memberId, page })
-  const reactions = await getReactions(supabase, activity.rows.map((e) => e.id))
+  const activity = await listFeed(supabase, { actorId: memberId, page, alongside: (ids) => getReactions(supabase, ids) })
+  const reactions = activity.alongside
   const pathname = `/members/${memberId}`
   const backToNewestHref = newestHref(pathname, searchParams, 'activity')
 

@@ -8,7 +8,8 @@
 #       Copies the proof and avatars buckets.
 #   backup.sh push <subdir> <file>...
 #       Commits sealed files to $BACKUP_REPO (default Aaron-Wickham/dwell-duel-backups) under
-#       <subdir>/, with $BACKUP_REPO_TOKEN, and drops files older than $BACKUP_RETENTION_DAYS (60).
+#       <subdir>/, with $BACKUP_REPO_TOKEN, and drops that folder's backups older than
+#       $BACKUP_RETENTION_DAYS (60), always keeping its newest $BACKUP_KEEP_MIN (14).
 #       $BACKUP_REMOTE overrides the remote URL, for trying it against a local bare repo.
 #
 # db and storage write one sealed file, <out-dir>/<UTC time>-<label>.tar.gz.age, encrypted to
@@ -69,9 +70,25 @@ seal() {
   fi
 }
 
+# GitHub masks the whole secret, not the password inside it, which an error could print alone.
+mask_db_password() {
+  [ -n "${GITHUB_ACTIONS:-}" ] || return 0
+  local rest="${SUPABASE_DB_URL#*://}"
+  case "$rest" in *@*) ;; *) return 0 ;; esac
+  local userinfo="${rest%@*}"
+  case "$userinfo" in *:*) ;; *) return 0 ;; esac
+  local password="${userinfo#*:}"
+  [ -n "$password" ] || return 0
+  echo "::add-mask::$password"
+  local decoded
+  decoded="$(printf '%b' "${password//%/\\x}")"
+  if [ "$decoded" != "$password" ]; then echo "::add-mask::$decoded"; fi
+}
+
 dump_db() {
   local label="$1" out_dir="$2"
   [ -n "${SUPABASE_DB_URL:-}" ] || die "SUPABASE_DB_URL is not set."
+  mask_db_password
   need supabase age gzip tar
   need_recipient
   out_dir="$(absolute_dir "$out_dir")"
@@ -115,6 +132,23 @@ cutoff_date() {
   date -u -d "-$days days" +%F 2>/dev/null || date -u -v-"$days"d +%F
 }
 
+# Drops backups dated before the cutoff from one folder, but never its newest <keep> backups (a
+# split backup's parts count as one), so a backup job that has stopped running can't age every
+# copy away. Only the folder being pushed to is pruned.
+prune() {
+  local folder="$1" cutoff="$2" keep="$3"
+  local names
+  names="$(find "$folder" -maxdepth 1 -type f -name '*.age*' -exec basename {} \; |
+    sed -E 's/\.part-[a-z]+$//' | sort -u)"
+  local total
+  total="$(printf '%s\n' "$names" | grep -c . || true)"
+  [ "$total" -gt "$keep" ] || return 0
+  local name
+  printf '%s\n' "$names" | head -n "$((total - keep))" | while IFS= read -r name; do
+    if [[ "$name" < "$cutoff" ]]; then rm -f "${folder:?}/$name" "$folder/$name".part-*; fi
+  done
+}
+
 # The backups repo keeps a single commit: encrypted files don't delta, so history would only grow.
 # Each push rebuilds that commit from the files already there, the new ones, minus the expired, and
 # force-pushes it with a lease so two writers can't drop each other's files.
@@ -125,6 +159,7 @@ push_backups() {
   [ -n "${BACKUP_REPO_TOKEN:-}" ] || die "BACKUP_REPO_TOKEN is not set."
   local repo="${BACKUP_REPO:-Aaron-Wickham/dwell-duel-backups}"
   local keep_days="${BACKUP_RETENTION_DAYS:-60}"
+  local keep_min="${BACKUP_KEEP_MIN:-14}"
   need git
   local auth
   auth="$(printf 'x-access-token:%s' "$BACKUP_REPO_TOKEN" | base64 | tr -d '\n')"
@@ -148,15 +183,11 @@ push_backups() {
     fi
     mkdir -p "$WORK/repo/$subdir"
     cp "${files[@]}" "$WORK/repo/$subdir/"
-    local expired
-    for expired in "$WORK"/repo/*/*; do
-      [ -f "$expired" ] || continue
-      if [[ "$(basename "$expired")" < "$cutoff" ]]; then rm -f "$expired"; fi
-    done
+    prune "$WORK/repo/$subdir" "$cutoff" "$keep_min"
     "${g[@]}" add -A
     "${g[@]}" commit -q -m "Backups as of $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     if "${g[@]}" push -q --force-with-lease="main:$lease" origin HEAD:main; then
-      echo "Pushed ${#files[@]} file(s) to $repo/$subdir; kept backups from $cutoff on." >&2
+      echo "Pushed ${#files[@]} file(s) to $repo/$subdir; kept backups from $cutoff on, and at least the newest $keep_min." >&2
       return 0
     fi
     echo "The push to $repo lost a race (attempt $attempt); trying again." >&2

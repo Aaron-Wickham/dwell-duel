@@ -31,7 +31,10 @@ Guardrails:
   `VERCEL_TOKEN`, `BACKUP_AGE_RECIPIENT`, `BACKUP_REPO_TOKEN`) live in that
   environment, not at repository level.
 - Runs never overlap, and waiting runs queue in order instead of replacing
-  each other (`concurrency: prod-db`, `queue: max`).
+  each other (`concurrency: prod-db`, `queue: max`). The nightly database
+  backup queues in the same group, so no migration lands mid-dump.
+- A dry run whose list of pending migrations can't be read fails the run
+  rather than counting as "nothing pending".
 - A failed backup, migration or build fails the run and leaves the old app
   live. Turn on GitHub's "failed workflows only" notification so it's an email.
 - Merging needs the `ci-ok` check green, with no bypass. CI also fails a PR
@@ -68,7 +71,9 @@ uploaded as an Actions artifact and nothing from a dump is printed, because
 this repo is public. The backups repo keeps a **single commit** holding the
 last 60 days of files: each push rebuilds that commit and force-pushes it with
 a lease, so expired files really go (encrypted files don't compress between
-versions, so history would only grow).
+versions, so history would only grow). A push prunes only the folder it
+writes to, and always keeps that folder's newest 14 backups, so if the
+nightly job stops running, the last good dumps don't age away.
 
 **Not in the backups**, so a restore into a new project redoes them by hand:
 Supabase Vault secrets (`app_url`, `cron_secret`), the pg_cron jobs, the

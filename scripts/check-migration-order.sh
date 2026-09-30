@@ -22,6 +22,14 @@ done
 
 status=0
 for file in "$dir"/*.sql; do
+  if ! [[ "$(basename "$file")" =~ ^[0-9]+_.+\.sql$ ]]; then
+    echo "::error file=$file::$file isn't named like a migration: it needs a number, an underscore and a description, as in 0073_add_widgets.sql."
+    status=1
+  fi
+done
+[ "$status" -eq 0 ] || exit "$status"
+
+for file in "$dir"/*.sql; do
   if ! grep -qxF "$file" <<<"$base_files"; then
     n=$((10#$(number "$file")))
     if [ "$n" -le "$latest" ]; then

@@ -22,7 +22,8 @@ on:
 permissions:
   contents: read
 
-# One at a time. Deploy Production's pre-migration dump can still race one; the push retries.
+# One at a time. The database job also queues in Deploy Production's group (below); a push that
+# races another writer to the backups repo retries.
 concurrency:
   group: backups
   cancel-in-progress: false
@@ -30,6 +31,12 @@ concurrency:
 jobs:
   database:
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 3 * * *'
+    # Deploy Production's group too, so no migration lands between the schema and data dumps. It
+    # waits its turn like a deploy run and cancels nothing.
+    concurrency:
+      group: prod-db
+      cancel-in-progress: false
+      queue: max
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: Production

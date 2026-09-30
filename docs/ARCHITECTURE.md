@@ -640,7 +640,7 @@ leaves out empty lines and hides when every one is empty.
   nightly `supabase db dump` of roles, schema and data (auth and storage
   rows included) and a weekly copy of the `proof` and `avatars` buckets,
   each age-encrypted and committed to the private `dwell-duel-backups`
-  repo, 60 days kept. `docs/OPERATIONS.md` is the runbook.
+  repo, 60 days kept (and always the newest 14 per folder). `docs/OPERATIONS.md` is the runbook.
 - **Checking the installed app** (`npm run check:ios`,
   `scripts/ios-standalone-check.mjs`): Playwright has no standalone mode,
   so the installed iPhone app is checked in the iOS Simulator by hand before

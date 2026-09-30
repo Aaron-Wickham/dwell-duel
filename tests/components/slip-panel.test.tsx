@@ -37,9 +37,11 @@ function OpenState() {
 }
 
 // Stands in for the layout: a mode switch's action re-renders it with the server's updated slip,
-// in a transition, as Next does with the action's refreshed props.
+// in a transition, as Next does with the action's refreshed props. The sheet's portal unmounts the
+// panel when the slip closes, which "Toggle sheet" stands in for.
 function Layout({ initial, balance = 100 }: { initial: SlipView; balance?: number }) {
   const [view, setView] = useState(initial)
+  const [shown, setShown] = useState(true)
   setPickModeAction.mockImplementation(async (outcomeId: string, parlay: boolean) => {
     startTransition(() =>
       setView((v) => ({ ...v, picks: v.picks.map((p) => (p.outcomeId === outcomeId ? { ...p, parlay } : p)) })),
@@ -49,7 +51,10 @@ function Layout({ initial, balance = 100 }: { initial: SlipView; balance?: numbe
   return (
     <SlipProvider view={view} balance={balance}>
       <OpenState />
-      <SlipPanel />
+      <button type="button" onClick={() => setShown((s) => !s)}>
+        Toggle sheet
+      </button>
+      {shown && <SlipPanel />}
     </SlipProvider>
   )
 }
@@ -142,6 +147,76 @@ describe('SlipPanel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Remove Outcome 1, Market 1' }))
     expect(removeFromSlipAction).toHaveBeenCalledWith(pick(1).outcomeId)
     expect(placeSlipAction).not.toHaveBeenCalled()
+  })
+
+  describe('a lost response (#61, #192)', () => {
+    it('says so, and a retry sends the same attempt key', async () => {
+      placeSlipAction.mockRejectedValueOnce(new Error('Failed to fetch'))
+      placeSlipAction.mockResolvedValueOnce({ placed: { solos: 1, parlay: null } })
+      renderPanel(viewOf(pick(1)))
+
+      await userEvent.type(screen.getByLabelText('Stake (DC)'), '7')
+      const place = screen.getByRole('button', { name: 'Place 1 bet · 7 DC' })
+      await userEvent.click(place)
+      const alert = await screen.findByRole('alert')
+      expect(alert).toHaveTextContent(/couldn’t confirm your bets/)
+      expect(place).toHaveAccessibleDescription(/Nothing will be placed twice/)
+      expect(screen.getByLabelText('Stake (DC)')).toHaveValue(7)
+
+      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 7 DC' }))
+      await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet.'))
+      expect(placeSlipAction).toHaveBeenCalledTimes(2)
+      const keys = placeSlipAction.mock.calls.map((c) => (c[1] as FormData).get('idempotency_key'))
+      expect(keys[0]).toMatch(/^[0-9a-f-]{36}$/)
+      expect(keys[1]).toBe(keys[0])
+    })
+
+    it('survives the sheet closing and reopening: the message shows again and the key is kept', async () => {
+      placeSlipAction.mockRejectedValueOnce(new Error('Failed to fetch'))
+      placeSlipAction.mockResolvedValueOnce({ placed: { solos: 1, parlay: null } })
+      renderPanel(viewOf(pick(1)))
+
+      await userEvent.type(screen.getByLabelText('Stake (DC)'), '7')
+      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 7 DC' }))
+      await screen.findByRole('alert')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Toggle sheet' }))
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Toggle sheet' }))
+
+      expect(screen.getByRole('alert')).toHaveTextContent(/couldn’t confirm your bets/)
+      expect(screen.getByLabelText('Stake (DC)')).toHaveValue(7)
+      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 7 DC' }))
+      await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet.'))
+      const keys = placeSlipAction.mock.calls.map((c) => (c[1] as FormData).get('idempotency_key'))
+      expect(keys).toHaveLength(2)
+      expect(keys[1]).toBe(keys[0])
+    })
+
+    it('gives way to a real answer: a later error replaces it, and a success clears the key', async () => {
+      placeSlipAction.mockRejectedValueOnce(new Error('Failed to fetch'))
+      placeSlipAction.mockResolvedValueOnce({ formError: 'Your slip is empty.' })
+      placeSlipAction.mockResolvedValueOnce({ placed: { solos: 1, parlay: null } })
+      placeSlipAction.mockResolvedValueOnce({ placed: { solos: 1, parlay: null } })
+      renderPanel(viewOf(pick(1)))
+
+      await userEvent.type(screen.getByLabelText('Stake (DC)'), '7')
+      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 7 DC' }))
+      await screen.findByRole('alert')
+      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 7 DC' }))
+      await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Your slip is empty.'))
+
+      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 7 DC' }))
+      await waitFor(() => expect(success).toHaveBeenCalledTimes(1))
+      // The stakes are cleared on success; a fresh stake starts a fresh attempt.
+      await userEvent.type(screen.getByLabelText('Stake (DC)'), '3')
+      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 3 DC' }))
+      await waitFor(() => expect(success).toHaveBeenCalledTimes(2))
+      const keys = placeSlipAction.mock.calls.map((c) => (c[1] as FormData).get('idempotency_key'))
+      expect(keys[1]).toBe(keys[0])
+      expect(keys[2]).toBe(keys[0])
+      expect(keys[3]).not.toBe(keys[0])
+    })
   })
 
   describe('quick stakes', () => {

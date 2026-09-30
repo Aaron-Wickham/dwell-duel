@@ -380,8 +380,10 @@ load: the drawer (`SlipDrawer`) loads the first time the slip opens, or
 when the button is pointed at or focused. Bets are never optimistic. Each place sends
 an attempt key, kept until a place succeeds: if the bets commit but the
 answer is lost, the slip says so, and tapping Place again returns the first
-result instead of placing twice (0047). `adjust_balance` takes a key the
-same way.
+result instead of placing twice (0047). The key and the lost-answer
+message live in `SlipProvider` with the stakes, not in the panel, because
+closing the sheet unmounts the panel (#192). `adjust_balance` takes a key
+the same way.
 
 **Duplicating a market.** Duplicate links to `/markets/new?from=<id>`. The
 page reads that market with the member's own client, so RLS decides what

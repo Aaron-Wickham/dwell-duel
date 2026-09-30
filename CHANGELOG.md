@@ -7,6 +7,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ## Unreleased
 
 ### Fixes
+- **A slip retry after a lost answer never places twice, even after closing the sheet.** The attempt key and the "couldn't confirm" message used to live in the slip panel, which the sheet unmounts on close, so reopening and tapping Place again started a fresh attempt. Both now live with the stakes in the slip provider (#192).
 - **Closing alerts arrive within a minute.** GitHub was dropping most runs of the ten-minute schedule (the Admin warning from #149 caught it), so the timer now lives in Supabase: every minute `pg_cron` checks for a market that has just closed and, if there is one, calls the app through `pg_net` with the address and secret from Vault; it also calls at least every ten minutes to keep the heartbeat honest. The GitHub schedule stays as a backup, and the Admin warning names both (#189).
 
 ### Under the hood

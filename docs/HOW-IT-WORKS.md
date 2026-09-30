@@ -306,6 +306,14 @@ open DwellDuel from there and turn them on in Settings. If you've blocked
 notifications for DwellDuel, allow them again in your browser's or
 phone's settings.
 
+**Notifications keep themselves connected.** If your browser replaces
+its notification connection, DwellDuel re-registers this device the next
+time you open the app (or straight away, where the browser tells it). A
+device that keeps failing to receive anything, five attempts in a row
+spanning more than a day, or that has received nothing for 60 days while
+failing, is removed from your account; opening DwellDuel on it puts it
+back, as long as notifications are still allowed in the browser.
+
 **Signing out stops notifications on that device,** so on a shared phone
 the next person to sign in never sees yours. Turn them on again after you
 sign back in. Your other devices keep theirs.

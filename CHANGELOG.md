@@ -6,6 +6,10 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Fixes
+- **One broken notification device no longer raises the closing-alerts alarm.** A failed push is logged and counted instead of failing the run, so the Admin warning and the backup workflow only mean "the schedule stopped". Every send now records its outcome per device, and a device that has failed five sends in a row over more than a day, or has had no delivery for 60 days while failing, is pruned (#257).
+- **Notifications re-sync themselves.** On load, a device that turned notifications on re-makes a subscription the browser dropped or made with an old key, and saves a rotated one; the service worker also handles `pushsubscriptionchange` (#257).
+
 ## v0.5.2-beta — 2026-09-30
 
 An Admin › Markets tab for the markets waiting on a result, with tab counts that add up to the Admin badge, and rows inside cards that tint on hover instead of floating like a button inside a button.

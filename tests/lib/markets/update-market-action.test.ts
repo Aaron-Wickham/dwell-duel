@@ -39,8 +39,21 @@ describe('updateMarketAction', () => {
     expect(supabase.rpc).not.toHaveBeenCalled()
   })
 
-  it('shows the database’s refusal as a sentence', async () => {
+  it('words the database’s refusals, pointing a title refusal at the title (#203)', async () => {
     supabase.rpc.mockResolvedValue({ data: null, error: { message: "this market has closed, so it can't be edited" } })
-    expect(await updateMarketAction('m1', undefined, form('Late'))).toEqual({ formError: "This market has closed, so it can't be edited." })
+    expect(await updateMarketAction('m1', undefined, form('Late'))).toEqual({ formError: 'This market has closed, so it can’t be edited.' })
+
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: "others have bet on this market, so its title can't change" } })
+    expect(await updateMarketAction('m1', undefined, form('New title'))).toEqual({
+      formError: 'Others have bet on this market, so its title can’t change.',
+      field: 'title',
+    })
+  })
+
+  it('hides raw database text', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'relation "public.market_edits" does not exist' } })
+    expect(await updateMarketAction('m1', undefined, form('Late'))).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(log).toHaveBeenCalled()
   })
 })

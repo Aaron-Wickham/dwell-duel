@@ -224,6 +224,37 @@ describe('#62 hardening', () => {
   })
 })
 
+describe('#203 hygiene', () => {
+  it('pins an empty search_path on every function in public', async () => {
+    const loose = await pgQuery<{ proname: string }>(`
+      select p.proname
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and not coalesce(p.proconfig, '{}') && array['search_path=""', 'search_path=']
+      order by 1
+    `)
+    expect(loose).toEqual([])
+  })
+
+  // pg_net is owned by supabase_admin, so a migration can't revoke anon's and authenticated's
+  // EXECUTE on net.*; the only way they could reach it is a public function they can execute.
+  it('lets no function anon or authenticated can execute call into the net schema', async () => {
+    const doors = await pgQuery<{ proname: string; anon: boolean; authenticated: boolean }>(`
+      select p.proname,
+             has_function_privilege('anon', p.oid, 'execute') as anon,
+             has_function_privilege('authenticated', p.oid, 'execute') as authenticated
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.prosrc ~* '\\mnet\\.'
+      order by 1
+    `)
+    expect(doors.map((d) => d.proname)).toEqual(['ping_closing_alerts'])
+    expect(doors).toEqual([{ proname: 'ping_closing_alerts', anon: false, authenticated: false }])
+  })
+})
+
 describe('#84 the creator’s stake is shown', () => {
   it('sums solo bets per outcome and lists parlay picks, only for the creator', async () => {
     const m = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })

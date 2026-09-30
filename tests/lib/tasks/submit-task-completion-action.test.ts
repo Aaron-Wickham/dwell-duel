@@ -83,12 +83,20 @@ describe('submitTaskCompletionAction', () => {
     )
   })
 
-  it('turns a database error into a sentence, and doesn’t refresh', async () => {
-    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'this task needs proof' } })
+  it('words the database’s refusal, and doesn’t refresh', async () => {
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'this task needs proof: add a photo, file or link' } })
 
     const state = await submitTaskCompletionAction('task-1', undefined, submission())
 
-    expect(state).toEqual({ formError: 'This task needs proof.' })
+    expect(state).toEqual({ formError: 'This task needs proof: add a photo, file or link.' })
     expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('hides raw database text (#203)', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'null value in column "task_id" violates not-null constraint' } })
+
+    expect(await submitTaskCompletionAction('task-1', undefined, submission())).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(log).toHaveBeenCalled()
   })
 })

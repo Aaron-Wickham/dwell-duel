@@ -6,6 +6,12 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Security
+- **Signing out signs out only that device, and stops its notifications.** Sign out used to revoke every device's session, and a transient error on sign-in did the same; both now sign out the one session. Sign out also deletes the device's push subscription first, so on a shared phone the next member never sees the last one's "You won 26 DC" (#194).
+- **Push endpoints are allowlisted in the database.** A subscription's endpoint must be on a known push service (FCM, Apple, Mozilla, WNS) to be stored at all, not just when Settings saves it; the direct insert grant is gone, so `save_push_subscription` is the only writer, and the sender checks again before every POST. The SQL and TypeScript host lists are kept equal by a test (#201).
+- **A role only counts while you're invited.** `my_role()` answers member unless the caller's email is still on the invite list, so a de-invited admin loses every admin power at once and can't re-invite themselves. The owner can now **remove a member** from Admin → Members: back to member, invite revoked, devices unsubscribed; coins and bets untouched (#202).
+- **Hygiene:** the cron secret is compared in constant time; `market_sparklines` pins an empty `search_path` like every other function; every server action words the database's refusals itself and never shows a member raw Postgres text (#203).
+
 ### Fixes
 - **Closing alerts arrive within a minute.** GitHub was dropping most runs of the ten-minute schedule (the Admin warning from #149 caught it), so the timer now lives in Supabase: every minute `pg_cron` checks for a market that has just closed and, if there is one, calls the app through `pg_net` with the address and secret from Vault; it also calls at least every ten minutes to keep the heartbeat honest. The GitHub schedule stays as a backup, and the Admin warning names both (#189).
 

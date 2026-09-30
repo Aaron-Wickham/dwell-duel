@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { cronAuthorized } from '@/lib/auth/cron-secret'
 import { serviceRoleClient } from '@/lib/supabase/service-role'
 import { sendClosingAlerts } from '@/lib/push/notify'
 import { CLOSING_ALERTS_JOB } from '@/lib/admin/cron-health'
@@ -12,9 +13,7 @@ import { CLOSING_ALERTS_JOB } from '@/lib/admin/cron-health'
 // as it's sent, so calling it as often as you like never repeats a push. Each successful run is
 // recorded in cron_heartbeats (#149), and the Admin pages warn when the last one is too old.
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization')
-  const secret = process.env.CRON_SECRET
-  if (!secret || authHeader !== `Bearer ${secret}`) {
+  if (!cronAuthorized(request.headers.get('authorization'), process.env.CRON_SECRET)) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 

@@ -296,6 +296,10 @@ open DwellDuel from there and turn them on in Settings. If you've blocked
 notifications for DwellDuel, allow them again in your browser's or
 phone's settings.
 
+**Signing out stops notifications on that device,** so on a shared phone
+the next person to sign in never sees yours. Turn them on again after you
+sign back in. Your other devices keep theirs.
+
 ## Roles
 
 | Role | Can also…
@@ -303,11 +307,18 @@ phone's settings.
 | **Member** | Bet, create and resolve their own markets, submit tasks |
 | **Reviewer** | Approve and reject task submissions (not their own), and resolve closed markets they have no stake in |
 | **Admin** | Invite people, manage tasks, resolve, override or void any market, delete any comment, view members and the full ledger |
-| **Owner** (exactly one) | Adjust balances, grant and remove roles, and delete a market or task that hasn't been used |
+| **Owner** (exactly one) | Adjust balances, grant and remove roles, remove a member, and delete a market or task that hasn't been used |
 
 Reviewers and above get a red count on the **Admin** button for what is
 waiting on them: other members' task submissions (reviewers and above) and
 closed markets with no result (admins and above). It disappears at zero.
+
+A role only counts while you're invited. The owner can **remove a member**
+from Admin → Members: they go back to plain member, their invite is
+revoked and their devices stop getting notifications, straight away. Their
+coins, bets and history stay where they are. If they sign in again they
+land on the not-invited page, and inviting them again brings them back as
+a member.
 
 ## Around the app
 
@@ -335,7 +346,8 @@ closed markets with no result (admins and above). It disappears at zero.
   Settings live.
 - **Settings:** theme (System, Light or Dark), vibration on taps (Android),
   reduced animations, [notifications](#notifications), this How it works
-  page, and sign out.
+  page, and sign out. Signing out only signs out the device you're on, and
+  stops its notifications; your other devices stay signed in.
 - **Install it:** add DwellDuel to your Home Screen for a full-screen app
   with a launch animation. It shows an offline page when you lose
   connection, and on iPhone and iPad it's how you get notifications.

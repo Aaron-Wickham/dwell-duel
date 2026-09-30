@@ -1,10 +1,9 @@
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { BookOpenText, LogOut, UserRound } from 'lucide-react'
+import { BookOpenText, UserRound } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
-import { signOut } from '@/lib/auth/sign-out'
 import { resolvePreferences } from '@/lib/preferences/preferences'
 import { vapidKeys } from '@/lib/push/config'
 import { getMyNotificationSettings } from '@/lib/push/prefs'
@@ -18,6 +17,7 @@ import { SectionCard } from '@/components/ui/section-card'
 import { cn } from '@/lib/utils'
 import { NotificationSettings } from './notification-settings'
 import { MotionSettings, ThemeSetting } from './settings-controls'
+import { SignOutButton } from './sign-out-button'
 
 export default async function SettingsPage() {
   const { supabase, user } = await requireUser()
@@ -84,12 +84,7 @@ export default async function SettingsPage() {
             </Link>
           </SectionCard>
           <SectionCard title="Account" titleId="settings-account">
-            <form action={signOut}>
-              <button type="submit" className={cn(buttonVariants({ variant: 'secondary', block: true }), 'md:w-auto')}>
-                <LogOut aria-hidden="true" className="size-5" />
-                Sign out
-              </button>
-            </form>
+            <SignOutButton />
           </SectionCard>
         </div>
       </div>

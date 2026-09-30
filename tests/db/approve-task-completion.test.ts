@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, ensureInvited, createTestTask, type Member } from './fixtures'
+import { seedMembers, clientFor, ensureInvited, createTestTask, type Member, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -30,7 +30,7 @@ describe('approve_task_completion', () => {
     const { taskId } = await createTestTask(alice, { rewardAmount: 30 })
     const completionId = await submitAsAlice(taskId)
 
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const adminClient = await clientFor(bob)
 
     const { data: before } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
@@ -59,7 +59,7 @@ describe('approve_task_completion', () => {
     const { taskId } = await createTestTask(alice)
     const completionId = await submitAsAlice(taskId)
 
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const adminClient = await clientFor(bob)
     await adminClient.rpc('approve_task_completion', { p_completion_id: completionId })
 

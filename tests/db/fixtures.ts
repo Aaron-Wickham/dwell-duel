@@ -178,6 +178,22 @@ export async function ensureInvited(client: SupabaseClient): Promise<void> {
 }
 
 /**
+ * Gives a fixture member a role and the invite that makes it count: since
+ * 0068, my_role() answers 'member' for anyone without an allowed_emails row,
+ * however profiles.role reads. Same upsert as ensureInvited, so a test that
+ * inserts its own row for this email afterwards should update it instead.
+ */
+export async function giveRole(member: Member, role: 'owner' | 'admin' | 'reviewer' | 'member'): Promise<void> {
+  const db = serviceClient()
+  const { error } = await db.from('profiles').update({ role }).eq('id', member.id)
+  if (error) throw error
+  const { error: inviteErr } = await db
+    .from('allowed_emails')
+    .upsert({ email: member.email.toLowerCase() }, { onConflict: 'email', ignoreDuplicates: true })
+  if (inviteErr) throw inviteErr
+}
+
+/**
  * Creates a market via the real create_market() RPC (not a raw insert),
  * so every test that needs a market also exercises the same validation
  * path a real user's create-market request goes through. Returns

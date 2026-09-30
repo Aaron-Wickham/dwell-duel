@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { cronAuthorized } from '@/lib/auth/cron-secret'
 import { serviceRoleClient } from '@/lib/supabase/service-role'
 import { sendClosingAlerts } from '@/lib/push/notify'
 import { CLOSING_ALERTS_JOB } from '@/lib/admin/cron-health'
@@ -19,9 +20,7 @@ import { CLOSING_ALERTS_JOB } from '@/lib/admin/cron-health'
 export const maxDuration = 60
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization')
-  const secret = process.env.CRON_SECRET
-  if (!secret || authHeader !== `Bearer ${secret}`) {
+  if (!cronAuthorized(request.headers.get('authorization'), process.env.CRON_SECRET)) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 

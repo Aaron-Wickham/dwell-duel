@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 
 const INDEXES: Record<string, string> = {
@@ -41,9 +41,12 @@ interface PlanNode {
 // The fixtures are a handful of rows, where a sequential scan is cheapest whatever the indexes,
 // so seq scans are priced out for the one statement: a plan that still uses one has no index to
 // use. `set local` ends with postgres-meta's implicit transaction.
+// `analyze` first: every test file's setup wipes the tables in one statement (#214), and until
+// autovacuum catches up the planner's row estimates are left over from earlier files, so it could
+// pick a different index depending on file order (#233). Fresh stats make the plan deterministic.
 async function planNodes(query: string): Promise<PlanNode[]> {
   const [row] = await pgQuery<{ 'QUERY PLAN': [{ Plan: PlanNode }] }>(
-    `set local enable_seqscan = off; explain (format json) ${query}`,
+    `analyze; set local enable_seqscan = off; explain (format json) ${query}`,
   )
   const nodes: PlanNode[] = []
   const walk = (node: PlanNode) => {
@@ -116,8 +119,7 @@ beforeAll(async () => {
   const [alice, member] = await seedMembers()
   bob = member
   const db = serviceClient()
-  const { error: adminErr } = await db.from('profiles').update({ role: 'admin' }).eq('id', alice.id)
-  if (adminErr) throw adminErr
+  await giveRole(alice, 'admin')
   const aliceClient = await clientFor(alice)
   const bobClient = await clientFor(bob)
   await ensureInvited(bobClient)

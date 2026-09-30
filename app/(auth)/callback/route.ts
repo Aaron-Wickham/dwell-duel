@@ -29,15 +29,17 @@ export async function GET(request: Request) {
           return NextResponse.redirect(`${origin}/`)
         }
         if (result.reason === 'not_invited') {
-          await supabase.auth.signOut()
+          await supabase.auth.signOut({ scope: 'local' })
           return NextResponse.redirect(`${origin}/not-invited`)
         }
       }
 
       // Either createOwnProfile hit a genuine error, or getUser() returned
       // no user despite a successful code exchange — either way a session
-      // may have been established; never leave it half-authenticated.
-      await supabase.auth.signOut()
+      // may have been established; never leave it half-authenticated. Only
+      // this session, though: a transient error here mustn't sign an
+      // existing member out of every other device (#194).
+      await supabase.auth.signOut({ scope: 'local' })
     }
   }
 

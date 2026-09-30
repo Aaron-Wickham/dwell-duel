@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, clientForEmail, makeAuthUserWithoutProfile, ensureInvited, type Member } from './fixtures'
+import { seedMembers, clientFor, clientForEmail, makeAuthUserWithoutProfile, ensureInvited, type Member, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -156,7 +156,7 @@ describe('allowed_emails policies', () => {
   })
 
   it('allows an admin to read and write', async () => {
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+    await giveRole(alice, 'admin')
     const client = await clientFor(alice)
 
     const { error: insertErr } = await client.from('allowed_emails').insert({ email: 'y@example.com' })
@@ -192,7 +192,7 @@ describe('coin_transactions select policy', () => {
   })
 
   it('shows an admin every transaction', async () => {
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+    await giveRole(alice, 'admin')
     const client = await clientFor(alice)
 
     const { data, error } = await client.from('coin_transactions').select('profile_id')

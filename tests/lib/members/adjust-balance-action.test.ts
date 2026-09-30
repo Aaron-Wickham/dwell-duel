@@ -41,22 +41,24 @@ describe('adjustBalanceAction', () => {
     expect(eq).toHaveBeenCalledWith('id', 'p-mia')
   })
 
-  it('falls back to the raw message when the profile read fails', async () => {
+  it('still names the problem when the profile read fails, without the raw constraint text', async () => {
     supabase.rpc.mockResolvedValue({ data: null, error: BALANCE_VIOLATION })
     const eq = vi.fn(() => ({ maybeSingle: async () => ({ data: null, error: { message: 'not found' } }) }))
     supabase.from.mockReturnValue({ select: () => ({ eq }) })
 
     const state = await adjustBalanceAction('p-mia', undefined, adjustForm('-50'))
 
-    expect(state).toEqual({ formError: BALANCE_VIOLATION.message })
+    expect(state).toEqual({ formError: 'That would take their balance below zero.', field: 'amount' })
   })
 
-  it('keeps every other error message as it is', async () => {
-    supabase.rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'something else went wrong' } })
+  it("words the RPC's own refusals and hides anything else (#203)", async () => {
+    supabase.rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'only the owner can adjust a balance' } })
+    expect(await adjustBalanceAction('p-mia', undefined, adjustForm('10'))).toEqual({ formError: 'Only the owner can adjust a balance.' })
 
-    const state = await adjustBalanceAction('p-mia', undefined, adjustForm('10'))
-
-    expect(state).toEqual({ formError: 'something else went wrong' })
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    supabase.rpc.mockResolvedValue({ data: null, error: { code: 'XX000', message: 'relation "public.profiles" does not exist' } })
+    expect(await adjustBalanceAction('p-mia', undefined, adjustForm('10'))).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(log).toHaveBeenCalled()
     expect(supabase.from).not.toHaveBeenCalled()
   })
 })

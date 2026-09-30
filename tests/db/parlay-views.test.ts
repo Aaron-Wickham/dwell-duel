@@ -1,8 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { listMyWagers, type WagerBucket } from '@/lib/bets/list-my-wagers'
 import type { ParlayView } from '@/lib/parlays/list-parlays'
@@ -17,7 +16,7 @@ beforeEach(async () => {
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   await ensureInvited(bobClient)
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+  await giveRole(alice, 'admin')
 })
 
 // Seeded 5 on Yes / 15 on No: Yes is 4x, No is 4/3x.

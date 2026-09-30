@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -136,7 +136,7 @@ describe('cancel_bet', () => {
     if (cancelErr) throw cancelErr
 
     // Alice created the market and bet on it, so only as an admin can she resolve it (0046).
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+    await giveRole(alice, 'admin')
     await serviceClient()
       .from('markets')
       .update({ close_at: new Date(Date.now() - 1000).toISOString() })

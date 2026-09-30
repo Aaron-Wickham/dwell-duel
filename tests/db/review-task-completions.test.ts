@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, makeMember, clientFor, ensureInvited, createTestTask, type Member } from './fixtures'
+import { seedMembers, makeMember, clientFor, ensureInvited, createTestTask, type Member, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 
 let alice: Member
@@ -13,7 +13,7 @@ const MISSING = '00000000-0000-4000-8000-000000000000'
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+  await giveRole(alice, 'admin')
   adminClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   await ensureInvited(bobClient)

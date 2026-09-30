@@ -48,15 +48,15 @@ describe('bulkApproveTaskCompletionsAction', () => {
 
     const state = await bulkApproveTaskCompletionsAction(undefined, selection(['c-3', 'c-2', 'c-1']))
 
-    expect(state).toEqual({ summary: '1 approved, 2 failed (completion is not pending).' })
+    expect(state).toEqual({ summary: '1 approved, 2 failed: This submission has already been reviewed.' })
   })
 
   it('fails every selected completion when the call itself fails', async () => {
-    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'only an admin can review task completions' } })
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'only a reviewer can review task completions' } })
 
     const state = await bulkApproveTaskCompletionsAction(undefined, selection(['c-1', 'c-2', 'c-3']))
 
-    expect(state).toEqual({ summary: '0 approved, 3 failed (only an admin can review task completions).' })
+    expect(state).toEqual({ summary: '0 approved, 3 failed: Only a reviewer can review task submissions.' })
   })
 
   it('asks for a selection before calling anything', async () => {
@@ -108,14 +108,17 @@ describe('bulkRejectTaskCompletionsAction', () => {
 
     const state = await bulkRejectTaskCompletionsAction(undefined, selection(['c-1', 'c-2']))
 
-    expect(state).toEqual({ summary: '1 rejected, 1 failed (completion is not pending).' })
+    expect(state).toEqual({ summary: '1 rejected, 1 failed: This submission has already been reviewed.' })
   })
 
   it('fails every selected completion when the call itself fails', async () => {
     supabase.rpc.mockResolvedValue({ data: null, error: { message: 'fetch failed' } })
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const state = await bulkRejectTaskCompletionsAction(undefined, selection(['c-1', 'c-2']))
 
-    expect(state).toEqual({ summary: '0 rejected, 2 failed (fetch failed).' })
+    // Raw Postgres text never reaches a member (#203).
+    expect(state).toEqual({ summary: '0 rejected, 2 failed: Something went wrong. Try again.' })
+    expect(log).toHaveBeenCalled()
   })
 })

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, createTestTask, type Member, type TestMarket } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, createTestTask, type Member, type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 
 // Reads the preflight guard out of the migration itself, so the test can't drift
@@ -29,8 +29,7 @@ let completionId: string
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
   const db = serviceClient()
-  const { error: adminErr } = await db.from('profiles').update({ role: 'owner' }).eq('id', alice.id)
-  if (adminErr) throw adminErr
+  await giveRole(alice, 'owner')
   adminClient = await clientFor(alice)
   market = await createTestMarket(adminClient, ['Yes', 'No'])
   ;({ taskId } = await createTestTask(alice))

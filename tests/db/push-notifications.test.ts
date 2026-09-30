@@ -595,19 +595,6 @@ describe('record_push_results pruning (#257)', () => {
     await record([], [id])
     expect(await row(alice, 'quiet')).toMatchObject({ failure_count: 1 })
   })
-
-  it('prunes nothing for a batch that delivered nothing and failed on several devices', async () => {
-    await subscribe(alice, 'a')
-    await subscribe(alice, 'b')
-    await subscribe(alice, 'c')
-    const ids = await Promise.all(['a', 'b', 'c'].map(async (d) => (await row(alice, d))!.id))
-    await serviceClient().from('push_subscriptions').update({ failure_count: 9, first_failed_at: ago(3 * DAY) }).in('id', ids)
-    expect(await record([], ids)).toBe(0)
-    for (const d of ['a', 'b', 'c']) expect(await row(alice, d)).not.toBeNull()
-    // The same devices are pruned once a batch does deliver somewhere.
-    await subscribe(bob)
-    expect(await record([(await row(bob, 'phone'))!.id], [])).toBe(3)
-  })
 })
 
 describe('closing-alerts lease and give-up (#257)', () => {

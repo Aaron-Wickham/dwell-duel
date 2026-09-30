@@ -84,7 +84,7 @@ export async function notifyNewMarket(marketId: string, db: DbClient = serviceRo
 
 const CLOSING_ALERTS_LEASE_SECONDS = 120
 
-export type ClosingAlertsDelivery = { sent: number; failed: number }
+export type ClosingAlertsDelivery = { sent: number; failed: number; systemic: number }
 type ClosingAlertsResult<K extends string> = { error: unknown } | ({ [P in K]: number } & ClosingAlertsDelivery)
 
 type PerMarketMessage = PushMessage & { marketId: string }
@@ -98,7 +98,7 @@ async function deliverPerMarket(
   db: DbClient,
   kind: 'resolve_reminder' | 'market_alert',
   messages: PerMarketMessage[],
-): Promise<{ error: unknown } | { markets: number; sent: number; failed: number }> {
+): Promise<{ error: unknown } | { markets: number; sent: number; failed: number; systemic: number }> {
   const byMarket = new Map<string, PushMessage[]>()
   for (const { marketId, ...message } of messages) byMarket.set(marketId, [...(byMarket.get(marketId) ?? []), message])
 
@@ -106,30 +106,32 @@ async function deliverPerMarket(
   const unreachable: string[] = []
   let sent = 0
   let failed = 0
+  let systemic = 0
   for (const [marketId, group] of byMarket) {
     const result = await sendPush(group, db)
     sent += result.sent
     failed += result.failed
+    systemic += result.systemic
     if (result.sent > 0) delivered.push(marketId)
-    else if (result.failed > 0) unreachable.push(marketId)
+    else if (result.failed > 0 && result.systemic === 0) unreachable.push(marketId)
   }
-  // A market nobody could be reached about is tried again next run, until the database gives up on
-  // it after 24 hours (record_push_failures, 0076). Losing this count only delays giving up.
+  // A market whose devices each rejected the push is tried again next run, until the database gives up
+  // on it after 24 hours; a systemic failure (ours, not the devices') never counts toward giving up (record_push_failures, 0076). Losing this count only delays giving up.
   if (unreachable.length > 0) {
     const { error } = await db.rpc('record_push_failures', { p_kind: kind, p_refs: unreachable })
     if (error) console.error('Recording failed push attempts failed', error)
   }
-  if (delivered.length === 0) return { markets: 0, sent, failed }
+  if (delivered.length === 0) return { markets: 0, sent, failed, systemic }
 
   const { error } = await db.rpc('claim_push_log', { p_kind: kind, p_refs: delivered })
   if (error) return { error }
-  return { markets: delivered.length, sent, failed }
+  return { markets: delivered.length, sent, failed, systemic }
 }
 
 // The closing-alerts reminders. due_resolve_reminders (0071) only reads, so a failed read is the
 // caller's to report; a market is reminded about once because it's claimed after its delivery.
 export async function sendResolveReminders(db: DbClient): Promise<ClosingAlertsResult<'reminded'>> {
-  if (!vapidKeys()) return { reminded: 0, sent: 0, failed: 0 }
+  if (!vapidKeys()) return { reminded: 0, sent: 0, failed: 0, systemic: 0 }
   const { data, error } = await db.rpc('due_resolve_reminders')
   if (error) return { error }
   const result = await deliverPerMarket(
@@ -142,7 +144,7 @@ export async function sendResolveReminders(db: DbClient): Promise<ClosingAlertsR
     })),
   )
   if ('error' in result) return result
-  return { reminded: result.markets, sent: result.sent, failed: result.failed }
+  return { reminded: result.markets, sent: result.sent, failed: result.failed, systemic: result.systemic }
 }
 
 // Reviewers and above hear about a submission the moment it's made. The submitter is left out in SQL.
@@ -164,7 +166,7 @@ export async function notifyTaskSubmitted(completionId: string, db: DbClient = s
 // Admins hear once about each market that has closed with no result. Like the creator's reminder,
 // due_market_alerts only reads, and a market is claimed once an admin's device has the alert.
 export async function sendMarketAlerts(db: DbClient): Promise<ClosingAlertsResult<'alerted'>> {
-  if (!vapidKeys()) return { alerted: 0, sent: 0, failed: 0 }
+  if (!vapidKeys()) return { alerted: 0, sent: 0, failed: 0, systemic: 0 }
   const { data, error } = await db.rpc('due_market_alerts')
   if (error) return { error }
   const result = await deliverPerMarket(
@@ -177,7 +179,7 @@ export async function sendMarketAlerts(db: DbClient): Promise<ClosingAlertsResul
     })),
   )
   if ('error' in result) return result
-  return { alerted: result.markets, sent: result.sent, failed: result.failed }
+  return { alerted: result.markets, sent: result.sent, failed: result.failed, systemic: result.systemic }
 }
 
 // Everything the schedule sends: the creator's reminder and the admins' alert, each claimed
@@ -186,13 +188,13 @@ export async function sendMarketAlerts(db: DbClient): Promise<ClosingAlertsResul
 export async function sendClosingAlerts(
   db: DbClient,
 ): Promise<{ error: unknown } | ({ reminded: number; alerted: number; busy?: true } & ClosingAlertsDelivery)> {
-  if (!vapidKeys()) return { reminded: 0, alerted: 0, sent: 0, failed: 0 }
+  if (!vapidKeys()) return { reminded: 0, alerted: 0, sent: 0, failed: 0, systemic: 0 }
   // Another run (pg_cron and the GitHub backup can overlap, and a run with slow sends can outlast a
   // minute) would read the same due markets and send every alert twice, so one run at a time; the
   // lease expires on its own if a run dies holding it (0076).
   const lease = await db.rpc('claim_cron_lease', { p_name: CLOSING_ALERTS_JOB, p_seconds: CLOSING_ALERTS_LEASE_SECONDS })
   if (lease.error) return { error: lease.error }
-  if (!lease.data) return { reminded: 0, alerted: 0, sent: 0, failed: 0, busy: true }
+  if (!lease.data) return { reminded: 0, alerted: 0, sent: 0, failed: 0, systemic: 0, busy: true }
   try {
     const reminders = await sendResolveReminders(db)
     if ('error' in reminders) return reminders
@@ -203,6 +205,7 @@ export async function sendClosingAlerts(
       alerted: alerts.alerted,
       sent: reminders.sent + alerts.sent,
       failed: reminders.failed + alerts.failed,
+      systemic: reminders.systemic + alerts.systemic,
     }
   } finally {
     const { error } = await db.rpc('release_cron_lease', { p_name: CLOSING_ALERTS_JOB })

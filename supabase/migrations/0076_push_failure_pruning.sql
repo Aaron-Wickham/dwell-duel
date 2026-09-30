@@ -4,8 +4,8 @@
 -- failed five sends in a row with the first of them over 24 hours ago (so a push-service outage of
 -- a few hours never costs anyone their subscription), or has had no delivery for 60 days while
 -- failing and its first failure is over 24 hours old too (one transient error never deletes a
--- quiet, healthy device). A batch that delivered nothing and failed on several devices is a problem
--- on our side, not theirs, so it prunes nothing. A member whose subscription was pruned is put back by the client's re-sync (a
+-- quiet, healthy device). The app passes only failures the device itself caused; ours (credentials,
+-- network, the push service) are never recorded. A member whose subscription was pruned is put back by the client's re-sync (a
 -- subscription saved again starts a clean streak).
 -- The same migration holds two smaller guards for the closing-alerts route: a lease, so two callers
 -- (pg_cron and the GitHub backup) never send the same alert at once, and push_attempts, so a
@@ -36,10 +36,6 @@ begin
   update public.push_subscriptions
     set failure_count = failure_count + 1, first_failed_at = coalesce(first_failed_at, now())
     where id = any (p_failed);
-
-  if coalesce(cardinality(p_delivered), 0) = 0 and coalesce(cardinality(p_failed), 0) >= 3 then
-    return 0;
-  end if;
 
   with pruned as (
     delete from public.push_subscriptions

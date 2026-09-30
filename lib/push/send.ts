@@ -16,13 +16,16 @@ export interface PushResult {
   sent: number
   removed: number
   failed: number
+  // The failures that say nothing about the device: our credentials (401, 403), our own network or
+  // key trouble (no status), 429 and 5xx. A run that delivers nothing while any occur is an alarm.
+  systemic: number
 }
 
 // A handful at a time: a group this size has few devices, and push services throttle bursts.
 const CONCURRENCY = 6
 // A result a day late is still news; a reminder older than that isn't worth waking a phone for.
 const TTL_SECONDS = 24 * 60 * 60
-const NONE: PushResult = { sent: 0, removed: 0, failed: 0 }
+const NONE: PushResult = { sent: 0, removed: 0, failed: 0, systemic: 0 }
 
 type Subscription = { id: string; profile_id: string; endpoint: string; p256dh: string; auth: string }
 
@@ -69,6 +72,7 @@ export async function sendPush(messages: PushMessage[], client?: DbClient): Prom
     const gone = new Set<string>()
     let sent = 0
     let failed = 0
+    let systemic = 0
 
     await runLimited(jobs, CONCURRENCY, async ({ subscription, message }) => {
       try {
@@ -85,9 +89,14 @@ export async function sendPush(messages: PushMessage[], client?: DbClient): Prom
           gone.add(subscription.id)
         } else {
           failed++
-          // Only a device-specific rejection counts against the device. No status (our own network
-          // or key trouble), 429 and 5xx are the service's or ours, and must never prune anyone.
-          if (status !== undefined && status >= 400 && status < 500 && status !== 429) failedIds.add(subscription.id)
+          // Only a 4xx the device caused (400, 413 and the like) counts against it. 401 and 403 mean
+          // the push service rejects our VAPID credentials, which hits every device alike, and no
+          // status, 429 and 5xx are the service's or ours: none of those may ever prune a device.
+          if (status !== undefined && status >= 400 && status < 500 && status !== 429 && status !== 401 && status !== 403) {
+            failedIds.add(subscription.id)
+          } else {
+            systemic++
+          }
           console.error('Push send failed', status ?? error)
         }
       }
@@ -108,9 +117,9 @@ export async function sendPush(messages: PushMessage[], client?: DbClient): Prom
       if (error) console.error('Recording push outcomes failed', error)
     }
 
-    return { sent, removed: gone.size, failed }
+    return { sent, removed: gone.size, failed, systemic }
   } catch (error) {
     console.error('Push send failed', error)
-    return { ...NONE, failed: messages.length }
+    return { ...NONE, failed: messages.length, systemic: messages.length }
   }
 }

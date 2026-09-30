@@ -217,8 +217,8 @@ the task catalogue and invite list, which are allowed by policy.
   delivered device's streak, extends a failed one's, and deletes a device
   that has failed five sends in a row with the first over 24 hours ago, or
   is failing with no delivery for 60 days and its first failure is over 24
-  hours old too; a batch with no delivery and three or more failures prunes
-  nothing. One failure counts per market attempt, not per run. A member
+  hours old too. Only failures the device caused are ever passed to it.
+  One failure counts per market attempt, not per run. A member
   reads and deletes only their own rows and has no insert grant (0067);
   Settings saves through `save_push_subscription`, the only writer, which
   also hands a shared device's row to whoever saves it with the same keys
@@ -524,8 +524,9 @@ server-only (`lib/push/send.ts`, `web-push`): it reads the recipients'
 subscriptions with the service-role client, sends up to six at a time, and
 deletes a subscription whose push service answers 404 or 410, and reports
 failures to `record_push_results` (0076), which prunes a device that keeps
-failing. Only a 4xx other than 404, 410 and 429 counts against a device;
-no status (our own network or key trouble), 429 and 5xx are logged only. It never throws; failures are logged. Resolving, overriding, voiding, approving
+failing. Only a 4xx other than 401, 403, 404, 410 and 429 counts against a device.
+`PushResult.systemic` counts the rest (401/403, which mean our VAPID
+credentials are wrong, no status, 429, 5xx): logged, never recorded. It never throws; failures are logged. Resolving, overriding, voiding, approving
 or rejecting a task and creating a market call `afterAction()`
 (`lib/push/notify.ts`), which runs the send through Next's `after()`, so
 the member's action never waits on it; the recipients are read from the
@@ -549,11 +550,12 @@ call that read its queue stamps `cron_heartbeats` (#149), whether or not its
 pushes were delivered: a failed push is logged and counted in the response
 (`failed`), not a 502 and not a missing stamp, so one broken device can't keep
 the warning below on or make the backup workflow email (#257). A run that
-delivered nothing while three or more pushes failed is systemic: it returns
-502 and leaves the stamp alone. `sendClosingAlerts` also takes a lease
+delivered nothing while any failure was systemic (`systemic` summed over the
+whole run, so a one-device group alarms too) returns 502 and leaves the stamp
+alone. `sendClosingAlerts` also takes a lease
 (`claim_cron_lease`, 120 seconds, table `cron_leases`) so overlapping callers
 never double-send, and `deliverPerMarket` records a market whose devices all
-failed in `push_attempts` (`record_push_failures`), which claims it in
+rejected the push (and none of the failures systemic) in `push_attempts` (`record_push_failures`), which claims it in
 `push_log` once its first failure is over 24 hours old. The
 Admin layout shows admins and the owner a warning (`ClosingAlertsWarning`,
 `lib/admin/cron-health.ts`) once the last stamp is over 30 minutes old or

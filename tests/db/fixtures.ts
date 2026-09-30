@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
-import { deleteAllAuthUsers, serviceClient } from './helpers'
+import { serviceClient, wipeDatabase } from './helpers'
 
 export interface Member {
   id: string
@@ -43,17 +43,7 @@ export async function makeMember(displayName: string): Promise<Member> {
 
 /** Wipes every table this suite touches and every auth user, then creates two fresh members. */
 export async function seedMembers(): Promise<[Member, Member]> {
-  const db = serviceClient()
-
-  await db.from('parlays').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  await db.from('task_completions').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  await db.from('tasks').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  await db.from('markets').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  await db.from('coin_transactions').delete().gte('id', 0)
-  await db.from('allowed_emails').delete().neq('email', '')
-  await db.from('profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-
-  await deleteAllAuthUsers(db)
+  await wipeDatabase()
 
   const alice = await makeMember('Alice')
   const bob = await makeMember('Bob')

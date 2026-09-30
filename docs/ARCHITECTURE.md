@@ -551,17 +551,30 @@ leaves out empty lines and hides when every one is empty.
   `supabase/.env` (`docs/GETTING-STARTED.md`); CI sets none and doesn't sign in.
 - **Production:** one Vercel project and one hosted Supabase project.
   Vercel preview deploys are off on purpose (see the README).
-- **CI** (`.github/workflows/ci.yml`): lint, the type check, a
-  generated-types drift check, Vitest (the `unit` project in parallel, the
-  `db` project serially), a production build and Playwright on every push
-  and PR, all against a throwaway local Supabase.
+- **CI** (`.github/workflows/ci.yml`) runs on every PR (not on `main`: the
+  ruleset requires a PR to be up to date, so the tested head is the merge
+  result) as three parallel jobs: `static` (lint, the type check), `db`
+  (a throwaway local Supabase, the generated-types drift check, Vitest's
+  `db` project, serially) and `web` (Vitest's `unit` project, a production
+  build with `.next/cache` restored, Playwright against its own local
+  Supabase). `ci-ok` needs all three and is the ruleset's one required
+  check. Both Supabase jobs start the stack through
+  `.github/actions/local-supabase`, which logs in to Docker Hub first when
+  the `DOCKERHUB_TOKEN` secret is set, so image pulls don't hit the
+  anonymous limit GitHub's runners share.
 - **Deploys** (`.github/workflows/deploy-production.yml`): Vercel's Git
   integration is off for `main` (`vercel.json`'s `git.deploymentEnabled`).
   Each push to `main` runs the workflow instead, one at a time and with no
   approval step: when `supabase/migrations/` changed, a dry run and then
   the push; then a POST to the Vercel deploy hook in the
-  `VERCEL_DEPLOY_HOOK_URL` repository secret. Redeploy by hand with
-  "Run workflow" on it.
+  `VERCEL_DEPLOY_HOOK_URL` repository secret. With a `VERCEL_TOKEN` secret
+  the run then polls Vercel's deployments API for this commit's production
+  deployment and fails when it ends in ERROR or CANCELED, or isn't live
+  within 15 minutes; without the token it says so and stops at the hook,
+  and only Vercel's own email reports a failed build. GitHub's
+  "failed workflows only" notification is what turns a failed migration,
+  hook call, build or closing-alerts backup ping into an email. Redeploy by
+  hand with "Run workflow" on it.
 - **Checking the installed app** (`npm run check:ios`,
   `scripts/ios-standalone-check.mjs`): Playwright has no standalone mode,
   so the installed iPhone app is checked in the iOS Simulator by hand before

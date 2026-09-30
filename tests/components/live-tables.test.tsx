@@ -56,19 +56,19 @@ describe('LiveTablesProvider / LiveTables / usePageSubscriptions / useLiveBaseSu
     render(
       <LiveTablesProvider userId="member-1">
         <Probe />
-        <LiveTables subscriptions={[{ table: 'bets', filter: 'market_id=eq.market-1' }, { table: 'markets' }]} />
+        <LiveTables subscriptions={[{ table: 'bets', filter: 'market_id=eq.market-1' }, { topic: 'markets' }]} />
         <LiveTables subscriptions={[{ table: 'bets', filter: 'market_id=eq.market-1' }]} />
       </LiveTablesProvider>,
     )
 
     expect(readProbe().subscriptions).toEqual([
+      { topic: 'markets' },
       { table: 'bets', filter: 'market_id=eq.market-1' },
-      { table: 'markets' },
     ])
   })
 
   it('is a no-op outside a provider: nothing throws, page subscriptions read [], and base reads null', () => {
-    expect(() => render(<LiveTables subscriptions={[{ table: 'bets' }]} />)).not.toThrow()
+    expect(() => render(<LiveTables subscriptions={[{ table: 'bets', filter: 'market_id=eq.market-2' }]} />)).not.toThrow()
 
     render(<Probe />)
     expect(readProbe()).toEqual({ base: null, subscriptions: [] })
@@ -91,7 +91,7 @@ describe('LiveTablesProvider / LiveTables / usePageSubscriptions / useLiveBaseSu
       return (
         <LiveTablesProvider userId="member-1">
           <CountingProbe />
-          <LiveTables subscriptions={[{ table: 'bets' }]} />
+          <LiveTables subscriptions={[{ table: 'bets', filter: 'market_id=eq.market-2' }]} />
         </LiveTablesProvider>
       )
     }
@@ -113,8 +113,8 @@ describe('LiveTablesProvider / LiveTables / usePageSubscriptions / useLiveBaseSu
 
 describe('subscriptionKey', () => {
   it('is the same string for equal entries regardless of input order', () => {
-    const a = subscriptionKey([{ table: 'bets', filter: 'market_id=eq.1' }, { table: 'markets' }])
-    const b = subscriptionKey([{ table: 'markets' }, { table: 'bets', filter: 'market_id=eq.1' }])
+    const a = subscriptionKey([{ table: 'bets', filter: 'market_id=eq.1' }, { topic: 'markets' }])
+    const b = subscriptionKey([{ topic: 'markets' }, { table: 'bets', filter: 'market_id=eq.1' }])
     expect(a).toBe(b)
   })
 
@@ -125,8 +125,8 @@ describe('subscriptionKey', () => {
   })
 
   it('collapses duplicate entries', () => {
-    const withDupe = subscriptionKey([{ table: 'markets' }, { table: 'markets' }])
-    const without = subscriptionKey([{ table: 'markets' }])
+    const withDupe = subscriptionKey([{ topic: 'markets' }, { topic: 'markets' }])
+    const without = subscriptionKey([{ topic: 'markets' }])
     expect(withDupe).toBe(without)
   })
 })

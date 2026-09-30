@@ -7,10 +7,11 @@ import type { LiveSubscription } from '@/components/live/live-refresh'
 
 type Status = 'SUBSCRIBED' | 'CLOSED' | 'CHANNEL_ERROR' | 'TIMED_OUT'
 type Handler = () => void
-type OnConfig = { event: string; schema: string; table: string; filter?: string }
+type OnConfig = { event: string; schema?: string; table?: string; filter?: string }
 
 interface MockChannel {
   topic: string
+  options?: { config: { private?: boolean } }
   on: ReturnType<typeof vi.fn>
   subscribe: ReturnType<typeof vi.fn>
   handlersByTable: Map<string, Handler[]>
@@ -21,20 +22,23 @@ interface MockChannel {
 const mocks = vi.hoisted(() => {
   const channels: MockChannel[] = []
 
-  function makeChannel(topic: string): MockChannel {
+  function makeChannel(topic: string, options?: MockChannel['options']): MockChannel {
     const handlersByTable = new Map<string, Handler[]>()
     const configsByTable = new Map<string, OnConfig[]>()
     const channel: MockChannel = {
       topic,
+      options,
       handlersByTable,
       configsByTable,
       report: () => {},
       on: vi.fn(),
       subscribe: vi.fn(),
     }
-    channel.on = vi.fn((_type: string, config: OnConfig, handler: Handler) => {
-      handlersByTable.set(config.table, [...(handlersByTable.get(config.table) ?? []), handler])
-      configsByTable.set(config.table, [...(configsByTable.get(config.table) ?? []), config])
+    // Postgres Changes handlers are keyed by table, Broadcast ones by `broadcast:<event>`.
+    channel.on = vi.fn((type: string, config: OnConfig, handler: Handler) => {
+      const key = type === 'broadcast' ? `broadcast:${config.event}` : config.table!
+      handlersByTable.set(key, [...(handlersByTable.get(key) ?? []), handler])
+      configsByTable.set(key, [...(configsByTable.get(key) ?? []), config])
       return channel
     })
     channel.subscribe = vi.fn((callback: (status: Status) => void) => {
@@ -45,12 +49,13 @@ const mocks = vi.hoisted(() => {
   }
 
   const client = {
-    channel: vi.fn((topic: string) => {
-      const channel = makeChannel(topic)
+    channel: vi.fn((topic: string, options?: MockChannel['options']) => {
+      const channel = makeChannel(topic, options)
       channels.push(channel)
       return channel
     }),
-    removeChannel: vi.fn(),
+    removeChannel: vi.fn((_channel: MockChannel): Promise<string> => Promise.resolve('ok')),
+    realtime: { setAuth: vi.fn(() => Promise.resolve()) },
   }
   const refresh = vi.fn()
   // Next's real useRouter() returns a stable object across renders; a fresh one on every call
@@ -85,7 +90,14 @@ vi.mock('@/lib/supabase/client', () => {
 })
 vi.mock('next/navigation', () => ({ useRouter: () => mocks.router }))
 
-import { LIVE_TABLES, LiveRefresh } from '@/components/live/live-refresh'
+import {
+  DEBOUNCE_MS,
+  HIDDEN_CLOSE_MS,
+  LIVE_TABLES,
+  LiveRefresh,
+  POLL_MS,
+  TOPIC_REFRESH_DELAY_MS,
+} from '@/components/live/live-refresh'
 
 function setVisibility(state: DocumentVisibilityState) {
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
@@ -103,8 +115,28 @@ function currentBaseChannel(): MockChannel {
 function currentPageChannel(): MockChannel | undefined {
   return [...mocks.channels].reverse().find((c) => c.topic.startsWith('live-refresh:'))
 }
+function currentTopicChannel(topic: string): MockChannel | undefined {
+  return [...mocks.channels].reverse().find((c) => c.topic === `live:${topic}`)
+}
 function channels() {
   return { base: currentBaseChannel(), page: currentPageChannel() }
+}
+
+// Settles the promise chains a channel effect runs through once the client is already loaded.
+async function settle() {
+  await act(async () => {
+    for (let i = 0; i < 5; i++) await Promise.resolve()
+  })
+}
+
+function hide() {
+  setVisibility('hidden')
+  document.dispatchEvent(new Event('visibilitychange'))
+}
+
+function show() {
+  setVisibility('visible')
+  document.dispatchEvent(new Event('visibilitychange'))
 }
 
 function Harness({ subscriptions }: { subscriptions?: LiveSubscription[] }) {
@@ -131,7 +163,7 @@ async function mount(subscriptions?: LiveSubscription[]) {
     await act(() => vi.dynamicImportSettled())
   }
 
-  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
   return { ...view, ...channels() }
 }
 
@@ -149,6 +181,8 @@ beforeEach(() => {
   mocks.channels.length = 0
   mocks.client.channel.mockClear()
   mocks.client.removeChannel.mockClear()
+  mocks.client.removeChannel.mockImplementation(() => Promise.resolve('ok'))
+  mocks.client.realtime.setAuth.mockClear()
   mocks.browserClient.mockClear()
   mocks.refresh.mockClear()
   mocks.consumeImportFailure() // clears a leftover flag from a test that failed before using it
@@ -223,10 +257,10 @@ describe('LiveRefresh', () => {
   })
 
   it('carries only the page subscriptions on the page channel, even when a page also declares profiles', async () => {
-    const { base, page } = await mount([{ table: 'profiles' }])
+    const { base, page } = await mount([{ table: 'profiles', filter: 'id=eq.member-2' }])
 
     expect(page!.configsByTable.get('profiles')).toEqual([
-      { event: '*', schema: 'public', table: 'profiles', filter: undefined },
+      { event: '*', schema: 'public', table: 'profiles', filter: 'id=eq.member-2' },
     ])
     expect(base.configsByTable.get('profiles')).toEqual([
       { event: '*', schema: 'public', table: 'profiles', filter: 'id=eq.member-1' },
@@ -279,7 +313,7 @@ describe('LiveRefresh', () => {
   })
 
   it('refreshes once, 400ms after the last change in a burst across the base and the page channel', async () => {
-    const { base, page } = await mount([{ table: 'bets' }])
+    const { base, page } = await mount([{ table: 'bets', filter: 'market_id=eq.market-1' }])
 
     fireChange(base, 'profiles')
     vi.advanceTimersByTime(200)
@@ -358,7 +392,7 @@ describe('LiveRefresh', () => {
   })
 
   it('refreshes after a reconnect on the page channel too, but not on its first join', async () => {
-    const { page } = await mount([{ table: 'bets' }])
+    const { page } = await mount([{ table: 'bets', filter: 'market_id=eq.market-1' }])
 
     page!.report('SUBSCRIBED')
     vi.advanceTimersByTime(400)
@@ -406,7 +440,7 @@ describe('LiveRefresh', () => {
   })
 
   it('removes both channels, the listener and any pending refresh on unmount', async () => {
-    const { unmount, base, page } = await mount([{ table: 'bets' }])
+    const { unmount, base, page } = await mount([{ table: 'bets', filter: 'market_id=eq.market-1' }])
     fireChange(base, 'profiles')
 
     unmount()
@@ -424,7 +458,6 @@ describe('LiveRefresh', () => {
     unmount()
     await act(() => vi.dynamicImportSettled())
 
-    expect(mocks.browserClient).not.toHaveBeenCalled()
     expect(mocks.client.channel).not.toHaveBeenCalled()
   })
 
@@ -452,7 +485,7 @@ describe('LiveRefresh', () => {
       )
     }
 
-    render(<StrictHarness subscriptions={[{ table: 'bets' }]} />)
+    render(<StrictHarness subscriptions={[{ table: 'bets', filter: 'market_id=eq.market-1' }]} />)
     await act(() => vi.dynamicImportSettled())
     await act(() => vi.dynamicImportSettled())
 
@@ -462,4 +495,153 @@ describe('LiveRefresh', () => {
     expect(pageChannels).toHaveLength(1)
   })
 
+  it('sets the auth token before opening any channel, since a private join carries it', async () => {
+    await mount([{ topic: 'markets' }])
+
+    const setAuthOrder = mocks.client.realtime.setAuth.mock.invocationCallOrder[0]
+    const firstChannelOrder = mocks.client.channel.mock.invocationCallOrder[0]
+    expect(setAuthOrder).toBeLessThan(firstChannelOrder)
+  })
+
+  it('opens one private Broadcast channel per declared topic, and no Postgres Changes page channel for topics alone', async () => {
+    const { page } = await mount([{ topic: 'markets' }, { topic: 'pools' }])
+
+    expect(page).toBeUndefined()
+    for (const topic of ['markets', 'pools']) {
+      const channel = currentTopicChannel(topic)!
+      expect(channel.options).toEqual({ config: { private: true } })
+      expect(channel.on).toHaveBeenCalledWith('broadcast', { event: 'changed' }, expect.any(Function))
+      expect(channel.subscribe).toHaveBeenCalledTimes(1)
+    }
+  })
+
+  it('refreshes once the database throttle window has passed after a ping, folding later pings into it', async () => {
+    await mount([{ topic: 'markets' }, { topic: 'pools' }])
+
+    fireChange(currentTopicChannel('markets')!, 'broadcast:changed')
+    vi.advanceTimersByTime(1000)
+    fireChange(currentTopicChannel('pools')!, 'broadcast:changed')
+    fireChange(currentTopicChannel('markets')!, 'broadcast:changed')
+
+    vi.advanceTimersByTime(TOPIC_REFRESH_DELAY_MS - 1000 + DEBOUNCE_MS - 1)
+    expect(mocks.refresh).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1)
+    expect(mocks.refresh).toHaveBeenCalledTimes(1)
+
+    vi.advanceTimersByTime(TOPIC_REFRESH_DELAY_MS * 2)
+    expect(mocks.refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('reopens a topic only after its previous channel has finished closing', async () => {
+    const view = await mount([{ topic: 'markets' }])
+    const first = currentTopicChannel('markets')!
+
+    let finishClosing: (status: string) => void = () => {}
+    mocks.client.removeChannel.mockImplementationOnce(() => new Promise((resolve) => (finishClosing = resolve)))
+    await rebuild(view, [{ topic: 'markets' }, { topic: 'pools' }])
+
+    expect(mocks.client.removeChannel).toHaveBeenCalledWith(first)
+    expect(currentTopicChannel('markets')).toBe(first)
+
+    finishClosing('ok')
+    await settle()
+    const reopened = currentTopicChannel('markets')!
+    expect(reopened).not.toBe(first)
+    expect(currentTopicChannel('pools')).toBeDefined()
+  })
+
+  it('keeps its channels through a short trip to the background', async () => {
+    const { base, page } = await mount([{ table: 'bets', filter: 'market_id=eq.market-1' }, { topic: 'markets' }])
+
+    hide()
+    vi.advanceTimersByTime(HIDDEN_CLOSE_MS - 1)
+    show()
+    vi.advanceTimersByTime(HIDDEN_CLOSE_MS)
+    await settle()
+
+    expect(mocks.client.removeChannel).not.toHaveBeenCalled()
+    expect(channels()).toEqual({ base, page })
+  })
+
+  it('closes every channel once the tab has been hidden a while, and reopens them with a refresh on return', async () => {
+    const { base, page } = await mount([{ table: 'bets', filter: 'market_id=eq.market-1' }, { topic: 'markets' }])
+    const topic = currentTopicChannel('markets')!
+
+    hide()
+    await act(async () => {
+      vi.advanceTimersByTime(HIDDEN_CLOSE_MS)
+    })
+    await settle()
+
+    expect(mocks.client.removeChannel).toHaveBeenCalledWith(base)
+    expect(mocks.client.removeChannel).toHaveBeenCalledWith(page)
+    expect(mocks.client.removeChannel).toHaveBeenCalledWith(topic)
+    const opened = mocks.client.channel.mock.calls.length
+
+    await act(async () => show())
+    await settle()
+
+    expect(mocks.client.channel.mock.calls.length).toBe(opened + 3)
+    expect(currentBaseChannel()).not.toBe(base)
+    expect(currentPageChannel()).not.toBe(page)
+    expect(currentTopicChannel('markets')).not.toBe(topic)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
+    expect(mocks.refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes its channels a while after mounting in a hidden tab', async () => {
+    setVisibility('hidden')
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
+    render(<Harness />)
+    await act(() => vi.dynamicImportSettled())
+    const base = currentBaseChannel()
+
+    await act(async () => {
+      vi.advanceTimersByTime(HIDDEN_CLOSE_MS)
+    })
+    await settle()
+
+    expect(mocks.client.removeChannel).toHaveBeenCalledWith(base)
+  })
+
+  it('polls while a channel cannot join, and stops once it has', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { base, page } = await mount([{ table: 'bets', filter: 'market_id=eq.market-1' }])
+
+    base.report('SUBSCRIBED')
+    page!.report('CHANNEL_ERROR')
+    vi.advanceTimersByTime(POLL_MS)
+    expect(mocks.refresh).toHaveBeenCalledTimes(1)
+    expect(warn).toHaveBeenCalledTimes(1)
+
+    // A hidden tab skips the poll.
+    setVisibility('hidden')
+    vi.advanceTimersByTime(POLL_MS)
+    expect(mocks.refresh).toHaveBeenCalledTimes(1)
+    setVisibility('visible')
+
+    page!.report('TIMED_OUT')
+    vi.advanceTimersByTime(POLL_MS)
+    expect(mocks.refresh).toHaveBeenCalledTimes(2)
+
+    page!.report('SUBSCRIBED')
+    vi.advanceTimersByTime(DEBOUNCE_MS)
+    const afterRejoin = mocks.refresh.mock.calls.length
+    vi.advanceTimersByTime(POLL_MS * 3)
+    expect(mocks.refresh).toHaveBeenCalledTimes(afterRejoin)
+    expect(warn).toHaveBeenCalledTimes(1)
+    warn.mockRestore()
+  })
+
+  it('stops polling when the failing channel is removed', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const view = await mount([{ topic: 'reviews' }])
+    currentTopicChannel('reviews')!.report('CHANNEL_ERROR')
+
+    await rebuild(view, undefined)
+    vi.advanceTimersByTime(POLL_MS * 2)
+
+    expect(mocks.refresh).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
 })

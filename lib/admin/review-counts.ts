@@ -19,7 +19,7 @@ export async function getReviewCounts(supabase: DbClient, role: Role): Promise<R
 // The tables whose changes move the badge, for the layout to keep live. A market closing is only
 // the clock passing, so nothing here hears that: the layout also refreshes at the next close.
 export function reviewSubscriptions(role: Role): LiveSubscription[] {
-  if (atLeast(role, 'admin')) return [{ table: 'task_completions' }, { table: 'markets' }]
-  if (atLeast(role, 'reviewer')) return [{ table: 'task_completions' }]
+  if (atLeast(role, 'admin')) return [{ topic: 'reviews' }, { topic: 'markets' }]
+  if (atLeast(role, 'reviewer')) return [{ topic: 'reviews' }]
   return []
 }

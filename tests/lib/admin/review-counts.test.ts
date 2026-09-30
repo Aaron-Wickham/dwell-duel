@@ -30,8 +30,8 @@ describe('getReviewCounts', () => {
 describe('reviewSubscriptions', () => {
   it('follows task submissions for a reviewer, and closing markets too for an admin', () => {
     expect(reviewSubscriptions('member')).toEqual([])
-    expect(reviewSubscriptions('reviewer')).toEqual([{ table: 'task_completions' }])
-    expect(reviewSubscriptions('admin')).toEqual([{ table: 'task_completions' }, { table: 'markets' }])
-    expect(reviewSubscriptions('owner')).toEqual([{ table: 'task_completions' }, { table: 'markets' }])
+    expect(reviewSubscriptions('reviewer')).toEqual([{ topic: 'reviews' }])
+    expect(reviewSubscriptions('admin')).toEqual([{ topic: 'reviews' }, { topic: 'markets' }])
+    expect(reviewSubscriptions('owner')).toEqual([{ topic: 'reviews' }, { topic: 'markets' }])
   })
 })

@@ -71,3 +71,31 @@ describe('addInvite', () => {
     expect(data).toBeNull()
   })
 })
+
+// 0073: an admin's invite names only the email and themselves as the inviter.
+describe('admin_insert_invites', () => {
+  async function inviteRow(email: string) {
+    const { data } = await serviceClient().from('allowed_emails').select('invited_by, claimed_by').eq('email', email).maybeSingle()
+    return data
+  }
+
+  it('records the admin as the inviter when only the email is given', async () => {
+    const adminClient = await clientFor(admin)
+    expect((await adminClient.from('allowed_emails').insert({ email: 'plain@example.com' })).error).toBeNull()
+    expect(await inviteRow('plain@example.com')).toEqual({ invited_by: admin.id, claimed_by: null })
+  })
+
+  it('refuses another member as the inviter', async () => {
+    const adminClient = await clientFor(admin)
+    const { error } = await adminClient.from('allowed_emails').insert({ email: 'named@example.com', invited_by: member.id })
+    expect(error?.code).toBe('42501')
+    expect(await inviteRow('named@example.com')).toBeNull()
+  })
+
+  it('refuses an invite that arrives already claimed', async () => {
+    const adminClient = await clientFor(admin)
+    const { error } = await adminClient.from('allowed_emails').insert({ email: 'claimed@example.com', claimed_by: member.id })
+    expect(error?.code).toBe('42501')
+    expect(await inviteRow('claimed@example.com')).toBeNull()
+  })
+})

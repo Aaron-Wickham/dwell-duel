@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
+import type { DbClient } from '@/lib/supabase/database'
 import { afterAction, notifyTaskReviews } from '@/lib/push/notify'
 
 export type ActionState = { formError?: string; field?: 'reason' } | undefined
@@ -21,11 +22,23 @@ const REVIEW_ERRORS: readonly KnownError<'reason'>[] = [
   { match: 'task_completions_review_note_length', formError: tooLong('Reason', TEXT_LIMITS.reviewNote), field: 'reason' },
 ]
 
+// A replay of a review that already committed (Next re-sends an action whose response was lost) is
+// refused as "not pending". If this reviewer's own review left it in the state asked for, that's success.
+async function reviewedByMe(supabase: DbClient, message: string, completionId: string, userId: string, status: 'approved' | 'rejected') {
+  if (message !== 'completion is not pending') return false
+  const { data } = await supabase.from('task_completions').select('status, reviewed_by').eq('id', completionId).maybeSingle()
+  return data?.status === status && data.reviewed_by === userId
+}
+
 export async function approveTaskCompletionAction(completionId: string, _prevState: ActionState, _formData: FormData): Promise<ActionState> {
   const { supabase, user } = await requireUser()
   if (!user) return { formError: 'Not signed in.' }
 
   const { error } = await supabase.rpc('approve_task_completion', { p_completion_id: completionId })
+  if (error && (await reviewedByMe(supabase, error.message, completionId, user.id, 'approved'))) {
+    revalidatePath('/', 'layout')
+    return undefined
+  }
   if (error) return friendlyError(error, REVIEW_ERRORS, 'approve_task_completion failed')
   afterAction(() => notifyTaskReviews([completionId]))
 
@@ -45,6 +58,10 @@ export async function rejectTaskCompletionAction(completionId: string, _prevStat
     p_completion_id: completionId,
     p_reason: reason || undefined,
   })
+  if (error && (await reviewedByMe(supabase, error.message, completionId, user.id, 'rejected'))) {
+    revalidatePath('/admin/tasks')
+    return undefined
+  }
   if (error) return friendlyError(error, REVIEW_ERRORS, 'reject_task_completion failed')
   afterAction(() => notifyTaskReviews([completionId]))
 

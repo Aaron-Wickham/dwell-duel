@@ -1136,7 +1136,7 @@ export type Database = {
           p_outcome_labels: string[]
           p_title: string
         }
-        Returns: string
+        Returns: Json
       }
       delete_market: { Args: { p_market_id: string }; Returns: undefined }
       delete_market_comment: {

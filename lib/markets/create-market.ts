@@ -48,7 +48,7 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
     if (!Number.isFinite(line) || line < 0.5 || line % 1 !== 0.5) {
       return { formError: 'Set the line to a half number, like 3.5.', field: 'line' }
     }
-    const { data: marketId, error } = await supabase.rpc('create_market_v2', {
+    const { data, error } = await supabase.rpc('create_market_v2', {
       p_title: title,
       p_description: description || null,
       p_kind: kind,
@@ -58,8 +58,7 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
       p_idempotency_key,
     })
     if (error) return friendlyError(error, CREATE_MARKET_ERRORS, 'create_market failed')
-    afterAction(() => notifyNewMarket(marketId))
-    redirect(`/markets/${marketId}`)
+    return finish(data)
   }
 
   // One line per outcome input, blanks included, so a line's position matches the form's "Outcome N".
@@ -79,7 +78,7 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
     return { formError: tooLong(`Outcome ${n}`, TEXT_LIMITS.outcomeLabel), field: `outcome_${n}` }
   }
 
-  const { data: marketId, error } = await supabase.rpc('create_market_v2', {
+  const { data, error } = await supabase.rpc('create_market_v2', {
     p_title: title,
     p_description: description || null,
     p_kind: kind,
@@ -90,6 +89,15 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
 
   if (error) return friendlyError(error, CREATE_MARKET_ERRORS, 'create_market failed')
 
-  afterAction(() => notifyNewMarket(marketId))
-  redirect(`/markets/${marketId}`)
+  return finish(data)
+}
+
+type Created = { market_id: string; replayed: boolean }
+
+// A replay (Next re-sending an action whose response was lost) finds the market the first call made,
+// whose own call already sent the new-market push.
+function finish(data: unknown): never {
+  const { market_id, replayed } = data as Created
+  if (!replayed) afterAction(() => notifyNewMarket(market_id))
+  redirect(`/markets/${market_id}`)
 }

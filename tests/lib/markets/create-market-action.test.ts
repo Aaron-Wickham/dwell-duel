@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const { supabase, redirect } = vi.hoisted(() => ({ supabase: { rpc: vi.fn() }, redirect: vi.fn() }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase, user: { id: 'member-1' } }) }))
 vi.mock('next/navigation', () => ({ redirect }))
+const { notifyNewMarket } = vi.hoisted(() => ({ notifyNewMarket: vi.fn() }))
+vi.mock('@/lib/push/notify', () => ({ afterAction: (fn: () => void) => fn(), notifyNewMarket }))
 
 import { createMarketAction } from '@/lib/markets/create-market'
 
@@ -30,8 +32,9 @@ function multipleChoiceForm(outcomes: string[]) {
 
 beforeEach(() => {
   supabase.rpc.mockReset()
-  supabase.rpc.mockResolvedValue({ data: 'market-1', error: null })
+  supabase.rpc.mockResolvedValue({ data: { market_id: 'market-1', replayed: false }, error: null })
   redirect.mockReset()
+  notifyNewMarket.mockReset()
 })
 
 describe('createMarketAction length limits', () => {
@@ -173,5 +176,19 @@ describe('createMarketAction attempt key (#258)', () => {
     bad.set('idempotency_key', 'nope')
     await createMarketAction(undefined, bad)
     expect(supabase.rpc).toHaveBeenLastCalledWith('create_market_v2', expect.objectContaining({ p_idempotency_key: undefined }))
+  })
+})
+
+describe('createMarketAction replay', () => {
+  it('announces a new market once, not again when the same key replays', async () => {
+    await createMarketAction(undefined, binaryForm('Will it rain?'))
+    expect(notifyNewMarket).toHaveBeenCalledTimes(1)
+    expect(notifyNewMarket).toHaveBeenCalledWith('market-1')
+
+    notifyNewMarket.mockClear()
+    supabase.rpc.mockResolvedValue({ data: { market_id: 'market-1', replayed: true }, error: null })
+    await createMarketAction(undefined, binaryForm('Will it rain?'))
+    expect(notifyNewMarket).not.toHaveBeenCalled()
+    expect(redirect).toHaveBeenLastCalledWith('/markets/market-1')
   })
 })

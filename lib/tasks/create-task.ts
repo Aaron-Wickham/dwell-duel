@@ -53,7 +53,9 @@ export async function createTaskAction(_prevState: ActionState, formData: FormDa
   })
 
   // 23505 on the key's index: this attempt already created the task, which is what was asked for.
-  if (error && !(error.code === '23505' && error.message.includes(ATTEMPT_KEY_INDEX))) return friendlyError(error, CREATE_TASK_ERRORS, 'Creating a task failed')
+  if (error && !(error.code === '23505' && error.message.includes(ATTEMPT_KEY_INDEX))) {
+    return friendlyError(error, CREATE_TASK_ERRORS, 'Creating a task failed')
+  }
 
   revalidatePath('/admin/tasks')
   return undefined

@@ -5,8 +5,9 @@
 -- Additive: the old create_market signature stays, as a thin wrapper, so the app still serving
 -- while this applies keeps working.
 
--- create_market_v2 is create_market (0043) plus the key. A repeat of the key returns the market the
--- first call made. The key row is written in the same transaction as the market, so a call that
+-- create_market_v2 is create_market (0043) plus the key. It returns {market_id, replayed}: a repeat
+-- of the key returns the market the first call made, marked as a replay so the caller doesn't
+-- announce it a second time (as place_slip_v2 does). The key row is written in the same transaction as the market, so a call that
 -- fails rolls its key back and a retry tries again.
 create function public.create_market_v2(
   p_title text,
@@ -16,7 +17,7 @@ create function public.create_market_v2(
   p_close_at timestamptz,
   p_line numeric default null,
   p_idempotency_key uuid default null
-) returns uuid
+) returns jsonb
 language plpgsql
 security definer
 set search_path = ''
@@ -34,7 +35,7 @@ begin
   if p_idempotency_key is not null then
     v_previous := public.claim_idempotency_key(p_idempotency_key, 'create_market');
     if v_previous is not null then
-      return (v_previous #>> '{}')::uuid;
+      return jsonb_build_object('market_id', v_previous ->> 'market_id', 'replayed', true);
     end if;
   end if;
 
@@ -76,10 +77,10 @@ begin
   end loop;
 
   if p_idempotency_key is not null then
-    perform public.finish_idempotent(p_idempotency_key, to_jsonb(v_market_id));
+    perform public.finish_idempotent(p_idempotency_key, jsonb_build_object('market_id', v_market_id));
   end if;
 
-  return v_market_id;
+  return jsonb_build_object('market_id', v_market_id, 'replayed', false);
 end;
 $$;
 
@@ -98,7 +99,7 @@ language sql
 security definer
 set search_path = ''
 as $$
-  select public.create_market_v2(p_title, p_description, p_kind, p_outcome_labels, p_close_at, p_line, null);
+  select (public.create_market_v2(p_title, p_description, p_kind, p_outcome_labels, p_close_at, p_line, null) ->> 'market_id')::uuid;
 $$;
 
 -- Comments and tasks are plain inserts with nothing to return, so the key is a column: a repeat of

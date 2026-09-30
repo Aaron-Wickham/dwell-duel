@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, ensureInvited, type Member } from './fixtures'
+import { seedMembers, clientFor, ensureInvited, giveRole, type Member } from './fixtures'
 
 let alice: Member
 
@@ -101,7 +101,8 @@ describe('create_market_v2 attempt key', () => {
     const second = await client.rpc('create_market_v2', args(key))
     expect(first.error).toBeNull()
     expect(second.error).toBeNull()
-    expect(second.data).toBe(first.data)
+    expect(first.data).toEqual({ market_id: expect.any(String), replayed: false })
+    expect(second.data).toEqual({ market_id: (first.data as { market_id: string }).market_id, replayed: true })
 
     const { count } = await serviceClient().from('markets').select('id', { count: 'exact', head: true }).eq('created_by', alice.id)
     expect(count).toBe(1)
@@ -112,7 +113,7 @@ describe('create_market_v2 attempt key', () => {
     await ensureInvited(client)
     const a = await client.rpc('create_market_v2', args(randomUUID()))
     const b = await client.rpc('create_market_v2', args(randomUUID()))
-    expect(a.data).not.toBe(b.data)
+    expect((a.data as { market_id: string }).market_id).not.toBe((b.data as { market_id: string }).market_id)
     const { error } = await client.rpc('create_market', {
       p_title: 'Old signature',
       p_description: null,
@@ -138,5 +139,20 @@ describe('attempt_key columns', () => {
     const again = await client.from('market_comments').insert(row)
     expect(again.error?.code).toBe('23505')
     expect(again.error?.message).toContain('market_comments_attempt_key_idx')
+  })
+
+  it('makes a task once per attempt key', async () => {
+    const db = serviceClient()
+    await giveRole(alice, 'admin')
+    const client = await clientFor(alice)
+    await ensureInvited(client)
+    const key = randomUUID()
+    const row = { title: 'Read Genesis 1', reward_amount: 10, is_repeatable: false, attempt_key: key }
+    expect((await client.from('tasks').insert(row)).error).toBeNull()
+    const again = await client.from('tasks').insert(row)
+    expect(again.error?.code).toBe('23505')
+    expect(again.error?.message).toContain('tasks_attempt_key_idx')
+    const { count } = await db.from('tasks').select('id', { count: 'exact', head: true }).eq('attempt_key', key)
+    expect(count).toBe(1)
   })
 })

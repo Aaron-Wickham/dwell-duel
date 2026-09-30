@@ -50,10 +50,13 @@ export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
   // which the server can't know.
   const closeAt = editedCloseAt ?? (initial ? nextWeeklyClose(initial.closeAt, initial.now, timeZone) : '')
   const attemptKey = useAttemptKey()
-  const [state, formAction] = useActionState<ActionState, FormData>((prev, formData) => {
+  const [state, formAction] = useActionState<ActionState, FormData>(async (prev, formData) => {
     // Held across a lost response and Next's replay, so a market that committed isn't made twice (#258).
     formData.set('idempotency_key', attemptKey.claim(fingerprintOf(formData)))
-    return createMarketAction(prev, formData)
+    const next = await createMarketAction(prev, formData)
+    // Only a refusal comes back here (success redirects), and it made nothing, so the next try is a new attempt.
+    attemptKey.release()
+    return next
   }, undefined)
 
   function updateOutcome(index: number, value: string) {

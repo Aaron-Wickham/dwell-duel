@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { supabase, revalidatePath } = vi.hoisted(() => ({ supabase: { rpc: vi.fn() }, revalidatePath: vi.fn() }))
+const { supabase, revalidatePath, maybeSingle } = vi.hoisted(() => {
+  const maybeSingle = vi.fn()
+  const chain: Record<string, unknown> = { maybeSingle }
+  for (const m of ['select', 'eq', 'is', 'limit']) chain[m] = () => chain
+  return { supabase: { rpc: vi.fn(), from: vi.fn(() => chain) }, revalidatePath: vi.fn(), maybeSingle }
+})
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase, user: { id: 'member-1' } }) }))
 vi.mock('next/cache', () => ({ revalidatePath }))
 
@@ -16,6 +21,8 @@ function outcomeForm(outcomeId: string, note = 'Final score 3–1') {
 beforeEach(() => {
   supabase.rpc.mockReset()
   revalidatePath.mockReset()
+  maybeSingle.mockReset()
+  maybeSingle.mockResolvedValue({ data: null })
 })
 
 describe('resolveMarketAction', () => {
@@ -79,5 +86,16 @@ describe('resolveMarketAction', () => {
 
     expect(state).toBeUndefined()
     expect(revalidatePath).toHaveBeenCalledWith('/', 'layout')
+  })
+
+  // A lost response replayed by Next: the first call resolved it, the replay is refused.
+  it('treats a replay of the same member’s resolve to the same outcome as success', async () => {
+    supabase.rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'only an admin can change an already-resolved market' } })
+    maybeSingle.mockResolvedValue({ data: { id: 'res-1' } })
+
+    expect(await resolveMarketAction('market-1', undefined, outcomeForm('outcome-1'))).toBeUndefined()
+
+    supabase.rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'that outcome is already the result' } })
+    expect(await resolveMarketAction('market-1', undefined, outcomeForm('outcome-1'))).toBeUndefined()
   })
 })

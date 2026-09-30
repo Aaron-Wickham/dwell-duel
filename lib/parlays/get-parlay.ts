@@ -78,6 +78,38 @@ export function toParlayDetail(row: DetailRow, ownerName: string, now: number): 
   }
 }
 
+export interface ParlayHead {
+  id: string
+  ownerId: string
+  ownerName: string
+  createdAt: string
+  legCount: number
+}
+
+const FALLBACK_OWNER = 'A member'
+
+// Just enough of a parlay for its page's header and its 404, read before anything streams: the
+// legs come back as ids only, so the count costs no join beyond the parlay's own row.
+export async function getParlayHead(supabase: DbClient, id: string): Promise<ParlayHead | null> {
+  if (!isUuid(id)) return null
+  const { data, error } = await supabase
+    .from('parlays')
+    .select('id, profile_id, created_at, parlay_legs(outcome_id)')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return null
+  const { data: owner, error: ownerError } = await supabase.from('profiles').select('display_name').eq('id', data.profile_id).maybeSingle()
+  if (ownerError) throw ownerError
+  return {
+    id: data.id,
+    ownerId: data.profile_id,
+    ownerName: owner?.display_name ?? FALLBACK_OWNER,
+    createdAt: data.created_at,
+    legCount: data.parlay_legs.length,
+  }
+}
+
 // One parlay for its detail page, or null when the id isn't one, or RLS shows the member nothing.
 export async function getParlayDetail(supabase: DbClient, id: string): Promise<ParlayDetail | null> {
   if (!isUuid(id)) return null
@@ -87,7 +119,7 @@ export async function getParlayDetail(supabase: DbClient, id: string): Promise<P
   const row = data as unknown as DetailRow
   const { data: owner, error: ownerError } = await supabase.from('profiles').select('display_name').eq('id', row.profile_id).maybeSingle()
   if (ownerError) throw ownerError
-  return toParlayDetail(row, owner?.display_name ?? 'A member', Date.now())
+  return toParlayDetail(row, owner?.display_name ?? FALLBACK_OWNER, Date.now())
 }
 
 // How the legs stand, in leg order, for the progress bar and its one-line summary.

@@ -3,6 +3,7 @@
 import type { CSSProperties } from 'react'
 import { CircleCheck } from 'lucide-react'
 import { Toaster as SonnerToaster } from 'sonner'
+import { useHtmlTheme } from '@/lib/theme/use-html-theme'
 import { useIsDesktop } from '@/lib/ui/use-is-desktop'
 
 // Sonner's own "mobile" layout switches at a fixed 600px baked into its stylesheet. This
@@ -16,8 +17,11 @@ const PHONE_OFFSET = { top: 'calc(80px + var(--safe-top))', left: 16, right: 16 
 
 export function Toaster() {
   const isDesktop = useIsDesktop()
+  // Sonner's rich colours come in a light and a dark set; without the theme they'd stay light.
+  const theme = useHtmlTheme()
   return (
     <SonnerToaster
+      theme={theme}
       position={isDesktop ? 'bottom-right' : 'top-center'}
       gap={12}
       richColors

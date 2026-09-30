@@ -302,6 +302,8 @@ describe('TaskCatalogItem', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByLabelText('Title')).toBeNull()
     expect(updateTaskAction).not.toHaveBeenCalled()
+    // Cancel unmounted the form under the keyboard, so focus goes back to what opened it.
+    expect(edit).toHaveFocus()
   })
 
   it('saves an edit, keeping the task active, and closes the form', async () => {
@@ -313,6 +315,7 @@ describe('TaskCatalogItem', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(screen.queryByLabelText('Title')).toBeNull())
+    expect(screen.getByRole('button', { name: 'Edit Read Genesis 1-3' })).toHaveFocus()
     const [taskId, , formData] = updateTaskAction.mock.calls[0]
     expect(taskId).toBe('t1')
     expect(formData.get('title')).toBe('Read Genesis 1-4')

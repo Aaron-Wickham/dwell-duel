@@ -14,14 +14,15 @@ import { chartClosedAt, type MarketCardStatus } from '@/lib/markets/market-statu
 import { focusTarget } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
 
-const STATUS_LABEL: Record<MarketCardStatus, string> = {
+// What a market's state is called, everywhere it's shown: here, and on the market page's chip.
+export const STATUS_LABEL: Record<MarketCardStatus, string> = {
   open: 'Open',
   awaiting: 'Awaiting resolution',
   resolved: 'Resolved',
   voided: 'Voided',
 }
 
-const STATUS_TONE: Record<MarketCardStatus, 'open' | 'wait' | 'done' | 'lost' | 'void'> = {
+export const STATUS_TONE: Record<MarketCardStatus, 'open' | 'wait' | 'done' | 'lost' | 'void'> = {
   open: 'open',
   awaiting: 'wait',
   resolved: 'done',
@@ -45,7 +46,7 @@ export interface MarketCardProps {
   title: string
   status: MarketCardStatus
   kind: MarketKind
-  // An over/under's line, shown as an O/U chip.
+  // An over/under's line, shown as an Over/Under chip.
   line?: number | null
   edited?: boolean
   closeAt: string
@@ -93,7 +94,7 @@ export function MarketCard({
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</StatusChip>
         {status === 'open' && now !== undefined && <ClosesSoonChip closeAt={closeAt} now={now} />}
-        {kind === 'over_under' && line !== null && <StatusChip tone="void">O/U {formatLine(line)}</StatusChip>}
+        {kind === 'over_under' && line !== null && <StatusChip tone="void">Over/Under {formatLine(line)}</StatusChip>}
         <span className="text-sm text-ink2">
           {status === 'open' &&
             (closeAt ? (
@@ -123,7 +124,7 @@ export function MarketCard({
         {preview ? (
           title
         ) : (
-          <Link href={`/markets/${id}`} transitionTypes={['nav-forward']} className="stretched-link">
+          <Link href={`/markets/${id}`} transitionTypes={['nav-forward']} className="stretched-link no-underline">
             {title}
           </Link>
         )}
@@ -158,7 +159,7 @@ export function MarketCard({
             {outcomes.map((outcome) => (
               <span
                 key={outcome.id}
-                className="inline-flex h-6 items-center whitespace-nowrap rounded-full bg-sunk px-[9px] text-xs font-extrabold text-ink2"
+                className="inline-flex min-h-6 max-w-full items-center rounded-full bg-sunk px-[9px] py-0.5 text-xs font-extrabold text-ink2 break-words"
               >
                 {outcome.label}
               </span>

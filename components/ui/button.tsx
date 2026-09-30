@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { ComponentProps } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
@@ -31,7 +31,7 @@ export function buttonVariants(opts?: VariantProps<typeof buttonCva>): string {
   return cn(buttonCva(opts))
 }
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonCva> {}
+export interface ButtonProps extends ComponentProps<'button'>, VariantProps<typeof buttonCva> {}
 
 export function Button({ className, variant, size, block, type = 'button', ...props }: ButtonProps) {
   return <button type={type} className={cn(buttonVariants({ variant, size, block }), className)} {...props} />

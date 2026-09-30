@@ -11,7 +11,13 @@ export function MarketChartSkeleton() {
     <SkeletonScreen name="market-chart" announce={false} className="lg:col-start-1 lg:row-start-1">
       <SkeletonCard>
         <Skeleton className="h-6 w-44" />
+        {/* The chart's bet count and range picker row, the plot, then its tick labels. */}
+        <div className="flex min-h-11 items-center justify-between gap-3">
+          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-11 w-40" />
+        </div>
         <Skeleton className="h-[220px] md:h-[300px]" />
+        <Skeleton className="h-5 w-full" />
       </SkeletonCard>
     </SkeletonScreen>
   )
@@ -49,11 +55,11 @@ export function MarketActionsSkeleton({ outcomes }: { outcomes: number }) {
         announce={false}
         className="flex flex-col gap-5 lg:col-start-2 lg:row-span-4 lg:row-start-1 lg:gap-7"
       >
-        <SkeletonCard className="gap-4">
+        {/* "Place a bet" or "Betting closed": a heading and a short paragraph, nothing to fill in. */}
+        <SkeletonCard className="gap-2">
           <Skeleton className="h-6 w-32" />
-          <SkeletonField />
-          <SkeletonField />
-          <Skeleton className="h-12" />
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-4/5" />
         </SkeletonCard>
       </SkeletonScreen>
     </>

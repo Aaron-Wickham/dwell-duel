@@ -14,7 +14,7 @@ function Figure({ label, value, className }: { label: string; value: string; cla
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
       <span className="text-xs text-ink2">{label}</span>
-      <span className={cn('text-[19px] leading-tight font-extrabold tabular-nums', className)}>{value}</span>
+      <span className={cn('text-xl leading-tight font-extrabold tabular-nums', className)}>{value}</span>
     </div>
   )
 }

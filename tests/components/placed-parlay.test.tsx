@@ -89,9 +89,12 @@ describe('PlacedParlay', () => {
         ],
       }),
     )
-    const progress = screen.getByRole('img', { name: '1 won · 2 open' })
-    expect(progress.children).toHaveLength(3)
-    expect(screen.getByText('1 won · 2 open')).toBeInTheDocument()
+    // The summary is the visible line; the bar only repeats it, so it is hidden from readers.
+    const summary = screen.getByText('1 won · 2 open')
+    const bar = summary.previousElementSibling!
+    expect(bar).toHaveAttribute('aria-hidden', 'true')
+    expect(bar.children).toHaveLength(3)
+    expect(screen.queryByRole('img', { name: '1 won · 2 open' })).toBeNull()
   })
 
   it('says a pick whose market is past its close time is awaiting resolution, like a solo bet', () => {
@@ -104,7 +107,7 @@ describe('PlacedParlay', () => {
       }),
     )
     expect(screen.getByText('Awaiting resolution')).toHaveClass('h-6', 'rounded-full')
-    expect(screen.getByRole('img', { name: '1 open · 1 awaiting' })).toBeInTheDocument()
+    expect(screen.getByText('1 open · 1 awaiting')).toBeInTheDocument()
   })
 
   it('lists the picks as plain text with the picked outcome and a status pill, so the whole card is one link', () => {

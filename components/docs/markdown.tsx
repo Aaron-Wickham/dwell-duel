@@ -10,6 +10,14 @@ function linkKind(href: string): 'app' | 'web' | 'text' {
   return 'text'
 }
 
+// The doc's own anchors are GitHub's `#the-leaderboard`; the page gives each section the id
+// `how-<slug>` (app/(app)/how-it-works/page.tsx), so an in-doc link is pointed at that.
+export const SECTION_ID_PREFIX = 'how-'
+
+function pageHref(href: string): string {
+  return href.startsWith('#') && !href.startsWith(`#${SECTION_ID_PREFIX}`) ? `#${SECTION_ID_PREFIX}${href.slice(1)}` : href
+}
+
 export function InlineContent({ nodes }: { nodes: Inline[] }): ReactNode {
   return nodes.map((node, i) => {
     switch (node.type) {
@@ -45,7 +53,7 @@ export function InlineContent({ nodes }: { nodes: Inline[] }): ReactNode {
         }
         if (kind === 'web') {
           return (
-            <a key={i} href={node.href}>
+            <a key={i} href={pageHref(node.href)}>
               {children}
             </a>
           )
@@ -87,28 +95,30 @@ function BlockContent({ block }: { block: Block }) {
     }
     case 'table':
       return (
-        <table className="w-full border-collapse text-left text-[15px]">
-          <thead>
-            <tr>
-              {block.head.map((cell, i) => (
-                <th key={i} scope="col" className={`${cellClass} border-line-s font-extrabold`}>
-                  <InlineContent nodes={cell} />
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {block.rows.map((row, r) => (
-              <tr key={r}>
-                {row.map((cell, i) => (
-                  <td key={i} className={`${cellClass} break-words`}>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left text-[15px]">
+            <thead>
+              <tr>
+                {block.head.map((cell, i) => (
+                  <th key={i} scope="col" className={`${cellClass} border-line-s font-extrabold`}>
                     <InlineContent nodes={cell} />
-                  </td>
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {block.rows.map((row, r) => (
+                <tr key={r}>
+                  {row.map((cell, i) => (
+                    <td key={i} className={`${cellClass} break-words`}>
+                      <InlineContent nodes={cell} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )
   }
 }

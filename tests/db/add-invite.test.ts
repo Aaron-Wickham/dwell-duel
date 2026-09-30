@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { addInvite } from '@/lib/invites/add-invite'
-import { serviceClient } from './helpers'
+import { serviceClient, expectError } from './helpers'
 import { seedMembers, clientFor, type Member, giveRole } from './fixtures'
 
 let admin: Member
@@ -88,14 +88,14 @@ describe('admin_insert_invites', () => {
   it('refuses another member as the inviter', async () => {
     const adminClient = await clientFor(admin)
     const { error } = await adminClient.from('allowed_emails').insert({ email: 'named@example.com', invited_by: member.id })
-    expect(error?.code).toBe('42501')
+    expectError(error, { code: '42501', message: 'row-level security policy for table "allowed_emails"' })
     expect(await inviteRow('named@example.com')).toBeNull()
   })
 
   it('refuses an invite that arrives already claimed', async () => {
     const adminClient = await clientFor(admin)
     const { error } = await adminClient.from('allowed_emails').insert({ email: 'claimed@example.com', claimed_by: member.id })
-    expect(error?.code).toBe('42501')
+    expectError(error, { code: '42501', message: 'permission denied for table allowed_emails' })
     expect(await inviteRow('claimed@example.com')).toBeNull()
   })
 })

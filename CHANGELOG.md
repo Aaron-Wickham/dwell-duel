@@ -14,6 +14,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Voids follow the same rule as results, and say why.** Until a market closes, its creator or an admin can void it; once it has closed, only an admin can. Every void needs a reason (up to 500 characters), which shows on the market page and, with the void itself, in the feed (#290).
 - **The feed skips an event kind it doesn't recognise** instead of failing, so a new kind can reach the database before the build that shows it (#290).
 
+### Tests
+- **The DB suite is typed, names what each refusal was for, and checks the money after every test.** Test clients carry the `Database` type, so a renamed RPC argument fails the typecheck. About 80 negative assertions that accepted any error now check the message or SQLSTATE (`expectError`). After each DB test, `tests/db/setup.ts` checks that every balance equals its ledger, every outcome's pool equals its live bets, and every parlay's credit equals its payout rows; tests that seed raw rows opt out with a reason. Slip tests call `place_slip_v2` and assert its summary, and `money-races` gains cancel-vs-resolve and double-approve races (#271).
+
 ## v0.5.2-beta — 2026-09-30
 
 An Admin › Markets tab for the markets waiting on a result, with tab counts that add up to the Admin badge, and rows inside cards that tint on hover instead of floating like a button inside a button.

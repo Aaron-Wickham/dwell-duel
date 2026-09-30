@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest'
 import { serviceClient, deleteAuthUser, type TestClient, skipLedgerCheck } from './helpers'
 import { seedMembers, makeMember, clientFor, ensureInvited } from './fixtures'
 import { getLeaderboardPage } from '@/lib/social/leaderboard'
@@ -77,6 +77,9 @@ afterAll(async () => {
 }, 60_000)
 
 describe('getLeaderboardPage', () => {
+  // beforeAll writes the 60 balances directly, in bulk, rather than through 60 ledger rows.
+  beforeEach(() => skipLedgerCheck('the board is seeded by writing balances directly'))
+
   it('sets up a board of 60 with the tie across the page boundary', () => {
     expect(board).toHaveLength(60)
     expect(board.slice(TIE_START, TIE_START + 6).map((m) => m.balance)).toEqual(Array(6).fill(TIE_BALANCE))
@@ -127,7 +130,6 @@ describe('getLeaderboardPage', () => {
   // The board's score is a bigint, so a cursor past a JS safe integer is the only out-of-range one:
   // decodeRankCursor rejects it like any other malformed cursor, and the page falls back to the top.
   it('reads a raw cursor with a score past a safe integer as the first page, not an error', async () => {
-    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     // ASCII-only JSON, so plain btoa (rather than rank-cursor.ts's UTF-8 path) is enough here.
     const encodeRaw = (json: string) => btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
     const overflow = encodeRaw(`[99999999999999999999,"A","${board[0].id}"]`)

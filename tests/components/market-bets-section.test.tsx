@@ -65,6 +65,7 @@ const market: MarketDetail = {
   createdBy: 'p-owner',
   creatorName: 'Owner',
   currentResolutionId: null,
+  resolvedOutcomeId: null,
   resolvedOutcomeLabel: null,
   resolvedAt: null,
   outcomes: [

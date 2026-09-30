@@ -20,6 +20,7 @@ export interface MarketDetail {
   createdBy: string
   creatorName: string
   currentResolutionId: string | null
+  resolvedOutcomeId: string | null
   resolvedOutcomeLabel: string | null
   resolvedAt: string | null
   outcomes: { id: string; label: string; poolTotal: number }[]
@@ -83,6 +84,7 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
     createdBy: data.created_by,
     creatorName: creator?.display_name ?? 'Unknown member',
     currentResolutionId: data.current_resolution_id,
+    resolvedOutcomeId: resolution?.outcome_id ?? null,
     resolvedOutcomeLabel,
     resolvedAt,
     outcomes,

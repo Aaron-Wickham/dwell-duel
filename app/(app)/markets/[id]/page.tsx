@@ -413,6 +413,7 @@ async function MarketActions({
                   outcomes={market.outcomes}
                   line={market.kind === 'over_under' ? market.line : null}
                   override={canOverride}
+                  currentOutcomeId={market.resolvedOutcomeId}
                 />
               )}
               {canVoid && (

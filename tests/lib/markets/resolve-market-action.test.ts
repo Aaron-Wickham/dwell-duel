@@ -41,6 +41,15 @@ describe('resolveMarketAction', () => {
     expect(revalidatePath).not.toHaveBeenCalled()
   })
 
+  it('words the same-outcome refusal for the admin (#198)', async () => {
+    supabase.rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'that outcome is already the result' } })
+
+    const state = await resolveMarketAction('market-1', undefined, outcomeForm('outcome-1'))
+
+    expect(state).toEqual({ formError: 'That outcome is already the result, so there’s nothing to override.', field: 'outcome' })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
   it('keeps every other error message as it is', async () => {
     supabase.rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'only an admin can change an already-resolved market' } })
 

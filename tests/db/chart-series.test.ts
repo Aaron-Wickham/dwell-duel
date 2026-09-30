@@ -69,8 +69,8 @@ describe('getChartSeries (#68)', () => {
       created_at: new Date(start + i * 1000).toISOString(),
     }))
     const { error } = await serviceClient().from('bets').insert(rows)
-    await reconcilePoolTotals()
     if (error) throw error
+    await reconcilePoolTotals()
 
     const chart = await getChartSeries(bobClient, await marketFacts(market.marketId, market.outcomeIds))
     expect(chart.betCount).toBe(CHART_POINTS + 50)

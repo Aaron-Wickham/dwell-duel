@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest'
-import { serviceClient, deleteAuthUser, type TestClient, skipLedgerCheck } from './helpers'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { pgQuery } from './pg-query'
+import { serviceClient, deleteAuthUser, type TestClient } from './helpers'
 import { seedMembers, makeMember, clientFor, ensureInvited } from './fixtures'
 import { getLeaderboardPage } from '@/lib/social/leaderboard'
 import { showMoreHref } from '@/lib/pagination/cursor'
@@ -54,6 +55,15 @@ beforeAll(async () => {
     }),
   )
 
+  // One adjustment row per profile for the gap, so every balance still equals its ledger.
+  await pgQuery(`
+    insert into public.coin_transactions (profile_id, amount, type)
+    select p.id, p.balance - coalesce(sum(t.amount), 0), 'test_adjustment'
+    from public.profiles p left join public.coin_transactions t on t.profile_id = p.id
+    group by p.id, p.balance
+    having p.balance <> coalesce(sum(t.amount), 0)
+  `)
+
   // The expected board comes from the database's own order, so the names in the tie sort by its
   // collation, the same one the reader's filters compare with.
   const { data, error } = await db
@@ -77,9 +87,6 @@ afterAll(async () => {
 }, 60_000)
 
 describe('getLeaderboardPage', () => {
-  // beforeAll writes the 60 balances directly, in bulk, rather than through 60 ledger rows.
-  beforeEach(() => skipLedgerCheck('beforeAll sets 60 balances with direct updates instead of 60 ledger rows; the tests only read the board'))
-
   it('sets up a board of 60 with the tie across the page boundary', () => {
     expect(board).toHaveLength(60)
     expect(board.slice(TIE_START, TIE_START + 6).map((m) => m.balance)).toEqual(Array(6).fill(TIE_BALANCE))

@@ -176,6 +176,7 @@ export type SlipSummary = { parlay_id: string | null; solos: number; picks: stri
  * hundreds of RPC calls): brings pools and balances in line with what was inserted, so the
  * ledger check after the test still guards everything the test didn't deliberately write.
  */
+// Run right after the raw seed, before anything under test moves coins: this rewrites every row.
 export async function reconcilePoolTotals(): Promise<void> {
   await pgQuery(`
     update public.market_outcomes o
@@ -183,6 +184,7 @@ export async function reconcilePoolTotals(): Promise<void> {
   `)
 }
 
+// Run right after the raw seed, before anything under test moves coins: this rewrites every row.
 export async function reconcileBalances(): Promise<void> {
   await pgQuery(`
     update public.profiles p

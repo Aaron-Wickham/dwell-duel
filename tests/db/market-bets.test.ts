@@ -76,8 +76,8 @@ describe('getMarketBets', () => {
       created_at: `${new Date(start + Math.floor(i / 3) * 60_000).toISOString().slice(0, 19)}.000123+00:00`,
     }))
     const { error } = await serviceClient().from('bets').insert(rows)
-    await reconcilePoolTotals()
     if (error) throw error
+    await reconcilePoolTotals()
 
     const first = await getMarketBets(bobClient, market.marketId, FIRST)
     expect(first.rows.map((b) => b.amount)).toEqual(Array.from({ length: 50 }, (_, i) => 70 - i))

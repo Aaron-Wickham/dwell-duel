@@ -1,4 +1,5 @@
 import type { DbClient } from '@/lib/supabase/database'
+import { GROUP_TIME_ZONE } from '@/lib/group-time-zone'
 
 // supabase/migrations/0052_economy_panel.sql: economy_summary's one row. bigint columns are
 // read through Number(), as my_at_stake's are, in case PostgREST hands one back as a string.
@@ -94,7 +95,7 @@ export async function readEconomySummary(supabase: DbClient, now: Date = new Dat
 
 // "September 2026": month_start is Eastern midnight on the 1st, so it's read in that zone.
 export function monthLabel(monthStart: string): string {
-  return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'America/New_York' }).format(
+  return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: GROUP_TIME_ZONE }).format(
     new Date(monthStart),
   )
 }

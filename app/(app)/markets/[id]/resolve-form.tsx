@@ -14,6 +14,7 @@ import { resolveMarketAction, type ActionState } from '@/lib/markets/resolve-mar
 import { formatLine } from '@/lib/markets/kind'
 import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import { Input } from '@/components/ui/field'
+import { labelClass } from '@/components/ui/page'
 
 const FORM_ID = 'resolve-form'
 
@@ -173,7 +174,7 @@ export function ResolveForm({
           />
         </Field>
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1.5 text-[15px] font-bold">Proof (optional)</legend>
+          <legend className={`mb-1.5 ${labelClass}`}>Proof (optional)</legend>
           <ProofPicker id="resolve-proof" value={drafts} onChange={setDrafts} />
         </fieldset>
         <FormSubmitButton block>{override ? 'Override resolution' : 'Resolve market'}</FormSubmitButton>

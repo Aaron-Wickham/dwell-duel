@@ -8,6 +8,7 @@ import { Message } from '@/components/ui/message'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { CopyInviteButton } from './copy-invite-button'
+import { labelClass } from '@/components/ui/page'
 
 export function AddInviteForm() {
   // Controlled, so a refused email stays put; cleared once the invite is added.
@@ -27,7 +28,7 @@ export function AddInviteForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-2">
-      <label htmlFor="invite-email" className="text-[15px] font-bold">
+      <label htmlFor="invite-email" className={labelClass}>
         Email
       </label>
       <div className="flex gap-2">

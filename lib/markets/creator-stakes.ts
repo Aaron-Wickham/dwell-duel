@@ -13,7 +13,6 @@ export async function getCreatorStakes(
   const stakes = new Map<string, CreatorStake>()
   if (markets.length === 0) return stakes
   const creatorOf = new Map(markets.map((m) => [m.id, m.createdBy]))
-  const creators = [...new Set(markets.map((m) => m.createdBy))]
   const stakeFor = (marketId: string) => {
     let s = stakes.get(marketId)
     if (!s) stakes.set(marketId, (s = { solo: [], parlayLabels: [] }))
@@ -21,6 +20,8 @@ export async function getCreatorStakes(
   }
 
   for (const ids of chunk([...creatorOf.keys()], IN_CHUNK)) {
+    // Only this chunk's creators, so a request's lists both stay at IN_CHUNK or fewer.
+    const creators = [...new Set(ids.map((id) => creatorOf.get(id)!))]
     const [bets, legs] = await Promise.all([
       supabase.from('bets').select('market_id, profile_id, amount, market_outcomes(label)').in('market_id', ids).in('profile_id', creators),
       supabase

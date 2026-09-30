@@ -85,7 +85,7 @@ vi.mock('@/lib/supabase/client', () => {
 })
 vi.mock('next/navigation', () => ({ useRouter: () => mocks.router }))
 
-import { LIVE_TABLES, LiveRefresh } from '@/components/live/live-refresh'
+import { DEBOUNCE_MS, LIVE_TABLES, LiveRefresh, MAX_WAIT_MS } from '@/components/live/live-refresh'
 
 function setVisibility(state: DocumentVisibilityState) {
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
@@ -284,7 +284,7 @@ describe('LiveRefresh', () => {
     fireChange(base, 'profiles')
     vi.advanceTimersByTime(200)
     fireChange(page!, 'bets')
-    vi.advanceTimersByTime(399)
+    vi.advanceTimersByTime(DEBOUNCE_MS - 1)
     expect(mocks.refresh).not.toHaveBeenCalled()
 
     vi.advanceTimersByTime(1)
@@ -296,19 +296,21 @@ describe('LiveRefresh', () => {
 
     // Each change lands well inside the 400ms trailing window, so without a cap the debounce
     // would never fire.
-    for (let i = 0; i < 6; i++) {
+    const STEP = 300
+    const STEPS = 6
+    for (let i = 0; i < STEPS; i++) {
       fireChange(base, 'profiles')
-      vi.advanceTimersByTime(300)
+      vi.advanceTimersByTime(STEP)
     }
     expect(mocks.refresh).not.toHaveBeenCalled()
 
     fireChange(base, 'profiles')
-    vi.advanceTimersByTime(200)
+    vi.advanceTimersByTime(MAX_WAIT_MS - STEP * STEPS)
     expect(mocks.refresh).toHaveBeenCalledTimes(1)
 
     // The cap resets after it fires: a further burst waits out its own debounce again.
     fireChange(base, 'profiles')
-    vi.advanceTimersByTime(399)
+    vi.advanceTimersByTime(DEBOUNCE_MS - 1)
     expect(mocks.refresh).toHaveBeenCalledTimes(1)
     vi.advanceTimersByTime(1)
     expect(mocks.refresh).toHaveBeenCalledTimes(2)
@@ -319,12 +321,12 @@ describe('LiveRefresh', () => {
 
     setVisibility('hidden')
     fireChange(base, 'profiles')
-    vi.advanceTimersByTime(400)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
     expect(mocks.refresh).not.toHaveBeenCalled()
 
     setVisibility('visible')
     document.dispatchEvent(new Event('visibilitychange'))
-    vi.advanceTimersByTime(400)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
     expect(mocks.refresh).toHaveBeenCalledTimes(1)
   })
 
@@ -340,7 +342,7 @@ describe('LiveRefresh', () => {
 
     setVisibility('visible')
     document.dispatchEvent(new Event('visibilitychange'))
-    vi.advanceTimersByTime(400)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
     expect(mocks.refresh).toHaveBeenCalledTimes(1)
   })
 
@@ -348,12 +350,12 @@ describe('LiveRefresh', () => {
     const { base } = await mount()
 
     base.report('SUBSCRIBED')
-    vi.advanceTimersByTime(400)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
     expect(mocks.refresh).not.toHaveBeenCalled()
 
     base.report('CLOSED')
     base.report('SUBSCRIBED')
-    vi.advanceTimersByTime(400)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
     expect(mocks.refresh).toHaveBeenCalledTimes(1)
   })
 
@@ -361,12 +363,12 @@ describe('LiveRefresh', () => {
     const { page } = await mount([{ table: 'bets' }])
 
     page!.report('SUBSCRIBED')
-    vi.advanceTimersByTime(400)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
     expect(mocks.refresh).not.toHaveBeenCalled()
 
     page!.report('CLOSED')
     page!.report('SUBSCRIBED')
-    vi.advanceTimersByTime(400)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
     expect(mocks.refresh).toHaveBeenCalledTimes(1)
   })
 
@@ -376,7 +378,7 @@ describe('LiveRefresh', () => {
     const { page: rebuiltPage } = await rebuild(view, [{ table: 'bets', filter: 'market_id=eq.market-1' }])
 
     rebuiltPage!.report('SUBSCRIBED')
-    vi.advanceTimersByTime(400)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
     expect(mocks.refresh).not.toHaveBeenCalled()
   })
 
@@ -385,12 +387,12 @@ describe('LiveRefresh', () => {
 
     setVisibility('hidden')
     document.dispatchEvent(new Event('visibilitychange'))
-    vi.advanceTimersByTime(400)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
     expect(mocks.refresh).not.toHaveBeenCalled()
 
     setVisibility('visible')
     document.dispatchEvent(new Event('visibilitychange'))
-    vi.advanceTimersByTime(400)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
     expect(mocks.refresh).toHaveBeenCalledTimes(1)
   })
 
@@ -400,7 +402,7 @@ describe('LiveRefresh', () => {
 
     document.dispatchEvent(new Event('visibilitychange'))
     base.report('SUBSCRIBED')
-    vi.advanceTimersByTime(400)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
 
     expect(mocks.refresh).toHaveBeenCalledTimes(1)
   })
@@ -410,9 +412,9 @@ describe('LiveRefresh', () => {
     fireChange(base, 'profiles')
 
     unmount()
-    vi.advanceTimersByTime(400)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
     document.dispatchEvent(new Event('visibilitychange'))
-    vi.advanceTimersByTime(400)
+    vi.advanceTimersByTime(DEBOUNCE_MS)
 
     expect(mocks.client.removeChannel).toHaveBeenCalledWith(base)
     expect(mocks.client.removeChannel).toHaveBeenCalledWith(page)

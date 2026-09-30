@@ -6,6 +6,12 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Fixes
+- **Creator stakes stay within the URL limit.** A deep feed window asks about each chunk of 50 markets with only that chunk's creators, not every creator on the page (#272).
+
+### Polish
+- **Code nits.** One `GROUP_TIME_ZONE` for seasons, the recap week and the economy month; one shared `labelClass` for field labels and legends; exports nothing else uses are no longer exported (#272).
+
 ## v0.5.2-beta — 2026-09-30
 
 An Admin › Markets tab for the markets waiting on a result, with tab counts that add up to the Admin badge, and rows inside cards that tint on hover instead of floating like a button inside a button.

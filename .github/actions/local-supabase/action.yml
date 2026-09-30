@@ -21,7 +21,7 @@ runs:
     # falls back to anonymous pulls rather than failing the run.
     - name: Log in to Docker Hub
       if: inputs.dockerhub-token != ''
-      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
       continue-on-error: true
       with:
         username: ${{ inputs.dockerhub-username }}

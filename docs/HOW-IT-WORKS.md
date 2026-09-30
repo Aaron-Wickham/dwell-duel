@@ -40,7 +40,9 @@ The Markets page lists open markets **soonest to close first**, so one
 closing within the hour is at the top. A market closing within a day
 says so ("Closes in 2h"). Markets past their close time with no result
 yet are grouped under Awaiting resolution, and resolved and voided markets
-follow, newest first.
+follow, most recently settled first: the order they were resolved or
+voided in, not the order they were created in. A voided market shows the
+day it was voided.
 
 The tabs above the list narrow it: **All** (the default), **Open** (still
 taking bets), **Awaiting** (past the close time, waiting to be resolved)
@@ -88,7 +90,7 @@ same formula as the real payout.
 - **Cancelling:** you can cancel a bet for a full refund until the market
   closes. Cancelled bets appear under My bets → Cancelled.
 - **No winners:** if nobody bet on the winning outcome, everyone is
-  refunded.
+  refunded. My bets marks such a bet "Refunded · no winners".
 
 ## The slip, solo bets and parlays
 
@@ -156,7 +158,8 @@ full ledger) can see it.
   (unless they have money on one). Reviewers and admins see any market
   still unresolved 48 hours after closing, and straight away one whose
   creator has money on it, since the creator can't resolve that one.
-- **Overrides:** an admin can change a result. The original payouts are
+- **Overrides:** an admin can change a result to a different outcome; the
+  outcome that already won can't be chosen again. The original payouts are
   taken back and the new winners paid; the confirmation says so first. If a past winner has already spent
   their winnings, the override is blocked and names who, so an admin can
   sort out balances first.

@@ -23,7 +23,7 @@ const dbReturning = (data: unknown, error: unknown = null) => {
 }
 
 beforeEach(() => {
-  sendPush.mockReset().mockResolvedValue({ sent: 1, removed: 0, failed: 0, systemic: 0 })
+  sendPush.mockReset().mockResolvedValue({ sent: 1, removed: 0, failed: 0, systemic: 0, credentials: 0 })
   after.mockReset()
   vi.stubEnv('NEXT_PUBLIC_VAPID_PUBLIC_KEY', 'public-key')
   vi.stubEnv('VAPID_PRIVATE_KEY', 'private-key')
@@ -125,9 +125,9 @@ describe('notify', () => {
     )
     const db = { rpc } as unknown as DbClient
     sendPush
-      .mockResolvedValueOnce({ sent: 1, removed: 0, failed: 0, systemic: 0 })
-      .mockResolvedValueOnce({ sent: 0, removed: 0, failed: 2, systemic: 0 })
-      .mockResolvedValueOnce({ sent: 2, removed: 1, failed: 0, systemic: 0 })
+      .mockResolvedValueOnce({ sent: 1, removed: 0, failed: 0, systemic: 0, credentials: 0 })
+      .mockResolvedValueOnce({ sent: 0, removed: 0, failed: 2, systemic: 0, credentials: 0 })
+      .mockResolvedValueOnce({ sent: 2, removed: 1, failed: 0, systemic: 0, credentials: 0 })
 
     expect(await sendResolveReminders(db)).toEqual({ reminded: 2, sent: 3, failed: 2, systemic: 0 })
     expect(sendPush.mock.calls.map(([messages]) => messages.map((m: { profileId: string }) => m.profileId))).toEqual([['alice'], ['bob'], ['carol']])
@@ -136,7 +136,7 @@ describe('notify', () => {
 
   it('claims nothing when every send failed, so the market is due again next run', async () => {
     const rpc = vi.fn(async () => ({ data: [{ market_id: 'm-1', title: 'A', profile_id: 'alice' }], error: null }))
-    sendPush.mockResolvedValue({ sent: 0, removed: 0, failed: 1, systemic: 0 })
+    sendPush.mockResolvedValue({ sent: 0, removed: 0, failed: 1, systemic: 0, credentials: 0 })
     expect(await sendResolveReminders({ rpc } as unknown as DbClient)).toEqual({ reminded: 0, sent: 0, failed: 1, systemic: 0 })
     expect(rpc).not.toHaveBeenCalledWith('claim_push_log', expect.anything())
     // The database counts the try, and gives up on the market after 24 hours (0076).
@@ -145,7 +145,7 @@ describe('notify', () => {
 
   it('does not count a systemic failure toward giving up on a market', async () => {
     const rpc = vi.fn(async () => ({ data: [{ market_id: 'm-1', title: 'A', profile_id: 'alice' }], error: null }))
-    sendPush.mockResolvedValue({ sent: 0, removed: 0, failed: 1, systemic: 1 })
+    sendPush.mockResolvedValue({ sent: 0, removed: 0, failed: 1, systemic: 1, credentials: 0 })
     expect(await sendResolveReminders({ rpc } as unknown as DbClient)).toEqual({ reminded: 0, sent: 0, failed: 1, systemic: 1 })
     expect(rpc).not.toHaveBeenCalledWith('record_push_failures', expect.anything())
   })
@@ -187,7 +187,7 @@ describe('notify', () => {
         : { data: 1, error: null },
     )
     const db = { rpc } as unknown as DbClient
-    sendPush.mockResolvedValue({ sent: 2, removed: 0, failed: 0, systemic: 0 })
+    sendPush.mockResolvedValue({ sent: 2, removed: 0, failed: 0, systemic: 0, credentials: 0 })
     expect(await sendMarketAlerts(db)).toEqual({ alerted: 1, sent: 2, failed: 0, systemic: 0 })
     expect(rpc).toHaveBeenCalledWith('due_market_alerts')
     expect(sendPush).toHaveBeenCalledTimes(1)
@@ -216,7 +216,7 @@ describe('notify', () => {
           ? { data: [{ market_id: 'm-2', title: 'B', profile_id: 'ada' }], error: null }
           : { data: 1, error: null },
     )
-    sendPush.mockResolvedValueOnce({ sent: 1, removed: 0, failed: 1, systemic: 0 }).mockResolvedValueOnce({ sent: 2, removed: 0, failed: 0, systemic: 0 })
+    sendPush.mockResolvedValueOnce({ sent: 1, removed: 0, failed: 1, systemic: 0, credentials: 0 }).mockResolvedValueOnce({ sent: 2, removed: 0, failed: 0, systemic: 0, credentials: 0 })
     expect(await sendClosingAlerts({ rpc } as unknown as DbClient)).toEqual({ reminded: 1, alerted: 1, sent: 3, failed: 1, systemic: 0 })
   })
 

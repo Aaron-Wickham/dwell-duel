@@ -15,7 +15,7 @@ beforeEach(() => {
   vi.stubEnv('NEXT_PUBLIC_VAPID_PUBLIC_KEY', '')
   vi.stubEnv('VAPID_PRIVATE_KEY', '')
   rpc.mockReset().mockImplementation(async (fn: string) => ({ data: fn === 'claim_cron_lease' ? true : [], error: null }))
-  sendPush.mockReset().mockResolvedValue({ sent: 1, removed: 0, failed: 0, systemic: 0 })
+  sendPush.mockReset().mockResolvedValue({ sent: 1, removed: 0, failed: 0, systemic: 0, credentials: 0 })
 })
 
 const due = (rows: unknown[]) =>
@@ -58,7 +58,7 @@ describe('closing-alerts cron', () => {
     vi.stubEnv('VAPID_PRIVATE_KEY', 'private-key')
     vi.spyOn(console, 'error').mockImplementation(() => {})
     due([{ market_id: 'm-1', title: 'Will it rain?', profile_id: 'alice' }])
-    sendPush.mockResolvedValue({ sent: 0, removed: 0, failed: 1, systemic: 0 })
+    sendPush.mockResolvedValue({ sent: 0, removed: 0, failed: 1, systemic: 0, credentials: 0 })
     const res = await GET(authorized())
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ sent: 0, failed: 1, systemic: 0 })
@@ -73,7 +73,7 @@ describe('closing-alerts cron', () => {
     vi.stubEnv('VAPID_PRIVATE_KEY', 'private-key')
     vi.spyOn(console, 'error').mockImplementation(() => {})
     due([{ market_id: 'm-1', title: 'Will it rain?', profile_id: 'alice' }])
-    sendPush.mockResolvedValue({ sent: 0, removed: 0, failed: 1, systemic: 1 })
+    sendPush.mockResolvedValue({ sent: 0, removed: 0, failed: 1, systemic: 1, credentials: 0 })
     expect((await GET(authorized())).status).toBe(502)
     expect(rpc).not.toHaveBeenCalledWith('record_cron_heartbeat', expect.anything())
     expect(rpc).not.toHaveBeenCalledWith('record_push_failures', expect.anything())
@@ -85,10 +85,48 @@ describe('closing-alerts cron', () => {
     vi.stubEnv('VAPID_PRIVATE_KEY', 'private-key')
     vi.spyOn(console, 'error').mockImplementation(() => {})
     due([{ market_id: 'm-1', title: 'Will it rain?', profile_id: 'alice' }])
-    sendPush.mockResolvedValue({ sent: 0, removed: 0, failed: 3, systemic: 0 })
+    sendPush.mockResolvedValue({ sent: 0, removed: 0, failed: 3, systemic: 0, credentials: 0 })
     expect((await GET(authorized())).status).toBe(200)
     expect(rpc).toHaveBeenCalledWith('record_push_failures', { p_kind: 'resolve_reminder', p_refs: ['m-1'] })
     expect(rpc).toHaveBeenCalledWith('record_cron_heartbeat', { p_name: 'closing-alerts' })
+  })
+
+  // #257: a 403 is the device's (an older VAPID key) when the run delivered something, ours when it didn't.
+  const credentialAnswer = (ids: Record<string, string>) =>
+    sendPush.mockImplementation(async (messages: { profileId: string }[], _db: unknown, run: { credentialIds: string[]; credentialCount: number }) => {
+      const id = ids[messages[0].profileId]
+      if (!id) return { sent: 1, removed: 0, failed: 0, systemic: 0, credentials: 0 }
+      run.credentialIds.push(id)
+      run.credentialCount++
+      return { sent: 0, removed: 0, failed: 1, systemic: 0, credentials: 1 }
+    })
+
+  it('records a 403 against its device, and stamps the heartbeat, when another device was delivered to', async () => {
+    vi.stubEnv('NEXT_PUBLIC_VAPID_PUBLIC_KEY', 'public-key')
+    vi.stubEnv('VAPID_PRIVATE_KEY', 'private-key')
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    due([
+      { market_id: 'm-1', title: 'A', profile_id: 'alice' },
+      { market_id: 'm-2', title: 'B', profile_id: 'bob' },
+    ])
+    credentialAnswer({ alice: 'sub-alice' })
+    const res = await GET(authorized())
+    expect(res.status).toBe(200)
+    expect(rpc).toHaveBeenCalledWith('record_push_results', { p_delivered: [], p_failed: ['sub-alice'] })
+    expect(rpc).toHaveBeenCalledWith('record_push_failures', { p_kind: 'resolve_reminder', p_refs: ['m-1'] })
+    expect(rpc).toHaveBeenCalledWith('record_cron_heartbeat', { p_name: 'closing-alerts' })
+  })
+
+  it('treats a lone 403 as our credentials: 502, no heartbeat, nothing recorded against the device', async () => {
+    vi.stubEnv('NEXT_PUBLIC_VAPID_PUBLIC_KEY', 'public-key')
+    vi.stubEnv('VAPID_PRIVATE_KEY', 'private-key')
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    due([{ market_id: 'm-1', title: 'A', profile_id: 'alice' }])
+    credentialAnswer({ alice: 'sub-alice' })
+    expect((await GET(authorized())).status).toBe(502)
+    expect(rpc).not.toHaveBeenCalledWith('record_push_results', expect.anything())
+    expect(rpc).not.toHaveBeenCalledWith('record_push_failures', expect.anything())
+    expect(rpc).not.toHaveBeenCalledWith('record_cron_heartbeat', expect.anything())
   })
 
   it('still stamps the heartbeat when a systemic failure came alongside a delivery', async () => {
@@ -96,7 +134,7 @@ describe('closing-alerts cron', () => {
     vi.stubEnv('VAPID_PRIVATE_KEY', 'private-key')
     vi.spyOn(console, 'error').mockImplementation(() => {})
     due([{ market_id: 'm-1', title: 'Will it rain?', profile_id: 'alice' }])
-    sendPush.mockResolvedValue({ sent: 1, removed: 0, failed: 1, systemic: 1 })
+    sendPush.mockResolvedValue({ sent: 1, removed: 0, failed: 1, systemic: 1, credentials: 0 })
     expect((await GET(authorized())).status).toBe(200)
   })
 
@@ -115,7 +153,7 @@ describe('closing-alerts cron', () => {
     vi.stubEnv('NEXT_PUBLIC_VAPID_PUBLIC_KEY', 'public-key')
     vi.stubEnv('VAPID_PRIVATE_KEY', 'private-key')
     due([{ market_id: 'm-1', title: 'Will it rain?', profile_id: 'alice' }])
-    sendPush.mockResolvedValue({ sent: 1, removed: 0, failed: 1, systemic: 0 })
+    sendPush.mockResolvedValue({ sent: 1, removed: 0, failed: 1, systemic: 0, credentials: 0 })
     expect((await GET(authorized())).status).toBe(200)
     expect(rpc).toHaveBeenCalledWith('record_cron_heartbeat', { p_name: 'closing-alerts' })
   })

@@ -524,9 +524,16 @@ server-only (`lib/push/send.ts`, `web-push`): it reads the recipients'
 subscriptions with the service-role client, sends up to six at a time, and
 deletes a subscription whose push service answers 404 or 410, and reports
 failures to `record_push_results` (0076), which prunes a device that keeps
-failing. Only a 4xx other than 401, 403, 404, 410 and 429 counts against a device.
-`PushResult.systemic` counts the rest (401/403, which mean our VAPID
-credentials are wrong, no status, 429, 5xx): logged, never recorded. It never throws; failures are logged. Resolving, overriding, voiding, approving
+failing. Only a 4xx other than 404, 410 and 429 counts against a device, with one
+rule for 401/403, which are the device's (a subscription made with an
+older VAPID key) or ours (wrong credentials, which every device answers):
+decided over the whole run. If the run delivered at least one push they
+count against the device (and its market towards giving up); if it
+delivered nothing they are systemic. `sendClosingAlerts` collects them in
+a `PushRun` and settles them after both sends
+(`settleCredentialFailures`); a lone `sendPush` call applies the same rule
+to itself. `PushResult.systemic` counts what is never recorded (no
+status, 429, 5xx, and 401/403 of a run that delivered nothing). It never throws; failures are logged. Resolving, overriding, voiding, approving
 or rejecting a task and creating a market call `afterAction()`
 (`lib/push/notify.ts`), which runs the send through Next's `after()`, so
 the member's action never waits on it; the recipients are read from the

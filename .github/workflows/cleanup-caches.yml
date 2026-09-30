@@ -12,6 +12,8 @@ permissions:
 
 jobs:
   delete:
+    # A fork PR's token is read-only, so it couldn't delete anything.
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -21,5 +23,7 @@ jobs:
           REPO: ${{ github.repository }}
           REF: refs/pull/${{ github.event.pull_request.number }}/merge
         run: |
-          gh cache list --repo "$REPO" --ref "$REF" --limit 100 --json id --jq '.[].id' |
-            while read -r id; do gh cache delete "$id" --repo "$REPO"; done
+          # --limit 100 caps one listing, so go round until none are left.
+          while ids=$(gh cache list --repo "$REPO" --ref "$REF" --limit 100 --json id --jq '.[].id') && [ -n "$ids" ]; do
+            for id in $ids; do gh cache delete "$id" --repo "$REPO"; done
+          done

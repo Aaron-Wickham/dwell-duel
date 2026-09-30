@@ -42,7 +42,7 @@ itself.
 | Styling | Tailwind v4 with CSS-variable tokens (`app/globals.css`), light and dark |
 | UI pieces | Base UI (dialogs, drawers), lucide-react icons, Motion (loaded lazily), NumberFlow, Recharts (the market page's chart and the leaderboard's race chart; cards draw plain SVG), sonner toasts |
 | Data | Supabase: Postgres, Auth, Realtime, Storage (`@supabase/ssr`) |
-| Hosting | Vercel (production only, plus a daily cron), with `@vercel/analytics` (10% of events kept) and `@vercel/speed-insights` (`sampleRate` 0.05), sampled in `lib/app-shell/analytics-sampling.ts` to stay inside Hobby's quotas (#278); `engines.node` pins Vercel to Node 22, the major `.nvmrc` and CI use |
+| Hosting | Vercel (production only, plus a daily cron), with `@vercel/analytics` (10% of events kept) and `@vercel/speed-insights` (`sampleRate` 0.05), sampled in `lib/app-shell/analytics-sampling.ts` to stay inside Hobby's quotas (#278; Analytics samples per event, so its visit and visitor counts read about 10x low); `engines.node` pins Vercel to Node 22, the major `.nvmrc` and CI use |
 | Tests | Vitest (unit, component, DB against local Supabase), Playwright (e2e) |
 
 ## Routes

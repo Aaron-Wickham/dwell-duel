@@ -39,7 +39,16 @@ test('a place whose response is lost can be retried without placing twice', asyn
   const placed = page.getByText('Placed 1 solo bet.').first()
   const unconfirmed = sheet.getByText(/couldn’t confirm your bets/)
   await expect(placed.or(unconfirmed)).toBeVisible()
-  if (await unconfirmed.isVisible()) await place.click()
+  if (await unconfirmed.isVisible()) {
+    // #192: closing the sheet unmounts the panel. The key and the message live in the provider,
+    // so reopening shows the same message, and Place returns the first result.
+    await sheet.getByRole('button', { name: 'Close slip' }).click()
+    await expect(sheet).toHaveCount(0)
+    const reopened = await openSlip(page)
+    await expect(reopened.getByText(/couldn’t confirm your bets/)).toBeVisible()
+    await expect(reopened.getByLabel('Stake (DC)')).toHaveValue('7')
+    await reopened.getByRole('button', { name: 'Place 1 bet · 7 DC' }).click()
+  }
   await expect(placed).toBeVisible()
   expect(dropped).toBe(true)
 

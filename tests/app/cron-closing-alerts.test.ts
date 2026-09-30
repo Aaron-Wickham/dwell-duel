@@ -93,9 +93,12 @@ describe('closing-alerts cron', () => {
 
   // #257: a 403 is the device's (an older VAPID key) when the run delivered something, ours when it didn't.
   const credentialAnswer = (ids: Record<string, string>) =>
-    sendPush.mockImplementation(async (messages: { profileId: string }[], _db: unknown, run: { credentialIds: string[]; credentialCount: number }) => {
+    sendPush.mockImplementation(async (messages: { profileId: string }[], _db: unknown, run: { sent: number; credentialIds: string[]; credentialCount: number }) => {
       const id = ids[messages[0].profileId]
-      if (!id) return { sent: 1, removed: 0, failed: 0, systemic: 0, credentials: 0 }
+      if (!id) {
+        run.sent += 1
+        return { sent: 1, removed: 0, failed: 0, systemic: 0, credentials: 0 }
+      }
       run.credentialIds.push(id)
       run.credentialCount++
       return { sent: 0, removed: 0, failed: 1, systemic: 0, credentials: 1 }

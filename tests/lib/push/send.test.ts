@@ -144,9 +144,9 @@ describe('sendPush', () => {
     const { db, failures } = fakeDb([sub('s1', 'alice')])
     sendNotification.mockRejectedValue(Object.assign(new Error('Forbidden'), { statusCode: 401 }))
     vi.spyOn(console, 'error').mockImplementation(() => {})
-    const run = { credentialIds: [] as string[], credentialCount: 0, credentialMarkets: [] }
+    const run = { sent: 0, credentialIds: [] as string[], credentialCount: 0, credentialMarkets: [] }
     expect(await sendPush([{ profileId: 'alice', payload }], db, run)).toEqual({ sent: 0, removed: 0, failed: 1, systemic: 0, credentials: 1 })
-    expect(run).toMatchObject({ credentialIds: ['s1'], credentialCount: 1 })
+    expect(run).toMatchObject({ sent: 0, credentialIds: ['s1'], credentialCount: 1 })
     expect(failures).toEqual([])
   })
 

@@ -28,6 +28,7 @@ export interface PushResult {
 // if nothing was delivered, it is our credentials (systemic). A run collects the answers across
 // several sendPush calls, and the caller settles them once it knows (settleCredentialFailures).
 export interface PushRun {
+  sent: number
   credentialIds: string[]
   credentialCount: number
   credentialMarkets: { kind: string; ref: string }[]
@@ -116,6 +117,7 @@ export async function sendPush(messages: PushMessage[], client?: DbClient, run?:
       }
     })
 
+    if (run) run.sent += sent
     let credentials = 0
     if (credentialIds.size > 0) {
       if (run) {

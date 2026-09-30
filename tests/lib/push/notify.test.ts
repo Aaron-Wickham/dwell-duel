@@ -220,6 +220,53 @@ describe('notify', () => {
     expect(await sendClosingAlerts({ rpc } as unknown as DbClient)).toEqual({ reminded: 1, alerted: 1, sent: 3, failed: 1, systemic: 0 })
   })
 
+  // A 403 device and a 400 device on one market, in a run that delivered nothing: the 400 is the
+  // device's own, so the market counts toward giving up; the 403 stays systemic.
+  it('counts a market with a device-caused failure toward giving up, even beside a 401/403', async () => {
+    const rpc = vi.fn(async (fn: string) =>
+      fn === 'claim_cron_lease'
+        ? { data: true, error: null }
+        : fn === 'due_resolve_reminders'
+          ? { data: [{ market_id: 'm-1', title: 'A', profile_id: 'alice' }], error: null }
+          : { data: [], error: null },
+    )
+    sendPush.mockImplementationOnce(async (_messages: unknown, _db: unknown, run: { credentialIds: string[]; credentialCount: number }) => {
+      run.credentialIds.push('s-403')
+      run.credentialCount += 1
+      return { sent: 0, removed: 0, failed: 2, systemic: 0, credentials: 1 }
+    })
+    expect(await sendClosingAlerts({ rpc } as unknown as DbClient)).toEqual({ reminded: 0, alerted: 0, sent: 0, failed: 2, systemic: 1 })
+    expect(rpc).toHaveBeenCalledWith('record_push_failures', { p_kind: 'resolve_reminder', p_refs: ['m-1'] })
+    expect(rpc).not.toHaveBeenCalledWith('record_push_results', expect.anything())
+  })
+
+  it('settles the 401/403 answers it collected even when a later step fails, and still reports the error', async () => {
+    const failure = new Error('db down')
+    const rpc = vi.fn(async (fn: string) =>
+      fn === 'claim_cron_lease'
+        ? { data: true, error: null }
+        : fn === 'due_resolve_reminders'
+          ? { data: [{ market_id: 'm-1', title: 'A', profile_id: 'alice' }, { market_id: 'm-2', title: 'B', profile_id: 'bob' }], error: null }
+          : fn === 'due_market_alerts'
+            ? { data: null, error: failure }
+            : { data: 1, error: null },
+    )
+    sendPush
+      .mockImplementationOnce(async (_messages: unknown, _db: unknown, run: { sent: number }) => {
+        run.sent += 1
+        return { sent: 1, removed: 0, failed: 0, systemic: 0, credentials: 0 }
+      })
+      .mockImplementationOnce(async (_messages: unknown, _db: unknown, run: { credentialIds: string[]; credentialCount: number }) => {
+        run.credentialIds.push('s-403')
+        run.credentialCount += 1
+        return { sent: 0, removed: 0, failed: 1, systemic: 0, credentials: 1 }
+      })
+    expect(await sendClosingAlerts({ rpc } as unknown as DbClient)).toEqual({ error: failure })
+    expect(rpc).toHaveBeenCalledWith('record_push_results', { p_delivered: [], p_failed: ['s-403'] })
+    expect(rpc).toHaveBeenCalledWith('record_push_failures', { p_kind: 'resolve_reminder', p_refs: ['m-2'] })
+    expect(rpc).toHaveBeenLastCalledWith('release_cron_lease', { p_name: 'closing-alerts' })
+  })
+
   it('skips the whole run while another holds the lease, and releases it afterwards', async () => {
     const busy = vi.fn(async () => ({ data: false, error: null }))
     expect(await sendClosingAlerts({ rpc: busy } as unknown as DbClient)).toEqual({ reminded: 0, alerted: 0, sent: 0, failed: 0, systemic: 0, busy: true })

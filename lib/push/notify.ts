@@ -114,9 +114,13 @@ async function deliverPerMarket(
     sent += result.sent
     failed += result.failed
     systemic += result.systemic
+    // A device's own rejection (a 4xx other than 401/403) counts toward giving up whatever else the
+    // market's devices said; a market that only met 401/403 waits for the run-wide verdict.
+    const deviceFailed = result.failed - result.systemic - result.credentials
     if (result.sent > 0) delivered.push(marketId)
-    else if (result.credentials > 0 && result.systemic === 0) run?.credentialMarkets.push({ kind, ref: marketId })
-    else if (result.failed > 0 && result.systemic === 0) unreachable.push(marketId)
+    else if (result.systemic > 0) continue
+    else if (deviceFailed > 0) unreachable.push(marketId)
+    else if (result.credentials > 0) run?.credentialMarkets.push({ kind, ref: marketId })
   }
   // A market whose devices each rejected the push is tried again next run, until the database gives up
   // on it after 24 hours; a systemic failure (ours, not the devices') never counts toward giving up (record_push_failures, 0076). Losing this count only delays giving up.
@@ -191,9 +195,9 @@ export async function sendMarketAlerts(db: DbClient, run?: PushRun): Promise<Clo
 // a subscription made with an older key) and ours when it delivered nothing (every device answers it).
 // The device's are recorded against it, and its markets count toward giving up; ours are returned
 // as systemic, for the route's alarm, and recorded against nobody.
-async function settleCredentialFailures(db: DbClient, run: PushRun, sent: number): Promise<number> {
+async function settleCredentialFailures(db: DbClient, run: PushRun): Promise<number> {
   if (run.credentialCount === 0) return 0
-  if (sent === 0) return run.credentialCount
+  if (run.sent === 0) return run.credentialCount
   const ids = [...new Set(run.credentialIds)]
   for (const batch of chunk(ids, IN_CHUNK)) {
     const { error } = await db.rpc('record_push_results', { p_delivered: [], p_failed: batch })
@@ -222,18 +226,19 @@ export async function sendClosingAlerts(
   if (lease.error) return { error: lease.error }
   if (!lease.data) return { reminded: 0, alerted: 0, sent: 0, failed: 0, systemic: 0, busy: true }
   try {
-    const run: PushRun = { credentialIds: [], credentialCount: 0, credentialMarkets: [] }
+    const run: PushRun = { sent: 0, credentialIds: [], credentialCount: 0, credentialMarkets: [] }
     const reminders = await sendResolveReminders(db, run)
+    const alerts = 'error' in reminders ? reminders : await sendMarketAlerts(db, run)
+    // Settled even when a step failed, so the 401/403 answers already collected aren't lost.
+    const credentialSystemic = await settleCredentialFailures(db, run)
     if ('error' in reminders) return reminders
-    const alerts = await sendMarketAlerts(db, run)
     if ('error' in alerts) return alerts
-    const sent = reminders.sent + alerts.sent
     return {
       reminded: reminders.reminded,
       alerted: alerts.alerted,
-      sent,
+      sent: reminders.sent + alerts.sent,
       failed: reminders.failed + alerts.failed,
-      systemic: reminders.systemic + alerts.systemic + (await settleCredentialFailures(db, run, sent)),
+      systemic: reminders.systemic + alerts.systemic + credentialSystemic,
     }
   } finally {
     const { error } = await db.rpc('release_cron_lease', { p_name: CLOSING_ALERTS_JOB })

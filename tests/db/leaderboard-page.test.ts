@@ -78,7 +78,7 @@ afterAll(async () => {
 
 describe('getLeaderboardPage', () => {
   // beforeAll writes the 60 balances directly, in bulk, rather than through 60 ledger rows.
-  beforeEach(() => skipLedgerCheck('the board is seeded by writing balances directly'))
+  beforeEach(() => skipLedgerCheck('beforeAll sets 60 balances with direct updates instead of 60 ledger rows; the tests only read the board'))
 
   it('sets up a board of 60 with the tie across the page boundary', () => {
     expect(board).toHaveLength(60)

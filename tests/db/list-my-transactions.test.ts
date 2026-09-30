@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { listMyTransactions, type MyCoinEntry } from '@/lib/ledger/my-transactions'
 import { readPageParams, showMoreHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
 import type { KeysetPage } from '@/lib/pagination/keyset'
-import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
+import { serviceClient, type TestClient, reconcileBalances } from './helpers'
 import { seedMembers, clientFor, ensureInvited, createTestMarket, createTestTask, type Member, giveRole } from './fixtures'
 
 let alice: Member
@@ -34,6 +34,7 @@ async function insertInterleavedRows(count: number): Promise<void> {
   ])
   const { error } = await serviceClient().from('coin_transactions').insert(rows)
   if (error) throw error
+  await reconcileBalances()
 }
 
 // One member's ledger rows, newest first, as the service role sees them: the order paging must reproduce.
@@ -87,7 +88,6 @@ describe('listMyTransactions', () => {
   })
 
   it("returns only the reader's own rows, even to an admin whose RLS reads everyone's", async () => {
-    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     await insertInterleavedRows(10)
     const aliceClient = await clientFor(alice)
 
@@ -99,7 +99,6 @@ describe('listMyTransactions', () => {
   })
 
   it("shows a member nothing when asked for someone else's history", async () => {
-    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     await insertInterleavedRows(10)
 
     const { rows } = await listMyTransactions(bobClient, alice.id, FIRST)
@@ -107,7 +106,6 @@ describe('listMyTransactions', () => {
   })
 
   it('pages 50 at a time, newest first, with nothing skipped or repeated', async () => {
-    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     await insertInterleavedRows(120)
     const everything = await idsNewestFirst(bob.id)
     expect(everything).toHaveLength(121)
@@ -127,7 +125,6 @@ describe('listMyTransactions', () => {
   })
 
   it('starts a fresh window past 500 rows, with every row reachable exactly once', async () => {
-    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     await insertInterleavedRows(560)
     const everything = await idsNewestFirst(bob.id)
     expect(everything).toHaveLength(561)

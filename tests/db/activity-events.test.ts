@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import {
   seedMembers,
   makeMember,
@@ -203,8 +203,8 @@ async function fullScenario(): Promise<void> {
   expect(reviewRows).toEqual([{ id: completionId2, ok: true, error: null }])
   expect(await mismatches()).toEqual([])
 
-  // A finished month's champion, from ledger rows dated in June (only the ledger, not balances).
-  await pgQuery(`insert into public.coin_transactions (profile_id, amount, type, created_at) values ('${carol.id}', 18, 'bet_won', '2026-06-12T12:00:00Z')`)
+  // A finished month's champion, from ledger rows dated in June (the balance follows it).
+  await pgQuery(`insert into public.coin_transactions (profile_id, amount, type, created_at) values ('${carol.id}', 18, 'bet_won', '2026-06-12T12:00:00Z'); update public.profiles set balance = balance + 18 where id = '${carol.id}'`)
   const { data: champion, error: settleErr } = await serviceClient().rpc('settle_season', { p_month: '2026-06-01' })
   if (settleErr) throw settleErr
   expect(champion).toBe(carol.id)
@@ -213,7 +213,6 @@ async function fullScenario(): Promise<void> {
 
 describe('activity_events', () => {
   it('holds exactly the rows activity_feed shows after every step of a full scenario', async () => {
-    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     await fullScenario()
 
     const kinds = await pgQuery<{ kind: string; visible: number; hidden: number }>(`
@@ -236,7 +235,6 @@ describe('activity_events', () => {
   })
 
   it("backfills, from activity_feed, the same rows the triggers wrote", async () => {
-    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     await fullScenario()
 
     // The migration's own backfill statement, run into a scratch copy of the table, so the real

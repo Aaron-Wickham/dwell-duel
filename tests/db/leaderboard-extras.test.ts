@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { combineOdds, formatOdds, lockedOddsToBp } from '@/lib/parlays/odds'
 import { getParlayDetail } from '@/lib/parlays/get-parlay'
 import { readMemberStats } from '@/lib/members/stats'
-import { rpcLoose, serviceClient, type TestClient, expectError, skipLedgerCheck } from './helpers'
+import { rpcLoose, serviceClient, type TestClient, expectError, reconcileBalances } from './helpers'
 import { pgQuery } from './pg-query'
 import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 
@@ -242,7 +242,6 @@ describe('leaderboard_race_steps', () => {
   })
 
   it('merges more than 120 moments into 120 steps, with every kept total exact', async () => {
-    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     // 150 moments a millisecond apart, just before now: Bob is paid i DC at the i-th, and Carol
     // 2 DC at every third, so she shares his moments rather than adding her own.
     const moments = 150
@@ -254,6 +253,7 @@ describe('leaderboard_race_steps', () => {
       if (i % 3 === 0) rows.push(`('${carol.id}', 2, 'bet_refunded', '${at(i)}')`)
     }
     await pgQuery(`insert into public.coin_transactions (profile_id, amount, type, created_at) values ${rows.join(', ')}`)
+    await reconcileBalances()
 
     const byMember = await steps(bobClient)
     expect([...byMember.keys()].sort()).toEqual([bob.id, carol.id].sort())

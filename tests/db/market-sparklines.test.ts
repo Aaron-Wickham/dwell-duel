@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
+import { serviceClient, type TestClient, reconcilePoolTotals } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
 import { pgQuery } from './pg-query'
 import { buildProbabilitySeries, type SeriesPoint } from '@/lib/markets/probability-series'
@@ -64,6 +64,7 @@ async function insertBets(market: TestMarket, count: number): Promise<void> {
   }))
   const { error } = await serviceClient().from('bets').insert(rows)
   if (error) throw error
+  await reconcilePoolTotals()
 }
 
 // The whole series the market page's chart draws, from every bet, oldest first.
@@ -120,7 +121,6 @@ describe('market_sparklines', () => {
   })
 
   it('breaks same-instant ties by id, the same order fullSeries reads and buildProbabilitySeries keeps', async () => {
-    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     const tie = new Date('2026-09-01T00:00:00.000Z').toISOString()
     const { error } = await serviceClient()
@@ -131,6 +131,7 @@ describe('market_sparklines', () => {
         { market_id: market.marketId, outcome_id: market.outcomeIds[0], profile_id: alice.id, amount: 5, created_at: tie },
       ])
     if (error) throw error
+    await reconcilePoolTotals()
 
     const points = await pointsOf(bobClient, market)
     const series = await fullSeries(market)
@@ -139,7 +140,6 @@ describe('market_sparklines', () => {
   })
 
   it('picks at most p_points evenly spaced bets, always the first and the last', async () => {
-    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await insertBets(market, 25)
 
@@ -154,7 +154,6 @@ describe('market_sparklines', () => {
   })
 
   it('returns every bet when a market has exactly p_points bets', async () => {
-    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await insertBets(market, 40)
     const series = await fullSeries(market)
@@ -163,7 +162,6 @@ describe('market_sparklines', () => {
   })
 
   it('treats a null p_points as the default of 40', async () => {
-    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await insertBets(market, 45)
     const series = await fullSeries(market)
@@ -176,7 +174,6 @@ describe('market_sparklines', () => {
   })
 
   it('caps p_points at 200, and keeps the last bet when asked for fewer than one', async () => {
-    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Yes', 'No', 'Maybe'])
     await insertBets(market, 205)
     const series = await fullSeries(market)
@@ -191,7 +188,6 @@ describe('market_sparklines', () => {
   })
 
   it('keeps its running sums to the bets plus one marker per picked bet and outcome, never bets × outcomes', async () => {
-    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Red', 'Blue', 'Green'])
     await insertBets(market, 100)
 
@@ -244,7 +240,6 @@ describe('market_sparklines', () => {
   })
 
   it('reads at most 50 market ids per call, and returns every point of all 50 in one response', async () => {
-    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await placeBet(aliceClient, market, 0, 5)
     // Fifty more markets with 41 bets each, inserted directly: fifty create_market calls and 2,050
@@ -284,6 +279,7 @@ describe('market_sparklines', () => {
       ),
     )
     if (betsErr) throw betsErr
+    await reconcilePoolTotals()
 
     const past = await sparklines(bobClient, [...fillers, market.marketId])
     expect(past.map((r) => r.market_id).sort()).toEqual([...fillers].sort())
@@ -295,7 +291,6 @@ describe('market_sparklines', () => {
   })
 
   it('caps by flattened element count, so a nested array cannot smuggle more than 50 ids past the cap', async () => {
-    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     // p_market_ids[1:50] slices only the array's first dimension: a single "row" holding every id
     // would pass that slice whole, and unnest() flattens all dimensions anyway, so the cap would
     // never bite. 59 real markets, each with a bet, sent as one nested array: only the first 50
@@ -331,6 +326,7 @@ describe('market_sparklines', () => {
       })),
     )
     if (betsErr) throw betsErr
+    await reconcilePoolTotals()
 
     const { data, error: rpcErr } = await bobClient.rpc('market_sparklines', { p_market_ids: [marketIds] as unknown as string[] })
     if (rpcErr) throw rpcErr
@@ -427,7 +423,6 @@ describe('markets.sparkline cache (0070)', () => {
   }
 
   it('is null while a market is open, and holds exactly market_sparklines’ 40 points once it resolves', async () => {
-    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Red', 'Blue', 'Green'])
     await insertBets(market, 60)
     expect(await cached(market.marketId)).toBeNull()

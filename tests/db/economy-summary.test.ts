@@ -260,7 +260,7 @@ describe('economy_summary', () => {
       .from('coin_transactions')
       .insert({ profile_id: bob.id, amount: 7, type: 'mystery' })
     expect(error).toBeNull()
-    skipLedgerCheck('this test writes the balance without its ledger row to make the gap the panel reports')
+    skipLedgerCheck('this test writes the balance without its ledger row to make the unclassified-type gap the panel reports')
     await serviceClient().from('profiles').update({ balance: 107 }).eq('id', bob.id)
 
     const s = await summary()

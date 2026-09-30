@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { serviceClient, skipLedgerCheck } from './helpers'
+import { serviceClient } from './helpers'
 import { seedMembers, createTestTask, type Member } from './fixtures'
 import { pgQuery } from './pg-query'
 
@@ -40,6 +40,16 @@ beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
 })
 
+// A parlay row written directly is settled on paper only; this gives it the payout row the real
+// settle_parlay would have written, so the ledger check still holds.
+async function payParlay(parlayId: string, profileId: string, amount: number): Promise<void> {
+  await pgQuery(`
+    insert into public.coin_transactions (profile_id, amount, type, meta)
+      values ('${profileId}', ${amount}, 'parlay_won', jsonb_build_object('parlay_id', '${parlayId}'));
+    update public.profiles set balance = balance + ${amount} where id = '${profileId}'
+  `)
+}
+
 describe('activity_events foreign key indexes', () => {
   it('indexes every column a source row delete looks events up by', async () => {
     const rows = await pgQuery<{ indexname: string; indexdef: string }>(
@@ -76,7 +86,6 @@ describe('timestamp invariants', () => {
   })
 
   it('refuses a won parlay with no settled_at, and accepts one with it', async () => {
-    skipLedgerCheck('the test writes parlay rows directly, without their ledger rows')
     const db = serviceClient()
     const { data: parlay, error: insertErr } = await db
       .from('parlays')
@@ -94,6 +103,7 @@ describe('timestamp invariants', () => {
       .update({ status: 'won', credited: 20, settled_at: new Date().toISOString() })
       .eq('id', parlay!.id)
     expect(won.error).toBeNull()
+    await payParlay(parlay!.id, bob.id, 20)
   })
 
   it('adds both constraints validated', async () => {
@@ -117,7 +127,6 @@ describe('timestamp invariants', () => {
   })
 
   it('the preflight guard passes clean rows and raises on rows that break either invariant, naming each count', async () => {
-    skipLedgerCheck('the test writes parlay rows directly, without their ledger rows')
     // A guard with a wrong predicate (say, missing `and reviewed_at is null`) would still pass on
     // an empty table. Seeding one row that satisfies each invariant makes sure the clean-pass
     // check is actually exercising the guard's condition, not just running it on nothing.
@@ -136,7 +145,10 @@ describe('timestamp invariants', () => {
     const cleanParlay = await db
       .from('parlays')
       .insert({ profile_id: bob.id, stake: 10, status: 'won', credited: 20, settled_at: new Date().toISOString() })
+      .select('id')
+      .single()
     expect(cleanParlay.error).toBeNull()
+    await payParlay(cleanParlay.data!.id, bob.id, 20)
 
     await expect(pgQuery(readGuardBlock())).resolves.toBeDefined()
 

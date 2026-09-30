@@ -82,18 +82,18 @@ type RaisedError = { code?: string; message: string } | null
  * Asserts that a call failed for the expected reason. A bare `error` is not null passes just as
  * happily when the function is missing (PGRST202) or the setup was wrong, so a permission or
  * money-guard test names what it was refused for: the message a function raised (a string is
- * matched as a substring, a RegExp as a pattern), or the SQLSTATE of a policy or constraint.
+ * matched as a substring, a RegExp as a pattern), or the SQLSTATE of a policy or constraint together with its message (a code alone can't pass).
  */
 export function expectError(
   error: RaisedError | undefined,
-  expected: string | RegExp | { code?: string; message?: string | RegExp },
+  expected: string | RegExp | { code?: string; message: string | RegExp },
   label?: string,
 ): void {
   const spec = typeof expected === 'string' || expected instanceof RegExp ? { message: expected } : expected
   expect(error, label ?? 'expected the call to fail').toBeTruthy()
   if (spec.code !== undefined) expect(error!.code, label).toBe(spec.code)
   if (typeof spec.message === 'string') expect(error!.message, label).toContain(spec.message)
-  else if (spec.message) expect(error!.message, label).toMatch(spec.message)
+  else expect(error!.message, label).toMatch(spec.message)
 }
 
 /**
@@ -170,3 +170,22 @@ export async function assertLedgerConsistent(): Promise<void> {
 
 /** What place_slip_v2 answers with: what the call placed, and whether it replayed an earlier attempt. */
 export type SlipSummary = { parlay_id: string | null; solos: number; picks: string[]; replayed: boolean }
+
+/**
+ * For a test that seeds bets or ledger rows in bulk with a raw insert (a real flow would take
+ * hundreds of RPC calls): brings pools and balances in line with what was inserted, so the
+ * ledger check after the test still guards everything the test didn't deliberately write.
+ */
+export async function reconcilePoolTotals(): Promise<void> {
+  await pgQuery(`
+    update public.market_outcomes o
+    set pool_total = coalesce((select sum(b.amount) from public.bets b where b.outcome_id = o.id), 0)
+  `)
+}
+
+export async function reconcileBalances(): Promise<void> {
+  await pgQuery(`
+    update public.profiles p
+    set balance = coalesce((select sum(t.amount) from public.coin_transactions t where t.profile_id = p.id), 0)
+  `)
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
+import { serviceClient, type TestClient, setBalanceViaLedger } from './helpers'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 import { buildProbabilitySeries } from '@/lib/markets/probability-series'
@@ -168,15 +168,14 @@ describe('parlay_limits', () => {
   })
 
   it('never overflows a huge capped payout into an aborted resolve', async () => {
-    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     const markets = await Promise.all(['A', 'B'].map((t) => createTestMarket(aliceClient, ['Yes', 'No'], { title: t })))
-    await serviceClient().from('profiles').update({ balance: 1000 }).eq('id', alice.id)
+    await setBalanceViaLedger(alice.id, 1000)
     for (const m of markets) {
       await bet(aliceClient, m, 0, 1)
       await bet(aliceClient, m, 1, 99)
     }
     // Give Bob a stake whose 100x would pass the integer ceiling.
-    await serviceClient().from('profiles').update({ balance: 30_000_000 }).eq('id', bob.id)
+    await setBalanceViaLedger(bob.id, 30_000_000)
     const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: markets.map((m) => m.outcomeIds[0]), p_stake: 30_000_000 })
     if (error) throw error
     for (const m of markets) await resolve(m, 0)

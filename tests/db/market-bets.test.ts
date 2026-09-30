@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
+import { serviceClient, type TestClient, reconcilePoolTotals } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
 import { getMarketBets } from '@/lib/markets/get-market'
 import { readPageParams, showMoreHref, type PageParams } from '@/lib/pagination/cursor'
@@ -63,7 +63,6 @@ describe('getMarketBets', () => {
   })
 
   it("pages a busy market's bets 50 at a time, newest first, with nothing skipped or repeated", async () => {
-    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     const other = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Other market' })
     const start = Date.parse('2026-09-01T00:00:00.000Z')
@@ -77,6 +76,7 @@ describe('getMarketBets', () => {
       created_at: `${new Date(start + Math.floor(i / 3) * 60_000).toISOString().slice(0, 19)}.000123+00:00`,
     }))
     const { error } = await serviceClient().from('bets').insert(rows)
+    await reconcilePoolTotals()
     if (error) throw error
 
     const first = await getMarketBets(bobClient, market.marketId, FIRST)

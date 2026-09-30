@@ -294,7 +294,7 @@ a line to `CHANGELOG.md` under the next release.
   storage uploads then fail with `42P10` (the local Storage service holds
   stale state after a reset), run `npx supabase stop && npx supabase start`.
 - **DB tests are typed and name what a refusal was for.** `serviceClient()`,
-  `clientFor()` and `anonClient()` return `TestClient` (`SupabaseClient<Database>`),
+  `clientFor()`, `clientForEmail()` and `anonClient()` return `TestClient` (`SupabaseClient<Database>`),
   so a renamed RPC argument fails `npm run typecheck`. A negative test calls
   `expectError(error, 'the message' | { code, message })` (`tests/db/helpers.ts`),
   never `expect(error).not.toBeNull()`, which also passes on a missing function.

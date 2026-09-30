@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, createTestTask, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 
@@ -63,7 +63,8 @@ async function recap(client: TestClient = bobClient, week: string = WEEK): Promi
 // A ledger row written straight into coin_transactions, dated as given (as in net-worth-and-seasons).
 async function ledger(profileId: string, amount: number, type: string, at: string): Promise<void> {
   await pgQuery(
-    `insert into public.coin_transactions (profile_id, amount, type, created_at) values ('${profileId}', ${amount}, '${type}', '${at}')`,
+    `insert into public.coin_transactions (profile_id, amount, type, created_at) values ('${profileId}', ${amount}, '${type}', '${at}');
+     update public.profiles set balance = balance + ${amount} where id = '${profileId}'`,
   )
 }
 
@@ -96,7 +97,6 @@ describe('weekly_recap', () => {
   })
 
   it("is the caller's own net betting profit, with task rewards apart, and nothing else from the ledger", async () => {
-    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     await ledger(bob.id, -10, 'bet_placed', BEFORE_START)
     await ledger(bob.id, 30, 'bet_won', START)
     await ledger(bob.id, -5, 'parlay_placed', LAST_MINUTE)

@@ -10,6 +10,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Net worth shows your standing beside the rankings on a wide screen.** A "Your standing" card fills the side column with your rank, net worth, record and how far you are behind the member above you; a phone keeps the list as it was (#185).
 
 ### Fixes
+- **Card text can be selected and copied with a mouse.** Market cards, bet rows, leaderboard rows and the like no longer cover their text with an invisible link on desktop, so a title can be selected; the whole card still opens on click (a click that finishes a selection doesn't), and a tap opens it on a phone as before. Thanks to @MrMortem for the CSS in #222 (#188).
 - **A cut-off line in the leaderboard race always keeps its label** on a phone, where only five fit: a runaway last place among eight used to be the first label dropped, hiding the only place its true total shows (#186).
 
 ### Under the hood

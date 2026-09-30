@@ -389,6 +389,19 @@
     position: absolute;
     inset: 0;
   }
+
+  @media (pointer: fine) {
+    &::after {
+      content: none;
+    }
+  }
+}
+
+/* With the cover off under a mouse, components/ui/card-link-click.tsx opens the card on click. */
+@media (pointer: fine) {
+  .pressable:has(a.stretched-link) {
+    cursor: pointer;
+  }
 }
 
 /* 44px tap target for inline text links, without growing the row. */

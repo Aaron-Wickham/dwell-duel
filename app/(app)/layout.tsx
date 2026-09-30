@@ -12,6 +12,7 @@ import { getSlipView } from '@/lib/parlays/get-slip'
 import { LiveRefresh } from '@/components/live/live-refresh'
 import { LiveTables, LiveTablesProvider } from '@/components/live/live-tables'
 import { NavDepthTracker } from '@/lib/nav/nav-depth'
+import { CardLinkClick } from '@/components/ui/card-link-click'
 import { Toaster } from '@/components/ui/toaster'
 import { OfflineBanner } from '@/components/offline/offline-banner'
 import { FALLBACK_NAME } from '@/lib/profile/fallback-name'
@@ -46,6 +47,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
     <LiveTablesProvider userId={user.id}>
       <SlipProvider view={slipView} balance={profile?.balance ?? 0}>
         <NavDepthTracker />
+        <CardLinkClick />
         {alertTables.length > 0 && <LiveTables subscriptions={alertTables} />}
         {/* A market closing changes nothing in the database, so an admin's badge refreshes at the next close. */}
         {isAdmin && <RefreshAt at={nextClose} />}

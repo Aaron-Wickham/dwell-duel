@@ -355,7 +355,7 @@ describe('AddInviteForm (#221)', () => {
     actions.addInviteAction.mockResolvedValue({ formError: 'That email is already invited.' })
     render(<AddInviteForm />)
     await userEvent.type(screen.getByLabelText('Email'), 'sarah@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add invite' }))
 
     await screen.findByRole('alert')
     expect(screen.getByLabelText('Email')).toHaveValue('sarah@example.com')
@@ -366,7 +366,7 @@ describe('AddInviteForm (#221)', () => {
     actions.addInviteAction.mockResolvedValue({ addedEmail: 'sarah@example.com' })
     render(<AddInviteForm />)
     await userEvent.type(screen.getByLabelText('Email'), 'sarah@example.com')
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add invite' }))
 
     await waitFor(() => expect(success).toHaveBeenCalledWith('Invite added.'))
     expect((actions.addInviteAction.mock.calls[0][1] as FormData).get('email')).toBe('sarah@example.com')

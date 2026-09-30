@@ -400,7 +400,7 @@ after it ships. They roughly follow the project's history:
 | 0070 | Speed at scale (#204, #205): `markets.sparkline` filled by the `cache_market_sparkline` trigger when a market resolves or voids (backfilled), `market_outcomes` in the realtime publication, and `parlays_pending_profile_idx` for `stakes_riding` |
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
-| 0085 | Live pings (#250): `live_pings` and `send_live_ping`, row triggers on `markets`, `market_outcomes`, `activity_events`, `feed_reactions`, `tasks` and `task_completions` that send one private Broadcast ping per topic per transaction, at most one per topic every `live_ping_interval_ms()`, and the `realtime.messages` policy that lets only invited members (reviewers and above for `live:reviews`) join |
+| 0085 | Live pings (#250): `live_pings` and `send_live_ping`, deferred row triggers on `markets`, `market_outcomes`, `activity_events`, `feed_reactions`, `tasks` and `task_completions` that send one private Broadcast ping per topic per transaction, at most one per topic every `live_ping_interval_ms()`, and the `realtime.messages` policy that lets only invited members (reviewers and above for `live:reviews`) join |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
@@ -471,12 +471,16 @@ signed URLs made with the viewer's own session.
 - **Rows**, `{ table, filter }`: Postgres Changes on a table in
   `LIVE_TABLES`, always filtered to one market, member, parlay or row, so
   only the pages about that thing hear it.
-- **Topics**, `{ topic }`: anything group-wide. Row triggers (0085) call
-  `send_live_ping`, which sends an empty private Broadcast message on
-  `live:<topic>` when the transaction commits: once per topic per
+- **Topics**, `{ topic }`: anything group-wide. Deferred row triggers
+  (0085) call `send_live_ping` as the transaction commits, which sends an
+  empty private Broadcast message on `live:<topic>`: once per topic per
   transaction, however many rows it writes (a resolution with 150 winners
   sends one `activity` ping, not 150), and at most once per topic every
   `live_ping_interval_ms()` (5 s, mirrored by `LIVE_PING_INTERVAL_MS`).
+  The throttle is judged at commit and only a committed ping holds a
+  change back: when another transaction holds the topic's row, the ping
+  is sent anyway rather than waited for (so a bet never blocks or
+  deadlocks), since that transaction could still roll back.
   The topics are `LIVE_TOPICS`: `markets` (market rows), `pools`
   (`market_outcomes`, which every bet moves), `activity`, `reactions`,
   `tasks` and `reviews` (`task_completions`). The `realtime.messages`
@@ -487,11 +491,13 @@ signed URLs made with the viewer's own session.
 and avatar) for the whole visit, a per-page Postgres Changes channel, and
 one private channel per topic. A row change refreshes after a 400 ms
 debounce (2 s at most under a steady stream). A topic ping refreshes
-`TOPIC_REFRESH_DELAY_MS` (6 s) after the first ping, folding later ones in:
-that waits out the database's throttle window, so the refresh also reads
-any change the throttle kept from pinging. The throttle skips a locked
-row rather than wait, so it never slows or deadlocks a bet; it assumes a
-transaction commits within that extra second. A hidden tab never
+`TOPIC_REFRESH_DELAY_MS` after it: 15 s for `pools` and `activity`, which
+every bet moves and which `/markets` and the feed follow, and 6 s for the
+rest. A ping that arrives while its topic's refresh is waiting folds into
+it and books one follow-up a full delay after itself. So there is always
+a refresh at least an interval plus a second after the latest ping, and
+a held-back change, which committed less than an interval after a ping,
+is always read. A hidden tab never
 refreshes, and after `HIDDEN_CLOSE_MS` (60 s) hidden it removes every
 channel, so the socket closes and stops counting as a connection;
 becoming visible reopens them and refreshes. A channel that can't join
@@ -508,7 +514,7 @@ market receives. The publication still holds `market_outcomes`, `tasks`
 and `feed_reactions`, which nothing follows row by row any more; dropping
 them is a later, non-additive change.
 
-**Proxy.** `proxy.ts` runs on page loads, RSC navigations,
+**Proxy and prefetch.** `proxy.ts` runs on page loads, RSC navigations,
 `router.refresh()` and server actions, where it refreshes the session
 cookie and turns a signed-out page load into a real redirect. It skips
 Link prefetches (the `next-router-prefetch` or `purpose: prefetch`
@@ -516,28 +522,40 @@ header, #251) and static files: a prefetch of a signed-in page is its own
 invocation, the prefetched layout's `requireUser` still guards it, and the
 navigation that follows runs the proxy.
 
+Every signed-in page is dynamic, and a prefetch down to its
+`loading.tsx` isn't cached (Next's `staleTimes.dynamic` is 0), so a link
+prefetched on sight is a render every time it scrolls into view. The nav,
+`SubNav` and the dense list rows (market cards, feed rows, leaderboard
+rows, My bets rows) link through `IntentLink`
+(`components/ui/intent-link.tsx`), which prefetches only on intent: a
+pointer over the link or keyboard focus, and a finger coming down for the
+nav and `SubNav` (`prefetchOnTouch`), so a tab tap still gets a head
+start. A list row's tap navigates without one and streams its skeleton
+first.
+
 **Free-tier budget at 1,000 members** (#250, #251). A model, not a
 measurement: after merge, read Supabase → Realtime usage and Vercel →
 Usage (Active CPU, Invocations) once a month and replace these guesses.
-Assumptions: 300 members active a day, 5 visits each of 5 page loads,
-10 prefetches a visit (a loading-boundary prefetch is reused for 5
-minutes), 1,500 bets and 20 resolutions a day over about 14 waking hours,
-and at a typical moment 10 open `/markets` tabs, 25 tabs following
-`markets`, 6 on the feed and 3 on each busy market page.
+Assumptions: 300 members active a day, 5 visits each of 5 page loads
+(7,500 renders, 6,000 of them client navigations), 60% of navigations on
+a phone and half from the nav or a sub-nav, 10 viewport prefetches a
+visit before #251, 1,500 bets and 20 resolutions a day over about 14
+waking hours, and at a typical moment 10 open `/markets` tabs, 25 tabs
+following `markets`, 6 on the feed and 3 on each busy market page.
 
 | Limit (Free / Hobby) | Before #250/#251 | Now |
 |---|---|---|
 | Realtime messages, 2M a month | about 1.2M from bets and resolutions, plus every idle desktop tab receiving everything: over 2M | pings: `pools` about 1,300 a day to 10 tabs, `activity` 1,400 to 6, `markets` 100 to 25, `reactions` 200 to 9, `reviews` 150 to 2, about 29k deliveries a day; rows (own profile, market pages) about 6k a day; about 1.05M a month, and hidden tabs add nothing after 60 s |
 | Realtime messages, 100 a second | a 150-winner resolution sent 150 rows to every feed tab: 1,500 in a second with 10 tabs | the same resolution sends one ping per topic: about 45. The ceiling is now one topic's subscribers, since one ping reaches them all in the same second: about 90 open `/markets` tabs |
 | Concurrent connections, 200 | one per open tab, hidden ones included | one per visible tab (hidden ones close after 60 s): about 10 to 30 typically; 200 when a fifth of members open the app at once, and past that new tabs poll every 60 s instead of failing silently |
-| Vercel invocations, 1M a month | 7.5k renders + 15k prefetches + about 7.5k live refreshes a day, each with a proxy run: about 60k a day, 1.8M a month | the same without the proxy on prefetches: about 45k a day, 1.35M a month |
-| Vercel Active CPU, 4 h a month | | about 900k renders a month: 2.5 h at 10 ms of CPU each, 5 h at 20 ms; the proxy's local JWT check adds about 0.4 h at 3 ms |
+| Vercel invocations, 1M a month | 7.5k renders + 15k prefetches + about 7.5k live refreshes a day, each with a proxy run: about 60k a day, 1.8M a month | 7.5k renders and 7.5k proxy runs; about 5.4k intent prefetches (1.8k nav taps on phones, 3.6k hovers and focuses on desktop), with no proxy; about 5.5k live refreshes (the 15 s wait on `/markets` and the feed folds about a third of them together) and 5.5k proxy runs: about 31k a day, 0.94M a month |
+| Vercel Active CPU, 4 h a month | about 900k renders a month: 2.5 h at 10 ms of CPU each, 5 h at 20 ms | about 550k renders a month: 1.5 h at 10 ms, 3.1 h at 20 ms; the proxy's local JWT check adds about 0.3 h at 3 ms |
 
-So Realtime fits with headroom, but at 300 daily members Vercel's
-invocations (and possibly Active CPU) still cross Hobby's limits on these
-assumptions, and going over pauses the app for up to 30 days. Before
-inviting at that scale: measure, then consider `prefetch={false}` on
-dense lists, moving `my_role` into the JWT, or Vercel Pro.
+Realtime fits with headroom. Vercel fits too, but only just: about 6% under
+the invocation limit on these guesses, and going over pauses the app for
+up to 30 days. Read Vercel → Usage within the first weeks at scale; the
+next levers are moving `my_role` into the JWT (CPU), caching the
+viewer-independent reads, or Vercel Pro.
 
 **Long lists.** Keyset pagination (`lib/pagination`) with "Show more".
 Each list keeps its place in URL cursors, jumps to a fresh window after

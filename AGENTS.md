@@ -100,6 +100,11 @@ a line to `CHANGELOG.md` under the next release.
 - **Drill-down pages** pass `Page`'s `transition="drill-down"`, which
   also enables the back-swipe; its logical parents live in
   `lib/nav/back-swipe.ts`.
+- **Prefetch on intent.** The nav, `SubNav` and dense list rows link
+  through `IntentLink`, which prefetches on hover or focus (and on touch
+  for the nav and `SubNav`) instead of on sight: every signed-in page is
+  dynamic, so each viewport prefetch is a server render on Vercel's
+  budget (#251).
 - **Signed-out redirects** live in `proxy.ts`, and a new `(app)` section
   must be added to `lib/auth/app-paths.ts` (a test guards the drift).
 - **The brand mark's art** lives in `components/brand/symbol-paths.ts`.
@@ -221,10 +226,12 @@ a line to `CHANGELOG.md` under the next release.
   `lib/live/page-subscriptions.ts` and `components/live/live-tables.tsx`.
 - **`LiveRefresh` keeps a base channel** for the member's own profile,
   a page channel for the page's row subscriptions, rebuilt on every
-  navigation, and one private channel per topic. A topic ping refreshes
-  after the database's throttle window, so it never misses a held-back
-  change. A tab hidden for 60 s closes them all, and a channel that can't
-  join makes the page poll every 60 s. A page's subscriptions live in
+  navigation, and one private channel per topic. The database judges its
+  throttle at commit (deferred triggers), and a topic always refreshes at
+  least an interval plus a second after its latest ping, so a change the
+  throttle held back is still read; keep every `TOPIC_REFRESH_DELAY_MS`
+  above `LIVE_PING_INTERVAL_MS`. A tab hidden for 60 s closes them all, and
+  a channel that can't join makes the page poll every 60 s. A page's subscriptions live in
   `page-subscriptions`; the budget they're held to is in
   `docs/ARCHITECTURE.md`.
 - **An Auth failure isn't "signed out."** `requireUser` reads claims

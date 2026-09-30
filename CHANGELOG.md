@@ -6,6 +6,10 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+## v0.5.2-beta — 2026-09-30
+
+An Admin › Markets tab for the markets waiting on a result, with tab counts that add up to the Admin badge, and rows inside cards that tint on hover instead of floating like a button inside a button.
+
 ### Features
 - **Admin has a Markets tab.** It lists every market that has closed without a result, oldest first, with when it closed, how much is in its pool, who made it and a Resolve button, so the markets share of the Admin badge has somewhere to go. The Tasks and Markets tabs show their counts, which add up to the badge (#243).
 

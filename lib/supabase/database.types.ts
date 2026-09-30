@@ -522,6 +522,7 @@ export type Database = {
           id: string
           market_id: string
           note: string | null
+          opposing_stake: number | null
           outcome_id: string
           resolved_at: string
           resolved_by: string
@@ -533,6 +534,7 @@ export type Database = {
           id?: string
           market_id: string
           note?: string | null
+          opposing_stake?: number | null
           outcome_id: string
           resolved_at?: string
           resolved_by: string
@@ -544,6 +546,7 @@ export type Database = {
           id?: string
           market_id?: string
           note?: string | null
+          opposing_stake?: number | null
           outcome_id?: string
           resolved_at?: string
           resolved_by?: string
@@ -691,21 +694,21 @@ export type Database = {
       parlay_legs: {
         Row: {
           id: string
-          locked_odds: number
+          locked_odds: number | null
           market_id: string
           outcome_id: string
           parlay_id: string
         }
         Insert: {
           id?: string
-          locked_odds: number
+          locked_odds?: number | null
           market_id: string
           outcome_id: string
           parlay_id: string
         }
         Update: {
           id?: string
-          locked_odds?: number
+          locked_odds?: number | null
           market_id?: string
           outcome_id?: string
           parlay_id?: string
@@ -739,6 +742,7 @@ export type Database = {
           created_at: string
           credited: number
           id: string
+          max_multiplier: number
           profile_id: string
           settled_at: string | null
           stake: number
@@ -748,6 +752,7 @@ export type Database = {
           created_at?: string
           credited?: number
           id?: string
+          max_multiplier: number
           profile_id: string
           settled_at?: string | null
           stake: number
@@ -757,6 +762,7 @@ export type Database = {
           created_at?: string
           credited?: number
           id?: string
+          max_multiplier?: number
           profile_id?: string
           settled_at?: string | null
           stake?: number
@@ -1346,16 +1352,55 @@ export type Database = {
           task_id: string
         }[]
       }
+      parlay_leg_odds: {
+        Args: { p_parlay_ids: string[] }
+        Returns: {
+          known: boolean
+          odds: number
+          outcome_id: string
+          parlay_id: string
+        }[]
+      }
       parlay_limits: {
         Args: never
         Returns: {
           max_legs: number
           max_multiplier: number
+          max_payout: number
+          min_leg_bettors: number
+          min_leg_pool: number
         }[]
       }
       period_index: {
         Args: { p_key: string; p_period: string }
         Returns: number
+      }
+      pick_quote: {
+        Args: { p_outcome_id: string; p_profile_id: string }
+        Returns: {
+          market_id: string
+          meets_floor: boolean
+          odds: number
+          opposing: number
+          other_bettors: number
+          others_on_pick: number
+          others_total: number
+          own_market: boolean
+        }[]
+      }
+      pick_quotes: {
+        Args: { p_outcome_ids: string[] }
+        Returns: {
+          market_id: string
+          meets_floor: boolean
+          odds: number
+          opposing: number
+          other_bettors: number
+          others_on_pick: number
+          others_total: number
+          outcome_id: string
+          own_market: boolean
+        }[]
       }
       ping_closing_alerts: { Args: never; Returns: number }
       place_bet: {

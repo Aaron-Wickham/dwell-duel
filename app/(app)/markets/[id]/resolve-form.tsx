@@ -46,28 +46,40 @@ export function ResolveForm({
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     withSuccessToast(
       async (prev: ActionState, formData: FormData) => {
-        let records: ProofRecord[] = []
+        // The dialog closes whatever happens (#199): an error left open behind it looked like a
+        // confirmation that did nothing, and Confirm again re-ran the upload.
         try {
-          records = await uploadProof(drafts, `resolution/${marketId}/`)
-        } catch (error) {
-          return { formError: error instanceof Error ? error.message : 'An attachment didn’t upload. Try again.' }
+          let records: ProofRecord[] = []
+          try {
+            records = await uploadProof(drafts, `resolution/${marketId}/`)
+          } catch (error) {
+            return { formError: error instanceof Error ? error.message : 'An attachment didn’t upload. Try again.' }
+          }
+          formData.set('attachments', JSON.stringify(records))
+          const next = await resolveMarketAction(marketId, prev, formData)
+          if (next?.formError) {
+            // Best effort: strays are swept daily, and a failed cleanup must never hide the real error.
+            await discardProof(records).catch(() => {})
+          } else {
+            setDrafts([])
+            setActual('')
+            setOutcomeId('')
+            setNote('')
+            setDone(true)
+          }
+          return next
+        } finally {
+          confirm.setOpen(false)
         }
-        formData.set('attachments', JSON.stringify(records))
-        const next = await resolveMarketAction(marketId, prev, formData)
-        if (next?.formError) await discardProof(records)
-        else {
-          setDrafts([])
-          setDone(true)
-        }
-        confirm.setOpen(false)
-        return next
       },
       (s) => Boolean(s?.formError),
       override ? 'Resolution overridden.' : 'Market resolved.',
     ),
     undefined,
   )
-  const outcomeError = state?.formError && state.field !== 'note'
+  // Only an error about the winner marks the winner's field: a lost attachment or a sign-in problem
+  // shows as a message on its own (#219).
+  const outcomeError = state?.field === 'outcome'
   const actualNumber = actual.trim() === '' ? NaN : Number(actual)
   const current = override ? (outcomes.find((o) => o.id === currentOutcomeId) ?? null) : null
   const sideFor = (n: number) => `${n > line! ? 'Over' : 'Under'} ${formatLine(line!)}`

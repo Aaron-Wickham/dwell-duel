@@ -18,7 +18,7 @@ import { readPageParams } from '@/lib/pagination/cursor'
 import { isUuid } from '@/lib/uuid'
 import { readSlip } from '@/lib/parlays/slip'
 import { legOddsBp } from '@/lib/parlays/odds'
-import { MAX_SLIP_PICKS } from '@/lib/parlays/parse-slip'
+import { MAX_SLIP_PICKS, SLIP_FULL_MESSAGE } from '@/lib/parlays/parse-slip'
 import { addToSlipAction, removeFromSlipAction } from '@/lib/parlays/slip-actions'
 import { BackLink } from '@/components/ui/back-link'
 import { buttonVariants } from '@/components/ui/button'
@@ -351,7 +351,7 @@ async function MarketActions({
       >
         {canBet && slipFull && (
           <Message tone="gold" icon={Ticket} id="slip-full-note" className="mt-2">
-            Your slip is full ({MAX_SLIP_PICKS} picks). Place or remove some to add more.
+            {SLIP_FULL_MESSAGE}
           </Message>
         )}
         <ul className="flex flex-col divide-y divide-line">

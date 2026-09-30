@@ -385,8 +385,10 @@ load: the drawer (`SlipDrawer`) loads the first time the slip opens, or
 when the button is pointed at or focused. Bets are never optimistic. Each place sends
 an attempt key, kept until a place succeeds: if the bets commit but the
 answer is lost, the slip says so, and tapping Place again returns the first
-result instead of placing twice (0047). `adjust_balance` takes a key the
-same way.
+result instead of placing twice (0047). The key and the lost-answer
+message live in `SlipProvider` with the stakes, not in the panel, because
+closing the sheet unmounts the panel (#192). `adjust_balance` takes a key
+the same way.
 
 **Duplicating a market.** Duplicate links to `/markets/new?from=<id>`. The
 page reads that market with the member's own client, so RLS decides what
@@ -536,7 +538,9 @@ leaves out empty lines and hides when every one is empty.
 ## Environments and deploys
 
 - **Local:** Docker Supabase (`npm run db:start`) is the only dev and test
-  database. DB tests refuse to run against anything but localhost.
+  database. DB tests refuse to run against anything but localhost. Local
+  Google sign-in uses each developer's own OAuth client, read from
+  `supabase/.env` (`docs/GETTING-STARTED.md`); CI sets none and doesn't sign in.
 - **Production:** one Vercel project and one hosted Supabase project.
   Vercel preview deploys are off on purpose (see the README).
 - **CI** (`.github/workflows/ci.yml`): lint, the type check, a

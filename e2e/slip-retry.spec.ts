@@ -6,6 +6,10 @@ import { serviceClient } from '../tests/db/helpers'
 // #61: the place commits, but its answer never reaches the phone. Retrying must show success
 // without placing the bet a second time.
 test('a place whose response is lost can be retried without placing twice', async ({ page }) => {
+  // This waits on Next replaying a failed action fetch, which can take a while on a loaded runner;
+  // it once hit the default 30s in a full local run while passing on its own and on CI. A wrong
+  // result still fails fast on the assertions; only a slow replay needs the room.
+  test.setTimeout(60_000)
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill('Lost response?')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))

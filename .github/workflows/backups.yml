@@ -1,0 +1,98 @@
+name: Backups
+
+# Supabase Free keeps no backups, so this does (#248): every night a dump of the production
+# database (roles, schema, and data including auth and storage metadata), and every Sunday a copy
+# of the proof and avatars buckets. Each is encrypted with age to BACKUP_AGE_RECIPIENT, whose
+# private key is kept offline, and committed to the private Aaron-Wickham/dwell-duel-backups repo.
+# Nothing is uploaded here as an artifact and nothing from a dump is logged: this repo is public.
+# Restoring is in docs/OPERATIONS.md.
+on:
+  schedule:
+    # 03:17 UTC nightly for the database, and 03:47 UTC on Sundays for Storage, off the hour
+    # GitHub's scheduler is busiest.
+    - cron: '17 3 * * *'
+    - cron: '47 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      storage:
+        description: Also copy the Storage buckets
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# One at a time. Deploy Production's pre-migration dump can still race one; the push retries.
+concurrency:
+  group: backups
+  cancel-in-progress: false
+
+jobs:
+  database:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 3 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: Production
+    steps:
+      - name: Only from main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Backups run only from main, not $GITHUB_REF."
+          exit 1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # The same version as ci.yml and Deploy Production.
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
+        with:
+          version: 2.117.0
+
+      - name: Install age
+        run: sudo apt-get install -y --no-install-recommends age
+
+      - name: Dump, encrypt and push the database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+          BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+          # GitHub's own registry, for the CLI's pg_dump image: no anonymous pull limit from Actions.
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
+        run: |
+          SEALED=$(scripts/backup/backup.sh db nightly "$RUNNER_TEMP/backup")
+          mapfile -t FILES <<<"$SEALED"
+          scripts/backup/backup.sh push db "${FILES[@]}"
+
+  storage:
+    if: >-
+      github.event.schedule == '47 3 * * 0' ||
+      (github.event_name == 'workflow_dispatch' && inputs.storage)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: Production
+    steps:
+      - name: Only from main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Backups run only from main, not $GITHUB_REF."
+          exit 1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
+        with:
+          version: 2.117.0
+
+      - name: Install age
+        run: sudo apt-get install -y --no-install-recommends age
+
+      # The CLI fetches the project's Storage keys through the Management API with the access
+      # token, so this needs no Storage key of its own.
+      - name: Copy, encrypt and push the Storage buckets
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+          BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+        run: |
+          SEALED=$(scripts/backup/backup.sh storage weekly "$RUNNER_TEMP/backup" lymrpiivqvdnfcjmxksx)
+          mapfile -t FILES <<<"$SEALED"
+          scripts/backup/backup.sh push storage "${FILES[@]}"

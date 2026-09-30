@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { serviceClient, wipeDatabase } from './helpers'
+import { serviceClient, wipeDatabase, expectError } from './helpers'
 import { makeMember, type Member } from './fixtures'
 
 let creator: Member
@@ -31,7 +31,7 @@ describe('markets table', () => {
     const { error } = await db
       .from('markets')
       .insert({ created_by: creator.id, title: 'Bad kind', kind: 'weird', close_at: closeAt })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '23514', message: 'markets_kind_check' })
   })
 })
 
@@ -67,7 +67,7 @@ describe('market_outcomes table', () => {
       .single()
 
     const { error } = await db.from('market_outcomes').update({ pool_total: -1 }).eq('id', outcome!.id)
-    expect(error).not.toBeNull()
+    expectError(error, { code: '23514', message: 'market_outcomes_pool_total_check' })
   })
 })
 
@@ -89,7 +89,7 @@ describe('bets table', () => {
     const { error } = await db
       .from('bets')
       .insert({ market_id: market!.id, outcome_id: outcome!.id, profile_id: creator.id, amount: 0 })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '23514', message: 'bets_amount_check' })
   })
 })
 

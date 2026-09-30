@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, type Member, giveRole } from './fixtures'
 
 let alice: Member
@@ -11,7 +10,7 @@ beforeEach(async () => {
 })
 
 interface SeededParlays {
-  aliceClient: SupabaseClient
+  aliceClient: TestClient
   marketId: string
   outcomeIds: string[]
   aliceParlayId: string

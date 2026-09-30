@@ -1,13 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { pgQuery } from './pg-query'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, expectError } from './helpers'
 import { seedMembers, clientFor, anonClient, ensureInvited, createTestMarket, type Member } from './fixtures'
 
 // GitHub dropped most runs of the ten-minute workflow (#189), so pg_cron is the timer now: every
 // minute, calling the app only when a market has just closed or the heartbeat is getting old.
 let alice: Member
-let aliceClient: SupabaseClient
+let aliceClient: TestClient
 
 async function ping(): Promise<number | null> {
   const [row] = await pgQuery<{ id: number | null }>('select public.ping_closing_alerts() as id')
@@ -97,7 +96,7 @@ describe('closing alerts in pg_cron', () => {
   it('is not callable by members or anonymous visitors', async () => {
     for (const client of [aliceClient, anonClient()]) {
       const { error } = await client.rpc('ping_closing_alerts')
-      expect(error).not.toBeNull()
+      expectError(error, { code: '42501', message: 'permission denied for function ping_closing_alerts' })
     }
   })
 })

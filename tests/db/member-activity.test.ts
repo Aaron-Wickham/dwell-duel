@@ -1,13 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, expectError } from './helpers'
 import { seedMembers, makeMember, clientFor, anonClient, ensureInvited, type Member, giveRole } from './fixtures'
 import { listMembers } from '@/lib/members/list-members'
 
 // 0050 (#85): joined and last-signed-in dates for Admin -> Members, admins only.
 let alice: Member
 let bob: Member
-let bobClient: SupabaseClient
+let bobClient: TestClient
 
 type ActivityRow = { id: string; joined_at: string; last_sign_in_at: string | null }
 
@@ -17,7 +16,7 @@ beforeEach(async () => {
   await ensureInvited(bobClient)
 })
 
-async function withRole(name: string, role: 'reviewer' | 'admin'): Promise<SupabaseClient> {
+async function withRole(name: string, role: 'reviewer' | 'admin'): Promise<TestClient> {
   const m = await makeMember(name)
   await giveRole(m, role)
   const client = await clientFor(m)
@@ -65,7 +64,7 @@ describe('member_activity', () => {
 
   it('is not callable signed out', async () => {
     const { error } = await anonClient().rpc('member_activity', { p_ids: [bob.id] })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for function member_activity' })
   })
 })
 

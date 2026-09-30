@@ -1,16 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { rpcLoose, serviceClient, type TestClient, expectError } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, type Member, giveRole } from './fixtures'
 
 let owner: Member
 let bob: Member
 let rita: Member
 let mo: Member
-let ownerClient: SupabaseClient
-let bobClient: SupabaseClient
-let ritaClient: SupabaseClient
-let moClient: SupabaseClient
+let ownerClient: TestClient
+let bobClient: TestClient
+let ritaClient: TestClient
+let moClient: TestClient
 
 const JPEG = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' })
 const uuid = () => crypto.randomUUID()
@@ -43,7 +42,7 @@ afterEach(async () => {
   }
 })
 
-async function upload(client: SupabaseClient, path: string) {
+async function upload(client: TestClient, path: string) {
   const { error } = await client.storage.from('proof').upload(path, JPEG, { contentType: 'image/jpeg' })
   if (error) throw error
   return path
@@ -108,7 +107,7 @@ describe('task proof', () => {
       [[{ kind: 'image', storage_path: `task/${bob.id}/${uuid()}/ghost.jpg` }], "an attachment didn't finish uploading; try again"],
       [[{ kind: 'link', url: 'javascript:alert(1)' }], 'links must start with http:// or https://'],
     ] as const) {
-      const { error } = await bobClient.rpc('submit_task_completion', { p_task_id: taskId, p_attachments: items })
+      const { error } = await rpcLoose(bobClient, 'submit_task_completion', { p_task_id: taskId, p_attachments: items })
       expect(error?.message).toBe(message)
     }
   })
@@ -135,7 +134,7 @@ describe('task proof', () => {
 
   it("won't let a member upload into someone else's task folder", async () => {
     const { error } = await moClient.storage.from('proof').upload(`task/${bob.id}/${uuid()}/x.jpg`, JPEG, { contentType: 'image/jpeg' })
-    expect(error).not.toBeNull()
+    expectError(error, { message: 'new row violates row-level security policy' })
   })
 })
 
@@ -157,9 +156,9 @@ describe('resolution proof', () => {
     expect(error).toBeNull()
 
     const { data: m } = await serviceClient().from('markets').select('current_resolution_id').eq('id', market.marketId).single()
-    const { data: resolution } = await moClient.from('market_resolutions').select('note').eq('id', m!.current_resolution_id).single()
+    const { data: resolution } = await moClient.from('market_resolutions').select('note').eq('id', m!.current_resolution_id!).single()
     expect(resolution?.note).toBe('Scoreboard at the final whistle')
-    const { data: rows } = await moClient.from('proof_attachments').select('storage_path').eq('resolution_id', m!.current_resolution_id)
+    const { data: rows } = await moClient.from('proof_attachments').select('storage_path').eq('resolution_id', m!.current_resolution_id!)
     expect(rows).toEqual([{ storage_path: path }])
     const { data: signed } = await moClient.storage.from('proof').createSignedUrl(path, 60)
     expect(signed?.signedUrl).toBeTruthy()
@@ -170,7 +169,7 @@ describe('resolution proof', () => {
     const { error } = await moClient.storage
       .from('proof')
       .upload(`resolution/${market.marketId}/${uuid()}/fake.jpg`, JPEG, { contentType: 'image/jpeg' })
-    expect(error).not.toBeNull()
+    expectError(error, { message: 'new row violates row-level security policy' })
   })
 
   it('needs its own note to override, and keeps the earlier resolution’s proof as history', async () => {
@@ -205,6 +204,6 @@ describe('resolution proof', () => {
   it('keeps resolve_market_core out of members’ reach', async () => {
     const market = await createTestMarket(ownerClient, ['Yes', 'No'])
     const { error } = await ownerClient.rpc('resolve_market_core', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0] })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for function resolve_market_core' })
   })
 })

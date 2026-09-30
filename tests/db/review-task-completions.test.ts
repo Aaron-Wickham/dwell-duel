@@ -1,13 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import { seedMembers, makeMember, clientFor, ensureInvited, createTestTask, type Member, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 
 let alice: Member
 let bob: Member
-let adminClient: SupabaseClient
-let bobClient: SupabaseClient
+let adminClient: TestClient
+let bobClient: TestClient
 
 const MISSING = '00000000-0000-4000-8000-000000000000'
 
@@ -19,7 +18,7 @@ beforeEach(async () => {
   await ensureInvited(bobClient)
 })
 
-async function submitAs(client: SupabaseClient, rewardAmount: number): Promise<string> {
+async function submitAs(client: TestClient, rewardAmount: number): Promise<string> {
   const { taskId } = await createTestTask(alice, { rewardAmount })
   const { data, error } = await client.rpc('submit_task_completion', { p_task_id: taskId })
   if (error) throw error
@@ -37,7 +36,7 @@ async function rewardsFor(member: Member): Promise<{ amount: number; completion_
     .eq('profile_id', member.id)
     .eq('type', 'task_completed')
   if (error) throw error
-  return data.map((t) => ({ amount: t.amount, completion_id: t.meta.completion_id }))
+  return data.map((t) => ({ amount: t.amount, completion_id: (t.meta as { completion_id: string }).completion_id }))
 }
 
 async function bobsRewards(): Promise<{ amount: number; completion_id: string }[]> {
@@ -88,7 +87,7 @@ describe('review_task_completions', () => {
     expect(error).toBeNull()
     const { data: again, error: againError } = await adminClient.rpc('review_task_completions', { p_ids: [first, second], p_approve: true })
     expect(againError).toBeNull()
-    expect(again.every((row: { ok: boolean }) => !row.ok)).toBe(true)
+    expect(again!.every((row: { ok: boolean }) => !row.ok)).toBe(true)
 
     expect(await bobsRewards()).toEqual(
       expect.arrayContaining([
@@ -112,7 +111,7 @@ describe('review_task_completions', () => {
     })
 
     expect(error).toBeNull()
-    expect(data.map((row: { ok: boolean }) => row.ok)).toEqual([true, true])
+    expect(data!.map((row: { ok: boolean }) => row.ok)).toEqual([true, true])
     expect(await statusOf(first)).toEqual({ status: 'rejected', review_note: 'Photo is blurry' })
     expect(await statusOf(second)).toEqual({ status: 'rejected', review_note: 'Photo is blurry' })
     expect(await bobsRewards()).toEqual([])
@@ -133,7 +132,7 @@ describe('review_task_completions', () => {
     })
 
     expect(error).toBeNull()
-    expect(data.every((row: { ok: boolean }) => row.ok)).toBe(true)
+    expect(data!.every((row: { ok: boolean }) => row.ok)).toBe(true)
     expect(await rewardsFor(bob)).toEqual([{ amount: 10, completion_id: bobsCompletion }])
     expect(await rewardsFor(carol)).toEqual([{ amount: 6, completion_id: carolsCompletion }])
     const { data: bobAfter } = await serviceClient().from('profiles').select('balance').eq('id', bob.id).single()
@@ -154,7 +153,7 @@ describe('review_task_completions', () => {
 
     const { data, error } = await adminClient.rpc('review_task_completions', { p_ids: [own, bobs], p_approve: true })
     expect(error).toBeNull()
-    const byId = Object.fromEntries(data.map((r: { id: string; ok: boolean; error: string | null }) => [r.id, r]))
+    const byId = Object.fromEntries(data!.map((r: { id: string; ok: boolean; error: string | null }) => [r.id, r]))
     expect(byId[own]).toMatchObject({ ok: false, error: "you can't review your own submission" })
     expect(byId[bobs]).toMatchObject({ ok: true })
     expect(await statusOf(own)).toEqual({ status: 'pending', review_note: null })

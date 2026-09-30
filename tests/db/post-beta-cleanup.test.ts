@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { serviceClient } from './helpers'
+import { serviceClient, skipLedgerCheck } from './helpers'
 import { seedMembers, createTestTask, type Member } from './fixtures'
 import { pgQuery } from './pg-query'
 
@@ -76,6 +76,7 @@ describe('timestamp invariants', () => {
   })
 
   it('refuses a won parlay with no settled_at, and accepts one with it', async () => {
+    skipLedgerCheck('the test writes parlay rows directly, without their ledger rows')
     const db = serviceClient()
     const { data: parlay, error: insertErr } = await db
       .from('parlays')
@@ -116,6 +117,7 @@ describe('timestamp invariants', () => {
   })
 
   it('the preflight guard passes clean rows and raises on rows that break either invariant, naming each count', async () => {
+    skipLedgerCheck('the test writes parlay rows directly, without their ledger rows')
     // A guard with a wrong predicate (say, missing `and reviewed_at is null`) would still pass on
     // an empty table. Seeding one row that satisfies each invariant makes sure the clean-pass
     // check is actually exercising the guard's condition, not just running it on nothing.

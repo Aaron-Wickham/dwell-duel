@@ -1,6 +1,10 @@
+import { expect } from 'vitest'
 import { createClient, isAuthRetryableFetchError, type SupabaseClient } from '@supabase/supabase-js'
 import { config } from 'dotenv'
+import type { Database } from '@/lib/supabase/database'
 import { pgQuery } from './pg-query'
+
+export type TestClient = SupabaseClient<Database>
 
 config({ path: '.env.local', quiet: true })
 
@@ -23,12 +27,22 @@ export function assertLocal(url: string): void {
   }
 }
 
-export function serviceClient(): SupabaseClient {
+export type RpcName = keyof Database['public']['Functions']
+
+/**
+ * An RPC call whose name is type-checked but whose arguments aren't, for tests that loop over
+ * many functions with different argument shapes (grant checks) or send a deliberately wrong one.
+ */
+export function rpcLoose(client: TestClient, fn: RpcName, args?: object) {
+  return client.rpc(fn, args as never)
+}
+
+export function serviceClient(): TestClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SECRET_KEY
   if (!url || !key) throw new Error('Missing Supabase env vars — is .env.local present?')
   assertLocal(url)
-  return createClient(url, key, { auth: { persistSession: false } })
+  return createClient<Database>(url, key, { auth: { persistSession: false } })
 }
 
 /**
@@ -53,7 +67,7 @@ export async function wipeDatabase(): Promise<void> {
 
 // Local Auth's admin API occasionally answers a delete with a retryable "Database error deleting
 // user" under the suite's sustained load; it succeeds when asked again.
-export async function deleteAuthUser(db: SupabaseClient, id: string): Promise<void> {
+export async function deleteAuthUser(db: TestClient, id: string): Promise<void> {
   for (let attempt = 1; ; attempt++) {
     const { error } = await db.auth.admin.deleteUser(id)
     if (!error) return
@@ -61,3 +75,98 @@ export async function deleteAuthUser(db: SupabaseClient, id: string): Promise<vo
     await new Promise((resolve) => setTimeout(resolve, 200 * attempt))
   }
 }
+
+type RaisedError = { code?: string; message: string } | null
+
+/**
+ * Asserts that a call failed for the expected reason. A bare `error` is not null passes just as
+ * happily when the function is missing (PGRST202) or the setup was wrong, so a permission or
+ * money-guard test names what it was refused for: the message a function raised (a string is
+ * matched as a substring, a RegExp as a pattern), or the SQLSTATE of a policy or constraint.
+ */
+export function expectError(
+  error: RaisedError | undefined,
+  expected: string | RegExp | { code?: string; message?: string | RegExp },
+  label?: string,
+): void {
+  const spec = typeof expected === 'string' || expected instanceof RegExp ? { message: expected } : expected
+  expect(error, label ?? 'expected the call to fail').toBeTruthy()
+  if (spec.code !== undefined) expect(error!.code, label).toBe(spec.code)
+  if (typeof spec.message === 'string') expect(error!.message, label).toContain(spec.message)
+  else if (spec.message) expect(error!.message, label).toMatch(spec.message)
+}
+
+/**
+ * Moves a member's balance to `target` through the ledger, the way a grant or a charge would. A
+ * test that set `profiles.balance` directly left the ledger behind, and the ledger check after
+ * every test (setup.ts) would rightly call that drift.
+ */
+export async function setBalanceViaLedger(memberId: string, target: number): Promise<void> {
+  const db = serviceClient()
+  const { data, error } = await db.from('profiles').select('balance').eq('id', memberId).single()
+  if (error) throw error
+  const delta = target - data.balance
+  if (delta === 0) return
+  const { error: txErr } = await db.rpc('apply_coin_transaction', {
+    p_profile_id: memberId,
+    p_amount: delta,
+    p_type: 'test_adjustment',
+  })
+  if (txErr) throw txErr
+}
+
+let ledgerCheckSkippedFor: string | null = null
+
+/** Opts the current test out of the after-each ledger check, with the reason a reader can judge. */
+export function skipLedgerCheck(reason: string): void {
+  ledgerCheckSkippedFor = reason
+}
+
+/** True if the test that just ran opted out; clears the opt-out for the next one. */
+export function takeLedgerCheckSkip(): boolean {
+  const skipped = ledgerCheckSkippedFor !== null
+  ledgerCheckSkippedFor = null
+  return skipped
+}
+
+interface LedgerViolation {
+  invariant: string
+  id: string
+  stored: number
+  expected: number
+}
+
+/**
+ * The money invariants that no single scenario asserts, as one query that returns every
+ * violating row: a balance equals the sum of its ledger rows, an outcome's pool equals its live
+ * bets, and a parlay's `credited` equals what the ledger paid and took back for it. (Balances
+ * and pools can't go negative: the schema's CHECKs already guarantee that.)
+ */
+export async function assertLedgerConsistent(): Promise<void> {
+  const violations = await pgQuery<LedgerViolation>(`
+    select 'balance <> ledger' as invariant, p.id::text as id, p.balance::int as stored,
+           coalesce(sum(t.amount), 0)::int as expected
+    from public.profiles p
+    left join public.coin_transactions t on t.profile_id = p.id
+    group by p.id, p.balance
+    having p.balance <> coalesce(sum(t.amount), 0)
+    union all
+    select 'pool_total <> live bets', o.id::text, o.pool_total::int, coalesce(sum(b.amount), 0)::int
+    from public.market_outcomes o
+    left join public.bets b on b.outcome_id = o.id
+    group by o.id, o.pool_total
+    having o.pool_total <> coalesce(sum(b.amount), 0)
+    union all
+    select 'parlay credited <> ledger', pa.id::text, pa.credited::int, coalesce(sum(t.amount), 0)::int
+    from public.parlays pa
+    left join public.coin_transactions t
+      on t.meta ->> 'parlay_id' = pa.id::text
+     and t.type in ('parlay_won', 'parlay_refunded', 'parlay_reversed')
+    group by pa.id, pa.credited
+    having pa.credited <> coalesce(sum(t.amount), 0)
+  `)
+  expect(violations, 'ledger invariants').toEqual([])
+}
+
+/** What place_slip_v2 answers with: what the call placed, and whether it replayed an earlier attempt. */
+export type SlipSummary = { parlay_id: string | null; solos: number; picks: string[]; replayed: boolean }

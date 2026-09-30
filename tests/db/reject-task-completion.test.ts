@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient } from './helpers'
+import { serviceClient, expectError } from './helpers'
 import { seedMembers, clientFor, ensureInvited, createTestTask, type Member, giveRole } from './fixtures'
 
 let alice: Member
@@ -23,7 +23,7 @@ describe('reject_task_completion', () => {
 
     const bobClient = await clientFor(bob)
     const { error } = await bobClient.rpc('reject_task_completion', { p_completion_id: completionId })
-    expect(error).not.toBeNull()
+    expectError(error, 'only a reviewer can reject a task completion')
   })
 
   it('moves zero coin and records the reason', async () => {
@@ -67,7 +67,7 @@ describe('reject_task_completion', () => {
     await adminClient.rpc('reject_task_completion', { p_completion_id: completionId })
 
     const { error } = await adminClient.rpc('reject_task_completion', { p_completion_id: completionId })
-    expect(error).not.toBeNull()
+    expectError(error, 'completion is not pending')
   })
 
   it('lets the member resubmit for the same period immediately after rejection', async () => {

@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, expectError } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, giveRole } from './fixtures'
-import type { SupabaseClient } from '@supabase/supabase-js'
 
 let alice: Member
 let bob: Member
@@ -13,7 +12,7 @@ beforeEach(async () => {
 
 // A reviewer with no stake in the market. Since 0046 nobody but an admin resolves a market
 // they've bet on, so the tests where Alice bets have this referee resolve instead.
-async function referee(): Promise<SupabaseClient> {
+async function referee(): Promise<TestClient> {
   const carol = await makeMember('Carol')
   await giveRole(carol, 'reviewer')
   const client = await clientFor(carol)
@@ -85,7 +84,7 @@ describe('resolve_market (first resolution)', () => {
 
     const bobClient = await clientFor(bob)
     const { error } = await bobClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
-    expect(error).not.toBeNull()
+    expectError(error, 'only the market creator, a reviewer or an admin can resolve this market')
   })
 
   it('rejects resolving before close_at for a non-admin', async () => {
@@ -93,7 +92,7 @@ describe('resolve_market (first resolution)', () => {
     const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'], { closeInMs: 60_000 })
 
     const { error } = await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
-    expect(error).not.toBeNull()
+    expectError(error, 'market has not closed yet')
   })
 
   it('lets an admin resolve before close_at', async () => {
@@ -201,7 +200,7 @@ describe('resolve_market (admin override)', () => {
 
     // Alice is the creator, not an admin -- can't change it once resolved.
     const { error } = await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[1] })
-    expect(error).not.toBeNull()
+    expectError(error, 'only an admin can change an already-resolved market')
   })
 
   it('fails atomically, changing nothing, if reversal would take a past winner negative', async () => {
@@ -241,7 +240,7 @@ describe('resolve_market (admin override)', () => {
     const { data: resolution } = await db
       .from('market_resolutions')
       .select('outcome_id, reversed_at')
-      .eq('id', market!.current_resolution_id)
+      .eq('id', market!.current_resolution_id!)
       .single()
     expect(resolution?.outcome_id).toBe(outcomeIds[0])
     expect(resolution?.reversed_at).toBeNull()

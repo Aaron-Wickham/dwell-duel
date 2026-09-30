@@ -1,18 +1,17 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { combineOdds, formatOdds, lockedOddsToBp } from '@/lib/parlays/odds'
 import { getParlayDetail } from '@/lib/parlays/get-parlay'
 import { readMemberStats } from '@/lib/members/stats'
-import { serviceClient } from './helpers'
+import { rpcLoose, serviceClient, type TestClient, expectError, skipLedgerCheck } from './helpers'
 import { pgQuery } from './pg-query'
 import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
 let carol: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let carolClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let carolClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -25,7 +24,7 @@ beforeEach(async () => {
   await giveRole(alice, 'admin')
 })
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
   const { error } = await client.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[outcomeIndex], p_amount: amount })
   if (error) throw error
 }
@@ -41,7 +40,7 @@ async function resolve(market: TestMarket, outcomeIndex: number): Promise<void> 
 
 type Award = { kind: string; profile_id: string; display_name: string; value: string | number; detail: string | null }
 
-async function awards(client: SupabaseClient): Promise<Award[]> {
+async function awards(client: TestClient): Promise<Award[]> {
   const { data, error } = await client.rpc('leaderboard_awards')
   if (error) throw error
   return data as Award[]
@@ -56,8 +55,8 @@ describe('access', () => {
       ['leaderboard_awards', undefined],
       ['member_records', { p_ids: [alice.id] }],
     ] as const) {
-      const anon = await anonClient().rpc(fn, args)
-      expect(anon.error, fn).not.toBeNull()
+      const anon = await rpcLoose(anonClient(), fn, args)
+      expectError(anon.error, { code: '42501', message: `permission denied for function ${fn}` }, fn)
     }
     const outsider = await makeMember('Dave')
     const outsiderClient = await clientFor(outsider)
@@ -66,7 +65,7 @@ describe('access', () => {
       ['leaderboard_awards', undefined],
       ['member_records', { p_ids: [alice.id] }],
     ] as const) {
-      const { error } = await outsiderClient.rpc(fn, args)
+      const { error } = await rpcLoose(outsiderClient, fn, args)
       expect(error?.code, fn).toBe('42501')
     }
   })
@@ -181,7 +180,7 @@ describe('member_records', () => {
 
 type Step = { profile_id: string; display_name: string; step: number; at: string; profit: string | number }
 
-async function steps(client: SupabaseClient, top = 5): Promise<Map<string, Step[]>> {
+async function steps(client: TestClient, top = 5): Promise<Map<string, Step[]>> {
   const { data, error } = await client.rpc('leaderboard_race_steps', { p_top: top })
   if (error) throw error
   const byMember = new Map<string, Step[]>()
@@ -243,6 +242,7 @@ describe('leaderboard_race_steps', () => {
   })
 
   it('merges more than 120 moments into 120 steps, with every kept total exact', async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     // 150 moments a millisecond apart, just before now: Bob is paid i DC at the i-th, and Carol
     // 2 DC at every third, so she shares his moments rather than adding her own.
     const moments = 150

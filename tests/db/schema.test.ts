@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { serviceClient, wipeDatabase } from './helpers'
+import { serviceClient, wipeDatabase, expectError, skipLedgerCheck } from './helpers'
 
 let userId: string
 
@@ -32,7 +32,7 @@ describe('profiles table', () => {
   it('rejects a negative balance', async () => {
     const db = serviceClient()
     const { error } = await db.from('profiles').update({ balance: -1 }).eq('id', userId)
-    expect(error).not.toBeNull()
+    expectError(error, { code: '23514', message: 'profiles_balance_check' })
   })
 })
 
@@ -53,10 +53,11 @@ describe('coin_transactions table', () => {
     const { error } = await db
       .from('coin_transactions')
       .insert({ profile_id: userId, amount: 0, type: 'test' })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '23514', message: 'coin_transactions_amount_check' })
   })
 
   it('accepts a nonzero amount', async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     const db = serviceClient()
     const { error } = await db
       .from('coin_transactions')

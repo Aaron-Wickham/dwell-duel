@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { getMarketsToResolve } from '@/lib/markets/markets-to-resolve'
 
@@ -10,10 +9,10 @@ let alice: Member
 let bob: Member
 let reviewer: Member
 let admin: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let reviewerClient: SupabaseClient
-let adminClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let reviewerClient: TestClient
+let adminClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -40,19 +39,19 @@ async function closedAgo(marketId: string, ms: number): Promise<void> {
   if (error) throw error
 }
 
-async function bet(client: SupabaseClient, market: TestMarket): Promise<void> {
+async function bet(client: TestClient, market: TestMarket): Promise<void> {
   const { error } = await client.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0], p_amount: 5 })
   if (error) throw error
 }
 
-async function market(title: string, closedMsAgo: number | null, bettors: SupabaseClient[] = []): Promise<TestMarket> {
+async function market(title: string, closedMsAgo: number | null, bettors: TestClient[] = []): Promise<TestMarket> {
   const m = await createTestMarket(aliceClient, ['Yes', 'No'], { title })
   for (const client of bettors) await bet(client, m)
   if (closedMsAgo !== null) await closedAgo(m.marketId, closedMsAgo)
   return m
 }
 
-const titles = async (client: SupabaseClient) => (await getMarketsToResolve(client)).markets.map((m) => m.title)
+const titles = async (client: TestClient) => (await getMarketsToResolve(client)).markets.map((m) => m.title)
 
 describe('markets_to_resolve', () => {
   it("nudges a creator about their own closed markets they can resolve, soonest closed first", async () => {

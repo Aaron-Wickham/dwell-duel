@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import {
   seedMembers,
   makeMember,
@@ -15,8 +14,8 @@ import { pgQuery } from './pg-query'
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -57,7 +56,7 @@ async function feed(actorId?: string): Promise<FeedRow[]> {
   return data as FeedRow[]
 }
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
   const { error } = await client.rpc('place_bet', {
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcomeIndex],
@@ -217,7 +216,7 @@ describe('activity_feed', () => {
     const rejectedId = await submit(rejectedTask.taskId)
     await submit(pendingTask.taskId)
     expect((await aliceClient.rpc('approve_task_completion', { p_completion_id: approvedId })).error).toBeNull()
-    expect((await aliceClient.rpc('reject_task_completion', { p_completion_id: rejectedId, p_reason: null })).error).toBeNull()
+    expect((await aliceClient.rpc('reject_task_completion', { p_completion_id: rejectedId })).error).toBeNull()
 
     expect((await feed()).filter((r) => r.kind === 'task_completed')).toEqual([
       expect.objectContaining({ id: `task:${approvedId}`, actor_id: bob.id, actor_name: 'Bob', task_title: 'Read Psalm 1', amount: 12 }),
@@ -292,7 +291,7 @@ describe('activity_feed', () => {
     const { data: rows, error } = await serviceClient().from('activity_feed').select('kind, market_id, occurred_at')
     expect(error).toBeNull()
     const at = (kind: string, marketId?: string) =>
-      Date.parse(rows!.find((r) => r.kind === kind && (marketId === undefined || r.market_id === marketId))!.occurred_at)
+      Date.parse(rows!.find((r) => r.kind === kind && (marketId === undefined || r.market_id === marketId))!.occurred_at!)
 
     const db = serviceClient()
     const { data: resolution } = await db
@@ -307,13 +306,13 @@ describe('activity_feed', () => {
     expect(at('bet_won', b.marketId)).toBe(resolvedAt)
 
     const { data: parlay } = await db.from('parlays').select('settled_at').eq('id', parlayId as string).single()
-    expect(at('parlay_won')).toBe(Date.parse(parlay!.settled_at))
+    expect(at('parlay_won')).toBe(Date.parse(parlay!.settled_at!))
 
     const { data: completion } = await db
       .from('task_completions')
       .select('reviewed_at')
       .eq('id', completionId as string)
       .single()
-    expect(at('task_completed')).toBe(Date.parse(completion!.reviewed_at))
+    expect(at('task_completed')).toBe(Date.parse(completion!.reviewed_at!))
   })
 })

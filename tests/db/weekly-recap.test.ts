@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
 import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, createTestTask, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 
@@ -40,9 +39,9 @@ type Recap = {
 let alice: Member
 let bob: Member
 let carol: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let carolClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let carolClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -55,7 +54,7 @@ beforeEach(async () => {
   await giveRole(alice, 'admin')
 })
 
-async function recap(client: SupabaseClient = bobClient, week: string = WEEK): Promise<Recap> {
+async function recap(client: TestClient = bobClient, week: string = WEEK): Promise<Recap> {
   const { data, error } = await client.rpc('weekly_recap', { p_week: week }).single<Recap>()
   if (error) throw error
   return data
@@ -68,7 +67,7 @@ async function ledger(profileId: string, amount: number, type: string, at: strin
   )
 }
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
   const { error } = await client.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[outcomeIndex], p_amount: amount })
   if (error) throw error
 }
@@ -97,6 +96,7 @@ describe('weekly_recap', () => {
   })
 
   it("is the caller's own net betting profit, with task rewards apart, and nothing else from the ledger", async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     await ledger(bob.id, -10, 'bet_placed', BEFORE_START)
     await ledger(bob.id, 30, 'bet_won', START)
     await ledger(bob.id, -5, 'parlay_placed', LAST_MINUTE)

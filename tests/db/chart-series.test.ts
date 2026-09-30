@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
 import { getChartSeries, CHART_POINTS } from '@/lib/markets/chart-series'
 import { buildProbabilitySeries } from '@/lib/markets/probability-series'
@@ -9,8 +8,8 @@ import type { DbClient } from '@/lib/supabase/database'
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -19,7 +18,7 @@ beforeEach(async () => {
   await ensureInvited(bobClient)
 })
 
-async function placeBet(client: SupabaseClient, marketId: string, outcomeId: string, amount: number) {
+async function placeBet(client: TestClient, marketId: string, outcomeId: string, amount: number) {
   const { error } = await client.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeId, p_amount: amount })
   if (error) throw error
 }
@@ -60,6 +59,7 @@ describe('getChartSeries (#68)', () => {
   })
 
   it('caps a busy market at CHART_POINTS points, ending on its latest odds', async () => {
+    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     // Rows straight into bets: this is about the chart's sampling, not about placing bets.
     const start = Date.parse('2026-09-01T00:00:00Z')

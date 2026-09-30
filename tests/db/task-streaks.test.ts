@@ -1,13 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, expectError } from './helpers'
 import { seedMembers, clientFor, createTestTask, anonClient, type Member } from './fixtures'
 
 // my_task_streaks (0054, #82): consecutive periods with an approved completion, ending in the
 // current period or the one before it. p_at pins "now" so these tests don't depend on the clock.
 let alice: Member
 let bob: Member
-let bobClient: SupabaseClient
+let bobClient: TestClient
 
 type StreakRow = { task_id: string; streak: number; includes_current: boolean }
 
@@ -29,7 +28,7 @@ async function complete(
   if (error) throw error
 }
 
-async function streaks(at: string, client: SupabaseClient = bobClient): Promise<StreakRow[]> {
+async function streaks(at: string, client: TestClient = bobClient): Promise<StreakRow[]> {
   const { data, error } = await client.rpc('my_task_streaks', { p_at: at })
   if (error) throw error
   return data as StreakRow[]
@@ -127,12 +126,12 @@ describe('my_task_streaks', () => {
 
   it('is closed to signed-out callers', async () => {
     const { error } = await anonClient().rpc('my_task_streaks')
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for function my_task_streaks' })
   })
 
   it("keeps period_index to the database's own functions", async () => {
     const { error } = await bobClient.rpc('period_index', { p_period: 'daily', p_key: '2026-03-09' })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for function period_index' })
   })
 
   it('reads the default clock when no time is given', async () => {

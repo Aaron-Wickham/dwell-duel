@@ -1,14 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
 import { pgQuery } from './pg-query'
 import { buildProbabilitySeries, type SeriesPoint } from '@/lib/markets/probability-series'
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -27,23 +26,23 @@ interface SparklineRow {
   points: SparklinePoint[]
 }
 
-async function sparklines(client: SupabaseClient, marketIds: string[], points?: number): Promise<SparklineRow[]> {
+async function sparklines(client: TestClient, marketIds: string[], points?: number): Promise<SparklineRow[]> {
   const { data, error } = await client.rpc('market_sparklines', {
     p_market_ids: marketIds,
     ...(points === undefined ? {} : { p_points: points }),
   })
   if (error) throw error
-  return data as SparklineRow[]
+  return data as unknown as SparklineRow[] // points is Json in the generated type
 }
 
 // One market's points, after checking the call returned that market's row and nothing else.
-async function pointsOf(client: SupabaseClient, market: TestMarket, points?: number): Promise<SparklinePoint[]> {
+async function pointsOf(client: TestClient, market: TestMarket, points?: number): Promise<SparklinePoint[]> {
   const rows = await sparklines(client, [market.marketId], points)
   expect(rows.map((r) => r.market_id)).toEqual([market.marketId])
   return rows[0].points
 }
 
-async function placeBet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
+async function placeBet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
   const { error } = await client.rpc('place_bet', {
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcomeIndex],
@@ -121,6 +120,7 @@ describe('market_sparklines', () => {
   })
 
   it('breaks same-instant ties by id, the same order fullSeries reads and buildProbabilitySeries keeps', async () => {
+    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     const tie = new Date('2026-09-01T00:00:00.000Z').toISOString()
     const { error } = await serviceClient()
@@ -139,6 +139,7 @@ describe('market_sparklines', () => {
   })
 
   it('picks at most p_points evenly spaced bets, always the first and the last', async () => {
+    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await insertBets(market, 25)
 
@@ -153,6 +154,7 @@ describe('market_sparklines', () => {
   })
 
   it('returns every bet when a market has exactly p_points bets', async () => {
+    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await insertBets(market, 40)
     const series = await fullSeries(market)
@@ -161,18 +163,20 @@ describe('market_sparklines', () => {
   })
 
   it('treats a null p_points as the default of 40', async () => {
+    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await insertBets(market, 45)
     const series = await fullSeries(market)
 
-    const { data, error } = await bobClient.rpc('market_sparklines', { p_market_ids: [market.marketId], p_points: null })
+    const { data, error } = await bobClient.rpc('market_sparklines', { p_market_ids: [market.marketId], p_points: null as unknown as number })
     if (error) throw error
-    const rows = data as SparklineRow[]
+    const rows = data as unknown as SparklineRow[]
     expect(rows.map((r) => r.market_id)).toEqual([market.marketId])
     expectSameSeries(rows[0].points, picked(series, 40))
   })
 
   it('caps p_points at 200, and keeps the last bet when asked for fewer than one', async () => {
+    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Yes', 'No', 'Maybe'])
     await insertBets(market, 205)
     const series = await fullSeries(market)
@@ -187,6 +191,7 @@ describe('market_sparklines', () => {
   })
 
   it('keeps its running sums to the bets plus one marker per picked bet and outcome, never bets × outcomes', async () => {
+    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Red', 'Blue', 'Green'])
     await insertBets(market, 100)
 
@@ -239,6 +244,7 @@ describe('market_sparklines', () => {
   })
 
   it('reads at most 50 market ids per call, and returns every point of all 50 in one response', async () => {
+    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await placeBet(aliceClient, market, 0, 5)
     // Fifty more markets with 41 bets each, inserted directly: fifty create_market calls and 2,050
@@ -289,6 +295,7 @@ describe('market_sparklines', () => {
   })
 
   it('caps by flattened element count, so a nested array cannot smuggle more than 50 ids past the cap', async () => {
+    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     // p_market_ids[1:50] slices only the array's first dimension: a single "row" holding every id
     // would pass that slice whole, and unnest() flattens all dimensions anyway, so the cap would
     // never bite. 59 real markets, each with a bet, sent as one nested array: only the first 50
@@ -325,9 +332,9 @@ describe('market_sparklines', () => {
     )
     if (betsErr) throw betsErr
 
-    const { data, error: rpcErr } = await bobClient.rpc('market_sparklines', { p_market_ids: [marketIds] })
+    const { data, error: rpcErr } = await bobClient.rpc('market_sparklines', { p_market_ids: [marketIds] as unknown as string[] })
     if (rpcErr) throw rpcErr
-    const rows = data as SparklineRow[]
+    const rows = data as unknown as SparklineRow[]
     expect(rows).toHaveLength(50)
     expect(rows.map((r) => r.market_id).sort()).toEqual(marketIds.slice(0, 50).sort())
     for (const id of marketIds.slice(50)) expect(rows.some((r) => r.market_id === id)).toBe(false)
@@ -420,6 +427,7 @@ describe('markets.sparkline cache (0070)', () => {
   }
 
   it('is null while a market is open, and holds exactly market_sparklines’ 40 points once it resolves', async () => {
+    skipLedgerCheck('the test inserts bets directly, so pool totals stay behind')
     const market = await createTestMarket(aliceClient, ['Red', 'Blue', 'Green'])
     await insertBets(market, 60)
     expect(await cached(market.marketId)).toBeNull()

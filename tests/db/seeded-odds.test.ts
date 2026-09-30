@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 import { buildProbabilitySeries } from '@/lib/markets/probability-series'
@@ -12,8 +11,8 @@ const SEED = 20
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -23,7 +22,7 @@ beforeEach(async () => {
   await giveRole(alice, 'admin')
 })
 
-async function bet(client: SupabaseClient, m: TestMarket, i: number, amount: number) {
+async function bet(client: TestClient, m: TestMarket, i: number, amount: number) {
   const { error } = await client.rpc('place_bet', { p_market_id: m.marketId, p_outcome_id: m.outcomeIds[i], p_amount: amount })
   if (error) throw error
 }
@@ -128,7 +127,7 @@ describe('seeded markets (0041)', () => {
     expect(view.picks.map((p) => p.oddsBp)).toEqual([20_000, 20_000])
     expect(view.multiplierBp).toBe(40_000)
 
-    const { error } = await bobClient.rpc('place_slip', {
+    const { error } = await bobClient.rpc('place_slip_v2', {
       p_singles: [],
       p_parlay_outcome_ids: [a.outcomeIds[0], b.outcomeIds[1]],
       p_parlay_stake: 5,
@@ -144,7 +143,7 @@ describe('seeded markets (0041)', () => {
     await bet(aliceClient, m, 1, 30)
     const { data, error } = await aliceClient.rpc('market_sparklines', { p_market_ids: [m.marketId] })
     if (error) throw error
-    const points = (data as { points: { shares: Record<string, number> }[] }[])[0].points
+    const points = (data as unknown as { points: { shares: Record<string, number> }[] }[])[0].points
     const { data: bets } = await serviceClient().from('bets').select('outcome_id, amount, created_at').eq('market_id', m.marketId).order('created_at').order('id')
     const series = buildProbabilitySeries(
       m.outcomeIds,
@@ -169,6 +168,7 @@ describe('parlay_limits', () => {
   })
 
   it('never overflows a huge capped payout into an aborted resolve', async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     const markets = await Promise.all(['A', 'B'].map((t) => createTestMarket(aliceClient, ['Yes', 'No'], { title: t })))
     await serviceClient().from('profiles').update({ balance: 1000 }).eq('id', alice.id)
     for (const m of markets) {

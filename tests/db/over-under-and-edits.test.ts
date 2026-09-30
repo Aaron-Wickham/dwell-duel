@@ -1,14 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
 let admin: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let adminClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let adminClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -22,7 +21,7 @@ beforeEach(async () => {
 
 const inAnHour = () => new Date(Date.now() + 3_600_000).toISOString()
 
-async function createOverUnder(client: SupabaseClient, line: number) {
+async function createOverUnder(client: TestClient, line: number) {
   return client.rpc('create_market', {
     p_title: 'Times Sean says "bet" in his teaching',
     p_description: null,
@@ -73,10 +72,10 @@ describe('over/under markets', () => {
   it('resolves from the actual number, picking the right side and recording it', async () => {
     const { data: id } = await createOverUnder(aliceClient, 3.5)
     const [over, under] = await outcomesOf(id as string)
-    await bobClient.rpc('place_bet', { p_market_id: id, p_outcome_id: over.id, p_amount: 10 })
-    await aliceClient.rpc('place_bet', { p_market_id: id, p_outcome_id: under.id, p_amount: 10 })
+    await bobClient.rpc('place_bet', { p_market_id: id!, p_outcome_id: over.id, p_amount: 10 })
+    await aliceClient.rpc('place_bet', { p_market_id: id!, p_outcome_id: under.id, p_amount: 10 })
 
-    const { error } = await adminClient.rpc('resolve_over_under', { p_market_id: id, p_actual: 5, p_note: 'He said it 5 times' })
+    const { error } = await adminClient.rpc('resolve_over_under', { p_market_id: id!, p_actual: 5, p_note: 'He said it 5 times' })
     expect(error).toBeNull()
     const { data: m } = await serviceClient()
       .from('markets')
@@ -86,7 +85,7 @@ describe('over/under markets', () => {
     expect(m).toEqual({ status: 'resolved', current_resolution: { outcome_id: over.id, actual_value: 5, note: 'He said it 5 times' } })
 
     // An override the other way works the same way, with its own reason.
-    const { error: overrideErr } = await adminClient.rpc('resolve_over_under', { p_market_id: id, p_actual: 2, p_note: 'Recount: 2' })
+    const { error: overrideErr } = await adminClient.rpc('resolve_over_under', { p_market_id: id!, p_actual: 2, p_note: 'Recount: 2' })
     expect(overrideErr).toBeNull()
     const { data: again } = await serviceClient()
       .from('markets')
@@ -98,10 +97,10 @@ describe('over/under markets', () => {
 
   it('refuses a result equal to the line, a missing note, and a non-over/under market', async () => {
     const { data: id } = await createOverUnder(aliceClient, 3.5)
-    expect((await adminClient.rpc('resolve_over_under', { p_market_id: id, p_actual: 3.5, p_note: 'x' })).error?.message).toBe(
+    expect((await adminClient.rpc('resolve_over_under', { p_market_id: id!, p_actual: 3.5, p_note: 'x' })).error?.message).toBe(
       "the result can't equal the line",
     )
-    expect((await adminClient.rpc('resolve_over_under', { p_market_id: id, p_actual: 4, p_note: ' ' })).error?.message).toBe(
+    expect((await adminClient.rpc('resolve_over_under', { p_market_id: id!, p_actual: 4, p_note: ' ' })).error?.message).toBe(
       'say why this outcome won',
     )
     const binary = await createTestMarket(aliceClient, ['Yes', 'No'])

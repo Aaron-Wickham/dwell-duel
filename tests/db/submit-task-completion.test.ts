@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient } from './helpers'
+import { serviceClient, expectError } from './helpers'
 import { seedMembers, clientFor, ensureInvited, createTestTask, type Member } from './fixtures'
 
 let alice: Member
@@ -14,7 +14,7 @@ describe('submit_task_completion', () => {
     const { taskId } = await createTestTask(alice)
     const aliceClient = await clientFor(alice)
     const { error } = await aliceClient.rpc('submit_task_completion', { p_task_id: taskId })
-    expect(error).not.toBeNull()
+    expectError(error, 'not invited')
   })
 
   it('rejects submitting an inactive task', async () => {
@@ -24,7 +24,7 @@ describe('submit_task_completion', () => {
     const aliceClient = await clientFor(alice)
     await ensureInvited(aliceClient)
     const { error } = await aliceClient.rpc('submit_task_completion', { p_task_id: taskId })
-    expect(error).not.toBeNull()
+    expectError(error, 'task not found or inactive')
   })
 
   it('succeeds and snapshots the task reward amount', async () => {
@@ -50,7 +50,7 @@ describe('submit_task_completion', () => {
 
     await aliceClient.rpc('submit_task_completion', { p_task_id: taskId })
     const { error } = await aliceClient.rpc('submit_task_completion', { p_task_id: taskId })
-    expect(error).not.toBeNull()
+    expectError(error, 'you already have a pending or approved submission for this task in the current period')
     expect(error?.message).toContain('you already have a pending or approved submission for this task in the current period')
   })
 

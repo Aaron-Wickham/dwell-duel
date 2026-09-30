@@ -1,10 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { listAllTransactions } from '@/lib/ledger/list-transactions'
 import { encodeCursor, readPageParams, showMoreHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
 import type { KeysetPage } from '@/lib/pagination/keyset'
 import type { LedgerEntry } from '@/lib/ledger/list-transactions'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
 import { seedMembers, clientFor, ensureInvited, createTestMarket, createTestTask, type Member, giveRole } from './fixtures'
 
 let admin: Member
@@ -54,7 +53,7 @@ function follow(page: KeysetPage<LedgerEntry>, searchParams: SearchParams): Sear
 }
 
 describe('listAllTransactions', () => {
-  let adminClient: SupabaseClient
+  let adminClient: TestClient
 
   beforeEach(async () => {
     adminClient = await clientFor(admin)
@@ -98,6 +97,7 @@ describe('listAllTransactions', () => {
   })
 
   it('pages 50 at a time, and each Show more extends the range with nothing skipped or repeated', async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     await insertLedgerRows(120)
     const everything = await allIdsNewestFirst()
     expect(everything).toHaveLength(122)
@@ -118,6 +118,7 @@ describe('listAllTransactions', () => {
   })
 
   it('starts a fresh window past 500 rows, with every row reachable exactly once', async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     await insertLedgerRows(560)
     const everything = await allIdsNewestFirst()
     expect(everything).toHaveLength(562)
@@ -145,6 +146,7 @@ describe('listAllTransactions', () => {
   })
 
   it('reads a garbage cursor, or one whose id is not a ledger id, as the first page instead of failing', async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     await insertLedgerRows(60)
     const everything = await allIdsNewestFirst()
     const wrongId = readPageParams({ before: encodeCursor({ ts: '2026-01-01T00:00:00Z', id: 'bet:1' }) }, 'before')

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient } from './helpers'
+import { serviceClient, expectError } from './helpers'
 import { seedMembers, clientFor, clientForEmail, makeAuthUserWithoutProfile, ensureInvited, type Member, giveRole } from './fixtures'
 
 let alice: Member
@@ -44,7 +44,7 @@ describe('profiles insert policy', () => {
       .from('profiles')
       .insert({ id: userId, email: 'notinvited@example.com', display_name: 'Nope' })
 
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'new row violates row-level security policy for table "profiles"' })
     expect(error?.code).toBe('42501')
   })
 
@@ -79,7 +79,7 @@ describe('profiles insert policy', () => {
       .from('profiles')
       .insert({ id: bob.id, email: 'invitee2@example.com', display_name: 'Sneaky' })
 
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'new row violates row-level security policy for table "profiles"' })
   })
 
   it('rejects an insert that tries to set balance directly', async () => {
@@ -91,7 +91,7 @@ describe('profiles insert policy', () => {
       .from('profiles')
       .insert({ id: userId, email: 'invitee3@example.com', display_name: 'Rich', balance: 999 } as never)
 
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for table profiles' })
   })
 
   it('rejects an insert that tries to set a role directly', async () => {
@@ -103,7 +103,7 @@ describe('profiles insert policy', () => {
       .from('profiles')
       .insert({ id: userId, email: 'invitee4@example.com', display_name: 'Boss', role: 'admin' } as never)
 
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for table profiles' })
   })
 
   it("rejects an insert whose email does not match the caller's JWT email", async () => {
@@ -115,7 +115,7 @@ describe('profiles insert policy', () => {
       .from('profiles')
       .insert({ id: userId, email: 'someoneelse@example.com', display_name: 'Spoofer' })
 
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'new row violates row-level security policy for table "profiles"' })
     expect(error?.code).toBe('42501')
 
     const { data: profile } = await serviceClient().from('profiles').select('id').eq('id', userId).maybeSingle()
@@ -152,7 +152,7 @@ describe('allowed_emails policies', () => {
     expect(selectData).toEqual([])
 
     const { error: insertErr } = await client.from('allowed_emails').insert({ email: 'x@example.com' })
-    expect(insertErr).not.toBeNull()
+    expectError(insertErr, { code: '42501', message: 'new row violates row-level security policy for table "allowed_emails"' })
   })
 
   it('allows an admin to read and write', async () => {
@@ -215,7 +215,7 @@ describe('coin_transactions write policies', () => {
     // (see migration 0006) — the only writer is apply_coin_transaction,
     // a SECURITY DEFINER function that bypasses RLS as its owner. So this
     // fails at the grant layer, not the RLS layer.
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for table coin_transactions' })
     expect(error?.code).toBe('42501')
 
     const { count } = await serviceClient()

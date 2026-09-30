@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, setBalanceViaLedger, skipLedgerCheck } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 import { getLeaderboardPage, getMemberStanding } from '@/lib/social/leaderboard'
@@ -10,9 +9,9 @@ import { getAtStake } from '@/lib/home/at-stake'
 let alice: Member
 let bob: Member
 let carol: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let carolClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let carolClient: TestClient
 
 const NO_PAGE = { top: null, bottom: null }
 
@@ -27,7 +26,7 @@ beforeEach(async () => {
   await giveRole(alice, 'admin')
 })
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
   const { error } = await client.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[outcomeIndex], p_amount: amount })
   if (error) throw error
 }
@@ -43,7 +42,7 @@ async function resolve(market: TestMarket, outcomeIndex: number): Promise<void> 
 
 type WorthRow = { id: string; balance: number; at_stake: number; score: number; rank: number }
 
-async function netWorth(client: SupabaseClient = bobClient): Promise<Map<string, WorthRow>> {
+async function netWorth(client: TestClient = bobClient): Promise<Map<string, WorthRow>> {
   const { data, error } = await client.rpc('leaderboard_net_worth').select('id, balance, at_stake, score, rank')
   if (error) throw error
   return new Map((data as WorthRow[]).map((r) => [r.id, r]))
@@ -108,8 +107,7 @@ describe('leaderboard_net_worth', () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     // Bob has 40 DC in hand but 100 in net worth; Carol has 80 in hand, and that's all.
     await bet(bobClient, market, 0, 60)
-    const db = serviceClient()
-    await db.from('profiles').update({ balance: 80 }).eq('id', carol.id)
+    await setBalanceViaLedger(carol.id, 80)
 
     const board = await getLeaderboardPage(carolClient, 'all', NO_PAGE)
     // Tied members follow each other by id, which is random, so the tie's order isn't pinned.
@@ -133,6 +131,7 @@ describe('leaderboard_net_worth', () => {
 
 describe('season_profits', () => {
   it('counts every betting ledger type and none of the others', async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     const at = '2026-06-10T15:00:00Z'
     const betting: [string, number][] = [
       ['bet_placed', -10],
@@ -168,6 +167,7 @@ describe('season_profits', () => {
   })
 
   it('splits months at midnight in New York, and counts a stake when it was placed, not when it paid', async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     // 03:59Z on 1 August is 23:59 EDT on 31 July; 04:00Z is midnight.
     await ledger(bob.id, -20, 'bet_placed', '2026-08-01T03:59:00Z')
     await ledger(bob.id, 50, 'bet_won', '2026-08-01T04:00:00Z')
@@ -194,6 +194,7 @@ describe('leaderboard_month', () => {
   })
 
   it('shares a rank on a tie', async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     const now = new Date().toISOString()
     for (const member of [alice, bob]) await ledger(member.id, 15, 'bet_won', now)
     await ledger(carol.id, 5, 'bet_won', now)
@@ -206,6 +207,7 @@ describe('leaderboard_month', () => {
   })
 
   it('shows an uninvited session nothing', async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     await ledger(bob.id, 15, 'bet_won', new Date().toISOString())
     const dave = await makeMember('Dave')
     expect(await getLeaderboardPage(await clientFor(dave), 'month', NO_PAGE)).toEqual({ rows: [], next: null, windowed: false })
@@ -214,6 +216,7 @@ describe('leaderboard_month', () => {
 
 describe('settle_season', () => {
   it("posts the month's top profit to the feed once, dated when the month ended", async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     await ledger(alice.id, 30, 'bet_won', '2026-07-05T12:00:00Z')
     await ledger(bob.id, -10, 'bet_placed', '2026-07-06T12:00:00Z')
     await ledger(bob.id, 80, 'bet_won', '2026-07-20T12:00:00Z')
@@ -239,6 +242,7 @@ describe('settle_season', () => {
   })
 
   it('gives a tie to whoever reached the total first', async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     await ledger(bob.id, 40, 'bet_won', '2026-07-03T12:00:00Z')
     await ledger(alice.id, 50, 'bet_won', '2026-07-02T12:00:00Z')
     await ledger(alice.id, -10, 'bet_placed', '2026-07-09T12:00:00Z')
@@ -248,6 +252,7 @@ describe('settle_season', () => {
   })
 
   it('posts nothing for a month with no betting, only task income, or nobody ahead', async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     expect(await settle('2026-05-01')).toBeNull()
 
     await ledger(bob.id, 12, 'task_completed', '2026-04-10T12:00:00Z')
@@ -261,6 +266,7 @@ describe('settle_season', () => {
   })
 
   it("refuses a month that hasn't ended, and settles last month when given none", async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     const { error } = await serviceClient().rpc('settle_season', { p_month: new Date().toISOString().slice(0, 10) })
     expect(error?.message).toMatch(/has not ended/)
 

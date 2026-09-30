@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient, deleteAuthUser } from './helpers'
+import { serviceClient, deleteAuthUser, type TestClient, skipLedgerCheck } from './helpers'
 import { seedMembers, makeMember, clientFor, ensureInvited } from './fixtures'
 import { getLeaderboardPage } from '@/lib/social/leaderboard'
 import { showMoreHref } from '@/lib/pagination/cursor'
@@ -17,7 +16,7 @@ const TIE_START = 47
 const TIE_BALANCE = 950
 const EXTRA_MEMBERS = 58
 
-let bobClient: SupabaseClient
+let bobClient: TestClient
 // Every member this file adds is deleted in afterAll, so a local run doesn't accumulate them.
 // seedMembers() wipes every auth user before seeding, so a run killed before cleanup can't strand
 // extras for the next file's own seedMembers() to trip over — afterAll just keeps a repeated
@@ -128,6 +127,7 @@ describe('getLeaderboardPage', () => {
   // The board's score is a bigint, so a cursor past a JS safe integer is the only out-of-range one:
   // decodeRankCursor rejects it like any other malformed cursor, and the page falls back to the top.
   it('reads a raw cursor with a score past a safe integer as the first page, not an error', async () => {
+    skipLedgerCheck('the test writes ledger rows or balances directly to shape history, so balances and the ledger differ')
     // ASCII-only JSON, so plain btoa (rather than rank-cursor.ts's UTF-8 path) is enough here.
     const encodeRaw = (json: string) => btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
     const overflow = encodeRaw(`[99999999999999999999,"A","${board[0].id}"]`)

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient } from './helpers'
+import { serviceClient, expectError } from './helpers'
 import { seedMembers, clientFor, ensureInvited, type Member } from './fixtures'
 
 let alice: Member
@@ -24,12 +24,12 @@ describe('create_market', () => {
     expect(error).toBeNull()
 
     const db = serviceClient()
-    const { data: market } = await db.from('markets').select('title, created_by, status').eq('id', marketId).single()
+    const { data: market } = await db.from('markets').select('title, created_by, status').eq('id', marketId!).single()
     expect(market?.title).toBe('Will it rain?')
     expect(market?.created_by).toBe(alice.id)
     expect(market?.status).toBe('open')
 
-    const { data: outcomes } = await db.from('market_outcomes').select('label').eq('market_id', marketId)
+    const { data: outcomes } = await db.from('market_outcomes').select('label').eq('market_id', marketId!)
     expect(outcomes?.map((o) => o.label).sort()).toEqual(['No', 'Yes'])
   })
 
@@ -45,7 +45,7 @@ describe('create_market', () => {
       p_outcome_labels: ['Yes', 'No', 'Maybe'],
       p_close_at: closeAt,
     })
-    expect(error).not.toBeNull()
+    expectError(error, 'a binary market must have exactly 2 outcomes')
   })
 
   it('rejects more than 6 outcomes', async () => {
@@ -60,7 +60,7 @@ describe('create_market', () => {
       p_outcome_labels: ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
       p_close_at: closeAt,
     })
-    expect(error).not.toBeNull()
+    expectError(error, 'a market may have at most 6 outcomes')
   })
 
   it('rejects a close time in the past', async () => {
@@ -75,6 +75,6 @@ describe('create_market', () => {
       p_outcome_labels: ['Yes', 'No'],
       p_close_at: closeAt,
     })
-    expect(error).not.toBeNull()
+    expectError(error, 'close time must be in the future')
   })
 })

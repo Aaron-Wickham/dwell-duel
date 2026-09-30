@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient } from './helpers'
+import { serviceClient, expectError } from './helpers'
 import { seedMembers, clientFor, type Member } from './fixtures'
 
 let alice: Member
@@ -42,7 +42,7 @@ describe('apply_coin_transaction', () => {
       p_amount: -(before!.balance + 1),
       p_type: 'test_overdraft',
     })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '23514', message: 'profiles_balance_check' })
 
     const { data: after } = await db.from('profiles').select('balance').eq('id', bob.id).single()
     const { count: countAfter } = await db
@@ -61,7 +61,7 @@ describe('apply_coin_transaction', () => {
       p_amount: 1000000,
       p_type: 'self_grant_attempt',
     })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for function apply_coin_transaction' })
 
     const { data: profile } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
     // The self-grant attempt was correctly rejected, so the balance is unchanged

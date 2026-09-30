@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient } from './helpers'
+import { serviceClient, expectError } from './helpers'
 import { seedMembers, clientFor, ensureInvited, createTestTask, type Member, giveRole } from './fixtures'
 
 let alice: Member
@@ -23,7 +23,7 @@ describe('approve_task_completion', () => {
 
     const bobClient = await clientFor(bob)
     const { error } = await bobClient.rpc('approve_task_completion', { p_completion_id: completionId })
-    expect(error).not.toBeNull()
+    expectError(error, 'only a reviewer can approve a task completion')
   })
 
   it('grants exactly the reward amount through the real ledger', async () => {
@@ -64,6 +64,6 @@ describe('approve_task_completion', () => {
     await adminClient.rpc('approve_task_completion', { p_completion_id: completionId })
 
     const { error } = await adminClient.rpc('approve_task_completion', { p_completion_id: completionId })
-    expect(error).not.toBeNull()
+    expectError(error, 'completion is not pending')
   })
 })

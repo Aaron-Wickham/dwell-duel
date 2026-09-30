@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, expectError } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, type Member } from './fixtures'
 
 type Role = 'owner' | 'admin' | 'reviewer' | 'member'
@@ -9,7 +8,7 @@ let owner: Member
 let admin: Member
 let reviewer: Member
 let member: Member
-const clients: Record<Role, SupabaseClient> = {} as Record<Role, SupabaseClient>
+const clients: Record<Role, TestClient> = {} as Record<Role, TestClient>
 
 async function setRole(m: Member, role: Role) {
   const { error } = await serviceClient().from('profiles').update({ role }).eq('id', m.id)
@@ -77,27 +76,27 @@ describe('reviewers', () => {
     const { data: visible } = await clients.reviewer.from('task_completions').select('id').eq('status', 'pending')
     expect(visible?.map((r) => r.id).sort()).toEqual([first, second].sort())
 
-    expect((await clients.reviewer.rpc('approve_task_completion', { p_completion_id: first })).error).toBeNull()
-    expect((await clients.reviewer.rpc('reject_task_completion', { p_completion_id: second, p_reason: 'No proof' })).error).toBeNull()
+    expect((await clients.reviewer.rpc('approve_task_completion', { p_completion_id: first! })).error).toBeNull()
+    expect((await clients.reviewer.rpc('reject_task_completion', { p_completion_id: second!, p_reason: 'No proof' })).error).toBeNull()
 
     const { error: createErr } = await clients.reviewer
       .from('tasks')
       .insert({ title: 'Nope', reward_amount: 5, is_repeatable: false, created_by: reviewer.id })
-    expect(createErr).not.toBeNull()
+    expectError(createErr, { code: '42501', message: 'permission denied for table tasks' })
   })
 
   it("can't resolve someone else's market early, void it, invite, or adjust balances", async () => {
     const market = await createTestMarket(clients.member, ['Yes', 'No'])
-    expect((await clients.reviewer.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0] })).error).not.toBeNull()
-    expect((await clients.reviewer.rpc('void_market', { p_market_id: market.marketId, p_reason: 'Voided in a test' })).error).not.toBeNull()
-    expect((await clients.reviewer.from('allowed_emails').insert({ email: 'x@example.com' })).error).not.toBeNull()
-    expect((await clients.reviewer.rpc('adjust_balance', { p_profile_id: member.id, p_amount: 5, p_reason: 'r' })).error).not.toBeNull()
+    expectError((await clients.reviewer.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0] })).error, 'market has not closed yet')
+    expectError((await clients.reviewer.rpc('void_market', { p_market_id: market.marketId, p_reason: 'Voided in a test' })).error, 'only the market creator or an admin can void this market')
+    expectError((await clients.reviewer.from('allowed_emails').insert({ email: 'x@example.com' })).error, { code: '42501', message: 'new row violates row-level security policy for table "allowed_emails"' })
+    expectError((await clients.reviewer.rpc('adjust_balance', { p_profile_id: member.id, p_amount: 5, p_reason: 'r' })).error, 'only the owner can adjust a balance')
   })
 
   it("members can't review", async () => {
     const { taskId } = await createTestTask(owner)
     const { data: id } = await clients.member.rpc('submit_task_completion', { p_task_id: taskId })
-    const { error } = await clients.member.rpc('approve_task_completion', { p_completion_id: id })
+    const { error } = await clients.member.rpc('approve_task_completion', { p_completion_id: id! })
     expect(error?.message).toBe('only a reviewer can approve a task completion')
   })
 })

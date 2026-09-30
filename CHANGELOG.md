@@ -6,6 +6,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Under the hood
+- **Live updates fit the free tiers at 1,000 members.** Group-wide changes (markets, pools, the feed, reactions, tasks and the review queue) now arrive as one private Broadcast ping per topic per transaction, at most one every 5 seconds, instead of a message per row to every open page, so a 150-winner resolution sends one ping rather than 150; only invited members can join, and only reviewers the review queue. A tab hidden for a minute closes its live channels and catches up when it returns, and a channel that can't join (past the connection cap, say) falls back to refreshing every minute instead of going quiet. The proxy no longer runs on link prefetches. The Realtime and Vercel budget is modelled in `docs/ARCHITECTURE.md` (#250, #251).
+
 ## v0.5.2-beta — 2026-09-30
 
 An Admin › Markets tab for the markets waiting on a result, with tab counts that add up to the Admin badge, and rows inside cards that tint on hover instead of floating like a button inside a button.

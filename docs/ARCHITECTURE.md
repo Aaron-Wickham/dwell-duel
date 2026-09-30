@@ -17,7 +17,7 @@ Next.js 16 on Vercel ── proxy.ts: signed-out requests → /sign-in
 Supabase (one hosted project: production)
   ├─ Auth: Google only, invite-gated
   ├─ Postgres: tables + RLS + security-definer RPCs (all money moves here)
-  ├─ Realtime: 13 published tables drive live page refreshes
+  ├─ Realtime: filtered Postgres Changes plus Broadcast pings (0085) drive live page refreshes
   └─ Storage: `avatars` (public), `proof` (private, signed URLs)
 
 Web push: server actions, pg_cron (every minute, via pg_net) and the daily
@@ -103,7 +103,7 @@ lib/            logic by area: admin, app-shell, auth, bets, docs, economy, env,
                 errors, forms, home, invites, ledger, live, markets, members, nav,
                 offline, pagination, parlays, preferences, profile, proof, push,
                 social, supabase, tasks, theme, toast, ui…
-supabase/       migrations/0001…0072, config.toml
+supabase/       migrations/0001…0085, config.toml
 tests/          components/, lib/, db/ (Vitest), plus e2e/ (Playwright)
 scripts/        generate-splash.mjs, generate-favicons.mjs, ios-standalone-check.mjs
                 (npm run check:ios), seed-scale.mjs
@@ -362,7 +362,7 @@ subquery per row, so 0055 adds no index.
 
 ### Migrations
 
-Migrations are numbered in order, `0001`–`0072`, and none is ever edited
+Migrations are numbered in order, `0001`–`0085`, and none is ever edited
 after it ships. They roughly follow the project's history:
 
 | Range | What they add |
@@ -400,6 +400,7 @@ after it ships. They roughly follow the project's history:
 | 0070 | Speed at scale (#204, #205): `markets.sparkline` filled by the `cache_market_sparkline` trigger when a market resolves or voids (backfilled), `market_outcomes` in the realtime publication, and `parlays_pending_profile_idx` for `stakes_riding` |
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
+| 0085 | Live pings (#250): `live_pings` and `send_live_ping`, row triggers on `markets`, `market_outcomes`, `activity_events`, `feed_reactions`, `tasks` and `task_completions` that send one private Broadcast ping per topic per transaction, at most one per topic every `live_ping_interval_ms()`, and the `realtime.messages` policy that lets only invited members (reviewers and above for `live:reviews`) join |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
@@ -464,20 +465,79 @@ private `proof` bucket (`lib/proof/upload.ts`), then `record_proof`
 checks the paths when the RPC runs. Pages show proof through short-lived
 signed URLs made with the viewer's own session.
 
-**Live updates.** A page declares the tables it shows with
-`<LiveTables subscriptions={pageSubscriptions.x(…)}>`. `LiveRefresh` keeps
-a long-lived channel on the member's own profile, which carries their
-balance and avatar, plus a per-page channel. A change to a subscribed
-table triggers `router.refresh()`, so the server re-renders with fresh
-data. Thirteen tables are published (`LIVE_TABLES`; `market_outcomes`
-since 0070, so `/markets` follows pools rather than every bet, and the
-leaderboard follows only `markets`, never every profile, #204, #205). A filtered channel never
-receives a DELETE, so a page that must hear one either watches the table
-unfiltered (the feed and member activity watch `feed_reactions` that way,
-since taking a reaction back is a delete) or has the delete write
-something it can hear: a cancelled bet inserts into `cancelled_bets`, and a
-deleted comment is an UPDATE, which the market page's channel filtered to
-its market receives.
+**Live updates.** A page declares what it shows with
+`<LiveTables subscriptions={pageSubscriptions.x(…)}>`, in two kinds:
+
+- **Rows**, `{ table, filter }`: Postgres Changes on a table in
+  `LIVE_TABLES`, always filtered to one market, member, parlay or row, so
+  only the pages about that thing hear it.
+- **Topics**, `{ topic }`: anything group-wide. Row triggers (0085) call
+  `send_live_ping`, which sends an empty private Broadcast message on
+  `live:<topic>` when the transaction commits: once per topic per
+  transaction, however many rows it writes (a resolution with 150 winners
+  sends one `activity` ping, not 150), and at most once per topic every
+  `live_ping_interval_ms()` (5 s, mirrored by `LIVE_PING_INTERVAL_MS`).
+  The topics are `LIVE_TOPICS`: `markets` (market rows), `pools`
+  (`market_outcomes`, which every bet moves), `activity`, `reactions`,
+  `tasks` and `reviews` (`task_completions`). The `realtime.messages`
+  policy lets only invited members join them, and only reviewers and above
+  join `reviews`; no client can send on them.
+
+`LiveRefresh` keeps a channel on the member's own profile (their balance
+and avatar) for the whole visit, a per-page Postgres Changes channel, and
+one private channel per topic. A row change refreshes after a 400 ms
+debounce (2 s at most under a steady stream). A topic ping refreshes
+`TOPIC_REFRESH_DELAY_MS` (6 s) after the first ping, folding later ones in:
+that waits out the database's throttle window, so the refresh also reads
+any change the throttle kept from pinging. The throttle skips a locked
+row rather than wait, so it never slows or deadlocks a bet; it assumes a
+transaction commits within that extra second. A hidden tab never
+refreshes, and after `HIDDEN_CLOSE_MS` (60 s) hidden it removes every
+channel, so the socket closes and stops counting as a connection;
+becoming visible reopens them and refreshes. A channel that can't join
+(`CHANNEL_ERROR`, `TIMED_OUT`, for example past the connection cap) makes
+the page poll with `router.refresh()` every `POLL_MS` (60 s) while visible,
+until it joins, and warns once in the console.
+
+A filtered channel never receives a DELETE, so a page that must hear one
+follows a topic (taking a reaction back is a delete, and the feed and
+member activity follow `reactions`) or has the delete write something it
+can hear: a cancelled bet inserts into `cancelled_bets`, and a deleted
+comment is an UPDATE, which the market page's channel filtered to its
+market receives. The publication still holds `market_outcomes`, `tasks`
+and `feed_reactions`, which nothing follows row by row any more; dropping
+them is a later, non-additive change.
+
+**Proxy.** `proxy.ts` runs on page loads, RSC navigations,
+`router.refresh()` and server actions, where it refreshes the session
+cookie and turns a signed-out page load into a real redirect. It skips
+Link prefetches (the `next-router-prefetch` or `purpose: prefetch`
+header, #251) and static files: a prefetch of a signed-in page is its own
+invocation, the prefetched layout's `requireUser` still guards it, and the
+navigation that follows runs the proxy.
+
+**Free-tier budget at 1,000 members** (#250, #251). A model, not a
+measurement: after merge, read Supabase → Realtime usage and Vercel →
+Usage (Active CPU, Invocations) once a month and replace these guesses.
+Assumptions: 300 members active a day, 5 visits each of 5 page loads,
+10 prefetches a visit (a loading-boundary prefetch is reused for 5
+minutes), 1,500 bets and 20 resolutions a day over about 14 waking hours,
+and at a typical moment 10 open `/markets` tabs, 25 tabs following
+`markets`, 6 on the feed and 3 on each busy market page.
+
+| Limit (Free / Hobby) | Before #250/#251 | Now |
+|---|---|---|
+| Realtime messages, 2M a month | about 1.2M from bets and resolutions, plus every idle desktop tab receiving everything: over 2M | pings: `pools` about 1,300 a day to 10 tabs, `activity` 1,400 to 6, `markets` 100 to 25, `reactions` 200 to 9, `reviews` 150 to 2, about 29k deliveries a day; rows (own profile, market pages) about 6k a day; about 1.05M a month, and hidden tabs add nothing after 60 s |
+| Realtime messages, 100 a second | a 150-winner resolution sent 150 rows to every feed tab: 1,500 in a second with 10 tabs | the same resolution sends one ping per topic: about 45. The ceiling is now one topic's subscribers, since one ping reaches them all in the same second: about 90 open `/markets` tabs |
+| Concurrent connections, 200 | one per open tab, hidden ones included | one per visible tab (hidden ones close after 60 s): about 10 to 30 typically; 200 when a fifth of members open the app at once, and past that new tabs poll every 60 s instead of failing silently |
+| Vercel invocations, 1M a month | 7.5k renders + 15k prefetches + about 7.5k live refreshes a day, each with a proxy run: about 60k a day, 1.8M a month | the same without the proxy on prefetches: about 45k a day, 1.35M a month |
+| Vercel Active CPU, 4 h a month | | about 900k renders a month: 2.5 h at 10 ms of CPU each, 5 h at 20 ms; the proxy's local JWT check adds about 0.4 h at 3 ms |
+
+So Realtime fits with headroom, but at 300 daily members Vercel's
+invocations (and possibly Active CPU) still cross Hobby's limits on these
+assumptions, and going over pauses the app for up to 30 days. Before
+inviting at that scale: measure, then consider `prefetch={false}` on
+dense lists, moving `my_role` into the JWT, or Vercel Pro.
 
 **Long lists.** Keyset pagination (`lib/pagination`) with "Show more".
 Each list keeps its place in URL cursors, jumps to a fresh window after
@@ -533,8 +593,8 @@ Admin layout shows admins and the owner a warning (`ClosingAlertsWarning`,
 missing. Only this route stamps it: the daily keep-alive doesn't,
 so it can't hide a dead schedule. Without push keys nothing is sent, so the
 warning never shows. The signed-in
-layout reads `getReviewCounts` for the Admin button's badge, follows
-`task_completions` (and `markets` for admins) live, and refreshes at the next
+layout reads `getReviewCounts` for the Admin button's badge, follows the
+`reviews` topic (and `markets` for admins) live, and refreshes at the next
 market close. The wording is `lib/push/messages.ts`: payloads are `{ title,
 body, url }`, with an in-app `url`. The OS already names the app, so the
 title says what happened ("New market", "You won 26 DC") and the body

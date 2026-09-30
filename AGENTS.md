@@ -180,11 +180,16 @@ a line to `CHANGELOG.md` under the next release.
   only in the provider's state, never in the cookie.
 - **The service worker never caches** per-member HTML, RSC payloads,
   server actions or Supabase responses.
-- **A new live table** goes in both `LIVE_TABLES` and a
-  realtime-publication migration. Prefer the narrowest table that moves
-  with what the page shows (`/markets` follows `market_outcomes`, not
-  `bets`), and never subscribe a whole-group page to `profiles`: every coin
-  movement updates one.
+- **Live updates come in two kinds** (0085, #250). A row subscription is
+  Postgres Changes on a `LIVE_TABLES` table and always has a filter; a new
+  one goes in `LIVE_TABLES` and a realtime-publication migration. Anything
+  group-wide is a topic (`LIVE_TOPICS`): a row trigger calling
+  `send_live_ping`, a seeded `live_pings` row and the `realtime.messages`
+  policy's topic list, all in a migration. Never follow a whole table
+  unfiltered: every open page would get a message per row anyone writes.
+  Prefer the narrowest source that moves with what the page shows
+  (`/markets` follows the `pools` topic, not `bets`), and never follow
+  `profiles` group-wide: every coin movement updates one.
 - **E2e specs await `serverActionSettled`** after an optimistic action,
   before navigating away.
 
@@ -214,10 +219,14 @@ a line to `CHANGELOG.md` under the next release.
 - **A page declares what it shows live** with
   `<LiveTables subscriptions={pageSubscriptions.x(…)}>`, from
   `lib/live/page-subscriptions.ts` and `components/live/live-tables.tsx`.
-- **`LiveRefresh` keeps two channels:** a long-lived base channel for the
-  member's own profile, and a page channel rebuilt on every navigation. A
-  new live table goes in `LIVE_TABLES`, a realtime-publication migration
-  and `page-subscriptions`.
+- **`LiveRefresh` keeps a base channel** for the member's own profile,
+  a page channel for the page's row subscriptions, rebuilt on every
+  navigation, and one private channel per topic. A topic ping refreshes
+  after the database's throttle window, so it never misses a held-back
+  change. A tab hidden for 60 s closes them all, and a channel that can't
+  join makes the page poll every 60 s. A page's subscriptions live in
+  `page-subscriptions`; the budget they're held to is in
+  `docs/ARCHITECTURE.md`.
 - **An Auth failure isn't "signed out."** `requireUser` reads claims
   through `readClaims` (`lib/auth/auth-unavailable.ts`) and throws
   `AuthUnavailableError` when Auth itself is unavailable; `getRole`

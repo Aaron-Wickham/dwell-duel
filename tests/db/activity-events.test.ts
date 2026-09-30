@@ -449,7 +449,8 @@ describe('activity_events indexes', () => {
       .single()
     if (error) throw error
     newest = data
-    await pgQuery('vacuum (analyze) public.activity_events;')
+    // full, so the previous file's wiped rows can't leave a bloated heap that tips the planner to the feed index
+    await pgQuery('vacuum (full, analyze) public.activity_events;')
   })
 
   it('reads a feed page, and a range below a cursor, in order from activity_events_feed_idx', async () => {

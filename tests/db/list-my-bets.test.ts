@@ -89,10 +89,23 @@ describe('listMyWagers: solo bets', () => {
 
     const settled = await myBets('settled')
     expect(settled.rows.map((b) => [b.marketTitle, b.result])).toEqual([
-      ['Voided', { kind: 'refunded' }],
+      ['Voided', { kind: 'refunded', reason: 'voided' }],
       ['Bob loses', { kind: 'lost' }],
       ['Bob wins', { kind: 'won', payout: 30 }],
     ])
+  })
+
+  it('shows a bet as refunded, not lost, when nobody backed the winning outcome (#193)', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Nobody picked No', seed: 20 })
+    await bet(bobClient, market, 0, 10)
+    const { data: before } = await serviceClient().from('profiles').select('balance').eq('id', bob.id).single()
+    await closeAndResolve(market, 1)
+    const { data: after } = await serviceClient().from('profiles').select('balance').eq('id', bob.id).single()
+
+    // resolve_market_core refunds every stake when the winning pool is 0, seed or no seed.
+    expect(after!.balance - before!.balance).toBe(10)
+    const settled = await myBets('settled')
+    expect(settled.rows.map((b) => [b.marketTitle, b.result])).toEqual([['Nobody picked No', { kind: 'refunded', reason: 'no_winners' }]])
   })
 
   it('reports a seeded win as what resolve_market actually paid', async () => {

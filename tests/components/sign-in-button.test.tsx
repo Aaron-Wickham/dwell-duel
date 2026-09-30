@@ -35,11 +35,23 @@ describe('SignInButton', () => {
     expect(signInWithOAuth).toHaveBeenCalledOnce()
   })
 
-  it('goes back to the button if the redirect could not start', async () => {
+  it('goes back to the button and says so if the redirect could not start (#221)', async () => {
     signInWithOAuth.mockResolvedValueOnce({ data: { url: null, provider: 'google' }, error: new Error('nope') } as never)
     render(<SignInButton />)
     await userEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }))
     expect(await screen.findByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Couldn’t open Google sign-in. Check your connection and try again.')
+  })
+
+  it('says so when the sign-in call itself throws, and clears the message on the next tap', async () => {
+    signInWithOAuth.mockRejectedValueOnce(new Error('Failed to fetch')).mockImplementationOnce(() => new Promise(() => {}))
+    render(<SignInButton />)
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t open Google sign-in.')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('Opening Google…')
   })
 
   it('shows the friendly error after a failed redirect back', () => {

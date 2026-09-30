@@ -14,7 +14,7 @@ test('signed-in member sees their name and balance', async ({ page }) => {
 test('admin can add and revoke an invite', async ({ page }) => {
   await page.goto('/admin/invites')
   await page.getByPlaceholder('friend@gmail.com').fill('newperson@example.com')
-  await page.getByRole('button', { name: 'Add' }).click()
+  await page.getByRole('button', { name: 'Add invite' }).click()
   await expect(page.getByText('newperson@example.com')).toBeVisible()
 
   await page.getByRole('button', { name: 'Revoke newperson@example.com' }).click()

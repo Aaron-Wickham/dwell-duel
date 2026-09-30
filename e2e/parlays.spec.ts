@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test'
-import { localDateTimeString } from './local-date-time'
 import { addToSlip, openSlip } from './slip'
 import { backers, clientForEmail } from '../tests/db/fixtures'
 import { serviceClient } from '../tests/db/helpers'
@@ -16,18 +15,22 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   const marketUrls: string[] = []
 
   for (const title of ['Parlay leg one?', 'Parlay leg two?']) {
-    await page.goto('/markets/new')
-    await page.getByLabel('Title').fill(title)
-    await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
-    await page.getByRole('button', { name: 'Create market' }).click()
-    await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)
-    marketUrls.push(page.url())
+    // Bob makes the markets: nobody can put a market they created in a parlay (0074).
+    const { data: marketId, error: createErr } = await bob.rpc('create_market', {
+      p_title: title,
+      p_description: null,
+      p_kind: 'binary',
+      p_outcome_labels: ['Yes', 'No'],
+      p_close_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    })
+    if (createErr) throw createErr
+    marketUrls.push(`/markets/${marketId}`)
+    await page.goto(`/markets/${marketId}`)
 
     // Bob bets 5 on Yes and 15 on No, Backer1 20 on Yes and Backer2 20 on No: 60 DC from three
-    // other members, over the parlay floor (0074). A leg's odds are set at close from that real
-    // money, seed left out: Yes is 60 / 25 = 2.40×. It's their money, not the parlay-builder's,
-    // because a leg's odds leave out the bettor's own stakes.
-    const marketId = new URL(page.url()).pathname.split('/').at(-1)!
+    // other members, over the parlay floor. A leg's odds are set at close from that real money,
+    // seed left out: Yes is 60 / 25 = 2.40×. It's their money, not the parlay-builder's, because a
+    // leg's odds leave out the bettor's own stakes.
     const { data: outcomes } = await serviceClient().from('market_outcomes').select('id, label').eq('market_id', marketId)
     const [backer1, backer2] = (await backers()).map((b) => b.client)
     for (const [client, label, amount] of [

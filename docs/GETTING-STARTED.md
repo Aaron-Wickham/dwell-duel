@@ -21,7 +21,7 @@ renders, validates and calls them.
 
 | Tool | Version | Install |
 |---|---|---|
-| **Node** | 22 (see `.nvmrc`) | `brew install nvm` then `nvm install 22`, or [nodejs.org](https://nodejs.org) |
+| **Node** | 22 (see `.nvmrc`; `engines.node` pins Vercel to it) | `brew install nvm` then `nvm install 22`, or [nodejs.org](https://nodejs.org) |
 | **Docker Desktop** | any current | [docker.com](https://www.docker.com/products/docker-desktop/). Local Supabase runs in Docker; it must be **running** before `npm run db:start`. |
 | **Supabase CLI** | 2.117.0 (what CI and deploys use) | `brew install supabase/tap/supabase` |
 | **GitHub CLI** (optional, handy) | any | `brew install gh` then `gh auth login` |

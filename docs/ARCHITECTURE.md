@@ -42,7 +42,7 @@ itself.
 | Styling | Tailwind v4 with CSS-variable tokens (`app/globals.css`), light and dark |
 | UI pieces | Base UI (dialogs, drawers), lucide-react icons, Motion (loaded lazily), NumberFlow, Recharts (the market page's chart and the leaderboard's race chart; cards draw plain SVG), sonner toasts |
 | Data | Supabase: Postgres, Auth, Realtime, Storage (`@supabase/ssr`) |
-| Hosting | Vercel (production only, plus a daily cron), with `@vercel/analytics` and `@vercel/speed-insights` |
+| Hosting | Vercel (production only, plus a daily cron), with `@vercel/analytics` (10% of events kept) and `@vercel/speed-insights` (`sampleRate` 0.05), sampled in `lib/app-shell/analytics-sampling.ts` to stay inside Hobby's quotas (#278); `engines.node` pins Vercel to Node 22, the major `.nvmrc` and CI use |
 | Tests | Vitest (unit, component, DB against local Supabase), Playwright (e2e) |
 
 ## Routes
@@ -608,11 +608,20 @@ leaves out empty lines and hides when every one is empty.
   after a miss): they come from AWS's public registry, whose anonymous data
   limit GitHub's runners share and hit (#238). A cache saved on a PR is scoped to that PR, so
   `.github/workflows/warm-caches.yml` saves it on `main` (when the setup
-  changes, weekly, and by hand) for every PR to restore. Every third-party action is
+  changes, weekly, and by hand) for every PR to restore; its `web-caches` job
+  does the same for the npm, Next build and Playwright caches when
+  `package-lock.json` changes, and CI only restores them (a Next cache keyed
+  on the source saved an entry per push and broke GitHub's 10 GB limit, #277).
+  `cleanup-caches.yml` deletes a PR's caches when it closes. GitHub disables
+  scheduled workflows after 60 days without repository activity (merged PRs
+  count); if the closing-alerts backup or warm-caches stops, re-enable it in
+  the Actions tab. Every third-party action is
   pinned to a commit SHA with its tag in a trailing comment
   (`uses: actions/checkout@<sha> # v7`); Dependabot's `github-actions`
   ecosystem (`.github/dependabot.yml`) keeps the SHA pins up to date in its
-  weekly PR, so don't bump one by hand to a bare tag.
+  weekly PR, so don't bump one by hand to a bare tag; a test (`tests/lib/deploy/repo-config.test.ts`)
+  fails on an unpinned `uses:`, and the repo setting "Require actions to be pinned to a
+  full-length commit SHA" enforces it on GitHub's side.
 - **Deploys** (`.github/workflows/deploy-production.yml`): Vercel's Git
   integration is off for `main` (`vercel.json`'s `git.deploymentEnabled`).
   Each push to `main` runs the workflow instead, one at a time and with no
@@ -644,7 +653,8 @@ leaves out empty lines and hides when every one is empty.
 - **Security headers** (`next.config.ts`): a Content Security Policy that
   only allows scripts from the app itself (and `va.vercel-scripts.com`, for
   Vercel Analytics and Speed Insights) and connections to the app and its
-  Supabase project, plus `X-Frame-Options: DENY`, `nosniff` and a referrer policy. A
+  Supabase project, plus `X-Frame-Options: DENY`, `nosniff`, a referrer policy and
+  a `Permissions-Policy` denying camera, microphone and location. `poweredByHeader` is off. A
   new third-party origin (analytics, an image host) has to be added to the
   CSP there.
 - **Required env vars** are checked at boot (`lib/env/required.ts`):

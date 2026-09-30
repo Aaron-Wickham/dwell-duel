@@ -1,0 +1,25 @@
+name: Clean up PR caches
+
+# A cache saved on a PR is scoped to that PR and is of no use once it closes, but it counts
+# against the repository's 10 GB limit until GitHub evicts it (#277).
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete this PR's caches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF: refs/pull/${{ github.event.pull_request.number }}/merge
+        run: |
+          gh cache list --repo "$REPO" --ref "$REF" --limit 100 --json id --jq '.[].id' |
+            while read -r id; do gh cache delete "$id" --repo "$REPO"; done

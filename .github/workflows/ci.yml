@@ -75,20 +75,21 @@ jobs:
       # Playwright's global setup seeds the database, so this job needs its own local Supabase too.
       - uses: ./.github/actions/local-supabase
 
-      # Next's build cache, so an unchanged page isn't compiled again; the fallback key restores the
-      # newest cache for the same dependencies when the source changed.
-      - name: Cache the Next.js build
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      # Next's build cache, so an unchanged page isn't compiled again. Restore only, keyed on the
+      # lockfile: a key that hashed the source saved a new 85-127 MB entry on every push and pushed
+      # the repo over GitHub's 10 GB cache limit (#277). warm-caches.yml saves it on main.
+      - name: Restore the Next.js build cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: .next/cache
-          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('app/**', 'components/**', 'lib/**') }}
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
           restore-keys: |
-            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            next-${{ runner.os }}-
 
       - run: npm run build
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      - name: Restore Playwright browsers
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}

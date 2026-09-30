@@ -6,6 +6,12 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Security and reliability
+- **Smaller attack surface.** Next is upgraded to 16.3.8 (with `eslint-config-next`), the `x-powered-by` header is gone and a `Permissions-Policy` denies camera, microphone and location (#276).
+- **Node is pinned for Vercel** with `engines.node: 22.x`, matching `.nvmrc` and CI (#277).
+- **CI caches stay under GitHub's limit.** The Next build cache is keyed on the lockfile and saved from `warm-caches.yml` (which now also warms npm and Playwright), a closed PR's caches are deleted, `closing-alerts` has a timeout, and a test fails on any action not pinned to a commit SHA (#277).
+- **Vercel Analytics and Speed Insights are sampled** (10% and 5%) so their free quotas last the month at 1000 members (#278).
+
 ## v0.5.2-beta — 2026-09-30
 
 An Admin › Markets tab for the markets waiting on a result, with tab counts that add up to the Admin badge, and rows inside cards that tint on hover instead of floating like a button inside a button.

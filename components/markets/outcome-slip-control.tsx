@@ -5,11 +5,11 @@ import { useSlip } from '@/components/slip/slip-provider'
 import { Button } from '@/components/ui/button'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { StatusChip } from '@/components/ui/status-chip'
-import { ToastActionForm } from '@/components/ui/toast-action-form'
+import { ToastActionForm, type ToastActionResult } from '@/components/ui/toast-action-form'
 import type { SlipPick } from '@/lib/parlays/get-slip'
 import type { OutcomeRowState } from '@/lib/markets/row-state'
 
-type SlipAction = (formData: FormData) => void | boolean | Promise<void | boolean>
+type SlipAction = (formData: FormData) => ToastActionResult | Promise<ToastActionResult>
 
 // Whether a row reads "In your slip" follows the slip itself (SlipProvider), so an add here, a
 // remove from the slip panel, and a pick from the same market replacing this one all flip the

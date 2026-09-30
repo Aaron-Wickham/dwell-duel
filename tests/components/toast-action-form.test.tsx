@@ -5,11 +5,12 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ToastActionForm } from '@/components/ui/toast-action-form'
 
-const { success } = vi.hoisted(() => ({ success: vi.fn() }))
-vi.mock('sonner', () => ({ toast: { success } }))
+const { success, error } = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
+vi.mock('sonner', () => ({ toast: { success, error } }))
 
 beforeEach(() => {
   success.mockReset()
+  error.mockReset()
 })
 
 describe('ToastActionForm', () => {
@@ -48,6 +49,18 @@ describe('ToastActionForm', () => {
     )
     await userEvent.click(screen.getByRole('button', { name: 'Add' }))
     await waitFor(() => expect(action).toHaveBeenCalledTimes(1))
+    expect(success).not.toHaveBeenCalled()
+  })
+
+  it('shows the reason as an error toast when the action refuses with one', async () => {
+    const action = vi.fn().mockResolvedValue({ error: 'Your slip is full.' })
+    render(
+      <ToastActionForm action={action} successMessage="Added.">
+        <button type="submit">Add</button>
+      </ToastActionForm>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await waitFor(() => expect(error).toHaveBeenCalledWith('Your slip is full.'))
     expect(success).not.toHaveBeenCalled()
   })
 

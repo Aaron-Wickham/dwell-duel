@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
+import { atLeast, getRole } from '@/lib/auth/roles'
 import { afterAction, notifyMarketResult } from '@/lib/push/notify'
 
 export type ActionState = { formError?: string } | undefined
@@ -28,10 +29,11 @@ export async function voidMarketAction(
 
   if (error) {
     // A replay of a void that already committed is refused as not voidable; the market being
-    // voided now is what was asked for.
+    // voided now is what was asked for. void_market checks status before permission, so only
+    // someone who could have voided it (its creator, or an admin) is told it worked.
     if (error.message === NOT_VOIDABLE) {
-      const { data: market } = await supabase.from('markets').select('status').eq('id', marketId).maybeSingle()
-      if (market?.status === 'voided') {
+      const { data: market } = await supabase.from('markets').select('status, created_by').eq('id', marketId).maybeSingle()
+      if (market?.status === 'voided' && (market.created_by === user.id || atLeast(await getRole(supabase), 'admin'))) {
         revalidatePath('/', 'layout')
         return undefined
       }

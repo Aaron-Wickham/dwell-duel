@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
+import { chunk, IN_CHUNK } from '@/lib/pagination/chunk'
 import type { DbClient } from '@/lib/supabase/database'
 import { afterAction, notifyTaskReviews } from '@/lib/push/notify'
 
@@ -97,6 +98,21 @@ function notifyReviewed(rows: ReviewRow[] | null) {
   if (reviewed.length > 0) afterAction(() => notifyTaskReviews(reviewed))
 }
 
+// After a replayed bulk review (Next re-sends an action whose response was lost), the rows the first
+// call reviewed come back "not pending". Those this reviewer already moved to the requested status
+// are done, so they count as succeeded rather than failed.
+async function countReplayedAsDone(supabase: DbClient, rows: ReviewRow[] | null, userId: string, status: 'approved' | 'rejected') {
+  if (!rows) return rows
+  const notPending = rows.filter((row) => !row.ok && row.error === 'completion is not pending').map((row) => row.id)
+  if (notPending.length === 0) return rows
+  const mine = new Set<string>()
+  for (const ids of chunk(notPending, IN_CHUNK)) {
+    const { data } = await supabase.from('task_completions').select('id').in('id', ids).eq('reviewed_by', userId).eq('status', status)
+    for (const row of data ?? []) mine.add(row.id)
+  }
+  return rows.map((row) => (mine.has(row.id) ? { ...row, ok: true, error: null } : row))
+}
+
 export async function bulkApproveTaskCompletionsAction(_prevState: BulkActionState | undefined, formData: FormData): Promise<BulkActionState> {
   const { supabase, user } = await requireUser()
   if (!user) return { formError: 'Not signed in.' }
@@ -105,7 +121,7 @@ export async function bulkApproveTaskCompletionsAction(_prevState: BulkActionSta
   if (completionIds.length === 0) return { formError: 'Select at least one completion.' }
 
   const { data, error } = await supabase.rpc('review_task_completions', { p_ids: completionIds, p_approve: true })
-  const { succeeded, failed, firstError } = tally(completionIds.length, data, error)
+  const { succeeded, failed, firstError } = tally(completionIds.length, await countReplayedAsDone(supabase, data, user.id, 'approved'), error)
   notifyReviewed(data)
 
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
@@ -129,7 +145,7 @@ export async function bulkRejectTaskCompletionsAction(_prevState: BulkActionStat
     p_approve: false,
     p_note: reason || undefined,
   })
-  const { succeeded, failed, firstError } = tally(completionIds.length, data, error)
+  const { succeeded, failed, firstError } = tally(completionIds.length, await countReplayedAsDone(supabase, data, user.id, 'rejected'), error)
   notifyReviewed(data)
 
   revalidatePath('/admin/tasks')

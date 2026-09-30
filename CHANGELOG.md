@@ -7,6 +7,15 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ## Unreleased
 
 ### Fixes
+- **A bet nobody could win says "Refunded · no winners", not "Lost".** When nobody backs the winning outcome, every stake is refunded, but My bets called such a bet Lost; it now matches the Coins tab and the Stats card (#193).
+- **An override must name a different outcome.** An admin could override a resolution to the outcome that had already won, which reversed and re-paid every win under a new date, pushed a "changed by an override" alert to the winners and moved the leaderboard's Biggest win. The database now refuses it, and the form disables the current result and says why (#198).
+- **Resolved markets list in the order they settled,** most recent first, as How it works says, instead of the order they were created in. A voided market shows the day it was voided, and one voided before its close time no longer draws as live until a close it never reached (#221).
+- **A market's title is fixed once someone else's parlay has a leg on it,** as it already was once someone else had a solo bet (#221).
+- **Closing alerts arrive within a minute.** GitHub was dropping most runs of the ten-minute schedule (the Admin warning from #149 caught it), so the timer now lives in Supabase: every minute `pg_cron` checks for a market that has just closed and, if there is one, calls the app through `pg_net` with the address and secret from Vault; it also calls at least every ten minutes to keep the heartbeat honest. The GitHub schedule stays as a backup, and the Admin warning names both (#189).
+
+### Under the hood
+- `markets.settled_at` (0066) records when a market left the open state, set once by its first resolution or its void, backfilled for existing markets, with a `(status, settled_at desc, id)` index for the Resolved list.
+- A daily `pg_cron` job prunes `cron.job_run_details` older than a week, which the every-minute closing-alerts job grew by about 1,440 rows a day (#210).
 - **How it works' own links land.** A link inside the rules to another section ("the leaderboard", "notifications") pointed at an anchor the page didn't have, so tapping it did nothing; it now jumps to the section, and the heading stops clear of the top bar on a phone as well as a desktop (#196).
 - **Admin › Members shows each member's email again,** under their name, so an admin can match a Google account to a member. The admin restyle had dropped it while still fetching it; members still can't read emails anywhere (#195).
 - **A rejected task always says so.** Your Tasks row now reads "Not approved" whenever your latest submission was turned down, with the reviewer's reason after a dash when they gave one; before, a rejection with no reason left the row looking untouched. The reason stays optional, and How it works says so. A reject that the server refuses also keeps the reason you typed, for a single row and for the shared bulk reason (#200).

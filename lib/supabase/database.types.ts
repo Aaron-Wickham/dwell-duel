@@ -593,6 +593,7 @@ export type Database = {
           kind: string
           line: number | null
           seed_per_outcome: number
+          settled_at: string | null
           status: string
           title: string
         }
@@ -607,6 +608,7 @@ export type Database = {
           kind: string
           line?: number | null
           seed_per_outcome?: number
+          settled_at?: string | null
           status?: string
           title: string
         }
@@ -621,6 +623,7 @@ export type Database = {
           kind?: string
           line?: number | null
           seed_per_outcome?: number
+          settled_at?: string | null
           status?: string
           title?: string
         }

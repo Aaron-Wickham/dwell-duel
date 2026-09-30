@@ -19,7 +19,7 @@ function ResultChip({ result }: { result: MyBet['result'] }) {
     case 'lost':
       return <StatusChip tone="lost">Lost</StatusChip>
     case 'refunded':
-      return <StatusChip tone="void">Refunded</StatusChip>
+      return <StatusChip tone="void">{result.reason === 'no_winners' ? 'Refunded · no winners' : 'Refunded'}</StatusChip>
   }
 }
 

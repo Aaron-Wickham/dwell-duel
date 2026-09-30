@@ -51,6 +51,8 @@ export interface MarketCardProps {
   edited?: boolean
   closeAt: string
   resolvedAt: string | null
+  // The first resolution or the void (0066); dates a void and ends the chart's live zone.
+  settledAt?: string | null
   outcomes: MarketCardOutcome[]
   resolvedOutcomeLabel: string | null
   chart?: MarketCardChart
@@ -71,6 +73,7 @@ export function MarketCard({
   edited = false,
   closeAt,
   resolvedAt,
+  settledAt = null,
   outcomes,
   resolvedOutcomeLabel,
   chart,
@@ -105,6 +108,10 @@ export function MarketCard({
             <>
               Resolved <LocalTime iso={resolvedAt} format="day" />
             </>
+          ) : status === 'voided' && settledAt ? (
+            <>
+              Voided <LocalTime iso={settledAt} format="day" />
+            </>
           ) : status !== 'open' ? (
             <>
               Closed <LocalTime iso={closeAt} format="day" />
@@ -129,7 +136,7 @@ export function MarketCard({
               outcomes={chart.outcomes}
               points={chart.points}
               now={chart.now}
-              closedAt={chartClosedAt(status, closeAt, resolvedAt)}
+              closedAt={chartClosedAt(status, closeAt, settledAt)}
               resolvedLabel={status === 'resolved' ? resolvedOutcomeLabel : null}
             />
           )}

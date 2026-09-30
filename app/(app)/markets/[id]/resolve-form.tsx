@@ -22,16 +22,20 @@ const FORM_ID = 'resolve-form'
 // An over/under (`line` set) resolves on the actual number instead of a chosen outcome
 // (resolve_over_under, 0043), with a live preview of which side that makes the winner.
 // Paying out, or reversing earlier payouts for an override, waits for a confirmation naming the winner.
+// An override can't name the outcome that already won (resolve_market_core, 0066): the select
+// disables it, and an over/under refuses an actual number that lands on the current side.
 export function ResolveForm({
   marketId,
   outcomes,
   line = null,
   override = false,
+  currentOutcomeId = null,
 }: {
   marketId: string
   outcomes: { id: string; label: string }[]
   line?: number | null
   override?: boolean
+  currentOutcomeId?: string | null
 }) {
   const [drafts, setDrafts] = useState<ProofDraft[]>([])
   const [actual, setActual] = useState('')
@@ -77,18 +81,30 @@ export function ResolveForm({
   // shows as a message on its own (#219).
   const outcomeError = state?.field === 'outcome'
   const actualNumber = actual.trim() === '' ? NaN : Number(actual)
+  const current = override ? (outcomes.find((o) => o.id === currentOutcomeId) ?? null) : null
+  const sideFor = (n: number) => `${n > line! ? 'Over' : 'Under'} ${formatLine(line!)}`
   const winner =
     line !== null
       ? Number.isFinite(actualNumber) && actualNumber !== line
-        ? `${actualNumber > line ? 'Over' : 'Under'} ${formatLine(line)}`
+        ? sideFor(actualNumber)
         : null
       : (outcomes.find((o) => o.id === outcomeId)?.label ?? null)
+  const actualValidity = (value: string) => {
+    if (value === '') return ''
+    if (Number(value) === line) return 'The result can’t equal the line.'
+    if (current && sideFor(Number(value)) === current.label) return 'That side is already the result.'
+    return ''
+  }
 
   return (
     <>
       <form id={FORM_ID} action={formAction} onSubmit={confirm.onSubmit} className="flex flex-col gap-4">
         {line !== null ? (
-          <Field label="Actual result" htmlFor="resolve-actual" hint={`The line is ${formatLine(line)}.`}>
+          <Field
+            label="Actual result"
+            htmlFor="resolve-actual"
+            hint={current ? `The line is ${formatLine(line)}. ${current.label} is the current result.` : `The line is ${formatLine(line)}.`}
+          >
             <Input
               id="resolve-actual"
               name="actual"
@@ -100,8 +116,9 @@ export function ResolveForm({
               value={actual}
               onChange={(e) => {
                 setActual(e.target.value)
-                // resolve_over_under refuses a tie, so the browser stops it before the confirmation.
-                e.target.setCustomValidity(e.target.value !== '' && Number(e.target.value) === line ? 'The result can’t equal the line.' : '')
+                // resolve_over_under refuses a tie and the current side, so the browser stops
+                // both before the confirmation.
+                e.target.setCustomValidity(actualValidity(e.target.value))
               }}
               className="md:w-40"
               aria-invalid={Boolean(outcomeError)}
@@ -111,12 +128,18 @@ export function ResolveForm({
               {actual !== '' && Number.isFinite(Number(actual))
                 ? Number(actual) === line
                   ? 'That equals the line; check the number.'
-                  : `${Number(actual) > line ? 'Over' : 'Under'} ${formatLine(line)} wins.`
+                  : current && sideFor(Number(actual)) === current.label
+                    ? `${current.label} is already the result.`
+                    : `${sideFor(Number(actual))} wins.`
                 : ''}
             </p>
           </Field>
         ) : (
-          <Field label="Winning outcome" htmlFor="resolve-outcome">
+          <Field
+            label="Winning outcome"
+            htmlFor="resolve-outcome"
+            hint={current ? `${current.label} is the current result, so an override names a different outcome.` : undefined}
+          >
             <Select
               id="resolve-outcome"
               name="outcome_id"
@@ -124,14 +147,14 @@ export function ResolveForm({
               value={outcomeId}
               onChange={(e) => setOutcomeId(e.target.value)}
               aria-invalid={Boolean(outcomeError)}
-              aria-describedby={outcomeError ? 'resolve-error' : undefined}
+              aria-describedby={[current ? 'resolve-outcome-hint' : null, outcomeError ? 'resolve-error' : null].filter(Boolean).join(' ') || undefined}
             >
               <option value="" disabled>
                 Choose the winner…
               </option>
               {outcomes.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
+                <option key={o.id} value={o.id} disabled={o.id === current?.id}>
+                  {o.id === current?.id ? `${o.label} (current result)` : o.label}
                 </option>
               ))}
             </Select>

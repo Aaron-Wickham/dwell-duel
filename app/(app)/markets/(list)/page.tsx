@@ -120,6 +120,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       edited: market.edited,
       closeAt: market.closeAt,
       resolvedAt: market.resolvedAt,
+      settledAt: market.settledAt,
       outcomes: odds.map((o) => ({
         id: o.outcomeId,
         label: o.label,

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Avatar } from '@/components/ui/avatar'
+import { rowTitleClass } from '@/components/ui/page'
 import { focusTarget } from '@/lib/pagination/row-id'
 import { signedDc } from '@/lib/social/season'
 import { cn } from '@/lib/utils'
@@ -42,7 +43,7 @@ export function LeaderboardRow({
         <span className="sr-only">Rank {rank}</span>
       </span>
       <Avatar name={name} src={avatarSrc} />
-      <span className="min-w-0 grow break-words text-[17px] font-extrabold">
+      <span className={cn(rowTitleClass, 'min-w-0 grow break-words')}>
         <Link href={href} transitionTypes={['nav-forward']} className="stretched-link">
           {name}
         </Link>
@@ -54,7 +55,7 @@ export function LeaderboardRow({
           <span className="sr-only">{record.won} won, {record.lost} lost</span>
         </span>
       )}
-      <span className="shrink-0 whitespace-nowrap text-[17px] font-extrabold tabular-nums">{signed ? signedDc(score) : `${score} DC`}</span>
+      <span className={cn(rowTitleClass, 'shrink-0 whitespace-nowrap tabular-nums')}>{signed ? signedDc(score) : `${score} DC`}</span>
     </li>
   )
 }

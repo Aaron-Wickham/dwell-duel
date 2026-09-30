@@ -41,8 +41,11 @@ a line to `CHANGELOG.md` under the next release.
   different variables.
 - **Every signed-in page is a `<Page>`.** It lives in `components/ui/page.tsx`
   and has exactly one `<h1>`, from `PageHeader` or `h1Class`. Sections are
-  `SectionCard`s, whose `<h2>` names the region. Lists with nothing in them
-  render an `EmptyState`.
+  `SectionCard`s, whose `<h2>` names the region; a line under that heading
+  goes in its `description` slot, never a negative margin. Lists with
+  nothing in them render an `EmptyState`. The title of a row or tile in a
+  list is `rowTitleClass`, beside `h1Class`, `h2Class` and `eyebrowClass`;
+  don't add a `text-[Npx]` of your own.
 - **Page widths come from `<Page width>`:** `wide` (default, 1120px of
   content) or `reading` (about 820px, centred), and a skeleton uses
   `pageClassFor(width)`. Don't cap a card's width inside a page; fill the
@@ -60,7 +63,11 @@ a line to `CHANGELOG.md` under the next release.
   `ConfirmActionButton`. A form that must ask first (resolve, balance,
   role) keeps its own button and fields, passes `useConfirmSubmit()`'s
   `onSubmit`, and renders `ConfirmSubmitDialog`, whose button submits the
-  form through its `form` attribute.
+  form through its `form` attribute. A form with several submit buttons
+  passes `useConfirmSubmit` a predicate naming which ones ask. The one
+  exception is approving a single task submission from its row, which
+  stays a direct button (the e2e suite clicks the first "Approve");
+  "Approve selected" confirms, saying how many it approves and what it pays.
 - **Controls.** Every control is a real `<button>`, `<a>` or `<label>`ed
   input, at least 44px tall. Selects and checkboxes stay native. When a
   form shows a server error, wire `aria-invalid` and `aria-describedby`

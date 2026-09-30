@@ -8,6 +8,7 @@ import { listTasks } from '@/lib/tasks/list-tasks'
 import { listPendingTaskCompletions } from '@/lib/tasks/list-task-completions'
 import { ageLabel } from '@/lib/social/relative-time'
 import { SectionCard } from '@/components/ui/section-card'
+import { StatusChip } from '@/components/ui/status-chip'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { CreateTaskForm } from './create-task-form'
@@ -27,6 +28,8 @@ export default async function AdminTasksPage() {
   ])
   // Ages are worked out here, on the server, so the client-rendered list hydrates with the same text.
   const pending = pendingRaw.map((c) => ({ ...c, submittedAge: ageLabel(c.submittedAt) }))
+  // What waits on this viewer: their own submission is listed but reviewed by someone else (0046).
+  const waiting = pending.filter((c) => c.submitterId !== user.id).length
 
   return (
     <ContentReveal>
@@ -36,7 +39,7 @@ export default async function AdminTasksPage() {
           title="Pending approvals"
           titleId="pending-approvals"
           className="gap-4"
-          action={pending.length > 0 ? <span className="text-sm text-ink2">{pending.length} waiting</span> : undefined}
+          action={waiting > 0 ? <StatusChip tone="wait">{waiting} waiting</StatusChip> : undefined}
         >
           <PendingApprovals pending={pending} viewerId={user.id} />
         </SectionCard>

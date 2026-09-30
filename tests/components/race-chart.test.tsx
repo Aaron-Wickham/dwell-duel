@@ -148,6 +148,26 @@ describe('RaceChart', () => {
       expect(announcer()).toHaveTextContent('Aaron +64 DC, Maci +41 DC, Py −3 DC')
     })
 
+    it('keeps the readout beside the cursor on the left, and pins it to the plot’s right edge past 40%', async () => {
+      const user = userEvent.setup()
+      render(<RaceChart series={race} />)
+      await user.tab()
+      const readout = () => screen.getByTestId('race-key-readout').lastElementChild as HTMLElement
+
+      // Step 1 of 4 is 25% along: the readout sits just right of the cursor.
+      await user.keyboard('{Home}{ArrowRight}')
+      expect(readout()).toHaveClass('ml-3.5')
+      expect(readout()).not.toHaveClass('right-0')
+      expect(readout().style.left).toBe('25%')
+
+      // Step 2 is 50% along: on a 320px phone there isn't room to its right without running under
+      // the labels, so it pins to the plot's right edge instead of hanging off the cursor.
+      await user.keyboard('{ArrowRight}')
+      expect(readout()).toHaveClass('right-0')
+      expect(readout()).not.toHaveClass('ml-3.5', '-translate-x-full')
+      expect(readout().style.left).toBe('')
+    })
+
     it('leaves modified keys to the browser', () => {
       render(<RaceChart series={race} />)
       const slider = screen.getByRole('slider')

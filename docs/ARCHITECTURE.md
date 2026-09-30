@@ -75,9 +75,16 @@ Supabase project never pauses. It also deletes unattached proof files and
 attempt keys older than a day, calls `settle_season()` to post last
 month's champion to the feed (a no-op once it's posted), and sends the
 push reminders to resolve closed markets (`push_resolve_reminders()`).
+It runs at 05:15 UTC (`vercel.json`), not midnight: `settle_season`
+defaults to the month before today's *Eastern* date, and midnight UTC is
+still the previous evening in Eastern time, so a run then settled the
+month before last and September's champion only posted on October 2
+(#197). Any hour from 05:00 UTC is past midnight Eastern under EST and
+EDT alike; `tests/lib/deploy/keep-alive-schedule.test.ts` guards it.
 The other, `/api/cron/closing-alerts`, sends the same closing alerts every
 minute a market closes, from Supabase's `pg_cron`, and records a heartbeat (see
-Notifications).
+Notifications). A second `pg_cron` job, `cron-history-cleanup` (0065), prunes
+`cron.job_run_details` older than a week each morning.
 
 ## Code layout
 
@@ -125,7 +132,9 @@ the task catalogue and invite list, which are allowed by policy.
 - `markets`: title, description, kind (`binary`, `multiple_choice`,
   `over_under`), `line` (Over/Under only), `close_at`, status (`open`,
   `resolved`, `voided`), `seed_per_outcome` (20 DC by default),
-  `current_resolution_id` and `edited_at`.
+  `current_resolution_id`, `edited_at` and `settled_at` (0066: when it
+  left `open`, set once by the first resolution or by the void; the
+  Resolved list's order and the chart's shaded zone for a voided market).
 - `market_outcomes`: labels and `pool_total`, the real DC bet on each.
 - `bets`: live stakes only. A cancelled bet moves to `cancelled_bets`.
 - `market_resolutions`: each resolution or override, with its required
@@ -223,24 +232,26 @@ the task catalogue and invite list, which are allowed by policy.
 | `place_slip` | member | Places every solo bet and the parlay in the slip, all or nothing |
 | `place_bet` / `place_parlay` | member | The single-bet and single-parlay versions `place_slip` builds on |
 | `cancel_bet` | bettor | Refunds a bet before its market closes |
-| `resolve_market` | after close, the creator or a reviewer with no stake; an admin any time | Needs a note; may take proof; pays winners from the seeded pool; an admin override reverses the old payouts first and is blocked if a past winner has already spent them. Nobody but an admin resolves a market they have a stake in (`has_stake_in_market`, 0046); `can_resolve_market` answers the same question for the page |
+| `resolve_market` | after close, the creator or a reviewer with no stake; an admin any time | Needs a note; may take proof; pays winners from the seeded pool (everyone is refunded when the winning pool is empty); an admin override must name a different outcome (0066), reverses the old payouts first and is blocked if a past winner has already spent them. Stamps `settled_at` on the first resolution only. Nobody but an admin resolves a market they have a stake in (`has_stake_in_market`, 0046); `can_resolve_market` answers the same question for the page |
 | `resolve_over_under` | same | Picks Over or Under from the actual number, then resolves |
-| `void_market` | creator or admin | Refunds every bet; parlays drop the voided leg |
+| `void_market` | creator or admin | Refunds every bet; parlays drop the voided leg; stamps `settled_at` |
 | `settle_parlay` | trigger | Runs when a leg's market resolves or voids |
 | `submit_task_completion` | member | Submits a task with an optional note and proof |
 | `approve_task_completion`, `reject_task_completion`, `review_task_completions` | reviewer+, never on their own submission | Pays or rejects submissions, one at a time or in bulk |
 | `adjust_balance` | owner | A manual correction, with a required reason |
 
 Also: `create_market`, `update_market` (creator or admin, before close; the
-title is fixed once anyone else has bet), `member_emails` (admin only:
+title is fixed once anyone else has bet, solo or as a parlay leg, 0065), `member_emails` (admin only:
 members can't select `profiles.email`), `member_activity` (admin only, 0050:
 each member's join date, `profiles.created_at`, and last sign-in from
 `auth.users`, for Admin → Members), `stray_proof_objects` (service role:
 the daily cron deletes proof files nothing attached),
-`set_member_role`, `delete_market`, `delete_task`, `remove_bet` and
-`remove_member` (owner only; 0068: back to member, `allowed_emails` row
-and push subscriptions gone, coins and bets untouched), `update_my_profile`,
-`record_proof`, `market_sparklines` (the
+`set_member_role`, `delete_market` (refuses a market with any bet, cancelled
+bet or parlay leg; the market page shows the button only when the pool is
+empty and `lib/markets/bet-history.ts`'s two head counts find nothing),
+`delete_task`, `remove_bet` and `remove_member` (owner only; 0068: back to
+member, `allowed_emails` row and push subscriptions gone, coins and bets
+untouched), `update_my_profile`, `record_proof`, `market_sparklines` (the
 cards' 40-point sparklines and the market chart's 200 points, sampled in
 SQL so no page reads every bet; both prepend a seeded market's even
 opening split through `withSeededStart`, since the function returns points
@@ -357,6 +368,8 @@ after it ships. They roughly follow the project's history:
 | 0061 | Cron heartbeat (#149): `cron_heartbeats` (service-role writes, admin reads) and `record_cron_heartbeat`, stamped by `/api/cron/closing-alerts` |
 | 0062 | `leaderboard_race_steps` (#145): the race from the month's first settled bet, step by step, replacing `leaderboard_race`'s day-by-day points (a new function, so the old one keeps working during the deploy) |
 | 0063 | Drops 0059's `leaderboard_race` (#176), unused since 0062 |
+| 0065 | `update_market` counts other members' parlay legs as bets (#221); the daily `cron-history-cleanup` job, pruning `cron.job_run_details` older than a week (#210) |
+| 0066 | `markets.settled_at` (#221), backfilled and indexed `(status, settled_at desc, id desc)`, stamped by `resolve_market_core` (first resolution) and `void_market`; `resolve_market_core` refuses an override to the current outcome (#198) |
 | 0067 | Push endpoints allowlisted in SQL (#201): `push_hosts()`, `push_endpoint_host`, `is_push_endpoint` and the `push_subscriptions_endpoint_push_service` check; the direct INSERT grant on `push_subscriptions` goes, so `save_push_subscription` is the only writer |
 | 0068 | Roles need an invite (#202): `my_role()` answers `member` unless `is_invited()`, so `has_role`, `is_admin` and every gate on them follow; `remove_member` (owner only) |
 | 0069 | Security hygiene (#203): `market_sparklines` pins an empty `search_path`; a DB test guards that no function `anon` or `authenticated` can execute calls into `net.*` (pg_net's own grants can't be revoked from a migration) |

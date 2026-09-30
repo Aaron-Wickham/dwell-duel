@@ -78,7 +78,7 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
     await page.getByLabel('Why did this outcome win?').fill('Checked against the recording')
     await page.getByRole('button', { name: 'Resolve market' }).click()
     await page.getByRole('button', { name: 'Confirm outcome' }).click()
-    await expect(page.getByText('Status: resolved')).toBeVisible()
+    await expect(page.getByText('Resolved', { exact: true })).toBeVisible()
   }
 
   await page.goto('/bets')

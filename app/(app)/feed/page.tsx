@@ -21,6 +21,8 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
 
   const feed = await listFeed(supabase, { page: readPageParams(searchParams, 'before') })
   const reactions = await getReactions(supabase, feed.rows.map((e) => e.id))
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now()
   const backToNewestHref = newestHref('/feed', searchParams, 'before')
 
   return (
@@ -31,6 +33,7 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
       <FeedList
         events={feed.rows}
         reactions={reactions}
+        now={now}
         heading="Events"
         headingId="feed-events"
         headingHidden

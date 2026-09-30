@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { approveTaskCompletionAction, rejectTaskCompletionAction, type ActionState } from '@/lib/tasks/review-task-completion'
 import { Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
@@ -23,8 +23,14 @@ export function ReviewButtons({
     hasError,
     'Submission approved.',
   )
+  // Controlled, so a refused reject keeps the typed reason; cleared once the reject goes through.
+  const [reason, setReason] = useState('')
   const boundReject = withSuccessToast(
-    rejectTaskCompletionAction.bind(null, completionId),
+    async (prev: ActionState, formData: FormData) => {
+      const next = await rejectTaskCompletionAction(completionId, prev, formData)
+      if (!next?.formError) setReason('')
+      return next
+    },
     hasError,
     'Submission rejected.',
   )
@@ -54,6 +60,8 @@ export function ReviewButtons({
             id={reasonId}
             name="reason"
             placeholder="Reason (optional)"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
             maxLength={TEXT_LIMITS.reviewNote}
             className="min-h-11 md:grow"
             aria-invalid={Boolean(rejectState?.formError)}

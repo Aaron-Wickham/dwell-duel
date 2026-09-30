@@ -36,8 +36,8 @@ export function ProofList({ proof, label }: { proof: ProofView[]; label: string 
               ) : (
                 <Link2 aria-hidden="true" className="size-4 shrink-0 text-ink2" />
               )}
-              <a href={p.href} target="_blank" rel="noopener noreferrer" className="hit-area min-w-0 truncate text-sm">
-                {p.label}
+              <a href={p.href} target="_blank" rel="noopener noreferrer" className="hit-area block min-w-0 text-sm">
+                <span className="block truncate">{p.label}</span>
               </a>
             </li>
           ))}

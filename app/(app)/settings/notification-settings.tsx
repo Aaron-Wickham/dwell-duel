@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useState, useSyncExternalStore } from 'react'
+import { useActionState, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { BellOff, BellRing } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
@@ -79,6 +79,16 @@ function DeviceStatus({ publicKey, endpoints }: { publicKey: string; endpoints: 
   const [device, setDevice] = useState<Device>('checking')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Turning on swaps the button for its opposite, so focus follows to the new one; the buttons
+  // stay enabled while busy (aria-disabled plus a guard), or focus would be lost a second time.
+  const button = useRef<HTMLButtonElement>(null)
+  const flipped = useRef(false)
+
+  useEffect(() => {
+    if (!flipped.current) return
+    flipped.current = false
+    button.current?.focus()
+  }, [device])
 
   useEffect(() => {
     let live = true
@@ -97,6 +107,7 @@ function DeviceStatus({ publicKey, endpoints }: { publicKey: string; endpoints: 
   }, [endpoints])
 
   async function turnOn() {
+    if (busy) return
     setBusy(true)
     setError(null)
     try {
@@ -121,6 +132,7 @@ function DeviceStatus({ publicKey, endpoints }: { publicKey: string; endpoints: 
         setError(result.error)
         return
       }
+      flipped.current = true
       setDevice('on')
     } catch {
       setError(TURN_ON_FAILED)
@@ -130,6 +142,7 @@ function DeviceStatus({ publicKey, endpoints }: { publicKey: string; endpoints: 
   }
 
   async function turnOff() {
+    if (busy) return
     setBusy(true)
     setError(null)
     try {
@@ -142,6 +155,7 @@ function DeviceStatus({ publicKey, endpoints }: { publicKey: string; endpoints: 
         }
         await subscription.unsubscribe()
       }
+      flipped.current = true
       setDevice('off')
     } catch {
       setError(TURN_OFF_FAILED)
@@ -162,7 +176,7 @@ function DeviceStatus({ publicKey, endpoints }: { publicKey: string; endpoints: 
       {device === 'off' && (
         <>
           <p className="text-ink2">Notifications are off on this device.</p>
-          <Button variant="secondary" size="sm" onClick={turnOn} disabled={busy}>
+          <Button ref={button} variant="secondary" size="sm" onClick={turnOn} aria-disabled={busy || undefined}>
             <BellRing aria-hidden="true" className="size-[18px]" />
             Turn on notifications
           </Button>
@@ -171,7 +185,7 @@ function DeviceStatus({ publicKey, endpoints }: { publicKey: string; endpoints: 
       {device === 'on' && (
         <>
           <p className="text-ink2">Notifications are on for this device.</p>
-          <Button variant="secondary" size="sm" onClick={turnOff} disabled={busy}>
+          <Button ref={button} variant="secondary" size="sm" onClick={turnOff} aria-disabled={busy || undefined}>
             <BellOff aria-hidden="true" className="size-[18px]" />
             Turn off on this device
           </Button>

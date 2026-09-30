@@ -309,7 +309,7 @@ describe('parlay settlement', () => {
     expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: displayed })
   })
 
-  it('writes no parlay transactions when a market is re-resolved to the same outcome', async () => {
+  it('refuses to re-resolve a market to the same outcome, leaving the parlay and its transactions alone (#198)', async () => {
     const a = await seededMarket('Market A')
     const b = await seededMarket('Market B')
     const id = await placeParlay([a.outcomeIds[0], b.outcomeIds[0]], 10)
@@ -317,7 +317,7 @@ describe('parlay settlement', () => {
     await resolve(b, 0)
     const before = await bobTransactions()
 
-    await resolve(a, 0)
+    await expect(resolve(a, 0)).rejects.toMatchObject({ message: 'that outcome is already the result' })
     expect(await bobTransactions()).toEqual(before)
     expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: 160 })
   })

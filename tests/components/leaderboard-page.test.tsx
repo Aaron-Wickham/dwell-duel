@@ -170,8 +170,12 @@ describe('LeaderboardPage', () => {
       windowed: false,
     })
     const podium = screen.getByRole('region', { name: 'Top three' })
-    const names = within(podium).getAllByRole('link').map((link) => link.textContent)
-    expect(names).toEqual(['Member 2', 'Member 1', 'Member 3'])
+    // Read in rank order; the winner is moved to the middle visually, with CSS order, so a screen
+    // reader and the Tab key meet first place first.
+    const places = within(podium).getAllByRole('listitem')
+    expect(places.map((place) => within(place).getByRole('link').textContent)).toEqual(['Member 1', 'Member 2', 'Member 3'])
+    expect(places.map((place) => place.className.match(/order-\d/)?.[0])).toEqual(['order-2', 'order-1', 'order-3'])
+    expect(within(podium).getByRole('heading', { level: 2, name: 'Top three' })).toHaveClass('sr-only')
     expect(within(podium).getByText('90 DC')).toBeInTheDocument()
     expect(screen.getAllByRole('listitem', { name: /Member/ })).toHaveLength(1)
   })

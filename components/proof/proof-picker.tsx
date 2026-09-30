@@ -8,9 +8,12 @@ import { Message } from '@/components/ui/message'
 import { isWebLink, PROOF_FILE_ACCEPT, PROOF_FILE_TYPES, PROOF_MAX_BYTES, PROOF_MAX_ITEMS, type ProofDraft } from '@/lib/proof/types'
 import { cn } from '@/lib/utils'
 
+// The labels stand in for their hidden file inputs, so they take the input's focus ring and, once
+// nothing more can be attached, the disabled look a button would have.
 const attachClass = cn(
   buttonVariants({ variant: 'secondary', size: 'sm' }),
-  'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus',
+  'peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus',
+  'peer-disabled:cursor-not-allowed peer-disabled:border-transparent peer-disabled:bg-sunk peer-disabled:text-ink2',
 )
 
 // Photos, a document and links, chosen before submitting; nothing uploads until the parent's
@@ -28,6 +31,8 @@ export function ProofPicker({
 }) {
   const [link, setLink] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
+  // Only a refused link marks the link field invalid; a file problem belongs to the file buttons.
+  const [linkInvalid, setLinkInvalid] = useState(false)
   const previews = useMemo(
     () => new Map(value.flatMap((d) => (d.kind === 'image' ? [[d.key, URL.createObjectURL(d.file)] as const] : []))),
     [value],
@@ -36,6 +41,8 @@ export function ProofPicker({
 
   const problemId = `${id}-problem`
   const room = PROOF_MAX_ITEMS - value.length
+  // A problem describes every way of adding proof; the parent's note describes the whole picker.
+  const describedByAll = [describedBy, problem ? problemId : null].filter(Boolean).join(' ') || undefined
 
   function add(drafts: ProofDraft[]) {
     if (drafts.length > room) {
@@ -56,13 +63,17 @@ export function ProofPicker({
 
   function addLink() {
     const url = link.trim()
-    if (!isWebLink(url)) return setProblem('Links must start with http:// or https://.')
+    if (!isWebLink(url)) {
+      setLinkInvalid(true)
+      return setProblem('Links must start with http:// or https://.')
+    }
+    setLinkInvalid(false)
     add([{ key: crypto.randomUUID(), kind: 'link', url }])
     setLink('')
   }
 
   return (
-    <div className="flex flex-col gap-3" aria-describedby={describedBy}>
+    <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-2">
         <span>
           <input
@@ -72,6 +83,7 @@ export function ProofPicker({
             multiple
             className="peer sr-only"
             disabled={room <= 0}
+            aria-describedby={describedByAll}
             onChange={(e) => {
               addFiles(e.target.files, 'image')
               e.target.value = ''
@@ -89,6 +101,7 @@ export function ProofPicker({
             accept={PROOF_FILE_ACCEPT}
             className="peer sr-only"
             disabled={room <= 0}
+            aria-describedby={describedByAll}
             onChange={(e) => {
               addFiles(e.target.files, 'file')
               e.target.value = ''
@@ -110,14 +123,18 @@ export function ProofPicker({
           inputMode="url"
           placeholder="https://"
           value={link}
-          onChange={(e) => setLink(e.target.value)}
+          onChange={(e) => {
+            setLink(e.target.value)
+            setLinkInvalid(false)
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault()
               addLink()
             }
           }}
-          aria-describedby={problem ? problemId : undefined}
+          aria-invalid={linkInvalid || undefined}
+          aria-describedby={describedByAll}
         />
         <Button variant="secondary" size="sm" className="shrink-0" onClick={addLink} disabled={!link.trim() || room <= 0}>
           <Link2 aria-hidden="true" className="size-[18px]" />
@@ -147,7 +164,7 @@ export function ProofPicker({
                 <Button
                   variant="quiet"
                   size="sm"
-                  className="shrink-0 px-2.5"
+                  className="min-w-11 shrink-0 px-2.5"
                   aria-label={`Remove ${name}`}
                   onClick={() => onChange(value.filter((d) => d.key !== draft.key))}
                 >

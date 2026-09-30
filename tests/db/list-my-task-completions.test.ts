@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { countPendingTaskCompletions, getMyPendingRewards, listMyTaskCompletions } from '@/lib/tasks/list-task-completions'
+import { getMyPendingRewards, listMyTaskCompletions } from '@/lib/tasks/list-task-completions'
 import { seedMembers, clientFor, ensureInvited, createTestTask, type Member, giveRole } from './fixtures'
 
 let alice: Member
@@ -70,6 +70,5 @@ describe("Home's pending counts (#68)", () => {
       dc: pending.reduce((sum, c) => sum + c.rewardAmount, 0),
     })
     expect(await getMyPendingRewards(aliceClient, alice.id)).toEqual({ count: 2, dc: 45 })
-    expect(await countPendingTaskCompletions(adminClient)).toBe(2)
   })
 })

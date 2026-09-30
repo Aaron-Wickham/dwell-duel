@@ -46,9 +46,11 @@ describe('resolve_market (first resolution)', () => {
     const { data: bobProfile } = await db.from('profiles').select('balance').eq('id', bob.id).single()
     expect(bobProfile?.balance).toBe(100 - 30)
 
-    const { data: market } = await db.from('markets').select('status, current_resolution_id').eq('id', marketId).single()
+    const { data: market } = await db.from('markets').select('status, current_resolution_id, settled_at').eq('id', marketId).single()
     expect(market?.status).toBe('resolved')
     expect(market?.current_resolution_id).not.toBeNull()
+    const { data: resolution } = await db.from('market_resolutions').select('resolved_at').eq('id', market!.current_resolution_id!).single()
+    expect(market?.settled_at).toBe(resolution?.resolved_at)
   })
 
   it('refunds everyone when the winning outcome has no bets', async () => {
@@ -149,6 +151,41 @@ describe('resolve_market (admin override)', () => {
     expect(resolutions?.[0].reversed_at).not.toBeNull()
     expect(resolutions?.[1].outcome_id).toBe(outcomeIds[1])
     expect(resolutions?.[1].reversed_at).toBeNull()
+
+    // settled_at (0066) stays the first resolution's instant; the override only re-dates the resolution.
+    const { data: market } = await db.from('markets').select('settled_at').eq('id', marketId).single()
+    const { data: first } = await db.from('market_resolutions').select('resolved_at').eq('market_id', marketId).order('resolved_at').limit(1).single()
+    expect(market?.settled_at).toBe(first?.resolved_at)
+  })
+
+  it('refuses an override to the outcome that already won, leaving the ledger alone (#198)', async () => {
+    const aliceClient = await clientFor(alice)
+    const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'], { closeInMs: 1000 })
+    const bobClient = await clientFor(bob)
+    await aliceClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[0], p_amount: 20 })
+    await bobClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[1], p_amount: 30 })
+    await serviceClient()
+      .from('markets')
+      .update({ close_at: new Date(Date.now() - 1000).toISOString() })
+      .eq('id', marketId)
+    await (await referee()).rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+
+    const db = serviceClient()
+    await db.from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    const adminClient = await clientFor(bob)
+    const { error } = await adminClient.rpc('resolve_market', { p_note: 'Same again', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
+    expect(error?.message).toBe('that outcome is already the result')
+
+    const { data: resolutions } = await db.from('market_resolutions').select('id').eq('market_id', marketId)
+    expect(resolutions).toHaveLength(1)
+    const { data: reversals } = await db.from('coin_transactions').select('id').eq('type', 'resolution_reversed').eq('meta->>market_id', marketId)
+    expect(reversals).toEqual([])
+    const { data: aliceProfile } = await db.from('profiles').select('balance').eq('id', alice.id).single()
+    expect(aliceProfile?.balance).toBe(100 - 20 + 50)
+
+    // A different outcome still overrides.
+    const { error: overrideErr } = await adminClient.rpc('resolve_market', { p_note: 'Actually No', p_market_id: marketId, p_outcome_id: outcomeIds[1] })
+    expect(overrideErr).toBeNull()
   })
 
   it('rejects a non-admin trying to change an already-resolved market', async () => {

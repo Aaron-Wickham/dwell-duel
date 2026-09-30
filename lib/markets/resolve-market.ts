@@ -9,6 +9,10 @@ import type { ProofRecord } from '@/lib/proof/types'
 
 export type ActionState = { formError?: string; field?: 'outcome' | 'note' } | undefined
 
+// resolve_market_core's exact text (0066); an override must name a different outcome.
+const SAME_OUTCOME = 'that outcome is already the result'
+const SAME_OUTCOME_MESSAGE = 'That outcome is already the result, so there’s nothing to override.'
+
 export async function resolveMarketAction(
   marketId: string,
   _prevState: ActionState,
@@ -43,6 +47,7 @@ export async function resolveMarketAction(
       : await supabase.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeId, p_note: note, p_attachments: attachments })
 
   if (error) {
+    if (error.message === SAME_OUTCOME) return { formError: SAME_OUTCOME_MESSAGE, field: 'outcome' }
     const short = parseClawbackError(error.message)
     return { formError: (short && clawbackMessage(short)) ?? error.message, field: 'outcome' }
   }

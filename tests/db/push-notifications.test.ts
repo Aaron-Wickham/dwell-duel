@@ -514,3 +514,77 @@ describe('review alerts (0058)', () => {
     expect(await counts(adminClient)).toEqual({ tasks: 1, markets: 1 })
   })
 })
+
+describe('record_push_results pruning (#257)', () => {
+  const ago = (ms: number) => new Date(Date.now() - ms).toISOString()
+  const HOUR = 3_600_000
+  const DAY = 24 * HOUR
+
+  async function row(m: Member, device: string) {
+    const { data, error } = await serviceClient()
+      .from('push_subscriptions')
+      .select('id, failure_count, first_failed_at, last_success_at')
+      .eq('endpoint', endpointFor(m, device))
+      .maybeSingle()
+    if (error) throw error
+    return data
+  }
+  const record = (delivered: string[], failed: string[]) =>
+    rpcOk<number>(serviceClient(), 'record_push_results', { p_delivered: delivered, p_failed: failed })
+
+  it('counts failures, resets on delivery, and is callable by the service role only', async () => {
+    await subscribe(alice)
+    const id = (await row(alice, 'phone'))!.id
+
+    await record([], [id])
+    await record([], [id])
+    expect(await row(alice, 'phone')).toMatchObject({ failure_count: 2 })
+    expect((await row(alice, 'phone'))!.first_failed_at).not.toBeNull()
+
+    await record([id], [])
+    expect(await row(alice, 'phone')).toMatchObject({ failure_count: 0, first_failed_at: null })
+    expect((await row(alice, 'phone'))!.last_success_at).not.toBeNull()
+
+    const { error } = await aliceClient.rpc('record_push_results', { p_delivered: [], p_failed: [id] })
+    expect(error).not.toBeNull()
+  })
+
+  it('keeps a device that failed a few times, or only recently, and prunes one that kept failing for over a day', async () => {
+    await subscribe(alice, 'recent')
+    await subscribe(alice, 'few')
+    await subscribe(alice, 'dead')
+    const [recent, few, dead] = await Promise.all(['recent', 'few', 'dead'].map(async (d) => (await row(alice, d))!.id))
+    const set = (id: string, failure_count: number, first_failed_at: string) =>
+      serviceClient().from('push_subscriptions').update({ failure_count, first_failed_at }).eq('id', id)
+    await set(recent, 9, ago(HOUR)) // many failures, but inside an outage window
+    await set(few, 2, ago(3 * DAY)) // long ago, but only a couple of failures
+    await set(dead, 5, ago(2 * DAY))
+
+    expect(await record([], [])).toBe(1)
+    expect(await row(alice, 'recent')).not.toBeNull()
+    expect(await row(alice, 'few')).not.toBeNull()
+    expect(await row(alice, 'dead')).toBeNull()
+  })
+
+  it('prunes a failing device with no delivery for 60 days, never a healthy one', async () => {
+    await subscribe(alice, 'stale')
+    await subscribe(alice, 'healthy')
+    const stale = (await row(alice, 'stale'))!.id
+    const healthy = (await row(alice, 'healthy'))!.id
+    await serviceClient().from('push_subscriptions').update({ last_success_at: ago(61 * DAY), failure_count: 1, first_failed_at: ago(HOUR) }).eq('id', stale)
+    await serviceClient().from('push_subscriptions').update({ last_success_at: ago(61 * DAY) }).eq('id', healthy)
+
+    expect(await record([], [])).toBe(1)
+    expect(await row(alice, 'stale')).toBeNull()
+    expect(await row(alice, 'healthy')).not.toBeNull()
+  })
+
+  it('starts a clean streak when a device saves its subscription again', async () => {
+    const args = { p_endpoint: endpointFor(alice), p_p256dh: 'k', p_auth: 'a' }
+    await rpcOk(aliceClient, 'save_push_subscription', args)
+    const id = (await row(alice, 'phone'))!.id
+    await record([], [id])
+    await rpcOk(aliceClient, 'save_push_subscription', args)
+    expect(await row(alice, 'phone')).toMatchObject({ failure_count: 0, first_failed_at: null })
+  })
+})

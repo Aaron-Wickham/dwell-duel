@@ -12,7 +12,14 @@ type Sub = { id: string; profile_id: string; endpoint: string; p256dh: string; a
 function fakeDb(subscriptions: Sub[]) {
   const deleted: string[] = []
   const touched: string[] = []
+  const failures: string[] = []
   const db = {
+    rpc: async (name: string, args: { p_delivered: string[]; p_failed: string[] }) => {
+      expect(name).toBe('record_push_results')
+      touched.push(...args.p_delivered)
+      failures.push(...args.p_failed)
+      return { error: null }
+    },
     from: () => ({
       select: () => ({
         in: async (_col: string, ids: string[]) => ({ data: subscriptions.filter((s) => ids.includes(s.profile_id)), error: null }),
@@ -23,15 +30,9 @@ function fakeDb(subscriptions: Sub[]) {
           return { error: null }
         },
       }),
-      update: () => ({
-        in: async (_col: string, ids: string[]) => {
-          touched.push(...ids)
-          return { error: null }
-        },
-      }),
     }),
   }
-  return { db: db as unknown as DbClient, deleted, touched }
+  return { db: db as unknown as DbClient, deleted, touched, failures }
 }
 
 const sub = (id: string, profile: string): Sub => ({
@@ -95,12 +96,14 @@ describe('sendPush', () => {
   })
 
   it('keeps a subscription after any other failure, logging it instead of throwing', async () => {
-    const { db, deleted } = fakeDb([sub('s1', 'alice')])
+    const { db, deleted, failures } = fakeDb([sub('s1', 'alice')])
     sendNotification.mockRejectedValue(Object.assign(new Error('Too many'), { statusCode: 429 }))
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     expect(await sendPush([{ profileId: 'alice', payload }], db)).toEqual({ sent: 0, removed: 0, failed: 1 })
     expect(deleted).toEqual([])
+    // The failure is counted against the device; the database prunes it once it keeps failing (0076).
+    expect(failures).toEqual(['s1'])
     expect(log).toHaveBeenCalled()
   })
 

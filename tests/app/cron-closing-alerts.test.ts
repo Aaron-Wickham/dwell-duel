@@ -38,8 +38,8 @@ describe('closing-alerts cron', () => {
     expect(rpc.mock.calls.map(([fn]) => fn)).toEqual(['record_cron_heartbeat'])
   })
 
-  // #207: a market is claimed once a device took its push, and a run that delivered nothing it
-  // tried to leaves the heartbeat alone, so the Admin warning shows.
+  // #207: a market is claimed once a device took its push. #257: failed pushes don't touch the
+  // heartbeat, which only says whether the schedule ran.
   it('claims a market after its push is delivered, then stamps the heartbeat', async () => {
     vi.stubEnv('NEXT_PUBLIC_VAPID_PUBLIC_KEY', 'public-key')
     vi.stubEnv('VAPID_PRIVATE_KEY', 'private-key')
@@ -51,16 +51,17 @@ describe('closing-alerts cron', () => {
     expect(rpc).toHaveBeenCalledWith('claim_push_log', { p_kind: 'resolve_reminder', p_refs: ['m-1'] })
   })
 
-  it('claims nothing and skips the heartbeat when every push failed, so the market is retried and admins see it', async () => {
+  it('claims nothing but still stamps the heartbeat when every push failed, so one broken device is no alarm (#257)', async () => {
     vi.stubEnv('NEXT_PUBLIC_VAPID_PUBLIC_KEY', 'public-key')
     vi.stubEnv('VAPID_PRIVATE_KEY', 'private-key')
     vi.spyOn(console, 'error').mockImplementation(() => {})
     due([{ market_id: 'm-1', title: 'Will it rain?', profile_id: 'alice' }])
     sendPush.mockResolvedValue({ sent: 0, removed: 0, failed: 1 })
     const res = await GET(authorized())
-    expect(res.status).toBe(502)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ sent: 0, failed: 1 })
     expect(rpc).not.toHaveBeenCalledWith('claim_push_log', expect.anything())
-    expect(rpc).not.toHaveBeenCalledWith('record_cron_heartbeat', expect.anything())
+    expect(rpc).toHaveBeenCalledWith('record_cron_heartbeat', { p_name: 'closing-alerts' })
   })
 
   it('still stamps the heartbeat when some devices failed but others were reached', async () => {

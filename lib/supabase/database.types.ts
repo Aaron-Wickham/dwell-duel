@@ -889,6 +889,8 @@ export type Database = {
           auth: string
           created_at: string
           endpoint: string
+          failure_count: number
+          first_failed_at: string | null
           id: string
           last_success_at: string | null
           p256dh: string
@@ -899,6 +901,8 @@ export type Database = {
           auth: string
           created_at?: string
           endpoint: string
+          failure_count?: number
+          first_failed_at?: string | null
           id?: string
           last_success_at?: string | null
           p256dh: string
@@ -909,6 +913,8 @@ export type Database = {
           auth?: string
           created_at?: string
           endpoint?: string
+          failure_count?: number
+          first_failed_at?: string | null
           id?: string
           last_success_at?: string | null
           p256dh?: string
@@ -1450,6 +1456,10 @@ export type Database = {
           p_prefix: string
           p_resolution_id: string
         }
+        Returns: number
+      }
+      record_push_results: {
+        Args: { p_delivered: string[]; p_failed: string[] }
         Returns: number
       }
       reject_task_completion: {

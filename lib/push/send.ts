@@ -36,7 +36,8 @@ async function runLimited<T>(items: T[], limit: number, work: (item: T) => Promi
 
 // Sends each message to every device its member has subscribed. It never throws: push is a
 // nicety on top of an action that has already succeeded, so a failure is only logged. A push
-// service answering 404 or 410 means that subscription is gone for good, so its row is deleted.
+// service answering 404 or 410 means that subscription is gone for good, so its row is deleted; any
+// other failure is counted against the device, which is pruned once it keeps failing (0076).
 export async function sendPush(messages: PushMessage[], client?: DbClient): Promise<PushResult> {
   const keys = vapidKeys()
   if (!keys || messages.length === 0) return NONE
@@ -64,6 +65,7 @@ export async function sendPush(messages: PushMessage[], client?: DbClient): Prom
       sendable.filter((s) => s.profile_id === message.profileId).map((subscription) => ({ subscription, message })),
     )
     const delivered = new Set<string>()
+    const failedIds = new Set<string>()
     const gone = new Set<string>()
     let sent = 0
     let failed = 0
@@ -83,6 +85,7 @@ export async function sendPush(messages: PushMessage[], client?: DbClient): Prom
           gone.add(subscription.id)
         } else {
           failed++
+          failedIds.add(subscription.id)
           console.error('Push send failed', status ?? error)
         }
       }
@@ -92,10 +95,15 @@ export async function sendPush(messages: PushMessage[], client?: DbClient): Prom
       const { error } = await db.from('push_subscriptions').delete().in('id', ids)
       if (error) console.error('Removing expired push subscriptions failed', error)
     }
-    const now = new Date().toISOString()
-    for (const ids of chunk([...delivered], IN_CHUNK)) {
-      const { error } = await db.from('push_subscriptions').update({ last_success_at: now }).in('id', ids)
-      if (error) console.error('Recording push delivery failed', error)
+    // Outcomes go to the database, which resets a delivered device's failure streak, extends a failed
+    // one's, and prunes a device that has kept failing (0076), so a dead endpoint isn't retried for ever.
+    const outcomes = [
+      ...chunk([...delivered], IN_CHUNK).map((ids) => ({ p_delivered: ids, p_failed: [] as string[] })),
+      ...chunk([...failedIds], IN_CHUNK).map((ids) => ({ p_delivered: [] as string[], p_failed: ids })),
+    ]
+    for (const args of outcomes) {
+      const { error } = await db.rpc('record_push_results', args)
+      if (error) console.error('Recording push outcomes failed', error)
     }
 
     return { sent, removed: gone.size, failed }

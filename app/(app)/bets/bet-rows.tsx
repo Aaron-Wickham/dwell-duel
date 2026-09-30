@@ -44,7 +44,7 @@ function Row({
   return (
     <li
       {...focusTarget(domId, titleId)}
-      className="pressable hover-lift-row relative flex items-start justify-between gap-3 py-3 lg:hover-lift lg:before:hidden lg:flex-col lg:justify-start lg:rounded-[14px] lg:border lg:border-line lg:p-4"
+      className="pressable hover-tint relative flex items-start justify-between gap-3 py-3 lg:hover-lift lg:before:hidden lg:flex-col lg:justify-start lg:rounded-[14px] lg:border lg:border-line lg:p-4"
     >
       <div className="flex min-w-0 flex-col gap-1">
         <Link

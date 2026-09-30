@@ -562,8 +562,8 @@ phone tab bar's, each a Motion `layoutId`, and SubNav's WAAPI one) share one
 slide, `PILL_SLIDE` / `PILL_TRANSITION`: 280ms on the iOS curve.
 The three dialogs share `components/ui/dialog-classes.ts`. `pressable`
 shrinks every control on press and, under a mouse only, grows it; a
-tappable card or row adds `hover-lift` and lifts onto `--lift-shadow`
-instead (`hover-lift-row` for a divided list's row, onto a wider panel), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins).
+tappable card adds `hover-lift` and lifts onto `--lift-shadow`
+instead, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins).
 
 **Getting started.** Home's onboarding card (`components/home/onboarding-card.tsx`)
 reads its three steps from real data in `lib/home/onboarding.ts`, with

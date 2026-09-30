@@ -22,7 +22,7 @@ const PLACE_ORDER = { 1: 'order-2', 2: 'order-1', 3: 'order-3' } as const
 function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean; meId: string }) {
   const place = Math.min(member.rank, 3) as 1 | 2 | 3
   return (
-    <li className={cn('pressable hover-lift-row relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-t-[10px] text-center', PLACE_ORDER[place])}>
+    <li className={cn('pressable hover-tint relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-t-[10px] text-center', PLACE_ORDER[place])}>
       <Avatar name={member.name} src={member.avatarSrc} size={place === 1 ? 'lg' : 'md'} />
       <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="stretched-link max-w-full truncate text-[15px] font-extrabold">
         {member.name}

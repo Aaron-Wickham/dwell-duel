@@ -6,6 +6,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Polish
+- **Rows inside a card no longer float like a button inside a button.** Under a mouse, a leaderboard row, a podium place, a member on Admin › Members, a past champion, and Home's and My bets' rows below desktop width now sit on a flat tint instead of lifting onto a ringed shadow; standalone cards (markets, awards, parlays, Home's desktop tiles) still lift (#244).
+
 ## v0.5.1-beta — 2026-09-30
 
 The last open issues closed: a "Your standing" card beside the Net worth rankings, selectable card text on desktop, a race-chart label fix, CI that no longer trips on Supabase's image registry, and the misspelled dwelldule.com now redirecting to the app.

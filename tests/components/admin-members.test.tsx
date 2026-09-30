@@ -37,7 +37,7 @@ describe('AdjustBalanceForm', () => {
     const email = screen.getByText('ben@example.com')
     expect(email).toHaveClass('text-sm', 'text-ink2', 'wrap-anywhere')
     // An unpadded block in a card lifts onto a panel wider than itself (#220).
-    expect(email.closest('.pressable')).toHaveClass('relative', 'hover-lift-row')
+    expect(email.closest('.pressable')).toHaveClass('relative', 'hover-tint')
     expect(email.closest('.pressable')).not.toHaveClass('hover-lift')
     expect(screen.getByRole('link', { name: 'Ben' }).compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })

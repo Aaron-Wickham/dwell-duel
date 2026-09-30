@@ -7,6 +7,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ## Unreleased
 
 ### Fixes
+- **How it works' own links land.** A link inside the rules to another section ("the leaderboard", "notifications") pointed at an anchor the page didn't have, so tapping it did nothing; it now jumps to the section, and the heading stops clear of the top bar on a phone as well as a desktop (#196).
 - **Closing alerts arrive within a minute.** GitHub was dropping most runs of the ten-minute schedule (the Admin warning from #149 caught it), so the timer now lives in Supabase: every minute `pg_cron` checks for a market that has just closed and, if there is one, calls the app through `pg_net` with the address and secret from Vault; it also calls at least every ten minutes to keep the heartbeat honest. The GitHub schedule stays as a backup, and the Admin warning names both (#189).
 
 ### Polish

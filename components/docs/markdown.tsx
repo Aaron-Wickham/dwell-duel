@@ -10,6 +10,14 @@ function linkKind(href: string): 'app' | 'web' | 'text' {
   return 'text'
 }
 
+// The doc's own anchors are GitHub's `#the-leaderboard`; the page gives each section the id
+// `how-<slug>` (app/(app)/how-it-works/page.tsx), so an in-doc link is pointed at that.
+export const SECTION_ID_PREFIX = 'how-'
+
+function pageHref(href: string): string {
+  return href.startsWith('#') && !href.startsWith(`#${SECTION_ID_PREFIX}`) ? `#${SECTION_ID_PREFIX}${href.slice(1)}` : href
+}
+
 export function InlineContent({ nodes }: { nodes: Inline[] }): ReactNode {
   return nodes.map((node, i) => {
     switch (node.type) {
@@ -45,7 +53,7 @@ export function InlineContent({ nodes }: { nodes: Inline[] }): ReactNode {
         }
         if (kind === 'web') {
           return (
-            <a key={i} href={node.href}>
+            <a key={i} href={pageHref(node.href)}>
               {children}
             </a>
           )

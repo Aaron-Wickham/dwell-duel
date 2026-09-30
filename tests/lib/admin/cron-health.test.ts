@@ -52,6 +52,12 @@ describe('readClosingAlertsHealth', () => {
     expect(await readClosingAlertsHealth(client, 'owner', NOW, PUSH)).toEqual({ stale: true, lastRunAt: null })
   })
 
+  it('degrades to unknown when the read throws, too', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const client = { from: () => { throw new Error('boom') } } as unknown as DbClient
+    expect(await readClosingAlertsHealth(client, 'owner', NOW, PUSH)).toEqual({ stale: false, unknown: true })
+  })
+
   it('degrades to unknown when the read fails, and logs it, instead of throwing through every Admin page', async () => {
     const failure = new Error('db down')
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})

@@ -632,7 +632,15 @@ value never stops production booting.
   ping URL; the daily cron GETs it after its steps, or `<url>/fail` when any
   step failed, and healthchecks emails when a ping is late or fails. A failed
   ping never fails the cron. Give the check a 1-day period and a few hours'
-  grace.
+  grace. `HEALTHCHECKS_CLOSING_ALERTS_URL` does the same for
+  `/api/cron/closing-alerts` (a healthy run pings it, a 502 pings `/fail`);
+  give that check a period of about 10 minutes and a grace of 30.
+- **Scrub.** Events carry no breadcrumbs (console ones hold raw error
+  objects, fetch ones Supabase query strings), and the query is stripped from
+  the request URL and from `contexts.nextjs.request_path`. Tracing is off by
+  omitting `tracesSampleRate`. The browser queues errors raised before the SDK
+  has loaded (at most 10 per page load) and sends them once it has. The error
+  card shows the digest as "Error code" so a member can quote it.
 
 ## Environments and deploys
 

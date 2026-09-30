@@ -18,4 +18,11 @@ describe('ErrorCard', () => {
     await userEvent.click(button)
     expect(retry).toHaveBeenCalledTimes(1)
   })
+
+  it('shows the digest as selectable text so a member can quote it, and nothing without one', () => {
+    const { rerender } = render(<ErrorCard retry={() => {}} digest="1234567890" />)
+    expect(screen.getByText('Error code: 1234567890')).toHaveClass('select-text')
+    rerender(<ErrorCard retry={() => {}} />)
+    expect(screen.queryByText(/Error code/)).not.toBeInTheDocument()
+  })
 })

@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { CircleAlert } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { reportClientError } from '@/lib/observability/client'
 import { h1Class } from '@/components/ui/page'
 
 // Matches the digest to the corresponding server-side log, per the Next.js error.js docs.
@@ -11,14 +12,12 @@ export function useReportError(error: Error & { digest?: string }): void {
   useEffect(() => {
     console.error(error, { digest: error.digest })
     // Server-rendered errors are captured by onRequestError; this is the member's browser, which no
-    // server ever sees. The SDK exists only when a DSN is set, so it's loaded only then.
-    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
-      void import('@sentry/nextjs').then((Sentry) => Sentry.captureException(error)).catch(() => {})
-    }
+    // server ever sees.
+    reportClientError(error)
   }, [error])
 }
 
-export function ErrorCard({ retry }: { retry: () => void }) {
+export function ErrorCard({ retry, digest }: { retry: () => void; digest?: string }) {
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-10 md:px-20">
       <Card padded={false} className="flex w-full max-w-[440px] flex-col items-start gap-4 p-7 md:p-10">
@@ -30,6 +29,7 @@ export function ErrorCard({ retry }: { retry: () => void }) {
         <Button block className="md:w-auto" onClick={retry}>
           Try again
         </Button>
+        {digest ? <p className="select-text text-sm text-ink2">Error code: {digest}</p> : null}
       </Card>
     </div>
   )

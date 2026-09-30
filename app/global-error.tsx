@@ -15,7 +15,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
     <html lang="en" className={`${manrope.variable} h-full`}>
       <body className="flex min-h-full flex-col">
         <title>Something went wrong</title>
-        <ErrorCard retry={retry} />
+        <ErrorCard retry={retry} digest={error.digest} />
       </body>
     </html>
   )

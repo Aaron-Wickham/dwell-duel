@@ -27,10 +27,12 @@ export async function readClosingAlertsHealth(
   env: Record<string, string | undefined> = process.env,
 ): Promise<ClosingAlertsHealth> {
   if (!atLeast(role, 'admin') || !vapidKeys(env)) return { stale: false }
-  const { data, error } = await supabase.from('cron_heartbeats').select('last_run_at').eq('name', CLOSING_ALERTS_JOB).maybeSingle()
-  if (error) {
+  try {
+    const { data, error } = await supabase.from('cron_heartbeats').select('last_run_at').eq('name', CLOSING_ALERTS_JOB).maybeSingle()
+    if (error) throw error
+    return closingAlertsHealth(data?.last_run_at ?? null, now)
+  } catch (error) {
     reportError('Reading the closing-alerts heartbeat failed', error)
     return { stale: false, unknown: true }
   }
-  return closingAlertsHealth(data?.last_run_at ?? null, now)
 }

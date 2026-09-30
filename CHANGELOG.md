@@ -6,6 +6,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Under the hood
+- **CI keeps Supabase's images in its own cache.** They come from AWS's public registry, not Docker Hub, and that registry's anonymous data limit was failing image pulls (run 36750361148 got through only on retries), so #213's Docker Hub login never applied. The images are now cached per Supabase CLI version and loaded before the stack starts; the Docker Hub login and its setup steps are gone (#238).
+
 ## v0.5.0-beta — 2026-09-30
 
 Everything the post-v0.4.0 codebase review found, #192–#236, with nothing left open from it: security fixes (push endpoints, roles that need an invite, per-device sign-out), a round of bug fixes across the slip, results, tasks and admin, pages that no longer jump while loading, faster live refresh at scale, safer deploys and push delivery, CI in about half the time, and docs that match the code.

@@ -1,0 +1,31 @@
+name: Warm caches
+
+# CI runs only on pull requests, and GitHub scopes a cache saved on a PR to that PR, so the
+# Supabase image cache (#238) has to be saved on main for every PR to restore it. This saves it
+# whenever the setup that decides the images changes, weekly so it never ages out of GitHub's
+# 7-day eviction, and by hand.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/actions/local-supabase/**'
+      - '.github/workflows/warm-caches.yml'
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: warm-caches
+  cancel-in-progress: true
+
+jobs:
+  supabase-images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      # Restores the images on a hit (keeping the entry fresh), or pulls and saves them on a miss.
+      - uses: ./.github/actions/local-supabase

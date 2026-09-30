@@ -6,6 +6,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Features
+- **Net worth shows your standing beside the rankings on a wide screen.** A "Your standing" card fills the side column with your rank, net worth, record and how far you are behind the member above you; a phone keeps the list as it was (#185).
+
 ### Fixes
 - **A cut-off line in the leaderboard race always keeps its label** on a phone, where only five fit: a runaway last place among eight used to be the first label dropped, hiding the only place its true total shows (#186).
 

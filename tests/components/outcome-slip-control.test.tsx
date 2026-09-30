@@ -8,12 +8,13 @@ import { OutcomeSlipControl } from '@/components/markets/outcome-slip-control'
 import { EMPTY_SLIP, type SlipPick, type SlipView } from '@/lib/parlays/get-slip'
 import { CommitHistory } from './commit-history'
 
-const { success } = vi.hoisted(() => ({ success: vi.fn() }))
-vi.mock('sonner', () => ({ toast: { success } }))
+const { success, error } = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
+vi.mock('sonner', () => ({ toast: { success, error } }))
 vi.mock('@/lib/parlays/slip-actions', () => ({ setPickModeAction: vi.fn() }))
 
 beforeEach(() => {
   success.mockReset()
+  error.mockReset()
 })
 
 function deferred<T>() {
@@ -87,6 +88,26 @@ describe('OutcomeSlipControl', () => {
 
     expect(screen.getByRole('button', { name: 'Add to slip Yes' })).toBeInTheDocument()
     expect(screen.getByLabelText('Slip')).toHaveTextContent('Picks 0')
+    expect(success).not.toHaveBeenCalled()
+  })
+
+  it('flips back and says why when the slip filled up elsewhere (#221)', async () => {
+    const answer = deferred<{ error: string }>()
+    render(
+      <SlipProvider view={viewOf()}>
+        <Count />
+        <OutcomeSlipControl pick={YES} state="add" addAction={() => answer.promise} removeAction={vi.fn()} />
+      </SlipProvider>,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add to slip Yes' }))
+    expect(screen.getByText('In your slip')).toBeInTheDocument()
+
+    await act(async () => answer.resolve({ error: 'Your slip is full (10 picks). Place or remove some to add more.' }))
+
+    expect(screen.getByRole('button', { name: 'Add to slip Yes' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Slip')).toHaveTextContent('Picks 0')
+    expect(error).toHaveBeenCalledWith('Your slip is full (10 picks). Place or remove some to add more.')
     expect(success).not.toHaveBeenCalled()
   })
 

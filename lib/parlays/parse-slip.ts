@@ -3,6 +3,10 @@ export const SLIP_COOKIE = 'parlay_slip'
 // The same cap as a parlay's MAX_PICKS; solo picks count toward it too.
 export const MAX_SLIP_PICKS = 10
 
+// The market page shows this beside a full slip, and addToSlipAction returns it when the slip
+// filled up elsewhere (another tab, say) since the page was drawn.
+export const SLIP_FULL_MESSAGE = `Your slip is full (${MAX_SLIP_PICKS} picks). Place or remove some to add more.`
+
 // One pick per outcome. `parlay` is the pick's Solo / Parlay switch; a new pick starts as Solo.
 export type SlipEntry = { outcomeId: string; parlay: boolean }
 

@@ -3,6 +3,7 @@ import { AnimatedNumber } from '@/components/ui/animated-number'
 import { AnimatedText } from '@/components/ui/animated-text'
 import { StatusChip } from '@/components/ui/status-chip'
 import { OutcomeSlipControl } from '@/components/markets/outcome-slip-control'
+import type { ToastActionResult } from '@/components/ui/toast-action-form'
 import { SERIES_BG } from '@/components/markets/series-classes'
 import type { Series } from '@/lib/markets/outcome-series'
 import type { OutcomeRowState } from '@/lib/markets/row-state'
@@ -35,8 +36,8 @@ export function OutcomeRow({
   state: OutcomeRowState
   winner?: boolean
   slipPick: SlipPick
-  addAction: (formData: FormData) => void | boolean | Promise<void | boolean>
-  removeAction: (formData: FormData) => void | boolean | Promise<void | boolean>
+  addAction: (formData: FormData) => ToastActionResult | Promise<ToastActionResult>
+  removeAction: (formData: FormData) => ToastActionResult | Promise<ToastActionResult>
   disabledReasonId?: string
 }) {
   const percent = (probability ?? 0) * 100

@@ -18,7 +18,7 @@ chili cook-off?". They earn more DC by completing Bible-study tasks.
 Markets use shared-pool (pari-mutuel) odds; bets can be combined into
 parlays; and everything that happens shows up in a live feed.
 
-**Current release:** [v0.5.1-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.5.1-beta) · see the [changelog](CHANGELOG.md).
+**Current release:** [v0.5.2-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.5.2-beta) · see the [changelog](CHANGELOG.md).
 
 | Home | A market | The feed | Settings |
 |---|---|---|---|

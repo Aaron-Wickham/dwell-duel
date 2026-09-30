@@ -10,25 +10,28 @@ import { AdminNav } from '@/components/admin/admin-nav'
 const SECTIONS = [
   ['Invites', '/admin/invites'],
   ['Tasks', '/admin/tasks'],
+  ['Markets', '/admin/markets'],
   ['Members', '/admin/members'],
   ['Ledger', '/admin/ledger'],
 ]
 
+const NONE = { tasks: 0, markets: 0 }
+
 describe('AdminNav', () => {
   it('links every admin section, in order', () => {
-    render(<AdminNav role="admin" />)
+    render(<AdminNav role="admin" counts={NONE} />)
     const nav = screen.getByRole('navigation', { name: 'Admin sections' })
     const links = within(nav).getAllByRole('link')
     expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual(SECTIONS)
   })
 
   it('shows no switcher to a reviewer, whose only section is the approval queue', () => {
-    render(<AdminNav role="reviewer" />)
+    render(<AdminNav role="reviewer" counts={NONE} />)
     expect(screen.queryByRole('navigation', { name: 'Admin sections' })).not.toBeInTheDocument()
   })
 
   it('behaves like a native segmented control: no long-press menu, a press state on each tab', () => {
-    render(<AdminNav role="admin" />)
+    render(<AdminNav role="admin" counts={NONE} />)
     const nav = screen.getByRole('navigation', { name: 'Admin sections' })
     expect(nav).toHaveClass('no-callout')
     for (const link of within(nav).getAllByRole('link')) expect(link).toHaveClass('pressable')
@@ -36,10 +39,23 @@ describe('AdminNav', () => {
 
   it.each(SECTIONS)('marks only %s as the current page at %s', (label, href) => {
     pathname = href
-    render(<AdminNav role="admin" />)
+    render(<AdminNav role="admin" counts={NONE} />)
     for (const link of screen.getAllByRole('link')) {
       if (link.textContent === label) expect(link).toHaveAttribute('aria-current', 'page')
       else expect(link).not.toHaveAttribute('aria-current')
     }
+  })
+
+  it('counts what waits on each tab, matching the Admin badge (#243)', () => {
+    pathname = '/admin/invites'
+    render(<AdminNav role="admin" counts={{ tasks: 1, markets: 2 }} />)
+    const nav = screen.getByRole('navigation', { name: 'Admin sections' })
+    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Invites',
+      'Tasks (1)',
+      'Markets (2)',
+      'Members',
+      'Ledger',
+    ])
   })
 })

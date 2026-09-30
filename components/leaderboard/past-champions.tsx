@@ -11,7 +11,7 @@ export function PastChampions({ champions, className }: { champions: PastChampio
     <SectionCard title="Past champions" titleId="leaderboard-champions" className={className}>
       <ul className="flex flex-col divide-y divide-line">
         {champions.map((champion) => (
-          <li key={champion.season} className="pressable hover-lift-row relative flex min-h-11 items-center gap-3 py-2 first:pt-0 last:pb-0">
+          <li key={champion.season} className="pressable hover-tint relative flex min-h-11 items-center gap-3 py-2 first:pt-0 last:pb-0">
             <Trophy aria-hidden="true" className="size-5 shrink-0 text-gold" />
             <span className="min-w-0 grow">{seasonName(champion.season)}</span>
             <Link href={`/members/${champion.memberId}`} transitionTypes={['nav-forward']} className="stretched-link min-w-0 font-extrabold break-words">

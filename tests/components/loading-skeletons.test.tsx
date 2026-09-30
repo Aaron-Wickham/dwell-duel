@@ -21,6 +21,7 @@ import AdminInvitesLoading from '@/app/(app)/admin/invites/loading'
 import AdminTasksLoading from '@/app/(app)/admin/tasks/loading'
 import AdminMembersLoading from '@/app/(app)/admin/members/loading'
 import AdminLedgerLoading from '@/app/(app)/admin/ledger/loading'
+import AdminMarketsLoading from '@/app/(app)/admin/markets/loading'
 
 const SKELETONS: [string, ComponentType][] = [
   ['home', HomeLoading],
@@ -37,6 +38,7 @@ const SKELETONS: [string, ComponentType][] = [
   ['admin-tasks', AdminTasksLoading],
   ['admin-members', AdminMembersLoading],
   ['admin-ledger', AdminLedgerLoading],
+  ['admin-markets', AdminMarketsLoading],
 ]
 
 describe.each(SKELETONS)('the %s skeleton', (name, Loading) => {

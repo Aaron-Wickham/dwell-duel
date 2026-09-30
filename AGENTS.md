@@ -127,12 +127,14 @@ a line to `CHANGELOG.md` under the next release.
   another control or finished a text selection); any other control in
   the card sits in a `relative z-[1]` wrapper. `press-feedback.test.tsx`
   guards the listed components. Under a mouse (`(hover: hover) and
-  (pointer: fine)`), `pressable` also grows a control to 103%; a card or
-  row adds `hover-lift` to lift onto `--lift-shadow` instead (a row in a
-  divided list, with no side padding, takes `hover-lift-row`, which lifts
-  onto a panel a little wider than itself). Both drop the
-  movement under reduced motion, and `pressable` carries the transition
-  for both, so a colour hover on a `pressable` eases on its own.
+  (pointer: fine)`), `pressable` also grows a control to 103%; a
+  standalone card adds `hover-lift` to lift onto `--lift-shadow` instead.
+  A row or tile *inside* a card never lifts (#244: a card floating in a
+  card reads as a button in a button): it takes `hover-tint`, a flat
+  `--sunk` panel drawn a little wider than a divided list's row, or flush
+  with a padded row that sets `[--tint-inset:0]`. The lift drops its
+  movement under reduced motion, and `pressable` carries the transition,
+  so a colour hover on a `pressable` eases on its own.
 - **Motion tokens.** Curves and durations are the `--ease-*` /
   `--duration-*` tokens in `globals.css`'s `@theme static` block (`ease-ios`,
   `duration-(--duration-fast)` in markup), mirrored for script by

@@ -6,6 +6,16 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+## v0.5.2-beta — 2026-09-30
+
+An Admin › Markets tab for the markets waiting on a result, with tab counts that add up to the Admin badge, and rows inside cards that tint on hover instead of floating like a button inside a button.
+
+### Features
+- **Admin has a Markets tab.** It lists every market that has closed without a result, oldest first, with when it closed, how much is in its pool, who made it and a Resolve button, so the markets share of the Admin badge has somewhere to go. The Tasks and Markets tabs show their counts, which add up to the badge (#243).
+
+### Polish
+- **Rows inside a card no longer float like a button inside a button.** Under a mouse, a leaderboard row, a podium place, a member on Admin › Members, a past champion, and Home's and My bets' rows below desktop width now sit on a flat tint instead of lifting onto a ringed shadow; standalone cards (markets, awards, parlays, Home's desktop tiles) still lift (#244).
+
 ## v0.5.1-beta — 2026-09-30
 
 The last open issues closed: a "Your standing" card beside the Net worth rankings, selectable card text on desktop, a race-chart label fix, CI that no longer trips on Supabase's image registry, and the misspelled dwelldule.com now redirecting to the app.

@@ -59,7 +59,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
 | `/parlays` | Redirects to `/bets` (kept for old links) |
-| `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its locked odds and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`: the page checks the parlay exists first (so an unknown id is a real 404), then streams the body behind `<Suspense>` with `ParlayDetailSkeleton` |
+| `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its odds (an estimate from `parlay_leg_odds` until its market closes) and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`: the page checks the parlay exists first (so an unknown id is a real 404), then streams the body behind `<Suspense>` with `ParlayDetailSkeleton` |
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
 | `/feed` | Everyone's activity, with reactions, live |
 | `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`) |
@@ -103,7 +103,7 @@ lib/            logic by area: admin, app-shell, auth, bets, docs, economy, env,
                 errors, forms, home, invites, ledger, live, markets, members, nav,
                 offline, pagination, parlays, preferences, profile, proof, push,
                 social, supabase, tasks, theme, toast, ui…
-supabase/       migrations/0001…0072, config.toml
+supabase/       migrations/0001…0074, config.toml
 tests/          components/, lib/, db/ (Vitest), plus e2e/ (Playwright)
 scripts/        generate-splash.mjs, generate-favicons.mjs, ios-standalone-check.mjs
                 (npm run check:ios), seed-scale.mjs
@@ -170,7 +170,14 @@ the task catalogue and invite list, which are allowed by policy.
   `market_comments_market_idx`: the newest 50, shown oldest first, with
   "Show more" above for older ones (`?comments=`).
 - `parlays` and `parlay_legs`: a stake, a status (`pending`, `won`, `lost`,
-  `refunded`), and each leg's outcome with odds locked at placement.
+  `refunded`), the multiplier cap it was placed under (`max_multiplier`,
+  0074), and each leg's outcome with its odds (`locked_odds`): null until
+  the leg's market closes or settles, then set once by `settle_parlay`.
+  Parlays placed before 0074 locked every leg at placement, under a 100×
+  cap, and keep both.
+- `market_resolutions.opposing_stake` (0074): what members with nothing on
+  the result staked on the other outcomes, the most the seed can add to the
+  winners' payouts.
 - `idempotency_keys` (0047): one row per slip or balance-adjustment
   attempt, holding its result. Only `place_slip` and `adjust_balance` touch
   it, and the daily cron prunes rows older than a day.
@@ -252,12 +259,14 @@ the task catalogue and invite list, which are allowed by policy.
 | Function | Who | What it does |
 |---|---|---|
 | `place_slip_v2` | member | Places every solo bet and the parlay in the slip, all or nothing, and returns what it placed and whether the call was a replay (`place_slip` wraps it for the previous build) |
-| `place_bet` / `place_parlay` | member | The single-bet and single-parlay versions `place_slip` builds on |
+| `place_bet` / `place_parlay` | member | The single-bet and single-parlay versions `place_slip` builds on. `place_parlay` refuses a leg on the bettor's own market or one without the floor of other members' money (`parlay_limits()`), and a stake over the payout cap; its legs have no odds yet (0074) |
 | `cancel_bet` | bettor | Refunds a bet before its market closes |
-| `resolve_market` | after close, the creator or a reviewer with no stake; an admin any time | Needs a note; may take proof; pays winners from the seeded pool (everyone is refunded when the winning pool is empty); an admin override must name a different outcome (0066), reverses the old payouts first and is blocked if a past winner has already spent them. Stamps `settled_at` on the first resolution only. Nobody but an admin resolves a market they have a stake in (`has_stake_in_market`, 0046); `can_resolve_market` answers the same question for the page |
+| `resolve_market` | after close, the creator or a reviewer with no stake; an admin any time | Needs a note; may take proof; pays winners from the seeded pool, the seed's top-up limited to the opposing stake (0074; everyone is refunded when the winning pool is empty); an admin override must name a different outcome (0066), reverses the old payouts first and is blocked if a past winner has already spent them. Stamps `settled_at` on the first resolution only. Nobody but an admin resolves a market they have a stake in (`has_stake_in_market`, 0046); `can_resolve_market` answers the same question for the page |
 | `resolve_over_under` | same | Picks Over or Under from the actual number, then resolves |
 | `void_market` | before close, the creator; an admin any time | Needs a reason (0073), stored in `void_reason` and posted to the feed as `market_voided`; refunds every bet; parlays drop the voided leg; stamps `settled_at`. `p_reason` defaults to null only so the previous build's call is refused cleanly |
-| `settle_parlay` | trigger | Runs when a leg's market resolves or voids |
+| `settle_parlay` | trigger | Runs when a leg's market resolves or voids. Sets the odds of each leg whose market has closed or resolved (`pick_quote` for the owner, once), then pays at most `max_multiplier` and `parlay_limits().max_payout` (or the stake, if larger) |
+| `remove_bet` | owner | Refunds any member's bet before its market closes (0074; it used to allow it until resolution) |
+| `apply_coin_transaction` | none (definer functions only) | Writes a ledger row and moves the balance; a credit is cut to what the balance can hold under the integer ceiling, and one cut to nothing writes no row (0074) |
 | `submit_task_completion` | member | Submits a task with an optional note and proof |
 | `approve_task_completion`, `reject_task_completion`, `review_task_completions` | reviewer+, never on their own submission | Pays or rejects submissions, one at a time or in bulk |
 | `adjust_balance` | owner | A manual correction, with a required reason |
@@ -290,7 +299,11 @@ creator's own at once, and for reviewers and admins any left 48 hours or
 whose creator has a stake, always filtered through `can_resolve_market`;
 a close fires no database change, so Home's `RefreshAt` refreshes it at
 the next moment the list could grow, from `nextResolveCheckAt`),
-`my_at_stake`, `parlay_limits`, and from 0071 (#206, #210)
+`my_at_stake`, `parlay_limits`, `pick_quotes(outcome_ids)` and
+`parlay_leg_odds(parlay_ids)` (0074: a pick's leg odds, floor and opposing
+stake for the caller, and each parlay leg's set or estimated odds for its
+owner, both built on the service-only `pick_quote(profile, outcome)` that
+`settle_parlay` prices with), and from 0071 (#206, #210)
 `my_current_task_completions()` (security invoker: the newest completion of
 the current period per task, filtered in SQL with `compute_period_key`, so
 the Tasks page reads O(tasks) rows and no period keys), `my_onboarding()`
@@ -362,8 +375,8 @@ for the member page's Stats card (`lib/members/stats.ts`,
 `components/members/member-stats-card.tsx`, streamed behind its own
 `<Suspense>`): settled solo bets and parlays won, lost and refunded; all-time
 net betting profit; the biggest win (a current resolution's `bet_won` less
-its stake, with the market); the best won parlay (its resolved legs' locked
-odds multiplied, capped by `parlay_limits()`, and its payout); markets
+its stake, with the market); the best won parlay (its resolved legs' odds
+multiplied, capped by its own `max_multiplier`, 0074, and its payout); markets
 created; and approved task completions. A solo bet counts as refunded when
 its market was voided or resolved to an outcome nobody backed; cancelled
 bets and open ones count nowhere. Net profit is `betting_ledger_types()`
@@ -377,7 +390,7 @@ subquery per row, so 0055 adds no index.
 
 ### Migrations
 
-Migrations are numbered in order, `0001`–`0072`, and none is ever edited
+Migrations are numbered in order, `0001`–`0074`, and none is ever edited
 after it ships. They roughly follow the project's history:
 
 | Range | What they add |
@@ -416,6 +429,7 @@ after it ships. They roughly follow the project's history:
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
 | 0073 | Permissions (#288, #289, #290): own-row branches of `resolve_market_core`, `can_resolve_market`, `void_market`, `update_market` and `delete_market_comment` need `is_invited()`; `remove_member` deletes the member's `auth.sessions`; `admin_delete_invites` only for unclaimed invites, and the invite insert grant narrowed to `email` and `invited_by` (the caller); `void_market(p_market_id, p_reason)` needs a reason (`markets.void_reason`, 500-character check), is admin-only after close and posts a `market_voided` feed event |
+| 0074 | Parlay pricing and the seed (#287, #272): leg odds set at close or settlement from other members' real money, no seed (`pick_quote`, `pick_quotes`, `parlay_leg_odds`, nullable `parlay_legs.locked_odds`); a 50 DC from 2 members floor and no legs on your own markets; `parlay_limits()` gains `max_payout`, `min_leg_pool` and `min_leg_bettors`, the cap drops to 20× and `parlays.max_multiplier` keeps each parlay's own; the seed's top-up limited to `market_resolutions.opposing_stake`; `apply_coin_transaction` cuts a credit to fit the balance; `remove_bet` stops at close |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
@@ -460,16 +474,29 @@ time zone (`lib/markets/weekly-close.ts`), so a weekly market keeps its
 local time across a DST change. Nothing is written until the form is
 submitted through `create_market` as usual.
 
-**Odds.** Pari-mutuel with a seed. A parlay leg locks its odds from
-everyone's money but the bettor's own (0046), and the slip previews the
-same number. Each outcome's pool counts
+**Odds.** Pari-mutuel with a seed. Each outcome's pool counts
 `seed_per_outcome` virtual DC on top of real stakes, so a new market
-already shows even odds, and one-sided betting never pays 1.00×.
-`effectivePools` in `lib/markets/odds.ts` is the one place the app does
-this sum. It matches `resolve_market`, so the percentages, charts, payout
-estimates and My bets results all agree with what's actually paid.
-Parlay legs lock their odds at placement, and parlays are paid by the
-house, not from market pools (the #51 decision).
+already shows even odds. `effectivePools` in `lib/markets/odds.ts` is the
+one place the app does this sum. A winner is paid the lower of the seeded
+payout and the real pool plus the resolution's opposing stake (0074), so
+the seed only tops up against money someone else really lost; My bets
+(`betResult`) and the slip (`soloPayout`, with `pick_quotes`' `opposing`)
+mirror `resolve_market_core`, so the estimates and results agree with
+what's actually paid.
+
+Parlays are paid by the house, not from market pools (the #51 decision,
+kept in 0074): one pool belongs to its solo winners, and a multi-leg win is
+a joint event no single pool can fund. A leg's odds are set when its market
+closes or settles, whichever comes first, from the final pool without the
+parlay owner's own money and without the seed (`pick_quote`: others' total
+÷ others' DC on the pick, to four places, or 1 when the market is under the
+floor or nobody else backed the pick). Nobody can bet, cancel or remove a
+bet after close, so that pool is final. Until then the slip and the parlay
+views show `~` estimates from the same function (`pick_quotes`,
+`parlay_leg_odds`). `parlay_limits()` holds the caps and the floor,
+mirrored by `MAX_PICKS`, `MAX_MULTIPLIER`, `MAX_PAYOUT`, `MIN_LEG_POOL` and
+`MIN_LEG_BETTORS` in `lib/parlays/odds.ts`; `tests/db/seeded-odds.test.ts`
+keeps them equal.
 
 **Resolution and proof.** The resolve form needs a reason and can carry
 photos, files and links. Submitting it opens a confirmation naming the

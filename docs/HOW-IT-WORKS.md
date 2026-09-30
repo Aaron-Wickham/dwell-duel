@@ -71,14 +71,24 @@ their stakes.
 
 To give a brand-new market sensible odds, each outcome starts with a
 **20 DC seed**: virtual money that counts toward the odds but belongs to
-nobody. The house covers it when it's paid out.
+nobody. The house covers it when it's paid out, but only against real
+opposing money (below).
 
 For an outcome, with *S* the seed per outcome and *n* the number of
 outcomes:
 
 - **Chance** = (DC on this outcome + S) ÷ (all DC on the market + S × n)
 - **Payout if it wins** = your stake × (all DC + S × n) ÷ (DC on the
-  winning outcome + S), rounded down
+  winning outcome + S), rounded down, but never more than your stake ×
+  (all DC + the opposing stake) ÷ (DC on the winning outcome)
+
+**The house covers it**, but only as far as someone really lost. The
+*opposing stake* is what members who had nothing on the winning outcome
+staked on the other outcomes. The seed can add to the winners' payouts at
+most that much in total, so a market nobody bet against pays its winners
+exactly their stakes back, however many outcomes it had, and your own bet
+on another outcome never counts as opposing money. With plenty of money
+on both sides the limit doesn't bite, and the payout is the seeded one.
 
 **A worked example.** On a new Yes/No market, both sides show 50% and
 2.00×. Then Alice bets 10 DC on Yes and Bob bets 30 DC on No.
@@ -86,17 +96,22 @@ outcomes:
 - Yes: (10 + 20) ÷ (40 + 40) = **37.5%**. No: (30 + 20) ÷ 80 = **62.5%**.
 - If Yes wins, Alice gets 10 × 80 ÷ 30 = **26 DC** (a 16 DC profit).
 - If No wins, Bob gets 30 × 80 ÷ 50 = **48 DC** (an 18 DC profit).
+- Had Bob not bet, Alice alone on Yes would get her 10 DC back: nobody
+  bet against her, so the seed adds nothing.
 
 Your payout isn't fixed when you bet. It moves as others bet, until the
 market closes. The percentages, charts and "Pays ~" estimates all use the
-same formula as the real payout.
+same formula as the real payout. The odds a market shows are the seeded
+ones, so a lone bet can show more than it will pay until someone bets
+against it; the slip's "Pays ~" takes that into account.
 
 - **Cancelling:** you can cancel a bet for a full refund until the market
   closes. Cancelled bets appear under My bets → Cancelled.
 - **No winners:** if nobody bet on the winning outcome, everyone is
   refunded. My bets marks such a bet "Refunded · no winners". (A parlay
   pick on that outcome still counts as won, because parlays don't go into
-  the pool.)
+  the pool, but at 1.00×: nobody else backed it, so it has no odds. See
+  below.)
 
 ## The slip, solo bets and parlays
 
@@ -113,32 +128,50 @@ greyed out. Each pick is either:
 "Place" sends everything at once. If any single bet can't be placed, none
 of them are.
 
-**How parlays pay.** Each leg's odds are **locked when you place it**:
-that outcome's payout multiplier at that moment, seed included, **counting
-everyone's money except your own** on that market. So you can't raise your
-own parlay's odds by betting against it.
+**How parlays pay.** Each leg's odds are **set when its market closes**
+(or when it's resolved, if an admin resolves it earlier), from the final
+pool: **other members' DC on the market ÷ other members' DC on your
+pick**. Your own money on that market doesn't count, and neither does the
+seed. Until then the slip, My bets and the parlay's page show a "~"
+estimate from the pool as it stands, which moves as people bet and cancel,
+just as a solo bet's payout does. Once a market has closed nobody can bet
+on it or cancel, so the odds it sets are money really at risk.
 Multiplying the legs gives the parlay's multiplier, and the payout is the
 stake × the multiplier, rounded down.
 
-- Between 2 and **10** legs, one per market, with the multiplier capped
-  at **100×**.
-- Example: two legs on new Yes/No markets are 2.00× each, so 4.00×. A
-  5 DC parlay pays 20 DC if both win.
+- Between 2 and **10** legs, one per market.
+- **Real money first:** a pick can be a leg only if its market already
+  has at least **50 DC from at least 2 other members**. A brand-new market
+  has seeded odds for solo bets, but nothing real to price a leg on.
+- **Not your own markets:** you can't put a market you created in a
+  parlay.
+- **Caps:** the multiplier is capped at **20×**, and a parlay pays at most
+  **1,000 DC**, so its stake can be at most 1,000 DC.
+- **A leg with no real odds counts 1.00×.** If, when its market closes, it
+  no longer has 50 DC from 2 other members (say someone cancelled), or
+  nobody else has money on your pick, the leg still has to win, but it
+  doesn't multiply. It can never raise the payout.
+- Example: a market with 25 DC on Yes and 35 DC on No from others prices
+  Yes at 60 ÷ 25 = 2.40×. Two such legs are 5.76×, so a 5 DC parlay pays
+  28 DC if both win.
 - It's lost as soon as one leg loses, and paid once every leg has won.
 - A leg whose market is voided drops out, and the parlay continues on the
   rest. If every leg is voided, the stake is refunded.
-- Parlays are paid by the house at their locked odds. They don't go into
-  any market's pool, so they don't move a market's percentages (the same
-  way Kalshi and Polymarket keep their "Combos" separate).
+- Parlays are paid by the house. They don't go into any market's pool, so
+  they don't move a market's percentages (the same way Kalshi and
+  Polymarket keep their "Combos" separate).
+- A parlay placed before odds were set at close keeps the odds it locked
+  when it was placed, and its 100× cap, but it too pays at most 1,000 DC
+  (or its stake back, if it staked more than that).
 
 **My bets** shows your solo bets and parlays together, newest first, under
 Open, Settled and Cancelled. Only you can see it. Everyone can see who
 bet what on each market, and bets and parlays also appear in the feed.
 
 Tap a parlay to open its **breakdown**: its stake, multiplier and what it
-pays (or paid), each pick with the odds locked when you placed it and
-where its market stands (Open, Awaiting resolution, Won, Lost or
-Voided), and a short sum showing how the multiplier adds
+pays (or paid), each pick with its odds (a "~" estimate until its market
+closes) and where its market stands (Open, Awaiting resolution, Won, Lost
+or Voided), and a short sum showing how the multiplier adds
 up. A voided pick is shown as left out, and the rest carry on.
 
 Its **Coins** tab is your coin history: every DC that came in or went
@@ -264,7 +297,7 @@ Every member's profile has a **Stats** card, which any member can see:
 - **Biggest win:** the largest payout minus its stake on a single solo
   bet, with the market. A payout an override took back doesn't count.
 - **Best parlay:** the won parlay with the highest multiplier (its winning
-  legs' odds multiplied, up to the 100× cap), and what it paid.
+  legs' odds multiplied, up to its cap), and what it paid.
 - **Markets created** and **Tasks completed** (approved submissions only).
 
 Until a member has a settled bet or parlay, the card says "No settled
@@ -322,7 +355,7 @@ sign back in. Your other devices keep theirs.
 | **Member** | Bet, create and resolve their own markets (and void them before they close), submit tasks |
 | **Reviewer** | Approve and reject task submissions (not their own), and resolve closed markets they have no stake in |
 | **Admin** | Invite people, manage tasks, resolve, override or void any market, delete any comment, view members and the full ledger |
-| **Owner** (exactly one) | Adjust balances, grant and remove roles, remove a member, remove anyone's bet while its market is open (with a refund), and delete a market or task that hasn't been used |
+| **Owner** (exactly one) | Adjust balances, grant and remove roles, remove a member, remove anyone's bet until its market closes (with a refund), and delete a market or task that hasn't been used |
 
 Reviewers and above get a red count on the **Admin** button for what is
 waiting on them: other members' task submissions (reviewers and above) and

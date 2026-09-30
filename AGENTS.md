@@ -161,8 +161,11 @@ a line to `CHANGELOG.md` under the next release.
 - **Odds are seeded** (0041): every outcome's pool counts
   `markets.seed_per_outcome` virtual DC. Odds, chance, payout estimates and
   charts go through `effectivePools` (`lib/markets/odds.ts`), the same maths
-  `resolve_market` pays on. Parlay limits live in SQL `parlay_limits()`,
-  mirrored by `MAX_PICKS` / `MAX_MULTIPLIER`; a DB test keeps them equal.
+  `resolve_market` pays on (the seed's top-up limited to the opposing
+  stake, 0074). Parlay limits live in SQL `parlay_limits()`, mirrored by
+  `MAX_PICKS` / `MAX_MULTIPLIER` / `MAX_PAYOUT` / `MIN_LEG_*`; a DB test
+  keeps them equal. A parlay leg's odds are set at close from real money
+  (`pick_quote`), so the slip and parlay views show `~` estimates until then.
 - **Proof files** (0042) live in the private `proof` bucket and upload from
   the browser (`lib/proof/upload.ts`), never through a server action. Show
   them with `toProofViews` (signed URLs made with the viewer's own client)

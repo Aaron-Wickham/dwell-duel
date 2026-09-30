@@ -33,6 +33,12 @@ function placedMessage(placed: NonNullable<NonNullable<PlaceSlipState>['placed']
 
 const QUICK_STAKES = [5, 10, 25]
 
+// A parlay stake only counts once there's a parlay to place: a lone Parlay pick has no stake field,
+// so a stake typed earlier shouldn't hold back the solo picks' chips or the button's total.
+function placeableParlayStake(picks: SlipPick[], parlayStake: string): number {
+  return picks.filter((p) => p.parlay).length >= 2 ? (wholeDc(parlayStake) ?? 0) : 0
+}
+
 // What a stake can use: the balance, less every other stake the slip already holds. A solo pick's
 // chips leave out its own stake, and the parlay's leave out the parlay's.
 function availableFor(
@@ -42,7 +48,7 @@ function availableFor(
   const solos = picks
     .filter((p) => !p.parlay && p.outcomeId !== except)
     .reduce((sum, p) => sum + (wholeDc(stakes[p.outcomeId]) ?? 0), 0)
-  const parlay = except !== 'parlay' && picks.some((p) => p.parlay) ? (wholeDc(parlayStake) ?? 0) : 0
+  const parlay = except !== 'parlay' ? placeableParlayStake(picks, parlayStake) : 0
   return Math.max(0, balance - solos - parlay)
 }
 
@@ -234,7 +240,7 @@ export function SlipPanel() {
   const solosReady = solos.every((p) => wholeDc(stakes[p.outcomeId]) !== null)
   const allOpen = picks.every((p) => p.open)
   const betCount = solos.length + (legs.length > 0 ? 1 : 0)
-  const total = solos.reduce((sum, p) => sum + (wholeDc(stakes[p.outcomeId]) ?? 0), 0) + (legs.length > 0 ? parlayStakeDc ?? 0 : 0)
+  const total = solos.reduce((sum, p) => sum + (wholeDc(stakes[p.outcomeId]) ?? 0), 0) + placeableParlayStake(picks, parlayStake)
   const parlayError = state?.parlayError
   const legNote =
     legs.length === 1

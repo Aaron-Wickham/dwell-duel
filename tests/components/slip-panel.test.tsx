@@ -258,6 +258,21 @@ describe('SlipPanel', () => {
       expect(chips.getByRole('button', { name: '5' })).toBeDisabled()
     })
 
+    it('stops counting the parlay stake against the solo chips once only one Parlay pick is left', async () => {
+      renderPanel(viewOf(pick(1), pick(2, { parlay: true }), pick(3, { parlay: true })), 50)
+      const parlay = within(screen.getByRole('region', { name: 'Parlay · 2 picks' }))
+      await userEvent.type(parlay.getByLabelText('Stake (DC)'), '30')
+      const solo = () => within(screen.getByRole('group', { name: 'Quick stakes for Outcome 1, Market 1' }))
+      expect(solo().getByRole('button', { name: 'Max, 20 DC' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Place 2 bets · 30 DC' })).toBeInTheDocument()
+
+      // A lone Parlay pick can't be placed and has no stake field, so its stake no longer holds anything back.
+      await userEvent.click(within(screen.getByRole('group', { name: /Bet type for Outcome 3/ })).getByRole('button', { name: 'Solo' }))
+      await screen.findByRole('region', { name: 'Parlay · 1 pick' })
+      expect(solo().getByRole('button', { name: 'Max, 50 DC' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Place 3 bets' })).toBeInTheDocument()
+    })
+
     it('sets the parlay stake from the parlay’s chips, net of the solo stakes', async () => {
       renderPanel(viewOf(pick(1), pick(2, { parlay: true }), pick(3, { parlay: true })), 50)
       await userEvent.type(screen.getByLabelText('Stake (DC)', { selector: '#slip-stake-' + pick(1).outcomeId }), '20')

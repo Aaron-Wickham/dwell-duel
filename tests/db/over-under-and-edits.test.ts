@@ -163,6 +163,24 @@ describe('update_market', () => {
     )
   })
 
+  it('fixes the title once another member has a parlay leg on the market, not just a solo bet (#221)', async () => {
+    const m = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Will it snow?', seed: 20 })
+    const other = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Other', seed: 20 })
+    const { error: parlayErr } = await bobClient.rpc('place_parlay', { p_outcome_ids: [m.outcomeIds[0], other.outcomeIds[0]], p_stake: 5 })
+    if (parlayErr) throw parlayErr
+
+    expect((await aliceClient.rpc('update_market', { p_market_id: m.marketId, p_title: 'Will it snow on Sunday?', p_description: null })).error?.message).toBe(
+      "others have bet on this market, so its title can't change",
+    )
+    // The description still changes, and the creator's own parlay never fixes the title.
+    expect((await aliceClient.rpc('update_market', { p_market_id: m.marketId, p_title: 'Will it snow?', p_description: 'Any flakes count.' })).error).toBeNull()
+
+    const own = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Mine', seed: 20 })
+    const { error: ownErr } = await aliceClient.rpc('place_parlay', { p_outcome_ids: [own.outcomeIds[0], other.outcomeIds[1]], p_stake: 5 })
+    if (ownErr) throw ownErr
+    expect((await aliceClient.rpc('update_market', { p_market_id: own.marketId, p_title: 'Mine, reworded', p_description: null })).error).toBeNull()
+  })
+
   it('never changes outcomes, kind, close time or line, and members still can’t update markets directly', async () => {
     const m = await createTestMarket(aliceClient, ['Yes', 'No'])
     const before = await serviceClient().from('markets').select('kind, close_at, line').eq('id', m.marketId).single()

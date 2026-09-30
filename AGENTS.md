@@ -244,7 +244,10 @@ a line to `CHANGELOG.md` under the next release.
   `activity_feed`. Triggers in 0035 keep it equal to what `activity_feed`
   would show. A new feed kind, or a new way of writing a source table,
   needs a trigger change plus a step in `tests/db/activity-events.test.ts`'s
-  equivalence scenario. No trigger watches `market_resolutions`.
+  equivalence scenario. No trigger watches `market_resolutions`. A feed
+  row is a sentence, not a card: its member and market names are its links
+  and tap targets, and the row itself doesn't press, lift or open anything
+  (decided in #187), since one row can name two destinations.
 - **Members can't select `activity_feed`** since 0036. It stays only as
   the DB tests' equivalence oracle, and tests read it through the service
   client or `pgQuery`, never a member client.

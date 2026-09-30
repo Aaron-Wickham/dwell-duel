@@ -6,6 +6,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Fixes
+- **A cut-off line in the leaderboard race always keeps its label** on a phone, where only five fit: a runaway last place among eight used to be the first label dropped, hiding the only place its true total shows (#186).
+
 ## v0.5.0-beta — 2026-09-30
 
 Everything the post-v0.4.0 codebase review found, #192–#236, with nothing left open from it: security fixes (push endpoints, roles that need an invite, per-device sign-out), a round of bug fixes across the slip, results, tasks and admin, pages that no longer jump while loading, faster live refresh at scale, safer deploys and push delivery, CI in about half the time, and docs that match the code.

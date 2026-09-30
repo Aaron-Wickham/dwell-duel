@@ -372,7 +372,9 @@ after it ships. They roughly follow the project's history:
 | 0066 | `markets.settled_at` (#221), backfilled and indexed `(status, settled_at desc, id desc)`, stamped by `resolve_market_core` (first resolution) and `void_market`; `resolve_market_core` refuses an override to the current outcome (#198) |
 | 0067 | Push endpoints allowlisted in SQL (#201): `push_hosts()`, `push_endpoint_host`, `is_push_endpoint` and the `push_subscriptions_endpoint_push_service` check; the direct INSERT grant on `push_subscriptions` goes, so `save_push_subscription` is the only writer |
 | 0068 | Roles need an invite (#202): `my_role()` answers `member` unless `is_invited()`, so `has_role`, `is_admin` and every gate on them follow; `remove_member` (owner only) |
-| 0069 | Security hygiene (#203): `market_sparklines` pins an empty `search_path`; a DB test guards that no function `anon` or `authenticated` can execute calls into `net.*` (pg_net's own grants can't be revoked from a migration) |
+
+No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
+
 
 Every merge to `main` runs the **Deploy Production** workflow, with no
 approval step: a dry run and the push when the merge touched

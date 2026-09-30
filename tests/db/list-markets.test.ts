@@ -174,7 +174,7 @@ describe('listResolvedMarkets', () => {
     const resolved = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Resolved' })
     const overridden = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Overridden' })
     await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Still open' })
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+    await giveRole(alice, 'admin')
     await resolve(overridden.marketId, overridden.outcomeIds[0])
     await closeNow(resolved.marketId)
     await resolve(resolved.marketId, resolved.outcomeIds[0])

@@ -225,12 +225,16 @@ describe('#62 hardening', () => {
 })
 
 describe('#203 hygiene', () => {
+  // market_sparklines is the one exception, on purpose: a stable SQL function with no search_path
+  // setting is inlined into the caller's plan, which is what keeps it on bets_market_created_idx
+  // (tests/db/market-sparklines.test.ts). It is security invoker and schema-qualifies every name.
   it('pins an empty search_path on every function in public', async () => {
     const loose = await pgQuery<{ proname: string }>(`
       select p.proname
       from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public'
+        and p.proname <> 'market_sparklines'
         and not coalesce(p.proconfig, '{}') && array['search_path=""', 'search_path=']
       order by 1
     `)

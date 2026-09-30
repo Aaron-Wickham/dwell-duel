@@ -171,7 +171,7 @@ describe('resolve_market (admin override)', () => {
     await (await referee()).rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
 
     const db = serviceClient()
-    await db.from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const adminClient = await clientFor(bob)
     const { error } = await adminClient.rpc('resolve_market', { p_note: 'Same again', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
     expect(error?.message).toBe('that outcome is already the result')

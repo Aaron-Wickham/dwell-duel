@@ -9,15 +9,16 @@ vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
 )
 
-const { getLeaderboardPage, requestShowMoreFocus, getRecords, getRace, getAwards, getPastChampions } = vi.hoisted(() => ({
+const { getLeaderboardPage, getYourStanding, requestShowMoreFocus, getRecords, getRace, getAwards, getPastChampions } = vi.hoisted(() => ({
   getLeaderboardPage: vi.fn(),
+  getYourStanding: vi.fn(),
   requestShowMoreFocus: vi.fn(),
   getRecords: vi.fn(),
   getRace: vi.fn(),
   getAwards: vi.fn(),
   getPastChampions: vi.fn(),
 }))
-vi.mock('@/lib/social/leaderboard', () => ({ getLeaderboardPage }))
+vi.mock('@/lib/social/leaderboard', () => ({ getLeaderboardPage, getYourStanding }))
 vi.mock('@/lib/social/leaderboard-extras', () => ({ getRecords, getRace, getAwards, getPastChampions }))
 // Recharts needs layout jsdom doesn't have; the chart has its own test.
 vi.mock('@/components/leaderboard/race-chart-lazy', () => ({ RaceChart: ({ series }: { series: unknown[] }) => <div data-testid="race">{series.length}</div> }))
@@ -65,6 +66,7 @@ async function renderPage(board: KeysetPage<LeaderboardEntry>, searchParams: Rec
 
 beforeEach(() => {
   getLeaderboardPage.mockReset()
+  getYourStanding.mockReset().mockResolvedValue({ rank: 5, memberCount: 5, score: 50, tiedWith: 0, above: { name: 'Member 4', gap: 10 } })
   requestShowMoreFocus.mockReset()
   getRecords.mockReset().mockResolvedValue(new Map())
   getRace.mockReset().mockResolvedValue([])
@@ -219,6 +221,31 @@ describe('LeaderboardPage', () => {
     expect(getAwards).not.toHaveBeenCalled()
     expect(getPastChampions).not.toHaveBeenCalled()
     expect(screen.queryByTestId('race')).toBeNull()
+  })
+
+  it('fills the Net worth side column with your standing, hidden on a phone', async () => {
+    await renderPage({
+      rows: [member(1, 90, 1), member(2, 80, 2), member(3, 70, 3), member(4, 60, 4), member(5, 50, 5)],
+      next: null,
+      windowed: false,
+    })
+    expect(getYourStanding).toHaveBeenCalledWith({}, 'p-me')
+    const card = screen.getByRole('region', { name: 'Your standing' })
+    expect(card.className).toContain('hidden')
+    expect(card.className).toContain('lg:col-start-2')
+    expect(within(card).getByText(/10 DC behind Member 4\./)).toBeInTheDocument()
+    expect(card.parentElement?.className).toContain('lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]')
+  })
+
+  it('leaves the standing card off This month', async () => {
+    await renderPage({ rows: [member(1, 90, 1), member(2, 80, 2), member(3, 70, 3), member(4, 60, 4)], next: null, windowed: false }, { tab: 'month' })
+    expect(screen.queryByRole('region', { name: 'Your standing' })).toBeNull()
+    expect(getYourStanding).not.toHaveBeenCalled()
+  })
+
+  it('leaves the standing card off a Net worth board that is only the podium', async () => {
+    await renderPage({ rows: [member(1, 90, 1), member(2, 80, 2), member(3, 70, 3)], next: null, windowed: false })
+    expect(screen.queryByRole('region', { name: 'Your standing' })).toBeNull()
   })
 
   it('leaves the race and awards out of a window part-way down This month', async () => {

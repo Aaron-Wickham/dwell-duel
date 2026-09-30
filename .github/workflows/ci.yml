@@ -48,9 +48,6 @@ jobs:
       - run: npm ci
 
       - uses: ./.github/actions/local-supabase
-        with:
-          dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
-          dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # The generated types must match the migrations (#71).
       - name: Check database types are up to date
@@ -77,9 +74,6 @@ jobs:
 
       # Playwright's global setup seeds the database, so this job needs its own local Supabase too.
       - uses: ./.github/actions/local-supabase
-        with:
-          dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
-          dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # Next's build cache, so an unchanged page isn't compiled again; the fallback key restores the
       # newest cache for the same dependencies when the source changed.

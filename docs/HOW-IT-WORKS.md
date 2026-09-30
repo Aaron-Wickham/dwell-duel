@@ -209,6 +209,9 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   this month, and its winnings count next month. Only members who've bet
   or been paid this month appear.
 - **Ties share a rank** on both boards ("1, 1, 3").
+- **Your standing** (Net worth, wide screens only): a card beside the
+  rankings shows your rank, net worth, record and how far you are behind
+  the member above you.
 - **Podium and records:** once three members are ranked, the top three
   of either board stand on a podium above the list. Each row shows a win-loss record (like 6-3):
   your settled solo bets and parlays, all time. Bets on a voided market,

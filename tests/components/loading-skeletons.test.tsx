@@ -100,6 +100,13 @@ describe('skeletons match their pages', () => {
     expect(container.querySelectorAll('.min-h-\\[60px\\]')).toHaveLength(6)
   })
 
+  it('the leaderboard skeleton puts a side card beside the rankings at lg', () => {
+    const { container } = render(<LeaderboardLoading />)
+    const grid = container.querySelector('[class*="lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]"]')!
+    expect(grid.children).toHaveLength(2)
+    expect(grid.children[1]).toHaveClass('hidden', 'lg:flex')
+  })
+
   it('the home skeleton draws one stat tile and the six tiles every member sees', () => {
     const { container } = render(<HomeLoading />)
     expect(container.querySelector('.grid-cols-1')?.children).toHaveLength(1)

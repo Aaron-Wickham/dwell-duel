@@ -48,8 +48,11 @@ export function FeedList({
   emptyState?: ReactNode
   rowIdPrefix?: string
 }) {
+  // A kind this build doesn't know (one added later, or read after a rollback) is left out rather
+  // than rendered without a sentence, so a new kind can never take the feed down.
+  const known = events.filter((e) => Object.hasOwn(EVENT_ICONS, e.kind))
   const body =
-    events.length === 0 ? (
+    known.length === 0 ? (
       emptyState ?? (
         <EmptyState icon={MessageSquareText} title="Nothing yet.">
           Bets, new markets, results and finished tasks show up here as they happen.
@@ -57,7 +60,7 @@ export function FeedList({
       )
     ) : (
       <ul className={cn('flex flex-col divide-y divide-line', headingHidden && 'px-[18px] md:px-6')}>
-        {events.map((e) => (
+        {known.map((e) => (
           <FeedItem
             key={e.id}
             icon={EVENT_ICONS[e.kind]}
@@ -74,7 +77,7 @@ export function FeedList({
 
   // With its heading hidden the card's padding belongs to the rows; an empty state has no rows, so
   // it takes the card's own padding instead.
-  const bare = headingHidden && events.length > 0
+  const bare = headingHidden && known.length > 0
   return (
     <SectionCard
       title={headingHidden ? <span className="sr-only">{heading}</span> : heading}

@@ -63,5 +63,8 @@ export function describeEvent(e: FeedEvent): Segment[] {
       return [actor(e), ` completed ${e.taskTitle} (+${e.amount} DC)`]
     case 'season_champion':
       return [actor(e), ` was ${e.season ? seasonName(e.season) : 'last month'}’s champion with ${signedDc(e.amount ?? 0)}`]
+    // A kind added after this build (FeedList leaves such rows out).
+    default:
+      return []
   }
 }

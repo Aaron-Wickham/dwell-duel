@@ -13,10 +13,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Three jobs run side by side after their own `npm ci`, and `ci-ok` sums them up, so the ruleset
+# needs one required check and the wall time is the slowest job's, not the total (#215).
 jobs:
-  test:
+  static:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -30,6 +32,19 @@ jobs:
       - run: npm run lint
 
       - run: npm run typecheck
+
+  db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - run: npm ci
 
       # The same CLI version as deploy-production.yml, so migrations are tested with the tool that ships them.
       - uses: supabase/setup-cli@v3
@@ -55,7 +70,47 @@ jobs:
           supabase gen types typescript --local > lib/supabase/database.types.ts
           git diff --exit-code lib/supabase/database.types.ts
 
-      - run: npm test
+      - run: npx vitest run --project db
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: npx vitest run --project unit
+
+      # Playwright's global setup seeds the database, so this job needs its own local Supabase too.
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.117.0
+
+      - name: Start local Supabase
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,mailpit
+
+      - name: Write .env.local from the local Supabase instance
+        run: |
+          STATUS=$(supabase status -o json)
+          echo "NEXT_PUBLIC_SUPABASE_URL=$(echo "$STATUS" | jq -r .API_URL)" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(echo "$STATUS" | jq -r .PUBLISHABLE_KEY)" >> .env.local
+          echo "SUPABASE_SECRET_KEY=$(echo "$STATUS" | jq -r .SECRET_KEY)" >> .env.local
+
+      # Next's build cache, so an unchanged page isn't compiled again; the fallback key restores the
+      # newest cache for the same dependencies when the source changed.
+      - name: Cache the Next.js build
+        uses: actions/cache@v6
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('app/**', 'components/**', 'lib/**') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
 
       - run: npm run build
 
@@ -77,3 +132,18 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # The one check the main ruleset requires. `if: always()` makes it run when a job fails or is
+  # cancelled, so it can fail rather than never report.
+  ci-ok:
+    needs: [static, db, web]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Every job succeeded
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          test "$(echo "$RESULTS" | jq -r '[.[].result] | all(. == "success")')" = "true"

@@ -103,7 +103,7 @@ lib/            logic by area: admin, app-shell, auth, bets, docs, economy, env,
                 errors, forms, home, invites, ledger, live, markets, members, nav,
                 offline, pagination, parlays, preferences, profile, proof, push,
                 social, supabase, tasks, theme, toast, ui…
-supabase/       migrations/0001…0072, config.toml
+supabase/       migrations/0001…0083, config.toml
 tests/          components/, lib/, db/ (Vitest), plus e2e/ (Playwright)
 scripts/        generate-splash.mjs, generate-favicons.mjs, ios-standalone-check.mjs
                 (npm run check:ios), seed-scale.mjs
@@ -165,9 +165,15 @@ the task catalogue and invite list, which are allowed by policy.
   "Show more" above for older ones (`?comments=`).
 - `parlays` and `parlay_legs`: a stake, a status (`pending`, `won`, `lost`,
   `refunded`), and each leg's outcome with odds locked at placement.
-- `idempotency_keys` (0047): one row per slip or balance-adjustment
-  attempt, holding its result. Only `place_slip` and `adjust_balance` touch
-  it, and the daily cron prunes rows older than a day.
+- `idempotency_keys` (0047): one row per slip, balance-adjustment or
+  create-market attempt, holding its result. Only `place_slip`,
+  `adjust_balance` and `create_market_v2` touch it, and the daily cron
+  prunes rows older than a day. Comments and tasks, which return nothing,
+  carry the key as a unique `attempt_key` column instead (0083), and their
+  actions treat a repeat as success. `useOffline` replays any action whose
+  response was lost, so every action that creates something takes a key;
+  forms hold it with `useAttemptKey` (`lib/forms/attempt-key.ts`), which
+  starts a new one when the submitted fields change.
 
 **Tasks and proof**
 
@@ -362,7 +368,7 @@ subquery per row, so 0055 adds no index.
 
 ### Migrations
 
-Migrations are numbered in order, `0001`–`0072`, and none is ever edited
+Migrations are numbered in order, `0001`–`0083`, and none is ever edited
 after it ships. They roughly follow the project's history:
 
 | Range | What they add |
@@ -400,6 +406,7 @@ after it ships. They roughly follow the project's history:
 | 0070 | Speed at scale (#204, #205): `markets.sparkline` filled by the `cache_market_sparkline` trigger when a market resolves or voids (backfilled), `market_outcomes` in the realtime publication, and `parlays_pending_profile_idx` for `stakes_riding` |
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
+| 0083 | `create_market_v2` (#258): `create_market` plus an attempt key, so a replayed create returns the first market; `create_market` now wraps it. `attempt_key` columns, unique where set, on `market_comments` and `tasks` |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 

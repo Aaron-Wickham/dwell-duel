@@ -5,7 +5,10 @@ import { rewardError } from './limits'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { friendlyError } from '@/lib/errors/friendly-error'
+import { isUuid } from '@/lib/uuid'
 import { CREATE_TASK_ERRORS } from './task-errors'
+
+const ATTEMPT_KEY_INDEX = 'tasks_attempt_key_idx'
 
 export type ActionState = { formError?: string; field?: 'title' | 'description' | 'reward_amount' | 'period' } | undefined
 
@@ -25,6 +28,7 @@ export async function createTaskAction(_prevState: ActionState, formData: FormDa
   const isRepeatable = formData.get('is_repeatable') === 'on'
   const period = String(formData.get('period') ?? '')
   const proofRequired = formData.get('proof_required') === 'on'
+  const attemptKey = String(formData.get('idempotency_key') ?? '')
 
   if (!title) return { formError: 'Enter a title.', field: 'title' }
   if (title.length > TEXT_LIMITS.taskTitle) return { formError: tooLong('Title', TEXT_LIMITS.taskTitle), field: 'title' }
@@ -44,9 +48,12 @@ export async function createTaskAction(_prevState: ActionState, formData: FormDa
     is_repeatable: isRepeatable,
     period: isRepeatable ? period : null,
     proof_required: proofRequired,
+    // useOffline replays an action whose response was lost; the key makes the replay a no-op (#258).
+    ...(isUuid(attemptKey) ? { attempt_key: attemptKey } : {}),
   })
 
-  if (error) return friendlyError(error, CREATE_TASK_ERRORS, 'Creating a task failed')
+  // 23505 on the key's index: this attempt already created the task, which is what was asked for.
+  if (error && !(error.code === '23505' && error.message.includes(ATTEMPT_KEY_INDEX))) return friendlyError(error, CREATE_TASK_ERRORS, 'Creating a task failed')
 
   revalidatePath('/admin/tasks')
   return undefined

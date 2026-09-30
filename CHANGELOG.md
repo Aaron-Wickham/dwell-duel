@@ -6,6 +6,10 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Fixes
+- **A lost response no longer duplicates a market, comment or task.** Next replays a server action whose response never arrived, even when it had already committed, so a phone switching networks while creating a market could make it twice. Creating a market, posting a comment and creating a task now send an attempt key, and a repeat returns the first result (#258).
+- **Editing a balance adjustment after a lost response applies the edit.** The form used to replay the first amount and still say "Balance adjusted"; it now starts a new attempt when the amount or reason changes, and the toast names the amount applied (#267).
+
 ## v0.5.2-beta — 2026-09-30
 
 An Admin › Markets tab for the markets waiting on a result, with tab counts that add up to the Admin badge, and rows inside cards that tint on hover instead of floating like a button inside a button.

@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
+import { fingerprintOf, useAttemptKey } from '@/lib/forms/attempt-key'
 import { Field, Textarea } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
@@ -12,11 +13,16 @@ import { postCommentAction, type CommentState } from '@/lib/social/comments-acti
 // after the action leaves it in place on an error; only a posted comment clears it.
 export function CommentForm({ marketId }: { marketId: string }) {
   const [draft, setDraft] = useState('')
+  const attemptKey = useAttemptKey()
   const [state, formAction] = useActionState<CommentState, FormData>(
     withSuccessToast(
       async (prev: CommentState, formData: FormData) => {
+        formData.set('idempotency_key', attemptKey.claim(fingerprintOf(formData)))
         const next = await postCommentAction(marketId, prev, formData)
-        if (next?.posted) setDraft('')
+        if (next?.posted) {
+          attemptKey.release()
+          setDraft('')
+        }
         return next
       },
       (s) => Boolean(s?.formError),

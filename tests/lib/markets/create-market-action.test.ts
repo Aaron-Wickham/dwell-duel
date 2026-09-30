@@ -47,7 +47,7 @@ describe('createMarketAction length limits', () => {
 
     await createMarketAction(undefined, binaryForm(`  ${title}  `))
 
-    expect(supabase.rpc).toHaveBeenCalledWith('create_market', expect.objectContaining({ p_title: title }))
+    expect(supabase.rpc).toHaveBeenCalledWith('create_market_v2', expect.objectContaining({ p_title: title }))
     expect(redirect).toHaveBeenCalledWith('/markets/market-1')
   })
 
@@ -61,7 +61,7 @@ describe('createMarketAction length limits', () => {
   it('allows a description of exactly 1000 characters', async () => {
     await createMarketAction(undefined, binaryForm('Will it rain?', 'd'.repeat(1000)))
 
-    expect(supabase.rpc).toHaveBeenCalledWith('create_market', expect.objectContaining({ p_description: 'd'.repeat(1000) }))
+    expect(supabase.rpc).toHaveBeenCalledWith('create_market_v2', expect.objectContaining({ p_description: 'd'.repeat(1000) }))
   })
 
   it('accepts a description of exactly 1000 characters once its CRLF line breaks are normalised', async () => {
@@ -72,7 +72,7 @@ describe('createMarketAction length limits', () => {
     await createMarketAction(undefined, binaryForm('Will it rain?', description))
 
     expect(supabase.rpc).toHaveBeenCalledWith(
-      'create_market',
+      'create_market_v2',
       expect.objectContaining({ p_description: `${'d'.repeat(998)}\n${'d'}` }),
     )
   })
@@ -89,7 +89,7 @@ describe('createMarketAction length limits', () => {
 
     await createMarketAction(undefined, multipleChoiceForm(['Red', long]))
 
-    expect(supabase.rpc).toHaveBeenCalledWith('create_market', expect.objectContaining({ p_outcome_labels: ['Red', long] }))
+    expect(supabase.rpc).toHaveBeenCalledWith('create_market_v2', expect.objectContaining({ p_outcome_labels: ['Red', long] }))
   })
 })
 
@@ -105,7 +105,7 @@ describe('createMarketAction over/under', () => {
 
   it('sends the line and lets create_market make the outcomes', async () => {
     await createMarketAction(undefined, overUnderForm('3.5'))
-    expect(supabase.rpc).toHaveBeenCalledWith('create_market', {
+    expect(supabase.rpc).toHaveBeenCalledWith('create_market_v2', {
       p_title: 'Times Sean says bet',
       p_description: null,
       p_kind: 'over_under',
@@ -157,5 +157,21 @@ describe('createMarketAction database errors', () => {
     expect(state).toEqual({ formError: 'Something went wrong. Try again.' })
     expect(log).toHaveBeenCalled()
     log.mockRestore()
+  })
+})
+
+describe('createMarketAction attempt key (#258)', () => {
+  const KEY = '3f0c1d52-6a52-4a0e-9a0b-0c5f3a9a4b11'
+
+  it('passes a valid key to create_market_v2 and ignores a malformed one', async () => {
+    const keyed = binaryForm('Will it rain?')
+    keyed.set('idempotency_key', KEY)
+    await createMarketAction(undefined, keyed)
+    expect(supabase.rpc).toHaveBeenLastCalledWith('create_market_v2', expect.objectContaining({ p_idempotency_key: KEY }))
+
+    const bad = binaryForm('Will it rain?')
+    bad.set('idempotency_key', 'nope')
+    await createMarketAction(undefined, bad)
+    expect(supabase.rpc).toHaveBeenLastCalledWith('create_market_v2', expect.objectContaining({ p_idempotency_key: undefined }))
   })
 })

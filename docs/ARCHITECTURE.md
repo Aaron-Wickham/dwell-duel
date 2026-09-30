@@ -531,7 +531,9 @@ leaves out empty lines and hides when every one is empty.
 ## Environments and deploys
 
 - **Local:** Docker Supabase (`npm run db:start`) is the only dev and test
-  database. DB tests refuse to run against anything but localhost.
+  database. DB tests refuse to run against anything but localhost. Local
+  Google sign-in uses each developer's own OAuth client, read from
+  `supabase/.env` (`docs/GETTING-STARTED.md`); CI sets none and doesn't sign in.
 - **Production:** one Vercel project and one hosted Supabase project.
   Vercel preview deploys are off on purpose (see the README).
 - **CI** (`.github/workflows/ci.yml`): lint, the type check, a

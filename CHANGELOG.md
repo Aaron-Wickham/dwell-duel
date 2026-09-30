@@ -10,6 +10,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Closing alerts arrive within a minute.** GitHub was dropping most runs of the ten-minute schedule (the Admin warning from #149 caught it), so the timer now lives in Supabase: every minute `pg_cron` checks for a market that has just closed and, if there is one, calls the app through `pg_net` with the address and secret from Vault; it also calls at least every ten minutes to keep the heartbeat honest. The GitHub schedule stays as a backup, and the Admin warning names both (#189).
 
 ### Under the hood
+- `docs/GETTING-STARTED.md` walks a new collaborator from a fresh machine to a signed-in local app, a green test suite and a first pull request. Local Supabase now has Google sign-in enabled through each developer's own OAuth client (`supabase/.env`), so a real sign-in works locally.
 - Local testing: after `npm run db:reset`, file uploads in the DB tests can fail with `42P10` until the local stack is restarted (`npx supabase stop && npx supabase start`); AGENTS.md says so.
 
 ## v0.4.0-beta — 2026-09-29

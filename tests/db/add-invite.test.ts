@@ -1,15 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { addInvite } from '@/lib/invites/add-invite'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, type Member } from './fixtures'
+import { seedMembers, clientFor, type Member, giveRole } from './fixtures'
 
 let admin: Member
 let member: Member
 
 beforeEach(async () => {
   ;[admin, member] = await seedMembers()
-  const { error } = await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', admin.id)
-  if (error) throw error
+  await giveRole(admin, 'admin')
 })
 
 describe('addInvite', () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 
 // #72: the money paths under concurrency. Each race fires its calls together with Promise.all; the
 // market row lock (for update) must serialize them so that whichever order Postgres picks, money
@@ -13,8 +13,7 @@ let bobClient: SupabaseClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
-  const { error } = await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
-  if (error) throw error
+  await giveRole(alice, 'admin')
   admin = await clientFor(alice)
   bobClient = await clientFor(bob)
   for (const client of [admin, bobClient]) await ensureInvited(client)

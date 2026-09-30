@@ -65,33 +65,36 @@ describe('updateProfileAction', () => {
   })
 
   it('removes the new photo again when update_my_profile fails, and keeps the old one', async () => {
-    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'display name too long' } })
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'not allowed' } })
 
     const state = await updateProfileAction(undefined, profileForm({ photo: jpeg() }))
 
-    expect(state).toEqual({ formError: 'display name too long' })
+    expect(state).toEqual({ formError: 'Only invited members can edit their profile.' })
     const newPath = upload.mock.calls[0][0]
     expect(remove).toHaveBeenCalledTimes(1)
     expect(remove).toHaveBeenCalledWith([newPath])
     expect(revalidatePath).not.toHaveBeenCalled()
   })
 
-  it('leaves storage alone when update_my_profile fails without a new photo', async () => {
+  it('leaves storage alone when update_my_profile fails without a new photo, hiding raw text (#203)', async () => {
     supabase.rpc.mockResolvedValue({ data: null, error: { message: 'boom' } })
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const state = await updateProfileAction(undefined, profileForm())
 
-    expect(state).toEqual({ formError: 'boom' })
+    expect(state).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(log).toHaveBeenCalledWith('update_my_profile failed', { message: 'boom' })
     expect(upload).not.toHaveBeenCalled()
     expect(remove).not.toHaveBeenCalled()
   })
 
   it('reports a failed upload against the photo without saving anything', async () => {
     upload.mockResolvedValue({ data: null, error: { message: 'bucket full' } })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const state = await updateProfileAction(undefined, profileForm({ photo: jpeg() }))
 
-    expect(state).toEqual({ formError: 'Your photo didn’t upload: bucket full', field: 'avatar' })
+    expect(state).toEqual({ formError: 'Your photo didn’t upload. Try again.', field: 'avatar' })
     expect(supabase.rpc).not.toHaveBeenCalled()
     expect(remove).not.toHaveBeenCalled()
   })
@@ -120,12 +123,13 @@ describe('updateProfileAction', () => {
     expect(upload).not.toHaveBeenCalled()
   })
 
-  it('returns the read error when the current profile can’t be loaded', async () => {
+  it('shows a generic error when the current profile can’t be loaded', async () => {
     single.mockResolvedValue({ data: null, error: { message: 'network down' } })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const state = await updateProfileAction(undefined, profileForm({ photo: jpeg() }))
 
-    expect(state).toEqual({ formError: 'network down' })
+    expect(state).toEqual({ formError: 'Something went wrong. Try again.' })
     expect(upload).not.toHaveBeenCalled()
     expect(supabase.rpc).not.toHaveBeenCalled()
   })
@@ -156,6 +160,14 @@ describe('updateProfileAction', () => {
       expect(supabase.from).not.toHaveBeenCalled()
       expect(upload).not.toHaveBeenCalled()
       expect(supabase.rpc).not.toHaveBeenCalled()
+    })
+
+    it('points a constraint the database still trips at its field', async () => {
+      supabase.rpc.mockResolvedValue({
+        data: null,
+        error: { message: 'new row for relation "profiles" violates check constraint "profiles_bio_length"' },
+      })
+      expect(await updateProfileAction(undefined, profileForm())).toEqual({ formError: 'Bio can be at most 160 characters.', field: 'bio' })
     })
 
     it('accepts a display name and bio exactly at their limits', async () => {

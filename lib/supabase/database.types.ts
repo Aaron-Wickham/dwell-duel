@@ -1169,6 +1169,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_invited: { Args: never; Returns: boolean }
+      is_push_endpoint: { Args: { p_endpoint: string }; Returns: boolean }
       leaderboard_awards: {
         Args: never
         Returns: {
@@ -1322,6 +1323,8 @@ export type Database = {
         }
         Returns: string
       }
+      push_endpoint_host: { Args: { p_endpoint: string }; Returns: string }
+      push_hosts: { Args: never; Returns: string[] }
       push_market_alerts: {
         Args: never
         Returns: {
@@ -1396,6 +1399,7 @@ export type Database = {
         Returns: undefined
       }
       remove_bet: { Args: { p_bet_id: number }; Returns: undefined }
+      remove_member: { Args: { p_profile_id: string }; Returns: undefined }
       resolve_market: {
         Args: {
           p_attachments?: Json

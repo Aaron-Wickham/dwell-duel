@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, giveRole } from './fixtures'
 import { countOpenMarkets, listResolvedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
 import { encodeCursor, readPageParams, showMoreHref, type PageParams } from '@/lib/pagination/cursor'
 
@@ -159,7 +159,7 @@ describe('listResolvedMarkets', () => {
   })
 
   it('shows the current resolution after an override, not the reversed one', async () => {
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+    await giveRole(alice, 'admin')
     const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'])
     await resolve(marketId, outcomeIds[0])
     await resolve(marketId, outcomeIds[1])
@@ -174,7 +174,7 @@ describe('listResolvedMarkets', () => {
     const resolved = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Resolved' })
     const overridden = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Overridden' })
     await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Still open' })
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+    await giveRole(alice, 'admin')
     await resolve(overridden.marketId, overridden.outcomeIds[0])
     await closeNow(resolved.marketId)
     await resolve(resolved.marketId, resolved.outcomeIds[0])

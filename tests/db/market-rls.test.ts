@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -80,7 +80,7 @@ describe('bets select policy', () => {
     await aliceClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[0], p_amount: 10 })
     await bobClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[1], p_amount: 10 })
 
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+    await giveRole(alice, 'admin')
     const adminClient = await clientFor(alice)
     const { data, error } = await adminClient.from('bets').select('profile_id')
     expect(error).toBeNull()

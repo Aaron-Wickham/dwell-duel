@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, makeMember, clientFor, createTestMarket, type Member } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, type Member, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -57,7 +57,7 @@ describe('parlays / parlay_legs select policies', () => {
 
   it('shows an admin every parlay and leg', async () => {
     await seedParlays()
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const bobClient = await clientFor(bob)
 
     const { data: parlays } = await bobClient.from('parlays').select('id')

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { describeCreatorStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
@@ -35,7 +35,7 @@ async function close(market: TestMarket): Promise<void> {
 
 async function member(name: string, role: 'member' | 'reviewer' | 'admin'): Promise<{ member: Member; client: SupabaseClient }> {
   const m = await makeMember(name)
-  if (role !== 'member') await serviceClient().from('profiles').update({ role }).eq('id', m.id)
+  if (role !== 'member') await giveRole(m, role)
   const client = await clientFor(m)
   await ensureInvited(client)
   return { member: m, client }
@@ -221,6 +221,41 @@ describe('#62 hardening', () => {
     expect((await bobClient.rpc('stray_proof_objects', { p_limit: 5 })).error).not.toBeNull()
 
     await serviceClient().storage.from('proof').remove([stale, fresh])
+  })
+})
+
+describe('#203 hygiene', () => {
+  // market_sparklines is the one exception, on purpose: a stable SQL function with no search_path
+  // setting is inlined into the caller's plan, which is what keeps it on bets_market_created_idx
+  // (tests/db/market-sparklines.test.ts). It is security invoker and schema-qualifies every name.
+  it('pins an empty search_path on every function in public', async () => {
+    const loose = await pgQuery<{ proname: string }>(`
+      select p.proname
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.proname <> 'market_sparklines'
+        and not coalesce(p.proconfig, '{}') && array['search_path=""', 'search_path=']
+      order by 1
+    `)
+    expect(loose).toEqual([])
+  })
+
+  // pg_net is owned by supabase_admin, so a migration can't revoke anon's and authenticated's
+  // EXECUTE on net.*; the only way they could reach it is a public function they can execute.
+  it('lets no function anon or authenticated can execute call into the net schema', async () => {
+    const doors = await pgQuery<{ proname: string; anon: boolean; authenticated: boolean }>(`
+      select p.proname,
+             has_function_privilege('anon', p.oid, 'execute') as anon,
+             has_function_privilege('authenticated', p.oid, 'execute') as authenticated
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.prosrc ~* '\\mnet\\.'
+      order by 1
+    `)
+    expect(doors.map((d) => d.proname)).toEqual(['ping_closing_alerts'])
+    expect(doors).toEqual([{ proname: 'ping_closing_alerts', anon: false, authenticated: false }])
   })
 })
 

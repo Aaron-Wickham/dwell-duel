@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
 import { pgQuery } from './pg-query'
-import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 
 // Reactions on feed items and comments on markets (#79, 0053).
 
@@ -19,7 +19,7 @@ beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
   const admin = await makeMember('Ada')
   const outsider = await makeMember('Otto')
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', admin.id)
+  await giveRole(admin, 'admin')
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   adminClient = await clientFor(admin)
@@ -193,9 +193,9 @@ describe('market_comments', () => {
 
   it("lets the owner delete anyone's comment, but not a reviewer", async () => {
     const { data } = await postComment(bobClient, bob.id)
-    await serviceClient().from('profiles').update({ role: 'reviewer' }).eq('id', alice.id)
+    await giveRole(alice, 'reviewer')
     expect((await aliceClient.rpc('delete_market_comment', { p_comment_id: data!.id })).error).not.toBeNull()
-    await serviceClient().from('profiles').update({ role: 'owner' }).eq('id', alice.id)
+    await giveRole(alice, 'owner')
     expect((await aliceClient.rpc('delete_market_comment', { p_comment_id: data!.id })).error).toBeNull()
   })
 

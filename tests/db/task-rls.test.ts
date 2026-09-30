@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, makeMember, clientFor, ensureInvited, createTestTask, type Member } from './fixtures'
+import { seedMembers, makeMember, clientFor, ensureInvited, createTestTask, type Member, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -41,7 +41,7 @@ describe('tasks write policy', () => {
   it('lets an admin insert and update a task', async () => {
     const adminClient = await clientFor(alice)
     await ensureInvited(adminClient)
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+    await giveRole(alice, 'admin')
 
     const { data, error } = await adminClient
       .from('tasks')
@@ -83,7 +83,7 @@ describe('task_completions select policy', () => {
 
     const adminClient = await clientFor(bob)
     await ensureInvited(adminClient)
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const { data, error } = await adminClient.from('task_completions').select('profile_id')
     expect(error).toBeNull()
     expect(data?.some((c) => c.profile_id === alice.id)).toBe(true)
@@ -105,7 +105,7 @@ describe('task_completions select policy', () => {
     const rejectedId = await submit(rejectedTask.taskId)
     await submit(pendingTask.taskId)
 
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+    await giveRole(alice, 'admin')
     const adminClient = await clientFor(alice)
     await ensureInvited(adminClient)
     expect((await adminClient.rpc('approve_task_completion', { p_completion_id: approvedId })).error).toBeNull()
@@ -131,7 +131,7 @@ describe('task_completions select policy', () => {
     const { data: completionId, error: submitErr } = await bobClient.rpc('submit_task_completion', { p_task_id: taskId })
     expect(submitErr).toBeNull()
 
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+    await giveRole(alice, 'admin')
     const adminClient = await clientFor(alice)
     await ensureInvited(adminClient)
     expect((await adminClient.rpc('approve_task_completion', { p_completion_id: completionId as string })).error).toBeNull()
@@ -168,7 +168,7 @@ describe('task_completions direct writes', () => {
     await ensureInvited(aliceClient)
     const { data: completionId } = await aliceClient.rpc('submit_task_completion', { p_task_id: taskId })
 
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', bob.id)
+    await giveRole(bob, 'admin')
     const adminClient = await clientFor(bob)
     const { error } = await adminClient
       .from('task_completions')

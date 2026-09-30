@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -172,7 +172,7 @@ describe('place_parlay', () => {
   it('rejects a resolved market', async () => {
     const a = await seededMarket('Market A', 5, 15)
     const b = await seededMarket('Market B', 5, 15)
-    await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', alice.id)
+    await giveRole(alice, 'admin')
     const { error: resolveErr } = await aliceClient.rpc('resolve_market', {
       p_note: 'Resolved in a test',
       p_market_id: b.marketId,

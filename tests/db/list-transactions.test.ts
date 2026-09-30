@@ -5,7 +5,7 @@ import { encodeCursor, readPageParams, showMoreHref, type PageParams, type Searc
 import type { KeysetPage } from '@/lib/pagination/keyset'
 import type { LedgerEntry } from '@/lib/ledger/list-transactions'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, ensureInvited, createTestMarket, createTestTask, type Member } from './fixtures'
+import { seedMembers, clientFor, ensureInvited, createTestMarket, createTestTask, type Member, giveRole } from './fixtures'
 
 let admin: Member
 let bob: Member
@@ -14,7 +14,7 @@ const FIRST: PageParams = { top: null, bottom: null }
 
 beforeEach(async () => {
   ;[admin, bob] = await seedMembers()
-  await serviceClient().from('profiles').update({ role: 'admin' }).eq('id', admin.id)
+  await giveRole(admin, 'admin')
 })
 
 // `count` adjustments on Bob, straight into the ledger (paging never reads a balance), a minute

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 
 const INDEXES: Record<string, string> = {
@@ -119,8 +119,7 @@ beforeAll(async () => {
   const [alice, member] = await seedMembers()
   bob = member
   const db = serviceClient()
-  const { error: adminErr } = await db.from('profiles').update({ role: 'admin' }).eq('id', alice.id)
-  if (adminErr) throw adminErr
+  await giveRole(alice, 'admin')
   const aliceClient = await clientFor(alice)
   const bobClient = await clientFor(bob)
   await ensureInvited(bobClient)

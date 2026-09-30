@@ -146,6 +146,29 @@ describe('raceLayout', () => {
     expect(minGap(shown(layout.labelTops))).toBeGreaterThanOrEqual(PHONE.gap - 0.001)
   })
 
+  it('keeps a clipped line’s label on a phone when there are more lines than room (#186)', () => {
+    // Eight members, five label slots on a phone: the runaway last place used to be the first dropped.
+    const values = [...Array.from({ length: 7 }, (_, i) => [0, 40 - i * 5]), [0, -900]]
+    const layout = raceLayout(values, PHONE)
+    expect(layout.clippedBottom).toBe(7)
+    expect(layout.labelTops[7]).not.toBeNull()
+    expect(layout.labelTops[7]).toBe(Math.max(...shown(layout.labelTops)))
+    // Still only as many as fit: the clipped label takes the slot of the lowest unclipped one.
+    expect(shown(layout.labelTops)).toHaveLength(5)
+    expect(layout.labelTops.slice(0, 4).every((t) => t !== null)).toBe(true)
+    expect(minGap(shown(layout.labelTops))).toBeGreaterThanOrEqual(PHONE.gap - 0.001)
+  })
+
+  it('keeps both clipped labels when a runaway at each end and a crowd share a phone', () => {
+    const values = [[0, 900], ...Array.from({ length: 6 }, (_, i) => [0, 20 - i * 4]), [0, -900]]
+    const layout = raceLayout(values, PHONE)
+    expect(layout.clippedTop).toBe(0)
+    expect(layout.clippedBottom).toBe(7)
+    expect(layout.labelTops[0]).not.toBeNull()
+    expect(layout.labelTops[7]).not.toBeNull()
+    expect(shown(layout.labelTops)).toHaveLength(5)
+  })
+
   it('gives an all-zero month a scale instead of dividing by zero', () => {
     const layout = raceLayout([[0, 0], [0, 0]], PHONE)
     expect(layout.high).toBeGreaterThan(layout.low)

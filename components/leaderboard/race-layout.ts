@@ -76,13 +76,17 @@ export function raceLayout(values: number[][], { height, pad, gap }: RaceLayoutO
   // A total off the scale is labelled at that edge.
   const targets = finals.map((f) => (f > high ? 0 : f < low ? height : yOf(f)))
 
-  // Only as many labels as fit a gap apart, best final first; the rest are in the readout.
+  // Only as many labels as fit a gap apart, best final first; the rest are in the readout. A clipped
+  // line always keeps its label, since that label carries the true total the chart can't show (#186):
+  // a runaway last place would otherwise be the first label dropped.
   const room = Math.floor((height - LABEL_PAD * 2) / gap) + 1
-  const shown = finals
+  const ranked = finals
     .map((f, i) => ({ f, i }))
     .sort((a, b) => b.f - a.f || a.i - b.i)
-    .slice(0, room)
     .map(({ i }) => i)
+  const kept = new Set([clipTop ? top : -1, clipBottom ? bottom : -1].filter((i) => i >= 0))
+  const others = ranked.filter((i) => !kept.has(i)).slice(0, Math.max(0, room - kept.size))
+  const shown = ranked.filter((i) => kept.has(i) || others.includes(i))
   const spread = spreadLabels(
     shown.map((i) => targets[i]),
     height,

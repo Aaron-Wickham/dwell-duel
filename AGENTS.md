@@ -270,6 +270,11 @@ a line to `CHANGELOG.md` under the next release.
   tests (`tests/db/`) refuse to run against anything but localhost. If
   storage uploads then fail with `42P10` (the local Storage service holds
   stale state after a reset), run `npx supabase stop && npx supabase start`.
+- **CI runs on pull requests only,** as three parallel jobs (`static`,
+  `db`, `web`) summed up by the one required check, `ci-ok`. A PR must be
+  up to date with `main` to merge: after another PR lands, run
+  `gh pr update-branch <n>` and let CI run again. Merging to `main` only
+  deploys, so nothing tests the merge commit separately.
 
 ## Migrations
 

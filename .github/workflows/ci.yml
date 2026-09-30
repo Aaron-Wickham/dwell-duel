@@ -1,9 +1,10 @@
 name: CI
 
+# Pull requests only: the main ruleset requires a PR to be up to date before it merges, so the
+# tested head is the merge result, and a merge to main goes straight to Deploy Production (#212).
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read

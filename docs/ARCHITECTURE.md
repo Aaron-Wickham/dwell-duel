@@ -67,7 +67,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/profile` | Edit your name, photo and bio |
 | `/settings` | Theme, your profile, haptics, reduced motion, notifications, How it works, sign out |
 | `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`) |
-| `/admin/invites` · `/admin/tasks` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role; the ledger opens with the owner's Economy card |
+| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role; Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); the ledger opens with the owner's Economy card |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/not-invited` and `/offline`. The API has two routes.

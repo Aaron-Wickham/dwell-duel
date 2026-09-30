@@ -6,6 +6,7 @@ import { Page, PageHeader } from '@/components/ui/page'
 import { AdminNav } from '@/components/admin/admin-nav'
 import { ClosingAlertsWarning } from '@/components/admin/closing-alerts-warning'
 import { readClosingAlertsHealth } from '@/lib/admin/cron-health'
+import { getReviewCounts } from '@/lib/admin/review-counts'
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   // Reviewers and up get the Admin header; each page keeps its own, stricter check, because a
@@ -17,13 +18,20 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   // A Server Component renders once per request, so the purity rule's re-render worry doesn't apply.
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now()
-  const closingAlerts = await readClosingAlertsHealth(supabase, role, now)
+  // The tab counts are a nicety, like the badge they explain: without them the tabs still render.
+  const [closingAlerts, counts] = await Promise.all([
+    readClosingAlertsHealth(supabase, role, now),
+    getReviewCounts(supabase, role).catch((error: unknown) => {
+      console.error('Reading the review counts failed', error)
+      return { tasks: 0, markets: 0 }
+    }),
+  ])
 
   return (
     <Page transition="drill-down">
       <div className="flex flex-col gap-4">
         <PageHeader title="Admin" />
-        <AdminNav role={role} />
+        <AdminNav role={role} counts={counts} />
       </div>
       <ClosingAlertsWarning health={closingAlerts} now={now} />
       {children}

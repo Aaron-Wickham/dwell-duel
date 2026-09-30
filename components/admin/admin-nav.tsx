@@ -3,15 +3,18 @@
 import { usePathname } from 'next/navigation'
 import { SubNav } from '@/components/ui/sub-nav'
 import { atLeast, type Role } from '@/lib/auth/roles'
+import type { ReviewCounts } from '@/lib/admin/review-counts'
 
-const SECTIONS: { href: string; label: string; min: Role }[] = [
+// Tasks and Markets carry their share of the Admin badge, so the badge's number can be found (#243).
+const SECTIONS: { href: string; label: string; min: Role; count?: keyof ReviewCounts }[] = [
   { href: '/admin/invites', label: 'Invites', min: 'admin' },
-  { href: '/admin/tasks', label: 'Tasks', min: 'reviewer' },
+  { href: '/admin/tasks', label: 'Tasks', min: 'reviewer', count: 'tasks' },
+  { href: '/admin/markets', label: 'Markets', min: 'admin', count: 'markets' },
   { href: '/admin/members', label: 'Members', min: 'admin' },
   { href: '/admin/ledger', label: 'Ledger', min: 'admin' },
 ]
 
-export function AdminNav({ role }: { role: Role }) {
+export function AdminNav({ role, counts }: { role: Role; counts: ReviewCounts }) {
   const pathname = usePathname()
   const sections = SECTIONS.filter((s) => atLeast(role, s.min))
   // A reviewer has only the approval queue; a one-tab switcher would just be noise.
@@ -20,7 +23,11 @@ export function AdminNav({ role }: { role: Role }) {
   return (
     <SubNav
       label="Admin sections"
-      items={sections.map(({ href, label }) => ({ href, label, current: pathname === href }))}
+      items={sections.map(({ href, label, count }) => ({
+        href,
+        label: count && counts[count] > 0 ? `${label} (${counts[count]})` : label,
+        current: pathname === href,
+      }))}
     />
   )
 }

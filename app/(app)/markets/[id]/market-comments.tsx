@@ -2,7 +2,7 @@ import { MessageCircle } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { listMarketComments } from '@/lib/social/comments'
-import { ageLabel, isOldEntry } from '@/lib/social/relative-time'
+import { isOldEntry, relativeTime } from '@/lib/social/relative-time'
 import { newestHref, showMoreHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
 import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
 import { ContentReveal } from '@/components/nav/page-transition'
@@ -41,6 +41,8 @@ export async function MarketComments({
   const pathname = `/markets/${marketId}`
   const backToNewestHref = newestHref(pathname, searchParams, 'comments')
   const thread = [...comments.rows].reverse()
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now()
 
   return (
     <ContentReveal>
@@ -74,7 +76,7 @@ export async function MarketComments({
                     <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
                       <span id={`${domId}-author`} className="font-bold text-ink">{own ? `${c.authorName} (you)` : c.authorName}</span>
                       <span className="text-ink2">
-                        {isOldEntry(c.createdAt) ? <LocalTime iso={c.createdAt} format="day" /> : ageLabel(c.createdAt)}
+                        {isOldEntry(c.createdAt, now) ? <LocalTime iso={c.createdAt} format="day" /> : relativeTime(c.createdAt, now)}
                       </span>
                     </p>
                     <p id={`${domId}-body`} className="whitespace-pre-line break-words">

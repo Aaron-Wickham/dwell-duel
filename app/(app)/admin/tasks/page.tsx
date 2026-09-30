@@ -8,6 +8,7 @@ import { listTasks } from '@/lib/tasks/list-tasks'
 import { listPendingTaskCompletions } from '@/lib/tasks/list-task-completions'
 import { ageLabel } from '@/lib/social/relative-time'
 import { SectionCard } from '@/components/ui/section-card'
+import { StatusChip } from '@/components/ui/status-chip'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { CreateTaskForm } from './create-task-form'
@@ -38,7 +39,7 @@ export default async function AdminTasksPage() {
           title="Pending approvals"
           titleId="pending-approvals"
           className="gap-4"
-          action={waiting > 0 ? <span className="text-sm text-ink2">{waiting} waiting</span> : undefined}
+          action={waiting > 0 ? <StatusChip tone="wait">{waiting} waiting</StatusChip> : undefined}
         >
           <PendingApprovals pending={pending} viewerId={user.id} />
         </SectionCard>

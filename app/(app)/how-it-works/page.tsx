@@ -1,13 +1,13 @@
 import { howItWorks } from '@/lib/docs/how-it-works'
 import { inlineText } from '@/lib/docs/markdown'
-import { Blocks, InlineContent } from '@/components/docs/markdown'
+import { Blocks, InlineContent, SECTION_ID_PREFIX } from '@/components/docs/markdown'
 import { HistoryBackLink } from '@/components/ui/history-back-link'
 import { eyebrowClass, Page, PageHeader } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 
-// Clears the sticky top bar (72px at md and up) when a contents link jumps to a heading, with room
-// for the card's own padding above it.
-const HEADING_OFFSET = 'lg:[&_h2]:scroll-mt-[calc(72px+var(--safe-top)+48px)]'
+// Clears the sticky top bar (64px on a phone, 72px from md) when a link jumps to a heading, with
+// room for the card's own padding above it. The bar is sticky at every width, so this is too.
+const HEADING_OFFSET = '[&_h2]:scroll-mt-[calc(64px+var(--safe-top)+40px)] md:[&_h2]:scroll-mt-[calc(72px+var(--safe-top)+48px)]'
 
 // The rules members see, rendered from docs/HOW-IT-WORKS.md so the app and the doc never disagree.
 export default function HowItWorksPage() {
@@ -27,7 +27,7 @@ export default function HowItWorksPage() {
           <ul className="flex flex-col">
             {sections.map((section) => (
               <li key={section.slug}>
-                <a href={`#how-${section.slug}`} className="flex min-h-11 items-center py-1 font-bold text-ink2 no-underline">
+                <a href={`#${SECTION_ID_PREFIX}${section.slug}`} className="flex min-h-11 items-center py-1 font-bold text-ink2 no-underline">
                   {inlineText(section.title)}
                 </a>
               </li>
@@ -41,7 +41,7 @@ export default function HowItWorksPage() {
             </div>
           )}
           {sections.map((section) => (
-            <SectionCard key={section.slug} title={<InlineContent nodes={section.title} />} titleId={`how-${section.slug}`}>
+            <SectionCard key={section.slug} title={<InlineContent nodes={section.title} />} titleId={`${SECTION_ID_PREFIX}${section.slug}`}>
               <Blocks blocks={section.blocks} />
             </SectionCard>
           ))}

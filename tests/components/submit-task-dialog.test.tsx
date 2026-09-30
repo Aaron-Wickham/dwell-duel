@@ -65,6 +65,26 @@ describe('SubmitTaskDialog', () => {
     await waitFor(() => expect(success).toHaveBeenCalledWith('Submitted for review.'))
   })
 
+  it('hands focus to the page heading once the chip replaces the trigger, instead of dropping it on <body>', async () => {
+    const answer = deferred<undefined>()
+    submitTaskCompletionAction.mockReturnValue(answer.promise)
+    render(
+      <>
+        <h1>Tasks</h1>
+        <SubmitTaskDialog taskId="t1" taskTitle="Read Psalm 23" memberId="m1" proofRequired={false} />
+      </>,
+    )
+    await openDialog()
+    await userEvent.click(screen.getByRole('button', { name: 'Submit for review' }))
+
+    expect(await screen.findByText('Pending review')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveFocus())
+    expect(screen.queryByRole('button', { name: /I did this/ })).toBeNull()
+
+    await act(async () => answer.resolve(undefined))
+  })
+
   it('refuses a proof-required task with no proof, without uploading or submitting', async () => {
     renderDialog(true)
     const dialog = await openDialog()

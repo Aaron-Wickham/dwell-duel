@@ -1,14 +1,15 @@
 import { pageClass } from '@/components/ui/page'
 import { Skeleton, SkeletonCard, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
 
-// Mirrors the markets list: header with Create market, then one status group of market cards,
-// three across from lg.
+// Mirrors the markets list: header with Create market, the filter tabs, then one status group of
+// market cards, three across from lg.
 // It sits in the (list) group because a loading.tsx also wraps every segment below it, and market
 // detail's real 404 needs nothing above it that streams.
 export default function Loading() {
   return (
     <SkeletonScreen name="markets" className={pageClass}>
       <SkeletonPageHeader action />
+      <Skeleton className="h-[52px] w-full rounded-[14px] md:w-80" />
       <div className="flex flex-col gap-3">
         <Skeleton className="h-6 w-20" />
         <div className="grid items-start gap-5 lg:grid-cols-3">

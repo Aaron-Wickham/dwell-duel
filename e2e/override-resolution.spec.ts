@@ -47,7 +47,7 @@ test('an admin overrides a resolved market through the confirmation dialog', asy
   await page.getByLabel('Why did this outcome win?').fill('They answered the last question first')
   await page.getByRole('button', { name: 'Resolve market' }).click()
   await page.getByRole('alertdialog', { name: 'Resolve this market?' }).getByRole('button', { name: 'Confirm outcome' }).click()
-  await expect(page.getByText('Status: resolved')).toBeVisible()
+  await expect(page.getByText('Resolved', { exact: true })).toBeVisible()
   await expect(page.getByText('Winning outcome: Yes')).toBeVisible()
   await expect.poll(bobBalance).toBeGreaterThan(start - 10)
 

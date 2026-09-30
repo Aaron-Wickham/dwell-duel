@@ -24,6 +24,12 @@ const SERIES_BG = ['bg-s1', 'bg-s2', 'bg-s3', 'bg-s4', 'bg-s5', 'bg-s6'] as cons
 
 type Row = { step: number } & Record<string, number>
 
+// The end labels have room for about eight characters, so they carry the first name; the readout
+// and the slider's label keep the whole name.
+function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0]
+}
+
 function formatMoment(iso: string, timeZone?: string): string {
   const time = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone }).format(new Date(iso))
   return `${formatDay(iso, timeZone)}, ${time}`
@@ -201,13 +207,15 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
             {active !== null && (
               <div aria-hidden="true" data-testid="race-key-readout">
                 <div className="absolute inset-y-0 w-[1.5px] -translate-x-1/2 bg-line-s" style={{ left: `${xPercent(active)}%` }} />
-                {/* The hover readout's look, on the side of the cursor with room. */}
+                {/* The hover readout's look, beside the cursor while there's room to its right and
+                    pinned to the plot's right edge once there isn't, so on a narrow phone it never
+                    runs under the label column. */}
                 <div
                   className={cn(
                     'absolute top-2 flex min-w-[150px] flex-col gap-1.5 rounded-control border border-line bg-surface px-3 py-2.5 text-ink shadow-card',
-                    xPercent(active) > 50 ? '-translate-x-full -ml-3.5' : 'ml-3.5',
+                    xPercent(active) > 40 ? 'right-0' : 'ml-3.5',
                   )}
-                  style={{ left: `${xPercent(active)}%` }}
+                  style={xPercent(active) > 40 ? undefined : { left: `${xPercent(active)}%` }}
                 >
                   <span className="whitespace-nowrap text-xs font-bold text-ink2">{momentLabel(active)}</span>
                   {standings(active).map(({ i, name, profit }) => (
@@ -244,7 +252,7 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
                   )}
                   style={{ '--label-top': `${phoneTop ?? 0}px`, '--label-top-md': `${desktopTop ?? 0}px` } as CSSProperties}
                 >
-                  <span className="truncate text-[13px] font-bold">{s.name}</span>
+                  <span className="truncate text-sm font-bold">{firstName(s.name)}</span>
                   <span className="flex items-center gap-0.5 text-base font-extrabold tabular-nums md:text-lg">
                     {s.final > high && <ArrowUp data-testid="race-off-top" strokeWidth={3} className="size-3.5 shrink-0" />}
                     {s.final < low && <ArrowDown data-testid="race-off-bottom" strokeWidth={3} className="size-3.5 shrink-0" />}

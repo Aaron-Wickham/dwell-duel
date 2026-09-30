@@ -44,7 +44,7 @@ export function BetList({
         return (
           <li key={b.id} {...focusTarget(domId, sentenceId)} className="flex min-h-[52px] items-center gap-3 py-3">
             <Avatar name={b.bettorName} src={b.bettorAvatarSrc} size="sm" />
-            <p id={sentenceId} className="min-w-0 flex-1">
+            <p id={sentenceId} className="min-w-0 flex-1 break-words">
               <Link href={`/members/${b.profileId}`} transitionTypes={['nav-forward']}>{b.bettorName}</Link> — {b.amount} DC on{' '}
               {outcomeLabel}
               {mine && <span className="text-ink2"> (you)</span>}

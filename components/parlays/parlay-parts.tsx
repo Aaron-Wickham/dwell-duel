@@ -41,10 +41,24 @@ export function LegPill({ status }: { status: LegStatus }) {
   )
 }
 
-export function ParlayStatusChip({ parlay, className }: { parlay: Pick<ParlayView, 'status' | 'credited'>; className?: string }) {
+// A pending parlay is Open while a pick can still be bet on; once every market has closed it waits
+// on their results, like a solo bet does.
+export function ParlayStatusChip({
+  parlay,
+  className,
+}: {
+  parlay: Pick<ParlayView, 'status' | 'credited'> & { legs?: { status: LegStatus }[] }
+  className?: string
+}) {
   switch (parlay.status) {
-    case 'pending':
-      return <StatusChip tone="open" className={className}>Open</StatusChip>
+    case 'pending': {
+      const awaiting = parlay.legs !== undefined && parlay.legs.length > 0 && parlay.legs.every((leg) => leg.status !== 'open')
+      return awaiting ? (
+        <StatusChip tone="wait" className={className}>Awaiting resolution</StatusChip>
+      ) : (
+        <StatusChip tone="open" className={className}>Open</StatusChip>
+      )
+    }
     case 'won':
       return <StatusChip tone="done" className={className}>Won {parlay.credited} DC</StatusChip>
     case 'lost':
@@ -79,9 +93,9 @@ export function ParlayProgress({ legs, className }: { legs: { status: LegStatus 
   const summary = tallySummary(legTally(legs))
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
-      <div role="img" aria-label={summary} className="flex gap-[3px]">
+      <div aria-hidden="true" className="flex gap-[3px]">
         {legs.map((leg, i) => (
-          <span key={i} aria-hidden="true" className={cn('h-1.5 flex-1 rounded-full', SEGMENT[leg.status])} />
+          <span key={i} className={cn('h-1.5 flex-1 rounded-full', SEGMENT[leg.status])} />
         ))}
       </div>
       <p className="text-sm text-ink2">{summary}</p>

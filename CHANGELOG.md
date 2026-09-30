@@ -6,6 +6,10 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+## v0.5.1-beta — 2026-09-30
+
+The last open issues closed: a "Your standing" card beside the Net worth rankings, selectable card text on desktop, a race-chart label fix, CI that no longer trips on Supabase's image registry, and the misspelled dwelldule.com now redirecting to the app.
+
 ### Features
 - **Net worth shows your standing beside the rankings on a wide screen.** A "Your standing" card fills the side column with your rank, net worth, record and how far you are behind the member above you; a phone keeps the list as it was (#185).
 
@@ -15,6 +19,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ### Under the hood
 - **CI keeps Supabase's images in its own cache.** They come from AWS's public registry, not Docker Hub, and that registry's anonymous data limit was failing image pulls (run 36750361148 got through only on retries), so #213's Docker Hub login never applied. The images are now cached per Supabase CLI version and loaded before the stack starts; the Docker Hub login and its setup steps are gone (#238).
+- **dwelldule.com redirects to www.dwellduel.com.** Both it and its www host answer with a 301 that keeps the path and query, so a misspelled link still lands (#191).
 
 ## v0.5.0-beta — 2026-09-30
 

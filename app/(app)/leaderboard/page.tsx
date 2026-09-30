@@ -19,7 +19,7 @@ import { LeaderboardRow } from '@/components/leaderboard/leaderboard-row'
 import { Awards } from '@/components/leaderboard/awards'
 import { PastChampions } from '@/components/leaderboard/past-champions'
 import { Podium } from '@/components/leaderboard/podium'
-import { RaceChart } from '@/components/leaderboard/race-chart'
+import { RaceChart } from '@/components/leaderboard/race-chart-lazy'
 import { cn } from '@/lib/utils'
 import { getAwards, getPastChampions, getRace, getRecords } from '@/lib/social/leaderboard-extras'
 

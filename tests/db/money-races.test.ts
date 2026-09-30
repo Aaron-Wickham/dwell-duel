@@ -87,7 +87,7 @@ describe('money races (#72)', () => {
     expect((await bet(bobClient, market, 0, 10)).error).toBeNull()
 
     const [voided, resolved] = await Promise.all([
-      admin.rpc('void_market', { p_market_id: market.marketId }),
+      admin.rpc('void_market', { p_market_id: market.marketId, p_reason: 'Voided in a test' }),
       resolve(market, 0),
     ])
     expect([voided.error, resolved.error].filter((e) => e === null)).toHaveLength(1)

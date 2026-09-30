@@ -116,7 +116,7 @@ describe('leaderboard_awards', () => {
       p_stake: 3,
     })
     if (error) throw error
-    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId })
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId, p_reason: 'Voided in a test' })
     if (voidErr) throw voidErr
     await resolve(skewed, 0)
     await resolve(even, 0)
@@ -167,7 +167,7 @@ describe('member_records', () => {
 
     const voided = await createTestMarket(aliceClient, ['Yes', 'No'])
     await bet(bobClient, voided, 0, 10)
-    const { error } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId })
+    const { error } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId, p_reason: 'Voided in a test' })
     if (error) throw error
 
     const { data, error: readErr } = await bobClient.rpc('member_records', { p_ids: [bob.id, carol.id, alice.id] })
@@ -236,7 +236,7 @@ describe('leaderboard_race_steps', () => {
   it('starts at a void\'s refunds too', async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await bet(bobClient, market, 0, 20)
-    const { error } = await aliceClient.rpc('void_market', { p_market_id: market.marketId })
+    const { error } = await aliceClient.rpc('void_market', { p_market_id: market.marketId, p_reason: 'Voided in a test' })
     if (error) throw error
     const bobSteps = (await steps(bobClient)).get(bob.id)!
     expect(bobSteps.map((s) => Number(s.profit))).toEqual([-20, 0])

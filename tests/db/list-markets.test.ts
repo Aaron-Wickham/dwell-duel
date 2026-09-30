@@ -33,7 +33,7 @@ async function resolve(marketId: string, outcomeId: string): Promise<void> {
 }
 
 async function voidMarket(marketId: string): Promise<void> {
-  const { error } = await aliceClient.rpc('void_market', { p_market_id: marketId })
+  const { error } = await aliceClient.rpc('void_market', { p_market_id: marketId, p_reason: 'Voided in a test' })
   if (error) throw error
 }
 

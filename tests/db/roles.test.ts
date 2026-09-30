@@ -89,7 +89,7 @@ describe('reviewers', () => {
   it("can't resolve someone else's market early, void it, invite, or adjust balances", async () => {
     const market = await createTestMarket(clients.member, ['Yes', 'No'])
     expect((await clients.reviewer.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0] })).error).not.toBeNull()
-    expect((await clients.reviewer.rpc('void_market', { p_market_id: market.marketId })).error).not.toBeNull()
+    expect((await clients.reviewer.rpc('void_market', { p_market_id: market.marketId, p_reason: 'Voided in a test' })).error).not.toBeNull()
     expect((await clients.reviewer.from('allowed_emails').insert({ email: 'x@example.com' })).error).not.toBeNull()
     expect((await clients.reviewer.rpc('adjust_balance', { p_profile_id: member.id, p_amount: 5, p_reason: 'r' })).error).not.toBeNull()
   })

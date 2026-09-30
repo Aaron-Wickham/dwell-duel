@@ -109,7 +109,7 @@ describe('cancel_bet', () => {
 
   it('refuses on a voided market, which has already refunded the bet', async () => {
     const betId = await placeBet(bobClient, 30)
-    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: market.marketId })
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: market.marketId, p_reason: 'Voided in a test' })
     if (voidErr) throw voidErr
 
     const { error } = await bobClient.rpc('cancel_bet', { p_bet_id: betId })

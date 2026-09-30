@@ -67,9 +67,11 @@ describe('markets_to_resolve', () => {
       p_outcome_id: resolved.outcomeIds[0],
     })
     if (error) throw error
-    const voided = await market('Voided', HOUR)
-    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId })
+    // Voided while open (after close only an admin may, 0073), then past its close like the rest.
+    const voided = await market('Voided', null)
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId, p_reason: 'Voided in a test' })
     if (voidErr) throw voidErr
+    await closedAgo(voided.marketId, HOUR)
 
     expect(await getMarketsToResolve(aliceClient)).toMatchObject({
       total: 2,

@@ -1176,6 +1176,8 @@ export type Database = {
           owner_adjustments_added: number
           owner_adjustments_removed: number
           parlays_at_stake: number
+          payout_rounding_added: number
+          payout_rounding_removed: number
           seed_payouts_added: number
           seed_payouts_removed: number
           starting_grants_added: number

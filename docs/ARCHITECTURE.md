@@ -357,13 +357,18 @@ only and backs the Economy card above Admin → Ledger's list
 the DC in circulation (balances, plus stakes in open markets' bets and
 pending parlays) and, for the America/New_York month holding
 `p_month_start`, the DC added and removed by source: starting grants, task
-rewards, seed payouts, house-paid parlays and owner adjustments. Stakes,
-cancels, voids and remove-bet refunds only move DC between a balance and
-"at stake", so they count nowhere. A market's seed effect is measured at
-each resolution: payouts less the real stakes at the first one, and new
-payouts less the reversed ones at an override; it can be negative, since
-the seed keeps part of the losers' stakes when they outweigh it, and
-`floor()` keeps the fractions. A parlay's is its credit less its stake, so
+rewards, seed payouts (older results only), payout rounding, house-paid
+parlays and owner adjustments. Stakes, cancels, voids and remove-bet
+refunds only move DC between a balance and "at stake", so they count
+nowhere. A market's resolution is measured at each event: payouts less the
+real stakes at the first resolution, and new payouts less the reversed ones
+at an override. Since 0074 winners split the real pool, so for a
+resolution that counted no seed (`payout_seed` = 0) that only ever leaves
+the fractions `floor()` keeps: *payout rounding* (an override can pay some
+back). An event that pays or reverses a resolution from before 0074, which
+counted the seed, stays under *seed payouts*, so older results' seed, and
+an override taking it back, still show; the card hides that row in a month
+with none. A parlay's is its credit less its stake, so
 a lost parlay removes its stake. `economy_flows` (callable by no member)
 holds that classification, with every `coin_transactions` type listed in
 the migration. The panel also checks the identity *all DC ever added less
@@ -429,7 +434,7 @@ after it ships. They roughly follow the project's history:
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
 | 0073 | Permissions (#288, #289, #290): own-row branches of `resolve_market_core`, `can_resolve_market`, `void_market`, `update_market` and `delete_market_comment` need `is_invited()`; `remove_member` deletes the member's `auth.sessions`; `admin_delete_invites` only for unclaimed invites, and the invite insert grant narrowed to `email` and `invited_by` (the caller); `void_market(p_market_id, p_reason)` needs a reason (`markets.void_reason`, 500-character check), is admin-only after close and posts a `market_voided` feed event |
-| 0074 | Parlay pricing and the seed (#287, #272): leg odds set at close or settlement from other members' real money, no seed (`pick_quote`, `pick_quotes`, `parlay_leg_odds`, nullable `parlay_legs.locked_odds`); a 50 DC from 2 members floor and no legs on your own markets; `parlay_limits()` gains `max_payout`, `min_leg_pool` and `min_leg_bettors`, the cap drops to 20×, a leg counts at most 5× and one member's pending parlays on a market can pay at most 1,000 DC (`parlay_limits()` gains `max_leg_odds`; `parlay_max_payout`); `parlays.max_multiplier` (pending parlays from before move to 20×) and `odds_at_close`; payouts are the real pool (`pool_payout`, `market_resolutions.payout_seed` backfilled for history); `apply_coin_transaction` cuts a credit to fit the balance and `refund_room` a refund; `remove_bet` stops at close; `leaderboard_awards` leaves out removed members |
+| 0074 | Parlay pricing and the seed (#287, #272): leg odds set at close or settlement from other members' real money, no seed (`pick_quote`, `pick_quotes`, `parlay_leg_odds`, nullable `parlay_legs.locked_odds`); a 50 DC from 2 members floor and no legs on your own markets; `parlay_limits()` gains `max_payout`, `min_leg_pool` and `min_leg_bettors`, the cap drops to 20×, a leg counts at most 5× and one member's pending parlays on a market can pay at most 1,000 DC (`parlay_limits()` gains `max_leg_odds`; `parlay_max_payout`); `parlays.max_multiplier` (pending parlays from before move to 20×) and `odds_at_close`; payouts are the real pool (`pool_payout`, `market_resolutions.payout_seed` backfilled for history); `apply_coin_transaction` cuts a credit to fit the balance and `refund_room` a refund; `remove_bet` stops at close; `leaderboard_awards` leaves out removed members; `economy_summary` splits payout rounding from older results' seed payouts |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 

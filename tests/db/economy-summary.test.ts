@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
 import { expectError } from './assertions'
+import { pgQuery } from './pg-query'
 import {
   seedMembers,
   makeMember,
@@ -30,6 +31,8 @@ type Summary = {
   task_rewards_added: number
   seed_payouts_added: number
   seed_payouts_removed: number
+  payout_rounding_added: number
+  payout_rounding_removed: number
   house_parlays_added: number
   house_parlays_removed: number
   owner_adjustments_added: number
@@ -214,6 +217,8 @@ describe('economy_summary', () => {
     expect(s.task_rewards_added).toBe(10)
     expect(s.seed_payouts_added).toBe(0)
     expect(s.seed_payouts_removed).toBe(0)
+    expect(s.payout_rounding_added).toBe(0)
+    expect(s.payout_rounding_removed).toBe(0)
     expect(s.house_parlays_added).toBe(30)
     expect(s.house_parlays_removed).toBe(5)
     expect(s.owner_adjustments_added).toBe(25)
@@ -262,6 +267,28 @@ describe('economy_summary', () => {
     expect(february.starting_grants_added).toBe(0)
 
     expect(now.all_time_added - now.all_time_removed).toBe(circulation(now))
+  })
+
+  it('counts what payouts round down as payout rounding, and an older seeded result as seed', async () => {
+    // Alice 2 and Bob 1 on Yes, Olive 2 on No: Yes pays floor(2 × 5 / 3) = 3 and floor(5 / 3) = 1,
+    // so 1 DC of the 5 DC pool stays unpaid.
+    async function splitThree(title: string): Promise<TestMarket> {
+      const m = await createTestMarket(oliveClient, ['Yes', 'No'], { title })
+      await bet(aliceClient, m, 0, 2)
+      await bet(bobClient, m, 0, 1)
+      await bet(oliveClient, m, 1, 2)
+      await resolve(m, 0)
+      return m
+    }
+    await splitThree('Rounds down')
+    const older = await splitThree('Older result')
+    // As 0074 leaves a resolution from before it, which counted the market's seed.
+    await pgQuery(`update public.market_resolutions set payout_seed = 20 where market_id = '${older.marketId}'`)
+
+    const s = await summary()
+    expect([s.payout_rounding_added, s.payout_rounding_removed]).toEqual([0, 1])
+    expect([s.seed_payouts_added, s.seed_payouts_removed]).toEqual([0, 1])
+    expect(s.all_time_added - s.all_time_removed).toBe(circulation(s))
   })
 
   it('shows a ledger type it doesn’t know as unclassified, and the gap it leaves', async () => {

@@ -76,9 +76,10 @@ export function EconomyCard({ summary }: { summary: EconomySummary }) {
       </table>
 
       <p className="text-sm text-ink2">
-        Seed payouts are what winners were paid beyond the market’s real stakes; when losers put in more
-        than the seed gave, the rest is removed. Parlays remove the stakes they lose, and overrides take
-        back earlier payouts.
+        Winners split exactly a market’s real stakes, rounded down, so payout rounding is the fractions of
+        a DC that rounding keeps (an override can pay some back). Seed payouts appear only for older
+        results, which counted the seed. Parlays remove the stakes they lose, and overrides take back
+        earlier payouts.
       </p>
 
       {reconciles ? (

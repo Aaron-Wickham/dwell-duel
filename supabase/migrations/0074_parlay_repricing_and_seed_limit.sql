@@ -27,6 +27,7 @@
 --    refunded.
 -- 6. remove_bet refuses once the market has closed, like cancel_bet (#272).
 -- 7. This month's awards leave out removed members, as the boards do (#265's rule).
+-- 8. The owner's economy panel shows payout rounding apart from older results' seed payouts.
 --
 -- Additive: every function keeps its signature, so the build before this one keeps calling them
 -- while it deploys. parlay_limits() gains columns (nothing in the app calls it). locked_odds becomes
@@ -1139,5 +1140,195 @@ join public.tasks t on t.id = c.task_id
 join public.profiles p on p.id = c.profile_id
 where c.status = 'approved';
 
+
+
+-- ─── The economy panel ───────────────────────────────────────────────────────
+-- 0052's economy_flows and economy_summary. A market's resolution flows used to be one source, the
+-- seed's effect. Since 0074 the seed is never paid, so a resolution that counted no seed
+-- (payout_seed = 0) only ever leaves the fractions floor() keeps: those events are their own
+-- source, payout_rounding. An event stays under seed_payouts when it pays or reverses a resolution
+-- that counted the seed, so older results' seed payouts, and an override taking one back, still
+-- show as seed. A new column needs economy_summary dropped and made again; only the owner's panel
+-- calls it, and the previous build ignores the two extra columns.
+create or replace function public.economy_flows(p_from timestamptz, p_to timestamptz)
+returns table (source text, added bigint, removed bigint)
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  with parlay_first_credit as (
+    select t.meta ->> 'parlay_id' as parlay_id, min(t.created_at) as happened_at
+    from public.coin_transactions t
+    where t.type in ('parlay_won', 'parlay_refunded')
+    group by 1
+  ),
+  parlay_first_loss as (
+    select l.parlay_id, min(r.resolved_at) as happened_at
+    from public.parlay_legs l
+    join public.market_resolutions r on r.market_id = l.market_id and r.outcome_id <> l.outcome_id
+    group by 1
+  ),
+  flows (source, event_key, happened_at, amount, seeded) as (
+    select
+      case t.type
+        when 'starting_grant' then 'starting_grants'
+        when 'task_completed' then 'task_rewards'
+        when 'admin_adjustment' then 'owner_adjustments'
+        when 'bet_won' then 'seed_payouts'
+        when 'bet_refunded' then 'seed_payouts'
+        when 'resolution_reversed' then 'seed_payouts'
+        else 'house_parlays'
+      end,
+      case
+        when t.type in ('bet_won', 'bet_refunded', 'resolution_reversed') then 'market:' || (t.meta ->> 'market_id')
+        when t.type like 'parlay_%' then 'parlay:' || (t.meta ->> 'parlay_id')
+        else 'txn:' || t.id
+      end,
+      t.created_at,
+      t.amount::bigint,
+      case
+        when t.type in ('bet_won', 'bet_refunded') then exists (
+          select 1 from public.market_resolutions r where r.id = (t.meta ->> 'resolution_id')::uuid and r.payout_seed > 0)
+        when t.type = 'resolution_reversed' then exists (
+          select 1 from public.market_resolutions r where r.id = (t.meta ->> 'reversed_resolution_id')::uuid and r.payout_seed > 0)
+        else false
+      end
+    from public.coin_transactions t
+    where t.type in (
+      'starting_grant', 'task_completed', 'admin_adjustment',
+      'bet_won', 'bet_refunded', 'resolution_reversed',
+      'parlay_won', 'parlay_refunded', 'parlay_reversed'
+    )
+
+    union all
+
+    select 'seed_payouts', 'market:' || b.market_id, first_resolution.happened_at, -sum(b.amount)::bigint,
+           first_resolution.payout_seed > 0
+    from public.bets b
+    join public.markets m on m.id = b.market_id and m.status = 'resolved'
+    cross join lateral (
+      select r.resolved_at as happened_at, r.payout_seed
+      from public.market_resolutions r
+      where r.market_id = b.market_id
+      order by r.resolved_at, r.id
+      limit 1
+    ) first_resolution
+    group by b.market_id, first_resolution.happened_at, first_resolution.payout_seed
+
+    union all
+
+    select 'house_parlays', 'parlay:' || pa.id, least(c.happened_at, x.happened_at), -pa.stake::bigint, false
+    from public.parlays pa
+    left join parlay_first_credit c on c.parlay_id = pa.id::text
+    left join parlay_first_loss x on x.parlay_id = pa.id
+    where pa.status <> 'pending'
+  ),
+  events as (
+    select
+      case when f.source = 'seed_payouts' and not bool_or(f.seeded) then 'payout_rounding' else f.source end as source,
+      sum(f.amount) as net
+    from flows f
+    where f.happened_at >= p_from and f.happened_at < p_to
+    group by f.source, f.event_key, f.happened_at
+  )
+  select e.source,
+         coalesce(sum(greatest(e.net, 0)), 0)::bigint,
+         coalesce(sum(greatest(-e.net, 0)), 0)::bigint
+  from events e
+  group by e.source
+$$;
+
+drop function public.economy_summary(timestamptz);
+
+create function public.economy_summary(p_month_start timestamptz)
+returns table (
+  month_start timestamptz,
+  month_end timestamptz,
+  balances bigint,
+  bets_at_stake bigint,
+  parlays_at_stake bigint,
+  starting_grants_added bigint,
+  task_rewards_added bigint,
+  seed_payouts_added bigint,
+  seed_payouts_removed bigint,
+  payout_rounding_added bigint,
+  payout_rounding_removed bigint,
+  house_parlays_added bigint,
+  house_parlays_removed bigint,
+  owner_adjustments_added bigint,
+  owner_adjustments_removed bigint,
+  all_time_added bigint,
+  all_time_removed bigint,
+  unclassified bigint
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_local_month timestamp;
+begin
+  if not public.has_role('owner') then
+    raise exception 'only the owner can see the economy';
+  end if;
+  if p_month_start is null then
+    raise exception 'a month is required';
+  end if;
+
+  v_local_month := date_trunc('month', p_month_start at time zone 'America/New_York');
+  month_start := v_local_month at time zone 'America/New_York';
+  month_end := (v_local_month + interval '1 month') at time zone 'America/New_York';
+
+  select coalesce(sum(p.balance), 0) into balances from public.profiles p;
+
+  select coalesce(sum(b.amount), 0) into bets_at_stake
+  from public.bets b
+  join public.markets m on m.id = b.market_id
+  where m.status = 'open';
+
+  select coalesce(sum(pa.stake), 0) into parlays_at_stake
+  from public.parlays pa
+  where pa.status = 'pending';
+
+  select
+    coalesce(sum(f.added) filter (where f.source = 'starting_grants'), 0),
+    coalesce(sum(f.added) filter (where f.source = 'task_rewards'), 0),
+    coalesce(sum(f.added) filter (where f.source = 'seed_payouts'), 0),
+    coalesce(sum(f.removed) filter (where f.source = 'seed_payouts'), 0),
+    coalesce(sum(f.added) filter (where f.source = 'payout_rounding'), 0),
+    coalesce(sum(f.removed) filter (where f.source = 'payout_rounding'), 0),
+    coalesce(sum(f.added) filter (where f.source = 'house_parlays'), 0),
+    coalesce(sum(f.removed) filter (where f.source = 'house_parlays'), 0),
+    coalesce(sum(f.added) filter (where f.source = 'owner_adjustments'), 0),
+    coalesce(sum(f.removed) filter (where f.source = 'owner_adjustments'), 0)
+  into
+    starting_grants_added, task_rewards_added,
+    seed_payouts_added, seed_payouts_removed,
+    payout_rounding_added, payout_rounding_removed,
+    house_parlays_added, house_parlays_removed,
+    owner_adjustments_added, owner_adjustments_removed
+  from public.economy_flows(month_start, month_end) f;
+
+  select coalesce(sum(f.added), 0), coalesce(sum(f.removed), 0)
+    into all_time_added, all_time_removed
+  from public.economy_flows('-infinity', 'infinity') f;
+
+  select count(*) into unclassified
+  from public.coin_transactions t
+  where t.type not in (
+    'starting_grant', 'task_completed', 'admin_adjustment',
+    'bet_won', 'bet_refunded', 'resolution_reversed',
+    'parlay_won', 'parlay_refunded', 'parlay_reversed',
+    'bet_placed', 'bet_cancelled', 'bet_voided_refund', 'parlay_placed'
+  );
+
+  return next;
+end;
+$$;
+
+revoke execute on function public.economy_summary(timestamptz) from public, anon;
+grant execute on function public.economy_summary(timestamptz) to authenticated;
 
 commit;

@@ -1081,6 +1081,27 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_member_counts: {
+        Args: { p_query?: string }
+        Returns: {
+          active: number
+          removed: number
+        }[]
+      }
+      admin_members: {
+        Args: { p_id?: string; p_query?: string }
+        Returns: {
+          avatar_path: string
+          balance: number
+          display_name: string
+          email: string
+          id: string
+          joined_at: string
+          last_sign_in_at: string
+          removed: boolean
+          role: string
+        }[]
+      }
       apply_coin_transaction: {
         Args: {
           p_amount: number
@@ -1189,6 +1210,12 @@ export type Database = {
       has_stake_in_market: {
         Args: { p_market_id: string; p_profile_id: string }
         Returns: boolean
+      }
+      invited_member_ids: {
+        Args: never
+        Returns: {
+          id: string
+        }[]
       }
       is_admin: { Args: never; Returns: boolean }
       is_invited: { Args: never; Returns: boolean }
@@ -1452,6 +1479,7 @@ export type Database = {
         }
         Returns: number
       }
+      reinvite_member: { Args: { p_profile_id: string }; Returns: undefined }
       reject_task_completion: {
         Args: { p_completion_id: string; p_reason?: string }
         Returns: undefined

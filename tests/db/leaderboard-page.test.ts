@@ -46,6 +46,12 @@ beforeAll(async () => {
 
   const db = serviceClient()
   const everyone = [alice.id, bob.id, ...extras]
+  // Only invited members are ranked (0086), so every member here gets an invite, claimed.
+  const { error: inviteErr } = await db.from('allowed_emails').upsert(
+    everyone.map((id) => ({ email: `invite-${id}@example.com`, claimed_by: id })),
+    { onConflict: 'email' },
+  )
+  if (inviteErr) throw inviteErr
   await Promise.all(
     everyone.map(async (id, k) => {
       const tied = k >= TIE_START && k < TIE_START + TIED_NAMES.length

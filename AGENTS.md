@@ -79,8 +79,10 @@ a line to `CHANGELOG.md` under the next release.
   every link, matching the mockup (its links use the browser default
   underline). A link styled as a button, tab, tile, chip or nav item
   carries `no-underline`.
-- **Visual source of truth:** `docs/design/app-redesign-handoff.md` and
-  the design spec in `docs/superpowers/specs/`.
+- **Visual source of truth:** `docs/design/app-redesign-handoff.md`, which
+  describes the app as it is. The dated specs and plans in `docs/archive/`
+  are history: they name things the code no longer has, so don't build
+  from them (`.ignore` keeps ripgrep out of them).
 
 ## Native feel and speed
 
@@ -193,7 +195,9 @@ a line to `CHANGELOG.md` under the next release.
 - **Every bet goes through the slip.** `SlipProvider` (in the signed-in
   layout) holds the cookie's picks, each Solo or Parlay, with optimistic
   add, remove and mode switches; the floating `SlipSheet` places them all
-  at once through `place_slip` (0039), which is all or nothing. Stakes live
+  at once through `place_slip_v2` (0072), which is all or nothing and
+  returns what it placed and whether the call replayed an earlier attempt
+  (`place_slip` only wraps it for the previous build). Stakes live
   only in the provider's state, never in the cookie.
 - **The service worker never caches** per-member HTML, RSC payloads,
   server actions or Supabase responses.

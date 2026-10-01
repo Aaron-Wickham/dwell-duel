@@ -5,8 +5,6 @@ const NOW = Date.parse('2026-09-29T12:00:00.000Z')
 
 function market(overrides: Partial<Parameters<typeof betResult>[1]> = {}): Parameters<typeof betResult>[1] {
   return {
-    id: 'm1',
-    title: 'Will it rain?',
     status: 'resolved',
     close_at: '2026-09-28T12:00:00.000Z',
     current_resolution: { outcome_id: 'o-no', payout_seed: 0 },

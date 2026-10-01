@@ -1250,6 +1250,13 @@ export type Database = {
           step: number
         }[]
       }
+      market_parlay_riding: {
+        Args: { p_market_id: string }
+        Returns: {
+          outcome_id: string
+          riding: number
+        }[]
+      }
       market_sparklines: {
         Args: { p_market_ids: string[]; p_points?: number }
         Returns: {
@@ -1331,6 +1338,14 @@ export type Database = {
           reward_amount: number
           status: string
           task_id: string
+        }[]
+      }
+      my_market_position: {
+        Args: { p_market_id: string }
+        Returns: {
+          bet_id: number
+          created_at: string
+          parlay_id: string
         }[]
       }
       my_onboarding: {

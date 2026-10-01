@@ -123,11 +123,13 @@ to understand and fix the problem.
   backup encryption recipient and backup-repository token) live in the
   GitHub `Production` environment, which only `main` can deploy to. A
   workflow on another branch can't read them.
-- **Repository-level secrets are reachable.** The one repository-level
-  secret, the cron secret the Closing alerts backup sends, is readable by
-  a workflow pushed to any branch, so write access is granted only to
-  people the maintainer trusts, and the secret is rotated if that trust
-  changes.
+- **Branch workflows and the one repository-level secret.** A write
+  collaborator can run workflows from their own branch, which can read
+  repository-level secrets. There is one, `CRON_SECRET`, kept there by
+  design so the Closing alerts backup can run on its schedule. It only
+  authorizes the two cron endpoints, which are idempotent: calling them
+  sends nothing that wasn't already due and reads no member data back.
+  It's rotated whenever the set of people with write access changes.
 - **No production data access.** Collaborators don't get the Supabase or
   Vercel dashboards, the production database or members' data.
 

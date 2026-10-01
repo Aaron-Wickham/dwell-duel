@@ -10,7 +10,7 @@ key named here, and is the only person who can carry out these steps.
 - [Rolling back](#rolling-back)
 - [Backups and restore](#backups-and-restore)
 - [Rotating secrets](#rotating-secrets)
-- [Incidents](#incidents), including [owner recovery](#owner-recovery)
+- [Incidents](#incidents), including [owner recovery](#owner-recovery) and [deleting a member's data](#deleting-a-members-data-on-request)
 - [Free-tier limits](#free-tier-limits)
 - [Scheduled jobs](#scheduled-jobs)
 
@@ -427,15 +427,38 @@ owner:
 
 1. Invite the new account, sign in with it once, so it has a profile:
    `insert into public.allowed_emails (email) values ('new@gmail.com');`
-2. Move the ownership in one transaction, demoting the old owner first
-   (the unique index allows only one at a time):
+2. Move the ownership, demoting the old owner first (the unique index
+   allows only one at a time). Put the new email in the first line. The
+   block is one statement, so it either does everything or nothing, and it
+   refuses unless exactly one invited account with a profile has signed in
+   with that email:
 
    ```sql
-   begin;
-   update public.profiles set role = 'member' where role = 'owner';
-   update public.profiles set role = 'owner'
-   where id = (select id from auth.users where email = 'new@gmail.com');
-   commit;
+   -- Move ownership to the account that signed in as new@gmail.com. Aborts, changing nothing, unless
+   -- exactly one invited account with a profile and a sign-in matches.
+   do $$
+   declare
+     v_email constant text := lower('new@gmail.com');
+     v_matches integer;
+     v_new uuid;
+   begin
+     select count(*), (array_agg(u.id))[1] into v_matches, v_new
+     from auth.users u
+     join public.profiles p on p.id = u.id
+     where lower(u.email) = v_email and u.last_sign_in_at is not null;
+
+     if v_matches <> 1 then
+       raise exception 'expected exactly one signed-in account with a profile for %, found %', v_email, v_matches;
+     end if;
+     if not exists (select 1 from public.allowed_emails where email = v_email) then
+       raise exception '% is not invited: insert it into allowed_emails first', v_email;
+     end if;
+
+     update public.profiles set role = 'member' where role = 'owner' and id <> v_new;
+     update public.profiles set role = 'owner' where id = v_new;
+     raise notice 'owner is now % (%)', v_email, v_new;
+   end
+   $$;
    ```
 
 3. Sign in as the new owner and, from Admin → Members, remove the old
@@ -444,12 +467,96 @@ owner:
 4. Check: the new owner sees the Adjust balance and Role cards on a
    member's Admin page.
 
-**The owner has been demoted or removed by SQL by mistake:** the second
-`update` above, keyed off their email, with their invite back as in the
-first case.
+**The owner has been demoted or removed by SQL by mistake:** put their
+invite back as in the first case, then run the block above with their
+email.
 
 If the Supabase account itself is lost, recover it through Supabase's own
 support; nothing in the app can.
+
+### Deleting a member's data on request
+
+When a member asks for their data to be deleted (How it works → Your data
+says the owner does it by hand). Removing them from Admin → Members only
+ends their access; this goes further. Their **profile row stays**, renamed
+"Former member": the ledger, their bets, parlays, markets and results all
+point at it, and other members' payouts and every balance must still add
+up, so ledger rows are kept, not deleted. Everything that identifies them
+goes.
+
+1. Take a fresh backup first (Backups → Run workflow), and make sure they
+   aren't the owner (move ownership first).
+2. Find their profile id: Admin → Members → their page (it's in the URL),
+   or `select id, display_name from public.profiles where email = lower('them@gmail.com');`
+3. In the SQL editor, replace `<member id>` (four places) and run both
+   parts. The first lists their files; keep the list. The second is one
+   statement, so a failure changes nothing.
+
+   ```sql
+   -- 1. The member's files, to delete through Storage afterwards (SQL can't delete Storage objects).
+   select bucket_id, name from storage.objects
+   where (bucket_id = 'avatars' and name like '<member id>/%')
+      or (bucket_id = 'proof' and name in (
+           select storage_path from public.proof_attachments
+           where created_by = '<member id>'::uuid and storage_path is not null and expired_at is null));
+
+   -- 2. Remove or anonymise everything else, in one statement.
+   do $$
+   declare
+     v_id constant uuid := '<member id>';
+     v_role text;
+     v_email text;
+   begin
+     select role, lower(email) into v_role, v_email from public.profiles where id = v_id for update;
+     if not found then
+       raise exception 'no profile %', v_id;
+     end if;
+     if v_role = 'owner' then
+       raise exception 'that is the owner: move ownership first (Owner recovery)';
+     end if;
+
+     -- Access: invite, devices, sessions and the Google link, so they can't sign back in as this account.
+     delete from public.allowed_emails where email = v_email or claimed_by = v_id;
+     delete from public.push_subscriptions where profile_id = v_id;
+     delete from public.notification_prefs where profile_id = v_id;
+     delete from public.idempotency_keys where profile_id = v_id;
+     delete from public.write_rate_counters where profile_id = v_id;
+     delete from auth.sessions where user_id = v_id;
+     delete from auth.identities where user_id = v_id;
+
+     -- What they wrote.
+     delete from public.feed_reactions where profile_id = v_id;
+     update public.market_comments
+        set body = '', deleted_at = coalesce(deleted_at, now()), deleted_by = coalesce(deleted_by, v_id)
+      where profile_id = v_id;
+     update public.task_completions set note = null where profile_id = v_id;
+     delete from public.proof_attachments where created_by = v_id and kind = 'link';
+     update public.proof_attachments set expired_at = now()
+      where created_by = v_id and storage_path is not null and expired_at is null;
+
+     -- Who they were. The row stays: the ledger, bets, parlays, markets and results point at it.
+     update public.profiles
+        set display_name = 'Former member', email = 'removed-' || v_id || '@invalid',
+            bio = null, avatar_url = null, avatar_path = null, role = 'member'
+      where id = v_id;
+     update auth.users
+        set email = null, phone = null, raw_user_meta_data = '{}'::jsonb
+      where id = v_id;
+   end
+   $$;
+   ```
+
+4. Delete the listed files through Storage (SQL can't): Supabase →
+   Storage → each bucket, or
+   `supabase storage rm ss:///avatars/<member id>/<file> --project-ref lymrpiivqvdnfcjmxksx --experimental`
+   for each path (`ss:///proof/<path>` for proof).
+5. Check: their profile page shows "Former member" with no photo or bio,
+   their email is gone from Admin → Members, and the owner's Economy card
+   still says the ledger adds up.
+
+What stays: their bets, parlays, markets, results and ledger rows, under
+"Former member", and feed events, which show that name. Their deleted
+data leaves the backups as those age out, within about 60 days.
 
 ## Free-tier limits
 
@@ -464,7 +571,7 @@ app runs to each at 1,000 members.
 | Supabase: **200 concurrent Realtime connections** (one per visible tab) | Supabase → Usage and Reports (Realtime) | Likeliest to bite first. Past it, new tabs poll every 60 s instead of going live, so nothing breaks; the levers are in ARCHITECTURE's Live updates |
 | Supabase: **2M Realtime messages a month**, 100 a second | Supabase → Usage | One ping per topic per transaction already; raise `live_ping_interval_ms()` in a migration |
 | Supabase: **5 GB egress a month** (plus 5 GB cached) | Supabase → Usage → Egress | The open markets list's sparklines are the biggest term; fewer cards per list |
-| Supabase: **500 MB database** | Supabase → Usage → Database size | `cron.job_run_details` is pruned weekly; look for the largest tables before deleting anything |
+| Supabase: **500 MB database** | Supabase → Usage → Database size | `cron.job_run_details` is pruned daily of rows older than 7 days (`cron-history-cleanup`, 0065); look for the largest tables before deleting anything |
 | Supabase: **1 GB Storage** | The keep-alive's `storageMb` and its `storage usage` step, which fails past 800 MB | Shorten the proof windows: `expired_proof_attachments`' 30 and 90 days in `app/api/cron/keep-alive/route.ts` (and How it works says them) |
 | Supabase: **50,000 monthly active users** | Supabase → Usage | Far off for an invite-only group |
 | Supabase: **pauses after 7 days idle** | The keep-alive heartbeat | The daily cron touches the database so it never idles |

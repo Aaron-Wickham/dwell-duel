@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { render, screen } from '@testing-library/react'
@@ -122,19 +122,33 @@ describe('Markdown links', () => {
 })
 
 describe('arriving at a section from another page', () => {
-  it('scrolls to the section in the URL once the doc has rendered, as a client navigation past the skeleton does not (#286)', async () => {
-    window.history.replaceState(null, '', '/how-it-works#how-your-data')
+  const original = Element.prototype.scrollIntoView
+  function renderAt(hash: string): string[] {
+    window.history.replaceState(null, '', `/how-it-works${hash}`)
     const scrolled: string[] = []
-    const original = Element.prototype.scrollIntoView
     Element.prototype.scrollIntoView = function (this: Element) {
       scrolled.push(this.id)
     }
-    try {
-      render(<HowItWorksPage />)
-      expect(scrolled).toEqual(['how-your-data'])
-    } finally {
-      Element.prototype.scrollIntoView = original
-      window.history.replaceState(null, '', '/')
-    }
+    render(<HowItWorksPage />)
+    return scrolled
+  }
+  afterEach(() => {
+    Element.prototype.scrollIntoView = original
+    window.history.replaceState(null, '', '/')
+    vi.useRealTimers()
+  })
+
+  it('scrolls to the section in the URL once the doc has rendered, as a client navigation past the skeleton does not (#286)', () => {
+    expect(renderAt('#how-your-data')).toEqual(['how-your-data'])
+  })
+
+  it('ignores a malformed hash instead of throwing', () => {
+    expect(() => renderAt('#%E0%A4%A')).not.toThrow()
+    expect(renderAt('#%E0%A4%A')).toEqual([])
+  })
+
+  it('leaves the restored position alone on back and forward', () => {
+    window.dispatchEvent(new PopStateEvent('popstate'))
+    expect(renderAt('#how-your-data')).toEqual([])
   })
 })

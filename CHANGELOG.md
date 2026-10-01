@@ -27,7 +27,6 @@ before v0.4.0 used other headings.)
 - **0 DC isn't a dead end.** At 0 DC, Home and the slip point to Tasks, Home with what tasks pay. The slip shows your balance and what's left after it (or how many DC short it is), and a line under Place says why it can't be tapped (#260).
 - **How it works opens with the short version**, has a collapsible "On this page" list on phones, keeps the formulas in "The maths", and says "shared pot" and "Monday–Sunday weeks" instead of jargon (#260).
 - **A link survives signing in.** A shared market link opened while signed out lands on that market after sign-in, not Home; only a same-site app path is accepted. Google always asks which account to use, so "Try another account" really offers another, and the not-invited page says which account was refused (#263).
-
 - **Settings links to what DwellDuel keeps about you.** How it works has a new **Your data** section: what's stored, who can see it, where it's kept, how long (proof 30 and 90 days, backups about 60) and how to leave or ask for deletion; Settings' Help card links straight to it (#286).
 - **Admin links to the new Admin guide** (`docs/ADMIN-GUIDE.md`): roles, inviting, resolving, overriding and voiding, reviewing tasks, members, balances and the ledger, for reviewers, admins and the owner (#283).
 

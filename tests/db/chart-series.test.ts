@@ -1,16 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, reconcilePoolTotals } from './helpers'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
 import { getChartSeries, CHART_POINTS } from '@/lib/markets/chart-series'
 import { buildProbabilitySeries } from '@/lib/markets/probability-series'
 import { listSparklines } from '@/lib/markets/sparklines'
-import type { DbClient } from '@/lib/supabase/database'
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -19,7 +17,7 @@ beforeEach(async () => {
   await ensureInvited(bobClient)
 })
 
-async function placeBet(client: SupabaseClient, marketId: string, outcomeId: string, amount: number) {
+async function placeBet(client: TestClient, marketId: string, outcomeId: string, amount: number) {
   const { error } = await client.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeId, p_amount: amount })
   if (error) throw error
 }
@@ -51,7 +49,7 @@ describe('getChartSeries (#68)', () => {
       { seed: 20, startAt: facts.createdAt },
     )
 
-    const chart = await getChartSeries(bobClient as unknown as DbClient, facts)
+    const chart = await getChartSeries(bobClient, facts)
     expect(chart.betCount).toBe(3)
     expect(chart.points.map((p) => p.t)).toEqual(expected.map((p) => p.t))
     chart.points.forEach((p, i) => {
@@ -72,8 +70,9 @@ describe('getChartSeries (#68)', () => {
     }))
     const { error } = await serviceClient().from('bets').insert(rows)
     if (error) throw error
+    await reconcilePoolTotals()
 
-    const chart = await getChartSeries(bobClient as unknown as DbClient, await marketFacts(market.marketId, market.outcomeIds))
+    const chart = await getChartSeries(bobClient, await marketFacts(market.marketId, market.outcomeIds))
     expect(chart.betCount).toBe(CHART_POINTS + 50)
     expect(chart.points).toHaveLength(CHART_POINTS)
     const noBets = rows.filter((r) => r.outcome_id === market.outcomeIds[1]).length
@@ -83,7 +82,7 @@ describe('getChartSeries (#68)', () => {
 
   it('has no points and no bets for an unseeded market nobody has bet on', async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
-    const chart = await getChartSeries(bobClient as unknown as DbClient, await marketFacts(market.marketId, market.outcomeIds))
+    const chart = await getChartSeries(bobClient, await marketFacts(market.marketId, market.outcomeIds))
     expect(chart).toEqual({ points: [], betCount: 0 })
   })
 })
@@ -95,8 +94,8 @@ describe('card sparklines and the market page chart (#110)', () => {
     await placeBet(bobClient, market.marketId, market.outcomeIds[1], 25)
     const facts = await marketFacts(market.marketId, market.outcomeIds)
 
-    const chart = await getChartSeries(bobClient as unknown as DbClient, facts)
-    const card = (await listSparklines(bobClient as unknown as DbClient, [facts])).get(market.marketId)!
+    const chart = await getChartSeries(bobClient, facts)
+    const card = (await listSparklines(bobClient, [facts])).get(market.marketId)!
 
     expect(card[0]).toEqual({
       t: Date.parse(facts.createdAt),
@@ -109,7 +108,7 @@ describe('card sparklines and the market page chart (#110)', () => {
   it('gives a seeded market nobody has bet on just its even start on its card', async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     const facts = await marketFacts(market.marketId, market.outcomeIds)
-    const card = (await listSparklines(bobClient as unknown as DbClient, [facts])).get(market.marketId)
+    const card = (await listSparklines(bobClient, [facts])).get(market.marketId)
     expect(card).toEqual([{ t: Date.parse(facts.createdAt), shares: { [market.outcomeIds[0]]: 0.5, [market.outcomeIds[1]]: 0.5 } }])
   })
 
@@ -117,7 +116,7 @@ describe('card sparklines and the market page chart (#110)', () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await placeBet(aliceClient, market.marketId, market.outcomeIds[0], 10)
     const facts = await marketFacts(market.marketId, market.outcomeIds)
-    const card = (await listSparklines(bobClient as unknown as DbClient, [facts])).get(market.marketId)!
+    const card = (await listSparklines(bobClient, [facts])).get(market.marketId)!
     expect(card).toHaveLength(1)
     expect(card[0].shares[market.outcomeIds[0]]).toBeCloseTo(1, 10)
   })

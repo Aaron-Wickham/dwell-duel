@@ -10,13 +10,16 @@ function parlay(overrides: Partial<ParlayView>): ParlayView {
     stake: 5,
     status: 'pending',
     credited: 0,
+    maxMultiplier: 20,
+    lockedAtPlacement: false,
     multiplierBp: 160_000,
     capped: false,
+    estimated: false,
     potentialPayout: 80,
     createdAt: '2026-09-25T12:00:00Z',
     legs: [
-      { marketId: 'm1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'open' },
-      { marketId: 'm2', marketTitle: 'Who wins trivia night?', outcomeLabel: 'Grace', lockedOddsBp: 40_000, status: 'open' },
+      { marketId: 'm1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', oddsBp: 40_000, oddsKnown: true, status: 'open' },
+      { marketId: 'm2', marketTitle: 'Who wins trivia night?', outcomeLabel: 'Grace', oddsBp: 40_000, oddsKnown: true, status: 'open' },
     ],
     ...overrides,
   }
@@ -62,10 +65,21 @@ describe('PlacedParlay', () => {
     expect(screen.getByText('Refunded')).toHaveClass('bg-sunk', 'text-ink2')
   })
 
-  it('notes when the multiplier was capped', () => {
-    renderParlay(parlay({ multiplierBp: 1_000_000, capped: true, potentialPayout: 500 }))
+  it('notes when the multiplier was capped, at the parlay’s own cap', () => {
+    renderParlay(parlay({ multiplierBp: 200_000, capped: true, potentialPayout: 100 }))
+    expect(screen.getByText('Multiplier (max 20×)')).toBeInTheDocument()
+    expect(screen.getByText('20.00×')).toBeInTheDocument()
+  })
+
+  it('keeps the 100× cap of a parlay placed before 0074', () => {
+    renderParlay(parlay({ maxMultiplier: 100, multiplierBp: 1_000_000, capped: true, potentialPayout: 500 }))
     expect(screen.getByText('Multiplier (max 100×)')).toBeInTheDocument()
-    expect(screen.getByText('100.00×')).toBeInTheDocument()
+  })
+
+  it('marks the multiplier and payout as estimates while a pick’s odds aren’t set', () => {
+    renderParlay(parlay({ estimated: true }))
+    expect(screen.getByText('~16.00×')).toBeInTheDocument()
+    expect(screen.getByText('~80 DC')).toBeInTheDocument()
   })
 
   it('is a Show more focus target named by its heading when given a row id', () => {
@@ -83,9 +97,9 @@ describe('PlacedParlay', () => {
     renderParlay(
       parlay({
         legs: [
-          { marketId: 'm1', marketTitle: 'A?', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'won' },
-          { marketId: 'm2', marketTitle: 'B?', outcomeLabel: 'No', lockedOddsBp: 40_000, status: 'open' },
-          { marketId: 'm3', marketTitle: 'C?', outcomeLabel: 'No', lockedOddsBp: 40_000, status: 'open' },
+          { marketId: 'm1', marketTitle: 'A?', outcomeLabel: 'Yes', oddsBp: 40_000, oddsKnown: true, status: 'won' },
+          { marketId: 'm2', marketTitle: 'B?', outcomeLabel: 'No', oddsBp: 40_000, oddsKnown: true, status: 'open' },
+          { marketId: 'm3', marketTitle: 'C?', outcomeLabel: 'No', oddsBp: 40_000, oddsKnown: true, status: 'open' },
         ],
       }),
     )
@@ -101,8 +115,8 @@ describe('PlacedParlay', () => {
     renderParlay(
       parlay({
         legs: [
-          { marketId: 'm1', marketTitle: 'A?', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'awaiting' },
-          { marketId: 'm2', marketTitle: 'B?', outcomeLabel: 'No', lockedOddsBp: 40_000, status: 'open' },
+          { marketId: 'm1', marketTitle: 'A?', outcomeLabel: 'Yes', oddsBp: 40_000, oddsKnown: true, status: 'awaiting' },
+          { marketId: 'm2', marketTitle: 'B?', outcomeLabel: 'No', oddsBp: 40_000, oddsKnown: true, status: 'open' },
         ],
       }),
     )
@@ -115,9 +129,9 @@ describe('PlacedParlay', () => {
       parlay({
         status: 'lost',
         legs: [
-          { marketId: 'm1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', lockedOddsBp: 40_000, status: 'won' },
-          { marketId: 'm2', marketTitle: 'Who wins trivia night?', outcomeLabel: 'Grace', lockedOddsBp: 40_000, status: 'lost' },
-          { marketId: 'm3', marketTitle: 'Will the choir sing?', outcomeLabel: 'No', lockedOddsBp: 20_000, status: 'voided' },
+          { marketId: 'm1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', oddsBp: 40_000, oddsKnown: true, status: 'won' },
+          { marketId: 'm2', marketTitle: 'Who wins trivia night?', outcomeLabel: 'Grace', oddsBp: 40_000, oddsKnown: true, status: 'lost' },
+          { marketId: 'm3', marketTitle: 'Will the choir sing?', outcomeLabel: 'No', oddsBp: 20_000, oddsKnown: true, status: 'voided' },
         ],
       }),
     )
@@ -133,7 +147,7 @@ describe('PlacedParlay', () => {
       marketId: `m${i}`,
       marketTitle: `Market ${i}?`,
       outcomeLabel: 'Yes',
-      lockedOddsBp: 20_000,
+      oddsBp: 20_000, oddsKnown: true,
       status: 'open' as const,
     }))
     renderParlay(parlay({ legs }))

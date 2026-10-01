@@ -1,18 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { combineOdds, formatOdds, lockedOddsToBp } from '@/lib/parlays/odds'
 import { getParlayDetail } from '@/lib/parlays/get-parlay'
 import { readMemberStats } from '@/lib/members/stats'
-import { serviceClient } from './helpers'
+import { rpcLoose, serviceClient, type TestClient, reconcileBalances } from './helpers'
+import { expectError } from './assertions'
 import { pgQuery } from './pg-query'
-import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
+import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backers, backLeg } from './fixtures'
 
 let alice: Member
 let bob: Member
 let carol: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let carolClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let carolClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -25,7 +25,7 @@ beforeEach(async () => {
   await giveRole(alice, 'admin')
 })
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
   const { error } = await client.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[outcomeIndex], p_amount: amount })
   if (error) throw error
 }
@@ -41,7 +41,7 @@ async function resolve(market: TestMarket, outcomeIndex: number): Promise<void> 
 
 type Award = { kind: string; profile_id: string; display_name: string; value: string | number; detail: string | null }
 
-async function awards(client: SupabaseClient): Promise<Award[]> {
+async function awards(client: TestClient): Promise<Award[]> {
   const { data, error } = await client.rpc('leaderboard_awards')
   if (error) throw error
   return data as Award[]
@@ -56,8 +56,8 @@ describe('access', () => {
       ['leaderboard_awards', undefined],
       ['member_records', { p_ids: [alice.id] }],
     ] as const) {
-      const anon = await anonClient().rpc(fn, args)
-      expect(anon.error, fn).not.toBeNull()
+      const anon = await rpcLoose(anonClient(), fn, args)
+      expectError(anon.error, { code: '42501', message: `permission denied for function ${fn}` }, fn)
     }
     const outsider = await makeMember('Dave')
     const outsiderClient = await clientFor(outsider)
@@ -66,7 +66,7 @@ describe('access', () => {
       ['leaderboard_awards', undefined],
       ['member_records', { p_ids: [alice.id] }],
     ] as const) {
-      const { error } = await outsiderClient.rpc(fn, args)
+      const { error } = await rpcLoose(outsiderClient, fn, args)
       expect(error?.code, fn).toBe('42501')
     }
   })
@@ -78,15 +78,23 @@ describe('leaderboard_awards', () => {
   })
 
   it('names the biggest win, best parlay, sharpshooter and most active member of the month', async () => {
-    // Bob's 20 on Yes against Carol's 30 pays floor(20 × 50 / 20) = 50: a gain of 30.
+    // Bob's 20 on Yes against Carol's 60 pays floor(20 × 80 / 20) = 80: a gain of 60, more than
+    // Backer1's 40 on the parlay's first leg.
     const big = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Bob wins this one' })
     await bet(bobClient, big, 0, 20)
-    await bet(carolClient, big, 1, 30)
+    await bet(carolClient, big, 1, 60)
     await resolve(big, 0)
 
-    // A parlay at 3.00× and 2.00×, seeded, so 6.00×, paying 60 on 10.
+    // A parlay at 3.00× and 2.00× (the backers' money at close), so 6.00×, paying 60 on 10.
+    // Carol also puts 1 DC on C, so she is the most active with three.
     const three = await createTestMarket(aliceClient, ['A', 'B', 'C'], { seed: 20 })
     const two = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    const [first, second] = await backers()
+    await bet(first.client, three, 0, 20)
+    await bet(second.client, three, 1, 40)
+    await bet(first.client, two, 0, 25)
+    await bet(second.client, two, 1, 25)
+    await bet(carolClient, three, 2, 1)
     const { error } = await carolClient.rpc('place_parlay', { p_outcome_ids: [three.outcomeIds[0], two.outcomeIds[0]], p_stake: 10 })
     if (error) throw error
     await resolve(three, 0)
@@ -94,36 +102,65 @@ describe('leaderboard_awards', () => {
 
     const rows = await awards(aliceClient)
     expect(award(rows, 'biggest_win')).toMatchObject({ profile_id: bob.id, display_name: 'Bob', detail: 'Bob wins this one' })
-    expect(Number(award(rows, 'biggest_win')?.value)).toBe(30)
+    expect(Number(award(rows, 'biggest_win')?.value)).toBe(60)
     expect(award(rows, 'best_parlay')).toMatchObject({ profile_id: carol.id })
     expect(Number(award(rows, 'best_parlay')?.value)).toBe(6)
     // Nobody has five decided bets yet.
     expect(award(rows, 'sharpshooter')).toBeUndefined()
-    // Bob and Carol have one bet each and Carol a parlay, so Carol is most active.
+    // Bob has one bet, each backer two, and Carol two and a parlay, so Carol is most active.
     expect(award(rows, 'most_active')).toMatchObject({ profile_id: carol.id })
-    expect(Number(award(rows, 'most_active')?.value)).toBe(2)
+    expect(Number(award(rows, 'most_active')?.value)).toBe(3)
+  })
+
+  it('leaves a removed member out, and gives the award to the next member still in', async () => {
+    // Bob's 10 against Carol's 30 gains 30; Carol's 10 against Bob's 5 gains 5.
+    const big = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Bob wins this one' })
+    await bet(bobClient, big, 0, 10)
+    await bet(carolClient, big, 1, 30)
+    await resolve(big, 0)
+    const small = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Carol wins this one' })
+    await bet(carolClient, small, 0, 10)
+    await bet(bobClient, small, 1, 5)
+    await resolve(small, 0)
+    expect(award(await awards(aliceClient), 'biggest_win')).toMatchObject({ profile_id: bob.id })
+
+    const olive = await makeMember('Olive')
+    await giveRole(olive, 'owner')
+    expect((await (await clientFor(olive)).rpc('remove_member', { p_profile_id: bob.id })).error).toBeNull()
+
+    const rows = await awards(aliceClient)
+    expect(award(rows, 'biggest_win')).toMatchObject({ profile_id: carol.id, detail: 'Carol wins this one' })
+    expect(Number(award(rows, 'biggest_win')?.value)).toBe(5)
+    expect(rows.map((r) => r.profile_id)).not.toContain(bob.id)
   })
 
   it('gives best parlay the multiplier the parlay page and the Stats card show, not the floored payout over the stake', async () => {
-    // Bob's 30 on Yes leaves it 50 of 70 seeded: 1.40×. The other leg is 2.00×, and a third is voided
-    // and drops out. 3 DC at 2.80× pays floor(8.4) = 8, which is only 2.66× the stake.
+    // Bob's 30 and Backer1's 20 on Yes against Backer2's 20 on No: 70 / 50 = 1.40× at close. The
+    // other leg is 2.00×, and a third is voided and drops out. 3 DC at 2.80× pays floor(8.4) = 8,
+    // which is only 2.66× the stake.
+    const [first, second] = await backers()
     const skewed = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     await bet(bobClient, skewed, 0, 30)
+    await bet(first.client, skewed, 0, 20)
+    await bet(second.client, skewed, 1, 20)
     const even = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    await bet(first.client, even, 0, 25)
+    await bet(second.client, even, 1, 25)
     const voided = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    await backLeg(voided, 1)
     const { data: parlayId, error } = await carolClient.rpc('place_parlay', {
       p_outcome_ids: [skewed.outcomeIds[0], even.outcomeIds[0], voided.outcomeIds[0]],
       p_stake: 3,
     })
     if (error) throw error
-    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId })
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId, p_reason: 'Voided in a test' })
     if (voidErr) throw voidErr
     await resolve(skewed, 0)
     await resolve(even, 0)
 
     const detail = await getParlayDetail(carolClient, parlayId as string)
     expect(detail).toMatchObject({ status: 'won', credited: 8 })
-    const shown = combineOdds(detail!.legs.filter((l) => l.status !== 'voided').map((l) => l.lockedOddsBp)).multiplierBp
+    const shown = combineOdds(detail!.legs.filter((l) => l.status !== 'voided').map((l) => l.oddsBp)).multiplierBp
     expect(shown).toBe(detail!.multiplierBp)
     expect(formatOdds(shown)).toBe('2.80')
 
@@ -167,7 +204,7 @@ describe('member_records', () => {
 
     const voided = await createTestMarket(aliceClient, ['Yes', 'No'])
     await bet(bobClient, voided, 0, 10)
-    const { error } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId })
+    const { error } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId, p_reason: 'Voided in a test' })
     if (error) throw error
 
     const { data, error: readErr } = await bobClient.rpc('member_records', { p_ids: [bob.id, carol.id, alice.id] })
@@ -181,7 +218,7 @@ describe('member_records', () => {
 
 type Step = { profile_id: string; display_name: string; step: number; at: string; profit: string | number }
 
-async function steps(client: SupabaseClient, top = 5): Promise<Map<string, Step[]>> {
+async function steps(client: TestClient, top = 5): Promise<Map<string, Step[]>> {
   const { data, error } = await client.rpc('leaderboard_race_steps', { p_top: top })
   if (error) throw error
   const byMember = new Map<string, Step[]>()
@@ -236,7 +273,7 @@ describe('leaderboard_race_steps', () => {
   it('starts at a void\'s refunds too', async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await bet(bobClient, market, 0, 20)
-    const { error } = await aliceClient.rpc('void_market', { p_market_id: market.marketId })
+    const { error } = await aliceClient.rpc('void_market', { p_market_id: market.marketId, p_reason: 'Voided in a test' })
     if (error) throw error
     const bobSteps = (await steps(bobClient)).get(bob.id)!
     expect(bobSteps.map((s) => Number(s.profit))).toEqual([-20, 0])
@@ -254,6 +291,7 @@ describe('leaderboard_race_steps', () => {
       if (i % 3 === 0) rows.push(`('${carol.id}', 2, 'bet_refunded', '${at(i)}')`)
     }
     await pgQuery(`insert into public.coin_transactions (profile_id, amount, type, created_at) values ${rows.join(', ')}`)
+    await reconcileBalances()
 
     const byMember = await steps(bobClient)
     expect([...byMember.keys()].sort()).toEqual([bob.id, carol.id].sort())

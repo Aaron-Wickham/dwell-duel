@@ -9,8 +9,7 @@ function market(overrides: Partial<Parameters<typeof betResult>[1]> = {}): Param
     title: 'Will it rain?',
     status: 'resolved',
     close_at: '2026-09-28T12:00:00.000Z',
-    seed_per_outcome: 20,
-    current_resolution: { outcome_id: 'o-no' },
+    current_resolution: { outcome_id: 'o-no', payout_seed: 0 },
     market_outcomes: [
       { id: 'o-yes', pool_total: 10 },
       { id: 'o-no', pool_total: 0 },
@@ -33,8 +32,25 @@ describe('betResult', () => {
       ],
     })
     expect(betResult({ outcomeId: 'o-yes', amount: 10 }, m, NOW)).toEqual({ kind: 'lost' })
+    // The real pool: floor(5 × 15 / 5) = 15.
+    expect(betResult({ outcomeId: 'o-no', amount: 5 }, m, NOW)).toEqual({ kind: 'won', payout: 15 })
+  })
+
+  it('reads a resolution from before 0074 with the seed its payouts counted', () => {
+    const m = market({
+      current_resolution: { outcome_id: 'o-no', payout_seed: 20 },
+      market_outcomes: [
+        { id: 'o-yes', pool_total: 10 },
+        { id: 'o-no', pool_total: 5 },
+      ],
+    })
     // floor(5 × (15 + 2 × 20) / (5 + 20)) = 11
     expect(betResult({ outcomeId: 'o-no', amount: 5 }, m, NOW)).toEqual({ kind: 'won', payout: 11 })
+  })
+
+  it('pays a lone winner their stake back', () => {
+    const m = market({ market_outcomes: [{ id: 'o-yes', pool_total: 0 }, { id: 'o-no', pool_total: 10 }] })
+    expect(betResult({ outcomeId: 'o-no', amount: 10 }, m, NOW)).toEqual({ kind: 'won', payout: 10 })
   })
 
   it('says a void refunded it, apart from a no-winners refund', () => {

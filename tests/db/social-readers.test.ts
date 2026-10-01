@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
-import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, type Member, giveRole } from './fixtures'
+import { type TestClient, setBalanceViaLedger } from './helpers'
+import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, type Member, giveRole, backLeg } from './fixtures'
 import { pgQuery } from './pg-query'
 import { listFeed } from '@/lib/social/list-feed'
 import { getLeaderboardPage, getMemberStanding } from '@/lib/social/leaderboard'
@@ -11,8 +10,8 @@ const NO_PAGE: PageParams = { top: null, bottom: null }
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -83,6 +82,7 @@ describe('listFeed', () => {
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Parlay market B' })
     expect((await aliceClient.rpc('place_bet', { p_market_id: a.marketId, p_outcome_id: a.outcomeIds[0], p_amount: 5 })).error).toBeNull()
     expect((await aliceClient.rpc('place_bet', { p_market_id: b.marketId, p_outcome_id: b.outcomeIds[0], p_amount: 5 })).error).toBeNull()
+    for (const market of [a, b]) await backLeg(market, 1)
     expect(
       (await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]], p_stake: 10 })).error,
     ).toBeNull()
@@ -123,10 +123,9 @@ describe('listFeed', () => {
 describe('getLeaderboardPage', () => {
   it('ranks every member by net worth, sharing ranks on ties', async () => {
     const carol = await makeMember('Carol')
-    const db = serviceClient()
-    await db.from('profiles').update({ balance: 150 }).eq('id', alice.id)
-    await db.from('profiles').update({ balance: 150 }).eq('id', bob.id)
-    await db.from('profiles').update({ balance: 90 }).eq('id', carol.id)
+    await setBalanceViaLedger(alice.id, 150)
+    await setBalanceViaLedger(bob.id, 150)
+    await setBalanceViaLedger(carol.id, 90)
 
     const board = await getLeaderboardPage(bobClient, 'all', { top: null, bottom: null })
     expect(board.rows.map((m) => [m.displayName, m.score, m.rank])).toEqual([
@@ -148,10 +147,9 @@ describe('getLeaderboardPage', () => {
 describe('getMemberStanding', () => {
   it('ranks on the net-worth board, and counts the total membership', async () => {
     const carol = await makeMember('Carol')
-    const db = serviceClient()
-    await db.from('profiles').update({ balance: 150 }).eq('id', alice.id)
-    await db.from('profiles').update({ balance: 90 }).eq('id', bob.id)
-    await db.from('profiles').update({ balance: 90 }).eq('id', carol.id)
+    await setBalanceViaLedger(alice.id, 150)
+    await setBalanceViaLedger(bob.id, 90)
+    await setBalanceViaLedger(carol.id, 90)
 
     const standing = await getMemberStanding(bobClient, bob.id)
     expect(standing).toMatchObject({ id: bob.id, displayName: 'Bob', balance: 90, score: 90, rank: 2, memberCount: 3 })

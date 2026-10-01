@@ -31,7 +31,7 @@ test('the slip button follows the member everywhere, and one tap places every so
   await page.setViewportSize({ width: 375, height: 812 })
 
   let sheet = await openSlip(page)
-  // Every open market is seeded (0041), so even an outcome nobody has bet on has odds to lock.
+  // Any pick can be switched to Parlay; one that can't be a leg yet says why once it is (0074).
   await expect(sheet.getByRole('button', { name: 'Parlay' }).first()).toBeEnabled()
   for (let i = 0; i < 8; i++) {
     await page.keyboard.press('Tab')

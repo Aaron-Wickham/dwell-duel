@@ -1,14 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, reconcilePoolTotals } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
 import { getMarketBets } from '@/lib/markets/get-market'
 import { readPageParams, showMoreHref, type PageParams } from '@/lib/pagination/cursor'
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 const FIRST: PageParams = { top: null, bottom: null }
 
@@ -78,6 +77,7 @@ describe('getMarketBets', () => {
     }))
     const { error } = await serviceClient().from('bets').insert(rows)
     if (error) throw error
+    await reconcilePoolTotals()
 
     const first = await getMarketBets(bobClient, market.marketId, FIRST)
     expect(first.rows.map((b) => b.amount)).toEqual(Array.from({ length: 50 }, (_, i) => 70 - i))

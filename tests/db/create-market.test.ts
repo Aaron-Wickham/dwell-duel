@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { serviceClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, clientFor, ensureInvited, giveRole, type Member } from './fixtures'
 
 let alice: Member
@@ -25,12 +26,12 @@ describe('create_market', () => {
     expect(error).toBeNull()
 
     const db = serviceClient()
-    const { data: market } = await db.from('markets').select('title, created_by, status').eq('id', marketId).single()
+    const { data: market } = await db.from('markets').select('title, created_by, status').eq('id', marketId!).single()
     expect(market?.title).toBe('Will it rain?')
     expect(market?.created_by).toBe(alice.id)
     expect(market?.status).toBe('open')
 
-    const { data: outcomes } = await db.from('market_outcomes').select('label').eq('market_id', marketId)
+    const { data: outcomes } = await db.from('market_outcomes').select('label').eq('market_id', marketId!)
     expect(outcomes?.map((o) => o.label).sort()).toEqual(['No', 'Yes'])
   })
 
@@ -46,7 +47,7 @@ describe('create_market', () => {
       p_outcome_labels: ['Yes', 'No', 'Maybe'],
       p_close_at: closeAt,
     })
-    expect(error).not.toBeNull()
+    expectError(error, 'a binary market must have exactly 2 outcomes')
   })
 
   it('rejects more than 6 outcomes', async () => {
@@ -61,7 +62,7 @@ describe('create_market', () => {
       p_outcome_labels: ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
       p_close_at: closeAt,
     })
-    expect(error).not.toBeNull()
+    expectError(error, 'a market may have at most 6 outcomes')
   })
 
   it('rejects a close time in the past', async () => {
@@ -76,7 +77,7 @@ describe('create_market', () => {
       p_outcome_labels: ['Yes', 'No'],
       p_close_at: closeAt,
     })
-    expect(error).not.toBeNull()
+    expectError(error, 'close time must be in the future')
   })
 })
 
@@ -137,8 +138,7 @@ describe('attempt_key columns', () => {
     const row = { market_id: marketId as string, profile_id: alice.id, body: 'Hi', attempt_key: key }
     expect((await client.from('market_comments').insert(row)).error).toBeNull()
     const again = await client.from('market_comments').insert(row)
-    expect(again.error?.code).toBe('23505')
-    expect(again.error?.message).toContain('market_comments_attempt_key_idx')
+    expectError(again.error, { code: '23505', message: 'market_comments_attempt_key_idx' })
   })
 
   it('makes a task once per attempt key', async () => {
@@ -150,8 +150,7 @@ describe('attempt_key columns', () => {
     const row = { title: 'Read Genesis 1', reward_amount: 10, is_repeatable: false, attempt_key: key }
     expect((await client.from('tasks').insert(row)).error).toBeNull()
     const again = await client.from('tasks').insert(row)
-    expect(again.error?.code).toBe('23505')
-    expect(again.error?.message).toContain('tasks_attempt_key_idx')
+    expectError(again.error, { code: '23505', message: 'tasks_attempt_key_idx' })
     const { count } = await db.from('tasks').select('id', { count: 'exact', head: true }).eq('attempt_key', key)
     expect(count).toBe(1)
   })

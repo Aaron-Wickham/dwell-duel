@@ -151,3 +151,27 @@ self.addEventListener('notificationclick', (event) => {
     }),
   )
 })
+
+// A browser rotates or expires a push subscription now and then (#257). The old endpoint stops
+// working, so the new subscription is made here, with the same key, and handed to the server. The
+// request is a plain POST, which this worker never answers from cache. If it fails (offline, signed
+// out), the page's own re-sync on the next load tells the server instead.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    (async () => {
+      const key = event.oldSubscription?.options?.applicationServerKey
+      // Firefox often gives neither subscription, so look for one the browser already made, and only
+      // then make one with the old key.
+      let subscription = event.newSubscription ?? (await self.registration.pushManager.getSubscription())
+      if (!subscription && key) subscription = await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
+      if (!subscription) return
+      const { endpoint, keys } = subscription.toJSON()
+      await fetch('/api/push/resync', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ endpoint, p256dh: keys?.p256dh, auth: keys?.auth }),
+      })
+    })().catch(() => undefined),
+  )
+})

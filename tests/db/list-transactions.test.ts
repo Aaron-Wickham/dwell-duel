@@ -1,10 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { listAllTransactions } from '@/lib/ledger/list-transactions'
 import { encodeCursor, readPageParams, showMoreHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
 import type { KeysetPage } from '@/lib/pagination/keyset'
 import type { LedgerEntry } from '@/lib/ledger/list-transactions'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, reconcileBalances } from './helpers'
 import { seedMembers, clientFor, ensureInvited, createTestMarket, createTestTask, type Member, giveRole } from './fixtures'
 
 let admin: Member
@@ -31,6 +30,7 @@ async function insertLedgerRows(count: number): Promise<void> {
   }))
   const { error } = await serviceClient().from('coin_transactions').insert(rows)
   if (error) throw error
+  await reconcileBalances()
 }
 
 // Every ledger row, newest first, as the service role sees it: the order paging must reproduce.
@@ -54,7 +54,7 @@ function follow(page: KeysetPage<LedgerEntry>, searchParams: SearchParams): Sear
 }
 
 describe('listAllTransactions', () => {
-  let adminClient: SupabaseClient
+  let adminClient: TestClient
 
   beforeEach(async () => {
     adminClient = await clientFor(admin)

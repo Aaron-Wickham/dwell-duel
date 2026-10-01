@@ -1,12 +1,15 @@
 import { FileText, Link2 } from 'lucide-react'
 import type { ProofView } from '@/lib/proof/types'
 
+// Attachments past their retention (0077) are gone, so they're counted in a line instead.
 // Photos as a thumbnail strip, then documents and links, each opening in a new tab. Signed URLs
 // last an hour (lib/proof/signed.ts), long past any time someone keeps a page open to look.
 export function ProofList({ proof, label }: { proof: ProofView[]; label: string }) {
   if (proof.length === 0) return null
-  const images = proof.filter((p) => p.kind === 'image')
-  const others = proof.filter((p) => p.kind !== 'image')
+  const expired = proof.filter((p) => p.expired)
+  const live = proof.filter((p) => !p.expired)
+  const images = live.filter((p) => p.kind === 'image')
+  const others = live.filter((p) => p.kind !== 'image')
   return (
     <div className="flex flex-col gap-2" role="group" aria-label={label}>
       {images.length > 0 && (
@@ -42,6 +45,11 @@ export function ProofList({ proof, label }: { proof: ProofView[]; label: string 
             </li>
           ))}
         </ul>
+      )}
+      {expired.length > 0 && (
+        <p className="text-sm text-ink2">
+          {expired.length === 1 ? '1 attachment has' : `${expired.length} attachments have`} expired and was deleted.
+        </p>
       )}
     </div>
   )

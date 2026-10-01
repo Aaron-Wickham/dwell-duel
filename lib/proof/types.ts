@@ -1,14 +1,12 @@
-// supabase/migrations/0042: what the proof bucket accepts, and the attachment records the
-// submit and resolve RPCs take.
-export const PROOF_MAX_BYTES = 10 * 1024 * 1024
-export const PROOF_MAX_ITEMS = 10
-export const PROOF_FILE_TYPES = [
-  'application/pdf',
-  'text/plain',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-]
-export const PROOF_FILE_ACCEPT = '.pdf,.txt,.doc,.docx'
+// supabase/migrations/0042 and 0077: what the proof bucket accepts, and the attachment records the
+// submit and resolve RPCs take. record_proof enforces the same caps.
+export const PROOF_MAX_BYTES = 3 * 1024 * 1024
+export const PROOF_MAX_ITEMS = 5
+export const PROOF_MAX_FILES = 3
+export const PROOF_MAX_TOTAL_BYTES = 6 * 1024 * 1024
+export const PROOF_FILE_TYPES = ['application/pdf', 'text/plain']
+export const PROOF_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif'
+export const PROOF_FILE_ACCEPT = '.pdf,.txt'
 
 // Chosen in the browser, not yet uploaded.
 export type ProofDraft =
@@ -26,6 +24,8 @@ export interface ProofView {
   kind: 'image' | 'file' | 'link'
   href: string
   label: string
+  // The file was removed by the retention job (0077); `href` is empty.
+  expired?: boolean
 }
 
 export function isWebLink(value: string): boolean {

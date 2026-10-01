@@ -25,6 +25,7 @@ export function subscriptionKey(subscriptions: LiveSubscription[]): string {
 // effect, and readers subscribe with useSyncExternalStore. That keeps registration out of the
 // render path entirely -- no setState-in-effect, no extra render per page.
 class LiveTableRegistry {
+  readonly userId: string
   readonly base: LiveTableSubscription
   private readonly registered = new Map<string, LiveSubscription[]>()
   private readonly listeners = new Set<() => void>()
@@ -33,6 +34,7 @@ class LiveTableRegistry {
   private pageSnapshot: LiveSubscription[] = []
 
   constructor(userId: string) {
+    this.userId = userId
     this.base = { table: 'profiles', filter: `id=eq.${userId}` }
   }
 
@@ -91,6 +93,12 @@ export function usePageSubscriptions(): LiveSubscription[] {
 export function useLiveBaseSubscription(): LiveTableSubscription | null {
   const registry = useContext(LiveTablesContext)
   return registry ? registry.base : null
+}
+
+// The signed-in member's id, which names their own private Postgres Changes channels.
+export function useLiveMemberId(): string | null {
+  const registry = useContext(LiveTablesContext)
+  return registry ? registry.userId : null
 }
 
 export function LiveTables({ subscriptions }: { subscriptions: LiveSubscription[] }): null {

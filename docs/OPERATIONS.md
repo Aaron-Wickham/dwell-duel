@@ -66,6 +66,31 @@ Guardrails:
   (`scripts/check-migration-order.sh`), since `db push` refuses one that
   sorts before production's latest.
 
+**Realtime: public channels off.** Every channel the app opens is private
+(0100), so Supabase's "Allow public access to channels" stays off; with it
+on, anyone holding the publishable key could open channels and spend the
+2M-message quota. After the deploy that applies 0100 is live, switch it
+off (a tab still running the older build then polls every 60 s instead of
+updating live, until it reloads):
+Supabase → Realtime → Settings → **Allow public access to channels** off,
+and save. To check:
+
+1. Signed in, open a market page and the console: no "Live updates
+   paused" warning. Place a bet from another window; the page and your
+   balance update without a reload.
+2. A public channel is refused. From a checkout of the repo:
+
+   ```sh
+   node -e "require('@supabase/supabase-js').createClient('https://lymrpiivqvdnfcjmxksx.supabase.co', process.env.KEY).channel('anything').subscribe((s, e) => { console.log(s, e?.message); process.exit() })"
+   ```
+
+   with `KEY` set to the publishable key prints `CHANNEL_ERROR
+   PrivateOnly: This project only allows private channels`.
+
+If live updates stop after the switch, turn it back on, and look for a
+channel opened without `private: true` or a topic no `realtime.messages`
+policy covers.
+
 Redeploy by hand with "Run workflow" on Deploy Production, from `main`. It
 pushes any migrations production is missing, then deploys `main`'s head.
 

@@ -120,13 +120,16 @@ function fireChange(channel: MockChannel, table: string, index = 0) {
   channel.handlersByTable.get(table)![index]()
 }
 
-// The base channel's topic is `live-base:<n>`, the page channel's `live-refresh:<n>` -- distinct
-// prefixes, so both are easy to tell apart in the shared mock channel list regardless of order.
+// The base channel's topic is `live-member:<id>:base:<n>`, the page channel's
+// `live-member:<id>:page:<n>` -- distinct prefixes, so both are easy to tell apart in the shared
+// mock channel list regardless of order.
+const BASE_PREFIX = 'live-member:member-1:base:'
+const PAGE_PREFIX = 'live-member:member-1:page:'
 function currentBaseChannel(): MockChannel {
-  return [...mocks.channels].reverse().find((c) => c.topic.startsWith('live-base:'))!
+  return [...mocks.channels].reverse().find((c) => c.topic.startsWith(BASE_PREFIX))!
 }
 function currentPageChannel(): MockChannel | undefined {
-  return [...mocks.channels].reverse().find((c) => c.topic.startsWith('live-refresh:'))
+  return [...mocks.channels].reverse().find((c) => c.topic.startsWith(PAGE_PREFIX))
 }
 function currentTopicChannel(topic: string): MockChannel | undefined {
   return [...mocks.channels].reverse().find((c) => c.topic === `live:${topic}`)
@@ -228,7 +231,7 @@ describe('LiveRefresh', () => {
     })
     await act(() => vi.dynamicImportSettled())
 
-    const pageChannels = mocks.channels.filter((c) => c.topic.startsWith('live-refresh:'))
+    const pageChannels = mocks.channels.filter((c) => c.topic.startsWith(PAGE_PREFIX))
     expect(pageChannels).toHaveLength(1)
   })
 
@@ -485,8 +488,8 @@ describe('LiveRefresh', () => {
     await act(() => vi.dynamicImportSettled())
     await act(() => vi.dynamicImportSettled())
 
-    const baseChannels = mocks.channels.filter((c) => c.topic.startsWith('live-base:'))
-    const pageChannels = mocks.channels.filter((c) => c.topic.startsWith('live-refresh:'))
+    const baseChannels = mocks.channels.filter((c) => c.topic.startsWith(BASE_PREFIX))
+    const pageChannels = mocks.channels.filter((c) => c.topic.startsWith(PAGE_PREFIX))
     expect(baseChannels).toHaveLength(1)
     expect(pageChannels).toHaveLength(1)
     expect(mocks.client.removeChannel).not.toHaveBeenCalled()
@@ -505,8 +508,8 @@ describe('LiveRefresh', () => {
     await act(() => vi.dynamicImportSettled())
     await act(() => vi.dynamicImportSettled())
 
-    const baseChannels = mocks.channels.filter((c) => c.topic.startsWith('live-base:'))
-    const pageChannels = mocks.channels.filter((c) => c.topic.startsWith('live-refresh:'))
+    const baseChannels = mocks.channels.filter((c) => c.topic.startsWith(BASE_PREFIX))
+    const pageChannels = mocks.channels.filter((c) => c.topic.startsWith(PAGE_PREFIX))
     expect(baseChannels).toHaveLength(1)
     expect(pageChannels).toHaveLength(1)
   })
@@ -517,6 +520,15 @@ describe('LiveRefresh', () => {
     const setAuthOrder = mocks.client.realtime.setAuth.mock.invocationCallOrder[0]
     const firstChannelOrder = mocks.client.channel.mock.invocationCallOrder[0]
     expect(setAuthOrder).toBeLessThan(firstChannelOrder)
+  })
+
+  it("opens every channel private, the Postgres Changes ones on topics naming the member", async () => {
+    const { base, page } = await mount([{ table: 'bets', filter: 'market_id=eq.market-1' }, { topic: 'markets' }])
+
+    expect(mocks.channels.length).toBeGreaterThanOrEqual(3)
+    for (const channel of mocks.channels) expect(channel.options).toEqual({ config: { private: true } })
+    expect(base.topic).toMatch(/^live-member:member-1:base:\d+$/)
+    expect(page!.topic).toMatch(/^live-member:member-1:page:\d+$/)
   })
 
   it('opens one private Broadcast channel per declared topic, and no Postgres Changes page channel for topics alone', async () => {
@@ -726,7 +738,7 @@ describe('LiveRefresh', () => {
 
     const subscribed = mocks.channels.filter((c) => c.subscribe.mock.calls.length > 0)
     expect(subscribed.map((c) => c.topic.replace(/:\d+$/, ''))).toEqual(
-      expect.arrayContaining(['live-base', 'live-refresh', 'live:markets']),
+      expect.arrayContaining(['live-member:member-1:base', 'live-member:member-1:page', 'live:markets']),
     )
     expect(subscribed.every((c) => c.authedAtSubscribe)).toBe(true)
   })

@@ -18,7 +18,7 @@ Next.js 16 on Vercel ── proxy.ts: signed-out requests → /sign-in
 Supabase (one hosted project: production)
   ├─ Auth: Google only, invite-gated
   ├─ Postgres: tables + RLS + security-definer RPCs (all money moves here)
-  ├─ Realtime: filtered Postgres Changes plus Broadcast pings (0092) drive live page refreshes
+  ├─ Realtime: filtered Postgres Changes plus Broadcast pings (0092) drive live page refreshes, on private channels only (0100)
   └─ Storage: `avatars` (public), `proof` (private, signed URLs)
 
 Web push: server actions, pg_cron (every minute, via pg_net) and the daily
@@ -540,6 +540,7 @@ after it ships. They roughly follow the project's history:
 | 0096 | The market page's Your position card and "riding in parlays" figure (#262, #279): `my_market_position(market)` and `market_parlay_riding(market)` |
 | 0097 | `leaderboard_awards` reads who is in from `invited_member_ids()` (0093) instead of its own copy of the rule (0074); every award is unchanged |
 | 0098 | Destructive cleanup of what the app stopped using: `market_outcomes`, `tasks` and `feed_reactions` leave the realtime publication, `markets.sparkline` with its trigger and `cache_market_sparkline`, and the claiming `push_resolve_reminders` and `push_market_alerts` |
+| 0100 | Private Postgres Changes channels: the `realtime.messages` policy `member_topics_receive` lets an invited member join only their own `live-member:<id>:base:<n>` and `live-member:<id>:page:<n>` topics, so the project can refuse public channels |
 
 Numbers 0075, 0077–0082 and 0084–0088 were reserved by branches that merged later under higher numbers, so they are unused.
 
@@ -701,9 +702,23 @@ the cron response, and the step fails, so the heartbeat pings `/fail`, past
   policy lets only invited members join them, and only reviewers and above
   join `reviews`; no client can send on them.
 
+**Every channel is private** (`{ config: { private: true } }`), so
+Supabase's "Allow public access to channels" can stay off and nobody
+holding the publishable key can open channels of their own. A private
+join needs a `realtime.messages` SELECT policy on its topic, and Realtime
+checks it only for Broadcast and Presence, refusing the join when neither
+is readable; so the Postgres Changes channels also carry a Broadcast read
+policy (0100), and their rows are still filtered by each table's RLS. Their
+topics are `live-member:<the member's id>:base:<n>` and `…:page:<n>`
+(`memberTopic`), which only that member, while invited, may join; `<n>` is
+a fresh counter per channel, because `RealtimeClient.channel(topic)` hands
+back a still-closing channel on a reused topic. The `live:<topic>` topics
+are 0092's. A new channel needs a topic one of these policies covers, or a
+policy of its own in a migration.
+
 `LiveRefresh` keeps a channel on the member's own profile (their balance
 and avatar) for the whole visit, a per-page Postgres Changes channel, and
-one private channel per topic. A row change refreshes after a 400 ms
+one channel per topic, all private. A row change refreshes after a 400 ms
 debounce (2 s at most under a steady stream). A topic ping refreshes
 `TOPIC_REFRESH_DELAY_MS` after it: 15 s for `pools` and `activity`, which
 every bet moves and which `/markets` and the feed follow, and 6 s for the

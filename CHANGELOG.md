@@ -6,6 +6,13 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Under the hood
+- **Nightly encrypted backups.** A new Backups workflow dumps the production database every night (roles, schema, and data including sign-ins and Storage records) and copies the proof and avatars buckets every Sunday, encrypted with age into a private backups repo that keeps 60 days; `docs/OPERATIONS.md` is the restore runbook, rehearsed once against a local copy (#248).
+- **Every migration has a restore point.** Deploy Production takes the same encrypted dump just before it applies migrations, and doesn't migrate if the dump fails (#248).
+- **Deploys push whatever production is missing.** Deploy Production asks production which migrations it lacks on every run instead of reading the merge's diff, so one a failed run left behind goes out with the next; waiting runs queue instead of replacing each other; and a run that main has moved past no longer fails waiting on a build it never started (#249).
+- **CI fails a migration numbered out of order.** A PR's new migration must be numbered after main's newest (#249).
+- **Deploy Production runs only from main,** with its secrets in the Production environment, and `ci-ok` is required for every merge (#291).
+
 ## v0.5.2-beta — 2026-09-30
 
 An Admin › Markets tab for the markets waiting on a result, with tab counts that add up to the Admin badge, and rows inside cards that tint on hover instead of floating like a button inside a button.

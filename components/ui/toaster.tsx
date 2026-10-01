@@ -39,6 +39,9 @@ export function Toaster() {
           '--success-bg': 'var(--acc-soft)',
           '--success-border': 'var(--acc-soft)',
           '--success-text': 'var(--acc-text)',
+          '--error-bg': 'var(--loss-soft)',
+          '--error-border': 'var(--loss-soft)',
+          '--error-text': 'var(--loss)',
         } as CSSProperties
       }
     />

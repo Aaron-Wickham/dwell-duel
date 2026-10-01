@@ -74,7 +74,7 @@ export function SubNav({ label, items }: { label: string; items: SubNavItem[] })
       <span
         ref={pillRef}
         aria-hidden="true"
-        className="pointer-events-none absolute top-1 bottom-1 rounded-[10px] bg-surface opacity-0 shadow-tab group-data-[ready]/subnav:opacity-100"
+        className="pointer-events-none absolute top-1 bottom-1 rounded-[10px] border border-ink2 bg-surface opacity-0 shadow-tab group-data-[ready]/subnav:opacity-100"
       />
       {items.map(({ href, label: itemLabel, current }) => (
         <Link
@@ -84,7 +84,7 @@ export function SubNav({ label, items }: { label: string; items: SubNavItem[] })
           className={cn(
             'pressable relative inline-flex min-h-11 grow items-center justify-center rounded-[10px] px-1.5 text-[15px] font-bold no-underline sm:px-2 md:grow-0 md:px-4',
             current
-              ? 'bg-surface text-ink shadow-tab group-data-[ready]/subnav:bg-transparent group-data-[ready]/subnav:shadow-none'
+              ? 'border border-ink2 bg-surface text-ink shadow-tab group-data-[ready]/subnav:border-transparent group-data-[ready]/subnav:bg-transparent group-data-[ready]/subnav:shadow-none'
               : 'text-ink2 hover:text-ink',
           )}
         >

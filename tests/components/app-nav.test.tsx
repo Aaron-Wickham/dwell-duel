@@ -86,7 +86,7 @@ describe('AppNav', () => {
     const [desktop, phone] = screen.getAllByRole('navigation', { name: 'Primary' })
     for (const name of ['Markets', 'My bets', 'Tasks', 'Feed', 'Leaderboard']) {
       expect(within(desktop).getByRole('link', { name })).toBeInTheDocument()
-      expect(within(phone).getByRole('link', { name })).toBeInTheDocument()
+      expect(within(phone).getByRole('link', { name: name === 'Leaderboard' ? 'Leaders, leaderboard' : name })).toBeInTheDocument()
     }
     // Home is the wordmark's job; parlays live on My bets.
     for (const nav of [desktop, phone]) {
@@ -120,10 +120,10 @@ describe('AppNav', () => {
     expect(phoneHome.querySelector('span')).not.toHaveClass('max-lg:hidden')
   })
 
-  it('shows the short Leaders label on the phone tab but names it Leaderboard', () => {
+  it('shows the short Leaders label on the phone tab and keeps the word in its accessible name', () => {
     render(<Nav balance={120} isAdmin={false} />)
     const phone = screen.getAllByRole('navigation', { name: 'Primary' })[1]
-    const tab = within(phone).getByRole('link', { name: 'Leaderboard' })
+    const tab = within(phone).getByRole('link', { name: 'Leaders, leaderboard' })
     expect(tab).toHaveTextContent('Leaders')
   })
 
@@ -197,12 +197,12 @@ describe('AppNav', () => {
     pathname = '/members/me-1'
     const { unmount } = render(<Nav balance={120} isAdmin={false} />)
     for (const link of screen.getAllByRole('link', { name: 'Your profile' })) expect(link).toHaveAttribute('aria-current', 'page')
-    for (const link of screen.getAllByRole('link', { name: 'Leaderboard' })) expect(link).not.toHaveAttribute('aria-current')
+    for (const link of screen.getAllByRole('link', { name: /^Leaders?,? ?(leaderboard)?$|^Leaderboard$/ })) expect(link).not.toHaveAttribute('aria-current')
     unmount()
     pathname = '/members/someone-else'
     render(<Nav balance={120} isAdmin={false} />)
     for (const link of screen.getAllByRole('link', { name: 'Your profile' })) expect(link).not.toHaveAttribute('aria-current')
-    for (const link of screen.getAllByRole('link', { name: 'Leaderboard' })) expect(link).toHaveAttribute('aria-current', 'page')
+    for (const link of screen.getAllByRole('link', { name: /^Leaders?,? ?(leaderboard)?$|^Leaderboard$/ })) expect(link).toHaveAttribute('aria-current', 'page')
   })
 
   // #210: NumberFlow's script stays off every page's first load; the chip is text until the

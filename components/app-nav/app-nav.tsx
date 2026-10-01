@@ -15,7 +15,7 @@ import { ICON_POP, PILL_TRANSITION } from '@/lib/ui/motion'
 import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
 import { BalanceNumber } from './balance-number'
-import { NAV_ITEMS, activeNavId, type NavId } from './nav-items'
+import { NAV_ITEMS, activeNavId, tabAriaLabel, type NavId } from './nav-items'
 
 const loadMotionFeatures = () => import('@/lib/ui/motion-features').then((mod) => mod.default)
 
@@ -59,7 +59,7 @@ function ProfileLink({ me, active }: { me: NavMember; active: boolean }) {
       <span
         className={cn(
           'flex size-9 items-center justify-center rounded-full',
-          active && 'ring-2 ring-lime ring-offset-2 ring-offset-surface md:ring-primary',
+          active && 'ring-2 ring-primary ring-offset-2 ring-offset-surface',
         )}
       >
         <Avatar name={me.name} src={me.avatarSrc} size="nav" />
@@ -238,7 +238,7 @@ export function AppNav({
               aria-current={active === 'admin' ? 'page' : undefined}
               className={cn(
                 'pressable relative inline-flex size-11 shrink-0 items-center justify-center rounded-control no-underline',
-                active === 'admin' ? 'bg-lime text-on-lime' : 'text-ink hover:bg-sunk',
+                active === 'admin' ? 'border-[1.5px] border-primary bg-lime text-on-lime' : 'text-ink hover:bg-sunk',
               )}
             >
               <ShieldCheck aria-hidden="true" className="size-[22px]" />
@@ -263,7 +263,7 @@ export function AppNav({
                 key={item.id}
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
-                aria-label={item.shortLabel === item.label ? undefined : item.label}
+                aria-label={tabAriaLabel(item)}
                 onClick={haptics.tap}
                 className={cn(
                   'pressable relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-[14px] text-xs leading-[1.1] no-underline',
@@ -283,7 +283,7 @@ export function AppNav({
                     <m.span
                       layoutId="tabbar-pill"
                       aria-hidden="true"
-                      className="absolute inset-0 -z-10 rounded-full bg-lime"
+                      className="absolute inset-0 -z-10 rounded-full border-[1.5px] border-primary bg-lime"
                       transition={PILL_TRANSITION}
                     />
                   )}

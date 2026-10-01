@@ -9,7 +9,8 @@ vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
 )
 
-const { getLeaderboardPage, getYourStanding, requestShowMoreFocus, getRecords, getRace, getAwards, getPastChampions } = vi.hoisted(() => ({
+const { getJumpToMeTop, getLeaderboardPage, getYourStanding, requestShowMoreFocus, getRecords, getRace, getAwards, getPastChampions } = vi.hoisted(() => ({
+  getJumpToMeTop: vi.fn(),
   getLeaderboardPage: vi.fn(),
   getYourStanding: vi.fn(),
   requestShowMoreFocus: vi.fn(),
@@ -18,7 +19,7 @@ const { getLeaderboardPage, getYourStanding, requestShowMoreFocus, getRecords, g
   getAwards: vi.fn(),
   getPastChampions: vi.fn(),
 }))
-vi.mock('@/lib/social/leaderboard', () => ({ getLeaderboardPage, getYourStanding }))
+vi.mock('@/lib/social/leaderboard', () => ({ getJumpToMeTop, getLeaderboardPage, getYourStanding }))
 vi.mock('@/lib/social/leaderboard-extras', () => ({ getRecords, getRace, getAwards, getPastChampions }))
 // Recharts needs layout jsdom doesn't have; the chart has its own test.
 vi.mock('@/components/leaderboard/race-chart-lazy', () => ({ RaceChart: ({ series }: { series: unknown[] }) => <div data-testid="race">{series.length}</div> }))
@@ -66,6 +67,7 @@ async function renderPage(board: KeysetPage<LeaderboardEntry>, searchParams: Rec
 
 beforeEach(() => {
   getLeaderboardPage.mockReset()
+  getJumpToMeTop.mockReset().mockResolvedValue(null)
   getYourStanding.mockReset().mockResolvedValue({ rank: 5, memberCount: 5, score: 50, tiedWith: 0, above: { name: 'Member 4', gap: 10 } })
   requestShowMoreFocus.mockReset()
   getRecords.mockReset().mockResolvedValue(new Map())
@@ -91,7 +93,7 @@ describe('LeaderboardPage', () => {
     // The top three stand on the podium; the list carries on from fourth place, ties sharing a rank.
     expect(screen.getByRole('listitem', { name: /Rank 4.*Member 4/ })).toHaveAttribute('id', `member-${member(4, 30, 4).id}`)
     expect(screen.getAllByText('Rank 4', { exact: false })).toHaveLength(2)
-    expect(screen.queryByRole('link', { name: 'Back to newest' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Back to the top' })).toBeNull()
     const showMore = screen.getByRole('link', { name: 'Show more' })
     expect(showMore).toHaveAttribute('href', '/leaderboard?before=NEXT')
     expect(showMore).toHaveAttribute('data-scroll', 'false')
@@ -100,12 +102,12 @@ describe('LeaderboardPage', () => {
     expect(requestShowMoreFocus).toHaveBeenCalledWith(`member-${member(6, 20, 6).id}`)
   })
 
-  it('starts a fresh window at the top of the page, with Back to newest above it', async () => {
+  it('starts a fresh window at the top of the page, with Back to the top above it', async () => {
     await renderPage(
       { rows: [member(501, 5, 498), member(502, 4, 502)], next: { kind: 'window', cursor: 'WIN', firstId: 'x' }, windowed: true },
       { before_from: 'OLD' },
     )
-    expect(screen.getByRole('link', { name: 'Back to newest' })).toHaveAttribute('href', '/leaderboard')
+    expect(screen.getByRole('link', { name: 'Back to the top' })).toHaveAttribute('href', '/leaderboard')
     expect(screen.getByRole('link', { name: 'Show more' })).toHaveAttribute('href', '/leaderboard?before_from=WIN')
     expect(screen.getByRole('link', { name: 'Show more' })).toHaveAttribute('data-scroll', 'true')
     expect(screen.getByText('Rank 498')).toBeInTheDocument()
@@ -257,5 +259,60 @@ describe('LeaderboardPage', () => {
     expect(getAwards).not.toHaveBeenCalled()
     expect(screen.queryByRole('region', { name: 'Top three' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Past champions' })).toBeNull()
+  })
+
+  describe('on a phone: your standing and Jump to me', () => {
+    const FIVE = [member(1, 90, 1), member(2, 80, 2), member(3, 70, 3), member(4, 60, 4), member(5, 50, 5)]
+    const me = { ...member(7, 40, 612), id: 'p-me', displayName: 'Me' }
+
+    it('shows a compact standing card, for phones only, with a Jump to me link that focuses your row', async () => {
+      await renderPage({ rows: FIVE, next: null, windowed: false })
+      const card = screen.getByRole('region', { name: 'Your rank' })
+      expect(card.className).toContain('lg:hidden')
+      expect(within(card).getByText('You · 50 DC')).toBeInTheDocument()
+      expect(within(card).getByText('10 DC behind Member 4.')).toBeInTheDocument()
+      const jump = within(card).getByRole('link', { name: 'Jump to me' })
+      expect(jump).toHaveAttribute('href', '/leaderboard?at=me')
+
+      fireEvent.click(jump)
+      expect(requestShowMoreFocus).toHaveBeenCalledWith('member-p-me')
+    })
+
+    it('opens a window above you for ?at=me, saying which ranks it shows and how to get back', async () => {
+      const top = { score: 60, name: 'Member 9', id: member(9, 60, 602).id }
+      getJumpToMeTop.mockResolvedValue(top)
+      await renderPage({ rows: [{ ...member(9, 60, 602) }, me], next: null, windowed: true }, { at: 'me' })
+
+      expect(getJumpToMeTop).toHaveBeenCalledWith({}, 'all', 'p-me')
+      expect(getLeaderboardPage).toHaveBeenCalledWith({}, 'all', { top, bottom: null })
+      expect(screen.getByText('Showing ranks 602–612')).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Back to the top' })).toHaveAttribute('href', '/leaderboard')
+      expect(screen.getByRole('listitem', { name: /Rank 612.*Me/ })).toHaveAttribute('id', 'member-p-me')
+      // Your row is on screen, so there's nothing left to jump to.
+      expect(screen.queryByRole('link', { name: 'Jump to me' })).toBeNull()
+    })
+
+    it('reads the first page for ?at=me when you are already near the top', async () => {
+      await renderPage({ rows: FIVE, next: null, windowed: false }, { at: 'me' })
+      expect(getLeaderboardPage).toHaveBeenCalledWith({}, 'all', { top: null, bottom: null })
+      expect(screen.queryByText(/^Showing rank/)).toBeNull()
+    })
+
+    it('lets a cursor override ?at=me, so Show more inside the window carries on from where it was', async () => {
+      const bottom = { score: 10, name: 'Member 9', id: member(9, 10, 9).id }
+      await renderPage({ rows: [member(9, 10, 9)], next: null, windowed: false }, { at: 'me', before: encodeRankCursor(bottom) })
+      expect(getJumpToMeTop).not.toHaveBeenCalled()
+      expect(getLeaderboardPage).toHaveBeenCalledWith({}, 'all', { top: null, bottom })
+    })
+
+    it('goes back to the top without ?at=me, so it does not jump straight back', async () => {
+      await renderPage({ rows: [member(9, 60, 602)], next: null, windowed: true }, { at: 'me', before_from: encodeRankCursor({ score: 60, name: 'Member 9', id: member(9, 60, 602).id }) })
+      expect(screen.getByRole('link', { name: 'Back to the top' })).toHaveAttribute('href', '/leaderboard')
+    })
+
+    it('leaves the compact card off This month', async () => {
+      await renderPage({ rows: [...FIVE], next: null, windowed: false }, { tab: 'month' })
+      expect(screen.queryByRole('region', { name: 'Your rank' })).toBeNull()
+    })
   })
 })

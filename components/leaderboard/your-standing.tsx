@@ -10,7 +10,7 @@ function ordinal(n: number): string {
   return `${n}${suffix}`
 }
 
-function gapLine({ rank, tiedWith, above }: YourStanding): string {
+export function gapLine({ rank, tiedWith, above }: YourStanding): string {
   if (rank === 1) return tiedWith > 0 ? 'Tied for the top.' : 'You’re top of the board.'
   const behind = above ? `${above.gap} DC behind ${above.name}.` : ''
   return tiedWith > 0 ? `Tied ${ordinal(rank)}. ${behind}`.trim() : behind

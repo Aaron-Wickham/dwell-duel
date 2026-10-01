@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ChartColumn, Plus } from 'lucide-react'
+import { ChartColumn, Plus, SearchX } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { listResolvedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
+import { listResolvedMarkets, listOpenMarkets, listMatchingMarkets } from '@/lib/markets/list-markets'
+import { MINE_LABELS, marketsHref, readMarketSearch, readMineFilter, type MineFilter } from '@/lib/markets/search'
 import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { marketCardStatus, type MarketCardStatus } from '@/lib/markets/market-status'
@@ -19,6 +20,8 @@ import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { SubNav } from '@/components/ui/sub-nav'
+import { FilterChips } from '@/components/ui/filter-chips'
+import { MarketSearch } from '@/components/markets/market-search'
 import { cn } from '@/lib/utils'
 import { MarketCard, type MarketCardChart } from '@/components/markets/market-card'
 
@@ -51,10 +54,19 @@ const OPEN_LIST_DESCRIPTIONS: Record<Exclude<MarketFilter, 'resolved'>, string> 
   awaiting: 'Markets awaiting resolution',
 }
 
+// What a narrowed list is a list of, in the caption and the empty state.
+const MINE_SUBJECTS: Record<MineFilter | 'all', string> = {
+  all: 'markets',
+  bet: 'markets you bet on',
+  made: 'markets you made',
+}
+const STATUS_WORDS: Record<MarketFilter, string> = { all: '', open: 'open ', awaiting: 'awaiting ', resolved: 'resolved ' }
+
 const NO_ROWS = { rows: [], next: null, windowed: false } as const
 
 const OPEN_ROW_ID_PREFIX = 'market-open'
 const RESOLVED_ROW_ID_PREFIX = 'market-resolved'
+const MATCH_ROW_ID_PREFIX = 'market-match'
 
 export default async function MarketsPage(props: PageProps<'/markets'>) {
   const searchParams = await props.searchParams
@@ -62,27 +74,39 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
   if (!user) redirect('/sign-in')
 
   const filter = readMarketFilter(searchParams.status)
+  const q = readMarketSearch(searchParams.q)
+  const mine = readMineFilter(searchParams.mine)
+  const narrowed = q !== '' || mine !== null
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now()
   const now = new Date(nowMs)
   const openParams = readPageParams(searchParams, 'open')
-  const [open, resolved] = await Promise.all([
-    filter === 'resolved'
-      ? NO_ROWS
-      : filter === 'all'
-        ? listOpenMarkets(supabase, openParams)
-        : listOpenMarkets(supabase, openParams, { upcoming: filter === 'open', at: now.toISOString() }),
-    filter === 'all' || filter === 'resolved' ? listResolvedMarkets(supabase, readPageParams(searchParams, 'resolved')) : NO_ROWS,
-  ])
+  // A search or a whose-markets chip lists its matches as one flat list under the match prefix;
+  // otherwise it's the status groups, read as two lists.
+  const matches = narrowed
+    ? await listMatchingMarkets(supabase, readPageParams(searchParams, 'match'), filter, { q, mine, userId: user.id }, now.toISOString())
+    : NO_ROWS
+  const [open, resolved] = narrowed
+    ? [NO_ROWS, NO_ROWS]
+    : await Promise.all([
+        filter === 'resolved'
+          ? NO_ROWS
+          : filter === 'all'
+            ? listOpenMarkets(supabase, openParams)
+            : listOpenMarkets(supabase, openParams, { upcoming: filter === 'open', at: now.toISOString() }),
+        filter === 'all' || filter === 'resolved' ? listResolvedMarkets(supabase, readPageParams(searchParams, 'resolved')) : NO_ROWS,
+      ])
   // A market can resolve or void between the two concurrent reads above, and then come back from
   // both. It only ever moves from open to resolved or voided, so the resolved list's copy is the
   // fresher one: the open copy is dropped rather than rendering the market twice, with duplicate
   // React keys and duplicate `market-resolved-*` DOM/title ids.
   const resolvedIds = new Set(resolved.rows.map((m) => m.id))
-  const markets = [
-    ...open.rows.filter((m) => !resolvedIds.has(m.id)).map((m) => [m, OPEN_ROW_ID_PREFIX] as const),
-    ...resolved.rows.map((m) => [m, RESOLVED_ROW_ID_PREFIX] as const),
-  ]
+  const markets = narrowed
+    ? matches.rows.map((m) => [m, MATCH_ROW_ID_PREFIX] as const)
+    : [
+        ...open.rows.filter((m) => !resolvedIds.has(m.id)).map((m) => [m, OPEN_ROW_ID_PREFIX] as const),
+        ...resolved.rows.map((m) => [m, RESOLVED_ROW_ID_PREFIX] as const),
+      ]
   const sparklinesByMarket = await readSparklines(
     supabase,
     markets.map(([m]) => ({
@@ -162,6 +186,65 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     </section>
   )
 
+  const subject = MINE_SUBJECTS[mine ?? 'all']
+  const clearHref = q ? marketsHref({ status: filter, mine }) : marketsHref({ status: filter })
+  const clearLabel = q ? 'Clear search' : 'Show everyone’s markets'
+  const matchesWindowTop = matches.windowed ? (
+    matches.rows.length > 0 ? <BackToNewest href={newestHref('/markets', searchParams, 'match')} /> : <NothingOlder href={newestHref('/markets', searchParams, 'match')} />
+  ) : null
+
+  function renderMatches() {
+    if (cards.length === 0 && !matches.windowed) {
+      return (
+        <EmptyState
+          icon={q ? SearchX : ChartColumn}
+          title={q ? `No ${STATUS_WORDS[filter]}${subject} match “${q}”.` : `No ${STATUS_WORDS[filter]}${subject} yet.`}
+          action={
+            <div className="flex flex-wrap gap-2">
+              {q && filter !== 'all' && (
+                <Link href={marketsHref({ q, mine })} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+                  Search all markets
+                </Link>
+              )}
+              <Link href={clearHref} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+                {clearLabel}
+              </Link>
+            </div>
+          }
+        >
+          {q ? 'Check the spelling, or search all markets.' : 'Bet on a market, or make one, and it shows up here.'}
+        </EmptyState>
+      )
+    }
+    // The count is only known when the whole list is on screen; past one page it's "newest first".
+    const complete = !matches.next && !matches.windowed
+    const lead = complete ? `${cards.length} ${cards.length === 1 ? subject.replace(/^markets/, 'market') : subject}` : `Newest ${subject}`
+    return (
+      <section aria-labelledby="markets-matches-heading" className="flex flex-col gap-3">
+        <h2 id="markets-matches-heading" className="sr-only">
+          Matching markets
+        </h2>
+        <p id="markets-matches-caption" className="text-sm text-ink2">
+          {q ? `${lead} ${complete && cards.length === 1 ? 'matches' : 'match'} “${q}”. ` : `${lead}. `}
+          <Link href={clearHref}>{clearLabel}</Link>
+        </p>
+        {matchesWindowTop}
+        <div className="grid items-start gap-5 lg:grid-cols-3">
+          {cards.map((market) => (
+            <MarketCard key={market.id} {...market} />
+          ))}
+        </div>
+        {matches.next && (
+          <ShowMore
+            href={showMoreHref('/markets', searchParams, 'match', matches.next)}
+            fresh={matches.next.kind === 'window'}
+            focusId={rowDomId(MATCH_ROW_ID_PREFIX, matches.next.firstId)}
+          />
+        )}
+      </section>
+    )
+  }
+
   return (
     <Page transition="tab">
       <PageHeader
@@ -177,17 +260,32 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
           </Link>
         }
       />
-      <SubNav
-        label="Filter markets"
-        items={MARKET_FILTERS.map((f) => ({
-          href: f === 'all' ? '/markets' : `/markets?status=${f}`,
-          label: MARKET_FILTER_LABELS[f],
-          current: f === filter,
-        }))}
-      />
+      <div className="flex flex-col gap-5 md:flex-row md:flex-wrap md:items-center">
+        <MarketSearch key={q} q={q} status={filter} mine={mine} />
+        <div className="flex flex-col md:order-3 md:basis-full">
+          <SubNav
+            label="Filter markets"
+            items={MARKET_FILTERS.map((f) => ({
+              href: marketsHref({ status: f, q, mine }),
+              label: MARKET_FILTER_LABELS[f],
+              current: f === filter,
+            }))}
+          />
+        </div>
+        <FilterChips
+          label="Whose markets"
+          items={([null, 'bet', 'made'] as const).map((m) => ({
+            href: marketsHref({ status: filter, q, mine: m }),
+            label: MINE_LABELS[m ?? 'all'],
+            current: m === mine,
+          }))}
+        />
+      </div>
       <LiveTables subscriptions={pageSubscriptions.markets()} />
       <ShowMoreFocus />
-      {groups.length === 0 && !open.windowed && !resolved.windowed ? (
+      {narrowed ? (
+        renderMatches()
+      ) : groups.length === 0 && !open.windowed && !resolved.windowed ? (
         <EmptyState
           icon={ChartColumn}
           title={EMPTY_TITLES[filter]}

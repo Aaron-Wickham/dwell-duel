@@ -3,7 +3,7 @@ import { CalendarDays, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { getLeaderboardPage, getYourStanding, type Board } from '@/lib/social/leaderboard'
+import { getJumpToMeTop, getLeaderboardPage, getYourStanding, type Board } from '@/lib/social/leaderboard'
 import { currentSeasonName } from '@/lib/social/season'
 import { newestHref, showMoreHref, type SearchParams } from '@/lib/pagination/cursor'
 import { readRankPageParams } from '@/lib/pagination/rank-cursor'
@@ -15,6 +15,8 @@ import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { SubNav } from '@/components/ui/sub-nav'
+import { JumpToMe } from '@/components/leaderboard/jump-to-me'
+import { StandingCompact } from '@/components/leaderboard/standing-compact'
 import { LeaderboardRow } from '@/components/leaderboard/leaderboard-row'
 import { Awards } from '@/components/leaderboard/awards'
 import { PastChampions } from '@/components/leaderboard/past-champions'
@@ -48,7 +50,16 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
   if (!user) redirect('/sign-in')
 
   const board = readBoard(searchParams.tab)
-  const page = await getLeaderboardPage(supabase, board, readRankPageParams(searchParams, 'before'))
+  // `?at=me` opens a window with the member's own row near its top. It only applies to a fresh
+  // visit: once a "Show more" has put a cursor in the URL, the cursor decides, so the link that
+  // follows a window never throws the member back to their own place.
+  const pageParams = readRankPageParams(searchParams, 'before')
+  const jumping = searchParams.at === 'me' && pageParams.top === null && pageParams.bottom === null
+  const page = await getLeaderboardPage(
+    supabase,
+    board,
+    jumping ? { top: await getJumpToMeTop(supabase, board, user.id), bottom: null } : pageParams,
+  )
   // The month's extras show only above the top of the board, never inside a window part-way down it.
   const showMonthExtras = board === 'month' && !page.windowed && page.rows.length > 0
   // On a wide screen the net-worth board fills its side column with your own standing; it needs
@@ -67,7 +78,10 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
   ])
   const podium = !page.windowed && page.rows.length >= 3 ? page.rows.slice(0, 3) : null
   const listed = podium ? page.rows.slice(3) : page.rows
-  const backToNewestHref = newestHref(PATH, searchParams, 'before')
+  const backToNewestHref = newestHref(PATH, { ...searchParams, at: undefined }, 'before')
+  const meListed = page.rows.some((r) => r.id === user.id)
+  const firstRank = page.rows[0]?.rank
+  const lastRank = page.rows[page.rows.length - 1]?.rank
 
   let body
   if (page.windowed && page.rows.length === 0) {
@@ -98,8 +112,11 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
         className={cn('gap-0 py-1.5 px-2 md:py-1.5 md:px-3', split && 'lg:col-start-1 lg:row-span-2 lg:row-start-1')}
       >
         {page.windowed && (
-          <div className="flex flex-col px-2.5 py-2.5 md:px-3.5">
-            <BackToNewest href={backToNewestHref} />
+          <div className="flex flex-wrap items-center gap-3 px-2.5 py-2.5 md:px-3.5">
+            <p className="text-sm text-ink2">
+              {firstRank === lastRank ? `Showing rank ${firstRank}` : `Showing ranks ${firstRank}–${lastRank}`}
+            </p>
+            <BackToNewest href={backToNewestHref} label="Back to the top" />
           </div>
         )}
         <ol className="flex flex-col">
@@ -131,6 +148,12 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
     )
     body = (
       <>
+        {showStanding && standing && (
+          <StandingCompact
+            standing={standing}
+            jump={!meListed && <JumpToMe href={`${PATH}?at=me`} focusId={rowDomId(ROW_ID_PREFIX, user.id)} />}
+          />
+        )}
         {podium && (
           <Podium
             members={podium.map((m) => ({ id: m.id, name: m.displayName, avatarSrc: m.avatarSrc, score: m.score, rank: m.rank }))}

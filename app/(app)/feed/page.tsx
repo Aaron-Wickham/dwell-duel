@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { listFeed } from '@/lib/social/list-feed'
+import { FEED_SHOWS, FEED_SHOW_LABELS, feedShowHref, readFeedShow, type FeedShow } from '@/lib/social/feed-filter'
 import { getReactions } from '@/lib/social/reactions'
 import { readPageParams, showMoreHref, newestHref } from '@/lib/pagination/cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
@@ -10,16 +11,26 @@ import { Page, PageHeader } from '@/components/ui/page'
 import { NothingOlder } from '@/components/ui/nothing-older'
 import { ShowMore, BackToNewest } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
+import { SubNav } from '@/components/ui/sub-nav'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Flag, UserRound } from 'lucide-react'
 import { FeedList } from './feed-list'
 
 const ROW_ID_PREFIX = 'feed'
+
+const EMPTY: Record<Exclude<FeedShow, 'all'>, { title: string; body: string; icon: typeof Flag }> = {
+  results: { title: 'No results yet.', body: 'Resolved markets and winning bets show up here.', icon: Flag },
+  mine: { title: 'Nothing of yours yet.', body: 'Your bets, your markets and results on markets you’re in show up here.', icon: UserRound },
+}
 
 export default async function FeedPage(props: PageProps<'/feed'>) {
   const searchParams = await props.searchParams
   const { supabase, user } = await requireUser()
   if (!user) redirect('/sign-in')
 
+  const show = readFeedShow(searchParams.show)
   const feed = await listFeed(supabase, {
+    show,
     page: readPageParams(searchParams, 'before'),
     alongside: (ids) => getReactions(supabase, ids),
   })
@@ -31,6 +42,10 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
   return (
     <Page transition="tab" width="reading">
       <PageHeader title="Feed" description="Everything that’s happened in DwellDuel, newest first." />
+      <SubNav
+        label="Show"
+        items={FEED_SHOWS.map((s) => ({ href: feedShowHref(s), label: FEED_SHOW_LABELS[s], current: s === show }))}
+      />
       <LiveTables subscriptions={pageSubscriptions.feed()} />
       <ShowMoreFocus />
       <FeedList
@@ -41,7 +56,15 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
         headingId="feed-events"
         headingHidden
         rowIdPrefix={ROW_ID_PREFIX}
-        emptyState={feed.windowed ? <NothingOlder href={backToNewestHref} /> : undefined}
+        emptyState={
+          feed.windowed ? (
+            <NothingOlder href={backToNewestHref} />
+          ) : show !== 'all' ? (
+            <EmptyState icon={EMPTY[show].icon} title={EMPTY[show].title}>
+              {EMPTY[show].body}
+            </EmptyState>
+          ) : undefined
+        }
         aboveList={
           feed.windowed &&
           feed.rows.length > 0 && (

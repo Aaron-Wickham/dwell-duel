@@ -57,6 +57,14 @@ jobs:
       - name: Install age
         run: sudo apt-get install -y --no-install-recommends age
 
+      # Its own step, before anything captures output: a ::add-mask:: line printed inside $(...)
+      # never reaches the runner, and the secret stays unmasked. backup.sh refuses to run without it.
+      - name: Mask secrets
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+        run: scripts/backup/mask-secrets.sh
+
       - name: Dump, encrypt and push the database
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
@@ -65,7 +73,9 @@ jobs:
           # GitHub's own registry, for the CLI's pg_dump image: no anonymous pull limit from Actions.
           SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
         run: |
-          SEALED=$(scripts/backup/backup.sh db nightly "$RUNNER_TEMP/backup")
+          OUT="$RUNNER_TEMP/backup"
+          SEALED=$(scripts/backup/backup.sh db nightly "$OUT")
+          scripts/backup/check-sealed.sh "$OUT" <<<"$SEALED"
           mapfile -t FILES <<<"$SEALED"
           scripts/backup/backup.sh push db "${FILES[@]}"
 
@@ -92,6 +102,13 @@ jobs:
       - name: Install age
         run: sudo apt-get install -y --no-install-recommends age
 
+      # Its own step, before anything captures output: a ::add-mask:: line printed inside $(...)
+      # never reaches the runner, and the secret stays unmasked. backup.sh refuses to run without it.
+      - name: Mask secrets
+        env:
+          BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+        run: scripts/backup/mask-secrets.sh
+
       # The CLI fetches the project's Storage keys through the Management API with the access
       # token, so this needs no Storage key of its own.
       - name: Copy, encrypt and push the Storage buckets
@@ -100,6 +117,8 @@ jobs:
           BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
           BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
         run: |
-          SEALED=$(scripts/backup/backup.sh storage weekly "$RUNNER_TEMP/backup" lymrpiivqvdnfcjmxksx)
+          OUT="$RUNNER_TEMP/backup"
+          SEALED=$(scripts/backup/backup.sh storage weekly "$OUT" lymrpiivqvdnfcjmxksx)
+          scripts/backup/check-sealed.sh "$OUT" <<<"$SEALED"
           mapfile -t FILES <<<"$SEALED"
           scripts/backup/backup.sh push storage "${FILES[@]}"

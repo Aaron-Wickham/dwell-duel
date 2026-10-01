@@ -99,6 +99,41 @@ describe('submitted proof is kept', () => {
   })
 })
 
+describe('attachment guards', () => {
+  it('lets a removed resolver not delete their resolution evidence', async () => {
+    const market = await createTestMarket(ownerClient, ['Yes', 'No'])
+    const path = `resolution/${market.marketId}/${uuid()}/score.jpg`
+    expect((await upload(ownerClient, path)).error).toBeNull()
+    const { error } = await ownerClient.rpc('resolve_market', {
+      p_market_id: market.marketId,
+      p_outcome_id: market.outcomeIds[0],
+      p_note: 'Final score',
+      p_attachments: [{ kind: 'image', storage_path: path }],
+    })
+    expect(error).toBeNull()
+    // No longer invited, so the attachment row is invisible to them through RLS.
+    await db().from('allowed_emails').delete().eq('email', owner.email.toLowerCase())
+    await ownerClient.storage.from('proof').remove([path])
+    expect(await exists(path)).toBe(true)
+  })
+
+  it('refuses to attach one file twice', async () => {
+    const { taskId } = await createTestTask(owner)
+    const [path] = await uploaded(bobClient, bob.id, 1)
+    const first = await bobClient.rpc('submit_task_completion', { p_task_id: taskId, p_attachments: [{ kind: 'image', storage_path: path }] })
+    expect(first.error).toBeNull()
+    const { taskId: other } = await createTestTask(owner)
+    const again = await bobClient.rpc('submit_task_completion', { p_task_id: other, p_attachments: [{ kind: 'image', storage_path: path }] })
+    expect(again.error?.message).toBe('that file is already attached')
+  })
+
+  it('has the unique and retention indexes', async () => {
+    const names = (await pgQuery<{ indexname: string }>("select indexname from pg_indexes where tablename = 'proof_attachments'")).map((r) => r.indexname)
+    expect(names).toContain('proof_attachments_storage_path_key')
+    expect(names).toContain('proof_attachments_unexpired_idx')
+  })
+})
+
 describe('upload quota', () => {
   it('stops a member at 30 proof uploads in a day', async () => {
     await uploaded(bobClient, bob.id, 30)
@@ -223,6 +258,18 @@ describe('retention', () => {
 })
 
 describe('avatars and usage', () => {
+  it('stops a member at 10 avatar uploads in a day', async () => {
+    for (let i = 0; i < 10; i++) {
+      const { error } = await bobClient.storage.from('avatars').upload(`${bob.id}/${uuid()}.jpg`, JPEG, { contentType: 'image/jpeg' })
+      expect(error).toBeNull()
+    }
+    const over = await bobClient.storage.from('avatars').upload(`${bob.id}/${uuid()}.jpg`, JPEG, { contentType: 'image/jpeg' })
+    expect(over.error).not.toBeNull()
+    await pgQuery("update storage.objects set created_at = now() - interval '2 days' where bucket_id = 'avatars'")
+    const again = await bobClient.storage.from('avatars').upload(`${bob.id}/${uuid()}.jpg`, JPEG, { contentType: 'image/jpeg' })
+    expect(again.error).toBeNull()
+  })
+
   it('lists avatar files no profile points at once they are a day old', async () => {
     const pointed = `${bob.id}/${uuid()}.jpg`
     const loose = `${bob.id}/${uuid()}.jpg`

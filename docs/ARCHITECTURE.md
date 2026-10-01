@@ -272,7 +272,7 @@ each member's join date, `profiles.created_at`, and last sign-in from
 `auth.users`, for Admin → Members), `stray_proof_objects` (service role:
 the daily cron deletes proof files nothing attached), `expired_proof_attachments`,
 `mark_proof_expired`, `stray_avatar_objects` and `storage_usage` (service role,
-0077), `proof_upload_quota_ok` (the upload policy's per-day cap),
+0077), `proof_upload_quota_ok` and `avatar_upload_quota_ok` (the upload policies' per-day caps: 30 proof files / 60 MB, 10 avatars), `proof_is_attached` (the delete guard, security definer),
 `set_member_role`, `delete_market` (refuses a market with any bet, cancelled
 bet or parlay leg; the market page shows the button only when the pool is
 empty and `lib/markets/bet-history.ts`'s two head counts find nothing),
@@ -486,7 +486,7 @@ plain text only. `proof_insert` also calls `proof_upload_quota_ok()`: at most
 30 uploads and 60 MB per member per rolling day. `record_proof` takes at
 most 5 attachments, 3 of them files, 6 MB of files together (read from
 Storage's own object size, not the client's). `proof_delete_own` only lets a
-member delete an upload no `proof_attachments` row holds, so submitted proof
+member delete an upload no `proof_attachments` row holds (`proof_is_attached`, so RLS can't hide the row; `record_proof` and a unique index on `storage_path` keep one file to one attachment), so submitted proof
 can't be removed. The browser shrinks photos to 1200px at quality 0.7 (WebP,
 JPEG where WebP can't be encoded; `lib/proof/downscale.ts`) and mirrors the
 caps in `lib/proof/types.ts`. The daily keep-alive runs three storage steps:

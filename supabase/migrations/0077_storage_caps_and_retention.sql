@@ -64,13 +64,57 @@ create policy proof_insert on storage.objects for insert to authenticated
     )
   );
 
+-- Rolling-day cap on avatar uploads (0038's policy had none). A photo change is one upload, so 10 is
+-- generous. Checked per insert, so parallel uploads can slightly overshoot; the daily sweep collects
+-- whatever isn't referenced.
+create function public.avatar_upload_quota_ok()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select count(*) < 10
+  from storage.objects o
+  where o.bucket_id = 'avatars'
+    and o.owner_id = auth.uid()::text
+    and o.created_at > now() - interval '1 day'
+$$;
+
+revoke execute on function public.avatar_upload_quota_ok() from public, anon;
+grant execute on function public.avatar_upload_quota_ok() to authenticated, service_role;
+
+drop policy avatars_insert_own on storage.objects;
+create policy avatars_insert_own on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and (select public.is_invited())
+    and (select public.avatar_upload_quota_ok())
+  );
+
+-- security definer, so the answer doesn't depend on which attachment rows the caller's own RLS shows
+-- (a resolver who has since been removed can't see the resolution's rows).
+create function public.proof_is_attached(p_name text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (select 1 from public.proof_attachments a where a.storage_path = p_name)
+$$;
+
+revoke execute on function public.proof_is_attached(text) from public, anon;
+grant execute on function public.proof_is_attached(text) to authenticated, service_role;
+
 -- A failed submit or resolve deletes the files it had just uploaded; a file a submission holds stays.
 drop policy proof_delete_own on storage.objects;
 create policy proof_delete_own on storage.objects for delete to authenticated
   using (
     bucket_id = 'proof'
     and owner_id = (select auth.uid())::text
-    and not exists (select 1 from public.proof_attachments a where a.storage_path = name)
+    and not (select public.proof_is_attached(name))
   );
 
 -- ─── Per-submission cap ───────────────────────────────────────────────────────
@@ -110,6 +154,10 @@ begin
       if v_path is null or left(v_path, char_length(p_prefix)) <> p_prefix or v_path like '%..%' then
         raise exception 'that file can''t be attached here';
       end if;
+      -- One object, one attachment: retention of one row would otherwise delete another's file.
+      if exists (select 1 from public.proof_attachments a where a.storage_path = v_path) then
+        raise exception 'that file is already attached';
+      end if;
       select coalesce((o.metadata ->> 'size')::bigint, 0) into v_size
       from storage.objects o where o.bucket_id = 'proof' and o.name = v_path;
       if not found then
@@ -139,6 +187,21 @@ begin
   return v_count;
 end;
 $$;
+
+-- Backs the check above and stops a double attachment even from a concurrent call. Created only when
+-- the existing rows hold no duplicate (record_proof never refused one before), so the migration can't
+-- fail; the check in record_proof covers the rest.
+do $$
+begin
+  if not exists (
+    select 1 from public.proof_attachments where storage_path is not null group by storage_path having count(*) > 1
+  ) then
+    create unique index proof_attachments_storage_path_key on public.proof_attachments (storage_path) where storage_path is not null;
+  end if;
+end $$;
+
+-- The retention query's candidates: attachments with a file not yet expired.
+create index proof_attachments_unexpired_idx on public.proof_attachments (created_at) where expired_at is null and storage_path is not null;
 
 -- ─── Retention ────────────────────────────────────────────────────────────────
 

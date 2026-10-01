@@ -5,7 +5,9 @@ export const PROOF_MAX_ITEMS = 5
 export const PROOF_MAX_FILES = 3
 export const PROOF_MAX_TOTAL_BYTES = 6 * 1024 * 1024
 export const PROOF_FILE_TYPES = ['application/pdf', 'text/plain']
-export const PROOF_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif'
+// No HEIC here: naming it makes iOS hand over the original file instead of converting to JPEG. The
+// bucket still allows it for desktop uploads.
+export const PROOF_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp'
 export const PROOF_FILE_ACCEPT = '.pdf,.txt'
 
 // Chosen in the browser, not yet uploaded.

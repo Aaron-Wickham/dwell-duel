@@ -48,7 +48,7 @@ export function ProofList({ proof, label }: { proof: ProofView[]; label: string 
       )}
       {expired.length > 0 && (
         <p className="text-sm text-ink2">
-          {expired.length === 1 ? '1 attachment has' : `${expired.length} attachments have`} expired and was deleted.
+          {expired.length === 1 ? '1 attachment has expired and been deleted.' : `${expired.length} attachments have expired and been deleted.`}
         </p>
       )}
     </div>

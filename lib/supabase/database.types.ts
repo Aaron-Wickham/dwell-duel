@@ -1097,6 +1097,7 @@ export type Database = {
         Args: { p_completion_id: string }
         Returns: undefined
       }
+      avatar_upload_quota_ok: { Args: never; Returns: boolean }
       betting_ledger_types: { Args: never; Returns: string[] }
       can_resolve_market: { Args: { p_market_id: string }; Returns: boolean }
       cancel_bet: { Args: { p_bet_id: number }; Returns: undefined }
@@ -1396,6 +1397,7 @@ export type Database = {
         }
         Returns: Json
       }
+      proof_is_attached: { Args: { p_name: string }; Returns: boolean }
       proof_upload_quota_ok: { Args: never; Returns: boolean }
       push_endpoint_host: { Args: { p_endpoint: string }; Returns: string }
       push_hosts: { Args: never; Returns: string[] }

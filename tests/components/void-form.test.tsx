@@ -31,7 +31,7 @@ describe('VoidForm', () => {
     expect(field).toBeRequired()
     expect(field).toHaveAttribute('maxlength', '500')
     expect(field).toHaveAttribute('aria-describedby', 'void-reason-hint')
-    expect(screen.getByText('Everyone sees this. Voiding refunds every bet and parlay leg.')).toHaveAttribute('id', 'void-reason-hint')
+    expect(screen.getByText('Everyone sees this. Voiding refunds every bet; parlays drop this leg and carry on with the rest.')).toHaveAttribute('id', 'void-reason-hint')
     expect(screen.queryByRole('alertdialog')).toBeNull()
   })
 
@@ -41,7 +41,7 @@ describe('VoidForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Void this market' }))
 
     const dialog = await screen.findByRole('alertdialog', { name: 'Void this market?' })
-    expect(dialog).toHaveAccessibleDescription('Every bet and parlay leg is refunded. This can’t be undone.')
+    expect(dialog).toHaveAccessibleDescription('Every bet is refunded. Parlays drop this leg and carry on with the rest (a parlay with no legs left is refunded). This can’t be undone.')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus())
     expect(screen.getByRole('button', { name: 'Void market' })).toHaveAttribute('type', 'submit')
     expect(screen.getByRole('button', { name: 'Void market' })).toHaveAttribute('form', 'void-form')

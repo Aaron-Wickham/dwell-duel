@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { TaskRow } from '@/components/tasks/task-row'
+import { AGAIN_LABEL } from '@/lib/tasks/period-label'
 
 describe('TaskRow', () => {
   it('joins the title and reward in one element, and renders the action when available', () => {
@@ -55,6 +56,23 @@ describe('TaskRow', () => {
       </ul>,
     )
     expect(screen.getByText('Approved')).toBeInTheDocument()
+    expect(screen.queryByText(/^Again/)).toBeNull()
+  })
+
+  it('says when an approved repeating task opens again (#266)', () => {
+    render(
+      <ul>
+        <TaskRow
+          title="Pray for a neighbour"
+          rewardAmount={5}
+          description={null}
+          cadence="Weekly"
+          state={{ kind: 'approved', again: AGAIN_LABEL.weekly }}
+        />
+      </ul>,
+    )
+    expect(screen.getByText('Approved')).toBeInTheDocument()
+    expect(screen.getByText('Again Monday, midnight ET')).toBeInTheDocument()
   })
 
   it('shows the rejection note beside the action when the latest submission was turned down', () => {

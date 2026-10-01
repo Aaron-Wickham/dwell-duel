@@ -64,16 +64,18 @@ function market(n: number, status: MarketSummary['status'], closeInMs = DAY): Ma
     resolvedAt: status === 'resolved' ? new Date(Date.now() - DAY).toISOString() : null,
     settledAt: status === 'open' ? null : new Date(Date.now() - DAY).toISOString(),
     outcomes: [],
-    sparkline: null,
+    sparkVersion: status === 'open' ? '1' : 'settled',
   }
 }
 
+// The open list answers for the upcoming side of the close time, awaiting for the other.
 async function renderPage(
   open: KeysetPage<MarketSummary>,
   resolved: KeysetPage<MarketSummary>,
   searchParams: Record<string, string> = {},
+  awaiting: KeysetPage<MarketSummary> = EMPTY,
 ) {
-  listOpenMarkets.mockResolvedValue(open)
+  listOpenMarkets.mockImplementation(async (_supabase, _page, bound: { upcoming: boolean }) => (bound.upcoming ? open : awaiting))
   listResolvedMarkets.mockResolvedValue(resolved)
   render(await MarketsPage({ params: Promise.resolve({}), searchParams: Promise.resolve(searchParams) }))
 }
@@ -95,24 +97,56 @@ beforeEach(() => {
 })
 
 describe('MarketsPage', () => {
-  it('reads each list from its own params, and sparklines for exactly the cards shown', async () => {
+  it('reads each list from its own params, and sparklines for exactly the cards shown, one batch per list', async () => {
     const openTop = { ts: '2026-09-20T10:00:00Z', id: market(1, 'open').id }
+    const awaitingEnd = { ts: '2026-09-15T10:00:00Z', id: market(2, 'open').id }
     const resolvedEnd = { ts: '2026-09-10T10:00:00Z', id: market(9, 'voided').id }
     await renderPage(
-      { rows: [market(1, 'open'), market(2, 'open', -DAY)], next: null, windowed: true },
+      { rows: [market(1, 'open')], next: null, windowed: true },
       { rows: [market(9, 'voided')], next: null, windowed: false },
-      { open_from: encodeCursor(openTop), resolved: encodeCursor(resolvedEnd) },
+      { open_from: encodeCursor(openTop), awaiting: encodeCursor(awaitingEnd), resolved: encodeCursor(resolvedEnd) },
+      { rows: [market(2, 'open', -DAY)], next: null, windowed: false },
     )
-    expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: openTop, bottom: null })
+    const at = expect.any(String)
+    expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: openTop, bottom: null }, { upcoming: true, at })
+    expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: null, bottom: awaitingEnd }, { upcoming: false, at })
+    expect(listOpenMarkets.mock.calls[0][2].at).toBe(listOpenMarkets.mock.calls[1][2].at)
     expect(listResolvedMarkets).toHaveBeenCalledWith({}, { top: null, bottom: resolvedEnd })
-    const facts = (m: MarketSummary) => ({ id: m.id, seedPerOutcome: 20, createdAt: '2026-09-01T10:00:00Z', outcomeIds: [], sparkline: null })
-    expect(readSparklines).toHaveBeenCalledWith({}, [market(1, 'open'), market(2, 'open'), market(9, 'voided')].map(facts))
+    const facts = (m: MarketSummary) => ({
+      id: m.id,
+      seedPerOutcome: 20,
+      createdAt: '2026-09-01T10:00:00Z',
+      outcomeIds: [],
+      version: m.sparkVersion,
+    })
+    expect(readSparklines).toHaveBeenCalledWith({}, [[facts(market(1, 'open'))], [facts(market(2, 'open'))], [facts(market(9, 'voided'))]])
+  })
+
+  it('lists open markets first on All, however many are awaiting resolution, each list with its own Show more (#261)', async () => {
+    const awaiting = Array.from({ length: 50 }, (_, i) => market(100 + i, 'open', -DAY - i))
+    await renderPage(
+      { rows: [market(1, 'open')], next: { kind: 'extend', cursor: 'OPEN', firstId: market(3, 'open').id }, windowed: false },
+      { rows: [market(9, 'resolved')], next: null, windowed: false },
+      {},
+      { rows: awaiting, next: { kind: 'extend', cursor: 'AWAITING', firstId: market(200, 'open').id }, windowed: false },
+    )
+
+    expect(outline()).toEqual(['Open', 'Show more', 'Awaiting resolution', 'Show more', 'Resolved'])
+    const [openMore, awaitingMore] = screen.getAllByRole('link', { name: 'Show more' })
+    expect(openMore).toHaveAttribute('href', '/markets?open=OPEN')
+    expect(openMore).toHaveAccessibleDescription('Open markets')
+    expect(awaitingMore).toHaveAttribute('href', '/markets?awaiting=AWAITING')
+    expect(awaitingMore).toHaveAccessibleDescription('Markets awaiting resolution')
+    fireEvent.click(awaitingMore)
+    expect(requestShowMoreFocus).toHaveBeenLastCalledWith(`market-awaiting-${market(200, 'open').id}`)
+    expect(screen.getByRole('article', { name: /Market 100\b/ })).toHaveAttribute('id', `market-awaiting-${market(100, 'open').id}`)
   })
 
   it.each(['awaiting', 'pending'])(
     'reads only the past-close side of the open list for ?status=%s, and skips the resolved list',
     async (status) => {
-      await renderPage({ rows: [market(2, 'open', -DAY)], next: null, windowed: false }, { rows: [], next: null, windowed: false }, { status })
+      await renderPage(EMPTY, EMPTY, { status }, { rows: [market(2, 'open', -DAY)], next: null, windowed: false })
+      expect(listOpenMarkets).toHaveBeenCalledTimes(1)
       expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: null, bottom: null }, { upcoming: false, at: expect.any(String) })
       expect(listResolvedMarkets).not.toHaveBeenCalled()
       expect(screen.getByRole('link', { name: 'Awaiting' })).toHaveAttribute('aria-current', 'page')
@@ -123,6 +157,7 @@ describe('MarketsPage', () => {
 
   it('reads only upcoming markets for the open filter', async () => {
     await renderPage({ rows: [market(1, 'open')], next: null, windowed: false }, { rows: [], next: null, windowed: false }, { status: 'open' })
+    expect(listOpenMarkets).toHaveBeenCalledTimes(1)
     expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: null, bottom: null }, { upcoming: true, at: expect.any(String) })
     expect(listResolvedMarkets).not.toHaveBeenCalled()
   })
@@ -158,14 +193,15 @@ describe('MarketsPage', () => {
 
   it('treats an unknown status as All', async () => {
     await renderPage({ rows: [market(1, 'open')], next: null, windowed: false }, { rows: [], next: null, windowed: false }, { status: 'bogus' })
-    expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: null, bottom: null })
+    expect(listOpenMarkets).toHaveBeenCalledTimes(2)
+    expect(listResolvedMarkets).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('link', { name: 'All' })).toHaveAttribute('aria-current', 'page')
   })
 
-  it('puts the open list’s Show more under its groups and the resolved list’s under theirs', async () => {
+  it('puts the open list’s Show more under its group and the resolved list’s under theirs', async () => {
     await renderPage(
       {
-        rows: [market(1, 'open'), market(2, 'open', -DAY)],
+        rows: [market(1, 'open')],
         next: { kind: 'extend', cursor: 'OPEN', firstId: market(3, 'open').id },
         windowed: false,
       },
@@ -175,16 +211,17 @@ describe('MarketsPage', () => {
         windowed: false,
       },
       { tab: 'x' },
+      { rows: [market(2, 'open', -DAY)], next: null, windowed: false },
     )
 
-    expect(outline()).toEqual(['Open', 'Awaiting resolution', 'Show more', 'Resolved', 'Voided', 'Show more'])
+    expect(outline()).toEqual(['Open', 'Show more', 'Awaiting resolution', 'Resolved', 'Voided', 'Show more'])
     const [openMore, resolvedMore] = screen.getAllByRole('link', { name: 'Show more' })
     expect(openMore).toHaveAttribute('href', '/markets?tab=x&open=OPEN')
     expect(openMore).toHaveAttribute('data-scroll', 'false')
     expect(resolvedMore).toHaveAttribute('href', '/markets?tab=x&resolved_from=RESOLVED')
     expect(resolvedMore).toHaveAttribute('data-scroll', 'true')
 
-    expect(openMore).toHaveAccessibleDescription('Open and awaiting markets')
+    expect(openMore).toHaveAccessibleDescription('Open markets')
     expect(resolvedMore).toHaveAccessibleDescription('Resolved markets')
 
     fireEvent.click(openMore)

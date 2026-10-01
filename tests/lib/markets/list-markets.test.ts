@@ -18,8 +18,8 @@ function marketRow(overrides: Record<string, unknown> = {}) {
     edited_at: null,
     current_resolution: { outcome_id: 'o-yes', resolved_at: '2026-09-21T09:00:00+00:00' },
     market_outcomes: [
-      { id: 'o-no', label: 'No', pool_total: 5 },
-      { id: 'o-yes', label: 'Yes', pool_total: 15 },
+      { id: 'o-no', label: 'No', pool_total: 5, pool_version: 2 },
+      { id: 'o-yes', label: 'Yes', pool_total: 15, pool_version: 3 },
     ],
     ...overrides,
   }
@@ -57,17 +57,17 @@ describe('listOpenMarkets', () => {
           { id: 'o-no', label: 'No', poolTotal: 5 },
           { id: 'o-yes', label: 'Yes', poolTotal: 15 },
         ],
-        sparkline: null,
+        sparkVersion: '5',
       },
     ])
   })
 
-  it("carries a settled market's cached sparkline (0070) as series points, so the list never recomputes it", async () => {
-    const { client } = fakeSupabase(() => ({
-      data: [marketRow({ sparkline: [{ t: '2026-09-20T08:00:00+00:00', shares: { 'o-no': 0.25, 'o-yes': 0.75 } }] })],
-    }))
+  it('selects no sparkline, only each outcome’s pool version, which a settled market no longer needs (#252)', async () => {
+    const { client, queries } = fakeSupabase(() => ({ data: [marketRow()] }))
     const page = await listResolvedMarkets(client, { top: null, bottom: null })
-    expect(page.rows[0].sparkline).toEqual([{ t: Date.parse('2026-09-20T08:00:00Z'), shares: { 'o-no': 0.25, 'o-yes': 0.75 } }])
+    expect(queries[0].select).not.toContain('sparkline')
+    expect(queries[0].select).toContain('market_outcomes(id, label, pool_total, pool_version)')
+    expect(page.rows[0].sparkVersion).toBe('settled')
   })
 
   it('probes only the keys of the next open markets, with the same filter and order', async () => {
@@ -171,11 +171,12 @@ describe('listResolvedMarkets', () => {
 })
 
 describe('countOpenMarkets', () => {
-  it('counts open markets without reading any rows', async () => {
+  it('counts only markets still taking bets, without reading any rows (#261)', async () => {
     const { client, queries } = fakeSupabase(() => ({ count: 7 }))
-    expect(await countOpenMarkets(client)).toBe(7)
+    expect(await countOpenMarkets(client, new Date('2026-09-30T12:00:00Z'))).toBe(7)
     expect(queries[0].selectOptions).toEqual({ count: 'exact', head: true })
     expect(queries[0].eq).toEqual([['status', 'open']])
+    expect(queries[0].gt).toEqual([['close_at', '2026-09-30T12:00:00.000Z']])
   })
 
   it('throws when the count fails', async () => {

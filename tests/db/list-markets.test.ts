@@ -137,6 +137,89 @@ describe('listOpenMarkets', () => {
   })
 })
 
+describe('the two sides of the close time (#261)', () => {
+  // 60 markets past their close and 5 still taking bets: the unbounded open list's first page
+  // would be all awaiting, which is why the page reads each side as its own list.
+  async function insertMarkets(prefix: string, count: number, firstCloseMs: number) {
+    const rows = Array.from({ length: count }, (_, i) => ({
+      created_by: alice.id,
+      title: `${prefix} ${String(i).padStart(2, '0')}`,
+      kind: 'binary',
+      status: 'open',
+      close_at: new Date(firstCloseMs + i * 60_000).toISOString(),
+    }))
+    const { error } = await serviceClient().from('markets').insert(rows)
+    if (error) throw error
+  }
+
+  it('reads the markets still taking bets on their own first page, however many are awaiting', async () => {
+    const now = Date.now()
+    await insertMarkets('Awaiting', 60, now - 2 * 86_400_000)
+    await insertMarkets('Upcoming', 5, now + 3_600_000)
+    const at = new Date(now).toISOString()
+
+    expect((await listOpenMarkets(bobClient, FIRST)).rows.every((m) => m.title.startsWith('Awaiting'))).toBe(true)
+
+    const upcoming = await listOpenMarkets(bobClient, FIRST, { upcoming: true, at })
+    expect(upcoming.rows.map((m) => m.title)).toEqual(['Upcoming 00', 'Upcoming 01', 'Upcoming 02', 'Upcoming 03', 'Upcoming 04'])
+    expect(upcoming.next).toBeNull()
+
+    const awaiting = await listOpenMarkets(bobClient, FIRST, { upcoming: false, at })
+    expect(awaiting.rows).toHaveLength(50)
+    expect(awaiting.rows.every((m) => m.title.startsWith('Awaiting'))).toBe(true)
+    expect(awaiting.next).not.toBeNull()
+  })
+
+  it('pages each side on its own, and a market that closes between pages moves to the awaiting list without a gap or a repeat', async () => {
+    const now = Date.now()
+    await insertMarkets('Awaiting', 55, now - 2 * 86_400_000)
+    // 60 upcoming, one a minute from an hour ahead.
+    await insertMarkets('Upcoming', 60, now + 3_600_000)
+    const at = new Date(now).toISOString()
+
+    const firstOpen = await listOpenMarkets(bobClient, FIRST, { upcoming: true, at })
+    const firstAwaiting = await listOpenMarkets(bobClient, FIRST, { upcoming: false, at })
+    expect(firstOpen.rows).toHaveLength(50)
+    expect(firstAwaiting.rows).toHaveLength(50)
+
+    // Later, the first upcoming market has closed: Show more on each list reads with a later bound.
+    const later = new Date(now + 3_600_000 + 30_000).toISOString()
+    const openHref = new URL(showMoreHref('/markets', {}, 'open', firstOpen.next!), 'http://localhost')
+    const awaitingHref = new URL(showMoreHref('/markets', {}, 'awaiting', firstAwaiting.next!), 'http://localhost')
+    const secondOpen = await listOpenMarkets(bobClient, readPageParams(Object.fromEntries(openHref.searchParams), 'open'), {
+      upcoming: true,
+      at: later,
+    })
+    const secondAwaiting = await listOpenMarkets(
+      bobClient,
+      readPageParams(Object.fromEntries(awaitingHref.searchParams), 'awaiting'),
+      { upcoming: false, at: later },
+    )
+
+    const openTitles = secondOpen.rows.map((m) => m.title)
+    expect(openTitles).toEqual(Array.from({ length: 59 }, (_, i) => `Upcoming ${String(i + 1).padStart(2, '0')}`))
+    expect(secondOpen.next).toBeNull()
+    // The awaiting list's second page ends where its first page's probe did; the newly closed
+    // market sorts after that, so its Show more now leads to it.
+    expect(secondAwaiting.rows.map((m) => m.title)).toEqual(Array.from({ length: 55 }, (_, i) => `Awaiting ${String(i).padStart(2, '0')}`))
+    const upcoming00 = firstOpen.rows[0]
+    expect(upcoming00.title).toBe('Upcoming 00')
+    expect(secondAwaiting.next).toMatchObject({ firstId: upcoming00.id })
+
+    const thirdHref = new URL(showMoreHref('/markets', {}, 'awaiting', secondAwaiting.next!), 'http://localhost')
+    const thirdAwaiting = await listOpenMarkets(
+      bobClient,
+      readPageParams(Object.fromEntries(thirdHref.searchParams), 'awaiting'),
+      { upcoming: false, at: later },
+    )
+    const awaitingTitles = thirdAwaiting.rows.map((m) => m.title)
+    expect(awaitingTitles.at(-1)).toBe('Upcoming 00')
+    expect(new Set([...openTitles, ...awaitingTitles]).size).toBe(115)
+    expect(openTitles.length + awaitingTitles.length).toBe(115)
+    expect(thirdAwaiting.next).toBeNull()
+  })
+})
+
 describe('listResolvedMarkets', () => {
   it('dates the current resolution, from the embedded join', async () => {
     const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'], { closeInMs: 1000 })
@@ -230,7 +313,7 @@ describe('listResolvedMarkets', () => {
 })
 
 describe('countOpenMarkets', () => {
-  it('counts open markets, awaiting ones included, and not resolved or voided ones', async () => {
+  it('counts only markets still taking bets: not awaiting, resolved or voided ones (#261)', async () => {
     await createTestMarket(aliceClient, ['Yes', 'No'])
     const awaiting = await createTestMarket(aliceClient, ['Yes', 'No'])
     await closeNow(awaiting.marketId)
@@ -240,7 +323,7 @@ describe('countOpenMarkets', () => {
     const voided = await createTestMarket(aliceClient, ['Yes', 'No'])
     await voidMarket(voided.marketId)
 
-    expect(await countOpenMarkets(bobClient)).toBe(2)
+    expect(await countOpenMarkets(bobClient)).toBe(1)
   })
 
   it('is 0 for an uninvited session', async () => {

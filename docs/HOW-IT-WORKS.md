@@ -44,7 +44,8 @@ changing them would change the bet.
 The Markets page lists open markets **soonest to close first**, so one
 closing within the hour is at the top. A market closing within a day
 says so ("Closes in 2h"). Markets past their close time with no result
-yet are grouped under Awaiting resolution, and Resolved and Voided markets
+yet are grouped under Awaiting resolution, after the open ones however
+many there are (each group has its own Show more), and Resolved and Voided markets
 follow as two groups, each most recently settled first: the order they were resolved or
 voided in, not the order they were created in. A voided market shows the
 day it was voided.
@@ -53,7 +54,8 @@ The tabs above the list narrow it: **All** (the default), **Open** (still
 taking bets), **Awaiting** (past the close time, waiting to be resolved)
 and **Resolved** (has a result; voided markets are here too, marked
 Voided). The choice is in the page's address, so a reload or a shared
-link keeps it.
+link keeps it. Home's open-market count is the Open tab's: markets still
+taking bets.
 
 For a question that comes round every week, **Duplicate** on any market
 opens Create market already filled in with its question, description,

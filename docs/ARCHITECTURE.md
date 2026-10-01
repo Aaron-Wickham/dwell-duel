@@ -54,7 +54,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | Route | What it is |
 |---|---|
 | `/` | Home: greeting, balance hero (balance, rank, At stake, Pending), a new member's Getting started card, Markets to resolve, the weekly recap (Sundays and Mondays), tiles |
-| `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then resolved and voided newest first, each paged. `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) narrows it: open and awaiting read the open list split at the close time (`listOpenMarkets`' `bound`), resolved reads only the resolved list (`listResolvedMarkets`, voided included) |
+| `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then those awaiting resolution (oldest close first), then resolved and voided newest first. The All tab reads these as three keyset lists, each with its own Show more (`?open=`, `?awaiting=`, `?resolved=`), so open markets lead page one however many wait on a result (#261); the open and awaiting lists are `listOpenMarkets` split at one `now` (its `bound`). `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) reads just one list. Card sparklines come from `market_sparks` (0088) through Next's data cache, one entry per list, keyed by a hash of its markets' `sparkVersion`s (the summed `pool_version` while open, `settled` after): a render costs one cache read per list, and a live refresh reads from Supabase only a list whose markets moved (`lib/markets/sparklines.ts`, #252; the budget is below) |
 | `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under. `?from=<id>` pre-fills it from a market (Duplicate) |
 | `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
@@ -194,9 +194,12 @@ spending coins should get a trigger and a `write_limits()` row.
   `sparkline` (0070): the card's
   40-point series, written by a trigger the moment the market resolves or
   voids (`cache_market_sparkline`, so `resolve_market_core` and
-  `void_market` needn't know), null while it's open. `/markets` reads it for
-  settled markets and only computes open ones live (#204).
-- `market_outcomes`: labels and `pool_total`, the real DC bet on each.
+  `void_market` needn't know), null while it's open. Since 0088 the app no
+  longer reads it (`market_sparks` serves every card, cached by version);
+  the column and trigger stay until a later PR drops them.
+- `market_outcomes`: labels and `pool_total`, the real DC bet on each, and
+  `pool_version` (0088), bumped by a trigger on every change to
+  `pool_total` (each bet and cancellation): the list's sparkline cache key.
 - `bets`: live stakes only. A cancelled bet moves to `cancelled_bets`.
 - `market_resolutions`: each resolution or override, with its required
   note, `actual_value` for an Over/Under, and a link to the one it
@@ -350,7 +353,12 @@ untouched; 0073: their `auth.sessions` too, so no device can refresh), `update_m
 cards' 40-point sparklines and the market chart's 200 points, sampled in
 SQL so no page reads every bet; both prepend a seeded market's even
 opening split through `withSeededStart`, since the function returns points
-only at bets),
+only at bets), `market_sparks` (0088: `market_sparklines` at most 24 points,
+compact as `[epoch seconds, share, ...]` in `outcome_ids` order, shares to
+4 decimals, about a tenth of the bytes; what `/markets` reads. Security
+definer and refused to anyone not invited, so the answer is the same for
+every member and safe to cache for all of them; a refusal is an error,
+which is never cached),
 `markets_to_resolve` (0049, security invoker: the closed, unresolved
 markets waiting on the caller, capped at 10 with an uncapped `total`; a
 creator's own at once, and for reviewers and admins any left 48 hours or
@@ -498,6 +506,7 @@ after it ships. They roughly follow the project's history:
 | 0090 | Write limits (#273): `write_limits()`, `write_rate_counters` and the `enforce_write_limit` trigger on markets, comments, reactions, task submissions and bet cancels; `cap_push_subscriptions` keeps a member's ten most recently used push devices |
 | 0091 | Default privileges (#274): nothing postgres creates in `public` grants `anon` anything, and no new function is executable by `PUBLIC`; anon's leftover sequence grants go; `has_stake_in_market` answers false to an uninvited caller. `uninvited_auth_users()` (#275), service role only, for the daily cron's cleanup |
 | 0085 | Live pings (#250): `live_pings`, `send_live_ping` and the unlogged `live_ping_queue`. Row triggers on `markets`, `market_outcomes`, `activity_events`, `feed_reactions`, `tasks` and `task_completions` queue their topic once per transaction, and the queue's deferred trigger sends it at commit: one private Broadcast ping per topic per transaction, at most one per topic every `live_ping_interval_ms()`. The `realtime.messages` policy lets only invited members join (reviewers and above for `live:reviews`) |
+| 0088 | Compact sparklines (#252): `market_sparks(p_market_ids, p_points default 24)` and `market_outcomes.pool_version` with its `bump_pool_version` trigger |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
@@ -711,7 +720,14 @@ following `markets`, 6 on the feed and 3 on each busy market page.
 | Realtime messages, 100 a second | a 150-winner resolution sent 150 rows to every feed tab: 1,500 in a second with 10 tabs | the same resolution sends one ping per topic: about 45. The ceiling is now one topic's subscribers, since one ping reaches them all in the same second: about 90 open `/markets` tabs |
 | Concurrent connections, 200 | one per open tab, hidden ones included | one per visible tab (hidden ones close after 60 s): about 10 to 30 typically; 200 when a fifth of members open the app at once, and past that new tabs poll every 60 s instead of failing silently |
 | Vercel invocations, 1M a month | 7.5k renders + 15k prefetches + about 7.5k live refreshes a day, each with a proxy run: about 60k a day, 1.8M a month | 7.5k renders and 7.5k proxy runs; about 5.4k intent prefetches (1.8k nav taps on phones, 3.6k hovers and focuses on desktop), with no proxy; about 5.5k live refreshes (the 15 s wait on `/markets` and the feed folds about a third of them together) and 5.5k proxy runs: about 31k a day, 0.94M a month |
+| Vercel Data Cache (counted as ISR reads and writes; about 1M reads and 200k writes a month on Hobby, check the current figures) | none | `/markets` sparklines (#252): one read per list per render. About 1.5k `/markets` visits and 4k live refreshes a day, up to 3 lists each on All: at most 16.5k reads a day, about 0.5M a month. A write only when a list's key moves: the open list on a `pools` ping (at most about 1,300 a day), the others on a `markets` ping (about 100): about 1.4k a day, 42k a month |
+| Supabase egress, 5 GB a month | about 720 KB of sparkline JSON on every `/markets` render (100 cards), about 4 GB a day | sparklines only on a cache miss: the open list's 50 cards at about 0.85 KB each, about 43 KB, about 1,300 times a day: about 56 MB a day, 1.7 GB a month at most, uncompressed (PostgREST gzips when asked, so likely about a quarter of that; unverified); settled lists are read about once a week |
 | Vercel Active CPU, 4 h a month | about 900k renders a month: 2.5 h at 10 ms of CPU each, 5 h at 20 ms | about 550k renders a month: 1.5 h at 10 ms, 3.1 h at 20 ms; the proxy's local JWT check adds about 0.3 h at 3 ms |
+
+Read Vercel → Usage → Data Cache and Supabase → Usage → Egress too: the
+sparkline cache trades Supabase egress for cache reads, and the open
+list's refetch on every pool change is the biggest remaining egress term
+(fewer cards per list, or a key per smaller group of cards, are the levers).
 
 Realtime fits with headroom. Vercel fits too, but only just: about 6% under
 the invocation limit on these guesses, and going over pauses the app for

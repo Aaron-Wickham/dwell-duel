@@ -509,6 +509,7 @@ export type Database = {
           label: string
           market_id: string
           pool_total: number
+          pool_version: number
         }
         Insert: {
           created_at?: string
@@ -516,6 +517,7 @@ export type Database = {
           label: string
           market_id: string
           pool_total?: number
+          pool_version?: number
         }
         Update: {
           created_at?: string
@@ -523,6 +525,7 @@ export type Database = {
           label?: string
           market_id?: string
           pool_total?: number
+          pool_version?: number
         }
         Relationships: [
           {
@@ -1366,6 +1369,14 @@ export type Database = {
         Args: { p_market_ids: string[]; p_points?: number }
         Returns: {
           market_id: string
+          points: Json
+        }[]
+      }
+      market_sparks: {
+        Args: { p_market_ids: string[]; p_points?: number }
+        Returns: {
+          market_id: string
+          outcome_ids: string[]
           points: Json
         }[]
       }

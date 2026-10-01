@@ -181,4 +181,49 @@ describe('backup secret masking', () => {
     expect(run([script('check-sealed.sh'), out], `${sealed}\n`).status).toBe(0)
     for (const secret of SECRETS) expect(printed()).not.toContain(secret)
   })
+
+  // A tool may spell the password in its own percent-encoding, or wrap it across lines.
+  it('hides a line holding the password in another spelling, or the longer half of a wrapped one', () => {
+    const spellings = ['Fake%40SentinelPw/q9', 'Fake%40SentinelPw%2fq9', 'Fake@SentinelPw%2Fq9', '%46ake@SentinelPw/q9']
+    const wrapped = ['connecting with Fake@Sentin', 'elPw/q9 failed']
+    stub('supabase', [...spellings.map((s) => `echo "error: password ${s}" >&2`), ...wrapped.map((s) => `echo "${s}" >&2`), 'exit 1'].join('\n'))
+    maskStep()
+    const dump = run([script('backup.sh'), 'db', 'nightly', path.join(dir, 'backup')])
+    expect(dump.status).not.toBe(0)
+    expect(dump.stdout).toBe('')
+    const notices = dump.stderr.split('\n').filter((line) => line === '(a line was hidden here: it held part of a secret)')
+    expect(notices).toHaveLength(spellings.length + 1)
+    for (const s of [...spellings, wrapped[0], 'SentinelPw']) expect(printed()).not.toContain(s)
+    expect(dump.stderr).toContain('elPw/q9 failed')
+  })
+
+  it('takes the password from the URL’s authority, not from an @ in its query', () => {
+    const forms = (url: string) =>
+      run(['-c', `source ${JSON.stringify(script('secrets.sh'))}; db_password_forms "$1"`, '_', url]).stdout.split('\n')[0]
+    expect(forms('postgresql://u:pw0rd-long@h:5432/db?options=a@b')).toBe('pw0rd-long')
+    expect(forms('postgresql://u:p@ss@h/db')).toBe('p@ss')
+    expect(forms('postgresql://u:p/w?x@h/db')).toBe('p/w?x')
+    expect(forms('postgresql://u@h/db?x=a:b@c')).toBe('')
+  })
+
+  it('restores with the URL from the environment, never on a command line', () => {
+    const backup = path.join(dir, 'restore')
+    mkdirSync(backup)
+    for (const file of ['roles', 'schema', 'data']) writeFileSync(path.join(backup, `${file}.sql`), 'select 1;\n')
+    const calls = path.join(dir, 'psql-calls')
+    stub('psql', `echo "psql $* password=$PGPASSWORD" >>"${calls}"; echo "psql: error: $* ${DECODED}" >&2`)
+    const ok = run([script('restore.sh'), backup], '', { RESTORE_DB_URL: DB_URL })
+    expect(ok.status).toBe(0)
+    const argv = readFileSync(calls, 'utf8')
+    expect(argv).toContain('--dbname postgresql://postgres.fakeref@db.example.invalid:5432/postgres ')
+    expect(argv).toContain(`password=${DECODED}`)
+    expect(argv.replaceAll(`password=${DECODED}`, '')).not.toContain('SentinelPw')
+    expect(ok.stdout + ok.stderr).not.toContain('SentinelPw')
+
+    const asArgument = run([script('restore.sh'), backup, DB_URL], '')
+    expect(asArgument.status).not.toBe(0)
+    const noUrl = run([script('restore.sh'), backup], '')
+    expect(noUrl.status).not.toBe(0)
+    expect(noUrl.stderr).toContain('RESTORE_DB_URL')
+  })
 })

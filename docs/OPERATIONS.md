@@ -96,8 +96,15 @@ header `git` authenticates to the backups repo with. So:
   instead and never registered, which is why it can't live in `backup.sh`.
 - **`backup.sh` prints only sealed file paths on stdout.** Everything else
   goes to stderr, and the Supabase CLI's and `git`'s output passes through
-  `redact` (`scripts/backup/secrets.sh`), which blanks every form of the
-  secrets even if a mask is missing. `restore.sh` does the same for `psql`.
+  `redact` (`scripts/backup/secrets.sh`) even if a mask is missing. It
+  blanks the URL, the password (as written, decoded and re-encoded), the
+  token and its header, then hides any whole line that still holds the first
+  or last 8 characters of the decoded password, token or header, as printed
+  or once percent-decoded. That catches the password in any percent-encoding
+  spelling, and the longer half of one a tool wraps across lines (always at
+  least 8 characters when the password has 16 or more, as Supabase's
+  generated ones do; a shorter one can slip through in two short halves).
+  `restore.sh` does the same for `psql`.
 - **The workflow checks what it captured** with
   `scripts/backup/check-sealed.sh` before using it: every line must be a
   sealed file in the output folder, and a line that isn't fails the step
@@ -138,6 +145,10 @@ To inspect a backup, or rehearse. `scripts/backup/restore.sh` loads a dump
 into an **empty** Supabase database: the roles first (the platform grants in
 it may fail, which is expected), then the schema and data in one
 transaction with triggers off, so a failure leaves the database as it was.
+It takes the database URL from `RESTORE_DB_URL`, or asks for it without
+echoing it when that's unset, never as an argument, and hands `psql` the URL
+without its password (the password goes through `PGPASSWORD`), so the
+password stays out of shell history and the process list.
 
 ```bash
 # An empty Supabase database: reset from a folder with no migrations and no seed.
@@ -146,7 +157,7 @@ cp supabase/config.toml /tmp/blank/supabase/ && : > /tmp/blank/supabase/seed.sql
 cp supabase/.temp/*-version supabase/.temp/storage-migration /tmp/blank/supabase/.temp/ 2>/dev/null
 (cd /tmp/blank && supabase db reset)
 
-scripts/backup/restore.sh restore postgresql://postgres:postgres@127.0.0.1:54322/postgres
+RESTORE_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres scripts/backup/restore.sh restore
 
 # Files from a Storage copy go back through the Storage API:
 supabase storage cp -r restore/avatars ss:/// --local --experimental
@@ -177,7 +188,8 @@ still there.
 
 1. Create a new Supabase project in the same region (us-east-2) and Postgres
    major version (17).
-2. `scripts/backup/restore.sh restore "<its session pooler URL>"`.
+2. `scripts/backup/restore.sh restore`, and paste its session pooler URL
+   at the prompt (it isn't echoed).
 3. Record the migrations as applied, so Deploy Production doesn't run them
    again: `supabase migration repair --project-ref <new ref> --status applied $(ls supabase/migrations | cut -d_ -f1)`.
 4. Recreate the Vault secrets and cron jobs: the two `vault.create_secret`

@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import { decodeCursor } from '@/lib/pagination/cursor'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backLeg } from './fixtures'
 import { listMyCancelledBets } from '@/lib/bets/list-my-bets'
 import { listMyWagers, type Wager, type WagerBucket } from '@/lib/bets/list-my-wagers'
 
@@ -16,8 +15,8 @@ async function myBets(bucket: WagerBucket) {
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -28,7 +27,7 @@ beforeEach(async () => {
   await giveRole(alice, 'admin')
 })
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<number> {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<number> {
   const { error } = await client.rpc('place_bet', {
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcomeIndex],
@@ -78,7 +77,7 @@ describe('listMyWagers: solo bets', () => {
 
     await closeAndResolve(won, 0)
     await closeAndResolve(lost, 0)
-    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId })
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId, p_reason: 'Voided in a test' })
     if (voidErr) throw voidErr
 
     const openPage = await myBets('open')
@@ -108,7 +107,7 @@ describe('listMyWagers: solo bets', () => {
     expect(settled.rows.map((b) => [b.marketTitle, b.result])).toEqual([['Nobody picked No', { kind: 'refunded', reason: 'no_winners' }]])
   })
 
-  it('reports a seeded win as what resolve_market actually paid', async () => {
+  it('reports a win on a seeded market as what resolve_market actually paid', async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Seeded', seed: 20 })
     await bet(bobClient, market, 0, 10)
     await bet(aliceClient, market, 1, 20)
@@ -116,10 +115,10 @@ describe('listMyWagers: solo bets', () => {
     await closeAndResolve(market, 0)
     const { data: after } = await serviceClient().from('profiles').select('balance').eq('id', bob.id).single()
 
-    // floor(10 × (30 + 2 × 20) / (10 + 20)) = 23
+    // The real pool, the seed left out: floor(10 × 30 / 10) = 30.
     const settled = await myBets('settled')
-    expect(settled.rows.map((b) => b.result)).toEqual([{ kind: 'won', payout: 23 }])
-    expect(after!.balance - before!.balance).toBe(23)
+    expect(settled.rows.map((b) => b.result)).toEqual([{ kind: 'won', payout: 30 }])
+    expect(after!.balance - before!.balance).toBe(30)
   })
 
   it("shows an open market that's past close as awaiting its result", async () => {
@@ -168,6 +167,8 @@ describe('listMyWagers: bets and parlays together', () => {
     const a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'A', seed: 20 })
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'B', seed: 20 })
     await bet(bobClient, a, 0, 5)
+    await backLeg(a, 1)
+    await backLeg(b, 0)
     const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[1]], p_stake: 4 })
     if (error) throw error
     await bet(bobClient, b, 0, 3)
@@ -188,6 +189,7 @@ describe('listMyWagers: bets and parlays together', () => {
   it('pages across both kinds with Show more, and ignores a cursor that names neither', async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     const other = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    for (const m of [market, other]) await backLeg(m, 1)
     const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [market.outcomeIds[0], other.outcomeIds[0]], p_stake: 2 })
     if (error) throw error
     for (let i = 0; i < 50; i++) await bet(bobClient, market, i % 2, 1)

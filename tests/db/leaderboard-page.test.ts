@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient, deleteAuthUser } from './helpers'
+import { pgQuery } from './pg-query'
+import { serviceClient, deleteAuthUser, type TestClient } from './helpers'
 import { seedMembers, makeMember, clientFor, ensureInvited } from './fixtures'
 import { getLeaderboardPage } from '@/lib/social/leaderboard'
 import { showMoreHref } from '@/lib/pagination/cursor'
@@ -17,7 +17,7 @@ const TIE_START = 47
 const TIE_BALANCE = 950
 const EXTRA_MEMBERS = 58
 
-let bobClient: SupabaseClient
+let bobClient: TestClient
 // Every member this file adds is deleted in afterAll, so a local run doesn't accumulate them.
 // seedMembers() wipes every auth user before seeding, so a run killed before cleanup can't strand
 // extras for the next file's own seedMembers() to trip over — afterAll just keeps a repeated
@@ -54,6 +54,15 @@ beforeAll(async () => {
       if (error) throw error
     }),
   )
+
+  // One adjustment row per profile for the gap, so every balance still equals its ledger.
+  await pgQuery(`
+    insert into public.coin_transactions (profile_id, amount, type)
+    select p.id, p.balance - coalesce(sum(t.amount), 0), 'test_adjustment'
+    from public.profiles p left join public.coin_transactions t on t.profile_id = p.id
+    group by p.id, p.balance
+    having p.balance <> coalesce(sum(t.amount), 0)
+  `)
 
   // The expected board comes from the database's own order, so the names in the tie sort by its
   // collation, the same one the reader's filters compare with.

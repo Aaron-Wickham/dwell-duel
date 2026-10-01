@@ -2,6 +2,7 @@
 
 import { MAX_TASK_REWARD } from '@/lib/tasks/limits'
 import { useActionState, useState } from 'react'
+import { fingerprintOf, useAttemptKey } from '@/lib/forms/attempt-key'
 import { createTaskAction, type ActionState } from '@/lib/tasks/create-task'
 import { Field, Input, Select, Textarea } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
@@ -17,12 +18,15 @@ export function CreateTaskForm() {
   const [proofRequired, setProofRequired] = useState(false)
   const [isRepeatable, setIsRepeatable] = useState(false)
   const [period, setPeriod] = useState('daily')
+  const attemptKey = useAttemptKey()
   const [state, formAction] = useActionState<ActionState, FormData>(
     withSuccessToast(
       async (prev: ActionState, formData: FormData) => {
+        formData.set('idempotency_key', attemptKey.claim(fingerprintOf(formData)))
         const next = await createTaskAction(prev, formData)
         // A created task starts the form afresh, ready for the next one.
         if (!next?.formError) {
+          attemptKey.release()
           setTitle('')
           setDescription('')
           setReward('')

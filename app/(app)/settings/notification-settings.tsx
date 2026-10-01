@@ -12,6 +12,7 @@ import {
   savePushSubscriptionAction,
   type PrefsState,
 } from '@/lib/push/actions'
+import { keyBytes, sameKey, writePushMemory } from '@/lib/push/client'
 import type { NotificationKind, NotificationPrefs } from '@/lib/push/prefs'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 
@@ -48,20 +49,6 @@ function detectSupport(): Support {
   return ios && !window.matchMedia('(display-mode: standalone)').matches ? 'ios-install' : 'unsupported'
 }
 
-function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
-  const base64 = (base64url + '='.repeat((4 - (base64url.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/')
-  const raw = atob(base64)
-  const bytes = new Uint8Array(new ArrayBuffer(raw.length))
-  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i)
-  return bytes
-}
-
-function sameKey(a: ArrayBuffer | null | undefined, b: Uint8Array): boolean {
-  if (!a || a.byteLength !== b.length) return false
-  const view = new Uint8Array(a)
-  return view.every((byte, i) => byte === b[i])
-}
-
 async function currentSubscription(): Promise<PushSubscription | null> {
   const registration = await navigator.serviceWorker.getRegistration()
   return (await registration?.pushManager.getSubscription()) ?? null
@@ -75,7 +62,7 @@ async function readyRegistration(): Promise<ServiceWorkerRegistration> {
   ])
 }
 
-function DeviceStatus({ publicKey, endpoints }: { publicKey: string; endpoints: string[] }) {
+function DeviceStatus({ userId, publicKey, endpoints }: { userId: string; publicKey: string; endpoints: string[] }) {
   const [device, setDevice] = useState<Device>('checking')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -97,14 +84,18 @@ function DeviceStatus({ publicKey, endpoints }: { publicKey: string; endpoints: 
       if (Notification.permission === 'denied') next = 'denied'
       else {
         const subscription = await currentSubscription().catch(() => null)
-        if (subscription && Notification.permission === 'granted' && endpoints.includes(subscription.endpoint)) next = 'on'
+        if (subscription && Notification.permission === 'granted' && endpoints.includes(subscription.endpoint)) {
+          next = 'on'
+          // A device that was on before re-sync shipped has no memory yet; this gives it one.
+          writePushMemory(localStorage, userId, { endpoint: subscription.endpoint, syncedAt: Date.now() })
+        }
       }
       if (live) setDevice(next)
     })()
     return () => {
       live = false
     }
-  }, [endpoints])
+  }, [endpoints, userId])
 
   async function turnOn() {
     if (busy) return
@@ -132,6 +123,7 @@ function DeviceStatus({ publicKey, endpoints }: { publicKey: string; endpoints: 
         setError(result.error)
         return
       }
+      writePushMemory(localStorage, userId, { endpoint: subscription.endpoint, syncedAt: Date.now() })
       flipped.current = true
       setDevice('on')
     } catch {
@@ -155,6 +147,7 @@ function DeviceStatus({ publicKey, endpoints }: { publicKey: string; endpoints: 
         }
         await subscription.unsubscribe()
       }
+      writePushMemory(localStorage, userId, null)
       flipped.current = true
       setDevice('off')
     } catch {
@@ -244,11 +237,13 @@ function PrefsForm({ prefs, reviewer }: { prefs: NotificationPrefs; reviewer: bo
 }
 
 export function NotificationSettings({
+  userId,
   publicKey,
   endpoints,
   prefs,
   reviewer,
 }: {
+  userId: string
   publicKey: string | null
   endpoints: string[]
   prefs: NotificationPrefs
@@ -268,7 +263,7 @@ export function NotificationSettings({
       ) : support === 'unsupported' ? (
         <p className="text-ink2">This browser can’t show notifications from DwellDuel.</p>
       ) : support === 'supported' ? (
-        <DeviceStatus publicKey={publicKey} endpoints={endpoints} />
+        <DeviceStatus userId={userId} publicKey={publicKey} endpoints={endpoints} />
       ) : null}
       <PrefsForm prefs={prefs} reviewer={reviewer} />
     </div>

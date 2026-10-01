@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import type { PostgrestError } from '@supabase/supabase-js'
+import { serviceClient, type TestClient } from './helpers'
 import { seedMembers, clientFor, createTestMarket, createTestTask, type Member, type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 
@@ -21,7 +21,7 @@ function readGuardBlock(): string {
 
 let alice: Member
 let bob: Member
-let adminClient: SupabaseClient
+let adminClient: TestClient
 let market: TestMarket
 let taskId: string
 let completionId: string
@@ -157,7 +157,7 @@ describe('adjust_balance reason limit', () => {
       .eq('profile_id', bob.id)
       .eq('type', 'admin_adjustment')
     if (error) throw error
-    return data.map((t) => ({ amount: t.amount, reason: t.meta.reason }))
+    return data.map((t) => ({ amount: t.amount, reason: (t.meta as { reason: string }).reason }))
   }
 
   async function bobsBalance(): Promise<number> {

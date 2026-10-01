@@ -5,6 +5,7 @@ import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { friendlyError } from '@/lib/errors/friendly-error'
 import { afterAction, notifyNewMarket } from '@/lib/push/notify'
+import { isUuid } from '@/lib/uuid'
 import { CREATE_MARKET_ERRORS } from './create-market-errors'
 
 export type ActionState =
@@ -25,6 +26,9 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
     .trim()
   const kind = String(formData.get('kind') ?? '')
   const closeAt = String(formData.get('close_at') ?? '')
+  // useOffline replays an action whose response was lost; the key makes that return the first market (#258).
+  const attemptKey = String(formData.get('idempotency_key') ?? '')
+  const p_idempotency_key = isUuid(attemptKey) ? attemptKey : undefined
 
   if (!title) return { formError: 'Enter a title.', field: 'title' }
   if (title.length > TEXT_LIMITS.marketTitle) return { formError: tooLong('Title', TEXT_LIMITS.marketTitle), field: 'title' }
@@ -44,17 +48,17 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
     if (!Number.isFinite(line) || line < 0.5 || line % 1 !== 0.5) {
       return { formError: 'Set the line to a half number, like 3.5.', field: 'line' }
     }
-    const { data: marketId, error } = await supabase.rpc('create_market', {
+    const { data, error } = await supabase.rpc('create_market_v2', {
       p_title: title,
       p_description: description || null,
       p_kind: kind,
       p_outcome_labels: [],
       p_close_at: closeAt,
       p_line: line,
+      p_idempotency_key,
     })
     if (error) return friendlyError(error, CREATE_MARKET_ERRORS, 'create_market failed')
-    afterAction(() => notifyNewMarket(marketId))
-    redirect(`/markets/${marketId}`)
+    return finish(data)
   }
 
   // One line per outcome input, blanks included, so a line's position matches the form's "Outcome N".
@@ -74,16 +78,26 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
     return { formError: tooLong(`Outcome ${n}`, TEXT_LIMITS.outcomeLabel), field: `outcome_${n}` }
   }
 
-  const { data: marketId, error } = await supabase.rpc('create_market', {
+  const { data, error } = await supabase.rpc('create_market_v2', {
     p_title: title,
     p_description: description || null,
     p_kind: kind,
     p_outcome_labels: outcomeLabels,
     p_close_at: closeAt,
+    p_idempotency_key,
   })
 
   if (error) return friendlyError(error, CREATE_MARKET_ERRORS, 'create_market failed')
 
-  afterAction(() => notifyNewMarket(marketId))
-  redirect(`/markets/${marketId}`)
+  return finish(data)
+}
+
+type Created = { market_id: string; replayed: boolean }
+
+// A replay (Next re-sending an action whose response was lost) finds the market the first call made,
+// whose own call already sent the new-market push.
+function finish(data: unknown): never {
+  const { market_id, replayed } = data as Created
+  if (!replayed) afterAction(() => notifyNewMarket(market_id))
+  redirect(`/markets/${market_id}`)
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
+import { fingerprintOf, useAttemptKey } from '@/lib/forms/attempt-key'
 import { Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Textarea } from '@/components/ui/field'
@@ -48,7 +49,15 @@ export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
   // Until it's edited, a duplicate's close time is worked out in the viewer's own time zone,
   // which the server can't know.
   const closeAt = editedCloseAt ?? (initial ? nextWeeklyClose(initial.closeAt, initial.now, timeZone) : '')
-  const [state, formAction] = useActionState<ActionState, FormData>(createMarketAction, undefined)
+  const attemptKey = useAttemptKey()
+  const [state, formAction] = useActionState<ActionState, FormData>(async (prev, formData) => {
+    // Held across a lost response and Next's replay, so a market that committed isn't made twice (#258).
+    formData.set('idempotency_key', attemptKey.claim(fingerprintOf(formData)))
+    const next = await createMarketAction(prev, formData)
+    // Only a refusal comes back here (success redirects), and it made nothing, so the next try is a new attempt.
+    attemptKey.release()
+    return next
+  }, undefined)
 
   function updateOutcome(index: number, value: string) {
     setOutcomes((prev) => prev.map((outcome, i) => (i === index ? value : outcome)))

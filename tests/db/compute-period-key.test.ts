@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { seedMembers, clientFor, type Member } from './fixtures'
+import type { TestClient } from './helpers'
 
 // Periods run midnight to midnight in America/New_York (0054, #82). Instants below are UTC;
 // Eastern is UTC-4 in summer (EDT) and UTC-5 in winter (EST). In 2026 the clocks go forward on
 // 8 March and back on 1 November.
 let alice: Member
-let client: SupabaseClient
+let client: TestClient
 
 beforeEach(async () => {
   ;[alice] = await seedMembers()

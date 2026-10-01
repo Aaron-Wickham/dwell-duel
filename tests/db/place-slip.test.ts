@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
+import { serviceClient, type TestClient, type SlipSummary } from './helpers'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, backLeg } from './fixtures'
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 let a: TestMarket
 let b: TestMarket
 let c: TestMarket
@@ -19,10 +18,11 @@ beforeEach(async () => {
   a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'A' })
   b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'B' })
   c = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'C' })
-  // Parlay legs need a pool on their outcome to lock odds against.
+  // Parlay legs need other members' money on their outcome to be priced at close, and the floor.
   for (const m of [b, c]) {
     const { error } = await aliceClient.rpc('place_bet', { p_market_id: m.marketId, p_outcome_id: m.outcomeIds[0], p_amount: 5 })
     if (error) throw error
+    await backLeg(m, 1)
   }
 })
 
@@ -40,9 +40,9 @@ async function countFor(member: Member) {
   return { bets, parlays }
 }
 
-describe('place_slip', () => {
+describe('place_slip_v2', () => {
   it('places solo bets and a parlay together', async () => {
-    const { data: parlayId, error } = await bobClient.rpc('place_slip', {
+    const { data: summary, error } = await bobClient.rpc('place_slip_v2', {
       p_singles: [
         { outcome_id: a.outcomeIds[0], amount: 10 },
         { outcome_id: a.outcomeIds[1], amount: 4 },
@@ -51,19 +51,22 @@ describe('place_slip', () => {
       p_parlay_stake: 6,
     })
     expect(error).toBeNull()
-    expect(parlayId).toMatch(/^[0-9a-f-]{36}$/)
+    const placed = summary as SlipSummary
+    expect(placed.parlay_id).toMatch(/^[0-9a-f-]{36}$/)
+    expect(placed).toMatchObject({ solos: 2, replayed: false })
+    expect([...placed.picks].sort()).toEqual([a.outcomeIds[0], a.outcomeIds[1], b.outcomeIds[0], c.outcomeIds[0]].sort())
     expect(await balanceOf(bob)).toBe(80)
     expect(await countFor(bob)).toEqual({ bets: 2, parlays: 1 })
   })
 
   it('places solo bets alone, including on an outcome with no pool yet, and returns no parlay', async () => {
-    const { data, error } = await bobClient.rpc('place_slip', {
+    const { data, error } = await bobClient.rpc('place_slip_v2', {
       p_singles: [{ outcome_id: a.outcomeIds[0], amount: 3 }],
       p_parlay_outcome_ids: [],
       p_parlay_stake: 0,
     })
     expect(error).toBeNull()
-    expect(data).toBeNull()
+    expect(data).toEqual({ parlay_id: null, solos: 1, picks: [a.outcomeIds[0]], replayed: false })
     expect(await countFor(bob)).toEqual({ bets: 1, parlays: 0 })
   })
 
@@ -73,7 +76,7 @@ describe('place_slip', () => {
       .update({ close_at: new Date(Date.now() - 1000).toISOString() })
       .eq('id', c.marketId)
 
-    const { error } = await bobClient.rpc('place_slip', {
+    const { error } = await bobClient.rpc('place_slip_v2', {
       p_singles: [
         { outcome_id: a.outcomeIds[0], amount: 10 },
         { outcome_id: c.outcomeIds[1], amount: 5 },
@@ -87,7 +90,7 @@ describe('place_slip', () => {
   })
 
   it('places nothing when the parlay fails, and says it was the parlay', async () => {
-    const { error } = await bobClient.rpc('place_slip', {
+    const { error } = await bobClient.rpc('place_slip_v2', {
       p_singles: [{ outcome_id: a.outcomeIds[0], amount: 10 }],
       p_parlay_outcome_ids: [b.outcomeIds[0]],
       p_parlay_stake: 5,
@@ -98,7 +101,7 @@ describe('place_slip', () => {
   })
 
   it('passes a balance shortfall through unprefixed, placing nothing', async () => {
-    const { error } = await bobClient.rpc('place_slip', {
+    const { error } = await bobClient.rpc('place_slip_v2', {
       p_singles: [
         { outcome_id: a.outcomeIds[0], amount: 60 },
         { outcome_id: b.outcomeIds[1], amount: 60 },
@@ -113,11 +116,11 @@ describe('place_slip', () => {
   })
 
   it('refuses an empty slip and an uninvited member', async () => {
-    const empty = await bobClient.rpc('place_slip', { p_singles: [], p_parlay_outcome_ids: [], p_parlay_stake: 0 })
+    const empty = await bobClient.rpc('place_slip_v2', { p_singles: [], p_parlay_outcome_ids: [], p_parlay_stake: 0 })
     expect(empty.error?.message).toBe('your slip is empty')
 
     await serviceClient().from('allowed_emails').delete().eq('email', bob.email)
-    const uninvited = await bobClient.rpc('place_slip', {
+    const uninvited = await bobClient.rpc('place_slip_v2', {
       p_singles: [{ outcome_id: a.outcomeIds[0], amount: 1 }],
       p_parlay_outcome_ids: [],
       p_parlay_stake: 0,

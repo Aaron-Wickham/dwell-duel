@@ -1,7 +1,7 @@
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { LocalTime } from '@/components/ui/local-time'
-import { formatOdds, MAX_MULTIPLIER } from '@/lib/parlays/odds'
+import { formatOdds } from '@/lib/parlays/odds'
 import type { ParlayView } from '@/lib/parlays/list-parlays'
 import { focusTarget } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
@@ -26,7 +26,7 @@ export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: st
   const figure = outcomeFigure(parlay)
   const shown = parlay.legs.slice(0, PREVIEW_LEGS)
   const hidden = parlay.legs.length - shown.length
-  const multiplier = `${formatOdds(parlay.multiplierBp)}×`
+  const multiplier = `${parlay.estimated ? '~' : ''}${formatOdds(parlay.multiplierBp)}×`
 
   return (
     <li {...focusTarget(domId, titleId)} className="py-3 lg:py-0">
@@ -52,7 +52,7 @@ export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: st
 
         <div className="grid grid-cols-3 items-end gap-2">
           <Figure label="Stake" value={`${parlay.stake} DC`} />
-          <Figure label={parlay.capped ? `Multiplier (max ${MAX_MULTIPLIER}×)` : 'Multiplier'} value={multiplier} />
+          <Figure label={parlay.capped ? `Multiplier (max ${parlay.maxMultiplier}×)` : 'Multiplier'} value={multiplier} />
           <Figure label={figure.label} value={figure.value} className={FIGURE_TONE[figure.tone]} />
         </div>
 

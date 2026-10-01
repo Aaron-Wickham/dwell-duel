@@ -19,6 +19,7 @@ const pick: SlipPick = {
   parlay: false,
   open: true,
   oddsBp: 20_000,
+  legBlock: null,
   outcomePool: 10,
   totalPool: 20,
 }

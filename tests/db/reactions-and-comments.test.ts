@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
+import { expectError } from './assertions'
 import { pgQuery } from './pg-query'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 
@@ -8,10 +8,10 @@ import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, ty
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let adminClient: SupabaseClient
-let outsiderClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let adminClient: TestClient
+let outsiderClient: TestClient
 let market: TestMarket
 let eventId: string
 
@@ -42,7 +42,7 @@ async function commentRow(id: number) {
   return data
 }
 
-async function postComment(client: SupabaseClient, profileId: string, body = 'Yes is a lock') {
+async function postComment(client: TestClient, profileId: string, body = 'Yes is a lock') {
   return client.from('market_comments').insert({ market_id: market.marketId, profile_id: profileId, body }).select('id').single()
 }
 
@@ -194,7 +194,7 @@ describe('market_comments', () => {
   it("lets the owner delete anyone's comment, but not a reviewer", async () => {
     const { data } = await postComment(bobClient, bob.id)
     await giveRole(alice, 'reviewer')
-    expect((await aliceClient.rpc('delete_market_comment', { p_comment_id: data!.id })).error).not.toBeNull()
+    expectError((await aliceClient.rpc('delete_market_comment', { p_comment_id: data!.id })).error, "only the comment's author or an admin can delete it")
     await giveRole(alice, 'owner')
     expect((await aliceClient.rpc('delete_market_comment', { p_comment_id: data!.id })).error).toBeNull()
   })

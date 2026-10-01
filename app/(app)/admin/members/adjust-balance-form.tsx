@@ -1,6 +1,7 @@
 'use client'
 
-import { useActionState, useRef, useState } from 'react'
+import { useActionState, useState } from 'react'
+import { fingerprintOf, useAttemptKey } from '@/lib/forms/attempt-key'
 import { adjustBalanceAction, type ActionState } from '@/lib/members/adjust-balance'
 import type { MemberSummary } from '@/lib/members/list-members'
 import { ConfirmSubmitDialog, useConfirmSubmit } from '@/components/ui/confirm-submit-dialog'
@@ -17,10 +18,11 @@ export function AdjustBalanceForm({ member, now }: { member: MemberSummary; now:
   const [reason, setReason] = useState('')
   const confirm = useConfirmSubmit()
   // Kept until an adjustment succeeds, so a retry after a lost response never adjusts twice (#61).
-  const attemptKey = useRef<string | null>(null)
+  // Editing the amount or reason starts a new attempt, so a corrected figure isn't swallowed as a
+  // replay of the first one (#267).
+  const attemptKey = useAttemptKey()
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(async (prev, formData) => {
-    attemptKey.current ??= crypto.randomUUID()
-    formData.set('idempotency_key', attemptKey.current)
+    formData.set('idempotency_key', attemptKey.claim(fingerprintOf(formData)))
     let next: ActionState
     try {
       next = await adjustBalanceAction(member.id, prev, formData)
@@ -30,10 +32,11 @@ export function AdjustBalanceForm({ member, now }: { member: MemberSummary; now:
     }
     confirm.setOpen(false)
     if (!next?.formError) {
-      attemptKey.current = null
+      attemptKey.release()
+      const applied = Number(formData.get('amount'))
       setAmount('')
       setReason('')
-      toast.success('Balance adjusted.')
+      toast.success(`Balance adjusted by ${applied > 0 ? '+' : '−'}${Math.abs(applied)} DC.`)
       haptics.success()
     }
     return next

@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import {
   seedMembers,
   makeMember,
@@ -11,15 +10,15 @@ import {
   createTestTask,
   ensureInvited,
   type Member,
-  type TestMarket, giveRole } from './fixtures'
+  type TestMarket, giveRole, backLeg } from './fixtures'
 import { pgQuery } from './pg-query'
 
 let alice: Member
 let bob: Member
 let carol: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let carolClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let carolClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -32,7 +31,7 @@ beforeEach(async () => {
   await giveRole(alice, 'admin')
 })
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
   const { error } = await client.rpc('place_bet', {
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcomeIndex],
@@ -57,7 +56,7 @@ async function resolve(market: TestMarket, outcomeIndex: number): Promise<string
   return data.current_resolution_id as string
 }
 
-async function placeParlay(client: SupabaseClient, outcomeIds: string[], stake: number): Promise<string> {
+async function placeParlay(client: TestClient, outcomeIds: string[], stake: number): Promise<string> {
   const { data, error } = await client.rpc('place_parlay', { p_outcome_ids: outcomeIds, p_stake: stake })
   if (error) throw error
   return data as string
@@ -83,7 +82,9 @@ interface Mismatch {
 // season_champion (0051) is left out: settle_season writes it on demand, from a finished month's
 // ledger, not a trigger from a source row, so the view has nothing to derive it from. The
 // scenario still settles a season, so the comparison proves the champion's row changes nothing
-// else, and tests/db/net-worth-and-seasons.test.ts covers the row itself.
+// else, and tests/db/net-worth-and-seasons.test.ts covers the row itself. market_voided (0073)
+// is left out the same way: void_market writes it, and the view predates it; tests/db/
+// void-market.test.ts covers that row.
 const MISMATCHES = `
   with stored as (
     select e.id, e.kind, e.occurred_at, e.actor_id, e.amount, e.market_id, o.label as outcome_label,
@@ -93,7 +94,7 @@ const MISMATCHES = `
     left join public.market_outcomes o on o.id = e.outcome_id
     left join public.task_completions c on c.id = e.task_completion_id
     left join public.tasks t on t.id = c.task_id
-    where e.hidden_at is null and e.kind <> 'season_champion'
+    where e.hidden_at is null and e.kind not in ('season_champion', 'market_voided')
   ),
   derived as (
     select id, kind, occurred_at, actor_id, amount, market_id, outcome_label, leg_count, task_title
@@ -142,15 +143,17 @@ async function fullScenario(): Promise<void> {
   const b = await createTestMarket(aliceClient, ['Red', 'Blue', 'Green'], { title: 'Scenario B', seed: 20 })
   expect(await mismatches()).toEqual([])
 
-  // Seeded like every real market, so no outcome is ever empty (a parlay leg's odds leave out the
-  // bettor's own stake, 0046). Bob's stake makes A's payout floor a fraction: effective pool
-  // 46 + 40 = 86, winning pool 16 + 20 = 36, floor(11 × 86 / 36) = floor(26.27) = 26.
+  // Seeded like every real market. The backers' 25 DC each give both markets the parlay floor
+  // (0074). Bob's stake makes A's payout floor a fraction: effective pool 96 + 40 = 136, winning
+  // pool 16 + 20 = 36, floor(11 × 136 / 36) = floor(41.56) = 41.
   await bet(bobClient, a, 0, 11)
   await bet(carolClient, a, 1, 30)
   await bet(aliceClient, a, 0, 5)
   await bet(bobClient, b, 0, 4)
   await bet(carolClient, b, 1, 6)
   await bet(aliceClient, b, 2, 2)
+  await backLeg(a, 1)
+  await backLeg(b, 2)
   expect(await mismatches()).toEqual([])
 
   // A cancelled bet leaves both the view and the table.
@@ -175,7 +178,7 @@ async function fullScenario(): Promise<void> {
   expect(await mismatches()).toEqual([])
 
   // Voiding B settles both parlays on A alone: Bob's wins, Carol's loses.
-  const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: b.marketId })
+  const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: b.marketId, p_reason: 'Voided in a test' })
   if (voidErr) throw voidErr
   expect(await mismatches()).toEqual([])
 
@@ -202,8 +205,8 @@ async function fullScenario(): Promise<void> {
   expect(reviewRows).toEqual([{ id: completionId2, ok: true, error: null }])
   expect(await mismatches()).toEqual([])
 
-  // A finished month's champion, from ledger rows dated in June (only the ledger, not balances).
-  await pgQuery(`insert into public.coin_transactions (profile_id, amount, type, created_at) values ('${carol.id}', 18, 'bet_won', '2026-06-12T12:00:00Z')`)
+  // A finished month's champion, from ledger rows dated in June (the balance follows it).
+  await pgQuery(`insert into public.coin_transactions (profile_id, amount, type, created_at) values ('${carol.id}', 18, 'bet_won', '2026-06-12T12:00:00Z'); update public.profiles set balance = balance + 18 where id = '${carol.id}'`)
   const { data: champion, error: settleErr } = await serviceClient().rpc('settle_season', { p_month: '2026-06-01' })
   if (settleErr) throw settleErr
   expect(champion).toBe(carol.id)
@@ -220,16 +223,17 @@ describe('activity_events', () => {
     `)
     // Every kind is covered, and the override really did hide rows, so the comparison isn't vacuous.
     expect(kinds).toEqual([
-      { kind: 'bet_placed', visible: 6, hidden: 0 },
-      { kind: 'bet_won', visible: 1, hidden: 2 },
+      { kind: 'bet_placed', visible: 10, hidden: 0 },
+      { kind: 'bet_won', visible: 3, hidden: 2 },
       { kind: 'market_created', visible: 2, hidden: 0 },
       { kind: 'market_resolved', visible: 1, hidden: 1 },
+      { kind: 'market_voided', visible: 1, hidden: 0 },
       { kind: 'parlay_placed', visible: 2, hidden: 0 },
       { kind: 'parlay_won', visible: 1, hidden: 1 },
       { kind: 'season_champion', visible: 1, hidden: 0 },
       { kind: 'task_completed', visible: 2, hidden: 0 },
     ])
-    expect(await feedCount()).toBe(15)
+    expect(await feedCount()).toBe(21)
   })
 
   it("backfills, from activity_feed, the same rows the triggers wrote", async () => {
@@ -237,7 +241,7 @@ describe('activity_events', () => {
 
     // The migration's own backfill statement, run into a scratch copy of the table, so the real
     // rows stay as the triggers left them. Every column is compared, related ids included. The
-    // champion isn't a row the view ever had, so it isn't one the backfill makes.
+    // champion and the void aren't rows the view ever had, so they aren't ones the backfill makes.
     const migration = readFileSync(path.resolve('supabase/migrations/0035_activity_events.sql'), 'utf8')
     const backfill = migration.match(/^insert into public\.activity_events [^;]*?from public\.activity_feed[^;]*;/m)?.[0]
     expect(backfill).toBeDefined()
@@ -247,13 +251,13 @@ describe('activity_events', () => {
       ${backfill!.replace('insert into public.activity_events', 'insert into pg_temp.backfill')}
       select
         (select count(*)::integer from (
-          (select ${columns} from pg_temp.backfill except select ${columns} from public.activity_events where hidden_at is null and kind <> 'season_champion')
+          (select ${columns} from pg_temp.backfill except select ${columns} from public.activity_events where hidden_at is null and kind not in ('season_champion', 'market_voided'))
           union all
-          (select ${columns} from public.activity_events where hidden_at is null and kind <> 'season_champion' except select ${columns} from pg_temp.backfill)
+          (select ${columns} from public.activity_events where hidden_at is null and kind not in ('season_champion', 'market_voided') except select ${columns} from pg_temp.backfill)
         ) d) as differing,
         (select count(*)::integer from pg_temp.backfill) as backfilled
     `)
-    expect(result).toEqual({ differing: 0, backfilled: 15 })
+    expect(result).toEqual({ differing: 0, backfilled: 21 })
   })
 
   it("hides exactly the old resolution's rows on an override, and shows a new resolution's rows when it goes back", async () => {
@@ -308,6 +312,7 @@ describe('activity_events', () => {
     for (const m of [a, b]) {
       await bet(aliceClient, m, 0, 5)
       await bet(aliceClient, m, 1, 15)
+      await backLeg(m, 1)
     }
     const parlayId = await placeParlay(bobClient, [a.outcomeIds[0], b.outcomeIds[0]], 10)
     await resolve(a, 0)
@@ -323,7 +328,7 @@ describe('activity_events', () => {
     expect(won.status).toBe('won')
     let win = (await eventsFor('parlay_id', parlayId)).find((e) => e.kind === 'parlay_won')!
     expect(win).toMatchObject({ id: `parlay_win:${parlayId}`, amount: won.credited, hidden_at: null })
-    expect(Date.parse(win.occurred_at)).toBe(Date.parse(won.settled_at))
+    expect(Date.parse(win.occurred_at)).toBe(Date.parse(won.settled_at!))
 
     await resolve(a, 1)
     expect((await settled()).status).toBe('lost')
@@ -338,8 +343,8 @@ describe('activity_events', () => {
     expect(events.filter((e) => e.kind === 'parlay_won')).toHaveLength(1)
     win = events.find((e) => e.kind === 'parlay_won')!
     expect(win).toMatchObject({ amount: wonAgain.credited, hidden_at: null })
-    expect(Date.parse(win.occurred_at)).toBe(Date.parse(wonAgain.settled_at))
-    expect(Date.parse(wonAgain.settled_at)).toBeGreaterThan(Date.parse(won.settled_at))
+    expect(Date.parse(win.occurred_at)).toBe(Date.parse(wonAgain.settled_at!))
+    expect(Date.parse(wonAgain.settled_at!)).toBeGreaterThan(Date.parse(won.settled_at!))
     expect(await mismatches()).toEqual([])
   })
 
@@ -348,6 +353,7 @@ describe('activity_events', () => {
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Direct B' })
     await bet(aliceClient, a, 0, 5)
     await bet(aliceClient, b, 0, 5)
+    for (const m of [a, b]) await backLeg(m, 1)
     const parlayId = await placeParlay(bobClient, [a.outcomeIds[0], b.outcomeIds[0]], 10)
     const { taskId } = await createTestTask(alice, { title: 'Seeded task', rewardAmount: 9 })
 

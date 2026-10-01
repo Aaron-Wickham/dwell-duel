@@ -26,14 +26,14 @@ function leg(over: Record<string, unknown> = {}, market: Record<string, unknown>
 }
 
 const row = (legs: unknown[], over: Record<string, unknown> = {}) =>
-  ({ id: ID, profile_id: 'u-1', stake: 5, status: 'pending', credited: 0, created_at: '2026-09-27T16:10:00Z', parlay_legs: legs, ...over }) as Parameters<
+  ({ id: ID, profile_id: 'u-1', stake: 5, status: 'pending', credited: 0, max_multiplier: 20, created_at: '2026-09-27T16:10:00Z', parlay_legs: legs, ...over }) as Parameters<
     typeof toParlayDetail
   >[0]
 
 const BEFORE_CLOSE = Date.parse('2026-09-29T12:00:00Z')
 
 describe('toParlayDetail', () => {
-  it('multiplies the locked odds and reads each leg’s state from its market', () => {
+  it('multiplies the set odds and reads each leg’s state from its market', () => {
     const detail = toParlayDetail(
       row([
         leg({}, { status: 'resolved', current_resolution: { outcome_id: 'o-yes', resolved_at: '2026-09-29T10:00:00Z' } }),
@@ -41,6 +41,7 @@ describe('toParlayDetail', () => {
       ]),
       'Grace',
       BEFORE_CLOSE,
+      new Map(),
     )
     expect(detail.ownerName).toBe('Grace')
     expect(detail.multiplierBp).toBe(42_000)
@@ -51,7 +52,7 @@ describe('toParlayDetail', () => {
   })
 
   it('leaves a voided leg out of the multiplier, as settle_parlay does', () => {
-    const detail = toParlayDetail(row([leg({}, { status: 'voided' }), leg({ locked_odds: 2 }, { id: 'm-2' })]), 'Grace', BEFORE_CLOSE)
+    const detail = toParlayDetail(row([leg({}, { status: 'voided' }), leg({ locked_odds: 2 }, { id: 'm-2' })]), 'Grace', BEFORE_CLOSE, new Map())
     expect(detail.legs[0].status).toBe('voided')
     expect(detail.multiplierBp).toBe(20_000)
     expect(detail.potentialPayout).toBe(10)
@@ -62,12 +63,37 @@ describe('toParlayDetail', () => {
       row([leg({}, { status: 'resolved', current_resolution: { outcome_id: 'o-no', resolved_at: '2026-09-29T10:00:00Z' } })]),
       'Grace',
       BEFORE_CLOSE,
+      new Map(),
     )
     expect(detail.legs[0]).toMatchObject({ status: 'lost', winningLabel: 'No' })
   })
 
+  it('estimates a leg whose odds aren’t set yet from its quote, and says the multiplier is an estimate', () => {
+    const detail = toParlayDetail(
+      row([leg({ locked_odds: null }), leg({ locked_odds: 2 }, { id: 'm-2' })]),
+      'Grace',
+      BEFORE_CLOSE,
+      new Map([[`${ID}:o-yes`, { oddsBp: 30_000, known: false }]]),
+    )
+    expect(detail.legs.map((l) => [l.oddsBp, l.oddsKnown])).toEqual([
+      [30_000, false],
+      [20_000, true],
+    ])
+    expect(detail).toMatchObject({ multiplierBp: 60_000, estimated: true, potentialPayout: 30 })
+  })
+
+  it('caps a parlay placed before 0074 at its own 100x', () => {
+    const detail = toParlayDetail(
+      row([leg({ locked_odds: 6 }), leg({ locked_odds: 6 }, { id: 'm-2' }), leg({ locked_odds: 6 }, { id: 'm-3' })], { max_multiplier: 100 }),
+      'Grace',
+      BEFORE_CLOSE,
+      new Map(),
+    )
+    expect(detail).toMatchObject({ maxMultiplier: 100, multiplierBp: 1_000_000, capped: true, estimated: false, potentialPayout: 500 })
+  })
+
   it('marks an unresolved leg past its market’s close time as awaiting', () => {
-    const detail = toParlayDetail(row([leg()]), 'Grace', Date.parse('2026-10-01T12:00:01Z'))
+    const detail = toParlayDetail(row([leg()]), 'Grace', Date.parse('2026-10-01T12:00:01Z'), new Map())
     expect(detail.legs[0].status).toBe('awaiting')
   })
 })
@@ -92,6 +118,20 @@ describe('getParlayDetail', () => {
     expect(detail?.ownerName).toBe('Grace')
     expect(queries[0].eq).toEqual([['id', ID]])
     expect(queries[1].table).toBe('profiles')
+    expect(queries.some((q) => q.rpc)).toBe(false)
+  })
+
+  it('asks parlay_leg_odds for the legs whose odds aren’t set yet', async () => {
+    const { client, queries } = fakeSupabase((q) =>
+      q.table === 'parlays'
+        ? { data: row([leg({ locked_odds: null })]) }
+        : q.table === 'parlay_leg_odds'
+          ? { data: [{ parlay_id: ID, outcome_id: 'o-yes', odds: 2.5, known: false }] }
+          : { data: { display_name: 'Grace' } },
+    )
+    const detail = await getParlayDetail(client, ID)
+    expect(queries.find((q) => q.rpc)?.table).toBe('parlay_leg_odds')
+    expect(detail?.legs[0]).toMatchObject({ oddsBp: 25_000, oddsKnown: false })
   })
 })
 

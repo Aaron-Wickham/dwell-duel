@@ -540,6 +540,7 @@ after it ships. They roughly follow the project's history:
 | 0096 | The market page's Your position card and "riding in parlays" figure (#262, #279): `my_market_position(market)` and `market_parlay_riding(market)` |
 | 0097 | `leaderboard_awards` reads who is in from `invited_member_ids()` (0093) instead of its own copy of the rule (0074); every award is unchanged |
 | 0098 | Destructive cleanup of what the app stopped using: `market_outcomes`, `tasks` and `feed_reactions` leave the realtime publication, `markets.sparkline` with its trigger and `cache_market_sparkline`, and the claiming `push_resolve_reminders` and `push_market_alerts` |
+| 0099 | `rls_auto_enable()`, Supabase's platform function behind automatic RLS, loses EXECUTE for `PUBLIC` too (0015 revoked only `anon` and `authenticated`), so the Security Advisor no longer lists it as callable signed out; guarded, since only hosted projects have it |
 | 0100 | Private Postgres Changes channels: the `realtime.messages` policy `member_topics_receive` lets an invited member join only their own `live-member:<id>:base:<n>` and `live-member:<id>:page:<n>` topics, so the project can refuse public channels |
 
 Numbers 0075, 0077–0082 and 0084–0088 were reserved by branches that merged later under higher numbers, so they are unused.
@@ -974,8 +975,12 @@ value never stops production booting.
   Handled errors go through `reportError` (`lib/observability/report.ts`):
   `console.error` plus a capture, which `friendlyError`, the resolve and slip
   actions, the cron steps, the health route, the Admin health read and the
-  sign-in callback use. `scrubEvent` removes the user, cookies, request body,
-  headers and query string from every event. There are no source maps
+  sign-in callback use. A Supabase error object is sent as an `Error` named
+  for what failed (`reportable`), with its message and code but not its
+  details. `scrubEvent` removes the user, cookies, request body,
+  headers and query string from every event, and `beforeSend` drops a view
+  transition the browser skipped (`isSkippedViewTransition`: a resize or a
+  hidden tab mid-transition, which react-dom leaves unhandled). There are no source maps
   (no build plugin, no auth token). The CSP's `connect-src` allows
   `https://*.sentry.io`.
 - **Raw database errors.** An RPC's own refusals are `raise exception`

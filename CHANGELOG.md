@@ -14,6 +14,11 @@ before v0.4.0 used other headings.)
 
 ### Security
 - **Every live-update channel is private.** The member's own balance channel and each page's row channels now join private Realtime topics only that member may open (0100), as the group-wide pings already did, so Supabase's "Allow public access to channels" can be switched off and nobody holding the public key can open channels and spend the message quota.
+- **`rls_auto_enable()` can't be called signed out.** Supabase's platform function behind automatic RLS loses EXECUTE for `PUBLIC` as well as `anon` and `authenticated` (0099), clearing the Security Advisor's warning.
+
+### Fixes
+- **Sentry no longer reports a skipped page transition.** Rotating a phone or opening the keyboard mid-navigation made the browser skip the animation, and React left that rejection unhandled; those events are now dropped.
+- **A Supabase error reported to Sentry says what failed.** A timed-out or refused call is sent as an error named for its step (for example "Closing alerts failed: TimeoutError: …") with the caller's stack, instead of a bare message with no frame of ours.
 
 ## v0.7.0-beta — 2026-10-01
 

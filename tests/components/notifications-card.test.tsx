@@ -58,6 +58,7 @@ describe('NotificationsCard (#260)', () => {
     ['in a browser tab, where Get the app shows instead', { standalone: false, push: 'off', onboarding: false }],
     ['once this device has push', { standalone: true, push: 'on', onboarding: false }],
     ['while it is still checking', { standalone: true, push: 'checking', onboarding: false }],
+    ['where this browser can never get push', { standalone: true, push: 'unsupported', onboarding: false }],
     ['while Getting started is up, which asks itself', { standalone: true, push: 'off', onboarding: true }],
   ] as const)('stays away %s', (_, c) => {
     setStandalone(c.standalone)

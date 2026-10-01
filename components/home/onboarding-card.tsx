@@ -39,9 +39,11 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
   const push = useDevicePush()
   if (!steps || dismissed) return null
 
+  // A browser that can never get push has no notifications step to finish.
+  const shown = push === 'unsupported' ? STEPS.filter((step) => step.key !== 'notify') : STEPS
   const done = (key: StepKey) => (key === 'notify' ? push === 'on' : steps[key])
-  const doneCount = STEPS.filter((step) => done(step.key)).length
-  if (doneCount === STEPS.length) return null
+  const doneCount = shown.filter((step) => done(step.key)).length
+  if (doneCount === shown.length) return null
 
   function dismiss() {
     setDismissed(true)
@@ -59,7 +61,7 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
             Getting started
           </h2>
           <p className="text-ink2">
-            {doneCount} of {STEPS.length} done
+            {doneCount} of {shown.length} done
           </p>
         </div>
         <Button variant="quiet" size="sm" onClick={dismiss}>
@@ -67,7 +69,7 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
         </Button>
       </div>
       <ol className="flex flex-col divide-y divide-line">
-        {STEPS.map((step, index) => {
+        {shown.map((step, index) => {
           const stepDone = done(step.key)
           return (
             <li key={step.key} data-step={step.key} className="flex min-h-16 items-center gap-3 py-2.5">
@@ -78,7 +80,7 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
               ) : (
                 <span
                   aria-hidden="true"
-                  className="flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-line-s text-[13px] font-extrabold text-ink2"
+                  className="flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-line-s text-xs font-extrabold text-ink2"
                 >
                   {index + 1}
                 </span>

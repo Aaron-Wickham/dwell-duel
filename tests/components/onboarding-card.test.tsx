@@ -71,6 +71,20 @@ describe('OnboardingCard', () => {
     expect(within(step('Turn on notifications')).queryByRole('link')).toBeNull()
   })
 
+  it('drops the notifications step where this browser can never get push, counting four', () => {
+    push = 'unsupported'
+    render(<OnboardingCard steps={{ ...NONE, photo: true }} />)
+    expect(screen.getByText('1 of 4 done')).toBeInTheDocument()
+    expect(screen.queryByText('Turn on notifications')).toBeNull()
+    expect([...document.querySelectorAll('li[data-step]')].map((li) => li.getAttribute('data-step'))).toEqual(['learn', 'photo', 'bet', 'task'])
+  })
+
+  it('hides itself there once the other four are done', () => {
+    push = 'unsupported'
+    const { container } = render(<OnboardingCard steps={ALL} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+
   it('stays up while notifications are off on this device, even with every other step done', () => {
     render(<OnboardingCard steps={ALL} />)
     expect(screen.getByText('4 of 5 done')).toBeInTheDocument()

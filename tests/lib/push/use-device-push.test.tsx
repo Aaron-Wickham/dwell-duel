@@ -5,6 +5,7 @@ import { useDevicePush } from '@/lib/push/use-device-push'
 
 function setDevice({ permission, subscribed }: { permission: NotificationPermission; subscribed: boolean }) {
   vi.stubGlobal('Notification', { permission })
+  vi.stubGlobal('PushManager', function PushManager() {})
   Object.defineProperty(navigator, 'serviceWorker', {
     configurable: true,
     value: { getRegistration: async () => ({ pushManager: { getSubscription: async () => (subscribed ? {} : null) } }) },
@@ -12,6 +13,7 @@ function setDevice({ permission, subscribed }: { permission: NotificationPermiss
 }
 
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
   Reflect.deleteProperty(navigator, 'serviceWorker')
 })
@@ -33,8 +35,21 @@ describe('useDevicePush', () => {
     await waitFor(() => expect(result.current).toBe('off'))
   })
 
-  it('is off where there is no service worker at all', async () => {
-    vi.stubGlobal('Notification', { permission: 'granted' })
+  it('is unsupported where this browser has no push at all', async () => {
+    vi.stubGlobal('Notification', { permission: 'default' })
+    const { result } = renderHook(() => useDevicePush())
+    await waitFor(() => expect(result.current).toBe('unsupported'))
+  })
+
+  it('is off, not unsupported, in iPhone Safari before the app is installed, since installing turns it on', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) Safari/604.1')
+    window.matchMedia = vi.fn().mockReturnValue({ matches: false })
+    const { result } = renderHook(() => useDevicePush())
+    await waitFor(() => expect(result.current).toBe('off'))
+  })
+
+  it('is off when permission is blocked, so the step stays and Settings explains', async () => {
+    setDevice({ permission: 'denied', subscribed: false })
     const { result } = renderHook(() => useDevicePush())
     await waitFor(() => expect(result.current).toBe('off'))
   })

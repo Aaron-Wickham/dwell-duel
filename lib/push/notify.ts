@@ -74,6 +74,8 @@ export async function notifyTaskReviews(completionIds: string[], db: DbClient = 
 
 // PostgREST returns at most max_rows (1000) rows per request, so the recipients are read a page at
 // a time, after the last profile_id (push_new_market orders by it), until a page comes back short.
+// A page that fails to load is logged and the read stops there: the members already read still
+// hear about the market, rather than nobody.
 export const NEW_MARKET_PAGE = 1000
 
 export async function notifyNewMarket(marketId: string, db: DbClient = serviceRoleClient()): Promise<PushResult | null> {
@@ -84,8 +86,9 @@ export async function notifyNewMarket(marketId: string, db: DbClient = serviceRo
     if (last) query = query.gt('profile_id', last.profile_id)
     const { data, error } = await query.order('profile_id').limit(NEW_MARKET_PAGE)
     if (error) {
-      console.error('Reading new market recipients failed', error)
-      return null
+      console.error(`Reading new market recipients failed after ${recipients.length} of them; sending to those`, error)
+      if (recipients.length === 0) return null
+      break
     }
     recipients.push(...data)
     if (data.length < NEW_MARKET_PAGE) break

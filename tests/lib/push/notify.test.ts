@@ -90,7 +90,7 @@ describe('notify', () => {
 
   // push_new_market's rows, read the way PostgREST would serve them: ordered by profile_id, after
   // a .gt() bound when given, at most .limit() rows a request.
-  function pagedRecipients(rows: { profile_id: string; title: string }[], error: unknown = null) {
+  function pagedRecipients(rows: { profile_id: string; title: string }[], error: unknown = null, failOnRequest = 0) {
     const requests: { after: string | null; limit: number }[] = []
     const rpc = vi.fn(() => {
       let after: string | null = null
@@ -103,7 +103,7 @@ describe('notify', () => {
         order: () => query,
         limit: async (limit: number) => {
           requests.push({ after, limit })
-          if (error) return { data: null, error }
+          if (error && requests.length > failOnRequest) return { data: null, error }
           const sorted = [...rows].sort((a, b) => a.profile_id.localeCompare(b.profile_id))
           return { data: sorted.filter((r) => after === null || r.profile_id > after).slice(0, limit), error: null }
         },
@@ -137,7 +137,17 @@ describe('notify', () => {
     expect(new Set(sent.map((m) => m.profileId)).size).toBe(rows.length)
   })
 
-  it('sends nothing when a page of recipients fails to read', async () => {
+  it('still sends to the recipients already read when a later page fails, and logs it', async () => {
+    const rows = Array.from({ length: NEW_MARKET_PAGE + 5 }, (_, i) => ({ profile_id: `p-${String(i).padStart(5, '0')}`, title: 'Big market' }))
+    const { db, requests } = pagedRecipients(rows, new Error('timeout'), 1)
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await notifyNewMarket('m-5', db)
+    expect(requests).toHaveLength(2)
+    expect(sendPush.mock.calls[0][0]).toHaveLength(NEW_MARKET_PAGE)
+    expect(log).toHaveBeenCalledWith(expect.stringContaining(`after ${NEW_MARKET_PAGE} of them`), expect.any(Error))
+  })
+
+  it('sends nothing when the first page of recipients fails to read', async () => {
     const { db } = pagedRecipients([], new Error('db down'))
     vi.spyOn(console, 'error').mockImplementation(() => {})
     expect(await notifyNewMarket('m-4', db)).toBeNull()

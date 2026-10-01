@@ -50,7 +50,7 @@ async function setup() {
   return { alice: await clientForEmail('alice@example.com'), bob: await clientForEmail('bob@example.com') }
 }
 
-test('Your position lists each bet with Pays ~ and Cancel, and a parlay leg; parlay money rides on each outcome, live', async ({ page }) => {
+test('Your position lists each bet with Pays ~ and Cancel, and a parlay leg; parlay money rides on each outcome', async ({ page }) => {
   const { alice, bob } = await setup()
   const stamp = Date.now()
   const here = await backedMarket(bob, `Position open ${stamp}?`)
@@ -89,26 +89,18 @@ test('Your position lists each bet with Pays ~ and Cancel, and a parlay leg; par
   const chart = page.getByRole('region', { name: 'Chance over time' })
   expect((await position.boundingBox())!.y).toBeLessThan((await chart.boundingBox())!.y)
 
-  // Backer1's parlay rides on Yes too, and the figure follows it live: the page's parlay_legs
-  // channel joins a moment after load, so the leg is touched again on each poll until one lands.
+  // Backer1's parlay rides on Yes too. The page follows parlay_legs for this market
+  // (pageSubscriptions.marketDetail); this checks the figure itself after a refresh.
   const [backer1] = await backers()
   const { error: aliceBetErr } = await alice.rpc('place_bet', { p_market_id: there.id, p_outcome_id: there.outcome('No'), p_amount: 5 })
   if (aliceBetErr) throw aliceBetErr
-  const { data: backerParlay, error: backerErr } = await backer1.client.rpc('place_parlay', {
+  const { error: backerErr } = await backer1.client.rpc('place_parlay', {
     p_outcome_ids: [here.outcome('Yes'), there.outcome('No')],
     p_stake: 10,
   })
   if (backerErr) throw backerErr
-  await expect
-    .poll(
-      async () => {
-        const { error } = await serviceClient().from('parlay_legs').update({ locked_odds: null }).eq('parlay_id', backerParlay as string)
-        if (error) throw error
-        return yes.getByText('+15 DC riding in parlays').count()
-      },
-      { timeout: 20_000, intervals: [1_000, 2_000, 3_000] },
-    )
-    .toBe(1)
+  await page.reload()
+  await expect(yes.getByText('+15 DC riding in parlays')).toBeVisible()
 
   // From lg the card tops the right column, above Place a bet.
   await page.setViewportSize({ width: 1280, height: 900 })

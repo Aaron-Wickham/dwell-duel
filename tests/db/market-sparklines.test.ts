@@ -3,6 +3,7 @@ import { serviceClient, type TestClient, reconcilePoolTotals } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
 import { pgQuery } from './pg-query'
 import { buildProbabilitySeries, type SeriesPoint } from '@/lib/markets/probability-series'
+import { computeOdds } from '@/lib/markets/odds'
 
 let alice: Member
 let bob: Member
@@ -512,14 +513,24 @@ describe('market_sparks (0088)', () => {
     expect((more as unknown as SparkRow[])[0].points).toHaveLength(24)
   })
 
-  it('returns no row for a market nobody has bet on, and nothing to an uninvited member', async () => {
+  it('returns no row for a market nobody has bet on', async () => {
     const quiet = await createTestMarket(aliceClient, ['Yes', 'No'])
     const busy = await createTestMarket(aliceClient, ['Yes', 'No'])
     await placeBet(aliceClient, busy, 0, 5)
     expect((await sparks(bobClient, [quiet.marketId, busy.marketId])).map((r) => r.market_id)).toEqual([busy.marketId])
+  })
+
+  // The app caches the answer for every member, so it mustn't depend on who asked: anyone not
+  // invited (a member removed mid-render, say) gets an error, never an empty series to cache.
+  it('refuses an uninvited caller with an error rather than an empty answer, and is closed to anon', async () => {
+    const busy = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await placeBet(aliceClient, busy, 0, 5)
 
     const carol = await makeMember('Carol')
-    expect(await sparks(await clientFor(carol), [busy.marketId])).toEqual([])
+    const { data, error } = await (await clientFor(carol)).rpc('market_sparks', { p_market_ids: [busy.marketId] })
+    expect(data).toBeNull()
+    expect(error).toMatchObject({ code: '42501', message: 'not invited' })
+
     const [fn] = await pgQuery<{ anon: boolean; authenticated: boolean; security_definer: boolean }>(`
       select
         has_function_privilege('anon', 'public.market_sparks(uuid[], integer)', 'execute') as anon,
@@ -528,7 +539,30 @@ describe('market_sparks (0088)', () => {
       from pg_proc p
       where p.oid = 'public.market_sparks(uuid[], integer)'::regprocedure
     `)
-    expect(fn).toEqual({ anon: false, authenticated: true, security_definer: false })
+    expect(fn).toEqual({ anon: false, authenticated: true, security_definer: true })
+  })
+
+  it('ends on the chance the card shows: the seeded effective pools, as computeOdds reads them', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No', 'Maybe'], { seed: 20 })
+    await placeBet(aliceClient, market, 0, 10)
+    await placeBet(bobClient, market, 1, 25)
+    await placeBet(aliceClient, market, 0, 7)
+
+    const [row] = await sparks(bobClient, [market.marketId])
+    const { data: outcomes, error } = await bobClient
+      .from('market_outcomes')
+      .select('id, label, pool_total')
+      .eq('market_id', market.marketId)
+    if (error) throw error
+    const { data: m } = await bobClient.from('markets').select('seed_per_outcome').eq('id', market.marketId).single()
+    const odds = computeOdds(outcomes, m!.seed_per_outcome)
+
+    const [, ...last] = row.points.at(-1)!
+    row.outcome_ids.forEach((id, i) => {
+      const chance = odds.find((o) => o.outcomeId === id)!.impliedProbability!
+      expect(last[i]).toBeCloseTo(chance, 3)
+      expect(Math.round(last[i] * 100)).toBe(Math.round(chance * 100))
+    })
   })
 
   it('moves the market’s pool version with every bet and every cancellation, and with nothing else', async () => {

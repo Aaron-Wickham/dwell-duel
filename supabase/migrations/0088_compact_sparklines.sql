@@ -6,13 +6,19 @@
 --
 -- 1. market_sparks returns at most 24 points a market, compact: each point is
 --    [epoch seconds, share, share, ...] with the shares in outcome_ids' order, rounded to 4
---    decimals (3 would round the card's "Now: Yes 33%" label differently from its odds about one
---    time in twenty). It reads market_sparklines, so the maths stays the one the DB tests hold
---    equal to the chart's.
+--    decimals (at 3, the card's "Now: Yes 33%" label would differ from the unrounded series about
+--    one time in twenty). It reads market_sparklines, so the shares are the seeded effective pools
+--    (0041) the card's chance shows, and the maths stays the one the DB tests hold equal to the
+--    chart's.
+--
+--    It is security definer and refuses anyone not invited, rather than filtering through RLS: the
+--    app caches its answer for every member, so the answer mustn't depend on who asked. A member
+--    removed mid-render gets an error, which is never cached, instead of an empty series that
+--    would blank the cards for everyone.
 -- 2. market_outcomes.pool_version counts every change to an outcome's pool (each bet and each
 --    cancellation), so the sum over a market's outcomes is a version of its series. The list
---    already reads the outcomes, so the app caches each card's series under that version and asks
---    for it again only when it moves. A settled market's series never changes.
+--    already reads the outcomes, so the app caches each list's series under its markets' versions
+--    and asks for them again only when one moves. A settled market's series never changes.
 --
 -- Additive: the previous build keeps reading markets.sparkline (0070), whose trigger still fills it.
 --
@@ -47,10 +53,17 @@ revoke execute on function public.bump_pool_version() from public, anon, authent
 -- Outcomes in the list's own order (insertion, then label), with id last so the order is total.
 create function public.market_sparks(p_market_ids uuid[], p_points integer default 24)
 returns table (market_id uuid, outcome_ids uuid[], points jsonb)
-language sql
+language plpgsql
 stable
+security definer
 set search_path = ''
 as $$
+begin
+  if not public.is_invited() then
+    raise exception 'not invited' using errcode = '42501';
+  end if;
+
+  return query
   with series as (
     select s.market_id, s.points
     from public.market_sparklines(p_market_ids, greatest(1, least(coalesce(p_points, 24), 24))) s
@@ -66,13 +79,13 @@ as $$
     (
       select jsonb_agg(
         (
-          select jsonb_agg(v order by k)
+          select jsonb_agg(c.v order by c.k)
           from (
-            select 0 as k, to_jsonb(floor(extract(epoch from (p.value ->> 't')::timestamptz))::bigint) as v
+            select 0::bigint as k, to_jsonb(floor(extract(epoch from (p.value ->> 't')::timestamptz))::bigint) as v
             union all
             select u.k, to_jsonb(round(coalesce((p.value -> 'shares' ->> u.id::text)::numeric, 0), 4)::double precision)
             from unnest(o.ids) with ordinality as u(id, k)
-          ) cells
+          ) c
         )
         order by p.n
       )
@@ -80,7 +93,8 @@ as $$
     )
   from series s
   join outcomes o on o.market_id = s.market_id
-  order by s.market_id
+  order by s.market_id;
+end;
 $$;
 
 revoke execute on function public.market_sparks(uuid[], integer) from public, anon;

@@ -87,15 +87,20 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
   const markets = LISTS.flatMap(({ id }) =>
     pages[id].rows.filter((m) => id === 'resolved' || !resolvedIds.has(m.id)).map((m) => [m, id] as const),
   )
+  // One sparkline batch per list, so each list's cache entry moves only with its own markets.
   const sparklinesByMarket = await readSparklines(
     supabase,
-    markets.map(([m]) => ({
-      id: m.id,
-      seedPerOutcome: m.seedPerOutcome,
-      createdAt: m.createdAt,
-      outcomeIds: m.outcomes.map((o) => o.id),
-      version: m.sparkVersion,
-    })),
+    LISTS.map(({ id }) =>
+      markets
+        .filter(([, list]) => list === id)
+        .map(([m]) => ({
+          id: m.id,
+          seedPerOutcome: m.seedPerOutcome,
+          createdAt: m.createdAt,
+          outcomeIds: m.outcomes.map((o) => o.id),
+          version: m.sparkVersion,
+        })),
+    ),
   )
 
   const cards = markets.map(([market, list]) => {

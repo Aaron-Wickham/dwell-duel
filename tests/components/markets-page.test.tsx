@@ -97,7 +97,7 @@ beforeEach(() => {
 })
 
 describe('MarketsPage', () => {
-  it('reads each list from its own params, and sparklines for exactly the cards shown, by version', async () => {
+  it('reads each list from its own params, and sparklines for exactly the cards shown, one batch per list', async () => {
     const openTop = { ts: '2026-09-20T10:00:00Z', id: market(1, 'open').id }
     const awaitingEnd = { ts: '2026-09-15T10:00:00Z', id: market(2, 'open').id }
     const resolvedEnd = { ts: '2026-09-10T10:00:00Z', id: market(9, 'voided').id }
@@ -119,7 +119,7 @@ describe('MarketsPage', () => {
       outcomeIds: [],
       version: m.sparkVersion,
     })
-    expect(readSparklines).toHaveBeenCalledWith({}, [market(1, 'open'), market(2, 'open'), market(9, 'voided')].map(facts))
+    expect(readSparklines).toHaveBeenCalledWith({}, [[facts(market(1, 'open'))], [facts(market(2, 'open'))], [facts(market(9, 'voided'))]])
   })
 
   it('lists open markets first on All, however many are awaiting resolution, each list with its own Show more (#261)', async () => {

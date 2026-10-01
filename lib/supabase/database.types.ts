@@ -399,6 +399,36 @@ export type Database = {
           },
         ]
       }
+      live_ping_queue: {
+        Row: {
+          id: number
+          topic: string
+        }
+        Insert: {
+          id?: never
+          topic: string
+        }
+        Update: {
+          id?: never
+          topic?: string
+        }
+        Relationships: []
+      }
+      live_pings: {
+        Row: {
+          sent_at: string
+          topic: string
+        }
+        Insert: {
+          sent_at?: string
+          topic: string
+        }
+        Update: {
+          sent_at?: string
+          topic?: string
+        }
+        Relationships: []
+      }
       market_comments: {
         Row: {
           attempt_key: string | null
@@ -1179,6 +1209,27 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_member_counts: {
+        Args: { p_query?: string }
+        Returns: {
+          active: number
+          removed: number
+        }[]
+      }
+      admin_members: {
+        Args: { p_id?: string; p_query?: string }
+        Returns: {
+          avatar_path: string
+          balance: number
+          display_name: string
+          email: string
+          id: string
+          joined_at: string
+          last_sign_in_at: string
+          removed: boolean
+          role: string
+        }[]
+      }
       apply_coin_transaction: {
         Args: {
           p_amount: number
@@ -1322,6 +1373,12 @@ export type Database = {
         Args: { m: Database["public"]["Tables"]["markets"]["Row"] }
         Returns: boolean
       }
+      invited_member_ids: {
+        Args: never
+        Returns: {
+          id: string
+        }[]
+      }
       is_admin: { Args: never; Returns: boolean }
       is_invited: { Args: never; Returns: boolean }
       is_push_endpoint: { Args: { p_endpoint: string }; Returns: boolean }
@@ -1368,7 +1425,15 @@ export type Database = {
           step: number
         }[]
       }
+      live_ping_interval_ms: { Args: never; Returns: number }
       mark_proof_expired: { Args: { p_ids: string[] }; Returns: number }
+      market_parlay_riding: {
+        Args: { p_market_id: string }
+        Returns: {
+          outcome_id: string
+          riding: number
+        }[]
+      }
       market_sparklines: {
         Args: { p_market_ids: string[]; p_points?: number }
         Returns: {
@@ -1481,6 +1546,14 @@ export type Database = {
           reward_amount: number
           status: string
           task_id: string
+        }[]
+      }
+      my_market_position: {
+        Args: { p_market_id: string }
+        Returns: {
+          bet_id: number
+          created_at: string
+          parlay_id: string
         }[]
       }
       my_onboarding: {
@@ -1679,6 +1752,7 @@ export type Database = {
         Args: { p_amount: number; p_profile_id: string }
         Returns: number
       }
+      reinvite_member: { Args: { p_profile_id: string }; Returns: undefined }
       reject_task_completion: {
         Args: { p_completion_id: string; p_reason?: string }
         Returns: undefined
@@ -1734,6 +1808,7 @@ export type Database = {
           profit: number
         }[]
       }
+      send_live_ping: { Args: { p_topic: string }; Returns: undefined }
       set_member_role: {
         Args: { p_profile_id: string; p_role: string }
         Returns: undefined

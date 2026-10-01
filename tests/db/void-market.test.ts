@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient, type TestClient, expectError } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, giveRole, type Member } from './fixtures'
 import { listFeed } from '@/lib/social/list-feed'
 

@@ -1,5 +1,6 @@
 import { afterEach, beforeAll } from 'vitest'
-import { assertLedgerConsistent, takeLedgerCheckSkip, wipeDatabase } from './helpers'
+import { takeLedgerCheckSkip, wipeDatabase } from './helpers'
+import { assertLedgerConsistent } from './assertions'
 
 // A file that never seeds (a catalog read, say) would otherwise be checked against whatever the
 // previous file left behind, including a test that opted out of the check.

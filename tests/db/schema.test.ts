@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { serviceClient, wipeDatabase, expectError, reconcileBalances } from './helpers'
+import { serviceClient, wipeDatabase, reconcileBalances } from './helpers'
+import { expectError } from './assertions'
 
 let userId: string
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { addInvite } from '@/lib/invites/add-invite'
-import { serviceClient, expectError } from './helpers'
+import { serviceClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, clientFor, type Member, giveRole } from './fixtures'
 
 let admin: Member

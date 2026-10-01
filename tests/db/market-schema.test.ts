@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { serviceClient, wipeDatabase, expectError } from './helpers'
+import { serviceClient, wipeDatabase } from './helpers'
+import { expectError } from './assertions'
 import { makeMember, type Member } from './fixtures'
 
 let creator: Member

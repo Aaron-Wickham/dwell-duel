@@ -1,4 +1,3 @@
-import { expect } from 'vitest'
 import { createClient, isAuthRetryableFetchError, type SupabaseClient } from '@supabase/supabase-js'
 import { config } from 'dotenv'
 import type { Database } from '@/lib/supabase/database'
@@ -76,26 +75,6 @@ export async function deleteAuthUser(db: TestClient, id: string): Promise<void> 
   }
 }
 
-type RaisedError = { code?: string; message: string } | null
-
-/**
- * Asserts that a call failed for the expected reason. A bare `error` is not null passes just as
- * happily when the function is missing (PGRST202) or the setup was wrong, so a permission or
- * money-guard test names what it was refused for: the message a function raised (a string is
- * matched as a substring, a RegExp as a pattern), or the SQLSTATE of a policy or constraint together with its message (a code alone can't pass).
- */
-export function expectError(
-  error: RaisedError | undefined,
-  expected: string | RegExp | { code?: string; message: string | RegExp },
-  label?: string,
-): void {
-  const spec = typeof expected === 'string' || expected instanceof RegExp ? { message: expected } : expected
-  expect(error, label ?? 'expected the call to fail').toBeTruthy()
-  if (spec.code !== undefined) expect(error!.code, label).toBe(spec.code)
-  if (typeof spec.message === 'string') expect(error!.message, label).toContain(spec.message)
-  else expect(error!.message, label).toMatch(spec.message)
-}
-
 /**
  * Moves a member's balance to `target` through the ledger, the way a grant or a charge would. A
  * test that set `profiles.balance` directly left the ledger behind, and the ledger check after
@@ -129,7 +108,7 @@ export function takeLedgerCheckSkip(): boolean {
   return skipped
 }
 
-interface LedgerViolation {
+export interface LedgerViolation {
   invariant: string
   id: string
   stored: number
@@ -142,8 +121,8 @@ interface LedgerViolation {
  * bets, and a parlay's `credited` equals what the ledger paid and took back for it. (Balances
  * and pools can't go negative: the schema's CHECKs already guarantee that.)
  */
-export async function assertLedgerConsistent(): Promise<void> {
-  const violations = await pgQuery<LedgerViolation>(`
+export async function ledgerViolations(): Promise<LedgerViolation[]> {
+  return pgQuery<LedgerViolation>(`
     select 'balance <> ledger' as invariant, p.id::text as id, p.balance::int as stored,
            coalesce(sum(t.amount), 0)::int as expected
     from public.profiles p
@@ -165,7 +144,6 @@ export async function assertLedgerConsistent(): Promise<void> {
     group by pa.id, pa.credited
     having pa.credited <> coalesce(sum(t.amount), 0)
   `)
-  expect(violations, 'ledger invariants').toEqual([])
 }
 
 /** What place_slip_v2 answers with: what the call placed, and whether it replayed an earlier attempt. */

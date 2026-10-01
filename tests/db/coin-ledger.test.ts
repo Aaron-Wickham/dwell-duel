@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient, expectError, assertLedgerConsistent, skipLedgerCheck } from './helpers'
+import { serviceClient, skipLedgerCheck } from './helpers'
+import { expectError, assertLedgerConsistent } from './assertions'
 import { seedMembers, clientFor, type Member } from './fixtures'
 
 let alice: Member

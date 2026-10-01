@@ -88,4 +88,16 @@ describe('ReinviteMemberButton', () => {
     expect(reinviteMemberAction.mock.calls[0][0]).toBe('p-ben')
     await waitFor(() => expect(success).toHaveBeenCalledWith('Ben invited again.'))
   })
+
+  it('can’t invite a member with no email on file, and says why instead of failing', async () => {
+    render(<ReinviteMemberButton member={{ ...REMOVED, email: '' }} />)
+    const button = screen.getByRole('button', { name: 'Invite Ben again' })
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+    expect(button).toHaveAccessibleDescription(
+      'There’s no email on file for Ben, so there’s nothing to invite. Add their Google email under Invites instead.',
+    )
+    await userEvent.click(button)
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(reinviteMemberAction).not.toHaveBeenCalled()
+  })
 })

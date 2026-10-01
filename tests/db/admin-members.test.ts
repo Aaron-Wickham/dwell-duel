@@ -114,6 +114,13 @@ describe('reinvite_member', () => {
     )
   })
 
+  it('refuses a member with no email to invite', async () => {
+    await remove(carol)
+    const { error } = await serviceClient().from('profiles').update({ email: '  ' }).eq('id', carol.id)
+    if (error) throw error
+    expect((await ownerClient.rpc('reinvite_member', { p_profile_id: carol.id })).error?.message).toBe('this member has no email to invite')
+  })
+
   it('gives a removed member their invite back, claimed by them, and ranks them again as a Member', async () => {
     await remove(carol)
     expect((await ownerClient.rpc('reinvite_member', { p_profile_id: carol.id })).error).toBeNull()

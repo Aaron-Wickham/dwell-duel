@@ -10,7 +10,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Admin › Members and Invites work at a thousand members.** Both have a search box (Members by name or email, Invites by email), tabs (Members: Active · Removed; Invites: Waiting · Claimed) with counts, and "Show more" paging, so nobody past the 1,000th row is silently dropped. Members are compact read-only rows; each opens the member's own Admin page with Adjust balance, Role, their last coin movements ("Open in Ledger", which filters Admin › Ledger to them with `?member=`) and Remove from DwellDuel. New-market notifications now reach every opted-in member past the first 1,000 (#254).
 
 ### Fixes
-- **Removed members are no longer ranked.** They drop off both leaderboards, out of "Rank X of N" and out of the month's champion; their profile still shows their net worth, marked "Not ranked". Admin › Members marks them Removed, and the owner can invite them again from their page, after a confirmation (#265).
+- **Removed members are no longer ranked.** They drop off both leaderboards, out of "Rank X of N", the month's champion and the weekly recap's best call and top tasker; their profile still shows their net worth, marked "Not ranked". Admin › Members marks them Removed, and the owner can invite them again from their page, after a confirmation (#265).
 
 ## v0.5.2-beta — 2026-09-30
 

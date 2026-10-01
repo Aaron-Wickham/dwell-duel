@@ -28,6 +28,7 @@ const OWNER_ERRORS: readonly KnownError<never>[] = [
   { match: 'only the owner can remove a member', formError: 'Only the owner can remove a member.' },
   { match: "the owner can't be removed", formError: 'The owner can’t be removed.' },
   { match: 'only the owner can invite a member back', formError: 'Only the owner can invite a member back.' },
+  { match: 'this member has no email to invite', formError: 'There’s no email on file for this member, so there’s nothing to invite.' },
 ]
 
 // Each RPC checks the caller's role itself (0040); these actions only pass the request on and

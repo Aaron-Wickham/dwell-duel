@@ -331,7 +331,9 @@ event, ties going to whoever reached the total first. Since 0086 (#265) a
 removed member (no invite left, `invited_member_ids()`) is out of both
 boards, `member_standing`'s rank and count (their own row keeps its net
 worth with a null rank, "Not ranked" on their profile), `season_profits`
-and so the race and the champion; their coins, bets and history stay.
+and so the race and the champion, and from `weekly_recap`'s best call and
+top tasker; their coins, bets and history stay. (`leaderboard_awards` is
+left to a later migration.)
 
 **The economy panel** (0052, #86). `economy_summary(p_month_start)` is owner
 only and backs the Economy card above Admin → Ledger's list
@@ -410,7 +412,7 @@ after it ships. They roughly follow the project's history:
 | 0070 | Speed at scale (#204, #205): `markets.sparkline` filled by the `cache_market_sparkline` trigger when a market resolves or voids (backfilled), `market_outcomes` in the realtime publication, and `parlays_pending_profile_idx` for `stakes_riding` |
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
-| 0086 | Admin at 1,000 and removed members unranked (#254, #265): `invited_member_ids()`; `leaderboard_net_worth`, `member_standing` and `season_profits` over invited members only; `admin_members`, `admin_member_counts` and `reinvite_member`; `allowed_emails` indexes on `claimed_by` and `(created_at desc, email desc)` |
+| 0086 | Admin at 1,000 and removed members unranked (#254, #265): `invited_member_ids()`; `leaderboard_net_worth`, `member_standing`, `season_profits` and `weekly_recap`'s best call and top tasker over invited members only; `admin_members`, `admin_member_counts` and `reinvite_member`; `allowed_emails` indexes on `claimed_by` and `(created_at desc, email desc)` |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 

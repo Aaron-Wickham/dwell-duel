@@ -330,7 +330,8 @@ A role only counts while you're invited. The owner can **remove a member**
 from their page under Admin → Members: they go back to plain member, their
 invite is revoked and their devices stop getting notifications, straight
 away. Their coins, bets and history stay where they are, but they're left
-out of both leaderboards, the "Rank X of N" count and the month's champion,
+out of both leaderboards, the "Rank X of N" count, the month's champion
+and the weekly recap's best call and top tasker,
 and Admin → Members lists them under **Removed**. If they sign in again they
 land on the not-invited page. The owner's **Invite again** on their page
 (it asks first) brings them back as a member, ranked again.

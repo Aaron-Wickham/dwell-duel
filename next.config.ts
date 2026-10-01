@@ -26,6 +26,8 @@ function contentSecurityPolicy(): string {
 }
 
 const nextConfig: NextConfig = {
+  // No reason to tell a scanner which framework answers.
+  poweredByHeader: false,
   experimental: {
     useOffline: true,
   },
@@ -53,6 +55,7 @@ const nextConfig: NextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
         ],
       },
       {

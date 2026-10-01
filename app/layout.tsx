@@ -1,8 +1,7 @@
 import { Manrope } from 'next/font/google'
 import { cookies } from 'next/headers'
-import { Analytics } from '@vercel/analytics/next'
-import { SpeedInsights } from '@vercel/speed-insights/next'
 import { StatusBand } from '@/components/app-shell/status-band'
+import { VercelMetrics } from '@/components/app-shell/vercel-metrics'
 import { LaunchScreen } from '@/components/brand/launch-screen'
 import { siteMetadata, siteViewport } from '@/lib/app-shell/site-metadata'
 import { resolveTheme, THEME_COOKIE } from '@/lib/theme/theme'
@@ -39,8 +38,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
         <StatusBand />
         {children}
         <ServiceWorkerRegistration />
-        <Analytics />
-        <SpeedInsights />
+        <VercelMetrics />
       </body>
     </html>
   )

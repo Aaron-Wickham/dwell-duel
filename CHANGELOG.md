@@ -6,6 +6,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Features
+- **Lists can be narrowed.** Markets has a title search and "Everyone's · I bet on · I made" chips (a search or a chip lists matches as one flat list, newest first), the Feed has All, Results and Mine tabs, and on a phone the Net worth board has a compact standing card whose "Jump to me" opens the list ten ranks above your own row, so a member ranked 600 no longer pages down twelve times (#264).
+
 ## v0.5.2-beta — 2026-09-30
 
 An Admin › Markets tab for the markets waiting on a result, with tab counts that add up to the Admin badge, and rows inside cards that tint on hover instead of floating like a button inside a button.

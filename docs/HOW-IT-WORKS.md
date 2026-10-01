@@ -199,7 +199,9 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
 - **Net worth** (the main board) ranks everyone by **balance plus the DC
   riding on open bets**: solo bets on markets that haven't resolved yet
   and parlays not yet settled. Placing a bet doesn't move you down; losing
-  it does. Home and your profile show your rank on this board.
+  it does. Home and your profile show your rank on this board. On a phone
+  a small card shows your rank and net worth, with **Jump to me**, which
+  opens the list ten places above you instead of paging down from the top.
 - **This month** ranks **net betting profit** for the calendar month, on
   Eastern time (America/New_York): winnings, refunds and cancelled-bet
   refunds, minus stakes, and minus any winnings an override took back.
@@ -349,7 +351,17 @@ a member.
   recap at all.
 - **Feed:** everyone's bets, parlays, new markets, results, wins,
   approved tasks and each month's champion, with their reactions, updated
-  live. See [Reactions and comments](#reactions-and-comments).
+  live. See [Reactions and comments](#reactions-and-comments). The tabs
+  narrow it: **All**, **Results** (markets resolved, bets and parlays won,
+  each month's champion) and **Mine** (your own bets, markets and wins,
+  plus the result of any market you have a bet or a parlay leg on).
+- **Finding a market:** on Markets, type in the search box to find a market
+  by any words in its title (not case-sensitive, up to 80 characters), and
+  use **I bet on** or **I made** to see only your own. They combine with the
+  Open, Awaiting and Resolved tabs; a search or one of those chips lists
+  every match in one list, newest first, rather than in sections. "I bet on"
+  includes markets you only have a parlay leg on, and markets that have
+  since settled.
 - **Leaderboard and profiles:** see [The leaderboard](#the-leaderboard)
   and [Profile stats](#profile-stats).
   Tap your avatar (top right) for your profile, where Edit profile and

@@ -10,6 +10,15 @@ can't be bought or cashed out.
 
 This page explains the rules.
 
+## The short version
+
+- Dwell Coin (DC) is play money. You start with 100 DC.
+- Bet DC on friendly questions. Everyone's bets on an outcome make its pool.
+- When a market resolves, the winners split the whole pot in proportion to
+  what they bet.
+- A parlay joins 2–10 picks. It pays big, but only if every pick wins.
+- Run low? Earn more DC with Bible-study tasks.
+
 ## Getting in
 
 - **Invites only.** An admin adds your Google email under Admin → Invites.
@@ -17,7 +26,10 @@ This page explains the rules.
   invite nobody has used yet; once someone has signed in with it, only the
   owner can remove them (see [Roles](#roles)).
   Sign in with that Google account; any other account lands on a "not
-  invited" page.
+  invited" page. Google always asks which account to use, so "Try another
+  account" there lets you pick a different one.
+- **Links survive signing in.** Open a shared market link while signed
+  out, and after signing in you land on that market, not Home.
 - **Everyone starts with 100 DC.** Every coin you gain or spend is a line
   in the ledger, so a balance can always be explained. Your own lines are
   under My bets → Coins.
@@ -38,7 +50,9 @@ description, and can reword the title until someone else has bet on it,
 solo or as a parlay pick. Everyone can see every past version under
 "Edited". The
 outcomes, the closing time and the line can never change, because
-changing them would change the bet.
+changing them would change the bet. Betting stops at the closing time, so
+set it before the answer is known, and if you bet on your own market, a
+reviewer resolves it (see [Results](#results)).
 
 The Markets page lists open markets **soonest to close first**, so one
 closing within the hour is at the top. A market closing within a day
@@ -65,25 +79,26 @@ copies it where there isn't one. Only signed-in members can open it.
 
 ## Betting: shared pools with a seed
 
-DwellDuel uses **pari-mutuel** betting: every DC bet on a market goes into
-one pot, and the people who picked the winner split it in proportion to
-their stakes.
-
-**Payout if it wins** = your stake × all DC on the market ÷ DC on the
-winning outcome, rounded down. The winners split exactly the real pool:
-nothing is added, so if nobody bet against you, you get your stake back.
+Every DC bet on a market goes into one **shared pot**, and the people who
+picked the winner split it in proportion to their stakes. The winners
+split exactly what was bet: nothing is added, so if nobody bet against
+you, you get your stake back.
 
 **The house adds nothing to a solo bet.** To give a thin market a sensible
 look, each outcome's **chance** counts a **20 DC seed**: virtual money that
-belongs to nobody and is never paid out. With *S* the seed per outcome and
-*n* the number of outcomes:
+belongs to nobody and is never paid out. So a brand-new Yes/No market
+shows 50% / 50%, not 0% / 0%, and its chart starts there. The seed only
+shapes the chance, the charts and the sparklines. Each outcome's
+**"× payout per DC"** comes from the real money alone, and an outcome
+nobody has backed shows none yet.
 
-- **Chance** = (DC on this outcome + S) ÷ (all DC on the market + S × n)
+### The maths
 
-So a brand-new Yes/No market shows 50% / 50%, not 0% / 0%, and its chart
-starts there. The seed only shapes the chance, the charts and the
-sparklines. Each outcome's **"× payout per DC"** is the real pool's (all DC
-÷ DC on that outcome), and an outcome nobody has backed shows none yet.
+- **Payout if it wins** = your stake × all DC on the market ÷ DC on the
+  winning outcome, rounded down.
+- **× payout per DC** = all DC on the market ÷ DC on that outcome.
+- **Chance** = (DC on this outcome + 20) ÷ (all DC on the market + 20 for
+  each outcome).
 
 **A worked example.** On a new Yes/No market, both sides show 50%. Then
 Alice bets 10 DC on Yes and Bob bets 30 DC on No.
@@ -112,7 +127,10 @@ Every bet goes through the **slip**. Tap "Add to slip" on outcomes from
 any number of markets, then open the slip to set stakes. Type a stake,
 or tap a quick stake: 5, 10, 25 or Max. Max is your balance less the
 other stakes already in the slip, and a chip for more than that is
-greyed out. Each pick is either:
+greyed out. The top of the slip shows your balance and what's left after
+the slip (or how many DC short it is), and when Place can't be tapped, a
+line under it says why. At 0 DC it points you to Tasks; your picks stay
+in the slip. Each pick is either:
 
 - **Solo:** a normal pool bet on that outcome.
 - **Parlay:** combined with your other Parlay picks into one bet that
@@ -156,8 +174,7 @@ stake × the multiplier, rounded down.
 - A leg whose market is voided drops out, and the parlay continues on the
   rest. If every leg is voided, the stake is refunded.
 - Parlays are paid by the house. They don't go into any market's pool, so
-  they don't move a market's percentages (the same way Kalshi and
-  Polymarket keep their "Combos" separate).
+  they don't move a market's percentages.
 - A parlay placed before odds were set at close keeps the odds it locked
   when it was placed, under the same 20× and 1,000 DC caps. One that
   staked more than 1,000 DC still gets at least its stake back if it wins,
@@ -173,7 +190,7 @@ closes) and where its market stands (Open, Awaiting resolution, Won, Lost
 or Voided), and a short sum showing how the multiplier adds
 up. A voided pick is shown as left out, and the rest carry on.
 
-Its **Coins** tab is your coin history: every DC that came in or went
+My bets' **Coins** tab is your coin history: every DC that came in or went
 out, newest first, in plain words ("Won 26 DC on Will it rain?", "Task
 reward: Read Ruth", "Refund: market voided"). It includes the reason for
 any balance adjustment the owner made. Only you (and admins, through the
@@ -212,10 +229,11 @@ full ledger) can see it.
 
 Admins keep a catalogue of Bible-study tasks, each with a DC reward.
 
-- A task is **one-off** or **repeats** daily, weekly (ISO weeks, starting
-  Monday), monthly or yearly. Periods run on US Eastern time, so a daily
+- A task is **one-off** or **repeats** daily, weekly (Monday–Sunday
+  weeks), monthly or yearly. Periods run on US Eastern time, so a daily
   task resets at **midnight Eastern**, a weekly one at midnight going into
-  Monday, and so on.
+  Monday, and so on. Once a repeating task is approved, its row says when
+  you can do it again ("Again Monday, midnight ET").
 - You submit a task once per period, with an optional note. Some tasks
   **require proof**: a photo, file or link.
 - A **reviewer** approves it, which pays the reward, or rejects it,
@@ -360,6 +378,8 @@ sign back in. Your other devices keep theirs.
 Reviewers and above get a red count on the **Admin** button for what is
 waiting on them: other members' task submissions (reviewers and above) and
 closed markets with no result (admins and above). It disappears at zero.
+Home's Admin tile counts the same things and opens the queue that has
+work in it.
 
 A role only counts while you're invited, and so does what you can do with
 your own markets and comments. The owner can **remove a member**
@@ -374,9 +394,12 @@ a member.
 ## Around the app
 
 - **Home:** your balance, rank, DC at stake and pending rewards, plus
-  links to everything else. New members also get a **Getting started**
-  card: add your photo, place your first bet and try a task. It goes away
-  once you've done all three, or when you dismiss it.
+  links to everything else. At 0 DC it points you to Tasks, the way to
+  earn more. New members also get a **Getting started** card: read this
+  page, turn on notifications on this device, add your photo, place your
+  first bet and try a task. It goes away once you've done all five, or
+  when you dismiss it. After that, the installed app without
+  notifications asks once to turn them on, until you tap Not now.
 - **Weekly recap:** on Sundays and Mondays (Eastern time), Home recaps
   the week, Monday to Sunday. On Sunday it's the week so far; on Monday
   it's the same week, finished. It shows your net betting profit for the

@@ -14,7 +14,18 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Parlay legs are priced from real money when their markets close.** Parlays are still paid by the house and stay out of the pools, but each leg's odds are now set when its market closes (or is resolved, if that comes first), from other members' money on the market divided by their money on the pick, with your own money and the seed left out, and at most 5× a leg. The slip, My bets and the parlay page show `~` estimates until then. A leg needs at least 50 DC from at least 2 other members on its market when it's placed, can't be on a market you created, and counts 1.00× if its market no longer has that at close or nobody else backed the pick. A parlay multiplies to at most 20× (was 100×) and pays at most 1,000 DC; one that staked more than that before the cap still gets its stake back on a win. One member's pending parlays on any one market can pay at most 1,000 DC between them. Parlays still pending from before keep their locked odds under the 20× and 1,000 DC caps (#287).
 - **Winners split exactly the real pool.** The seed now only shapes the chance and charts a thin market shows; it's never paid out, so a winner nobody bet against gets their stake back. Each outcome's "× payout per DC", the slip's "Pays ~" and My bets show what will really be paid. Results from before keep what they paid (#287).
 
+### Features
+- **Getting started has five steps, How it works first.** New members are pointed to How it works and to turning on notifications on this device, before the photo, first bet and first task. Once the card is gone, the installed app without notifications asks once to turn them on, in place of Get the app (#260).
+- **0 DC isn't a dead end.** At 0 DC, Home and the slip point to Tasks, Home with what tasks pay. The slip shows your balance and what's left after it (or how many DC short it is), and a line under Place says why it can't be tapped (#260).
+- **How it works opens with the short version**, has a collapsible "On this page" list on phones, keeps the formulas in "The maths", and says "shared pot" and "Monday–Sunday weeks" instead of jargon (#260).
+- **A link survives signing in.** A shared market link opened while signed out lands on that market after sign-in, not Home; only a same-site app path is accepted. Google always asks which account to use, so "Try another account" really offers another (#263).
+
 ### Fixes
+- **The void copy says what happens to parlays**: every bet is refunded, and parlays drop the voided leg and carry on with the rest (#266).
+- **Home's Admin tile counts what the Admin badge counts**, approvals and markets to resolve, and opens the queue that has work in it (#266).
+- **Create market explains the close time**: betting stops then, so set it before the answer is known, and the outcomes, close time and line can't change later; the preview notes that a reviewer resolves a market you bet on (#266).
+- **Approved repeating tasks say when they open again**, such as "Again Monday, midnight ET" (#266).
+- **The slip's "How parlays pay" link lands on its section** of How it works (#260).
 - **A balance can't run past the ledger's integer ceiling.** A credit that would take a balance past 2,147,483,647 DC is cut to fit, so it can never block a resolution (#287).
 - **The economy panel shows payout rounding apart from seed payouts.** With the seed no longer paid, a result only ever leaves the fractions that rounding down keeps, now their own "Payout rounding" row; "Seed payouts (older results)" shows only in a month an older, seeded result was paid or overridden (#287).
 - **This month's awards leave out removed members**, so an award goes to the next member still in (#287).

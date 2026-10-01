@@ -448,8 +448,16 @@ the old app is still serving while they apply.
 ## Key flows
 
 **Signing in.** Google OAuth only; Supabase has every other provider
-switched off. `/callback` exchanges the code, and a member whose email
-isn't in `allowed_emails` lands on `/not-invited`. The `profiles` trigger
+switched off, and the sign-in button passes `prompt=select_account`, so
+Google always shows its account chooser. `/callback` exchanges the code, and a member whose email
+isn't in `allowed_emails` lands on `/not-invited`. A signed-out request
+for an app page is sent to `/sign-in?next=<path>`; the sign-in page keeps
+`next` in the short-lived `sign-in-next` cookie (path `/callback`) for the
+round trip through Google, and `/callback` sends the member there instead
+of Home. Both ends pass it through `safeNextPath` (`lib/auth/next-path.ts`):
+only a same-site app path, never `//host`, a backslash or a scheme. A
+cookie, rather than `/callback?next=` in `redirectTo`, keeps Supabase's
+redirect allow-list to exact URLs. The `profiles` trigger
 creates the profile and the 100 DC starting grant. `requireUser` reads
 claims and throws `AuthUnavailableError` (not "signed out") when Auth
 itself is down.
@@ -459,7 +467,9 @@ of picks (`lib/parlays/slip.ts`). `SlipProvider` in the signed-in layout
 holds those picks, each marked Solo or Parlay, with optimistic add, remove
 and mode switches. Stakes live only in client state. The layout also
 hands it the member's balance, for the quick-stake chips' Max (the balance
-less the slip's other stakes). The floating
+less the slip's other stakes), the balance strip at the top of the slip
+("N DC left after this slip" or "N DC short") and the line under Place
+saying why it can't be tapped; at 0 DC that line points to Tasks. The floating
 `SlipSheet` sends everything to `place_slip_v2` in one call; it either all
 succeeds or nothing is placed. Only its button is in every page's first
 load: the drawer (`SlipDrawer`) loads the first time the slip opens, or
@@ -618,11 +628,19 @@ tappable card adds `hover-lift` and lifts onto `--lift-shadow`
 instead, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins).
 
 **Getting started.** Home's onboarding card (`components/home/onboarding-card.tsx`)
-reads its three steps from real data in `lib/home/onboarding.ts`, with
-head-only counts: a photo (`profiles.avatar_path`), any bet or parlay
-(`bets`, `cancelled_bets`, `parlays`) and any task submission. It hides
-itself once all three are done. Dismissing it sets the `onboarding`
-cookie, which skips those reads, so it never flashes back.
+has five steps. Reading How it works is the `read-how-it-works` cookie,
+which that page sets from the browser (`components/docs/mark-how-it-works-read.tsx`).
+Turning on notifications is per device, so the card asks the browser for
+a push subscription itself (`lib/push/use-device-push.ts`). The other three
+come from `my_onboarding()` (`lib/home/onboarding.ts`): a photo
+(`profiles.avatar_path`), any bet or parlay and any task submission. It
+hides itself once all five are done. Dismissing it sets the `onboarding`
+cookie, which skips those reads, so it never flashes back. Once it's
+dismissed, the installed app with no push subscription shows
+`NotificationsCard` in its place (InstallCard never shows there), until
+Not now, which is remembered in `localStorage`. At exactly 0 DC the Home
+hero points to Tasks, with what active tasks pay (`getTaskRewardRange`,
+read only at 0 DC).
 
 **Weekly recap** (0056, #81). On Sundays and Mondays in America/New_York,
 Home shows `components/home/weekly-recap-card.tsx`. `lib/home/recap-week.ts`

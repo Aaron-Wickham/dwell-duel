@@ -1318,6 +1318,10 @@ export type Database = {
         Args: { p_market_id: string; p_profile_id: string }
         Returns: boolean
       }
+      i_bet_on: {
+        Args: { m: Database["public"]["Tables"]["markets"]["Row"] }
+        Returns: boolean
+      }
       is_admin: { Args: never; Returns: boolean }
       is_invited: { Args: never; Returns: boolean }
       is_push_endpoint: { Args: { p_endpoint: string }; Returns: boolean }
@@ -1438,6 +1442,29 @@ export type Database = {
           parlays_won: number
           tasks_completed: number
         }[]
+      }
+      my_activity_events: {
+        Args: never
+        Returns: {
+          actor_id: string
+          amount: number | null
+          bet_id: number | null
+          hidden_at: string | null
+          id: string
+          kind: string
+          market_id: string | null
+          occurred_at: string
+          outcome_id: string | null
+          parlay_id: string | null
+          resolution_id: string | null
+          task_completion_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "activity_events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       my_at_stake: {
         Args: never

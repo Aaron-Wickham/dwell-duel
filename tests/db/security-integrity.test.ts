@@ -240,20 +240,52 @@ describe('#62 hardening', () => {
 })
 
 describe('#203 hygiene', () => {
-  // market_sparklines is the one exception, on purpose: a stable SQL function with no search_path
-  // setting is inlined into the caller's plan, which is what keeps it on bets_market_created_idx
-  // (tests/db/market-sparklines.test.ts). It is security invoker and schema-qualifies every name.
-  it('pins an empty search_path on every function in public', async () => {
+  // Functions that deliberately have no search_path setting. A function with a SET clause can't be
+  // inlined into the caller's plan, and each of these is only fast because it is inlined:
+  //   market_sparklines: keeps its read on bets_market_created_idx (tests/db/market-sparklines.test.ts).
+  //   i_bet_on, my_activity_events (0087, #264): the Markets "I bet on" filter and the Feed's Mine
+  //   tab push the caller's cursor, order and limit into the function's body, onto its indexes.
+  // The exemption is safe only while each one is security invoker, plain SQL and names every table
+  // and schema-qualified function, so no search_path can redirect a reference; the test below
+  // checks exactly that, and a new entry has to meet it.
+  const INLINABLE = ['market_sparklines', 'i_bet_on', 'my_activity_events']
+
+  it('pins an empty search_path on every function in public, except the inlinable allowlist', async () => {
     const loose = await pgQuery<{ proname: string }>(`
       select p.proname
       from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public'
-        and p.proname <> 'market_sparklines'
+        and p.proname <> all (array[${INLINABLE.map((n) => `'${n}'`).join(', ')}])
         and not coalesce(p.proconfig, '{}') && array['search_path=""', 'search_path=']
       order by 1
     `)
     expect(loose).toEqual([])
+  })
+
+  it('holds every inlinable function to security invoker, SQL, and schema-qualified references', async () => {
+    const fns = await pgQuery<{ proname: string; invoker: boolean; lang: string; src: string; config: string[] | null }>(`
+      select p.proname, not p.prosecdef as invoker, l.lanname as lang, p.prosrc as src, p.proconfig as config
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      join pg_language l on l.oid = p.prolang
+      where n.nspname = 'public' and p.proname = any (array[${INLINABLE.map((n) => `'${n}'`).join(', ')}])
+      order by 1
+    `)
+    expect(fns.map((f) => f.proname).sort()).toEqual([...INLINABLE].sort())
+    for (const f of fns) {
+      expect(f.invoker, `${f.proname} must be security invoker`).toBe(true)
+      expect(f.lang, `${f.proname} must be language sql`).toBe('sql')
+      // Every relation after from/join is public-qualified, a subquery, the built-in unnest, lateral or one of its own CTEs; a bare name would resolve
+      // through whatever search_path the caller has.
+      const refs = [...f.src.matchAll(/\b(?:from|join)\s+(\(|[\w."]+)/gi)].map((m) => m[1])
+      expect(refs.length, `${f.proname} reads some table`).toBeGreaterThan(0)
+      // A name the body defines itself (`with ids as (...)`) is not a table lookup either.
+      const ctes = new Set([...f.src.matchAll(/(?:\bwith|,)\s+(\w+)\s+as\s*\(/gi)].map((m) => m[1]))
+      for (const ref of refs) if (!ctes.has(ref)) expect(ref, `${f.proname}: ${ref}`).toMatch(/^(public\.|\(|unnest$|lateral$)/)
+      // auth.uid() is always schema-qualified; a bare uid() would follow the caller's search_path.
+      expect(f.src, `${f.proname} calls uid() unqualified`).not.toMatch(/(?<![\w.])uid\s*\(/i)
+    }
   })
 
   // pg_net is owned by supabase_admin, so a migration can't revoke anon's and authenticated's

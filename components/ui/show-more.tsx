@@ -57,10 +57,10 @@ export function ShowMore({
   )
 }
 
-export function BackToNewest({ href }: { href: string }) {
+export function BackToNewest({ href, label = 'Back to newest' }: { href: string; label?: string }) {
   return (
     <Link href={href} replace className={linkClass}>
-      Back to newest
+      {label}
     </Link>
   )
 }

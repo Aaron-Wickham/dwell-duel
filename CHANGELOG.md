@@ -33,6 +33,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ### Features
 - **Admin › Members and Invites work at a thousand members.** Both have a search box (Members by name or email, Invites by email), tabs (Members: Active · Removed; Invites: Waiting · Claimed) with counts, and "Show more" paging, so nobody past the 1,000th row is silently dropped. Members are compact read-only rows; each opens the member's own Admin page with Adjust balance, Role, their last coin movements ("Open in Ledger", which filters Admin › Ledger to them with `?member=`) and Remove from DwellDuel. New-market notifications now reach every opted-in member past the first 1,000 (#254).
+- **Lists can be narrowed.** Markets has a title search and "Everyone's · I bet on · I made" chips (a search or a chip lists matches as one flat list, newest first), the Feed has All, Results and Mine tabs, and on a phone the Net worth board has a compact standing card whose "Jump to me" opens the list ten ranks above your own row, so a member ranked 600 no longer pages down twelve times (#264).
 
 ## v0.6.0-beta — 2026-10-01
 

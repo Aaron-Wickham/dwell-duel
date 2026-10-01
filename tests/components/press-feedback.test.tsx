@@ -8,11 +8,15 @@ import { ChartColumn } from 'lucide-react'
 
 vi.mock('@/lib/markets/cancel-bet', () => ({ cancelBetAction: vi.fn() }))
 vi.mock('@/lib/markets/create-market', () => ({ createMarketAction: vi.fn() }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/lib/theme/set-theme', () => ({ setThemeAction: vi.fn() }))
 vi.mock('@/lib/preferences/set-preference', () => ({ setHapticsAction: vi.fn(), setReduceMotionAction: vi.fn() }))
 
 import { BackLink } from '@/components/ui/back-link'
 import { buttonVariants } from '@/components/ui/button'
+import { FilterChips } from '@/components/ui/filter-chips'
+import { MarketSearch } from '@/components/markets/market-search'
+import { JumpToMe } from '@/components/leaderboard/jump-to-me'
 import { Wordmark } from '@/components/brand/wordmark'
 import { MarketCard } from '@/components/markets/market-card'
 import { PlacedParlay } from '@/components/parlays/placed-parlay'
@@ -144,6 +148,20 @@ const CASES: [string, () => ReactElement][] = [
       </ul>
     ),
   ],
+  [
+    'FilterChips',
+    () => (
+      <FilterChips
+        label="Whose markets"
+        items={[
+          { href: '/markets', label: 'Everyone’s', current: true },
+          { href: '/markets?mine=bet', label: 'I bet on', current: false },
+        ]}
+      />
+    ),
+  ],
+  ['MarketSearch', () => <MarketSearch q="" status="all" mine={null} />],
+  ['JumpToMe', () => <JumpToMe href="/leaderboard?at=me" focusId="member-1" />],
   ['MotionSettings', () => <MotionSettings haptics reduceMotion={false} />],
   ['CreateMarketForm', () => <CreateMarketForm />],
 ]

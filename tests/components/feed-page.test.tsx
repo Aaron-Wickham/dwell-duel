@@ -127,4 +127,39 @@ describe('FeedPage', () => {
     fireEvent.click(showMore)
     expect(requestShowMoreFocus).toHaveBeenCalledWith('feed-bet_003a2')
   })
+
+  it('has All, Results and Mine tabs, with the choice in the URL and no cursor in their links', async () => {
+    await renderPage({ rows: [event('bet:1')], next: null, windowed: false }, { show: 'mine', before: 'OLD' })
+    const tabs = screen.getByRole('navigation', { name: 'Show' })
+    expect(within(tabs).getByRole('link', { name: 'All' })).toHaveAttribute('href', '/feed')
+    expect(within(tabs).getByRole('link', { name: 'Results' })).toHaveAttribute('href', '/feed?show=results')
+    expect(within(tabs).getByRole('link', { name: 'Mine' })).toHaveAttribute('href', '/feed?show=mine')
+    expect(within(tabs).getByRole('link', { name: 'Mine' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it.each([
+    ['results', 'results'],
+    ['mine', 'mine'],
+    [undefined, 'all'],
+    ['following', 'all'],
+  ])('reads ?show=%s as the %s feed', async (show, expected) => {
+    await renderPage({ rows: [event('bet:1')], next: null, windowed: false }, show ? { show } : {})
+    expect(listFeed).toHaveBeenCalledWith({}, expect.objectContaining({ show: expected }))
+  })
+
+  it('says what an empty Results or Mine tab is waiting for, and keeps Show more on the tab', async () => {
+    await renderPage({ rows: [], next: null, windowed: false }, { show: 'results' })
+    expect(screen.getByText('No results yet.')).toBeInTheDocument()
+    expect(screen.queryByText('Nothing yet.')).toBeNull()
+  })
+
+  it('names an empty Mine tab', async () => {
+    await renderPage({ rows: [], next: null, windowed: false }, { show: 'mine' })
+    expect(screen.getByText('Nothing of yours yet.')).toBeInTheDocument()
+  })
+
+  it('keeps the tab in Show more', async () => {
+    await renderPage({ rows: [event('bet:1')], next: { kind: 'extend', cursor: 'NEXT', firstId: 'bet:2' }, windowed: false }, { show: 'results' })
+    expect(screen.getByRole('link', { name: 'Show more' })).toHaveAttribute('href', '/feed?show=results&before=NEXT')
+  })
 })

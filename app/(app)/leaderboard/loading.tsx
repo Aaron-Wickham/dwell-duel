@@ -21,6 +21,14 @@ export default function Loading() {
     <SkeletonScreen name="leaderboard" className={pageClass}>
       <SkeletonPageHeader description />
       <Skeleton className="h-[52px] w-full rounded-[14px] md:w-72" />
+      <SkeletonCard className="flex-row items-center gap-3 p-4 lg:hidden">
+        <Skeleton className="size-10 shrink-0" />
+        <div className="flex grow flex-col gap-1.5">
+          <Skeleton className="h-5 w-28" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+        <Skeleton className="h-11 w-28 shrink-0 rounded-full" />
+      </SkeletonCard>
       <SkeletonCard className="p-4 md:p-6">
         <div className="flex items-end justify-center gap-3 md:gap-6">
           {PODIUM.map((place, i) => (

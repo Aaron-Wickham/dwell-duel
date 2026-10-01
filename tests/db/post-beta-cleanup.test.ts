@@ -40,6 +40,16 @@ beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
 })
 
+// A parlay row written directly is settled on paper only; this gives it the payout row the real
+// settle_parlay would have written, so the ledger check still holds.
+async function payParlay(parlayId: string, profileId: string, amount: number): Promise<void> {
+  await pgQuery(`
+    insert into public.coin_transactions (profile_id, amount, type, meta)
+      values ('${profileId}', ${amount}, 'parlay_won', jsonb_build_object('parlay_id', '${parlayId}'));
+    update public.profiles set balance = balance + ${amount} where id = '${profileId}'
+  `)
+}
+
 describe('activity_events foreign key indexes', () => {
   it('indexes every column a source row delete looks events up by', async () => {
     const rows = await pgQuery<{ indexname: string; indexdef: string }>(
@@ -93,6 +103,7 @@ describe('timestamp invariants', () => {
       .update({ status: 'won', credited: 20, settled_at: new Date().toISOString() })
       .eq('id', parlay!.id)
     expect(won.error).toBeNull()
+    await payParlay(parlay!.id, bob.id, 20)
   })
 
   it('adds both constraints validated', async () => {
@@ -134,7 +145,10 @@ describe('timestamp invariants', () => {
     const cleanParlay = await db
       .from('parlays')
       .insert({ profile_id: bob.id, stake: 10, status: 'won', credited: 20, settled_at: new Date().toISOString() })
+      .select('id')
+      .single()
     expect(cleanParlay.error).toBeNull()
+    await payParlay(cleanParlay.data!.id, bob.id, 20)
 
     await expect(pgQuery(readGuardBlock())).resolves.toBeDefined()
 

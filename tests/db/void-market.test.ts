@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, giveRole, type Member } from './fixtures'
 import { listFeed } from '@/lib/social/list-feed'
 
@@ -62,7 +62,7 @@ describe('void_market', () => {
     await aliceClient.rpc('resolve_market', { p_note: 'Resolved in a test', p_market_id: marketId, p_outcome_id: outcomeIds[0] })
 
     const { error } = await aliceClient.rpc('void_market', { p_market_id: marketId, p_reason: REASON })
-    expect(error).not.toBeNull()
+    expectError(error, 'only an unresolved, unvoided market can be voided')
   })
 
   it('rejects a non-creator, non-admin caller', async () => {
@@ -76,7 +76,7 @@ describe('void_market', () => {
 })
 
 describe('void_market needs a reason (0073)', () => {
-  let aliceClient: SupabaseClient
+  let aliceClient: TestClient
   let marketId: string
 
   beforeEach(async () => {
@@ -125,9 +125,9 @@ describe('void_market needs a reason (0073)', () => {
 
 describe('who can void (0073)', () => {
   let admin: Member
-  let creatorClient: SupabaseClient
-  let adminClient: SupabaseClient
-  let bobClient: SupabaseClient
+  let creatorClient: TestClient
+  let adminClient: TestClient
+  let bobClient: TestClient
 
   beforeEach(async () => {
     admin = await makeMember('Ada')

@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { listMyWagers, type WagerBucket } from '@/lib/bets/list-my-wagers'
 import type { ParlayView } from '@/lib/parlays/list-parlays'
+import type { TestClient } from './helpers'
 
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   const [alice, seededBob] = await seedMembers()

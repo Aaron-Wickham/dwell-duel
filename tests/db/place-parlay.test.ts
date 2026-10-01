@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto'
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -218,7 +218,7 @@ describe('place_parlay', () => {
       p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]],
       p_stake: 101,
     })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '23514', message: 'profiles_balance_check' })
     await expectNothingPlaced()
   })
 

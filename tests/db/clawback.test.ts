@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import {
   seedMembers,
   clientFor,
@@ -15,9 +14,9 @@ import { CLAWBACK_PREFIX } from '@/lib/markets/clawback'
 let alice: Member
 let bob: Member
 let carol: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let carolClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let carolClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -31,7 +30,7 @@ beforeEach(async () => {
   await ensureInvited(bobClient)
 })
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number) {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number) {
   const { error } = await client.rpc('place_bet', {
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcomeIndex],

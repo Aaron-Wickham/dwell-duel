@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import {
   seedMembers,
   makeMember,
@@ -17,9 +16,9 @@ import { pgQuery } from './pg-query'
 let alice: Member
 let bob: Member
 let carol: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let carolClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let carolClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -32,7 +31,7 @@ beforeEach(async () => {
   await giveRole(alice, 'admin')
 })
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
   const { error } = await client.rpc('place_bet', {
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcomeIndex],
@@ -57,7 +56,7 @@ async function resolve(market: TestMarket, outcomeIndex: number): Promise<string
   return data.current_resolution_id as string
 }
 
-async function placeParlay(client: SupabaseClient, outcomeIds: string[], stake: number): Promise<string> {
+async function placeParlay(client: TestClient, outcomeIds: string[], stake: number): Promise<string> {
   const { data, error } = await client.rpc('place_parlay', { p_outcome_ids: outcomeIds, p_stake: stake })
   if (error) throw error
   return data as string
@@ -204,8 +203,8 @@ async function fullScenario(): Promise<void> {
   expect(reviewRows).toEqual([{ id: completionId2, ok: true, error: null }])
   expect(await mismatches()).toEqual([])
 
-  // A finished month's champion, from ledger rows dated in June (only the ledger, not balances).
-  await pgQuery(`insert into public.coin_transactions (profile_id, amount, type, created_at) values ('${carol.id}', 18, 'bet_won', '2026-06-12T12:00:00Z')`)
+  // A finished month's champion, from ledger rows dated in June (the balance follows it).
+  await pgQuery(`insert into public.coin_transactions (profile_id, amount, type, created_at) values ('${carol.id}', 18, 'bet_won', '2026-06-12T12:00:00Z'); update public.profiles set balance = balance + 18 where id = '${carol.id}'`)
   const { data: champion, error: settleErr } = await serviceClient().rpc('settle_season', { p_month: '2026-06-01' })
   if (settleErr) throw settleErr
   expect(champion).toBe(carol.id)
@@ -326,7 +325,7 @@ describe('activity_events', () => {
     expect(won.status).toBe('won')
     let win = (await eventsFor('parlay_id', parlayId)).find((e) => e.kind === 'parlay_won')!
     expect(win).toMatchObject({ id: `parlay_win:${parlayId}`, amount: won.credited, hidden_at: null })
-    expect(Date.parse(win.occurred_at)).toBe(Date.parse(won.settled_at))
+    expect(Date.parse(win.occurred_at)).toBe(Date.parse(won.settled_at!))
 
     await resolve(a, 1)
     expect((await settled()).status).toBe('lost')
@@ -341,8 +340,8 @@ describe('activity_events', () => {
     expect(events.filter((e) => e.kind === 'parlay_won')).toHaveLength(1)
     win = events.find((e) => e.kind === 'parlay_won')!
     expect(win).toMatchObject({ amount: wonAgain.credited, hidden_at: null })
-    expect(Date.parse(win.occurred_at)).toBe(Date.parse(wonAgain.settled_at))
-    expect(Date.parse(wonAgain.settled_at)).toBeGreaterThan(Date.parse(won.settled_at))
+    expect(Date.parse(win.occurred_at)).toBe(Date.parse(wonAgain.settled_at!))
+    expect(Date.parse(wonAgain.settled_at!)).toBeGreaterThan(Date.parse(won.settled_at!))
     expect(await mismatches()).toEqual([])
   })
 

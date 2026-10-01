@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, setBalanceViaLedger } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 import { getLeaderboardPage, getMemberStanding } from '@/lib/social/leaderboard'
@@ -10,9 +9,9 @@ import { getAtStake } from '@/lib/home/at-stake'
 let alice: Member
 let bob: Member
 let carol: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let carolClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let carolClient: TestClient
 
 const NO_PAGE = { top: null, bottom: null }
 
@@ -27,7 +26,7 @@ beforeEach(async () => {
   await giveRole(alice, 'admin')
 })
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
   const { error } = await client.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[outcomeIndex], p_amount: amount })
   if (error) throw error
 }
@@ -43,7 +42,7 @@ async function resolve(market: TestMarket, outcomeIndex: number): Promise<void> 
 
 type WorthRow = { id: string; balance: number; at_stake: number; score: number; rank: number }
 
-async function netWorth(client: SupabaseClient = bobClient): Promise<Map<string, WorthRow>> {
+async function netWorth(client: TestClient = bobClient): Promise<Map<string, WorthRow>> {
   const { data, error } = await client.rpc('leaderboard_net_worth').select('id, balance, at_stake, score, rank')
   if (error) throw error
   return new Map((data as WorthRow[]).map((r) => [r.id, r]))
@@ -54,7 +53,8 @@ async function netWorth(client: SupabaseClient = bobClient): Promise<Map<string,
 // skipped by the payout trigger, so no feed event comes with it.
 async function ledger(profileId: string, amount: number, type: string, at: string): Promise<void> {
   await pgQuery(
-    `insert into public.coin_transactions (profile_id, amount, type, created_at) values ('${profileId}', ${amount}, '${type}', '${at}')`,
+    `insert into public.coin_transactions (profile_id, amount, type, created_at) values ('${profileId}', ${amount}, '${type}', '${at}');
+     update public.profiles set balance = balance + ${amount} where id = '${profileId}'`,
   )
 }
 
@@ -108,8 +108,7 @@ describe('leaderboard_net_worth', () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     // Bob has 40 DC in hand but 100 in net worth; Carol has 80 in hand, and that's all.
     await bet(bobClient, market, 0, 60)
-    const db = serviceClient()
-    await db.from('profiles').update({ balance: 80 }).eq('id', carol.id)
+    await setBalanceViaLedger(carol.id, 80)
 
     const board = await getLeaderboardPage(carolClient, 'all', NO_PAGE)
     // Tied members follow each other by id, which is random, so the tie's order isn't pinned.

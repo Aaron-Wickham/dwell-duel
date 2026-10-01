@@ -14,6 +14,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Voids follow the same rule as results, and say why.** Until a market closes, its creator or an admin can void it; once it has closed, only an admin can. Every void needs a reason (up to 500 characters), which shows on the market page and, with the void itself, in the feed (#290).
 - **The feed skips an event kind it doesn't recognise** instead of failing, so a new kind can reach the database before the build that shows it (#290).
 
+### Tests
+- **The DB suite is typed, names what each refusal was for, and checks the money after every test.** Test clients carry the `Database` type, so a renamed RPC argument fails the typecheck. 86 negative assertions that accepted any error now check the message or SQLSTATE (`expectError`). After each DB test, `tests/db/setup.ts` checks that every balance equals its ledger, every outcome's pool equals its live bets, and every parlay's credit equals its payout rows; bulk raw seeds reconcile pools and balances afterwards, and the few tests that need drift opt out with a reason. Slip tests call `place_slip_v2` and assert its summary, and `money-races` gains cancel-vs-resolve and double-approve races (#271).
+
 ### Under the hood
 - **Nightly encrypted backups.** A new Backups workflow dumps the production database every night (roles, schema, and data including sign-ins and Storage records) and copies the proof and avatars buckets every Sunday, encrypted with age into a private backups repo that keeps 60 days; `docs/OPERATIONS.md` is the restore runbook, rehearsed once against a local copy (#248).
 - **Every migration has a restore point.** Deploy Production takes the same encrypted dump just before it applies migrations, and doesn't migrate if the dump fails (#248).

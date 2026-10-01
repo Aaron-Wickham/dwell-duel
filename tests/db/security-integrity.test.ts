@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, type SlipSummary, setBalanceViaLedger } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 import { getSlipView } from '@/lib/parlays/get-slip'
@@ -11,18 +11,18 @@ import { listMembers } from '@/lib/members/list-members'
 // 0046: the release 0.3 security batch. Each block reproduces the hole it closes.
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
   aliceClient = await clientFor(alice)
   bobClient = await clientFor(bob)
   for (const c of [aliceClient, bobClient]) await ensureInvited(c)
-  await serviceClient().from('profiles').update({ balance: 3000 }).eq('id', bob.id)
+  await setBalanceViaLedger(bob.id, 3000)
 })
 
-async function bet(client: SupabaseClient, market: TestMarket, index: number, amount: number): Promise<number> {
+async function bet(client: TestClient, market: TestMarket, index: number, amount: number): Promise<number> {
   const { error } = await client.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[index], p_amount: amount })
   if (error) throw error
   const { data } = await serviceClient().from('bets').select('id').eq('market_id', market.marketId).order('id', { ascending: false }).limit(1).single()
@@ -33,7 +33,7 @@ async function close(market: TestMarket): Promise<void> {
   await serviceClient().from('markets').update({ close_at: new Date(Date.now() - 1000).toISOString() }).eq('id', market.marketId)
 }
 
-async function member(name: string, role: 'member' | 'reviewer' | 'admin'): Promise<{ member: Member; client: SupabaseClient }> {
+async function member(name: string, role: 'member' | 'reviewer' | 'admin'): Promise<{ member: Member; client: TestClient }> {
   const m = await makeMember(name)
   if (role !== 'member') await giveRole(m, role)
   const client = await clientFor(m)
@@ -41,7 +41,7 @@ async function member(name: string, role: 'member' | 'reviewer' | 'admin'): Prom
   return { member: m, client }
 }
 
-const resolve = (client: SupabaseClient, market: TestMarket, index = 0) =>
+const resolve = (client: TestClient, market: TestMarket, index = 0) =>
   client.rpc('resolve_market', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[index], p_note: 'Checked' })
 
 describe('#57 parlay legs lock without your own stakes', () => {
@@ -87,13 +87,13 @@ describe('#57 parlay legs lock without your own stakes', () => {
   it('leaves out your singles placed in the same slip', async () => {
     const a = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
-    const { data: parlayId, error } = await bobClient.rpc('place_slip', {
+    const { data: summary, error } = await bobClient.rpc('place_slip_v2', {
       p_singles: [{ outcome_id: a.outcomeIds[0], amount: 500 }],
       p_parlay_outcome_ids: [a.outcomeIds[1], b.outcomeIds[1]],
       p_parlay_stake: 10,
     })
     expect(error).toBeNull()
-    const { data: legs } = await serviceClient().from('parlay_legs').select('locked_odds').eq('parlay_id', parlayId as string)
+    const { data: legs } = await serviceClient().from('parlay_legs').select('locked_odds').eq('parlay_id', (summary as SlipSummary).parlay_id!)
     expect(legs!.map((l) => Number(l.locked_odds))).toEqual([2, 2])
   })
 })
@@ -218,7 +218,7 @@ describe('#62 hardening', () => {
     const names = (data as { name: string }[]).map((r) => r.name)
     expect(names).toContain(stale)
     expect(names).not.toContain(fresh)
-    expect((await bobClient.rpc('stray_proof_objects', { p_limit: 5 })).error).not.toBeNull()
+    expectError((await bobClient.rpc('stray_proof_objects', { p_limit: 5 })).error, { code: '42501', message: 'permission denied for function stray_proof_objects' })
 
     await serviceClient().storage.from('proof').remove([stale, fresh])
   })

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, type Member } from './fixtures'
 import { pgQuery } from './pg-query'
 
@@ -8,9 +8,9 @@ import { pgQuery } from './pg-query'
 let owner: Member
 let admin: Member
 let member: Member
-let ownerClient: SupabaseClient
-let adminClient: SupabaseClient
-let memberClient: SupabaseClient
+let ownerClient: TestClient
+let adminClient: TestClient
+let memberClient: TestClient
 
 async function setRole(m: Member, role: 'owner' | 'admin' | 'reviewer' | 'member') {
   const { error } = await serviceClient().from('profiles').update({ role }).eq('id', m.id)
@@ -65,19 +65,19 @@ describe('a role needs an invite', () => {
 
     const { data: invites } = await adminClient.from('allowed_emails').select('email')
     expect(invites ?? [], 'admin_select_invites').toEqual([])
-    expect((await adminClient.from('allowed_emails').insert({ email: 'friend@example.com' })).error, 'admin_insert_invites').not.toBeNull()
-    expect((await adminClient.from('allowed_emails').insert({ email: admin.email })).error, 'cannot re-invite themselves').not.toBeNull()
+    expectError((await adminClient.from('allowed_emails').insert({ email: 'friend@example.com' })).error, { code: '42501', message: 'new row violates row-level security policy for table "allowed_emails"' }, 'admin_insert_invites')
+    expectError((await adminClient.from('allowed_emails').insert({ email: admin.email })).error, { code: '42501', message: 'new row violates row-level security policy for table "allowed_emails"' }, 'cannot re-invite themselves')
     expect(await inviteFor(admin)).toBeNull()
 
     expect((await adminClient.rpc('member_emails', { p_ids: [member.id] })).error?.message).toBe('only an admin can see member emails')
     expect((await adminClient.rpc('void_market', { p_market_id: market.marketId, p_reason: 'Voided in a test' })).error?.message).toBe(
       'only the market creator or an admin can void this market',
     )
-    expect((await adminClient.rpc('approve_task_completion', { p_completion_id: completionId })).error?.message).toBe(
+    expect((await adminClient.rpc('approve_task_completion', { p_completion_id: completionId! })).error?.message).toBe(
       'only a reviewer can approve a task completion',
     )
-    expect((await adminClient.rpc('adjust_balance', { p_profile_id: member.id, p_amount: 5, p_reason: 'r' })).error).not.toBeNull()
-    expect((await adminClient.from('tasks').insert({ title: 'Nope', reward_amount: 5, is_repeatable: false, created_by: admin.id })).error).not.toBeNull()
+    expectError((await adminClient.rpc('adjust_balance', { p_profile_id: member.id, p_amount: 5, p_reason: 'r' })).error, 'only the owner can adjust a balance')
+    expectError((await adminClient.from('tasks').insert({ title: 'Nope', reward_amount: 5, is_repeatable: false, created_by: admin.id })).error, { code: '42501', message: 'permission denied for table tasks' })
 
     const { data: ledger } = await adminClient.from('coin_transactions').select('id').eq('profile_id', member.id)
     expect(ledger ?? [], 'select_own_or_admin_transactions').toEqual([])
@@ -117,7 +117,7 @@ describe('remove_member', () => {
 
     // Still signed in, they have no powers and can't invite themselves back.
     expect((await adminClient.rpc('my_role')).data).toBe('member')
-    expect((await adminClient.from('allowed_emails').insert({ email: admin.email })).error).not.toBeNull()
+    expectError((await adminClient.from('allowed_emails').insert({ email: admin.email })).error, { code: '42501', message: 'new row violates row-level security policy for table "allowed_emails"' })
     // Signing in again runs createOwnProfile's insert, which the RLS check refuses before the
     // duplicate key is noticed, so the callback sends them to /not-invited.
     const { error: again } = await adminClient.from('profiles').insert({ id: admin.id, email: admin.email, display_name: admin.displayName })
@@ -134,7 +134,7 @@ describe('remove_member', () => {
     expect(await sessions()).toBe(0)
     const [{ n: tokens }] = await pgQuery<{ n: number }>(`select count(*)::integer as n from auth.refresh_tokens where user_id = '${member.id}'`)
     expect(tokens).toBe(0)
-    expect((await memberClient.auth.refreshSession()).error).not.toBeNull()
+    expectError((await memberClient.auth.refreshSession()).error, { message: 'Invalid Refresh Token: Refresh Token Not Found' })
     // Everyone else stays signed in.
     expect((await ownerClient.auth.refreshSession()).error).toBeNull()
   })
@@ -175,7 +175,7 @@ describe('remove_member', () => {
       .upload(`resolution/${closed.marketId}/${crypto.randomUUID()}/proof.jpg`, new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' }), {
         contentType: 'image/jpeg',
       })
-    expect(uploadErr, 'resolution proof upload').not.toBeNull()
+    expectError(uploadErr, { message: 'new row violates row-level security policy' }, 'resolution proof upload')
     expect((await memberClient.rpc('delete_market_comment', { p_comment_id: comment.id })).error?.message).toBe(
       "only the comment's author or an admin can delete it",
     )

@@ -297,6 +297,15 @@ a line to `CHANGELOG.md` under the next release.
   tests (`tests/db/`) refuse to run against anything but localhost. If
   storage uploads then fail with `42P10` (the local Storage service holds
   stale state after a reset), run `npx supabase stop && npx supabase start`.
+- **DB tests are typed and name what a refusal was for.** `serviceClient()`,
+  `clientFor()`, `clientForEmail()` and `anonClient()` return `TestClient` (`SupabaseClient<Database>`),
+  so a renamed RPC argument fails `npm run typecheck`. A negative test calls
+  `expectError(error, 'the message' | { code, message })` (`tests/db/assertions.ts`),
+  never `expect(error).not.toBeNull()`, which also passes on a missing function.
+  `tests/db/setup.ts` runs `assertLedgerConsistent()` after every DB test
+  (balances equal their ledger, pools equal live bets, a parlay's `credited` equals
+  its payout rows). Shape balances with `setBalanceViaLedger`; a test that seeds
+  raw rows on purpose calls `skipLedgerCheck('why')`. Slip tests call `place_slip_v2`.
 - **CI runs on pull requests only,** as three parallel jobs (`static`,
   `db`, `web`) summed up by the one required check, `ci-ok`. A PR must be
   up to date with `main` to merge: after another PR lands, run

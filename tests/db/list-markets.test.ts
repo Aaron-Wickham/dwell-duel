@@ -1,14 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, giveRole } from './fixtures'
 import { countOpenMarkets, listResolvedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
 import { encodeCursor, readPageParams, showMoreHref, type PageParams } from '@/lib/pagination/cursor'
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 const FIRST: PageParams = { top: null, bottom: null }
 

@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 let market: TestMarket
 
 beforeEach(async () => {
@@ -17,7 +17,7 @@ beforeEach(async () => {
   market = await createTestMarket(aliceClient, ['Yes', 'No'])
 })
 
-async function placeBet(client: SupabaseClient, amount: number): Promise<number> {
+async function placeBet(client: TestClient, amount: number): Promise<number> {
   const { error } = await client.rpc('place_bet', {
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[0],
@@ -170,6 +170,6 @@ describe('cancel_bet', () => {
       amount: 5,
       placed_at: new Date().toISOString(),
     })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for table cancelled_bets' })
   })
 })

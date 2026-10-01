@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, giveRole, type Member } from './fixtures'
 import { listAwaitingMarkets } from '@/lib/admin/markets-awaiting'
 import { getReviewCounts } from '@/lib/admin/review-counts'
@@ -9,9 +8,9 @@ const HOUR = 3_600_000
 const FIRST_PAGE = { top: null, bottom: null }
 
 let alice: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let adminClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let adminClient: TestClient
 
 beforeEach(async () => {
   const [a, bob] = await seedMembers()

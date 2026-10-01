@@ -1,14 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, reconcilePoolTotals } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
 import { pgQuery } from './pg-query'
 import { buildProbabilitySeries, type SeriesPoint } from '@/lib/markets/probability-series'
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -27,23 +26,23 @@ interface SparklineRow {
   points: SparklinePoint[]
 }
 
-async function sparklines(client: SupabaseClient, marketIds: string[], points?: number): Promise<SparklineRow[]> {
+async function sparklines(client: TestClient, marketIds: string[], points?: number): Promise<SparklineRow[]> {
   const { data, error } = await client.rpc('market_sparklines', {
     p_market_ids: marketIds,
     ...(points === undefined ? {} : { p_points: points }),
   })
   if (error) throw error
-  return data as SparklineRow[]
+  return data as unknown as SparklineRow[] // points is Json in the generated type
 }
 
 // One market's points, after checking the call returned that market's row and nothing else.
-async function pointsOf(client: SupabaseClient, market: TestMarket, points?: number): Promise<SparklinePoint[]> {
+async function pointsOf(client: TestClient, market: TestMarket, points?: number): Promise<SparklinePoint[]> {
   const rows = await sparklines(client, [market.marketId], points)
   expect(rows.map((r) => r.market_id)).toEqual([market.marketId])
   return rows[0].points
 }
 
-async function placeBet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
+async function placeBet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
   const { error } = await client.rpc('place_bet', {
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcomeIndex],
@@ -65,6 +64,7 @@ async function insertBets(market: TestMarket, count: number): Promise<void> {
   }))
   const { error } = await serviceClient().from('bets').insert(rows)
   if (error) throw error
+  await reconcilePoolTotals()
 }
 
 // The whole series the market page's chart draws, from every bet, oldest first.
@@ -131,6 +131,7 @@ describe('market_sparklines', () => {
         { market_id: market.marketId, outcome_id: market.outcomeIds[0], profile_id: alice.id, amount: 5, created_at: tie },
       ])
     if (error) throw error
+    await reconcilePoolTotals()
 
     const points = await pointsOf(bobClient, market)
     const series = await fullSeries(market)
@@ -165,9 +166,9 @@ describe('market_sparklines', () => {
     await insertBets(market, 45)
     const series = await fullSeries(market)
 
-    const { data, error } = await bobClient.rpc('market_sparklines', { p_market_ids: [market.marketId], p_points: null })
+    const { data, error } = await bobClient.rpc('market_sparklines', { p_market_ids: [market.marketId], p_points: null as unknown as number })
     if (error) throw error
-    const rows = data as SparklineRow[]
+    const rows = data as unknown as SparklineRow[]
     expect(rows.map((r) => r.market_id)).toEqual([market.marketId])
     expectSameSeries(rows[0].points, picked(series, 40))
   })
@@ -278,6 +279,7 @@ describe('market_sparklines', () => {
       ),
     )
     if (betsErr) throw betsErr
+    await reconcilePoolTotals()
 
     const past = await sparklines(bobClient, [...fillers, market.marketId])
     expect(past.map((r) => r.market_id).sort()).toEqual([...fillers].sort())
@@ -324,10 +326,11 @@ describe('market_sparklines', () => {
       })),
     )
     if (betsErr) throw betsErr
+    await reconcilePoolTotals()
 
-    const { data, error: rpcErr } = await bobClient.rpc('market_sparklines', { p_market_ids: [marketIds] })
+    const { data, error: rpcErr } = await bobClient.rpc('market_sparklines', { p_market_ids: [marketIds] as unknown as string[] })
     if (rpcErr) throw rpcErr
-    const rows = data as SparklineRow[]
+    const rows = data as unknown as SparklineRow[]
     expect(rows).toHaveLength(50)
     expect(rows.map((r) => r.market_id).sort()).toEqual(marketIds.slice(0, 50).sort())
     for (const id of marketIds.slice(50)) expect(rows.some((r) => r.market_id === id)).toBe(false)

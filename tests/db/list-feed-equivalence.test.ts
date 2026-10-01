@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import { pgQuery } from './pg-query'
 import {
   seedMembers,
@@ -71,7 +70,7 @@ function withoutNotes<T extends { rows: FeedEvent[] }>(page: T): T {
 }
 
 async function legacyListFeed(
-  supabase: SupabaseClient,
+  supabase: TestClient,
   opts: { actorId?: string; page: PageParams },
 ): Promise<KeysetPage<FeedEvent>> {
   const fetchRows = async (filter: string | null, limit: number): Promise<LegacyFeedRow[]> => {
@@ -102,9 +101,9 @@ async function legacyListFeed(
 let alice: Member
 let bob: Member
 let carol: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let carolClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let carolClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -117,7 +116,7 @@ beforeEach(async () => {
   await giveRole(alice, 'admin')
 })
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
   const { error } = await client.rpc('place_bet', {
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcomeIndex],

@@ -1,6 +1,7 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
-import { serviceClient, wipeDatabase } from './helpers'
+import type { Database } from '@/lib/supabase/database'
+import { serviceClient, wipeDatabase, type TestClient } from './helpers'
 
 export interface Member {
   id: string
@@ -55,7 +56,7 @@ export async function seedMembers(): Promise<[Member, Member]> {
  * must already belong to an existing auth user — call
  * `makeAuthUserWithoutProfile`/`makeMember` first.
  */
-export async function clientForEmail(email: string): Promise<SupabaseClient> {
+export async function clientForEmail(email: string): Promise<TestClient> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const anon = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
   const { data, error } = await serviceClient().auth.admin.generateLink({
@@ -63,7 +64,7 @@ export async function clientForEmail(email: string): Promise<SupabaseClient> {
     email,
   })
   if (error) throw error
-  const c = createClient(url, anon, { auth: { persistSession: false } })
+  const c = createClient<Database>(url, anon, { auth: { persistSession: false } })
   const { error: vErr } = await c.auth.verifyOtp({
     token_hash: data.properties.hashed_token,
     type: 'email',
@@ -73,13 +74,13 @@ export async function clientForEmail(email: string): Promise<SupabaseClient> {
 }
 
 /** A client acting as the given member, subject to RLS. */
-export async function clientFor(member: Member): Promise<SupabaseClient> {
+export async function clientFor(member: Member): Promise<TestClient> {
   return clientForEmail(member.email)
 }
 
 /** A signed-out client, subject to RLS as `anon`. */
-export function anonClient(): SupabaseClient {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
+export function anonClient(): TestClient {
+  return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     auth: { persistSession: false },
   })
 }
@@ -90,7 +91,7 @@ export function anonClient(): SupabaseClient {
  * `e2e/global-setup.ts` (Task 9) to inject a real session into a fresh
  * browser context without driving the real Google consent screen.
  */
-export async function sessionCookieHeader(client: SupabaseClient): Promise<string> {
+export async function sessionCookieHeader(client: TestClient): Promise<string> {
   const {
     data: { session },
     error,
@@ -165,7 +166,7 @@ export interface TestMarket {
  * into makeMember()/seedMembers() themselves: that would run this upsert
  * for every fixture member unconditionally, including in that same test.
  */
-export async function ensureInvited(client: SupabaseClient): Promise<void> {
+export async function ensureInvited(client: TestClient): Promise<void> {
   const {
     data: { user },
   } = await client.auth.getUser()
@@ -204,7 +205,7 @@ export async function giveRole(member: Member, role: 'owner' | 'admin' | 'review
  * (0041) pass `seed` explicitly.
  */
 export async function createTestMarket(
-  creatorClient: SupabaseClient,
+  creatorClient: TestClient,
   labels: string[],
   opts?: { kind?: 'binary' | 'multiple_choice'; closeInMs?: number; title?: string; seed?: number },
 ): Promise<TestMarket> {

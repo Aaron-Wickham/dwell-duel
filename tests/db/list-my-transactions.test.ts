@@ -1,14 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { listMyTransactions, type MyCoinEntry } from '@/lib/ledger/my-transactions'
 import { readPageParams, showMoreHref, type PageParams, type SearchParams } from '@/lib/pagination/cursor'
 import type { KeysetPage } from '@/lib/pagination/keyset'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, reconcileBalances } from './helpers'
 import { seedMembers, clientFor, ensureInvited, createTestMarket, createTestTask, type Member, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
-let bobClient: SupabaseClient
+let bobClient: TestClient
 
 const FIRST: PageParams = { top: null, bottom: null }
 
@@ -35,6 +34,7 @@ async function insertInterleavedRows(count: number): Promise<void> {
   ])
   const { error } = await serviceClient().from('coin_transactions').insert(rows)
   if (error) throw error
+  await reconcileBalances()
 }
 
 // One member's ledger rows, newest first, as the service role sees them: the order paging must reproduce.

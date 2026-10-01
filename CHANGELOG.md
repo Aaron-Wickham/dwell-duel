@@ -28,6 +28,9 @@ before v0.4.0 used other headings.)
 - **How it works opens with the short version**, has a collapsible "On this page" list on phones, keeps the formulas in "The maths", and says "shared pot" and "Monday–Sunday weeks" instead of jargon (#260).
 - **A link survives signing in.** A shared market link opened while signed out lands on that market after sign-in, not Home; only a same-site app path is accepted. Google always asks which account to use, so "Try another account" really offers another, and the not-invited page says which account was refused (#263).
 
+- **Settings links to what DwellDuel keeps about you.** How it works has a new **Your data** section: what's stored, who can see it, where it's kept, how long (proof 30 and 90 days, backups about 60) and how to leave or ask for deletion; Settings' Help card links straight to it (#286).
+- **Admin links to the new Admin guide** (`docs/ADMIN-GUIDE.md`): roles, inviting, resolving, overriding and voiding, reviewing tasks, members, balances and the ledger, for reviewers, admins and the owner (#283).
+
 ### Fixes
 - **Live updates no longer die on a fresh page load.** The live channels could join before the app had read your session, as a signed-out visitor, and the server then refused them, so your balance and the page stopped updating until a reload. They now wait for your session, and a refused channel falls back to refreshing every minute (#310).
 - **The Markets tab opens on markets you can bet on.** Open markets now come first on the All tab however many are waiting on a result, with Awaiting resolution as its own list and its own Show more; before, 50 or more awaiting markets filled the first page. Home's open-market count leaves out markets past their close (#261).
@@ -39,6 +42,7 @@ before v0.4.0 used other headings.)
 - **Create market explains the close time**: betting stops then, so set it before the answer is known, and the outcomes, close time and line can't change later; the preview notes that a reviewer resolves a market you bet on (#266).
 - **Approved repeating tasks say when they open again**, such as "Again Monday, midnight ET" (#266).
 - **The slip's "How parlays pay" link lands on its section** of How it works (#260).
+- **A link to a section of How it works from another page now scrolls to it.** Following one from inside the app (the slip's How parlays pay, Settings' Your data) used to open the page at the top, because the section wasn't there yet while the page loaded (#286).
 
 ### Polish
 - **Code nits.** One `GROUP_TIME_ZONE` for seasons, the recap week and the economy month; one shared `labelClass` for field labels and legends; exports nothing else uses are no longer exported (#272).
@@ -54,6 +58,8 @@ before v0.4.0 used other headings.)
 - **Node is pinned for Vercel** with `engines.node: 22.x`, matching `.nvmrc` and CI (#277).
 - **CI caches stay under GitHub's limit.** The Next build cache is keyed on the lockfile and saved from `warm-caches.yml` (which now also warms npm and Playwright), a closed PR's caches are deleted, `closing-alerts` has a timeout, and a test fails on any action not pinned to a commit SHA (#277).
 - **Vercel Analytics and Speed Insights are sampled** (10% and 5%) so their free quotas last the month at 1000 members (#278).
+- **Docs for running DwellDuel.** `docs/OPERATIONS.md` now covers rollback (Vercel's one-step Instant Rollback and Undo Rollback, forward-fix migrations), rotating every secret, what each alarm means, owner recovery and the free-tier limits (#282); `docs/RELEASING.md` is the release checklist (#286); `SECURITY.md` is a full policy with scope, testing rules, response targets and the trust model (#284); `docs/GETTING-STARTED.md` adds a first-week path, worktrees and the shared local database, testing money paths and working as a collaborator (#285).
+- **Docs match the code.** The VAPID keys only warn at boot, ARCHITECTURE lists the direct table writes RLS allows, notification preferences include review alerts, AGENTS.md names `place_slip_v2`, the README links GitHub Releases instead of a table, and the changelog states its headings (#280). The dated specs and plans moved to `docs/archive/` (kept out of ripgrep by `.ignore`), and the design handoff describes the app as built (#281).
 
 ### Tests
 - **Your position and riding in parlays are covered end to end**: `my_market_position` names only the caller's own bets and parlays, `market_parlay_riding` counts each pending parlay's full stake per pick, drops settled ones and returns sums only (`tests/db/market-position.test.ts`), the card's lines and states (`tests/lib/markets/position.test.ts`, `tests/components/market-position.test.tsx`), and the card and figure on an open and a resolved market, live (`e2e/market-position.spec.ts`) (#262, #279).

@@ -1,6 +1,6 @@
 {
   "name": "dwell-duel",
-  "version": "0.1.0",
+  "version": "0.7.0-beta",
   "private": true,
   "engines": {
     "node": "22.x"

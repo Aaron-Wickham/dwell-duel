@@ -25,11 +25,11 @@ vi.mock('@/lib/markets/cancel-bet', () => ({ cancelBetAction: actions.cancelBetA
 vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 
 import { RoleForm } from '@/app/(app)/admin/members/role-form'
-import { MemberIdentity } from '@/app/(app)/admin/members/member-identity'
+import { MemberChip } from '@/app/(app)/admin/members/member-chip'
 import { TaskCatalogItem } from '@/app/(app)/admin/(sections)/tasks/task-catalog-item'
 import { BetList } from '@/components/markets/bet-list'
 
-const BEN: MemberSummary = { id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, role: 'reviewer', joinedAt: null, lastSignInAt: null }
+const BEN: MemberSummary = { id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, role: 'reviewer', joinedAt: null, lastSignInAt: null, removed: false }
 const TASK: TaskSummary = {
   id: 't1',
   title: 'Read Genesis 1-3',
@@ -93,12 +93,19 @@ describe('RoleForm confirmation (#65)', () => {
   })
 })
 
-describe('MemberIdentity', () => {
+describe('MemberChip', () => {
   it('badges every role but member', () => {
-    const { rerender } = render(<MemberIdentity member={BEN} now={0} />)
+    const { rerender } = render(<MemberChip member={BEN} />)
     expect(screen.getByText('Reviewer')).toBeInTheDocument()
-    rerender(<MemberIdentity member={{ ...BEN, role: 'member' }} now={0} />)
+    rerender(<MemberChip member={{ ...BEN, role: 'member' }} />)
     expect(screen.queryByText('Member')).not.toBeInTheDocument()
+  })
+
+  // #265: a removed member's role is already back to Member; Removed takes its place.
+  it('marks a removed member Removed instead of a role', () => {
+    render(<MemberChip member={{ ...BEN, role: 'admin', removed: true }} />)
+    expect(screen.getByText('Removed')).toBeInTheDocument()
+    expect(screen.queryByText('Admin')).not.toBeInTheDocument()
   })
 })
 

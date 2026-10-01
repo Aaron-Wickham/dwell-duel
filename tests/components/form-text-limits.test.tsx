@@ -100,8 +100,7 @@ describe('text limits on form inputs', () => {
     render(
       <>
         <AdjustBalanceForm
-          member={{ id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, role: 'member', joinedAt: null, lastSignInAt: null }}
-          now={0}
+          member={{ id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, role: 'member', joinedAt: null, lastSignInAt: null, removed: false }}
         />
         <AddInviteForm />
       </>,

@@ -4,16 +4,22 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { MemberSummary } from '@/lib/members/list-members'
 
-const { removeMemberAction, success } = vi.hoisted(() => ({ removeMemberAction: vi.fn(), success: vi.fn() }))
-vi.mock('@/lib/admin/owner-actions', () => ({ removeMemberAction }))
+const { removeMemberAction, reinviteMemberAction, success } = vi.hoisted(() => ({
+  removeMemberAction: vi.fn(),
+  reinviteMemberAction: vi.fn(),
+  success: vi.fn(),
+}))
+vi.mock('@/lib/admin/owner-actions', () => ({ removeMemberAction, reinviteMemberAction }))
 vi.mock('sonner', () => ({ toast: { success } }))
 
 import { RemoveMemberButton } from '@/app/(app)/admin/members/remove-member-button'
+import { ReinviteMemberButton } from '@/app/(app)/admin/members/reinvite-member-button'
 
-const BEN: MemberSummary = { id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, role: 'admin', joinedAt: null, lastSignInAt: null }
+const BEN: MemberSummary = { id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, role: 'admin', joinedAt: null, lastSignInAt: null, removed: false }
 
 beforeEach(() => {
   removeMemberAction.mockReset()
+  reinviteMemberAction.mockReset()
   success.mockReset()
 })
 
@@ -52,5 +58,34 @@ describe('RemoveMemberButton (#202)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Only the owner can remove a member.')
     expect(screen.getByRole('button', { name: 'Remove Ben from DwellDuel' })).toHaveAttribute('aria-describedby', 'remove-member-p-ben-error')
     expect(success).not.toHaveBeenCalled()
+  })
+})
+
+// #265: inviting a removed member back restores their access, so it asks first.
+describe('ReinviteMemberButton', () => {
+  const REMOVED: MemberSummary = { ...BEN, role: 'member', removed: true }
+
+  it('asks first, saying what coming back means, and invites nobody on Cancel', async () => {
+    render(<ReinviteMemberButton member={REMOVED} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Invite Ben again' }))
+
+    const dialog = await screen.findByRole('alertdialog', { name: 'Invite Ben again?' })
+    expect(dialog).toHaveAccessibleDescription(
+      'Ben can sign in again straight away, as a Member, and is ranked again. Their coins, bets and history are as they left them.',
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    expect(reinviteMemberAction).not.toHaveBeenCalled()
+  })
+
+  it('invites this member again on confirm and toasts', async () => {
+    reinviteMemberAction.mockResolvedValue(undefined)
+    render(<ReinviteMemberButton member={REMOVED} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Invite Ben again' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Invite again' }))
+
+    await waitFor(() => expect(reinviteMemberAction).toHaveBeenCalledOnce())
+    expect(reinviteMemberAction.mock.calls[0][0]).toBe('p-ben')
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Ben invited again.'))
   })
 })

@@ -1,9 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import type { MemberSummary } from '@/lib/members/list-members'
+import { render } from '@testing-library/react'
 import { MemberActivity } from '@/app/(app)/admin/members/member-activity'
-import { MemberIdentity } from '@/app/(app)/admin/members/member-identity'
 import { formatDay } from '@/lib/markets/format-date'
 
 const NOW = Date.parse('2026-09-28T12:00:00Z')
@@ -37,24 +35,5 @@ describe('MemberActivity (#85)', () => {
     const last = hoursAgo(3)
     const { container } = render(<MemberActivity joinedAt={JOINED} lastSignInAt={last} now={NOW} />)
     expect([...container.querySelectorAll('time')].map((t) => t.getAttribute('datetime'))).toEqual([JOINED, last])
-  })
-})
-
-describe('MemberIdentity shows activity under the balance', () => {
-  it('renders the joined and active line for the member', () => {
-    const member: MemberSummary = {
-      id: 'p-ben',
-      displayName: 'Ben',
-      avatarSrc: null,
-      email: 'ben@example.com',
-      balance: 60,
-      role: 'member',
-      joinedAt: JOINED,
-      lastSignInAt: hoursAgo(2),
-    }
-    render(<MemberIdentity member={member} now={NOW} />)
-    expect(screen.getByText('60 DC')).toBeInTheDocument()
-    const line = `Joined ${formatDay(JOINED)} · Active 2h ago`
-    expect(screen.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === line)).toBeInTheDocument()
   })
 })

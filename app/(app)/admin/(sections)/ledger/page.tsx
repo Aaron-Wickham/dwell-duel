@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { NotebookText } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
@@ -14,9 +15,17 @@ import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { ContentReveal } from '@/components/nav/page-transition'
+import { isUuid } from '@/lib/uuid'
+import type { DbClient } from '@/lib/supabase/database'
 import { cn } from '@/lib/utils'
 
 const ROW_ID_PREFIX = 'ledger'
+
+async function readMemberName(supabase: DbClient, id: string): Promise<{ id: string; name: string } | null> {
+  const { data, error } = await supabase.from('profiles').select('id, display_name').eq('id', id).maybeSingle()
+  if (error) throw error
+  return data ? { id: data.id, name: data.display_name } : null
+}
 
 export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>) {
   const searchParams = await props.searchParams
@@ -25,19 +34,35 @@ export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>)
   const role = await getRole(supabase)
   if (!atLeast(role, 'admin')) redirect('/admin/tasks')
 
-  // The economy's figures are the owner's alone, like balances (0052).
+  // ?member= narrows the ledger to one member's movements, linked from their Admin page (#254).
+  // A malformed or unknown id shows everyone's, as the plain ledger.
+  const memberParam = typeof searchParams.member === 'string' && isUuid(searchParams.member) ? searchParams.member : null
+  const member = memberParam ? await readMemberName(supabase, memberParam) : null
+  // The economy's figures are the owner's alone, like balances (0052), and cover everyone.
   const [ledger, economy] = await Promise.all([
-    listAllTransactions(supabase, readPageParams(searchParams, 'before')),
-    atLeast(role, 'owner') ? readEconomySummary(supabase) : null,
+    listAllTransactions(supabase, readPageParams(searchParams, 'before'), member?.id),
+    atLeast(role, 'owner') && !member ? readEconomySummary(supabase) : null,
   ])
   const backToNewestHref = newestHref('/admin/ledger', searchParams, 'before')
 
   return (
     <ContentReveal>
       {economy && <EconomyCard summary={economy} />}
+      {member && (
+        <p className="text-sm text-ink2">
+          Showing {member.name}’s coin movements.{' '}
+          <Link href={`/admin/members/${member.id}`} transitionTypes={['nav-forward']}>
+            Open {member.name}
+          </Link>
+          {' · '}
+          <Link href="/admin/ledger" replace scroll={false}>
+            Show everyone’s
+          </Link>
+        </p>
+      )}
       <section aria-labelledby="ledger-title" className={cn(cardClass, 'px-[18px] py-1 md:px-6')}>
         <h2 id="ledger-title" className="sr-only">
-          Every coin movement
+          {member ? `${member.name}’s coin movements` : 'Every coin movement'}
         </h2>
         <ShowMoreFocus />
         {ledger.windowed && ledger.rows.length > 0 && (
@@ -50,7 +75,7 @@ export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>)
             {ledger.windowed ? (
               <NothingOlder href={backToNewestHref} />
             ) : (
-              <EmptyState icon={NotebookText} title="No coin movements yet." />
+              <EmptyState icon={NotebookText} title={member ? `No coin movements for ${member.name} yet.` : 'No coin movements yet.'} />
             )}
           </div>
         ) : (

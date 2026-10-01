@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
 import { seedMembers, makeMember, clientFor, anonClient, ensureInvited, type Member, giveRole } from './fixtures'
-import { listMembers } from '@/lib/members/list-members'
+import { getAdminMember } from '@/lib/members/list-members'
 
 // 0050 (#85): joined and last-signed-in dates for Admin -> Members, admins only.
 let alice: Member
@@ -69,13 +69,12 @@ describe('member_activity', () => {
   })
 })
 
-describe('listMembers with activity', () => {
+describe('admin members with activity', () => {
   it('carries each member’s joined and last-active dates for an admin', async () => {
     const ada = await withRole('Ada', 'admin')
-    const members = await listMembers(ada)
-    const b = members.find((m) => m.id === bob.id)!
+    const b = (await getAdminMember(ada, bob.id))!
     expect(b.joinedAt).not.toBeNull()
     expect(b.lastSignInAt).not.toBeNull()
-    expect(members.find((m) => m.id === alice.id)!.lastSignInAt).toBeNull()
+    expect((await getAdminMember(ada, alice.id))!.lastSignInAt).toBeNull()
   })
 })

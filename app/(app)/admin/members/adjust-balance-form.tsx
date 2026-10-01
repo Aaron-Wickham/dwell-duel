@@ -10,9 +10,9 @@ import { Message } from '@/components/ui/message'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { toast } from 'sonner'
 import { haptics } from '@/lib/haptics'
-import { MemberIdentity } from './member-identity'
 
-export function AdjustBalanceForm({ member, now }: { member: MemberSummary; now: number }) {
+// Owner only: the page leaves it out for anyone else, and adjust_balance refuses anyway.
+export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
   const [amount, setAmount] = useState('')
   const [reason, setReason] = useState('')
   const confirm = useConfirmSubmit()
@@ -54,42 +54,39 @@ export function AdjustBalanceForm({ member, now }: { member: MemberSummary; now:
         onSubmit={(e) => {
           if (confirmable) confirm.onSubmit(e)
         }}
-        className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4 lg:flex-col lg:items-stretch lg:gap-3"
+        className="flex flex-col gap-3"
       >
-        <MemberIdentity member={member} now={now} />
-        <div className="flex min-w-0 grow flex-col gap-3 md:flex-row md:items-end md:gap-2 lg:flex-col lg:items-stretch lg:gap-3">
-          <div className="flex min-w-0 grow items-end gap-2">
-            <Field label="Amount" htmlFor={amountId} className="w-[108px] shrink-0 md:w-[150px] lg:w-[108px]">
-              <Input
-                id={amountId}
-                name="amount"
-                type="number"
-                step="1"
-                required
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="+/−"
-                aria-invalid={state?.field === 'amount'}
-                aria-describedby={state?.field === 'amount' ? errorId : undefined}
-              />
-            </Field>
-            <Field label="Reason" htmlFor={reasonId} className="grow">
-              <Input
-                id={reasonId}
-                name="reason"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                maxLength={TEXT_LIMITS.adjustReason}
-                aria-invalid={state?.field === 'reason'}
-                aria-describedby={state?.field === 'reason' ? errorId : undefined}
-              />
-            </Field>
-          </div>
-          <FormSubmitButton block className="md:w-auto lg:w-full">
-            Adjust{' '}
-            <span className="sr-only">{member.displayName}</span>
-          </FormSubmitButton>
+        <div className="flex min-w-0 items-end gap-2">
+          <Field label="Amount" htmlFor={amountId} className="w-[108px] shrink-0 md:w-[150px]">
+            <Input
+              id={amountId}
+              name="amount"
+              type="number"
+              step="1"
+              required
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="+/−"
+              aria-invalid={state?.field === 'amount'}
+              aria-describedby={state?.field === 'amount' ? errorId : undefined}
+            />
+          </Field>
+          <Field label="Reason" htmlFor={reasonId} className="grow">
+            <Input
+              id={reasonId}
+              name="reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              maxLength={TEXT_LIMITS.adjustReason}
+              aria-invalid={state?.field === 'reason'}
+              aria-describedby={state?.field === 'reason' ? errorId : undefined}
+            />
+          </Field>
         </div>
+        <FormSubmitButton block>
+          Adjust{' '}
+          <span className="sr-only">{member.displayName}</span>
+        </FormSubmitButton>
       </form>
       <ConfirmSubmitDialog
         formId={formId}

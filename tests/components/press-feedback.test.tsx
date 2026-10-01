@@ -22,7 +22,7 @@ import { Podium } from '@/components/leaderboard/podium'
 import { Awards } from '@/components/leaderboard/awards'
 import { PastChampions } from '@/components/leaderboard/past-champions'
 import { CancelledBetRows, WagerRows } from '@/app/(app)/bets/bet-rows'
-import { MemberIdentity } from '@/app/(app)/admin/members/member-identity'
+import { MemberRow } from '@/app/(app)/admin/members/member-row'
 import { MotionSettings } from '@/app/(app)/settings/settings-controls'
 import { CreateMarketForm } from '@/app/(app)/markets/new/create-market-form'
 
@@ -130,12 +130,15 @@ const CASES: [string, () => ReactElement][] = [
     ),
   ],
   [
-    'MemberIdentity',
+    'MemberRow',
     () => (
-      <MemberIdentity
-        now={Date.parse('2026-09-28T12:00:00Z')}
-        member={{ id: 'm1', displayName: 'Grace', avatarSrc: null, email: 'g@example.com', balance: 90, role: 'member', joinedAt: null, lastSignInAt: null }}
-      />
+      <ul>
+        <MemberRow
+          domId="member-m1"
+          now={Date.parse('2026-09-28T12:00:00Z')}
+          member={{ id: 'm1', displayName: 'Grace', avatarSrc: null, email: 'g@example.com', balance: 90, role: 'member', joinedAt: null, lastSignInAt: null, removed: false }}
+        />
+      </ul>
     ),
   ],
   ['MotionSettings', () => <MotionSettings haptics reduceMotion={false} />],

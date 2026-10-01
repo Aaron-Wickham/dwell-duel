@@ -8,7 +8,13 @@ vi.mock('react', async (importOriginal) =>
 )
 
 import { LoadingStatus } from '@/components/ui/loading-status'
-import { MarketActionsSkeleton, MarketBetsSkeleton, MarketChartSkeleton } from '@/components/markets/market-detail-skeletons'
+import {
+  MarketActionsSkeleton,
+  MarketBetsSkeleton,
+  MarketChartSkeleton,
+  MarketOutcomesSkeleton,
+  MarketPositionSkeleton,
+} from '@/components/markets/market-detail-skeletons'
 
 describe('LoadingStatus', () => {
   it('announces on the server, before there is a DOM to check', () => {
@@ -53,23 +59,25 @@ describe('LoadingStatus', () => {
     expect(screen.getByRole('status')).toHaveTextContent('')
   })
 
-  it('is the market page cold render’s only status, for as long as any of its four fallbacks is showing, and clears once none are', async () => {
+  it('is the market page cold render’s only status, for as long as any of its fallbacks is showing, and clears once none are', async () => {
     const { rerender } = render(
       <LoadingStatus>
+        <MarketPositionSkeleton rows={2} />
         <MarketChartSkeleton />
-        <MarketActionsSkeleton outcomes={2} />
+        <MarketOutcomesSkeleton outcomes={2} />
+        <MarketActionsSkeleton hasPosition />
         <MarketBetsSkeleton />
       </LoadingStatus>,
     )
 
-    // Cold render: all four sections pending at once, but exactly one status announces it.
+    // Cold render: every section pending at once, but exactly one status announces it.
     expect(screen.getAllByRole('status')).toHaveLength(1)
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Loading…'))
 
     // One section resolving (its fallback unmounts) while the others are still pending.
     rerender(
       <LoadingStatus>
-        <MarketActionsSkeleton outcomes={2} />
+        <MarketActionsSkeleton hasPosition />
         <MarketBetsSkeleton />
       </LoadingStatus>,
     )

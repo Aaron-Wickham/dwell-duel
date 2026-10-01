@@ -8,7 +8,7 @@ const MARKET_ID = '11111111-1111-4111-8111-111111111111'
 const MEMBER_ID = '22222222-2222-4222-8222-222222222222'
 
 const declarations: Record<string, () => LiveSubscription[]> = {
-  marketDetail: () => pageSubscriptions.marketDetail(MARKET_ID),
+  marketDetail: () => pageSubscriptions.marketDetail(MARKET_ID, MEMBER_ID),
   markets: () => pageSubscriptions.markets(),
   'home (member)': () => pageSubscriptions.home({ me: MEMBER_ID, reviewer: false }),
   'home (reviewer)': () => pageSubscriptions.home({ me: MEMBER_ID, reviewer: true }),
@@ -41,13 +41,15 @@ describe('pageSubscriptions', () => {
 
   // Presence in LIVE_TABLES alone doesn't prove a page gets every update it needs today, so each
   // declaration is pinned exactly against the agreed table.
-  it('marketDetail carries the market id, and only the market id', () => {
-    expect(pageSubscriptions.marketDetail(MARKET_ID)).toEqual([
+  // The viewer's id narrows only their own parlays (#262), so no channel follows every parlay.
+  it('marketDetail carries the market id, plus the viewer id for their own parlays', () => {
+    expect(pageSubscriptions.marketDetail(MARKET_ID, MEMBER_ID)).toEqual([
       { table: 'bets', filter: `market_id=eq.${MARKET_ID}` },
       { table: 'cancelled_bets', filter: `market_id=eq.${MARKET_ID}` },
       { table: 'markets', filter: `id=eq.${MARKET_ID}` },
       { table: 'market_resolutions', filter: `market_id=eq.${MARKET_ID}` },
       { table: 'parlay_legs', filter: `market_id=eq.${MARKET_ID}` },
+      { table: 'parlays', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'market_comments', filter: `market_id=eq.${MARKET_ID}` },
     ])
   })

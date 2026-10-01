@@ -15,6 +15,10 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **New database objects grant signed-out visitors nothing by default,** and a schema-wide test fails on any table without RLS, any grant to `anon`, or any new SECURITY DEFINER function a signed-in account can call that hasn't been reviewed (#274).
 - **Google accounts that were never invited are deleted a day later** by the daily cron, instead of staying in Auth forever (#275).
 
+### Markets
+- **The market page shows your own position.** A market you have money on gets a **Your position** card, above the chart on a phone and at the top of the right-hand column on a computer: each of your bets with what it pays if it wins and its own Cancel, and each parlay with a leg there, linking to the parlay. Once the market settles it shows each bet as Won, Lost or Refunded, what you won or lost on the market overall, and where each parlay leg and its parlay stand. "No more bets" on a resolved market now says solo bets have been paid and parlays pay once every pick has settled (#262).
+- **Parlay money shows on each outcome, without moving the odds.** Each outcome on a market page shows the DC riding on it in pending parlays ("+45 DC riding in parlays"), each parlay's full stake on every pick, updated live, with a note that parlays are paid by DwellDuel and never move the pool. It's a total only, never whose; the pool, chance, payouts and charts don't count it (#279).
+
 ### Fixes
 - **Live updates no longer die on a fresh page load.** The live channels could join before the app had read your session, as a signed-out visitor, and the server then refused them, so your balance and the page stopped updating until a reload. They now wait for your session, and a refused channel falls back to refreshing every minute (#310).
 - **The Markets tab opens on markets you can bet on.** Open markets now come first on the All tab however many are waiting on a result, with Awaiting resolution as its own list and its own Show more; before, 50 or more awaiting markets filled the first page. Home's open-market count leaves out markets past their close (#261).
@@ -50,6 +54,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Accessibility fixes (#268).** Error toasts use the app's loss colours (5.65:1 in light, 7.18:1 in dark, where Sonner's own red was 4.35:1), the phone tab bar's active pill, Admin button and profile ring, and SubNav's selected pill, now carry an edge that reaches 3:1 on the page in light mode, and the Leaders tab's accessible name is "Leaders, leaderboard", so voice control hears the word on screen.
 - **My bets on desktop (#269).** Parlay and bet tiles tint on hover like every other row inside a card, instead of lifting, and the grid aligns tiles to the top, so a tall parlay no longer stretches its neighbours.
 - **Smaller fixes (#270).** A proof link longer than 2000 characters is refused in the picker (and by the task and resolve actions) with a plain message, instead of failing the whole submission; market, outcome and slip titles share the row title size; the Preview and race cards put their line in the description slot; more tap targets press; removing outcomes in Create market keeps keyboard focus; the global error page follows your theme; unknown URLs show the 404 inside the app's header and tab bar, with copy that no longer blames a removed market; `/admin` opens its first section and `/members` the leaderboard; long names on the podium wrap over up to three lines instead of cutting off at one.
+
+### Tests
+- **Your position and riding in parlays are covered end to end**: `my_market_position` names only the caller's own bets and parlays, `market_parlay_riding` counts each pending parlay's full stake per pick, drops settled ones and returns sums only (`tests/db/market-position.test.ts`), the card's lines and states (`tests/lib/markets/position.test.ts`, `tests/components/market-position.test.tsx`), and the card and figure on an open and a resolved market, live (`e2e/market-position.spec.ts`) (#262, #279).
 
 ## v0.6.0-beta — 2026-10-01
 

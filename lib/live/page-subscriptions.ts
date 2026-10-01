@@ -1,7 +1,12 @@
 import type { LiveSubscription } from '@/components/live/live-refresh'
 
 export const pageSubscriptions = {
-  marketDetail(marketId: string): LiveSubscription[] {
+  // The bets, cancelled_bets and parlay_legs channels also carry the viewer's Your position card
+  // (#262) and the outcomes' "riding in parlays" figure (#279); parlays filtered to the viewer
+  // carries their own parlays settling on another market. Another member's parlay settling
+  // elsewhere writes nothing here, so the figure catches up on the next refresh: following every
+  // parlay would refresh every open market page group-wide.
+  marketDetail(marketId: string, viewerId: string): LiveSubscription[] {
     return [
       { table: 'bets', filter: `market_id=eq.${marketId}` },
       // A cancel deletes from bets, and a filtered channel never receives deletes; the
@@ -11,6 +16,7 @@ export const pageSubscriptions = {
       { table: 'market_resolutions', filter: `market_id=eq.${marketId}` },
       // The creator's parlay legs show in the creator-stake line (#84).
       { table: 'parlay_legs', filter: `market_id=eq.${marketId}` },
+      { table: 'parlays', filter: `profile_id=eq.${viewerId}` },
       // A deleted comment is a soft delete, an UPDATE (0053), so this filtered channel hears it.
       { table: 'market_comments', filter: `market_id=eq.${marketId}` },
     ]

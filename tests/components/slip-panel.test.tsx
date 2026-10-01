@@ -75,6 +75,12 @@ describe('SlipPanel', () => {
     expect(screen.getByRole('link', { name: 'Browse markets' })).toHaveAttribute('href', '/markets')
   })
 
+  // How it works gives each section the id how-<slug> (components/docs/markdown.tsx).
+  it('links How parlays pay to the parlays section of How it works', () => {
+    renderPanel(viewOf(pick(1)))
+    expect(screen.getByRole('link', { name: 'How parlays pay' })).toHaveAttribute('href', '/how-it-works#how-the-slip-solo-bets-and-parlays')
+  })
+
   it('starts each pick as Solo, with its own stake and an estimated payout', async () => {
     renderPanel(viewOf(pick(1)))
     const group = screen.getByRole('group', { name: 'Bet type for Outcome 1, Market 1' })

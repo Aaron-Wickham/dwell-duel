@@ -51,7 +51,11 @@ export interface BetRow {
 
 // The same arithmetic as resolve_market_core, from pools that can't move once a market resolves:
 // the real pool (0074), or with the seed a resolution from before then counted (payout_seed).
-export function betResult(bet: { outcomeId: string; amount: number }, market: MarketEmbed, now: number): MyBetResult {
+export function betResult(
+  bet: { outcomeId: string; amount: number },
+  market: Pick<MarketEmbed, 'status' | 'close_at' | 'current_resolution' | 'market_outcomes'>,
+  now: number,
+): MyBetResult {
   if (market.status === 'voided') return { kind: 'refunded', reason: 'voided' }
   if (market.status === 'open') return Date.parse(market.close_at) > now ? { kind: 'open' } : { kind: 'awaiting' }
   const winner = market.current_resolution?.outcome_id

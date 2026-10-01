@@ -29,6 +29,7 @@ import { CancelledBetRows, WagerRows } from '@/app/(app)/bets/bet-rows'
 import { MemberRow } from '@/app/(app)/admin/members/member-row'
 import { MotionSettings, ThemeSetting } from '@/app/(app)/settings/settings-controls'
 import { CreateMarketForm } from '@/app/(app)/markets/new/create-market-form'
+import { PositionCard } from '@/components/markets/position-card'
 
 const MEMBER = { id: 'm1', name: 'Grace', avatarSrc: null }
 
@@ -164,6 +165,39 @@ const CASES: [string, () => ReactElement][] = [
   ['JumpToMe', () => <JumpToMe href="/leaderboard?at=me" focusId="member-1" />],
   ['MotionSettings', () => <MotionSettings haptics reduceMotion={false} />],
   ['CreateMarketForm', () => <CreateMarketForm />],
+  [
+    'PositionCard',
+    () => (
+      <PositionCard
+        resolvedAt={null}
+        position={{
+          bets: [{ id: 1, outcomeLabel: 'Yes', amount: 20, placedAt: '2026-10-03T09:14:00Z', result: { kind: 'open' }, paysIfWins: 26 }],
+          legs: [
+            {
+              leg: { marketId: 'k1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', oddsBp: 20_000, oddsKnown: false, status: 'open' },
+              parlay: {
+                id: 'p1',
+                stake: 5,
+                status: 'pending',
+                credited: 0,
+                maxMultiplier: 20,
+                lockedAtPlacement: false,
+                multiplierBp: 40_000,
+                capped: false,
+                estimated: true,
+                potentialPayout: 20,
+                createdAt: '2026-10-03T09:00:00Z',
+                legs: [
+                  { marketId: 'k1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', oddsBp: 20_000, oddsKnown: false, status: 'open' },
+                  { marketId: 'k2', marketTitle: 'Snow?', outcomeLabel: 'No', oddsBp: 20_000, oddsKnown: false, status: 'open' },
+                ],
+              },
+            },
+          ],
+        }}
+      />
+    ),
+  ],
 ]
 
 function tapTargets(container: HTMLElement): HTMLElement[] {

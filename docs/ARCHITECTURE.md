@@ -56,7 +56,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/` | Home: greeting, balance hero (balance, rank, At stake, Pending), a new member's Getting started card, Markets to resolve, the weekly recap (Sundays and Mondays), tiles |
 | `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then those awaiting resolution (oldest close first), then resolved and voided newest first. The All tab reads these as three keyset lists, each with its own Show more (`?open=`, `?awaiting=`, `?resolved=`), so open markets lead page one however many wait on a result (#261); the open and awaiting lists are `listOpenMarkets` split at one `now` (its `bound`). `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) reads just one list. `?q=` (a title search, `lib/markets/search.ts`: trimmed, `*` and control characters dropped, 80 characters, then `ilike` with `\`, `%` and `_` escaped, sent as its own filter parameter, backed by a trigram index) and `?mine=bet|made` (the `i_bet_on` computed column, 0087, or `created_by`) switch it to one flat list of matches, newest first and paged under `?match=` (`listMatchingMarkets`), whatever their status, which the status tab still narrows; the search box (`MarketSearch`) and the "Whose markets" `FilterChips` keep each other and the status tab in the URL. Card sparklines come from `market_sparks` (0088) through Next's data cache, one entry per list, keyed by a hash of its markets' `sparkVersion`s (the summed `pool_version` while open, `settled` after): a render costs one cache read per list, and a live refresh reads from Supabase only a list whose markets moved (`lib/markets/sparklines.ts`, #252; the budget is below) |
 | `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under. `?from=<id>` pre-fills it from a market (Duplicate) |
-| `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
+| `/markets/[id]` | A market: the viewer's own position (#262: each solo bet with "Pays ~" and Cancel, each parlay leg linking to its parlay, then results and the net once settled; read from `my_market_position`'s keys before anything streams, so a viewer with nothing on the market gets no card and no skeleton), chart, outcomes (with each outcome's "riding in parlays" figure from `market_parlay_riding`, #279, display only), the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
 | `/parlays` | Redirects to `/bets` (kept for old links) |
 | `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its odds (an estimate from `parlay_leg_odds` until its market closes) and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`: the page checks the parlay exists first (so an unknown id is a real 404), then streams the body behind `<Suspense>` with `ParlayDetailSkeleton` |
@@ -375,7 +375,13 @@ the next moment the list could grow, from `nextResolveCheckAt`),
 `my_at_stake`, `parlay_limits`, `pick_quotes(outcome_ids)` and
 `parlay_leg_odds(parlay_ids)` (0074: a pick's leg odds and floor for the
 caller, and each parlay leg's set or estimated odds for its owner, both built on the service-only `pick_quote(profile, outcome)` that
-`settle_parlay` prices with), and from 0071 (#206, #210)
+`settle_parlay` prices with), `my_market_position(market)` and
+`market_parlay_riding(market)` (0082, security invoker: the keys of the
+caller's own bets and parlays on one market, settled ones included, for
+the market page's Your position card; and per outcome the stakes of
+pending parlays with a leg on it, each parlay's whole stake on every pick,
+sums only, never whose; display only, so nothing that prices or pays
+reads it), and from 0071 (#206, #210)
 `my_current_task_completions()` (security invoker: the newest completion of
 the current period per task, filtered in SQL with `compute_period_key`, so
 the Tasks page reads O(tasks) rows and no period keys), `my_onboarding()`
@@ -523,6 +529,7 @@ after it ships. They roughly follow the project's history:
 | 0088 | Compact sparklines (#252): `market_sparks(p_market_ids, p_points default 24)` and `market_outcomes.pool_version` with its `bump_pool_version` trigger |
 | 0086 | Admin at 1,000 and removed members unranked (#254, #265): `invited_member_ids()`; `leaderboard_net_worth`, `member_standing`, `season_profits` and `weekly_recap`'s best call and top tasker over invited members only; `admin_members`, `admin_member_counts` and `reinvite_member`; `allowed_emails` indexes on `claimed_by` and `(created_at desc, email desc)` |
 | 0087 | Finding things (#264): `markets_title_trgm_idx` (pg_trgm) for the title search, the computed column `markets.i_bet_on` and `my_activity_events()` (the Feed's Mine: own events plus results on markets you have a bet or parlay leg on); both security invoker with no `SET` clause so they inline |
+| 0082 | The market page's Your position card and "riding in parlays" figure (#262, #279): `my_market_position(market)` and `market_parlay_riding(market)` |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
@@ -711,7 +718,12 @@ follows a topic (taking a reaction back is a delete, and the feed and
 member activity follow `reactions`) or has the delete write something it
 can hear: a cancelled bet inserts into `cancelled_bets`, and a deleted
 comment is an UPDATE, which the market page's channel filtered to its
-market receives. The publication still holds `market_outcomes`, `tasks`
+market receives. The market page also follows the viewer's own `parlays`
+(filtered to them), so its Your position card hears their parlay settle on
+another market. Another member's parlay settling elsewhere writes nothing
+to this market's rows, so the "riding in parlays" figure catches up on the
+next refresh: following every parlay would refresh every open market page.
+The publication still holds `market_outcomes`, `tasks`
 and `feed_reactions`, which nothing follows row by row any more; dropping
 them is a later, non-additive change.
 

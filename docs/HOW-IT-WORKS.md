@@ -113,9 +113,18 @@ Alice bets 10 DC on Yes and Bob bets 30 DC on No.
 - Had Bob not bet, Alice alone on Yes would get her 10 DC back.
 
 Your payout isn't fixed when you bet. It moves as others bet, until the
-market closes. The slip's "Pays ~" and My bets work it out with the same
-formula as the real payout. (Some older results counted the seed in their
+market closes. The slip's "Pays ~", the market page's **Your position**
+card and My bets work it out with the same formula as the real payout. (Some older results counted the seed in their
 payouts, and My bets still shows what they paid.)
+
+**Your position.** A market you have money on shows a **Your position**
+card at the top (above the chart on a phone, at the top of the right-hand
+column on a computer). Only you see it. While the market is open it lists
+each of your bets with what it pays if it wins and its own Cancel, and
+each parlay that has a leg on the market, linking to the parlay. Once the
+market settles, each bet shows Won, Lost or Refunded, the card says what
+you won or lost on the market overall (left out when it comes to 0), and
+each parlay leg says where it and its parlay stand.
 
 - **Cancelling:** you can cancel a bet for a full refund until the market
   closes. Cancelled bets appear under My bets → Cancelled.
@@ -178,7 +187,14 @@ stake × the multiplier, rounded down.
 - A leg whose market is voided drops out, and the parlay continues on the
   rest. If every leg is voided, the stake is refunded.
 - Parlays are paid by the house. They don't go into any market's pool, so
-  they don't move a market's percentages.
+  they don't move a market's percentages (the same way Kalshi and
+  Polymarket keep their "Combos" separate).
+- **Riding in parlays.** So a busy parlay market doesn't look empty, each
+  outcome on a market page shows the DC in parlays still pending that ride
+  on it, as "+45 DC riding in parlays". Each parlay's full stake is counted
+  on every pick it rides on. It's shown for information only: it doesn't
+  change the pool, the chance, the "× payout per DC", the charts or
+  anyone's payout. It never says whose parlays they are.
 - A parlay placed before odds were set at close keeps the odds it locked
   when it was placed, under the same 20× and 1,000 DC caps. One that
   staked more than 1,000 DC still gets at least its stake back if it wins,

@@ -53,3 +53,22 @@ describe('isDeliberateRaise', () => {
     expect(isDeliberateRaise({})).toBe(false)
   })
 })
+
+describe('beforeSend', () => {
+  const beforeSend = async () => (await import('@/lib/observability/sentry-options')).sentryOptions().beforeSend
+
+  it('drops a view transition the browser skipped, in either shape the SDK builds', async () => {
+    const send = await beforeSend()
+    const viewport = 'Skipping view transition because viewport size changed.'
+    expect(send({ exception: { values: [{ type: 'InvalidStateError', value: viewport }] } })).toBeNull()
+    expect(send({ exception: { values: [{ type: 'Error', value: `InvalidStateError: ${viewport}` }] } })).toBeNull()
+    expect(send({ exception: { values: [{ type: 'AbortError', value: 'Transition was skipped' }] } })).toBeNull()
+  })
+
+  it('keeps every other error, InvalidStateErrors included, and still scrubs it', async () => {
+    const send = await beforeSend()
+    const other = { exception: { values: [{ type: 'InvalidStateError', value: 'The object is in an invalid state.' }] }, user: { email: 'a@b.c' } }
+    expect(send(other)).toEqual({ exception: other.exception })
+    expect(send({ exception: { values: [{ type: 'TypeError', value: 'Skipping view transition because viewport size changed. Not.' }] } })).not.toBeNull()
+  })
+})

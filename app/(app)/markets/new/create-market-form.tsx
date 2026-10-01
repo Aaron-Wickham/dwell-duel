@@ -44,7 +44,8 @@ export interface MarketPrefill {
   now: number
 }
 
-export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
+// admin: an admin may resolve a market they have money on, so the reviewer note isn't theirs.
+export function CreateMarketForm({ initial, admin = false }: { initial?: MarketPrefill; admin?: boolean }) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [kind, setKind] = useState<MarketKind>(initial?.kind ?? 'binary')
@@ -240,7 +241,7 @@ export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
           Create market
         </FormSubmitButton>
       </form>
-      <MarketPreview kind={kind} title={title} outcomes={outcomes} line={line} closeAt={closeAt} />
+      <MarketPreview kind={kind} title={title} outcomes={outcomes} line={line} closeAt={closeAt} admin={admin} />
     </div>
   )
 }
@@ -253,7 +254,9 @@ function MarketPreview({
   outcomes,
   line,
   closeAt,
+  admin,
 }: {
+  admin: boolean
   kind: MarketKind
   title: string
   outcomes: string[]
@@ -283,7 +286,7 @@ function MarketPreview({
       </h2>
       <p className="text-sm text-ink2">How the card will look on Markets.</p>
       {/* can_resolve_market (0046): nobody but an admin resolves a market they have money on. */}
-      <p className="text-sm text-ink2">If you bet on it, a reviewer resolves it.</p>
+      {!admin && <p className="text-sm text-ink2">If you bet on it, a reviewer resolves it.</p>}
       <MarketCard
         preview
         id="preview"

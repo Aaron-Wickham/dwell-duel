@@ -55,6 +55,11 @@ describe('CreateMarketForm', () => {
     expect(screen.getByRole('region', { name: 'Preview' })).toHaveTextContent('If you bet on it, a reviewer resolves it.')
   })
 
+  it('leaves the reviewer note out for an admin, who may resolve a market they bet on', () => {
+    render(<CreateMarketForm admin />)
+    expect(screen.getByRole('region', { name: 'Preview' })).not.toHaveTextContent('a reviewer resolves it')
+  })
+
   it('labels the title and close time fields, and defaults to a binary market', () => {
     render(<CreateMarketForm />)
     expect(screen.getByLabelText('Title')).toBeInTheDocument()

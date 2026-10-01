@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
+import { atLeast, getRole } from '@/lib/auth/roles'
 import { Page, PageHeader } from '@/components/ui/page'
 import { BackLink } from '@/components/ui/back-link'
 import type { DbClient } from '@/lib/supabase/database'
@@ -39,7 +40,7 @@ export default async function NewMarketPage(props: PageProps<'/markets/new'>) {
   const { from } = await props.searchParams
   // A server render's clock; the form moves a duplicate's close time past it.
   // eslint-disable-next-line react-hooks/purity
-  const initial = await readPrefill(supabase, from, Date.now())
+  const [initial, role] = await Promise.all([readPrefill(supabase, from, Date.now()), getRole(supabase)])
 
   return (
     <Page transition="drill-down">
@@ -52,7 +53,7 @@ export default async function NewMarketPage(props: PageProps<'/markets/new'>) {
         </p>
       )}
       {/* Keyed by the source, so moving between duplicates starts each form afresh. */}
-      <CreateMarketForm key={typeof from === 'string' ? from : 'blank'} initial={initial} />
+      <CreateMarketForm key={typeof from === 'string' ? from : 'blank'} initial={initial} admin={atLeast(role, 'admin')} />
     </Page>
   )
 }

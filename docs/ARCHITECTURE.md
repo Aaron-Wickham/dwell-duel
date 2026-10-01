@@ -228,7 +228,14 @@ the task catalogue and invite list, which are allowed by policy.
 
 - `push_subscriptions`: one row per subscribed device: `endpoint`
   (unique, https, at most 1024 characters), the device's `p256dh` and
-  `auth` keys, `user_agent`, `created_at` and `last_success_at`. A member
+  `auth` keys, `user_agent`, `created_at`, `last_success_at`, and
+  (0076) `failure_count` and `first_failed_at`, the current streak of failed
+  sends. `record_push_results(delivered, failed)` (service role) resets a
+  delivered device's streak, extends a failed one's, and deletes a device
+  that has failed five sends in a row with the first over 24 hours ago, or
+  is failing with no delivery for 60 days and its first failure is over 24
+  hours old too. Only failures the device caused are ever passed to it.
+  One failure counts per market attempt, not per run. A member
   reads and deletes only their own rows and has no insert grant (0067);
   Settings saves through `save_push_subscription`, the only writer, which
   also hands a shared device's row to whoever saves it with the same keys
@@ -435,6 +442,7 @@ after it ships. They roughly follow the project's history:
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
 | 0073 | Permissions (#288, #289, #290): own-row branches of `resolve_market_core`, `can_resolve_market`, `void_market`, `update_market` and `delete_market_comment` need `is_invited()`; `remove_member` deletes the member's `auth.sessions`; `admin_delete_invites` only for unclaimed invites, and the invite insert grant narrowed to `email` and `invited_by` (the caller); `void_market(p_market_id, p_reason)` needs a reason (`markets.void_reason`, 500-character check), is admin-only after close and posts a `market_voided` feed event |
 | 0074 | Parlay pricing and the seed (#287, #272): leg odds set at close or settlement from other members' real money, no seed (`pick_quote`, `pick_quotes`, `parlay_leg_odds`, nullable `parlay_legs.locked_odds`); a 50 DC from 2 members floor and no legs on your own markets; `parlay_limits()` gains `max_payout`, `min_leg_pool` and `min_leg_bettors`, the cap drops to 20×, a leg counts at most 5× and one member's pending parlays on a market can pay at most 1,000 DC (`parlay_limits()` gains `max_leg_odds`; `parlay_max_payout`); `parlays.max_multiplier` (pending parlays from before move to 20×) and `odds_at_close`; payouts are the real pool (`pool_payout`, `market_resolutions.payout_seed` backfilled for history); `apply_coin_transaction` cuts a credit to fit the balance and `refund_room` a refund; `remove_bet` stops at close; `leaderboard_awards` leaves out removed members; `economy_summary` splits payout rounding from older results' seed payouts |
+| 0076 | Push failure pruning (#257): `push_subscriptions.failure_count` and `first_failed_at`, the service-role `record_push_results()`, `save_push_subscription` resetting the streak, and the closing-alerts lease (`cron_leases`, `claim_cron_lease`, `release_cron_lease`) and give-up counter (`push_attempts`, `record_push_failures`) |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
@@ -556,13 +564,33 @@ each signed-in route has a skeleton.
 subscribes this device's service worker with the VAPID public key, and
 saves the subscription (`lib/push/actions.ts`); its "on" state is this
 device's `pushManager.getSubscription()` matching one of the member's
-saved endpoints. Signing out deletes this device's subscription first
+saved endpoints. A device that turned them on remembers it in
+`localStorage` (`dd-push:<member id>`, `lib/push/client.ts`; cleared on
+turning off and on sign-out), and `PushResync` in the signed-in layout uses
+that on every load (#257): with permission still granted it re-makes a
+subscription the browser dropped or made with an old VAPID key, and saves
+the current one again when its endpoint changed or the server was last told
+over a day ago (which also clears a failure streak). The service worker
+handles `pushsubscriptionchange` too: it resubscribes with the old key and
+posts the result to `/api/push/resync`, a JSON-only route that makes the same
+save as Settings. A device turned on before this shipped gets its memory the
+next time Settings is opened. Signing out deletes this device's subscription first
 (`app/(app)/settings/sign-out-button.tsx`), so a shared phone's next member
 never sees the last one's notifications. Its four checkboxes save `notification_prefs`. Sending is
 server-only (`lib/push/send.ts`, `web-push`): it reads the recipients'
 subscriptions with the service-role client, sends up to six at a time, and
-deletes a subscription whose push service answers 404 or 410. It never
-throws; failures are logged. Resolving, overriding, voiding, approving
+deletes a subscription whose push service answers 404 or 410, and reports
+failures to `record_push_results` (0076), which prunes a device that keeps
+failing. Only a 4xx other than 404, 410 and 429 counts against a device, with one
+rule for 401/403, which are the device's (a subscription made with an
+older VAPID key) or ours (wrong credentials, which every device answers):
+decided over the whole run. If the run delivered at least one push they
+count against the device (and its market towards giving up); if it
+delivered nothing they are systemic. `sendClosingAlerts` collects them in
+a `PushRun` and settles them after both sends
+(`settleCredentialFailures`); a lone `sendPush` call applies the same rule
+to itself. `PushResult.systemic` counts what is never recorded (no
+status, 429, 5xx, and 401/403 of a run that delivered nothing). It never throws; failures are logged. Resolving, overriding, voiding, approving
 or rejecting a task and creating a market call `afterAction()`
 (`lib/push/notify.ts`), which runs the send through Next's `after()`, so
 the member's action never waits on it; the recipients are read from the
@@ -582,9 +610,17 @@ is only a backup now; the route claims each market in `push_log` once a
 device has its push (`claim_push_log`'s `on conflict do nothing`), so two
 callers never repeat a push. Vercel Hobby cron runs once a day, so the
 daily keep-alive calls `sendClosingAlerts` itself as the last backstop. Each
-successful call stamps `cron_heartbeats` (#149); a run whose every push
-failed returns 502 and leaves the stamp alone, so the warning below covers
-a dead push service too (#207). The
+call that read its queue stamps `cron_heartbeats` (#149), whether or not its
+pushes were delivered: a failed push is logged and counted in the response
+(`failed`), not a 502 and not a missing stamp, so one broken device can't keep
+the warning below on or make the backup workflow email (#257). A run that
+delivered nothing while any failure was systemic (`systemic` summed over the
+whole run, so a one-device group alarms too) returns 502 and leaves the stamp
+alone. `sendClosingAlerts` also takes a lease
+(`claim_cron_lease`, 120 seconds, table `cron_leases`) so overlapping callers
+never double-send, and `deliverPerMarket` records a market whose devices all
+rejected the push (and none of the failures systemic) in `push_attempts` (`record_push_failures`), which claims it in
+`push_log` once its first failure is over 24 hours old. The
 Admin layout shows admins and the owner a warning (`ClosingAlertsWarning`,
 `lib/admin/cron-health.ts`) once the last stamp is over 30 minutes old or
 missing. Only this route stamps it: the daily keep-alive doesn't,

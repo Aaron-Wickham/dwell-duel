@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useActionState, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Check } from 'lucide-react'
 import {
   bulkApproveTaskCompletionsAction,
@@ -14,11 +15,13 @@ import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ConfirmSubmitDialog, useConfirmSubmit } from '@/components/ui/confirm-submit-dialog'
+import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
 import { keepCheckedOnReset } from '@/lib/forms/keep-on-reset'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { ProofList } from '@/components/proof/proof-list'
 import { ReviewButtons } from './review-buttons'
 
+export const PENDING_ROW_ID_PREFIX = 'pending'
 const BULK_FORM_ID = 'bulk-review-form'
 const BULK_APPROVE_ERROR_ID = 'bulk-approve-error'
 const BULK_REJECT_ERROR_ID = 'bulk-reject-error'
@@ -26,7 +29,16 @@ const BULK_REJECT_ERROR_ID = 'bulk-reject-error'
 export type PendingRow = PendingCompletion & { submittedAge: string }
 
 // viewerId: a reviewer never reviews their own submission (0046), so those rows show why instead.
-export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[]; viewerId: string }) {
+export function PendingApprovals({
+  pending,
+  viewerId,
+  emptyState,
+}: {
+  pending: PendingRow[]
+  viewerId: string
+  // Shown instead of "Nothing pending." when the page is a window past the end of the queue.
+  emptyState?: ReactNode
+}) {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
   // Worked out from the rows on screen, so Select all follows rows that leave the list once reviewed.
   const selectable = pending.filter((c) => c.submitterId !== viewerId).map((c) => c.id)
@@ -89,14 +101,14 @@ export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[];
       {lastBulk === 'reject' && !isRejectPending && rejectState?.summary && <Message tone="ok">{rejectState.summary}</Message>}
 
       {pending.length === 0 ? (
-        <EmptyState icon={Check} title="Nothing pending." />
+        emptyState ?? <EmptyState icon={Check} title="Nothing pending." />
       ) : (
         <>
           <ul className="flex flex-col divide-y divide-line">
             {pending.map((c) => {
               const own = c.submitterId === viewerId
               return (
-              <li key={c.id} className="flex flex-col gap-3 py-4">
+              <li key={c.id} {...focusTarget(rowDomId(PENDING_ROW_ID_PREFIX, c.id))} className="flex flex-col gap-3 py-4">
                 <div className="flex items-start gap-2">
                   {own ? (
                     <span aria-hidden="true" className="min-w-11 shrink-0" />

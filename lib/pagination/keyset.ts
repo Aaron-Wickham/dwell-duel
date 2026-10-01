@@ -64,10 +64,11 @@ export async function readOrdered<Row, Key extends { id: string }>(
   fetchRows: (filter: string | null, limit: number) => Promise<Row[]>,
   keyOf: (row: Row) => Key,
   fetchKeys?: (filter: string, limit: number) => Promise<Key[]>,
+  windowCap: number = WINDOW_CAP,
 ): Promise<KeysetPage<Row>> {
   const windowed = page.top !== null
 
-  const rows = await fetchRows(order.range(page), page.bottom ? WINDOW_CAP : PAGE_SIZE)
+  const rows = await fetchRows(order.range(page), page.bottom ? windowCap : PAGE_SIZE)
   if (rows.length === 0 || (page.bottom === null && rows.length < PAGE_SIZE)) return { rows, next: null, windowed }
 
   // "Show more" points at the 50th row past the last one shown, so the read needs those rows'
@@ -77,7 +78,7 @@ export async function readOrdered<Row, Key extends { id: string }>(
   const probe = fetchKeys ? await fetchKeys(after, PAGE_SIZE) : (await fetchRows(after, PAGE_SIZE)).map(keyOf)
   if (probe.length === 0) return { rows, next: null, windowed }
   const firstId = probe[0].id
-  if (rows.length + probe.length > WINDOW_CAP) {
+  if (rows.length + probe.length > windowCap) {
     return { rows, next: { kind: 'window', cursor: order.encode(probe[0]), firstId }, windowed }
   }
   return { rows, next: { kind: 'extend', cursor: order.encode(probe[probe.length - 1]), firstId }, windowed }
@@ -89,6 +90,7 @@ export async function readKeyset<Row>(
   fetchRows: (filter: string | null, limit: number) => Promise<Row[]>,
   keyOf: (row: Row) => Cursor,
   fetchKeys?: (filter: string, limit: number) => Promise<Cursor[]>,
+  windowCap: number = WINDOW_CAP,
 ): Promise<KeysetPage<Row>> {
   const valid = (c: Cursor | null) => (c && (!cols.isId || cols.isId(c.id)) ? c : null)
   const order: KeysetOrder<Cursor> = {
@@ -96,5 +98,5 @@ export async function readKeyset<Row>(
     after: (key) => (cols.ascending ? newerThanFilter(cols, key) : olderThanFilter(cols, key)),
     encode: encodeCursor,
   }
-  return readOrdered({ top: valid(rawPage.top), bottom: valid(rawPage.bottom) }, order, fetchRows, keyOf, fetchKeys)
+  return readOrdered({ top: valid(rawPage.top), bottom: valid(rawPage.bottom) }, order, fetchRows, keyOf, fetchKeys, windowCap)
 }

@@ -86,6 +86,17 @@ describe('private member channels (0100)', () => {
     expect(await join(await clientFor(stranger), memberTopic(stranger.id, 'base', 1), stranger.id)).toBe('UNAUTHORIZED')
   })
 
+  it('refuses a member whose invite was removed their own topic', async () => {
+    const dave = await makeMember('Dave')
+    const client = await clientFor(dave)
+    await ensureInvited(client)
+    expect(await join(client, memberTopic(dave.id, 'base', 1), dave.id)).toBe('SUBSCRIBED')
+
+    const { error } = await serviceClient().from('allowed_emails').delete().eq('email', dave.email)
+    if (error) throw error
+    expect(await join(await clientFor(dave), memberTopic(dave.id, 'base', 2), dave.id)).toBe('UNAUTHORIZED')
+  })
+
   it('refuses a signed-out client', async () => {
     expect(await join(anonClient(), memberTopic(alice.id, 'base', 1), alice.id)).toBe('UNAUTHORIZED')
   })

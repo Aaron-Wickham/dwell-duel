@@ -78,14 +78,18 @@ and save. To check:
 1. Signed in, open a market page and the console: no "Live updates
    paused" warning. Place a bet from another window; the page and your
    balance update without a reload.
-2. A public channel is refused. From a checkout of the repo:
+2. A public channel is refused. This uses the **publishable** key (the one
+   the browser already has; never the secret key), exported into the
+   shell's environment rather than pasted into the command, so it stays out
+   of shell history. From a checkout of the repo:
 
    ```sh
-   node -e "require('@supabase/supabase-js').createClient('https://lymrpiivqvdnfcjmxksx.supabase.co', process.env.KEY).channel('anything').subscribe((s, e) => { console.log(s, e?.message); process.exit() })"
+   read -rs SUPABASE_PUBLISHABLE_KEY && export SUPABASE_PUBLISHABLE_KEY   # paste it at the silent prompt
+   node -e "require('@supabase/supabase-js').createClient('https://lymrpiivqvdnfcjmxksx.supabase.co', process.env.SUPABASE_PUBLISHABLE_KEY).channel('anything').subscribe((s, e) => { console.log(s, e?.message); process.exit() })"
    ```
 
-   with `KEY` set to the publishable key prints `CHANNEL_ERROR
-   PrivateOnly: This project only allows private channels`.
+   prints `CHANNEL_ERROR PrivateOnly: This project only allows private
+   channels`.
 
 If live updates stop after the switch, turn it back on, and look for a
 channel opened without `private: true` or a topic no `realtime.messages`

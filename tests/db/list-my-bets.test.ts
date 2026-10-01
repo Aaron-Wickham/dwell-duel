@@ -78,7 +78,7 @@ describe('listMyWagers: solo bets', () => {
 
     await closeAndResolve(won, 0)
     await closeAndResolve(lost, 0)
-    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId })
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId, p_reason: 'Voided in a test' })
     if (voidErr) throw voidErr
 
     const openPage = await myBets('open')

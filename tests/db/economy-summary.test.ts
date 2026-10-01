@@ -153,7 +153,7 @@ async function playScenario(): Promise<void> {
   const cancelled = await bet(bobClient, m4, 1, 3)
   const { error: cancelErr } = await bobClient.rpc('cancel_bet', { p_bet_id: cancelled })
   if (cancelErr) throw cancelErr
-  const { error: voidErr } = await oliveClient.rpc('void_market', { p_market_id: m4.marketId })
+  const { error: voidErr } = await oliveClient.rpc('void_market', { p_market_id: m4.marketId, p_reason: 'Voided in a test' })
   if (voidErr) throw voidErr
 
   // Still at stake: Alice's 12 on an open market and Bob's pending 4 DC parlay.

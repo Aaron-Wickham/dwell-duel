@@ -88,7 +88,7 @@ describe('member_stats', () => {
     // Refunded: the market is voided.
     const voided = await createTestMarket(aliceClient, ['Yes', 'No'])
     await bet(bobClient, voided, 0, 15)
-    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId })
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId, p_reason: 'Voided in a test' })
     if (voidErr) throw voidErr
 
     // Overridden: Bob first wins 50 on 10 (a gain of 40, which would be his biggest), then an

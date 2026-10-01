@@ -6,6 +6,14 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Security
+- **Removing a member takes away everything they could do, and signs them out.** A creator's powers over their own markets (resolving, voiding, editing, attaching resolution proof) and deleting their own comments now need a current invite, as roles already did, and `remove_member` ends the member's sessions on every device. A schema test fails on any member-callable security definer function that writes without checking the invite or a role (#288).
+- **Only an unclaimed invite can be revoked, in the database as well as the app.** An admin's delete of an invite someone has already signed in with removes nothing; taking out a member stays the owner's, through Remove member. A new invite records the admin who added it and starts unclaimed, whatever the request says (#289).
+
+### Fixes
+- **Voids follow the same rule as results, and say why.** Until a market closes, its creator or an admin can void it; once it has closed, only an admin can. Every void needs a reason (up to 500 characters), which shows on the market page and, with the void itself, in the feed (#290).
+- **The feed skips an event kind it doesn't recognise** instead of failing, so a new kind can reach the database before the build that shows it (#290).
+
 ### Under the hood
 - **Nightly encrypted backups.** A new Backups workflow dumps the production database every night (roles, schema, and data including sign-ins and Storage records) and copies the proof and avatars buckets every Sunday, encrypted with age into a private backups repo that keeps 60 days; `docs/OPERATIONS.md` is the restore runbook, rehearsed once against a local copy (#248).
 - **Every migration has a restore point.** Deploy Production takes the same encrypted dump just before it applies migrations, and doesn't migrate if the dump fails (#248).

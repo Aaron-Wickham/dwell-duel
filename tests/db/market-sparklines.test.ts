@@ -439,7 +439,7 @@ describe('markets.sparkline cache (0070)', () => {
     const quiet = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Quiet' })
     await placeBet(bobClient, bet, 0, 7)
     for (const m of [bet, quiet]) {
-      const { error } = await aliceClient.rpc('void_market', { p_market_id: m.marketId })
+      const { error } = await aliceClient.rpc('void_market', { p_market_id: m.marketId, p_reason: 'Voided in a test' })
       if (error) throw error
     }
     expectSameSeries((await cached(bet.marketId))!, await fullSeries(bet))

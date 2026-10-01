@@ -271,7 +271,7 @@ describe('recipients', () => {
     await subscribe(bob)
     await subscribe(carol)
     await setPrefs(carol, { results: false })
-    await rpcOk(aliceClient, 'void_market', { p_market_id: market.marketId })
+    await rpcOk(aliceClient, 'void_market', { p_market_id: market.marketId, p_reason: 'Voided in a test' })
 
     const rows = await rpcOk<ResultRow[]>(serviceClient(), 'push_market_result', { p_market_id: market.marketId })
     expect(rows).toEqual([

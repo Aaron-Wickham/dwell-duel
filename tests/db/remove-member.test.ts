@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, type Member } from './fixtures'
+import { pgQuery } from './pg-query'
 
 // #202: a role only counts while its holder is invited, and the owner can remove a member.
 let owner: Member
@@ -69,7 +70,7 @@ describe('a role needs an invite', () => {
     expect(await inviteFor(admin)).toBeNull()
 
     expect((await adminClient.rpc('member_emails', { p_ids: [member.id] })).error?.message).toBe('only an admin can see member emails')
-    expect((await adminClient.rpc('void_market', { p_market_id: market.marketId })).error?.message).toBe(
+    expect((await adminClient.rpc('void_market', { p_market_id: market.marketId, p_reason: 'Voided in a test' })).error?.message).toBe(
       'only the market creator or an admin can void this market',
     )
     expect((await adminClient.rpc('approve_task_completion', { p_completion_id: completionId })).error?.message).toBe(
@@ -123,8 +124,75 @@ describe('remove_member', () => {
     expect(again?.code).toBe('42501')
   })
 
+  it('ends their Auth sessions, so no device can renew its token', async () => {
+    const sessions = async () =>
+      (await pgQuery<{ n: number }>(`select count(*)::integer as n from auth.sessions where user_id = '${member.id}'`))[0].n
+    expect(await sessions()).toBeGreaterThan(0)
+
+    expect((await ownerClient.rpc('remove_member', { p_profile_id: member.id })).error).toBeNull()
+
+    expect(await sessions()).toBe(0)
+    const [{ n: tokens }] = await pgQuery<{ n: number }>(`select count(*)::integer as n from auth.refresh_tokens where user_id = '${member.id}'`)
+    expect(tokens).toBe(0)
+    expect((await memberClient.auth.refreshSession()).error).not.toBeNull()
+    // Everyone else stays signed in.
+    expect((await ownerClient.auth.refreshSession()).error).toBeNull()
+  })
+
+  it('takes away a creator’s and author’s own powers along with the invite', async () => {
+    const db = serviceClient()
+    const open = await createTestMarket(memberClient, ['Yes', 'No'], { title: 'Mo’s open market' })
+    const closed = await createTestMarket(memberClient, ['Yes', 'No'], { title: 'Mo’s closed market' })
+    const { error: closeErr } = await db
+      .from('markets')
+      .update({ close_at: new Date(Date.now() - 1000).toISOString() })
+      .eq('id', closed.marketId)
+    if (closeErr) throw closeErr
+    const { data: comment, error: commentErr } = await memberClient
+      .from('market_comments')
+      .insert({ market_id: open.marketId, profile_id: member.id, body: 'First!' })
+      .select('id')
+      .single()
+    if (commentErr) throw commentErr
+    expect((await memberClient.rpc('can_resolve_market', { p_market_id: closed.marketId })).data, 'while invited').toBe(true)
+
+    expect((await ownerClient.rpc('remove_member', { p_profile_id: member.id })).error).toBeNull()
+
+    // The member's access token outlives the removal until it expires, so each check is the invite's.
+    expect((await memberClient.rpc('void_market', { p_market_id: open.marketId, p_reason: 'r' })).error?.message).toBe(
+      'only the market creator or an admin can void this market',
+    )
+    expect(
+      (await memberClient.rpc('update_market', { p_market_id: open.marketId, p_title: 'Reworded', p_description: null })).error?.message,
+    ).toBe("only the market's creator or an admin can edit it")
+    expect((await memberClient.rpc('can_resolve_market', { p_market_id: closed.marketId })).data).toBe(false)
+    expect(
+      (await memberClient.rpc('resolve_market', { p_market_id: closed.marketId, p_outcome_id: closed.outcomeIds[0], p_note: 'n' })).error
+        ?.message,
+    ).toBe('only the market creator, a reviewer or an admin can resolve this market')
+    const { error: uploadErr } = await memberClient.storage
+      .from('proof')
+      .upload(`resolution/${closed.marketId}/${crypto.randomUUID()}/proof.jpg`, new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' }), {
+        contentType: 'image/jpeg',
+      })
+    expect(uploadErr, 'resolution proof upload').not.toBeNull()
+    expect((await memberClient.rpc('delete_market_comment', { p_comment_id: comment.id })).error?.message).toBe(
+      "only the comment's author or an admin can delete it",
+    )
+
+    const { data: markets } = await db.from('markets').select('id, status, title').in('id', [open.marketId, closed.marketId]).order('title')
+    expect(markets).toEqual([
+      { id: closed.marketId, status: 'open', title: 'Mo’s closed market' },
+      { id: open.marketId, status: 'open', title: 'Mo’s open market' },
+    ])
+    const { data: kept } = await db.from('market_comments').select('body, deleted_at').eq('id', comment.id).single()
+    expect(kept).toEqual({ body: 'First!', deleted_at: null })
+  })
+
   it('can be undone by inviting them again, with their role to be granted afresh', async () => {
     expect((await ownerClient.rpc('remove_member', { p_profile_id: admin.id })).error).toBeNull()
+    // Removal signed them out, so they sign in again once invited.
+    adminClient = await clientFor(admin)
     await ensureInvited(adminClient)
     expect((await adminClient.rpc('my_role')).data).toBe('member')
     expect((await ownerClient.rpc('set_member_role', { p_profile_id: admin.id, p_role: 'admin' })).error).toBeNull()

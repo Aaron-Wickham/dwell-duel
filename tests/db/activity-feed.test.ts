@@ -166,7 +166,7 @@ describe('activity_feed', () => {
   it('shows no wins for a voided market or one nobody backed', async () => {
     const voided = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Voided market' })
     await bet(bobClient, voided, 0, 5)
-    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId })
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId, p_reason: 'Voided in a test' })
     expect(voidErr).toBeNull()
 
     const unbacked = await createTestMarket(aliceClient, ['Yes', 'No', 'Maybe'], { title: 'Unbacked market' })

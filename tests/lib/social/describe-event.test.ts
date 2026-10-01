@@ -14,6 +14,7 @@ const base: FeedEvent = {
   legCount: null,
   taskTitle: null,
   resolutionNote: null,
+  voidReason: null,
   creatorStake: null,
   season: null,
 }
@@ -38,6 +39,18 @@ describe('describeEvent', () => {
 
   it('describes a resolved market', () => {
     expect(describeEvent({ ...base, kind: 'market_resolved', amount: null })).toEqual([market, ' resolved: Yes'])
+  })
+
+  it('describes a voided market by who voided it', () => {
+    expect(describeEvent({ ...base, kind: 'market_voided', outcomeLabel: null, amount: null, voidReason: 'Rained off' })).toEqual([
+      sarah,
+      ' voided ',
+      market,
+    ])
+  })
+
+  it('describes a kind it doesn’t know as nothing, rather than throwing', () => {
+    expect(describeEvent({ ...base, kind: 'market_renamed' as FeedEvent['kind'] })).toEqual([])
   })
 
   it('describes a bet win', () => {

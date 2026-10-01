@@ -17,11 +17,24 @@ type Expression = Pick<Policy, 'tablename' | 'policyname' | 'cmd' | 'qual' | 'wi
 // (select …) wraps, plus 0035's new policy on activity_events, 0037's on cancelled_bets, and
 // 0040's role changes (new profiles start as members; reviewers read every completion), and
 // 0042's proof_attachments, 0043's market_edits, 0053's feed_reactions and market_comments, and
-// 0057's push_subscriptions and notification_prefs, and 0061's cron_heartbeats.
+// 0057's push_subscriptions and notification_prefs, and 0061's cron_heartbeats, and 0073's
+// unclaimed-only invite delete and caller-named invite insert.
 const POLICIES_NOW: Expression[] = [
   { tablename: 'activity_events', policyname: 'select_activity_events', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
-  { tablename: 'allowed_emails', policyname: 'admin_delete_invites', cmd: 'DELETE', qual: 'is_admin()', with_check: null },
-  { tablename: 'allowed_emails', policyname: 'admin_insert_invites', cmd: 'INSERT', qual: null, with_check: 'is_admin()' },
+  {
+    tablename: 'allowed_emails',
+    policyname: 'admin_delete_invites',
+    cmd: 'DELETE',
+    qual: '(is_admin() AND (claimed_by IS NULL))',
+    with_check: null,
+  },
+  {
+    tablename: 'allowed_emails',
+    policyname: 'admin_insert_invites',
+    cmd: 'INSERT',
+    qual: null,
+    with_check: '(is_admin() AND (invited_by = ( SELECT auth.uid() AS uid)))',
+  },
   { tablename: 'allowed_emails', policyname: 'admin_select_invites', cmd: 'SELECT', qual: 'is_admin()', with_check: null },
   { tablename: 'bets', policyname: 'select_invited_bets', cmd: 'SELECT', qual: '(is_invited() OR is_admin())', with_check: null },
   { tablename: 'cancelled_bets', policyname: 'select_invited_cancelled_bets', cmd: 'SELECT', qual: '(is_invited() OR is_admin())', with_check: null },

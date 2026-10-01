@@ -249,7 +249,11 @@ a line to `CHANGELOG.md` under the next release.
   `activity_feed`. Triggers in 0035 keep it equal to what `activity_feed`
   would show. A new feed kind, or a new way of writing a source table,
   needs a trigger change plus a step in `tests/db/activity-events.test.ts`'s
-  equivalence scenario. No trigger watches `market_resolutions`. A feed
+  equivalence scenario. A kind with no source row for a trigger to follow
+  (`season_champion`, `market_voided`) is inserted by the function that
+  makes the event instead, left out of that equivalence check, and tested
+  on its own. `FeedList` skips a kind it doesn't know, so a new kind reaches
+  the database before the build that renders it without breaking the feed. No trigger watches `market_resolutions`. A feed
   row is a sentence, not a card: its member and market names are its links
   and tap targets, and the row itself doesn't press, lift or open anything
   (decided in #187), since one row can name two destinations.

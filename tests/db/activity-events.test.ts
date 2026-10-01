@@ -83,7 +83,9 @@ interface Mismatch {
 // season_champion (0051) is left out: settle_season writes it on demand, from a finished month's
 // ledger, not a trigger from a source row, so the view has nothing to derive it from. The
 // scenario still settles a season, so the comparison proves the champion's row changes nothing
-// else, and tests/db/net-worth-and-seasons.test.ts covers the row itself.
+// else, and tests/db/net-worth-and-seasons.test.ts covers the row itself. market_voided (0073)
+// is left out the same way: void_market writes it, and the view predates it; tests/db/
+// void-market.test.ts covers that row.
 const MISMATCHES = `
   with stored as (
     select e.id, e.kind, e.occurred_at, e.actor_id, e.amount, e.market_id, o.label as outcome_label,
@@ -93,7 +95,7 @@ const MISMATCHES = `
     left join public.market_outcomes o on o.id = e.outcome_id
     left join public.task_completions c on c.id = e.task_completion_id
     left join public.tasks t on t.id = c.task_id
-    where e.hidden_at is null and e.kind <> 'season_champion'
+    where e.hidden_at is null and e.kind not in ('season_champion', 'market_voided')
   ),
   derived as (
     select id, kind, occurred_at, actor_id, amount, market_id, outcome_label, leg_count, task_title
@@ -175,7 +177,7 @@ async function fullScenario(): Promise<void> {
   expect(await mismatches()).toEqual([])
 
   // Voiding B settles both parlays on A alone: Bob's wins, Carol's loses.
-  const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: b.marketId })
+  const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: b.marketId, p_reason: 'Voided in a test' })
   if (voidErr) throw voidErr
   expect(await mismatches()).toEqual([])
 
@@ -224,6 +226,7 @@ describe('activity_events', () => {
       { kind: 'bet_won', visible: 1, hidden: 2 },
       { kind: 'market_created', visible: 2, hidden: 0 },
       { kind: 'market_resolved', visible: 1, hidden: 1 },
+      { kind: 'market_voided', visible: 1, hidden: 0 },
       { kind: 'parlay_placed', visible: 2, hidden: 0 },
       { kind: 'parlay_won', visible: 1, hidden: 1 },
       { kind: 'season_champion', visible: 1, hidden: 0 },
@@ -237,7 +240,7 @@ describe('activity_events', () => {
 
     // The migration's own backfill statement, run into a scratch copy of the table, so the real
     // rows stay as the triggers left them. Every column is compared, related ids included. The
-    // champion isn't a row the view ever had, so it isn't one the backfill makes.
+    // champion and the void aren't rows the view ever had, so they aren't ones the backfill makes.
     const migration = readFileSync(path.resolve('supabase/migrations/0035_activity_events.sql'), 'utf8')
     const backfill = migration.match(/^insert into public\.activity_events [^;]*?from public\.activity_feed[^;]*;/m)?.[0]
     expect(backfill).toBeDefined()
@@ -247,9 +250,9 @@ describe('activity_events', () => {
       ${backfill!.replace('insert into public.activity_events', 'insert into pg_temp.backfill')}
       select
         (select count(*)::integer from (
-          (select ${columns} from pg_temp.backfill except select ${columns} from public.activity_events where hidden_at is null and kind <> 'season_champion')
+          (select ${columns} from pg_temp.backfill except select ${columns} from public.activity_events where hidden_at is null and kind not in ('season_champion', 'market_voided'))
           union all
-          (select ${columns} from public.activity_events where hidden_at is null and kind <> 'season_champion' except select ${columns} from pg_temp.backfill)
+          (select ${columns} from public.activity_events where hidden_at is null and kind not in ('season_champion', 'market_voided') except select ${columns} from pg_temp.backfill)
         ) d) as differing,
         (select count(*)::integer from pg_temp.backfill) as backfilled
     `)

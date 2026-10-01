@@ -220,7 +220,7 @@ describe('resolve_market and void_market lock order', () => {
 
   it('credits and debits members in profile order, so concurrent resolutions cannot deadlock', async () => {
     const resolveLoops = memberLoops(await definition('resolve_market_core(uuid,uuid)'))
-    const voidLoops = memberLoops(await definition('void_market(uuid)'))
+    const voidLoops = memberLoops(await definition('void_market(uuid, text)'))
 
     expect(resolveLoops).toHaveLength(3)
     expect(voidLoops).toHaveLength(1)
@@ -236,7 +236,7 @@ describe('resolve_market and void_market lock order', () => {
 
   it('locks every profile it could touch, in id order, in one statement before any write', async () => {
     const resolveDef = await definition('resolve_market_core(uuid,uuid)')
-    const voidDef = await definition('void_market(uuid)')
+    const voidDef = await definition('void_market(uuid, text)')
 
     expect(resolveDef).toMatch(upfrontLock)
     expect(voidDef).toMatch(upfrontLock)

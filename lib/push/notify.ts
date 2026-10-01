@@ -72,13 +72,25 @@ export async function notifyTaskReviews(completionIds: string[], db: DbClient = 
   )
 }
 
+// PostgREST returns at most max_rows (1000) rows per request, so the recipients are read a page at
+// a time, after the last profile_id (push_new_market orders by it), until a page comes back short.
+export const NEW_MARKET_PAGE = 1000
+
 export async function notifyNewMarket(marketId: string, db: DbClient = serviceRoleClient()): Promise<PushResult | null> {
-  const { data, error } = await db.rpc('push_new_market', { p_market_id: marketId })
-  if (error) {
-    console.error('Reading new market recipients failed', error)
-    return null
+  const recipients: { profile_id: string; title: string }[] = []
+  for (;;) {
+    let query = db.rpc('push_new_market', { p_market_id: marketId }).select('profile_id, title')
+    const last = recipients.at(-1)
+    if (last) query = query.gt('profile_id', last.profile_id)
+    const { data, error } = await query.order('profile_id').limit(NEW_MARKET_PAGE)
+    if (error) {
+      console.error('Reading new market recipients failed', error)
+      return null
+    }
+    recipients.push(...data)
+    if (data.length < NEW_MARKET_PAGE) break
   }
-  return sendPush(data.map((row) => ({ profileId: row.profile_id, payload: newMarketPayload({ marketId, title: row.title }) })), db)
+  return sendPush(recipients.map((row) => ({ profileId: row.profile_id, payload: newMarketPayload({ marketId, title: row.title }) })), db)
 }
 
 export type ClosingAlertsDelivery = { sent: number; failed: number }

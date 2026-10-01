@@ -8,6 +8,7 @@ vi.mock('next/server', () => ({ after }))
 import {
   afterAction,
   notifyMarketResult,
+  NEW_MARKET_PAGE,
   notifyNewMarket,
   notifyTaskReviews,
   notifyTaskSubmitted,
@@ -87,12 +88,60 @@ describe('notify', () => {
     ])
   })
 
+  // push_new_market's rows, read the way PostgREST would serve them: ordered by profile_id, after
+  // a .gt() bound when given, at most .limit() rows a request.
+  function pagedRecipients(rows: { profile_id: string; title: string }[], error: unknown = null) {
+    const requests: { after: string | null; limit: number }[] = []
+    const rpc = vi.fn(() => {
+      let after: string | null = null
+      const query = {
+        select: () => query,
+        gt: (_col: string, value: string) => {
+          after = value
+          return query
+        },
+        order: () => query,
+        limit: async (limit: number) => {
+          requests.push({ after, limit })
+          if (error) return { data: null, error }
+          const sorted = [...rows].sort((a, b) => a.profile_id.localeCompare(b.profile_id))
+          return { data: sorted.filter((r) => after === null || r.profile_id > after).slice(0, limit), error: null }
+        },
+      }
+      return query
+    })
+    return { db: { rpc } as unknown as DbClient, rpc, requests }
+  }
+
   it('announces a new market to the members the database picks', async () => {
-    const { db } = dbReturning([{ profile_id: 'bob', title: 'Sermon past noon?' }])
+    const { db, rpc } = pagedRecipients([{ profile_id: 'bob', title: 'Sermon past noon?' }])
     await notifyNewMarket('m-2', db)
+    expect(rpc).toHaveBeenCalledWith('push_new_market', { p_market_id: 'm-2' })
     expect(sendPush.mock.calls[0][0]).toEqual([
       { profileId: 'bob', payload: { title: 'New market', body: 'Sermon past noon?', url: '/markets/m-2' } },
     ])
+  })
+
+  // #254: PostgREST serves 1000 rows a request, so the recipients past the first 1000 are read on.
+  it('reads every recipient past the 1000-row cap, a page at a time', async () => {
+    const rows = Array.from({ length: NEW_MARKET_PAGE * 2 + 5 }, (_, i) => ({ profile_id: `p-${String(i).padStart(5, '0')}`, title: 'Big market' }))
+    const { db, requests } = pagedRecipients(rows)
+    await notifyNewMarket('m-3', db)
+    expect(requests).toEqual([
+      { after: null, limit: NEW_MARKET_PAGE },
+      { after: 'p-00999', limit: NEW_MARKET_PAGE },
+      { after: 'p-01999', limit: NEW_MARKET_PAGE },
+    ])
+    const sent = sendPush.mock.calls[0][0] as { profileId: string }[]
+    expect(sent).toHaveLength(rows.length)
+    expect(new Set(sent.map((m) => m.profileId)).size).toBe(rows.length)
+  })
+
+  it('sends nothing when a page of recipients fails to read', async () => {
+    const { db } = pagedRecipients([], new Error('db down'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(await notifyNewMarket('m-4', db)).toBeNull()
+    expect(sendPush).not.toHaveBeenCalled()
   })
 
   it('logs a failed recipient read and sends nothing', async () => {

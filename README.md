@@ -18,7 +18,7 @@ chili cook-off?". They earn more DC by completing Bible-study tasks.
 Markets use shared-pool (pari-mutuel) odds; bets can be combined into
 parlays; and everything that happens shows up in a live feed.
 
-**Current release:** [v0.5.2-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.5.2-beta) · see the [changelog](CHANGELOG.md).
+**Current release:** [v0.6.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.6.0-beta) · see the [changelog](CHANGELOG.md).
 
 | Home | A market | The feed | Settings |
 |---|---|---|---|
@@ -135,17 +135,26 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
 
 - **Vercel project** `dwell-duel`, connected to this repo. Every merge to
   `main` deploys, but through `.github/workflows/deploy-production.yml`
-  and a Vercel deploy hook (the `VERCEL_DEPLOY_HOOK_URL` repo secret), not
+  and a Vercel deploy hook (the `VERCEL_DEPLOY_HOOK_URL` secret), not
   Vercel's Git integration, which `vercel.json` turns off for `main`. Functions run in `cle1` (`vercel.json`), next to the
   Supabase project in us-east-2. A daily Vercel cron calls `/api/cron/keep-alive` so the
   free-tier Supabase project never pauses (it needs `CRON_SECRET`).
-- **Supabase project** `dwell-duel` holds the real data. When a merge to
-  `main` changes `supabase/migrations/`, the same workflow shows a dry run,
-  pushes the migrations to production (it needs the
-  `SUPABASE_ACCESS_TOKEN` repo secret) and only then triggers the app
-  deploy, so new code never runs against an old schema. It never runs two
-  at once. If a push fails, nothing deploys; fix it and re-run the
-  workflow from the Actions tab.
+- **Supabase project** `dwell-duel` holds the real data. On every merge to
+  `main` the same workflow dry-runs `supabase db push` against production,
+  and when production is missing any migration it takes an encrypted backup,
+  pushes the migrations (with the `SUPABASE_ACCESS_TOKEN` secret) and only
+  then triggers the app deploy, so new code never runs against an old
+  schema. What to push comes from production's migration history, so a
+  migration a failed run left behind goes out with the next merge. It never
+  runs two at once, and runs only from `main`. If a backup or migration
+  fails, nothing deploys; fix it and re-run the workflow from `main` in the
+  Actions tab. Its secrets live in the GitHub `Production` environment,
+  which only `main` can deploy to; [docs/OPERATIONS.md](docs/OPERATIONS.md)
+  lists them.
+- **Backups.** Supabase Free keeps none, so `.github/workflows/backups.yml`
+  dumps the database nightly and copies the Storage buckets weekly,
+  encrypted with age, into the private `dwell-duel-backups` repo.
+  [docs/OPERATIONS.md](docs/OPERATIONS.md) covers restoring and rolling back.
 - **Supabase keys.** Sessions are signed with an ECC (ES256) key, so the
   app verifies them locally with no Auth round trip; the legacy HS256
   secret is revoked and the legacy `anon` / `service_role` JWT API keys are
@@ -200,7 +209,7 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
   Notifications → Actions, turn on "Send notifications for failed workflows
   only", so a failed migration, deploy, or closing-alerts backup ping is an
   email. For a failed Vercel build to count too, add a `VERCEL_TOKEN`
-  repository secret (Vercel → Account settings → Tokens; it only needs to
+  secret to the `Production` environment (Vercel → Account settings → Tokens; it only needs to
   read deployments), which lets Deploy Production watch the build to READY;
   if the project belongs to a Vercel team, also set the team's id as the
   `VERCEL_TEAM_ID` variable. Keep Vercel's own failed-build email on as well.
@@ -220,6 +229,8 @@ and the Playwright suite (`.github/workflows/ci.yml`) as three parallel
 jobs behind one required check, `ci-ok`, against a throwaway local
 Supabase, never the production database. A PR must be up to date with
 `main` to merge, so `main` itself isn't tested again: merging deploys.
+`ci-ok` has no bypass, so nothing merges red. CI also fails a PR whose new
+migration is numbered at or below `main`'s newest.
 Dependabot opens weekly update PRs for npm packages and GitHub Actions
 (`.github/dependabot.yml`).
 

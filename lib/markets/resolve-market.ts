@@ -8,12 +8,14 @@ import { isDeliberateRaise } from '@/lib/errors/deliberate-raise'
 import { reportError } from '@/lib/observability/report'
 import { clawbackMessage, parseClawbackError } from '@/lib/markets/clawback'
 import { afterAction, notifyMarketResult } from '@/lib/push/notify'
+import type { DbClient } from '@/lib/supabase/database'
 import type { ProofRecord } from '@/lib/proof/types'
 
 export type ActionState = { formError?: string; field?: 'outcome' | 'note' } | undefined
 
 // resolve_market_core's exact text (0066); an override must name a different outcome.
 const SAME_OUTCOME = 'that outcome is already the result'
+const ALREADY_RESOLVED = 'only an admin can change an already-resolved market'
 const SAME_OUTCOME_MESSAGE = 'That outcome is already the result, so there’s nothing to override.'
 
 export async function resolveMarketAction(
@@ -50,6 +52,17 @@ export async function resolveMarketAction(
       : await supabase.rpc('resolve_market', { p_market_id: marketId, p_outcome_id: outcomeId, p_note: note, p_attachments: attachments })
 
   if (error) {
+    // A replay of a resolve that already committed (Next re-sends an action whose response was
+    // lost) is refused as "already the result" or, for a non-admin, as already resolved. If this
+    // member's own resolution to this outcome is the live one, that's success, not an error.
+    if (
+      outcomeId &&
+      (error.message === SAME_OUTCOME || error.message === ALREADY_RESOLVED) &&
+      (await resolvedByMeTo(supabase, marketId, outcomeId, user.id))
+    ) {
+      revalidatePath('/', 'layout')
+      return undefined
+    }
     if (error.message === SAME_OUTCOME) return { formError: SAME_OUTCOME_MESSAGE, field: 'outcome' }
     const short = parseClawbackError(error.message)
     const clawback = short && clawbackMessage(short)
@@ -65,4 +78,17 @@ export async function resolveMarketAction(
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')
   return undefined
+}
+
+async function resolvedByMeTo(supabase: DbClient, marketId: string, outcomeId: string, userId: string) {
+  const { data } = await supabase
+    .from('market_resolutions')
+    .select('id')
+    .eq('market_id', marketId)
+    .eq('resolved_by', userId)
+    .eq('outcome_id', outcomeId)
+    .is('reversed_at', null)
+    .limit(1)
+    .maybeSingle()
+  return Boolean(data)
 }

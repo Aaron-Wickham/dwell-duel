@@ -14,9 +14,13 @@ const ANON_EXECUTABLE = ['cache_market_sparkline']
 const AUTHENTICATED_DEFINER = [
   'adjust_balance',
   'approve_task_completion',
+  // Storage RLS helper (0089): counts only the caller's own avatar uploads today; returns a boolean.
+  'avatar_upload_quota_ok',
   'can_resolve_market',
   'cancel_bet',
   'create_market',
+  // create_market plus an attempt key (0083): checks is_invited() first, keys are claimed per caller.
+  'create_market_v2',
   'delete_market',
   'delete_market_comment',
   'delete_task',
@@ -34,10 +38,18 @@ const AUTHENTICATED_DEFINER = [
   'member_stats',
   'my_role',
   'my_task_streaks',
+  // Parlay pages' leg odds (0074): raises unless invited or admin; reads only, at most 50 ids.
+  'parlay_leg_odds',
+  // The slip's quotes (0074): raises unless invited; quotes for the caller's own auth.uid() only.
+  'pick_quotes',
   'place_bet',
   'place_parlay',
   'place_slip',
   'place_slip_v2',
+  // Storage RLS helper (0089): whether a path is attached to proof; a boolean, no rows or paths leak.
+  'proof_is_attached',
+  // Storage RLS helper (0089): counts only the caller's own proof uploads today; returns a boolean.
+  'proof_upload_quota_ok',
   'reject_task_completion',
   'remove_bet',
   'remove_member',
@@ -109,7 +121,7 @@ describe('schema-wide privileges', () => {
     expect(executable.map((r) => r.proname)).toEqual([...AUTHENTICATED_DEFINER].sort())
   })
 
-  it('gives anon nothing, and PUBLIC no EXECUTE, on objects postgres creates from now on (0079)', async () => {
+  it('gives anon nothing, and PUBLIC no EXECUTE, on objects postgres creates from now on (0091)', async () => {
     const defaults = await pgQuery<{ schema: string | null; objtype: string; grantee: string; privilege: string }>(`
       select nullif(d.defaclnamespace::regnamespace::text, '-') as schema, d.defaclobjtype as objtype,
              case when x.grantee = 0 then 'PUBLIC' else x.grantee::regrole::text end as grantee, x.privilege_type as privilege

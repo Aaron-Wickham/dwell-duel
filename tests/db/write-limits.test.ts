@@ -5,7 +5,7 @@ import { pgQuery } from './pg-query'
 import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, giveRole, type Member, type TestMarket } from './fixtures'
 import { RATE_LIMIT_ERRORS, WRITE_LIMITS, type WriteAction } from '@/lib/forms/limits'
 
-// Per-member write limits and the push device cap (#273, 0078).
+// Per-member write limits and the push device cap (#273, 0090).
 
 let alice: Member
 let bob: Member
@@ -114,6 +114,16 @@ describe('comments', () => {
         ('${alice.id}', 'comment', 86400, now(), 200)
     `)
     expect((await comment(aliceClient, alice.id)).error?.message).toBe(RATE_LIMIT_ERRORS.comment.match)
+  })
+
+  it('lets a replay of an already-posted comment through to its attempt key, even at the limit', async () => {
+    const key = crypto.randomUUID()
+    const post = () => aliceClient.from('market_comments').insert({ market_id: market.marketId, profile_id: alice.id, body: 'Once', attempt_key: key })
+    expect((await post()).error).toBeNull()
+    await fill(alice, 'comment', 10)
+    const { error } = await post()
+    expect(error?.code).toBe('23505')
+    expect(error?.message).toContain('market_comments_attempt_key_idx')
   })
 
   it('never counts the service role', async () => {

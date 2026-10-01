@@ -3,7 +3,7 @@ import { reportError } from '@/lib/observability/report'
 
 /**
  * Deletes auth users who finished Google sign-in but were never invited (#275): a day old or more,
- * with no profile, invite or ledger row (uninvited_auth_users, 0079 — it never lists a member,
+ * with no profile, invite or ledger row (uninvited_auth_users, 0091 — it never lists a member,
  * removed members included). Through the Auth admin API, which clears their sessions and
  * identities too. `db` must be the service-role client.
  *

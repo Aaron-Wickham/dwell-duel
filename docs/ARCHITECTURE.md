@@ -59,7 +59,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
 | `/parlays` | Redirects to `/bets` (kept for old links) |
-| `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its locked odds and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`: the page checks the parlay exists first (so an unknown id is a real 404), then streams the body behind `<Suspense>` with `ParlayDetailSkeleton` |
+| `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its odds (an estimate from `parlay_leg_odds` until its market closes) and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`: the page checks the parlay exists first (so an unknown id is a real 404), then streams the body behind `<Suspense>` with `ParlayDetailSkeleton` |
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
 | `/feed` | Everyone's activity, with reactions, live |
 | `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`) |
@@ -73,7 +73,9 @@ Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/not-invited` and `/offline`. The API has three routes.
 `/api/cron/keep-alive`, which a daily Vercel cron calls so the free
 Supabase project never pauses. It also deletes unattached proof files,
-attempt keys older than a day and uninvited sign-ins (below), calls `settle_season()` to post last
+attempt keys older than a day and uninvited sign-ins (below), expires
+reviewed proof, removes avatar files no profile points at, reports Storage
+use (#253, below), calls `settle_season()` to post last
 month's champion to the feed (a no-op once it's posted), and runs
 `sendClosingAlerts`, the daily backstop for the closing alerts: both the
 creator's reminder to resolve and the admins' alert for a closed market
@@ -95,8 +97,8 @@ doesn't, `Cache-Control: no-store`, no member data, and outside the proxy
 (`proxy.ts`'s matcher) so it doesn't depend on Auth.
 
 The daily keep-alive runs its steps independently (database touch, proof
-cleanup, key cleanup, uninvited sign-in cleanup, season settle, resolve
-reminders): a failing step is
+cleanup, proof retention, avatar cleanup, storage usage, key cleanup,
+uninvited sign-in cleanup, season settle, resolve reminders): a failing step is
 logged, captured and named in the response, the rest still run, and the
 route answers 502 at the end if any failed (#259). It then pings the
 heartbeat, below.
@@ -114,7 +116,7 @@ lib/            logic by area: admin, app-shell, auth, bets, docs, economy, env,
                 errors, forms, home, invites, ledger, live, markets, members, nav,
                 offline, pagination, parlays, preferences, profile, proof, push,
                 social, supabase, tasks, theme, toast, ui…
-supabase/       migrations/0001…0072, config.toml
+supabase/       migrations/00NN_*.sql, config.toml
 tests/          components/, lib/, db/ (Vitest), plus e2e/ (Playwright)
 scripts/        generate-splash.mjs, generate-favicons.mjs, ios-standalone-check.mjs
                 (npm run check:ios), seed-scale.mjs
@@ -129,7 +131,7 @@ Almost every write goes through an RPC; the exceptions are admin writes to
 the task catalogue and invite list, which are allowed by policy.
 
 **Grants.** `anon` (the signed-out publishable key) can reach nothing in
-`public`. Since 0079, nothing postgres creates there grants `anon` anything
+`public`. Since 0091, nothing postgres creates there grants `anon` anything
 by default, and no new function is executable by `PUBLIC`; `authenticated`
 keeps Supabase's defaults, so a new function or table still needs its
 `revoke ... from public, anon` and the grants it means. A new table still
@@ -141,7 +143,7 @@ every SECURITY DEFINER function a signed-in account can call. Adding one to
 that list is the review step: a definer function skips RLS, so it must check
 its caller (`is_invited`, `has_role`, `auth.uid()`) itself.
 
-**Write limits** (0078, #273). A member's own inserts into `markets`,
+**Write limits** (0090, #273). A member's own inserts into `markets`,
 `market_comments`, `feed_reactions`, `task_completions` and `cancelled_bets`
 pass `enforce_write_limit`, a BEFORE INSERT trigger that counts them per
 fixed window in `write_rate_counters` (one row per member, action and
@@ -161,7 +163,11 @@ spending coins should get a trigger and a `write_limits()` row.
 
 - `allowed_emails`: the invite list. Only invited Google accounts get in. Adding one
   sends nothing: Admin → Invites offers a "Copy invite message" to send
-  the invitee yourself (`lib/invites/invite-message.ts`).
+  the invitee yourself (`lib/invites/invite-message.ts`). An admin may delete
+  only an unclaimed row (`admin_delete_invites`, 0073); a claimed one goes
+  only through `remove_member`. Members' insert grant covers only `email` and
+  `invited_by`, which defaults to and must equal the caller; `claimed_by` is
+  the profile trigger's alone.
 - `profiles`: one per member. Display name, bio, `avatar_path`, `balance`
   and `role` (owner › admin › reviewer › member). A trigger creates it on
   first sign-in and grants 100 DC.
@@ -181,7 +187,9 @@ spending coins should get a trigger and a `write_limits()` row.
 - `markets`: title, description, kind (`binary`, `multiple_choice`,
   `over_under`), `line` (Over/Under only), `close_at`, status (`open`,
   `resolved`, `voided`), `seed_per_outcome` (20 DC by default),
-  `current_resolution_id`, `edited_at`, `settled_at` (0066: when it
+  `current_resolution_id`, `edited_at`, `void_reason` (0073: required by
+  `void_market`, at most 500 characters, `TEXT_LIMITS.voidReason`; null for
+  older voids), `settled_at` (0066: when it
   left `open`; the Resolved list's order and a voided chart's shaded zone) and
   `sparkline` (0070): the card's
   40-point series, written by a trigger the moment the market resolves or
@@ -204,10 +212,24 @@ spending coins should get a trigger and a `write_limits()` row.
   `market_comments_market_idx`: the newest 50, shown oldest first, with
   "Show more" above for older ones (`?comments=`).
 - `parlays` and `parlay_legs`: a stake, a status (`pending`, `won`, `lost`,
-  `refunded`), and each leg's outcome with odds locked at placement.
-- `idempotency_keys` (0047): one row per slip or balance-adjustment
-  attempt, holding its result. Only `place_slip` and `adjust_balance` touch
-  it, and the daily cron prunes rows older than a day.
+  `refunded`), the multiplier cap it settles under (`max_multiplier`, 0074:
+  20, or 100 for one settled before), whether its legs are priced at close
+  (`odds_at_close`), and each leg's outcome with its odds (`locked_odds`):
+  null until the leg's market closes or settles, then set once by
+  `settle_parlay`. Parlays placed before 0074 locked every leg at placement
+  and keep those odds.
+- `market_resolutions.payout_seed` (0074): the seed per outcome the
+  resolution's payouts counted, the market's seed before 0074 and 0 since,
+  so history (My bets, the feed oracle) reads what was paid.
+- `idempotency_keys` (0047): one row per slip, balance-adjustment or
+  create-market attempt, holding its result. Only `place_slip`,
+  `adjust_balance` and `create_market_v2` touch it, and the daily cron
+  prunes rows older than a day. Comments and tasks, which return nothing,
+  carry the key as a unique `attempt_key` column instead (0083), and their
+  actions treat a repeat as success. `useOffline` replays any action whose
+  response was lost, so every action that creates something takes a key;
+  forms hold it with `useAttemptKey` (`lib/forms/attempt-key.ts`), which
+  starts a new one when the submitted fields change.
 
 **Tasks and proof**
 
@@ -229,12 +251,15 @@ spending coins should get a trigger and a `write_limits()` row.
 **Feed**
 
 - `activity_events`: one row per feed item (bets, parlays, new markets,
-  results, wins and approved tasks), kept in step by triggers (0035). The
+  results, voids, wins and approved tasks), kept in step by triggers (0035). The
   feed and member activity read only this table. `season_champion` (0051)
-  is the one kind no trigger writes: `settle_season` inserts it, keyed
-  `season:YYYY-MM`, so it has no source row and the DB tests' equivalence
-  check against `activity_feed` leaves it out. `actor_id` cascades, so a
-  champion's events go with their profile.
+  and `market_voided` (0073) are the kinds no trigger writes: `settle_season`
+  inserts the first, keyed `season:YYYY-MM`, and `void_market` the second,
+  keyed `void:<market id>`, with the reason read from `markets.void_reason`.
+  Neither has a row in `activity_feed`, so the DB tests' equivalence check
+  leaves them out. `actor_id` cascades, so a champion's events go with
+  their profile. `FeedList` skips any kind missing from its `EVENT_ICONS`,
+  so a kind added by a migration can't break a build that predates it.
 - `feed_reactions` (0053): one row per member, event and kind (`fire`,
   `pray`, `laugh`, `clap`), keyed `(event_id, profile_id, kind)` and
   cascading with the event and the member. Members insert and delete their
@@ -251,7 +276,14 @@ spending coins should get a trigger and a `write_limits()` row.
 
 - `push_subscriptions`: one row per subscribed device: `endpoint`
   (unique, https, at most 1024 characters), the device's `p256dh` and
-  `auth` keys, `user_agent`, `created_at` and `last_success_at`. A member
+  `auth` keys, `user_agent`, `created_at`, `last_success_at`, and
+  (0076) `failure_count` and `first_failed_at`, the current streak of failed
+  sends. `record_push_results(delivered, failed)` (service role) resets a
+  delivered device's streak, extends a failed one's, and deletes a device
+  that has failed five sends in a row with the first over 24 hours ago, or
+  is failing with no delivery for 60 days and its first failure is over 24
+  hours old too. Only failures the device caused are ever passed to it.
+  One failure counts per market attempt, not per run. A member
   reads and deletes only their own rows and has no insert grant (0067);
   Settings saves through `save_push_subscription`, the only writer, which
   also hands a shared device's row to whoever saves it with the same keys
@@ -283,28 +315,38 @@ spending coins should get a trigger and a `write_limits()` row.
 | Function | Who | What it does |
 |---|---|---|
 | `place_slip_v2` | member | Places every solo bet and the parlay in the slip, all or nothing, and returns what it placed and whether the call was a replay (`place_slip` wraps it for the previous build) |
-| `place_bet` / `place_parlay` | member | The single-bet and single-parlay versions `place_slip` builds on |
-| `cancel_bet` | bettor | Refunds a bet before its market closes |
-| `resolve_market` | after close, the creator or a reviewer with no stake; an admin any time | Needs a note; may take proof; pays winners from the seeded pool (everyone is refunded when the winning pool is empty); an admin override must name a different outcome (0066), reverses the old payouts first and is blocked if a past winner has already spent them. Stamps `settled_at` on the first resolution only. Nobody but an admin resolves a market they have a stake in (`has_stake_in_market`, 0046); `can_resolve_market` answers the same question for the page |
+| `place_bet` / `place_parlay` | member | The single-bet and single-parlay versions `place_slip` builds on. `place_parlay` refuses a leg on the bettor's own market or one without the floor of other members' money (`parlay_limits()`), a stake over the payout cap, and a parlay that would take the member's pending parlays on any of its markets past `max_payout` of possible payout (`parlay_max_payout`); its legs have no odds yet (0074) |
+| `cancel_bet` | bettor | Refunds a bet before its market closes; near the integer ceiling, `cancelled_bets` records the refund the balance could take (`refund_room`, 0074) |
+| `resolve_market` | after close, the creator or a reviewer with no stake; an admin any time | Needs a note; may take proof; pays winners their share of the real pool (`pool_payout`, 0074: the seed is never paid; everyone is refunded when the winning pool is empty); an admin override must name a different outcome (0066), reverses the old payouts first and is blocked if a past winner has already spent them. Stamps `settled_at` on the first resolution only. Nobody but an admin resolves a market they have a stake in (`has_stake_in_market`, 0046); `can_resolve_market` answers the same question for the page |
 | `resolve_over_under` | same | Picks Over or Under from the actual number, then resolves |
-| `void_market` | creator or admin | Refunds every bet; parlays drop the voided leg; stamps `settled_at` |
-| `settle_parlay` | trigger | Runs when a leg's market resolves or voids |
+| `void_market` | before close, the creator; an admin any time | Needs a reason (0073), stored in `void_reason` and posted to the feed as `market_voided`; refunds every bet; parlays drop the voided leg; stamps `settled_at`. `p_reason` defaults to null only so the previous build's call is refused cleanly |
+| `settle_parlay` | trigger | Runs when a leg's market resolves or voids. Sets the odds of each leg whose market has closed or resolved (`pick_quote` for the owner, once), then pays at most `max_multiplier` and `parlay_limits().max_payout` (or the stake, if larger) |
+| `remove_bet` | owner | Refunds any member's bet before its market closes (0074; it used to allow it until resolution) |
+| `apply_coin_transaction` | none (definer functions only) | Writes a ledger row and moves the balance; a credit is cut to what the balance can hold under the integer ceiling, and one cut to nothing writes no row (0074) |
 | `submit_task_completion` | member | Submits a task with an optional note and proof |
 | `approve_task_completion`, `reject_task_completion`, `review_task_completions` | reviewer+, never on their own submission | Pays or rejects submissions, one at a time or in bulk |
 | `adjust_balance` | owner | A manual correction, with a required reason |
+
+A creator's or author's own-row branch (resolving, voiding or editing their
+market, deleting their comment) checks `is_invited()` as well (0073), as the
+role branches already do through `has_role`; `tests/db/definer-writers.test.ts`
+fails on any member-callable security definer writer that neither checks the
+invite nor is listed there as role-gated or delegating.
 
 Also: `create_market`, `update_market` (creator or admin, before close; the
 title is fixed once anyone else has bet, solo or as a parlay leg, 0065), `member_emails` (admin only:
 members can't select `profiles.email`), `member_activity` (admin only, 0050:
 each member's join date, `profiles.created_at`, and last sign-in from
 `auth.users`, for Admin → Members), `stray_proof_objects` (service role:
-the daily cron deletes proof files nothing attached),
+the daily cron deletes proof files nothing attached), `expired_proof_attachments`,
+`mark_proof_expired`, `stray_avatar_objects` and `storage_usage` (service role,
+0089), `proof_upload_quota_ok` and `avatar_upload_quota_ok` (the upload policies' per-day caps: 30 proof files / 60 MB, 10 avatars), `proof_is_attached` (the delete guard, security definer),
 `set_member_role`, `delete_market` (refuses a market with any bet, cancelled
 bet or parlay leg; the market page shows the button only when the pool is
 empty and `lib/markets/bet-history.ts`'s two head counts find nothing),
 `delete_task`, `remove_bet` and `remove_member` (owner only; 0068: back to
 member, `allowed_emails` row and push subscriptions gone, coins and bets
-untouched), `update_my_profile`, `record_proof`, `market_sparklines` (the
+untouched; 0073: their `auth.sessions` too, so no device can refresh), `update_my_profile`, `record_proof`, `market_sparklines` (the
 cards' 40-point sparklines and the market chart's 200 points, sampled in
 SQL so no page reads every bet; both prepend a seeded market's even
 opening split through `withSeededStart`, since the function returns points
@@ -315,7 +357,10 @@ creator's own at once, and for reviewers and admins any left 48 hours or
 whose creator has a stake, always filtered through `can_resolve_market`;
 a close fires no database change, so Home's `RefreshAt` refreshes it at
 the next moment the list could grow, from `nextResolveCheckAt`),
-`my_at_stake`, `parlay_limits`, and from 0071 (#206, #210)
+`my_at_stake`, `parlay_limits`, `pick_quotes(outcome_ids)` and
+`parlay_leg_odds(parlay_ids)` (0074: a pick's leg odds and floor for the
+caller, and each parlay leg's set or estimated odds for its owner, both built on the service-only `pick_quote(profile, outcome)` that
+`settle_parlay` prices with), and from 0071 (#206, #210)
 `my_current_task_completions()` (security invoker: the newest completion of
 the current period per task, filtered in SQL with `compute_period_key`, so
 the Tasks page reads O(tasks) rows and no period keys), `my_onboarding()`
@@ -369,13 +414,18 @@ only and backs the Economy card above Admin → Ledger's list
 the DC in circulation (balances, plus stakes in open markets' bets and
 pending parlays) and, for the America/New_York month holding
 `p_month_start`, the DC added and removed by source: starting grants, task
-rewards, seed payouts, house-paid parlays and owner adjustments. Stakes,
-cancels, voids and remove-bet refunds only move DC between a balance and
-"at stake", so they count nowhere. A market's seed effect is measured at
-each resolution: payouts less the real stakes at the first one, and new
-payouts less the reversed ones at an override; it can be negative, since
-the seed keeps part of the losers' stakes when they outweigh it, and
-`floor()` keeps the fractions. A parlay's is its credit less its stake, so
+rewards, seed payouts (older results only), payout rounding, house-paid
+parlays and owner adjustments. Stakes, cancels, voids and remove-bet
+refunds only move DC between a balance and "at stake", so they count
+nowhere. A market's resolution is measured at each event: payouts less the
+real stakes at the first resolution, and new payouts less the reversed ones
+at an override. Since 0074 winners split the real pool, so for a
+resolution that counted no seed (`payout_seed` = 0) that only ever leaves
+the fractions `floor()` keeps: *payout rounding* (an override can pay some
+back). An event that pays or reverses a resolution from before 0074, which
+counted the seed, stays under *seed payouts*, so older results' seed, and
+an override taking it back, still show; the card hides that row in a month
+with none. A parlay's is its credit less its stake, so
 a lost parlay removes its stake. `economy_flows` (callable by no member)
 holds that classification, with every `coin_transactions` type listed in
 the migration. The panel also checks the identity *all DC ever added less
@@ -387,8 +437,8 @@ for the member page's Stats card (`lib/members/stats.ts`,
 `components/members/member-stats-card.tsx`, streamed behind its own
 `<Suspense>`): settled solo bets and parlays won, lost and refunded; all-time
 net betting profit; the biggest win (a current resolution's `bet_won` less
-its stake, with the market); the best won parlay (its resolved legs' locked
-odds multiplied, capped by `parlay_limits()`, and its payout); markets
+its stake, with the market); the best won parlay (its resolved legs' odds
+multiplied, capped by its own `max_multiplier`, 0074, and its payout); markets
 created; and approved task completions. A solo bet counts as refunded when
 its market was voided or resolved to an outcome nobody backed; cancelled
 bets and open ones count nowhere. Net profit is `betting_ledger_types()`
@@ -402,7 +452,7 @@ subquery per row, so 0055 adds no index.
 
 ### Migrations
 
-Migrations are numbered in order, `0001`–`0079`, and none is ever edited
+Migrations are numbered sequentially from `0001`, and none is ever edited
 after it ships. They roughly follow the project's history:
 
 | Range | What they add |
@@ -440,17 +490,27 @@ after it ships. They roughly follow the project's history:
 | 0070 | Speed at scale (#204, #205): `markets.sparkline` filled by the `cache_market_sparkline` trigger when a market resolves or voids (backfilled), `market_outcomes` in the realtime publication, and `parlays_pending_profile_idx` for `stakes_riding` |
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
-| 0078 | Write limits (#273): `write_limits()`, `write_rate_counters` and the `enforce_write_limit` trigger on markets, comments, reactions, task submissions and bet cancels; `cap_push_subscriptions` keeps a member's ten most recently used push devices |
-| 0079 | Default privileges (#274): nothing postgres creates in `public` grants `anon` anything, and no new function is executable by `PUBLIC`; anon's leftover sequence grants go; `has_stake_in_market` answers false to an uninvited caller. `uninvited_auth_users()` (#275), service role only, for the daily cron's cleanup |
+| 0073 | Permissions (#288, #289, #290): own-row branches of `resolve_market_core`, `can_resolve_market`, `void_market`, `update_market` and `delete_market_comment` need `is_invited()`; `remove_member` deletes the member's `auth.sessions`; `admin_delete_invites` only for unclaimed invites, and the invite insert grant narrowed to `email` and `invited_by` (the caller); `void_market(p_market_id, p_reason)` needs a reason (`markets.void_reason`, 500-character check), is admin-only after close and posts a `market_voided` feed event |
+| 0074 | Parlay pricing and the seed (#287, #272): leg odds set at close or settlement from other members' real money, no seed (`pick_quote`, `pick_quotes`, `parlay_leg_odds`, nullable `parlay_legs.locked_odds`); a 50 DC from 2 members floor and no legs on your own markets; `parlay_limits()` gains `max_payout`, `min_leg_pool` and `min_leg_bettors`, the cap drops to 20×, a leg counts at most 5× and one member's pending parlays on a market can pay at most 1,000 DC (`parlay_limits()` gains `max_leg_odds`; `parlay_max_payout`); `parlays.max_multiplier` (pending parlays from before move to 20×) and `odds_at_close`; payouts are the real pool (`pool_payout`, `market_resolutions.payout_seed` backfilled for history); `apply_coin_transaction` cuts a credit to fit the balance and `refund_room` a refund; `remove_bet` stops at close; `leaderboard_awards` leaves out removed members; `economy_summary` splits payout rounding from older results' seed payouts |
+| 0076 | Push failure pruning (#257): `push_subscriptions.failure_count` and `first_failed_at`, the service-role `record_push_results()`, `save_push_subscription` resetting the streak, and the closing-alerts lease (`cron_leases`, `claim_cron_lease`, `release_cron_lease`) and give-up counter (`push_attempts`, `record_push_failures`) |
+| 0083 | `create_market_v2` (#258): `create_market` plus an attempt key, returning `{market_id, replayed}` so a replayed create returns the first market and skips its push; `create_market` now wraps it. `attempt_key` columns, unique where set, on `market_comments` and `tasks` |
+| 0089 | Storage caps and retention (#253): proof bucket 3 MB and no Word files, a per-member daily upload quota, `record_proof` caps (5 attachments, 3 files, 6 MB), submitted proof can't be deleted, `proof_attachments.expired_at` with `expired_proof_attachments` / `mark_proof_expired`, `stray_avatar_objects`, `storage_usage` |
+| 0090 | Write limits (#273): `write_limits()`, `write_rate_counters` and the `enforce_write_limit` trigger on markets, comments, reactions, task submissions and bet cancels; `cap_push_subscriptions` keeps a member's ten most recently used push devices |
+| 0091 | Default privileges (#274): nothing postgres creates in `public` grants `anon` anything, and no new function is executable by `PUBLIC`; anon's leftover sequence grants go; `has_stake_in_market` answers false to an uninvited caller. `uninvited_auth_users()` (#275), service role only, for the daily cron's cleanup |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
 Every merge to `main` runs the **Deploy Production** workflow, with no
-approval step: a dry run and the push when the merge touched
-`supabase/migrations/`, then the app deploy through a Vercel deploy hook.
-The app never goes live before its migrations; a failed migration fails the
-run and leaves the old app live. Migrations stay additive anyway, because
-the old app is still serving while they apply.
+approval step: a dry run against production, and when production is missing
+any migration, an encrypted pre-migration backup and the push; then the app
+deploy through a Vercel deploy hook. What's pending comes from production's
+migration history, not the merge's diff, so a migration an earlier run
+failed to apply goes out with the next. The app never goes live before its
+migrations; a failed backup or migration fails the run and leaves the old
+app live. Migrations stay additive anyway, because the old app is still
+serving while they apply. CI fails a PR whose new migration isn't numbered
+after `main`'s newest, since `db push` refuses one that sorts before
+production's latest. Backups and restoring are in `docs/OPERATIONS.md`.
 
 ## Key flows
 
@@ -462,7 +522,7 @@ claims and throws `AuthUnavailableError` (not "signed out") when Auth
 itself is down. Signups stay open, since Google sign-in creates the
 `auth.users` row before the invite check can run, so anyone who finishes
 Google's consent leaves a row with their name, email and picture. The daily
-keep-alive deletes those (#275): `uninvited_auth_users()` (0079, service role
+keep-alive deletes those (#275): `uninvited_auth_users()` (0091, service role
 only) lists up to 50 a run that are a day old or more and have no profile,
 invite or ledger row, and `pruneUninvitedUsers` (`lib/auth/prune-uninvited-users.ts`)
 deletes each through the Auth admin API. A delete that fails is reported
@@ -496,16 +556,33 @@ time zone (`lib/markets/weekly-close.ts`), so a weekly market keeps its
 local time across a DST change. Nothing is written until the form is
 submitted through `create_market` as usual.
 
-**Odds.** Pari-mutuel with a seed. A parlay leg locks its odds from
-everyone's money but the bettor's own (0046), and the slip previews the
-same number. Each outcome's pool counts
-`seed_per_outcome` virtual DC on top of real stakes, so a new market
-already shows even odds, and one-sided betting never pays 1.00×.
-`effectivePools` in `lib/markets/odds.ts` is the one place the app does
-this sum. It matches `resolve_market`, so the percentages, charts, payout
-estimates and My bets results all agree with what's actually paid.
-Parlay legs lock their odds at placement, and parlays are paid by the
-house, not from market pools (the #51 decision).
+**Odds.** Pari-mutuel. Winners split exactly the real pool (0074):
+`pool_payout()` in SQL, which `resolve_market_core` pays with, and
+`poolPayout` / `soloPayout` in `lib/markets/odds.ts` and
+`lib/parlays/odds.ts`, which the market page's "× payout per DC", the slip's
+"Pays ~" and My bets (`betResult`) use; `tests/db/seeded-odds.test.ts`
+keeps the two equal. The seed is display only: each outcome's chance
+counts `seed_per_outcome` virtual DC on top of real stakes, so a new
+market shows an even split, through `effectivePools` (mirrored by
+`market_sparklines`). A resolution from before 0074 counted the seed in its
+payouts, recorded as `market_resolutions.payout_seed`, so history still
+reads what was paid.
+
+Parlays are paid by the house, not from market pools (the #51 decision,
+kept in 0074): one pool belongs to its solo winners, and a multi-leg win is
+a joint event no single pool can fund. A leg's odds are set when its market
+closes or settles, whichever comes first, from the final pool without the
+parlay owner's own money and without the seed (`pick_quote`: others' total
+÷ others' DC on the pick, to four places, at most `max_leg_odds` (5), or 1
+when the market is under the floor or nobody else backed the pick). One
+member's pending parlays with a leg on any one market can pay at most
+`max_payout` between them, each counted at the most it could pay. Nobody can bet, cancel or remove a
+bet after close, so that pool is final. Until then the slip and the parlay
+views show `~` estimates from the same function (`pick_quotes`,
+`parlay_leg_odds`). `parlay_limits()` holds the caps and the floor,
+mirrored by `MAX_PICKS`, `MAX_MULTIPLIER`, `MAX_PAYOUT`, `MIN_LEG_POOL`,
+`MIN_LEG_BETTORS` and `MAX_LEG_ODDS` in `lib/parlays/odds.ts`; `tests/db/seeded-odds.test.ts`
+keeps them equal.
 
 **Resolution and proof.** The resolve form needs a reason and can carry
 photos, files and links. Submitting it opens a confirmation naming the
@@ -515,6 +592,28 @@ role changes ask the same way. Files upload straight from the browser to the
 private `proof` bucket (`lib/proof/upload.ts`), then `record_proof`
 checks the paths when the RPC runs. Pages show proof through short-lived
 signed URLs made with the viewer's own session.
+
+**Storage caps and retention (#253, 0089).** The free plan holds 1 GB across
+the `proof` and `avatars` buckets, so the limits live in the database, not
+only the browser. The `proof` bucket takes 3 MB a file and images, PDF and
+plain text only. `proof_insert` also calls `proof_upload_quota_ok()`: at most
+30 uploads and 60 MB per member per rolling day. `record_proof` takes at
+most 5 attachments, 3 of them files, 6 MB of files together (read from
+Storage's own object size, not the client's). `proof_delete_own` only lets a
+member delete an upload no `proof_attachments` row holds (`proof_is_attached`, so RLS can't hide the row; `record_proof` and a unique index on `storage_path` keep one file to one attachment), so submitted proof
+can't be removed. The browser shrinks photos to 1200px at quality 0.7 (WebP,
+JPEG where WebP can't be encoded; `lib/proof/downscale.ts`) and mirrors the
+caps in `lib/proof/types.ts`. The daily keep-alive runs three storage steps:
+`proof retention` (`expired_proof_attachments(30, 90)` lists attachments of
+task submissions reviewed over 30 days ago and of resolutions over 90 days
+old; it removes the files, then `mark_proof_expired` stamps
+`proof_attachments.expired_at` and keeps the row, and `toProofViews` /
+`ProofList` show "expired" instead of a link), `avatar cleanup`
+(`stray_avatar_objects`: avatar files over a day old that no
+`profiles.avatar_path` names, which also covers a replaced avatar whose
+remove failed) and `storage usage` (`storage_usage()`: its `storageMb` is in
+the cron response, and the step fails, so the heartbeat pings `/fail`, past
+800 MB). That is the ops check: when it fails, shorten the retention windows.
 
 **Live updates.** A page declares the tables it shows with
 `<LiveTables subscriptions={pageSubscriptions.x(…)}>`. `LiveRefresh` keeps
@@ -551,13 +650,33 @@ each signed-in route has a skeleton.
 subscribes this device's service worker with the VAPID public key, and
 saves the subscription (`lib/push/actions.ts`); its "on" state is this
 device's `pushManager.getSubscription()` matching one of the member's
-saved endpoints. Signing out deletes this device's subscription first
+saved endpoints. A device that turned them on remembers it in
+`localStorage` (`dd-push:<member id>`, `lib/push/client.ts`; cleared on
+turning off and on sign-out), and `PushResync` in the signed-in layout uses
+that on every load (#257): with permission still granted it re-makes a
+subscription the browser dropped or made with an old VAPID key, and saves
+the current one again when its endpoint changed or the server was last told
+over a day ago (which also clears a failure streak). The service worker
+handles `pushsubscriptionchange` too: it resubscribes with the old key and
+posts the result to `/api/push/resync`, a JSON-only route that makes the same
+save as Settings. A device turned on before this shipped gets its memory the
+next time Settings is opened. Signing out deletes this device's subscription first
 (`app/(app)/settings/sign-out-button.tsx`), so a shared phone's next member
 never sees the last one's notifications. Its four checkboxes save `notification_prefs`. Sending is
 server-only (`lib/push/send.ts`, `web-push`): it reads the recipients'
 subscriptions with the service-role client, sends up to six at a time, and
-deletes a subscription whose push service answers 404 or 410. It never
-throws; failures are logged. Resolving, overriding, voiding, approving
+deletes a subscription whose push service answers 404 or 410, and reports
+failures to `record_push_results` (0076), which prunes a device that keeps
+failing. Only a 4xx other than 404, 410 and 429 counts against a device, with one
+rule for 401/403, which are the device's (a subscription made with an
+older VAPID key) or ours (wrong credentials, which every device answers):
+decided over the whole run. If the run delivered at least one push they
+count against the device (and its market towards giving up); if it
+delivered nothing they are systemic. `sendClosingAlerts` collects them in
+a `PushRun` and settles them after both sends
+(`settleCredentialFailures`); a lone `sendPush` call applies the same rule
+to itself. `PushResult.systemic` counts what is never recorded (no
+status, 429, 5xx, and 401/403 of a run that delivered nothing). It never throws; failures are logged. Resolving, overriding, voiding, approving
 or rejecting a task and creating a market call `afterAction()`
 (`lib/push/notify.ts`), which runs the send through Next's `after()`, so
 the member's action never waits on it; the recipients are read from the
@@ -577,9 +696,17 @@ is only a backup now; the route claims each market in `push_log` once a
 device has its push (`claim_push_log`'s `on conflict do nothing`), so two
 callers never repeat a push. Vercel Hobby cron runs once a day, so the
 daily keep-alive calls `sendClosingAlerts` itself as the last backstop. Each
-successful call stamps `cron_heartbeats` (#149); a run whose every push
-failed returns 502 and leaves the stamp alone, so the warning below covers
-a dead push service too (#207). The
+call that read its queue stamps `cron_heartbeats` (#149), whether or not its
+pushes were delivered: a failed push is logged and counted in the response
+(`failed`), not a 502 and not a missing stamp, so one broken device can't keep
+the warning below on or make the backup workflow email (#257). A run that
+delivered nothing while any failure was systemic (`systemic` summed over the
+whole run, so a one-device group alarms too) returns 502 and leaves the stamp
+alone. `sendClosingAlerts` also takes a lease
+(`claim_cron_lease`, 120 seconds, table `cron_leases`) so overlapping callers
+never double-send, and `deliverPerMarket` records a market whose devices all
+rejected the push (and none of the failures systemic) in `push_attempts` (`record_push_failures`), which claims it in
+`push_log` once its first failure is over 24 hours old. The
 Admin layout shows admins and the owner a warning (`ClosingAlertsWarning`,
 `lib/admin/cron-health.ts`) once the last stamp is over 30 minutes old or
 missing. Only this route stamps it: the daily keep-alive doesn't,
@@ -694,12 +821,13 @@ value never stops production booting.
   Vercel preview deploys are off on purpose (see the README).
 - **CI** (`.github/workflows/ci.yml`) runs on every PR (not on `main`: the
   ruleset requires a PR to be up to date, so the tested head is the merge
-  result) as three parallel jobs: `static` (lint, the type check), `db`
+  result) as three parallel jobs: `static` (the migration-order check,
+  lint, the type check), `db`
   (a throwaway local Supabase, the generated-types drift check, Vitest's
   `db` project, serially) and `web` (Vitest's `unit` project, a production
   build with `.next/cache` restored, Playwright against its own local
   Supabase). `ci-ok` needs all three and is the ruleset's one required
-  check. Both Supabase jobs start the stack through
+  check, with no bypass. Both Supabase jobs start the stack through
   `.github/actions/local-supabase`, which keeps Supabase's images in the
   Actions cache per CLI version (loaded before `supabase start`, saved
   after a miss): they come from AWS's public registry, whose anonymous data
@@ -712,17 +840,28 @@ value never stops production booting.
   weekly PR, so don't bump one by hand to a bare tag.
 - **Deploys** (`.github/workflows/deploy-production.yml`): Vercel's Git
   integration is off for `main` (`vercel.json`'s `git.deploymentEnabled`).
-  Each push to `main` runs the workflow instead, one at a time and with no
-  approval step: when `supabase/migrations/` changed, a dry run and then
-  the push; then a POST to the Vercel deploy hook in the
-  `VERCEL_DEPLOY_HOOK_URL` repository secret. With a `VERCEL_TOKEN` secret
+  Each push to `main` runs the workflow instead, one at a time (waiting runs
+  queue in order, `queue: max`) and with no approval step: a dry run against
+  production; when anything is pending, `scripts/backup/backup.sh`'s
+  encrypted dump and then the push; then, if the run's commit is still
+  `main`'s head, a POST to the Vercel deploy hook in the
+  `VERCEL_DEPLOY_HOOK_URL` secret. Every job runs only from `main` and takes
+  its secrets from the GitHub `Production` environment, which only `main`
+  may deploy to. With a `VERCEL_TOKEN` secret
   the run then polls Vercel's deployments API for this commit's production
   deployment and fails when it ends in ERROR or CANCELED, or isn't live
   within 15 minutes; without the token it says so and stops at the hook,
   and only Vercel's own email reports a failed build. GitHub's
   "failed workflows only" notification is what turns a failed migration,
   hook call, build or closing-alerts backup ping into an email. Redeploy by
-  hand with "Run workflow" on it.
+  hand with "Run workflow" on it, from `main`.
+- **Backups** (`.github/workflows/backups.yml`, `scripts/backup/`): a
+  nightly `supabase db dump` of roles, schema and data (auth and storage
+  rows included) and a weekly copy of the `proof` and `avatars` buckets,
+  each age-encrypted and committed to the private `dwell-duel-backups`
+  repo, 60 days kept (and always the newest 14 per folder). Each job first
+  runs `mask-secrets.sh` as its own step, and `backup.sh` refuses to run in
+  Actions without it. `docs/OPERATIONS.md` is the runbook.
 - **Checking the installed app** (`npm run check:ios`,
   `scripts/ios-standalone-check.mjs`): Playwright has no standalone mode,
   so the installed iPhone app is checked in the iOS Simulator by hand before

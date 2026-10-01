@@ -4,7 +4,7 @@ import { pgQuery } from './pg-query'
 import { seedMembers, makeAuthUserWithoutProfile, clientFor, ensureInvited, type Member } from './fixtures'
 import { pruneUninvitedUsers } from '@/lib/auth/prune-uninvited-users'
 
-// Pruning Google sign-ins that were never invited (#275, 0079).
+// Pruning Google sign-ins that were never invited (#275, 0091).
 
 let alice: Member
 

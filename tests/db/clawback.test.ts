@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import {
   seedMembers,
   clientFor,
@@ -8,16 +7,16 @@ import {
   ensureInvited,
   makeMember,
   type Member,
-  type TestMarket, giveRole } from './fixtures'
+  type TestMarket, giveRole, backers } from './fixtures'
 import { pgQuery } from './pg-query'
 import { CLAWBACK_PREFIX } from '@/lib/markets/clawback'
 
 let alice: Member
 let bob: Member
 let carol: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let carolClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let carolClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -31,7 +30,7 @@ beforeEach(async () => {
   await ensureInvited(bobClient)
 })
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number) {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number) {
   const { error } = await client.rpc('place_bet', {
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcomeIndex],
@@ -151,14 +150,17 @@ describe('resolve_market override: resolution payouts', () => {
 })
 
 describe('resolve_market override: won parlays', () => {
-  // Both markets are seeded 5 on Yes and 15 on No, so Yes locks at 4x and Bob's 10 DC parlay on
-  // both Yeses pays 160 once they win.
+  // Both markets hold 13 on Yes and 39 on No (Alice 5 and 15, Backer1 8 on Yes, Backer2 24 on
+  // No), so Yes prices at 4x and Bob's 10 DC parlay on both Yeses pays 160 once they win.
   async function parlayOnBothYeses(): Promise<{ a: TestMarket; b: TestMarket; parlayId: string }> {
     const a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Market A' })
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Market B' })
+    const [first, second] = await backers()
     for (const market of [a, b]) {
       await bet(aliceClient, market, 0, 5)
       await bet(aliceClient, market, 1, 15)
+      await bet(first.client, market, 0, 8)
+      await bet(second.client, market, 1, 24)
     }
     const { data, error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0], b.outcomeIds[0]], p_stake: 10 })
     if (error) throw error
@@ -174,7 +176,7 @@ describe('resolve_market override: won parlays', () => {
 
   it('adds the parlay credit to what a member owes, blocks the override and changes nothing', async () => {
     const { a, b, parlayId } = await parlayOnBothYeses()
-    // Bob also backs Yes on A directly: A's pool is then 25 with 10 on Yes, so Yes pays him 12.
+    // Bob also backs Yes on A directly: A's pool is then 57 with 18 on Yes, so Yes pays him 15.
     await bet(bobClient, a, 0, 5)
     await resolveBothYes(a, b)
     await spendDownTo(bob, 50)
@@ -184,8 +186,8 @@ describe('resolve_market override: won parlays', () => {
     const { error } = await resolve(a, 1)
 
     expect(error?.code).toBe('P0001')
-    // 12 from A's payout plus the parlay's 160. Alice owes A's other 12, which she has.
-    expect(shortList(error?.message)).toEqual([{ display_name: 'Bob', owed: 172, balance: 50 }])
+    // 15 from A's payout plus the parlay's 160. Alice and Backer1 can pay back their own A payouts.
+    expect(shortList(error?.message)).toEqual([{ display_name: 'Bob', owed: 175, balance: 50 }])
     expect(await snapshot(a)).toEqual(before)
   })
 
@@ -220,7 +222,7 @@ describe('resolve_market and void_market lock order', () => {
 
   it('credits and debits members in profile order, so concurrent resolutions cannot deadlock', async () => {
     const resolveLoops = memberLoops(await definition('resolve_market_core(uuid,uuid)'))
-    const voidLoops = memberLoops(await definition('void_market(uuid)'))
+    const voidLoops = memberLoops(await definition('void_market(uuid, text)'))
 
     expect(resolveLoops).toHaveLength(3)
     expect(voidLoops).toHaveLength(1)
@@ -236,7 +238,7 @@ describe('resolve_market and void_market lock order', () => {
 
   it('locks every profile it could touch, in id order, in one statement before any write', async () => {
     const resolveDef = await definition('resolve_market_core(uuid,uuid)')
-    const voidDef = await definition('void_market(uuid)')
+    const voidDef = await definition('void_market(uuid, text)')
 
     expect(resolveDef).toMatch(upfrontLock)
     expect(voidDef).toMatch(upfrontLock)

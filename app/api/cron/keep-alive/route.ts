@@ -29,6 +29,8 @@ import { pruneUninvitedUsers } from '@/lib/auth/prune-uninvited-users'
 // legacy 10s limit.
 export const maxDuration = 60
 
+const STORAGE_ALERT_BYTES = 800 * 1024 * 1024
+
 type Db = ReturnType<typeof serviceRoleClient>
 
 // A step returns its report, or throws; the runner turns a throw into a named failure.
@@ -54,6 +56,50 @@ const steps: { name: string; run: (db: Db) => Promise<Record<string, unknown>> }
         if (removeErr) throw removeErr
       }
       return { strayProofRemoved: names.length }
+    },
+  },
+  {
+    // Reviewed task proof expires after 30 days and resolution proof after 90 (#253, HOW-IT-WORKS).
+    // The files go first, then the rows are stamped, so a failure in between is retried next run.
+    name: 'proof retention',
+    run: async (db) => {
+      const { data, error } = await db.rpc('expired_proof_attachments', { p_task_days: 30, p_resolution_days: 90, p_limit: 500 })
+      if (error) throw error
+      const rows = (data ?? []) as { id: string; storage_path: string }[]
+      if (rows.length > 0) {
+        const { error: removeErr } = await db.storage.from('proof').remove(rows.map((r) => r.storage_path))
+        if (removeErr) throw removeErr
+        const { error: markErr } = await db.rpc('mark_proof_expired', { p_ids: rows.map((r) => r.id) })
+        if (markErr) throw markErr
+      }
+      return { proofExpired: rows.length }
+    },
+  },
+  {
+    // Avatar files no profile points at: a failed remove on replace, or a removed member (0077).
+    name: 'avatar cleanup',
+    run: async (db) => {
+      const { data, error } = await db.rpc('stray_avatar_objects', { p_limit: 500 })
+      if (error) throw error
+      const names = ((data ?? []) as { name: string }[]).map((r) => r.name)
+      if (names.length > 0) {
+        const { error: removeErr } = await db.storage.from('avatars').remove(names)
+        if (removeErr) throw removeErr
+      }
+      return { strayAvatarsRemoved: names.length }
+    },
+  },
+  {
+    // The free plan holds 1 GB across every bucket. Failing this step past 80% pages through the
+    // same channel as any other failed step, in time to shorten the retention windows.
+    name: 'storage usage',
+    run: async (db) => {
+      const { data, error } = await db.rpc('storage_usage')
+      if (error) throw error
+      const usage = (data ?? []) as { bucket_id: string; objects: number | string; bytes: number | string }[]
+      const bytes = usage.reduce((sum, b) => sum + Number(b.bytes), 0)
+      if (bytes > STORAGE_ALERT_BYTES) throw new Error(`Storage is at ${Math.round(bytes / 1048576)} MB of the 1 GB free plan`)
+      return { storageMb: Math.round(bytes / 1048576) }
     },
   },
   {

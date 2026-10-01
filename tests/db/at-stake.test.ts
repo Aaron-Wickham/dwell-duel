@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, giveRole } from './fixtures'
+import { serviceClient, type TestClient } from './helpers'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, giveRole, backLeg } from './fixtures'
 import { getAtStake } from '@/lib/home/at-stake'
 
 let alice: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   let bob: Member
@@ -30,6 +29,7 @@ describe('my_at_stake', () => {
       const { error } = await bobClient.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0], p_amount: amount })
       if (error) throw error
     }
+    for (const market of [a, b]) await backLeg(market, 0)
     const { error: parlayErr } = await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[1], b.outcomeIds[1]], p_stake: 3 })
     if (parlayErr) throw parlayErr
     await aliceClient.rpc('place_bet', { p_market_id: a.marketId, p_outcome_id: a.outcomeIds[0], p_amount: 9 })

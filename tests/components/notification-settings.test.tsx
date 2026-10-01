@@ -75,7 +75,7 @@ function unstubBrowser() {
 }
 
 function renderCard(props: Partial<Parameters<typeof NotificationSettings>[0]> = {}) {
-  return render(<NotificationSettings publicKey={PUBLIC_KEY} endpoints={[]} prefs={DEFAULT_NOTIFICATION_PREFS} reviewer={false} {...props} />)
+  return render(<NotificationSettings userId="u-1" publicKey={PUBLIC_KEY} endpoints={[]} prefs={DEFAULT_NOTIFICATION_PREFS} reviewer={false} {...props} />)
 }
 
 beforeEach(() => {

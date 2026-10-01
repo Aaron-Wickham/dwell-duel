@@ -1,5 +1,5 @@
 import { downscaleImage } from './downscale'
-import { PROOF_MAX_BYTES, type ProofDraft, type ProofRecord } from './types'
+import { PROOF_MAX_BYTES, PROOF_MAX_FILES, PROOF_MAX_TOTAL_BYTES, type ProofDraft, type ProofRecord } from './types'
 
 // Loaded at upload time, so the pages with a proof picker don't ship the Supabase client up front.
 async function proofBucket() {
@@ -18,14 +18,20 @@ export async function uploadProof(drafts: ProofDraft[], prefix: string): Promise
   const bucket = await proofBucket()
   const uploaded: string[] = []
   const records: ProofRecord[] = []
+  let totalBytes = 0
   try {
+    if (drafts.filter((d) => d.kind !== 'link').length > PROOF_MAX_FILES) {
+      throw new Error(`Add at most ${PROOF_MAX_FILES} photos or files.`)
+    }
     for (const draft of drafts) {
       if (draft.kind === 'link') {
         records.push({ kind: 'link', url: draft.url })
         continue
       }
       const file = draft.kind === 'image' ? await downscaleImage(draft.file) : draft.file
-      if (file.size > PROOF_MAX_BYTES) throw new Error(`${draft.file.name} is over 10 MB.`)
+      if (file.size > PROOF_MAX_BYTES) throw new Error(`${draft.file.name} is over 3 MB.`)
+      totalBytes += file.size
+      if (totalBytes > PROOF_MAX_TOTAL_BYTES) throw new Error('Those files are over 6 MB together.')
       const path = `${prefix}${crypto.randomUUID()}/${safeName(file.name)}`
       const { error } = await bucket.upload(path, file, { contentType: file.type || undefined })
       if (error) throw new Error(`${draft.file.name} didn’t upload: ${error.message}`)

@@ -3,6 +3,7 @@
 import { LogOut } from 'lucide-react'
 import { signOut } from '@/lib/auth/sign-out'
 import { deletePushSubscriptionAction } from '@/lib/push/actions'
+import { clearAllPushMemory } from '@/lib/push/client'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 
 // A service worker that never answers mustn't hold up signing out.
@@ -12,6 +13,7 @@ const STOP_PUSH_TIMEOUT_MS = 5_000
 // it, then the browser's subscription. Either failing still unsubscribes what it can; a row left
 // behind is deleted the next time a push to it comes back 410.
 async function stopPushOnThisDevice(): Promise<void> {
+  clearAllPushMemory(localStorage)
   if (!('serviceWorker' in navigator)) return
   const registration = await navigator.serviceWorker.getRegistration()
   const subscription = await registration?.pushManager.getSubscription()

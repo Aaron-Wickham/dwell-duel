@@ -13,6 +13,8 @@ import { LiveRefresh } from '@/components/live/live-refresh'
 import { LiveTables, LiveTablesProvider } from '@/components/live/live-tables'
 import { NavDepthTracker } from '@/lib/nav/nav-depth'
 import { CardLinkClick } from '@/components/ui/card-link-click'
+import { PushResync } from '@/components/push/push-resync'
+import { vapidKeys } from '@/lib/push/config'
 import { Toaster } from '@/components/ui/toaster'
 import { OfflineBanner } from '@/components/offline/offline-banner'
 import { FALLBACK_NAME } from '@/lib/profile/fallback-name'
@@ -24,7 +26,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   const [{ data: profile, error }, role, slipView] = await Promise.all([
     supabase.from('profiles').select('balance, display_name, avatar_path').eq('id', user.id).maybeSingle(),
     getRole(supabase),
-    readSlip().then((slip) => getSlipView(supabase, slip, user.id)),
+    readSlip().then((slip) => getSlipView(supabase, slip)),
   ])
   if (error) throw error
   const isAdmin = atLeast(role, 'admin')
@@ -42,6 +44,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
       : null,
   ])
   const alertTables = reviewSubscriptions(role)
+  const vapid = vapidKeys()
 
   return (
     <LiveTablesProvider userId={user.id}>
@@ -68,6 +71,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
           <SlipSpacer />
         </main>
         <SlipSheet />
+        {vapid && <PushResync userId={user.id} publicKey={vapid.publicKey} />}
         <Toaster />
         <LiveRefresh />
       </SlipProvider>

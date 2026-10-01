@@ -87,6 +87,14 @@ begin
     return new;
   end if;
 
+  -- A comment replayed with its attempt key (0083) is about to hit the key's unique index and post
+  -- nothing, so it doesn't count: a member at the limit whose response was lost still sees it posted.
+  if v_action = 'comment' and (to_jsonb(new) ->> 'attempt_key') is not null and exists (
+    select 1 from public.market_comments c where c.attempt_key = (to_jsonb(new) ->> 'attempt_key')::uuid
+  ) then
+    return new;
+  end if;
+
   for v_limit in select l.max_writes, l.window_seconds from public.write_limits() l where l.action = v_action loop
     insert into public.write_rate_counters as c (profile_id, action, window_seconds, window_start, writes)
     values (v_owner, v_action, v_limit.window_seconds, now(), 1)

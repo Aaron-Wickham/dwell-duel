@@ -66,6 +66,7 @@ export default async function SettingsPage() {
         <div className="flex flex-col gap-5 md:gap-7">
           <SectionCard title="Notifications" titleId="settings-notifications">
             <NotificationSettings
+              userId={user.id}
               publicKey={vapidKeys()?.publicKey ?? null}
               endpoints={notifications.endpoints}
               prefs={notifications.prefs}

@@ -1,7 +1,7 @@
 import type { KnownError } from '@/lib/errors/friendly-error'
 import { RATE_LIMIT_ERRORS, TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 
-// create_market's raises (supabase/migrations/0043), the write limit (0078) and the constraints its
+// create_market's raises (supabase/migrations/0043), the write limit (0090) and the constraints its
 // inserts can trip.
 export const CREATE_MARKET_ERRORS: readonly KnownError<'title' | 'description' | 'close_at' | 'outcomes' | 'line'>[] = [
   { match: 'not invited', formError: 'Only invited members can create markets.' },

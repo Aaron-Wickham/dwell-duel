@@ -6,6 +6,8 @@ import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
 import { RATE_LIMIT_ERRORS, TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { isUuid } from '@/lib/uuid'
 
+const ATTEMPT_KEY_INDEX = 'market_comments_attempt_key_idx'
+
 export type CommentState = { formError?: string; posted?: boolean } | undefined
 
 export async function postCommentAction(marketId: string, _prev: CommentState, formData: FormData): Promise<CommentState> {
@@ -21,8 +23,13 @@ export async function postCommentAction(marketId: string, _prev: CommentState, f
   if (!body) return { formError: 'Write a comment first.' }
   if (body.length > TEXT_LIMITS.commentBody) return { formError: tooLong('A comment', TEXT_LIMITS.commentBody) }
 
-  const { error } = await supabase.from('market_comments').insert({ market_id: marketId, profile_id: user.id, body })
-  if (error) {
+  // useOffline replays an action whose response was lost; the key makes the replay a no-op (#258).
+  const attemptKey = String(formData.get('idempotency_key') ?? '')
+  const { error } = await supabase
+    .from('market_comments')
+    .insert({ market_id: marketId, profile_id: user.id, body, ...(isUuid(attemptKey) ? { attempt_key: attemptKey } : {}) })
+  // 23505 on the key's index: this attempt already posted, which is what was asked for.
+  if (error && !(error.code === '23505' && error.message.includes(ATTEMPT_KEY_INDEX))) {
     // 23503: the market was deleted while the form was open.
     if (error.code === '23503') return { formError: 'This market no longer exists.' }
     if (error.message === RATE_LIMIT_ERRORS.comment.match) return { formError: RATE_LIMIT_ERRORS.comment.formError }

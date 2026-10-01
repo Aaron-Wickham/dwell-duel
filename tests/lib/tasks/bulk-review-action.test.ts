@@ -1,6 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { supabase, revalidatePath } = vi.hoisted(() => ({ supabase: { rpc: vi.fn() }, revalidatePath: vi.fn() }))
+const { supabase, revalidatePath, mine, filters } = vi.hoisted(() => {
+  const mine = { data: [] as { id: string }[] }
+  const filters: [string, string][] = []
+  const chain: Record<string, unknown> = {}
+  chain.select = () => chain
+  chain.in = () => chain
+  // The last filter the action applies is the status, which ends the chain.
+  chain.eq = (col: string, value: string) => {
+    filters.push([col, value])
+    return col === 'status' ? Promise.resolve({ data: mine.data }) : chain
+  }
+  return { supabase: { rpc: vi.fn(), from: vi.fn(() => chain) }, revalidatePath: vi.fn(), mine, filters }
+})
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase, user: { id: 'admin-1' } }) }))
 vi.mock('next/cache', () => ({ revalidatePath }))
 
@@ -16,6 +28,9 @@ function selection(ids: string[], reason?: string) {
 beforeEach(() => {
   supabase.rpc.mockReset()
   revalidatePath.mockReset()
+  supabase.from.mockClear()
+  mine.data = []
+  filters.length = 0
 })
 
 describe('bulkApproveTaskCompletionsAction', () => {
@@ -49,6 +64,23 @@ describe('bulkApproveTaskCompletionsAction', () => {
     const state = await bulkApproveTaskCompletionsAction(undefined, selection(['c-3', 'c-2', 'c-1']))
 
     expect(state).toEqual({ summary: '1 approved, 2 failed: This submission has already been reviewed.' })
+  })
+
+  // A lost response replayed by Next: the first call reviewed them, so they come back "not pending".
+  it('counts rows this reviewer already approved as done on a replay, not failed', async () => {
+    supabase.rpc.mockResolvedValue({
+      data: [
+        { id: 'c-1', ok: false, error: 'completion is not pending' },
+        { id: 'c-2', ok: false, error: 'completion is not pending' },
+      ],
+      error: null,
+    })
+    mine.data = [{ id: 'c-1' }]
+
+    const state = await bulkApproveTaskCompletionsAction(undefined, selection(['c-1', 'c-2']))
+
+    expect(filters).toEqual([['reviewed_by', 'admin-1'], ['status', 'approved']])
+    expect(state).toEqual({ summary: '1 approved, 1 failed: This submission has already been reviewed.' })
   })
 
   it('fails every selected completion when the call itself fails', async () => {
@@ -120,5 +152,17 @@ describe('bulkRejectTaskCompletionsAction', () => {
     // Raw Postgres text never reaches a member (#203).
     expect(state).toEqual({ summary: '0 rejected, 2 failed: Something went wrong. Try again.' })
     expect(log).toHaveBeenCalled()
+  })
+})
+
+describe('bulkRejectTaskCompletionsAction replay', () => {
+  it('counts rows this reviewer already rejected as done', async () => {
+    supabase.rpc.mockResolvedValue({ data: [{ id: 'c-1', ok: false, error: 'completion is not pending' }], error: null })
+    mine.data = [{ id: 'c-1' }]
+
+    const state = await bulkRejectTaskCompletionsAction(undefined, selection(['c-1'], 'Blurry'))
+
+    expect(filters).toContainEqual(['status', 'rejected'])
+    expect(state).toEqual({ summary: '1 rejected.' })
   })
 })

@@ -10,7 +10,7 @@ import type { ProofRecord } from '@/lib/proof/types'
 export type ActionState = { formError?: string; field?: 'note' } | undefined
 
 // submit_task_completion's raises (0019, 0042, 0046), its attachment checks included, and the write
-// limit (0078).
+// limit (0090).
 const SUBMIT_TASK_ERRORS: readonly KnownError<'note'>[] = [
   { match: 'not invited', formError: 'Only invited members can submit a task.' },
   { match: 'task not found or inactive', formError: 'This task is no longer available.' },

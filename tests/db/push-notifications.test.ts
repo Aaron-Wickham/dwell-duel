@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { rpcLoose, serviceClient, type RpcName, type TestClient } from './helpers'
 import { pgQuery } from './pg-query'
-import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, createTestTask, ensureInvited, type Member, giveRole } from './fixtures'
+import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, createTestTask, ensureInvited, type Member, giveRole, backLeg } from './fixtures'
 import { isPushEndpoint, PUSH_HOSTS } from '@/lib/push/subscription'
 
 let alice: Member
@@ -10,11 +9,11 @@ let bob: Member
 let carol: Member
 let dave: Member
 let admin: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let carolClient: SupabaseClient
-let daveClient: SupabaseClient
-let adminClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let carolClient: TestClient
+let daveClient: TestClient
+let adminClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -52,8 +51,8 @@ async function closeNow(marketId: string): Promise<void> {
   if (error) throw error
 }
 
-async function rpcOk<T>(client: SupabaseClient, fn: string, args?: Record<string, unknown>): Promise<T> {
-  const { data, error } = await client.rpc(fn, args)
+async function rpcOk<T>(client: TestClient, fn: RpcName, args?: Record<string, unknown>): Promise<T> {
+  const { data, error } = await rpcLoose(client, fn, args)
   if (error) throw error
   return data as T
 }
@@ -178,7 +177,7 @@ describe('push_subscriptions RLS', () => {
       ['push_new_market', { p_market_id: '00000000-0000-0000-0000-000000000000' }],
       ['push_wants', { p_profile_id: alice.id, p_kind: 'results' }],
     ] as const) {
-      const { error } = await adminClient.rpc(fn, args)
+      const { error } = await rpcLoose(adminClient, fn, args)
       expect(error?.code, fn).toBe('42501')
     }
   })
@@ -241,6 +240,8 @@ describe('recipients', () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Will it rain?', seed: 20 })
     const other = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Other leg', seed: 20 })
     await rpcOk(bobClient, 'place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0], p_amount: 10 })
+    // Backer1 and Backer2 put 25 each on No in both markets, so Carol's parlay can have them as legs.
+    for (const m of [market, other]) await backLeg(m, 1)
     await rpcOk(carolClient, 'place_parlay', { p_outcome_ids: [market.outcomeIds[0], other.outcomeIds[0]], p_stake: 5 })
     await rpcOk(daveClient, 'place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[1], p_amount: 10 })
     const { data: daveBet } = await serviceClient().from('bets').select('id').eq('profile_id', dave.id).single()
@@ -253,14 +254,15 @@ describe('recipients', () => {
 
     const rows = byProfile(await rpcOk<ResultRow[]>(serviceClient(), 'push_market_result', { p_market_id: market.marketId }))
     expect(Object.keys(rows).sort()).toEqual([admin.id, bob.id, carol.id].sort())
-    // 10 × (20 real + 40 seed) ÷ (10 + 20), rounded down.
-    expect(rows[bob.id]).toMatchObject({ status: 'resolved', outcome_label: 'Yes', is_override: false, won: 20, has_solo: true })
+    // Bob's share of the real pool: 10 × 70 ÷ 10.
+    expect(rows[bob.id]).toMatchObject({ status: 'resolved', outcome_label: 'Yes', is_override: false, won: 70, has_solo: true })
     expect(rows[carol.id]).toMatchObject({ won: 0, has_solo: false })
     expect(rows[admin.id]).toMatchObject({ won: 0, has_solo: true })
 
     await rpcOk(adminClient, 'resolve_market', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[1], p_note: 'Recount' })
     const overridden = byProfile(await rpcOk<ResultRow[]>(serviceClient(), 'push_market_result', { p_market_id: market.marketId }))
-    expect(overridden[admin.id]).toMatchObject({ outcome_label: 'No', is_override: true, won: 20 })
+    // 10 × 70 ÷ 60 = 11.67, rounded down.
+    expect(overridden[admin.id]).toMatchObject({ outcome_label: 'No', is_override: true, won: 11 })
     expect(overridden[bob.id]).toMatchObject({ is_override: true, won: 0 })
   })
 
@@ -271,7 +273,7 @@ describe('recipients', () => {
     await subscribe(bob)
     await subscribe(carol)
     await setPrefs(carol, { results: false })
-    await rpcOk(aliceClient, 'void_market', { p_market_id: market.marketId })
+    await rpcOk(aliceClient, 'void_market', { p_market_id: market.marketId, p_reason: 'Voided in a test' })
 
     const rows = await rpcOk<ResultRow[]>(serviceClient(), 'push_market_result', { p_market_id: market.marketId })
     expect(rows).toEqual([
@@ -366,7 +368,7 @@ async function setRole(m: Member, role: 'reviewer' | 'admin' | 'owner'): Promise
 }
 
 // A reviewer on the invite list, as a real one always is: push_wants skips anyone who isn't.
-async function makeReviewer(name: string): Promise<{ member: Member; client: SupabaseClient }> {
+async function makeReviewer(name: string): Promise<{ member: Member; client: TestClient }> {
   const member = await makeMember(name)
   await setRole(member, 'reviewer')
   const client = await clientFor(member)
@@ -507,10 +509,124 @@ describe('review alerts (0058)', () => {
     await closeNow(closed.marketId)
     await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Not closed yet' })
 
-    const counts = async (c: SupabaseClient) => (await rpcOk<{ tasks: number; markets: number }[]>(c, 'my_review_counts'))[0]
+    const counts = async (c: TestClient) => (await rpcOk<{ tasks: number; markets: number }[]>(c, 'my_review_counts'))[0]
     expect(await counts(aliceClient)).toEqual({ tasks: 0, markets: 0 })
     expect(await counts(reviewerClient)).toEqual({ tasks: 2, markets: 0 })
     // The admin's own submission never counts for them.
     expect(await counts(adminClient)).toEqual({ tasks: 1, markets: 1 })
+  })
+})
+
+describe('record_push_results pruning (#257)', () => {
+  const ago = (ms: number) => new Date(Date.now() - ms).toISOString()
+  const HOUR = 3_600_000
+  const DAY = 24 * HOUR
+
+  async function row(m: Member, device: string) {
+    const { data, error } = await serviceClient()
+      .from('push_subscriptions')
+      .select('id, failure_count, first_failed_at, last_success_at')
+      .eq('endpoint', endpointFor(m, device))
+      .maybeSingle()
+    if (error) throw error
+    return data
+  }
+  const record = (delivered: string[], failed: string[]) =>
+    rpcOk<number>(serviceClient(), 'record_push_results', { p_delivered: delivered, p_failed: failed })
+
+  it('counts failures, resets on delivery, and is callable by the service role only', async () => {
+    await subscribe(alice)
+    const id = (await row(alice, 'phone'))!.id
+
+    await record([], [id])
+    await record([], [id])
+    expect(await row(alice, 'phone')).toMatchObject({ failure_count: 2 })
+    expect((await row(alice, 'phone'))!.first_failed_at).not.toBeNull()
+
+    await record([id], [])
+    expect(await row(alice, 'phone')).toMatchObject({ failure_count: 0, first_failed_at: null })
+    expect((await row(alice, 'phone'))!.last_success_at).not.toBeNull()
+
+    const { error } = await aliceClient.rpc('record_push_results', { p_delivered: [], p_failed: [id] })
+    expect(error).not.toBeNull()
+  })
+
+  it('keeps a device that failed a few times, or only recently, and prunes one that kept failing for over a day', async () => {
+    await subscribe(alice, 'recent')
+    await subscribe(alice, 'few')
+    await subscribe(alice, 'dead')
+    const [recent, few, dead] = await Promise.all(['recent', 'few', 'dead'].map(async (d) => (await row(alice, d))!.id))
+    const set = (id: string, failure_count: number, first_failed_at: string) =>
+      serviceClient().from('push_subscriptions').update({ failure_count, first_failed_at }).eq('id', id)
+    await set(recent, 9, ago(HOUR)) // many failures, but inside an outage window
+    await set(few, 2, ago(3 * DAY)) // long ago, but only a couple of failures
+    await set(dead, 5, ago(2 * DAY))
+
+    expect(await record([], [])).toBe(1)
+    expect(await row(alice, 'recent')).not.toBeNull()
+    expect(await row(alice, 'few')).not.toBeNull()
+    expect(await row(alice, 'dead')).toBeNull()
+  })
+
+  it('prunes a failing device with no delivery for 60 days, never a healthy one', async () => {
+    await subscribe(alice, 'stale')
+    await subscribe(alice, 'healthy')
+    const stale = (await row(alice, 'stale'))!.id
+    const healthy = (await row(alice, 'healthy'))!.id
+    await serviceClient().from('push_subscriptions').update({ last_success_at: ago(61 * DAY), failure_count: 1, first_failed_at: ago(2 * DAY) }).eq('id', stale)
+    await serviceClient().from('push_subscriptions').update({ last_success_at: ago(61 * DAY) }).eq('id', healthy)
+
+    expect(await record([], [])).toBe(1)
+    expect(await row(alice, 'stale')).toBeNull()
+    expect(await row(alice, 'healthy')).not.toBeNull()
+  })
+
+  it('starts a clean streak when a device saves its subscription again', async () => {
+    const args = { p_endpoint: endpointFor(alice), p_p256dh: 'k', p_auth: 'a' }
+    await rpcOk(aliceClient, 'save_push_subscription', args)
+    const id = (await row(alice, 'phone'))!.id
+    await record([], [id])
+    await rpcOk(aliceClient, 'save_push_subscription', args)
+    expect(await row(alice, 'phone')).toMatchObject({ failure_count: 0, first_failed_at: null })
+  })
+
+  it('keeps a quiet healthy device on one transient failure, even after 60 days without a delivery', async () => {
+    await subscribe(alice, 'quiet')
+    const id = (await row(alice, 'quiet'))!.id
+    await serviceClient().from('push_subscriptions').update({ last_success_at: ago(90 * DAY) }).eq('id', id)
+    await record([], [id])
+    expect(await row(alice, 'quiet')).toMatchObject({ failure_count: 1 })
+  })
+})
+
+describe('closing-alerts lease and give-up (#257)', () => {
+  it('hands the lease to one caller at a time, until it is released or expires', async () => {
+    const db = serviceClient()
+    const claim = async (s = 120) => (await rpcOk<boolean>(db, 'claim_cron_lease', { p_name: 'closing-alerts', p_seconds: s }))
+    await rpcOk(db, 'release_cron_lease', { p_name: 'closing-alerts' })
+    expect(await claim()).toBe(true)
+    expect(await claim()).toBe(false)
+    await rpcOk(db, 'release_cron_lease', { p_name: 'closing-alerts' })
+    expect(await claim(1)).toBe(true)
+    await new Promise((resolve) => setTimeout(resolve, 1100))
+    expect(await claim()).toBe(true)
+    const { error } = await aliceClient.rpc('claim_cron_lease', { p_name: 'closing-alerts', p_seconds: 1 })
+    expect(error).not.toBeNull()
+    await rpcOk(db, 'release_cron_lease', { p_name: 'closing-alerts' })
+  })
+
+  it('gives up on a market whose pushes have failed for over 24 hours, and stops offering it', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await closeNow(market.marketId)
+    const db = serviceClient()
+    const due = async () => (await rpcOk<{ market_id: string }[]>(db, 'due_market_alerts')).filter((r) => r.market_id === market.marketId)
+    await rpcOk(adminClient, 'save_push_subscription', { p_endpoint: endpointFor(admin), p_p256dh: 'k', p_auth: 'a' })
+    expect(await due()).not.toHaveLength(0)
+
+    expect(await rpcOk<number>(db, 'record_push_failures', { p_kind: 'market_alert', p_refs: [market.marketId] })).toBe(0)
+    expect(await due()).not.toHaveLength(0)
+    await db.from('push_attempts').update({ first_tried_at: new Date(Date.now() - 25 * 3_600_000).toISOString() }).eq('ref', market.marketId)
+    expect(await rpcOk<number>(db, 'record_push_failures', { p_kind: 'market_alert', p_refs: [market.marketId] })).toBe(1)
+    expect(await due()).toHaveLength(0)
   })
 })

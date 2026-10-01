@@ -7,7 +7,7 @@ import { RATE_LIMIT_ERRORS } from '@/lib/forms/limits'
 
 export type ActionState = { formError?: string } | undefined
 
-// cancel_bet's raises (supabase/migrations/0046) and the write limit (0078).
+// cancel_bet's raises (supabase/migrations/0046) and the write limit (0090).
 const CANCEL_BET_ERRORS: readonly KnownError<never>[] = [
   { match: 'not invited', formError: 'Only invited members can cancel a bet.' },
   { match: 'bet not found', formError: 'This bet is no longer here. It may already have been cancelled.' },

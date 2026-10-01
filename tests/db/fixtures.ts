@@ -1,6 +1,8 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
-import { serviceClient, wipeDatabase } from './helpers'
+import type { Database } from '@/lib/supabase/database'
+import { serviceClient, wipeDatabase, type TestClient } from './helpers'
+import { pgQuery } from './pg-query'
 
 export interface Member {
   id: string
@@ -55,7 +57,7 @@ export async function seedMembers(): Promise<[Member, Member]> {
  * must already belong to an existing auth user — call
  * `makeAuthUserWithoutProfile`/`makeMember` first.
  */
-export async function clientForEmail(email: string): Promise<SupabaseClient> {
+export async function clientForEmail(email: string): Promise<TestClient> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const anon = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
   const { data, error } = await serviceClient().auth.admin.generateLink({
@@ -63,7 +65,7 @@ export async function clientForEmail(email: string): Promise<SupabaseClient> {
     email,
   })
   if (error) throw error
-  const c = createClient(url, anon, { auth: { persistSession: false } })
+  const c = createClient<Database>(url, anon, { auth: { persistSession: false } })
   const { error: vErr } = await c.auth.verifyOtp({
     token_hash: data.properties.hashed_token,
     type: 'email',
@@ -73,13 +75,13 @@ export async function clientForEmail(email: string): Promise<SupabaseClient> {
 }
 
 /** A client acting as the given member, subject to RLS. */
-export async function clientFor(member: Member): Promise<SupabaseClient> {
+export async function clientFor(member: Member): Promise<TestClient> {
   return clientForEmail(member.email)
 }
 
 /** A signed-out client, subject to RLS as `anon`. */
-export function anonClient(): SupabaseClient {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
+export function anonClient(): TestClient {
+  return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     auth: { persistSession: false },
   })
 }
@@ -90,7 +92,7 @@ export function anonClient(): SupabaseClient {
  * `e2e/global-setup.ts` (Task 9) to inject a real session into a fresh
  * browser context without driving the real Google consent screen.
  */
-export async function sessionCookieHeader(client: SupabaseClient): Promise<string> {
+export async function sessionCookieHeader(client: TestClient): Promise<string> {
   const {
     data: { session },
     error,
@@ -165,7 +167,7 @@ export interface TestMarket {
  * into makeMember()/seedMembers() themselves: that would run this upsert
  * for every fixture member unconditionally, including in that same test.
  */
-export async function ensureInvited(client: SupabaseClient): Promise<void> {
+export async function ensureInvited(client: TestClient): Promise<void> {
   const {
     data: { user },
   } = await client.auth.getUser()
@@ -204,7 +206,7 @@ export async function giveRole(member: Member, role: 'owner' | 'admin' | 'review
  * (0041) pass `seed` explicitly.
  */
 export async function createTestMarket(
-  creatorClient: SupabaseClient,
+  creatorClient: TestClient,
   labels: string[],
   opts?: { kind?: 'binary' | 'multiple_choice'; closeInMs?: number; title?: string; seed?: number },
 ): Promise<TestMarket> {
@@ -230,7 +232,7 @@ export async function createTestMarket(
     .single()
   if (seedErr) throw seedErr
 
-  // Some suites have one member make dozens of markets; the daily limit (0078) has its own tests.
+  // Some suites have one member make dozens of markets; the daily limit (0090) has its own tests.
   const { error: limitErr } = await serviceClient()
     .from('write_rate_counters')
     .delete()
@@ -251,4 +253,88 @@ export async function createTestMarket(
   })
 
   return { marketId: marketId as string, outcomeIds }
+}
+
+const BACKERS = ['Backer1', 'Backer2'] as const
+const backerSessions = new Map<string, TestClient>()
+
+export interface Backer {
+  id: string
+  client: TestClient
+}
+
+let backersQueue: Promise<unknown> = Promise.resolve()
+
+/**
+ * Two more members, Backer1 and Backer2, invited, with a session each. Made on first use after a
+ * wipe; a session is kept only while its profile is the same one. Calls queue behind each other, so
+ * markets built in parallel don't each try to make the pair.
+ */
+export function backers(): Promise<Backer[]> {
+  const next = backersQueue.then(findOrMakeBackers)
+  backersQueue = next.catch(() => undefined)
+  return next
+}
+
+async function findOrMakeBackers(): Promise<Backer[]> {
+  const db = serviceClient()
+  const result: Backer[] = []
+  for (const name of BACKERS) {
+    const email = `${name.toLowerCase()}@example.com`
+    const { data, error } = await db.from('profiles').select('id').eq('email', email).maybeSingle()
+    if (error) throw error
+    const id = data?.id ?? (await makeMember(name)).id
+    let client = backerSessions.get(id)
+    if (!client) {
+      client = await clientForEmail(email)
+      await ensureInvited(client)
+      backerSessions.set(id, client)
+    }
+    result.push({ id, client })
+  }
+  return result
+}
+
+/**
+ * Since 0074 a parlay leg needs at least 50 DC of other members' stakes on its market, from at
+ * least 2 other members. Backer1 and Backer2 each stake `each` DC (25 by default) on the given
+ * outcome, which meets that floor for anyone but them. These are real bets: they move the pool,
+ * count toward a leg's odds at close, and are paid or lost like any other.
+ */
+export async function backLeg(market: TestMarket, outcomeIndex: number, each = 25): Promise<void> {
+  for (const { client } of await backers()) {
+    const { error } = await client.rpc('place_bet', {
+      p_market_id: market.marketId,
+      p_outcome_id: market.outcomeIds[outcomeIndex],
+      p_amount: each,
+    })
+    if (error) throw error
+  }
+}
+
+/**
+ * A parlay as place_parlay wrote one before 0074, as 0074 leaves it while still pending: every
+ * leg's odds locked at placement, and the 20x cap. place_parlay can't make one any more, so it's
+ * written directly, with its stake debited through the ledger as place_parlay would. For how such
+ * a parlay settles and shows.
+ */
+export async function insertLockedParlay(
+  profileId: string,
+  stake: number,
+  legs: { market: TestMarket; outcomeIndex: number; lockedOdds: number }[],
+): Promise<string> {
+  const values = legs
+    .map((l) => `('${l.market.marketId}'::uuid, '${l.market.outcomeIds[l.outcomeIndex]}'::uuid, ${l.lockedOdds}::numeric)`)
+    .join(', ')
+  const [row] = await pgQuery<{ id: string }>(`
+    with p as (
+      insert into public.parlays (profile_id, stake, max_multiplier, odds_at_close) values ('${profileId}', ${stake}, 20, false) returning id
+    ),
+    l as (
+      insert into public.parlay_legs (parlay_id, market_id, outcome_id, locked_odds)
+      select p.id, x.market_id, x.outcome_id, x.odds from p, (values ${values}) as x(market_id, outcome_id, odds)
+    )
+    select p.id, public.apply_coin_transaction('${profileId}', -${stake}, 'parlay_placed', jsonb_build_object('parlay_id', p.id)) from p
+  `)
+  return row.id
 }

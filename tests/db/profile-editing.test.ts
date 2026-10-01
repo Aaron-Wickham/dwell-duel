@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, clientFor, ensureInvited, type Member } from './fixtures'
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 const JPEG = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' })
 const photoPath = (member: Member) => `${member.id}/${crypto.randomUUID()}.jpg`
@@ -106,7 +106,7 @@ describe('avatars bucket', () => {
     const { error: othersErr } = await aliceClient.storage
       .from('avatars')
       .upload(photoPath(bob), JPEG, { contentType: 'image/jpeg' })
-    expect(othersErr).not.toBeNull()
+    expectError(othersErr, { message: 'new row violates row-level security policy' })
 
     const { data: removed } = await aliceClient.storage.from('avatars').remove([own])
     expect(removed?.map((f) => f.name)).toEqual([own])
@@ -129,11 +129,11 @@ describe('avatars bucket', () => {
     const { error: typeErr } = await aliceClient.storage
       .from('avatars')
       .upload(`${alice.id}/${crypto.randomUUID()}.jpg`, png, { contentType: 'image/png' })
-    expect(typeErr).not.toBeNull()
+    expectError(typeErr, { message: 'mime type image/png is not supported' })
 
     const { error: uninvitedErr } = await bobClient.storage
       .from('avatars')
       .upload(photoPath(bob), JPEG, { contentType: 'image/jpeg' })
-    expect(uninvitedErr).not.toBeNull()
+    expectError(uninvitedErr, { message: 'new row violates row-level security policy' })
   })
 })

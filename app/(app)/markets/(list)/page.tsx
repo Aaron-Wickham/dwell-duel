@@ -1,10 +1,13 @@
+import { Fragment } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ChartColumn, Plus } from 'lucide-react'
+import { ChartColumn, Plus, SearchX } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { listResolvedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
+import { listResolvedMarkets, listOpenMarkets, listMatchingMarkets, type MarketSummary } from '@/lib/markets/list-markets'
+import { MINE_LABELS, marketsHref, readMarketSearch, readMineFilter, type MineFilter } from '@/lib/markets/search'
+import type { KeysetPage } from '@/lib/pagination/keyset'
 import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { marketCardStatus, type MarketCardStatus } from '@/lib/markets/market-status'
@@ -19,6 +22,8 @@ import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { SubNav } from '@/components/ui/sub-nav'
+import { FilterChips } from '@/components/ui/filter-chips'
+import { MarketSearch } from '@/components/markets/market-search'
 import { cn } from '@/lib/utils'
 import { MarketCard, type MarketCardChart } from '@/components/markets/market-card'
 
@@ -29,7 +34,6 @@ const GROUPS: { id: MarketCardStatus; heading: string }[] = [
   { id: 'voided', heading: 'Voided' },
 ]
 
-const OPEN_GROUPS: MarketCardStatus[] = ['open', 'awaiting']
 const EMPTY_TITLES: Record<MarketFilter, string> = {
   all: 'No markets yet.',
   open: 'No open markets.',
@@ -44,17 +48,30 @@ const EMPTY_BODIES: Record<MarketFilter, string> = {
   resolved: 'Resolved and voided markets show up here.',
 }
 
-// The open list holds both sides of the close time unless a tab picks one.
-const OPEN_LIST_DESCRIPTIONS: Record<Exclude<MarketFilter, 'resolved'>, string> = {
-  all: 'Open and awaiting markets',
-  open: 'Open markets',
-  awaiting: 'Markets awaiting resolution',
+// What a narrowed list is a list of, in the caption and the empty state.
+const MINE_SUBJECTS: Record<MineFilter | 'all', string> = {
+  all: 'markets',
+  bet: 'markets you bet on',
+  made: 'markets you made',
 }
+const STATUS_WORDS: Record<MarketFilter, string> = { all: '', open: 'open ', awaiting: 'awaiting ', resolved: 'resolved ' }
 
-const NO_ROWS = { rows: [], next: null, windowed: false } as const
+const NO_ROWS: KeysetPage<MarketSummary> = { rows: [], next: null, windowed: false }
 
-const OPEN_ROW_ID_PREFIX = 'market-open'
-const RESOLVED_ROW_ID_PREFIX = 'market-resolved'
+// The All tab reads three lists, each with its own Show more, so markets still taking bets come
+// first however many are waiting on a result (#261). The open and awaiting lists are the two sides
+// of the close time; the Open and Awaiting tabs read just theirs.
+type ListId = 'open' | 'awaiting' | 'resolved'
+type List = { id: ListId; groups: MarketCardStatus[]; filters: MarketFilter[]; description: string }
+const LISTS: List[] = [
+  { id: 'open', groups: ['open'], filters: ['all', 'open'], description: 'Open markets' },
+  { id: 'awaiting', groups: ['awaiting'], filters: ['all', 'awaiting'], description: 'Markets awaiting resolution' },
+  { id: 'resolved', groups: ['resolved', 'voided'], filters: ['all', 'resolved'], description: 'Resolved markets' },
+]
+
+// A search or a whose-markets chip lists its matches as one flat list instead (#264).
+type CardList = ListId | 'match'
+const rowIdPrefix = (list: CardList) => `market-${list}`
 
 export default async function MarketsPage(props: PageProps<'/markets'>) {
   const searchParams = await props.searchParams
@@ -62,39 +79,56 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
   if (!user) redirect('/sign-in')
 
   const filter = readMarketFilter(searchParams.status)
+  const q = readMarketSearch(searchParams.q)
+  const mine = readMineFilter(searchParams.mine)
+  const narrowed = q !== '' || mine !== null
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now()
   const now = new Date(nowMs)
-  const openParams = readPageParams(searchParams, 'open')
-  const [open, resolved] = await Promise.all([
-    filter === 'resolved'
-      ? NO_ROWS
-      : filter === 'all'
-        ? listOpenMarkets(supabase, openParams)
-        : listOpenMarkets(supabase, openParams, { upcoming: filter === 'open', at: now.toISOString() }),
-    filter === 'all' || filter === 'resolved' ? listResolvedMarkets(supabase, readPageParams(searchParams, 'resolved')) : NO_ROWS,
+  const at = now.toISOString()
+  const read = async ({ id, filters }: List): Promise<KeysetPage<MarketSummary>> => {
+    if (narrowed || !filters.includes(filter)) return NO_ROWS
+    const params = readPageParams(searchParams, id)
+    if (id === 'resolved') return listResolvedMarkets(supabase, params)
+    return listOpenMarkets(supabase, params, { upcoming: id === 'open', at })
+  }
+  const [open, awaiting, resolved, matches] = await Promise.all([
+    ...LISTS.map(read),
+    narrowed
+      ? listMatchingMarkets(supabase, readPageParams(searchParams, 'match'), filter, { q, mine, userId: user.id }, at)
+      : NO_ROWS,
   ])
-  // A market can resolve or void between the two concurrent reads above, and then come back from
-  // both. It only ever moves from open to resolved or voided, so the resolved list's copy is the
-  // fresher one: the open copy is dropped rather than rendering the market twice, with duplicate
-  // React keys and duplicate `market-resolved-*` DOM/title ids.
+  const pages: Record<ListId, KeysetPage<MarketSummary>> = { open, awaiting, resolved }
+  // A market can resolve or void between the concurrent reads above, and then come back from
+  // two lists. It only ever moves from open to resolved or voided, so the resolved list's copy is
+  // the fresher one: the open copy is dropped rather than rendering the market twice, with
+  // duplicate React keys and DOM/title ids. The open and awaiting lists split at one instant, so
+  // they never share a market.
   const resolvedIds = new Set(resolved.rows.map((m) => m.id))
-  const markets = [
-    ...open.rows.filter((m) => !resolvedIds.has(m.id)).map((m) => [m, OPEN_ROW_ID_PREFIX] as const),
-    ...resolved.rows.map((m) => [m, RESOLVED_ROW_ID_PREFIX] as const),
+  const markets: (readonly [MarketSummary, CardList])[] = [
+    ...LISTS.flatMap(({ id }) =>
+      pages[id].rows.filter((m) => id === 'resolved' || !resolvedIds.has(m.id)).map((m) => [m, id] as const),
+    ),
+    ...matches.rows.map((m) => [m, 'match'] as const),
   ]
+  // One sparkline batch per list, so each list's cache entry moves only with its own markets.
+  const cardLists: CardList[] = narrowed ? ['match'] : LISTS.map(({ id }) => id)
   const sparklinesByMarket = await readSparklines(
     supabase,
-    markets.map(([m]) => ({
-      id: m.id,
-      seedPerOutcome: m.seedPerOutcome,
-      createdAt: m.createdAt,
-      outcomeIds: m.outcomes.map((o) => o.id),
-      sparkline: m.sparkline,
-    })),
+    cardLists.map((id) =>
+      markets
+        .filter(([, list]) => list === id)
+        .map(([m]) => ({
+          id: m.id,
+          seedPerOutcome: m.seedPerOutcome,
+          createdAt: m.createdAt,
+          outcomeIds: m.outcomes.map((o) => o.id),
+          version: m.sparkVersion,
+        })),
+    ),
   )
 
-  const cards = markets.map(([market, prefix]) => {
+  const cards = markets.map(([market, list]) => {
     const odds = computeOdds(
       market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })),
       market.seedPerOutcome,
@@ -112,7 +146,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
             now: nowMs,
           }
         : undefined
-    return {
+    const card = {
       id: market.id,
       title: market.title,
       status: marketCardStatus(market.status, market.closeAt, now),
@@ -129,27 +163,33 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       })),
       resolvedOutcomeLabel: market.resolvedOutcomeLabel,
       chart,
-      domId: rowDomId(prefix, market.id),
+      domId: rowDomId(rowIdPrefix(list), market.id),
       now: nowMs,
     }
+    return { list, card }
   })
 
-  const groups = GROUPS.map((group) => ({
-    ...group,
-    markets: cards.filter((card) => card.status === group.id),
-  })).filter((group) => group.markets.length > 0)
-  const openGroups = groups.filter((group) => OPEN_GROUPS.includes(group.id))
-  const resolvedGroups = groups.filter((group) => !OPEN_GROUPS.includes(group.id))
+  // Each list's groups hold only its own cards: a market that closes between two Show mores has
+  // already moved to the awaiting list.
+  const listGroups = (list: List) =>
+    GROUPS.filter((group) => list.groups.includes(group.id))
+      .map((group) => ({
+        ...group,
+        markets: cards.filter((c) => c.list === list.id && c.card.status === group.id).map((c) => c.card),
+      }))
+      .filter((group) => group.markets.length > 0)
+  const lists = LISTS.map((list) => ({ ...list, page: pages[list.id], groups: listGroups(list) }))
+  const nothing = lists.every((list) => list.groups.length === 0 && !list.page.windowed)
 
   // Each list's window says where it starts above its own groups: Back to newest, or, when the
   // window has no rows left, that there's nothing older, where those groups would have been.
-  const windowTop = (list: typeof open, param: string) => {
+  const windowTop = (list: KeysetPage<MarketSummary>, param: string) => {
     if (!list.windowed) return null
     const href = newestHref('/markets', searchParams, param)
     return list.rows.length > 0 ? <BackToNewest href={href} /> : <NothingOlder href={href} />
   }
 
-  const renderGroup = (group: (typeof groups)[number]) => (
+  const renderGroup = (group: ReturnType<typeof listGroups>[number]) => (
     <section key={group.id} aria-labelledby={`markets-${group.id}-heading`} className="flex flex-col gap-3">
       <h2 id={`markets-${group.id}-heading`} className={h2Class}>
         {group.heading}
@@ -161,6 +201,63 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       </div>
     </section>
   )
+
+  const subject = MINE_SUBJECTS[mine ?? 'all']
+  const clearHref = q ? marketsHref({ status: filter, mine }) : marketsHref({ status: filter })
+  const clearLabel = q ? 'Clear search' : 'Show everyone’s markets'
+  const matchCards = cards.filter((c) => c.list === 'match').map((c) => c.card)
+
+  function renderMatches() {
+    if (matchCards.length === 0 && !matches.windowed) {
+      return (
+        <EmptyState
+          icon={q ? SearchX : ChartColumn}
+          title={q ? `No ${STATUS_WORDS[filter]}${subject} match “${q}”.` : `No ${STATUS_WORDS[filter]}${subject} yet.`}
+          action={
+            <div className="flex flex-wrap gap-2">
+              {q && filter !== 'all' && (
+                <Link href={marketsHref({ q, mine })} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+                  Search all markets
+                </Link>
+              )}
+              <Link href={clearHref} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+                {clearLabel}
+              </Link>
+            </div>
+          }
+        >
+          {q ? (filter === 'all' ? 'Check the spelling, or try fewer words.' : 'Check the spelling, or search all markets.') : 'Bet on a market, or make one, and it shows up here.'}
+        </EmptyState>
+      )
+    }
+    // The count is only known when the whole list is on screen; past one page it's "newest first".
+    const complete = !matches.next && !matches.windowed
+    const lead = complete ? `${matchCards.length} ${matchCards.length === 1 ? subject.replace(/^markets/, 'market') : subject}` : `Newest ${subject}`
+    return (
+      <section aria-labelledby="markets-matches-heading" className="flex flex-col gap-3">
+        <h2 id="markets-matches-heading" className="sr-only">
+          Matching markets
+        </h2>
+        <p id="markets-matches-caption" className="text-sm text-ink2">
+          {q ? `${lead} ${complete && matchCards.length === 1 ? 'matches' : 'match'} “${q}”. ` : `${lead}. `}
+          <Link href={clearHref}>{clearLabel}</Link>
+        </p>
+        {windowTop(matches, 'match')}
+        <div className="grid items-start gap-5 lg:grid-cols-3">
+          {matchCards.map((market) => (
+            <MarketCard key={market.id} {...market} />
+          ))}
+        </div>
+        {matches.next && (
+          <ShowMore
+            href={showMoreHref('/markets', searchParams, 'match', matches.next)}
+            fresh={matches.next.kind === 'window'}
+            focusId={rowDomId(rowIdPrefix('match'), matches.next.firstId)}
+          />
+        )}
+      </section>
+    )
+  }
 
   return (
     <Page transition="tab">
@@ -177,17 +274,33 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
           </Link>
         }
       />
-      <SubNav
-        label="Filter markets"
-        items={MARKET_FILTERS.map((f) => ({
-          href: f === 'all' ? '/markets' : `/markets?status=${f}`,
-          label: MARKET_FILTER_LABELS[f],
-          current: f === filter,
-        }))}
-      />
+      <div className="flex flex-col gap-5 md:flex-row md:flex-wrap md:items-center">
+        <MarketSearch key={q} q={q} status={filter} mine={mine} />
+        <FilterChips
+          className="order-3 md:order-2"
+          label="Whose markets"
+          items={([null, 'bet', 'made'] as const).map((m) => ({
+            href: marketsHref({ status: filter, q, mine: m }),
+            label: MINE_LABELS[m ?? 'all'],
+            current: m === mine,
+          }))}
+        />
+        <div className="order-2 flex flex-col md:order-3 md:basis-full">
+          <SubNav
+            label="Filter markets"
+            items={MARKET_FILTERS.map((f) => ({
+              href: marketsHref({ status: f, q, mine }),
+              label: MARKET_FILTER_LABELS[f],
+              current: f === filter,
+            }))}
+          />
+        </div>
+      </div>
       <LiveTables subscriptions={pageSubscriptions.markets()} />
       <ShowMoreFocus />
-      {groups.length === 0 && !open.windowed && !resolved.windowed ? (
+      {narrowed ? (
+        renderMatches()
+      ) : nothing ? (
         <EmptyState
           icon={ChartColumn}
           title={EMPTY_TITLES[filter]}
@@ -205,26 +318,22 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
         </EmptyState>
       ) : (
         <>
-          {windowTop(open, 'open')}
-          {openGroups.map(renderGroup)}
-          {open.next && (
-            <ShowMore
-              href={showMoreHref('/markets', searchParams, 'open', open.next)}
-              fresh={open.next.kind === 'window'}
-              focusId={rowDomId(OPEN_ROW_ID_PREFIX, open.next.firstId)}
-              description={OPEN_LIST_DESCRIPTIONS[filter === 'resolved' ? 'all' : filter]}
-            />
-          )}
-          {windowTop(resolved, 'resolved')}
-          {resolvedGroups.map(renderGroup)}
-          {resolved.next && (
-            <ShowMore
-              href={showMoreHref('/markets', searchParams, 'resolved', resolved.next)}
-              fresh={resolved.next.kind === 'window'}
-              focusId={rowDomId(RESOLVED_ROW_ID_PREFIX, resolved.next.firstId)}
-              description="Resolved markets"
-            />
-          )}
+          {lists.map(({ id, description, page, groups }) => {
+            return (
+              <Fragment key={id}>
+                {windowTop(page, id)}
+                {groups.map(renderGroup)}
+                {page.next && (
+                  <ShowMore
+                    href={showMoreHref('/markets', searchParams, id, page.next)}
+                    fresh={page.next.kind === 'window'}
+                    focusId={rowDomId(rowIdPrefix(id), page.next.firstId)}
+                    description={description}
+                  />
+                )}
+              </Fragment>
+            )
+          })}
         </>
       )}
     </Page>

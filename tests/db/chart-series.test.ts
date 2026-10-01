@@ -1,9 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { serviceClient, type TestClient, reconcilePoolTotals } from './helpers'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
 import { getChartSeries, CHART_POINTS } from '@/lib/markets/chart-series'
 import { buildProbabilitySeries } from '@/lib/markets/probability-series'
 import { listSparklines } from '@/lib/markets/sparklines'
+
+// No Next data cache outside a request: every read reaches the database.
+vi.mock('next/cache', () => ({ unstable_cache: <F>(fn: F) => fn }))
 
 let alice: Member
 let bob: Member
@@ -25,7 +28,13 @@ async function placeBet(client: TestClient, marketId: string, outcomeId: string,
 async function marketFacts(marketId: string, outcomeIds: string[]) {
   const { data, error } = await serviceClient().from('markets').select('seed_per_outcome, created_at').eq('id', marketId).single()
   if (error) throw error
-  return { id: marketId, seedPerOutcome: data.seed_per_outcome as number, createdAt: data.created_at as string, outcomeIds }
+  return {
+    id: marketId,
+    version: 'test',
+    seedPerOutcome: data.seed_per_outcome as number,
+    createdAt: data.created_at as string,
+    outcomeIds,
+  }
 }
 
 describe('getChartSeries (#68)', () => {
@@ -95,20 +104,27 @@ describe('card sparklines and the market page chart (#110)', () => {
     const facts = await marketFacts(market.marketId, market.outcomeIds)
 
     const chart = await getChartSeries(bobClient, facts)
-    const card = (await listSparklines(bobClient, [facts])).get(market.marketId)!
+    const card = (await listSparklines(bobClient, [[facts]])).get(market.marketId)!
 
     expect(card[0]).toEqual({
       t: Date.parse(facts.createdAt),
       shares: { [market.outcomeIds[0]]: 0.5, [market.outcomeIds[1]]: 0.5 },
     })
     expect(card).toHaveLength(3)
-    expect(card).toEqual(chart.points)
+    // The card's compact series (0095) keeps whole seconds and four decimals; the seeded start
+    // comes from the market's own created_at on both.
+    expect(card).toEqual(
+      chart.points.map((p, i) => ({
+        t: i === 0 ? p.t : Math.floor(p.t / 1000) * 1000,
+        shares: Object.fromEntries(Object.entries(p.shares).map(([id, share]) => [id, Math.round(share * 10_000) / 10_000])),
+      })),
+    )
   })
 
   it('gives a seeded market nobody has bet on just its even start on its card', async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     const facts = await marketFacts(market.marketId, market.outcomeIds)
-    const card = (await listSparklines(bobClient, [facts])).get(market.marketId)
+    const card = (await listSparklines(bobClient, [[facts]])).get(market.marketId)
     expect(card).toEqual([{ t: Date.parse(facts.createdAt), shares: { [market.outcomeIds[0]]: 0.5, [market.outcomeIds[1]]: 0.5 } }])
   })
 
@@ -116,7 +132,7 @@ describe('card sparklines and the market page chart (#110)', () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await placeBet(aliceClient, market.marketId, market.outcomeIds[0], 10)
     const facts = await marketFacts(market.marketId, market.outcomeIds)
-    const card = (await listSparklines(bobClient, [facts])).get(market.marketId)!
+    const card = (await listSparklines(bobClient, [[facts]])).get(market.marketId)!
     expect(card).toHaveLength(1)
     expect(card[0].shares[market.outcomeIds[0]]).toBeCloseTo(1, 10)
   })

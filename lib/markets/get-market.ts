@@ -23,6 +23,8 @@ export interface MarketDetail {
   resolvedOutcomeId: string | null
   resolvedOutcomeLabel: string | null
   resolvedAt: string | null
+  // The seed per outcome the current resolution's payouts counted (0074): 0 since then.
+  payoutSeed: number
   // When it stopped being open (0066): the first resolution or the void; null while open.
   settledAt: string | null
   // Why it was voided (0073); null otherwise, and for voids made before reasons were required.
@@ -44,7 +46,7 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
   const { data, error } = await supabase
     .from('markets')
     .select(
-      'id, title, description, kind, status, close_at, created_at, settled_at, void_reason, created_by, current_resolution_id, seed_per_outcome, line, edited_at, creator:profiles(display_name), market_outcomes(id, label, pool_total), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at, actual_value)',
+      'id, title, description, kind, status, close_at, created_at, settled_at, void_reason, created_by, current_resolution_id, seed_per_outcome, line, edited_at, creator:profiles(display_name), market_outcomes(id, label, pool_total), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at, actual_value, payout_seed)',
     )
     .eq('id', marketId)
     // Rows come back with no default order, and colours are assigned by position for
@@ -91,6 +93,7 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
     resolvedOutcomeId: resolution?.outcome_id ?? null,
     resolvedOutcomeLabel,
     resolvedAt,
+    payoutSeed: resolution?.payout_seed ?? 0,
     settledAt: data.settled_at,
     voidReason: data.void_reason,
     outcomes,

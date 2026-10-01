@@ -2,23 +2,33 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Circle, CircleCheck } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cardClass } from '@/components/ui/card'
 import { h2Class } from '@/components/ui/page'
 import { dismissOnboardingAction } from '@/lib/home/dismiss-onboarding'
 import type { OnboardingSteps } from '@/lib/home/onboarding'
+import { useDevicePush } from '@/lib/push/use-device-push'
 import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import { cn } from '@/lib/utils'
 
+type StepKey = keyof OnboardingSteps | 'notify'
+
+export const NOTIFICATIONS_HREF = '/settings#settings-notifications'
+
+// How it works comes first, so a new member knows what a Dwell Coin is before spending one (#260).
 const STEPS: {
-  key: keyof OnboardingSteps
+  key: StepKey
   title: string
   hint: string
   cta: string
   href: string
   drillDown?: boolean
 }[] = [
+  { key: 'learn', title: 'Learn how DwellDuel works', hint: 'Two-minute read: Dwell Coin, odds and parlays.', cta: 'Read', href: '/how-it-works', drillDown: true },
+  // Settings handles every device state (not installed on iOS, unsupported, blocked), so the step
+  // only points there.
+  { key: 'notify', title: 'Turn on notifications', hint: 'Hear when your markets close and your bets pay.', cta: 'Turn on', href: NOTIFICATIONS_HREF, drillDown: true },
   { key: 'photo', title: 'Add your photo', hint: 'So everyone knows who’s betting.', cta: 'Add photo', href: '/profile', drillDown: true },
   { key: 'bet', title: 'Place your first bet', hint: 'Add an outcome to your slip, then place it.', cta: 'Find a market', href: '/markets' },
   { key: 'task', title: 'Try a task', hint: 'Earn DC with Bible study.', cta: 'See tasks', href: '/tasks' },
@@ -26,10 +36,14 @@ const STEPS: {
 
 export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
   const [dismissed, setDismissed] = useState(false)
+  const push = useDevicePush()
   if (!steps || dismissed) return null
 
-  const doneCount = STEPS.filter((step) => steps[step.key]).length
-  if (doneCount === STEPS.length) return null
+  // A browser that can never get push has no notifications step to finish.
+  const shown = push === 'unsupported' ? STEPS.filter((step) => step.key !== 'notify') : STEPS
+  const done = (key: StepKey) => (key === 'notify' ? push === 'on' : steps[key])
+  const doneCount = shown.filter((step) => done(step.key)).length
+  if (doneCount === shown.length) return null
 
   function dismiss() {
     setDismissed(true)
@@ -47,7 +61,7 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
             Getting started
           </h2>
           <p className="text-ink2">
-            {doneCount} of {STEPS.length} done
+            {doneCount} of {shown.length} done
           </p>
         </div>
         <Button variant="quiet" size="sm" onClick={dismiss}>
@@ -55,17 +69,27 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
         </Button>
       </div>
       <ol className="flex flex-col divide-y divide-line">
-        {STEPS.map((step) => {
-          const done = steps[step.key]
-          const Icon = done ? CircleCheck : Circle
+        {shown.map((step, index) => {
+          const stepDone = done(step.key)
           return (
             <li key={step.key} data-step={step.key} className="flex min-h-16 items-center gap-3 py-2.5">
-              <Icon aria-hidden="true" className={cn('size-6 shrink-0', done ? 'text-win' : 'text-ink2')} />
+              {stepDone ? (
+                <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-lime text-on-lime">
+                  <Check className="size-4" strokeWidth={2.6} />
+                </span>
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-line-s text-xs font-extrabold text-ink2"
+                >
+                  {index + 1}
+                </span>
+              )}
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className="font-extrabold">{step.title}</span>
-                <span className="text-sm text-ink2">{done ? 'Done' : step.hint}</span>
+                <span className={cn('font-extrabold', stepDone && 'text-ink2 line-through')}>{step.title}</span>
+                {stepDone ? <span className="sr-only">Done</span> : <span className="text-sm text-ink2">{step.hint}</span>}
               </div>
-              {!done && (
+              {!stepDone && (
                 <Link
                   href={step.href}
                   transitionTypes={step.drillDown ? ['nav-forward'] : undefined}

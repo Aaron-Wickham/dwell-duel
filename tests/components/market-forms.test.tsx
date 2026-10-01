@@ -151,7 +151,7 @@ describe('ResolveForm confirmation (#64)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Resolve market' }))
 
     const dialog = await screen.findByRole('alertdialog', { name: 'Resolve this market?' })
-    expect(dialog).toHaveAccessibleDescription('Yes wins. Winning bets and parlay legs are paid out straight away.')
+    expect(dialog).toHaveAccessibleDescription('Yes wins. Winning solo bets are paid straight away. A parlay with a pick here is lost if that pick lost, and pays once every pick has won.')
     expect(resolveMarketAction).not.toHaveBeenCalled()
   })
 
@@ -235,7 +235,7 @@ describe('ResolveForm confirmation (#64)', () => {
 
     const dialog = await screen.findByRole('alertdialog', { name: 'Override the resolution?' })
     expect(dialog).toHaveAccessibleDescription(
-      'No wins. The previous payouts are reversed, then winning bets and parlay legs are paid out on this outcome.',
+      'No wins. The previous payouts are reversed, then winning solo bets on this outcome are paid. Every parlay with a pick here is settled again on the new result.',
     )
     expect(resolveMarketAction).not.toHaveBeenCalled()
   })

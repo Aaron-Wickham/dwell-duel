@@ -8,6 +8,8 @@ export const h2Class = 'text-[19px] font-extrabold leading-[1.25] tracking-[-0.0
 export const eyebrowClass = 'text-xs font-extrabold uppercase tracking-[0.09em] text-ink2'
 // The title of a row or tile in a list: home tiles, task rows, leaderboard rows and the like.
 export const rowTitleClass = 'text-[17px] font-extrabold leading-[1.3] tracking-[-0.01em]'
+// The name of a form field: a <label> above its control, or a <legend> over a group of them.
+export const labelClass = 'text-[15px] font-bold'
 
 // `wide` gives a 1120px content column inside md:px-20; `reading` gives about 820px, centred, for a
 // single stream or long text, so the header, tabs and content always share one pair of edges.

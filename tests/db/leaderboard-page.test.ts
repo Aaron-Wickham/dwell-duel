@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { pgQuery } from './pg-query'
 import { serviceClient, deleteAuthUser, type TestClient } from './helpers'
 import { seedMembers, makeMember, clientFor, ensureInvited } from './fixtures'
-import { getLeaderboardPage } from '@/lib/social/leaderboard'
+import { getJumpToMeTop, getLeaderboardPage, JUMP_CONTEXT } from '@/lib/social/leaderboard'
 import { showMoreHref } from '@/lib/pagination/cursor'
 import { encodeRankCursor, readRankPageParams, type RankCursor } from '@/lib/pagination/rank-cursor'
 
@@ -46,6 +46,12 @@ beforeAll(async () => {
 
   const db = serviceClient()
   const everyone = [alice.id, bob.id, ...extras]
+  // Only invited members are ranked (0093), so every member here gets an invite, claimed.
+  const { error: inviteErr } = await db.from('allowed_emails').upsert(
+    everyone.map((id) => ({ email: `invite-${id}@example.com`, claimed_by: id })),
+    { onConflict: 'email' },
+  )
+  if (inviteErr) throw inviteErr
   await Promise.all(
     everyone.map(async (id, k) => {
       const tied = k >= TIE_START && k < TIE_START + TIED_NAMES.length
@@ -144,5 +150,34 @@ describe('getLeaderboardPage', () => {
     const page = await getLeaderboardPage(bobClient, 'all', readRankPageParams({ before_from: overflow }, 'before'))
     expect(page.windowed).toBe(false)
     expect(summary(page.rows)).toEqual(summary(board.slice(0, 50)))
+  })
+})
+
+describe('getJumpToMeTop', () => {
+  it('starts a window JUMP_CONTEXT rows above the member, so their row has neighbours', async () => {
+    const top = await getJumpToMeTop(bobClient, 'all', board[30].id)
+    expect(top).toEqual(keyOf(board[30 - JUMP_CONTEXT]))
+
+    const page = await getLeaderboardPage(bobClient, 'all', { top, bottom: null })
+    expect(page.windowed).toBe(true)
+    expect(page.rows.findIndex((m) => m.id === board[30].id)).toBe(JUMP_CONTEXT)
+    expect(page.rows[0].rank).toBe(board[30 - JUMP_CONTEXT].rank)
+  })
+
+  it('reads the window from inside a tie, ranking it against the whole board', async () => {
+    const mid = TIE_START + 3
+    const top = await getJumpToMeTop(bobClient, 'all', board[mid].id)
+    expect(top).toEqual(keyOf(board[mid - JUMP_CONTEXT]))
+    const page = await getLeaderboardPage(bobClient, 'all', { top, bottom: null })
+    expect(page.rows.find((m) => m.id === board[mid].id)?.rank).toBe(48)
+  })
+
+  it('has no window for a member within the first JUMP_CONTEXT places, who is on the first page already', async () => {
+    expect(await getJumpToMeTop(bobClient, 'all', board[JUMP_CONTEXT - 1].id)).toBeNull()
+    expect(await getJumpToMeTop(bobClient, 'all', board[JUMP_CONTEXT].id)).toEqual(keyOf(board[0]))
+  })
+
+  it('has no window for a member who is not on the board', async () => {
+    expect(await getJumpToMeTop(bobClient, 'month', board[30].id)).toBeNull()
   })
 })

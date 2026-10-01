@@ -15,6 +15,7 @@ import {
 import { keyBytes, sameKey, writePushMemory } from '@/lib/push/client'
 import type { NotificationKind, NotificationPrefs } from '@/lib/push/prefs'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
+import { labelClass } from '@/components/ui/page'
 
 type Support = 'supported' | 'unsupported' | 'ios-install'
 type Device = 'checking' | 'off' | 'on' | 'denied'
@@ -200,10 +201,10 @@ function PrefsForm({ prefs, reviewer }: { prefs: NotificationPrefs; reviewer: bo
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <fieldset className="flex flex-col gap-3" aria-describedby={state?.formError ? errorId : undefined}>
-        <legend className="mb-1.5 text-[15px] font-bold">Notify me about</legend>
+        <legend className={`mb-1.5 ${labelClass}`}>Notify me about</legend>
         {(reviewer ? [...KINDS, REVIEWER_KIND] : KINDS).map(({ kind, label, hint }) => (
           <div key={kind} className="flex flex-col gap-0.5">
-            <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
+            <label className="pressable inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
               <input
                 type="checkbox"
                 name={kind}

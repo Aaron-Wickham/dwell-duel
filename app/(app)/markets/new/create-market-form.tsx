@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { fingerprintOf, useAttemptKey } from '@/lib/forms/attempt-key'
 import { Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,7 @@ import { createMarketAction, type ActionState } from '@/lib/markets/create-marke
 import { formatLine, type MarketKind } from '@/lib/markets/kind'
 import { computeOdds } from '@/lib/markets/odds'
 import { MarketCard } from '@/components/markets/market-card'
-import { h2Class } from '@/components/ui/page'
+import { h2Class, labelClass } from '@/components/ui/page'
 import { nextWeeklyClose } from '@/lib/markets/weekly-close'
 import { useTimeZone } from '@/components/ui/local-time'
 
@@ -27,6 +27,13 @@ const toggleClass = (on: boolean) =>
     on && 'bg-surface text-ink shadow-tab',
   )
 
+// update_market (0043) only ever changes the title and description, so the hint says so before
+// it's too late (#266).
+function closeTimeHint(kind: MarketKind): string {
+  const fixed = kind === 'over_under' ? 'The line, outcomes and close time' : 'The outcomes and close time'
+  return `Betting stops at this time, so set it before the answer is known. ${fixed} can’t be changed later.`
+}
+
 // A market being duplicated (?from=), read on the server. `closeAt` is the original's close.
 export interface MarketPrefill {
   title: string
@@ -38,7 +45,8 @@ export interface MarketPrefill {
   now: number
 }
 
-export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
+// admin: an admin may resolve a market they have money on, so the reviewer note isn't theirs.
+export function CreateMarketForm({ initial, admin = false }: { initial?: MarketPrefill; admin?: boolean }) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [kind, setKind] = useState<MarketKind>(initial?.kind ?? 'binary')
@@ -67,9 +75,20 @@ export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
     setOutcomes((prev) => (prev.length >= MAX_OUTCOMES ? prev : [...prev, '']))
   }
 
+  // Removing the last row unmounts the focused button, and reaching the minimum disables it, so
+  // either would drop a keyboard user's focus onto <body>. It moves to the input beside it instead.
+  const focusOutcomeAfterRemove = useRef<number | null>(null)
   function removeOutcome(index: number) {
+    if (outcomes.length <= MIN_OUTCOMES) return
+    const left = outcomes.length - 1
+    if (index === left || left <= MIN_OUTCOMES) focusOutcomeAfterRemove.current = Math.min(index, left - 1)
     setOutcomes((prev) => (prev.length <= MIN_OUTCOMES ? prev : prev.filter((_, i) => i !== index)))
   }
+  useEffect(() => {
+    if (focusOutcomeAfterRemove.current === null) return
+    document.getElementById(`cm-outcome-${focusOutcomeAfterRemove.current}`)?.focus()
+    focusOutcomeAfterRemove.current = null
+  }, [outcomes])
 
   // Too few outcomes points at the first input; a too-long label points at its own.
   const outcomeInvalid = (index: number) =>
@@ -107,7 +126,7 @@ export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
         </Field>
 
         <fieldset className="flex flex-col gap-1.5">
-          <legend className="text-[15px] font-bold">Type</legend>
+          <legend className={labelClass}>Type</legend>
           <div className="grid grid-cols-1 gap-1.5 rounded-[14px] bg-sunk p-1 md:grid-cols-3">
             <label className={toggleClass(kind === 'binary')}>
               <input
@@ -176,7 +195,7 @@ export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
           </Field>
         ) : (
           <fieldset className="flex flex-col gap-2">
-            <legend className="text-[15px] font-bold">Outcomes</legend>
+            <legend className={labelClass}>Outcomes</legend>
             <span className="text-sm text-ink2">
               Up to {MAX_OUTCOMES} outcomes · {outcomes.length} of {MAX_OUTCOMES} used
             </span>
@@ -218,7 +237,7 @@ export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
           </fieldset>
         )}
 
-        <Field label="Close time" htmlFor="cm-close">
+        <Field label="Close time" htmlFor="cm-close" hint={closeTimeHint(kind)}>
           <Input
             id="cm-close"
             type="datetime-local"
@@ -226,7 +245,7 @@ export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
             value={closeAt}
             onChange={(e) => setCloseAt(e.target.value)}
             aria-invalid={state?.field === 'close_at'}
-            aria-describedby={state?.field === 'close_at' ? 'create-market-error' : undefined}
+            aria-describedby={['cm-close-hint', state?.field === 'close_at' ? 'create-market-error' : null].filter(Boolean).join(' ')}
           />
         </Field>
         {/* The picker's value is local wall-clock time; the server needs the instant it names. */}
@@ -242,7 +261,7 @@ export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
           Create market
         </FormSubmitButton>
       </form>
-      <MarketPreview kind={kind} title={title} outcomes={outcomes} line={line} closeAt={closeAt} />
+      <MarketPreview kind={kind} title={title} outcomes={outcomes} line={line} closeAt={closeAt} admin={admin} />
     </div>
   )
 }
@@ -255,7 +274,9 @@ function MarketPreview({
   outcomes,
   line,
   closeAt,
+  admin,
 }: {
+  admin: boolean
   kind: MarketKind
   title: string
   outcomes: string[]
@@ -284,6 +305,8 @@ function MarketPreview({
         Preview
       </h2>
       <p className="text-sm text-ink2">How the card will look on Markets.</p>
+      {/* can_resolve_market (0046): nobody but an admin resolves a market they have money on. */}
+      {!admin && <p className="text-sm text-ink2">If you bet on it, a reviewer resolves it.</p>}
       <MarketCard
         preview
         id="preview"

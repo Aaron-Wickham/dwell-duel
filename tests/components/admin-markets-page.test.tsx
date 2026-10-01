@@ -24,7 +24,7 @@ vi.mock('@/lib/auth/roles', async (importOriginal) => ({
 const { listAwaitingMarkets } = vi.hoisted(() => ({ listAwaitingMarkets: vi.fn() }))
 vi.mock('@/lib/admin/markets-awaiting', () => ({ listAwaitingMarkets }))
 
-import AdminMarketsPage from '@/app/(app)/admin/markets/page'
+import AdminMarketsPage from '@/app/(app)/admin/(sections)/markets/page'
 
 const MARKET = {
   id: '00000000-0000-4000-8000-000000000001',

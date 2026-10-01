@@ -10,7 +10,7 @@ import { Page, PageHeader } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { TaskRow, type TaskRowState } from '@/components/tasks/task-row'
-import { PERIOD_LABEL } from '@/lib/tasks/period-label'
+import { AGAIN_LABEL, PERIOD_LABEL } from '@/lib/tasks/period-label'
 import { SubmitTaskDialog } from './submit-task-dialog'
 
 export default async function TasksPage() {
@@ -41,7 +41,7 @@ export default async function TasksPage() {
                 current?.status === 'pending'
                   ? { kind: 'pending', proofCount: current.proofCount }
                   : current?.status === 'approved'
-                    ? { kind: 'approved' }
+                    ? { kind: 'approved', again: task.isRepeatable && task.period ? AGAIN_LABEL[task.period] : null }
                     : { kind: 'available', rejection: current?.status === 'rejected' ? { note: current.reviewNote } : null }
 
               return (

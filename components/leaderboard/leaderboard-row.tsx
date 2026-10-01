@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import { IntentLink } from '@/components/ui/intent-link'
 import { Avatar } from '@/components/ui/avatar'
 import { rowTitleClass } from '@/components/ui/page'
 import { focusTarget } from '@/lib/pagination/row-id'
@@ -44,9 +44,9 @@ export function LeaderboardRow({
       </span>
       <Avatar name={name} src={avatarSrc} />
       <span className={cn(rowTitleClass, 'min-w-0 grow break-words')}>
-        <Link href={href} transitionTypes={['nav-forward']} className="stretched-link">
+        <IntentLink href={href} transitionTypes={['nav-forward']} className="stretched-link">
           {name}
-        </Link>
+        </IntentLink>
         {isMe && <span className="font-semibold text-ink2"> (you)</span>}
       </span>
       {record && record.won + record.lost > 0 && (

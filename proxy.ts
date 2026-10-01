@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isAppPath } from '@/lib/auth/app-paths'
+import { safeNextPath } from '@/lib/auth/next-path'
 import { isAuthUnavailable, readClaims } from '@/lib/auth/auth-unavailable'
 import { fetchWithTimeout, SERVER_FETCH_TIMEOUT_MS } from '@/lib/supabase/timeout-fetch'
 
@@ -35,8 +36,10 @@ export async function proxy(request: NextRequest) {
   const isPageLoad = request.method === 'GET' || request.method === 'HEAD'
   if (!data && isPageLoad && isAppPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone()
+    // The page asked for comes along, so a shared market link still lands on the market (#263).
+    const next = safeNextPath(`${request.nextUrl.pathname}${request.nextUrl.search}`)
     url.pathname = '/sign-in'
-    url.search = ''
+    url.search = next ? `?next=${encodeURIComponent(next)}` : ''
     const redirect = NextResponse.redirect(url)
     response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie))
     return redirect
@@ -45,8 +48,19 @@ export async function proxy(request: NextRequest) {
   return response
 }
 
+// Not on a Link prefetch (#251): a signed-in page is dynamic, so each prefetch is its own
+// invocation, and the proxy would double it. The prefetched layout's requireUser still guards it,
+// and the navigation that follows runs the proxy, which refreshes the session cookie and turns a
+// signed-out load into a real redirect.
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|manifest\\.webmanifest$|sw\\.js$|offline$|api/cron/|api/health$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    {
+      source:
+        '/((?!_next/static|_next/image|favicon.ico|manifest\\.webmanifest$|sw\\.js$|offline$|api/cron/|api/health$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml)$).*)',
+      missing: [
+        { type: 'header', key: 'next-router-prefetch' },
+        { type: 'header', key: 'purpose', value: 'prefetch' },
+      ],
+    },
   ],
 }

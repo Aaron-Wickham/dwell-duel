@@ -13,6 +13,7 @@ import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { resizePhoto } from '@/lib/profile/resize-photo'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { updateProfileAction, type ActionState } from '@/lib/profile/update-profile'
+import { labelClass } from '@/components/ui/page'
 
 type NewPhoto = { blob: Blob; preview: string }
 
@@ -82,7 +83,7 @@ export function ProfileForm({
         {/* The card goes on a wrapper: a bordered fieldset would draw its legend into the border. */}
         <div className={cn('contents', lgCard)}>
           <fieldset className="flex flex-col gap-3" aria-describedby={avatarErrorId}>
-            <legend className="mb-1.5 text-[15px] font-bold">Photo</legend>
+            <legend className={`mb-1.5 ${labelClass}`}>Photo</legend>
             <div className="flex flex-wrap items-center gap-4">
               <Avatar name={name || displayName} src={shownSrc} size="lg" />
               <div className="flex flex-wrap gap-2">
@@ -126,8 +127,12 @@ export function ProfileForm({
           </fieldset>
         </div>
 
-        <SectionCard title="Preview" titleId="profile-preview-title" className="hidden lg:flex">
-          <p className="text-sm text-ink2">How your profile looks to other members.</p>
+        <SectionCard
+          title="Preview"
+          titleId="profile-preview-title"
+          description="How your profile looks to other members."
+          className="hidden lg:flex"
+        >
           <MemberProfileHeader name={name.trim() || displayName} avatarSrc={shownSrc} bio={bioText.trim() || null} heading={false} />
         </SectionCard>
       </div>

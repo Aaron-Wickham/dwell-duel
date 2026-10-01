@@ -1,4 +1,4 @@
-import { Trophy } from 'lucide-react'
+import { Layers, Trophy } from 'lucide-react'
 import { AnimatedNumber } from '@/components/ui/animated-number'
 import { AnimatedText } from '@/components/ui/animated-text'
 import { StatusChip } from '@/components/ui/status-chip'
@@ -9,6 +9,7 @@ import type { Series } from '@/lib/markets/outcome-series'
 import type { OutcomeRowState } from '@/lib/markets/row-state'
 import type { SlipPick } from '@/lib/parlays/get-slip'
 import { formatOdds } from '@/lib/parlays/odds'
+import { rowTitleClass } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
 
 // Re-exported for existing importers (e.g. this file's own test) -- the type lives in
@@ -23,6 +24,7 @@ export function OutcomeRow({
   series,
   state,
   winner = false,
+  riding = 0,
   slipPick,
   addAction,
   removeAction,
@@ -35,6 +37,9 @@ export function OutcomeRow({
   series: Series
   state: OutcomeRowState
   winner?: boolean
+  // DC in pending parlays with a leg on this outcome (#279). Outside the bar and the percentage,
+  // since parlays are paid by DwellDuel and never move the pool.
+  riding?: number
   slipPick: SlipPick
   addAction: (formData: FormData) => ToastActionResult | Promise<ToastActionResult>
   removeAction: (formData: FormData) => ToastActionResult | Promise<ToastActionResult>
@@ -47,7 +52,7 @@ export function OutcomeRow({
       <div className="flex items-center justify-between gap-3">
         <span className="flex min-w-0 flex-wrap items-center gap-2">
           <span aria-hidden="true" className={cn('size-2.5 shrink-0 rounded-full', SERIES_BG[series])} />
-          <span className="min-w-0 text-[17px] font-extrabold wrap-break-word">{label}</span>
+          <span className={cn(rowTitleClass, 'min-w-0 wrap-break-word')}>{label}</span>
           {winner && (
             <StatusChip tone="done">
               <Trophy aria-hidden="true" className="size-4" />
@@ -65,6 +70,12 @@ export function OutcomeRow({
       <div aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-sunk">
         <span className={cn('block h-full rounded-full', SERIES_BG[series])} style={{ width: `${percent}%` }} />
       </div>
+      {riding > 0 && (
+        <p className="flex items-center gap-1.5 text-sm text-ink2">
+          <Layers aria-hidden="true" className="size-4 shrink-0" />
+          <span className="tabular-nums">+{riding} DC riding in parlays</span>
+        </p>
+      )}
       {state !== 'none' && (
         <div className="flex min-h-11 flex-wrap items-center justify-between gap-2">
           <span className="text-sm text-ink2">

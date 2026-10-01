@@ -47,6 +47,17 @@ test('Show more on the admin ledger appends older rows in place, and a reload ke
 
   const showMore = ledger.getByRole('link', { name: 'Show more' })
   await showMore.scrollIntoViewIfNeeded()
+  // The page fades in through a view transition; while it runs the root element covers the page, so
+  // a click is not delivered, and Playwright retries it after scrolling the link to another
+  // alignment. That moves the page the test is about to measure, so wait until the link can be hit.
+  await expect
+    .poll(() =>
+      showMore.evaluate((el) => {
+        const { left, top, width, height } = el.getBoundingClientRect()
+        return document.elementFromPoint(left + width / 2, top + height / 2) === el
+      }),
+    )
+    .toBe(true)
   const scrollBefore = await page.evaluate(() => window.scrollY)
   expect(scrollBefore).toBeGreaterThan(0)
   // Flags the route's loading skeleton if it mounts at any point, even for one frame.

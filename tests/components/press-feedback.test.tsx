@@ -8,11 +8,15 @@ import { ChartColumn } from 'lucide-react'
 
 vi.mock('@/lib/markets/cancel-bet', () => ({ cancelBetAction: vi.fn() }))
 vi.mock('@/lib/markets/create-market', () => ({ createMarketAction: vi.fn() }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/lib/theme/set-theme', () => ({ setThemeAction: vi.fn() }))
 vi.mock('@/lib/preferences/set-preference', () => ({ setHapticsAction: vi.fn(), setReduceMotionAction: vi.fn() }))
 
 import { BackLink } from '@/components/ui/back-link'
 import { buttonVariants } from '@/components/ui/button'
+import { FilterChips } from '@/components/ui/filter-chips'
+import { MarketSearch } from '@/components/markets/market-search'
+import { JumpToMe } from '@/components/leaderboard/jump-to-me'
 import { Wordmark } from '@/components/brand/wordmark'
 import { MarketCard } from '@/components/markets/market-card'
 import { PlacedParlay } from '@/components/parlays/placed-parlay'
@@ -22,9 +26,10 @@ import { Podium } from '@/components/leaderboard/podium'
 import { Awards } from '@/components/leaderboard/awards'
 import { PastChampions } from '@/components/leaderboard/past-champions'
 import { CancelledBetRows, WagerRows } from '@/app/(app)/bets/bet-rows'
-import { MemberIdentity } from '@/app/(app)/admin/members/member-identity'
-import { MotionSettings } from '@/app/(app)/settings/settings-controls'
+import { MemberRow } from '@/app/(app)/admin/members/member-row'
+import { MotionSettings, ThemeSetting } from '@/app/(app)/settings/settings-controls'
 import { CreateMarketForm } from '@/app/(app)/markets/new/create-market-form'
+import { PositionCard } from '@/components/markets/position-card'
 
 const MEMBER = { id: 'm1', name: 'Grace', avatarSrc: null }
 
@@ -133,16 +138,66 @@ const CASES: [string, () => ReactElement][] = [
     ),
   ],
   [
-    'MemberIdentity',
+    'MemberRow',
     () => (
-      <MemberIdentity
-        now={Date.parse('2026-09-28T12:00:00Z')}
-        member={{ id: 'm1', displayName: 'Grace', avatarSrc: null, email: 'g@example.com', balance: 90, role: 'member', joinedAt: null, lastSignInAt: null }}
+      <ul>
+        <MemberRow
+          domId="member-m1"
+          now={Date.parse('2026-09-28T12:00:00Z')}
+          member={{ id: 'm1', displayName: 'Grace', avatarSrc: null, email: 'g@example.com', balance: 90, role: 'member', joinedAt: null, lastSignInAt: null, removed: false }}
+        />
+      </ul>
+    ),
+  ],
+  [
+    'FilterChips',
+    () => (
+      <FilterChips
+        label="Whose markets"
+        items={[
+          { href: '/markets', label: 'Everyone’s', current: true },
+          { href: '/markets?mine=bet', label: 'I bet on', current: false },
+        ]}
       />
     ),
   ],
+  ['MarketSearch', () => <MarketSearch q="" status="all" mine={null} />],
+  ['JumpToMe', () => <JumpToMe href="/leaderboard?at=me" focusId="member-1" />],
   ['MotionSettings', () => <MotionSettings haptics reduceMotion={false} />],
   ['CreateMarketForm', () => <CreateMarketForm />],
+  [
+    'PositionCard',
+    () => (
+      <PositionCard
+        resolvedAt={null}
+        position={{
+          bets: [{ id: 1, outcomeLabel: 'Yes', amount: 20, placedAt: '2026-10-03T09:14:00Z', result: { kind: 'open' }, paysIfWins: 26 }],
+          legs: [
+            {
+              leg: { marketId: 'k1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', oddsBp: 20_000, oddsKnown: false, status: 'open' },
+              parlay: {
+                id: 'p1',
+                stake: 5,
+                status: 'pending',
+                credited: 0,
+                maxMultiplier: 20,
+                lockedAtPlacement: false,
+                multiplierBp: 40_000,
+                capped: false,
+                estimated: true,
+                potentialPayout: 20,
+                createdAt: '2026-10-03T09:00:00Z',
+                legs: [
+                  { marketId: 'k1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', oddsBp: 20_000, oddsKnown: false, status: 'open' },
+                  { marketId: 'k2', marketTitle: 'Snow?', outcomeLabel: 'No', oddsBp: 20_000, oddsKnown: false, status: 'open' },
+                ],
+              },
+            },
+          ],
+        }}
+      />
+    ),
+  ],
 ]
 
 function tapTargets(container: HTMLElement): HTMLElement[] {
@@ -196,6 +251,41 @@ describe('press feedback', () => {
     )
     expect(container.querySelector('a')).toHaveClass('pressable', 'relative', 'hover-tint', 'lg:hover-lift', 'lg:before:hidden')
     expect(container.querySelector('a')).not.toHaveClass('hover-lift')
+  })
+
+  it('tints My bets’ parlay and bet tiles instead of lifting them inside the section card', () => {
+    const { container } = render(
+      <ul>
+        <PlacedParlay
+          parlay={{
+            id: 'p1',
+            stake: 5,
+            status: 'pending',
+            credited: 0,
+            maxMultiplier: 20,
+            lockedAtPlacement: false,
+            multiplierBp: 40_000,
+            capped: false,
+            estimated: false,
+            potentialPayout: 20,
+            createdAt: '2026-09-25T12:00:00Z',
+            legs: [{ marketId: 'k1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', oddsBp: 20_000, oddsKnown: true, status: 'open' }],
+          }}
+        />
+      </ul>,
+    )
+    const tile = container.querySelector('li > div')!
+    expect(tile).toHaveClass('pressable', 'relative', 'hover-tint')
+    expect(tile).not.toHaveClass('hover-lift')
+    const rows = readFileSync(path.resolve(import.meta.dirname, '../../app/(app)/bets/bet-rows.tsx'), 'utf8')
+    expect(rows).not.toMatch(/hover-lift/)
+  })
+
+  it('presses the theme choices', () => {
+    const { container } = render(<ThemeSetting initial="system" />)
+    const labels = container.querySelectorAll('label')
+    expect(labels).toHaveLength(3)
+    for (const label of labels) expect(label).toHaveClass('pressable')
   })
 
   it('tints the podium’s places instead of lifting them inside the podium card', () => {

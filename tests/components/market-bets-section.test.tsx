@@ -68,6 +68,7 @@ const market: MarketDetail = {
   resolvedOutcomeId: null,
   resolvedOutcomeLabel: null,
   resolvedAt: null,
+  payoutSeed: 0,
   settledAt: null,
   voidReason: null,
   outcomes: [

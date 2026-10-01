@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
-import type { PendingRow } from '@/app/(app)/admin/tasks/pending-approvals'
+import type { PendingRow } from '@/app/(app)/admin/(sections)/tasks/pending-approvals'
 
 // React resets a form once its action finishes, even after an error (#63). Each form here keeps
 // what the member typed when the server refuses it; the admin forms also toast on success (#65).
@@ -37,13 +37,13 @@ vi.mock('@/lib/tasks/review-task-completion', () => ({
 
 import { SubmitTaskDialog } from '@/app/(app)/tasks/submit-task-dialog'
 import { EditMarketDialog } from '@/app/(app)/markets/[id]/edit-market-dialog'
-import { CreateTaskForm } from '@/app/(app)/admin/tasks/create-task-form'
-import { EditTaskForm } from '@/app/(app)/admin/tasks/edit-task-form'
-import { TaskCatalogItem } from '@/app/(app)/admin/tasks/task-catalog-item'
+import { CreateTaskForm } from '@/app/(app)/admin/(sections)/tasks/create-task-form'
+import { EditTaskForm } from '@/app/(app)/admin/(sections)/tasks/edit-task-form'
+import { TaskCatalogItem } from '@/app/(app)/admin/(sections)/tasks/task-catalog-item'
 import { ProfileForm } from '@/app/(app)/profile/profile-form'
-import { PendingApprovals } from '@/app/(app)/admin/tasks/pending-approvals'
-import { ReviewButtons } from '@/app/(app)/admin/tasks/review-buttons'
-import { AddInviteForm } from '@/app/(app)/admin/invites/add-invite-form'
+import { PendingApprovals } from '@/app/(app)/admin/(sections)/tasks/pending-approvals'
+import { ReviewButtons } from '@/app/(app)/admin/(sections)/tasks/review-buttons'
+import { AddInviteForm } from '@/app/(app)/admin/(sections)/invites/add-invite-form'
 
 const GENESIS: TaskSummary = {
   id: 't1',

@@ -9,18 +9,20 @@ vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
 )
 
-const { listOpenMarkets, listResolvedMarkets, readSparklines, requestShowMoreFocus } = vi.hoisted(() => ({
+const { listOpenMarkets, listResolvedMarkets, listMatchingMarkets, readSparklines, requestShowMoreFocus, push } = vi.hoisted(() => ({
   listOpenMarkets: vi.fn(),
+  listMatchingMarkets: vi.fn(),
+  push: vi.fn(),
   listResolvedMarkets: vi.fn(),
   readSparklines: vi.fn(),
   requestShowMoreFocus: vi.fn(),
 }))
-vi.mock('@/lib/markets/list-markets', () => ({ listOpenMarkets, listResolvedMarkets }))
+vi.mock('@/lib/markets/list-markets', () => ({ listOpenMarkets, listResolvedMarkets, listMatchingMarkets }))
 vi.mock('@/lib/markets/sparklines', () => ({ readSparklines }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase: {}, user: { id: 'p-me' } }) }))
 vi.mock('@/components/live/live-tables', () => ({ LiveTables: () => null }))
 vi.mock('@/components/ui/show-more-focus', () => ({ ShowMoreFocus: () => null, requestShowMoreFocus }))
-vi.mock('next/navigation', () => ({ redirect: vi.fn() }))
+vi.mock('next/navigation', () => ({ redirect: vi.fn(), useRouter: () => ({ push }) }))
 // A plain click runs onNavigate, as the App Router's Link does for a client-side navigation.
 vi.mock('next/link', () => ({
   default: ({
@@ -64,16 +66,18 @@ function market(n: number, status: MarketSummary['status'], closeInMs = DAY): Ma
     resolvedAt: status === 'resolved' ? new Date(Date.now() - DAY).toISOString() : null,
     settledAt: status === 'open' ? null : new Date(Date.now() - DAY).toISOString(),
     outcomes: [],
-    sparkline: null,
+    sparkVersion: status === 'open' ? '1' : 'settled',
   }
 }
 
+// The open list answers for the upcoming side of the close time, awaiting for the other.
 async function renderPage(
   open: KeysetPage<MarketSummary>,
   resolved: KeysetPage<MarketSummary>,
   searchParams: Record<string, string> = {},
+  awaiting: KeysetPage<MarketSummary> = EMPTY,
 ) {
-  listOpenMarkets.mockResolvedValue(open)
+  listOpenMarkets.mockImplementation(async (_supabase, _page, bound: { upcoming: boolean }) => (bound.upcoming ? open : awaiting))
   listResolvedMarkets.mockResolvedValue(resolved)
   render(await MarketsPage({ params: Promise.resolve({}), searchParams: Promise.resolve(searchParams) }))
 }
@@ -89,30 +93,64 @@ function outline(): string[] {
 beforeEach(() => {
   listOpenMarkets.mockReset()
   listResolvedMarkets.mockReset()
+  listMatchingMarkets.mockReset()
+  push.mockReset()
   readSparklines.mockReset()
   readSparklines.mockResolvedValue(new Map())
   requestShowMoreFocus.mockReset()
 })
 
 describe('MarketsPage', () => {
-  it('reads each list from its own params, and sparklines for exactly the cards shown', async () => {
+  it('reads each list from its own params, and sparklines for exactly the cards shown, one batch per list', async () => {
     const openTop = { ts: '2026-09-20T10:00:00Z', id: market(1, 'open').id }
+    const awaitingEnd = { ts: '2026-09-15T10:00:00Z', id: market(2, 'open').id }
     const resolvedEnd = { ts: '2026-09-10T10:00:00Z', id: market(9, 'voided').id }
     await renderPage(
-      { rows: [market(1, 'open'), market(2, 'open', -DAY)], next: null, windowed: true },
+      { rows: [market(1, 'open')], next: null, windowed: true },
       { rows: [market(9, 'voided')], next: null, windowed: false },
-      { open_from: encodeCursor(openTop), resolved: encodeCursor(resolvedEnd) },
+      { open_from: encodeCursor(openTop), awaiting: encodeCursor(awaitingEnd), resolved: encodeCursor(resolvedEnd) },
+      { rows: [market(2, 'open', -DAY)], next: null, windowed: false },
     )
-    expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: openTop, bottom: null })
+    const at = expect.any(String)
+    expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: openTop, bottom: null }, { upcoming: true, at })
+    expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: null, bottom: awaitingEnd }, { upcoming: false, at })
+    expect(listOpenMarkets.mock.calls[0][2].at).toBe(listOpenMarkets.mock.calls[1][2].at)
     expect(listResolvedMarkets).toHaveBeenCalledWith({}, { top: null, bottom: resolvedEnd })
-    const facts = (m: MarketSummary) => ({ id: m.id, seedPerOutcome: 20, createdAt: '2026-09-01T10:00:00Z', outcomeIds: [], sparkline: null })
-    expect(readSparklines).toHaveBeenCalledWith({}, [market(1, 'open'), market(2, 'open'), market(9, 'voided')].map(facts))
+    const facts = (m: MarketSummary) => ({
+      id: m.id,
+      seedPerOutcome: 20,
+      createdAt: '2026-09-01T10:00:00Z',
+      outcomeIds: [],
+      version: m.sparkVersion,
+    })
+    expect(readSparklines).toHaveBeenCalledWith({}, [[facts(market(1, 'open'))], [facts(market(2, 'open'))], [facts(market(9, 'voided'))]])
+  })
+
+  it('lists open markets first on All, however many are awaiting resolution, each list with its own Show more (#261)', async () => {
+    const awaiting = Array.from({ length: 50 }, (_, i) => market(100 + i, 'open', -DAY - i))
+    await renderPage(
+      { rows: [market(1, 'open')], next: { kind: 'extend', cursor: 'OPEN', firstId: market(3, 'open').id }, windowed: false },
+      { rows: [market(9, 'resolved')], next: null, windowed: false },
+      {},
+      { rows: awaiting, next: { kind: 'extend', cursor: 'AWAITING', firstId: market(200, 'open').id }, windowed: false },
+    )
+
+    expect(outline()).toEqual(['Open', 'Show more', 'Awaiting resolution', 'Show more', 'Resolved'])
+    const [openMore, awaitingMore] = screen.getAllByRole('link', { name: 'Show more' })
+    expect(openMore).toHaveAttribute('href', '/markets?open=OPEN')
+    expect(openMore).toHaveAccessibleDescription('Open markets')
+    expect(awaitingMore).toHaveAttribute('href', '/markets?awaiting=AWAITING')
+    expect(awaitingMore).toHaveAccessibleDescription('Markets awaiting resolution')
+    fireEvent.click(awaitingMore)
+    expect(requestShowMoreFocus).toHaveBeenLastCalledWith(`market-awaiting-${market(200, 'open').id}`)
+    expect(screen.getByRole('article', { name: /Market 100\b/ })).toHaveAttribute('id', `market-awaiting-${market(100, 'open').id}`)
   })
 
   it.each(['awaiting', 'pending'])(
     'reads only the past-close side of the open list for ?status=%s, and skips the resolved list',
     async (status) => {
-      await renderPage({ rows: [market(2, 'open', -DAY)], next: null, windowed: false }, { rows: [], next: null, windowed: false }, { status })
+      await renderPage(EMPTY, EMPTY, { status }, { rows: [market(2, 'open', -DAY)], next: null, windowed: false })
+      expect(listOpenMarkets).toHaveBeenCalledTimes(1)
       expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: null, bottom: null }, { upcoming: false, at: expect.any(String) })
       expect(listResolvedMarkets).not.toHaveBeenCalled()
       expect(screen.getByRole('link', { name: 'Awaiting' })).toHaveAttribute('aria-current', 'page')
@@ -123,6 +161,7 @@ describe('MarketsPage', () => {
 
   it('reads only upcoming markets for the open filter', async () => {
     await renderPage({ rows: [market(1, 'open')], next: null, windowed: false }, { rows: [], next: null, windowed: false }, { status: 'open' })
+    expect(listOpenMarkets).toHaveBeenCalledTimes(1)
     expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: null, bottom: null }, { upcoming: true, at: expect.any(String) })
     expect(listResolvedMarkets).not.toHaveBeenCalled()
   })
@@ -158,14 +197,15 @@ describe('MarketsPage', () => {
 
   it('treats an unknown status as All', async () => {
     await renderPage({ rows: [market(1, 'open')], next: null, windowed: false }, { rows: [], next: null, windowed: false }, { status: 'bogus' })
-    expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: null, bottom: null })
+    expect(listOpenMarkets).toHaveBeenCalledTimes(2)
+    expect(listResolvedMarkets).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('link', { name: 'All' })).toHaveAttribute('aria-current', 'page')
   })
 
-  it('puts the open list’s Show more under its groups and the resolved list’s under theirs', async () => {
+  it('puts the open list’s Show more under its group and the resolved list’s under theirs', async () => {
     await renderPage(
       {
-        rows: [market(1, 'open'), market(2, 'open', -DAY)],
+        rows: [market(1, 'open')],
         next: { kind: 'extend', cursor: 'OPEN', firstId: market(3, 'open').id },
         windowed: false,
       },
@@ -175,16 +215,17 @@ describe('MarketsPage', () => {
         windowed: false,
       },
       { tab: 'x' },
+      { rows: [market(2, 'open', -DAY)], next: null, windowed: false },
     )
 
-    expect(outline()).toEqual(['Open', 'Awaiting resolution', 'Show more', 'Resolved', 'Voided', 'Show more'])
+    expect(outline()).toEqual(['Open', 'Show more', 'Awaiting resolution', 'Resolved', 'Voided', 'Show more'])
     const [openMore, resolvedMore] = screen.getAllByRole('link', { name: 'Show more' })
     expect(openMore).toHaveAttribute('href', '/markets?tab=x&open=OPEN')
     expect(openMore).toHaveAttribute('data-scroll', 'false')
     expect(resolvedMore).toHaveAttribute('href', '/markets?tab=x&resolved_from=RESOLVED')
     expect(resolvedMore).toHaveAttribute('data-scroll', 'true')
 
-    expect(openMore).toHaveAccessibleDescription('Open and awaiting markets')
+    expect(openMore).toHaveAccessibleDescription('Open markets')
     expect(resolvedMore).toHaveAccessibleDescription('Resolved markets')
 
     fireEvent.click(openMore)
@@ -240,5 +281,96 @@ describe('MarketsPage', () => {
     expect(screen.getByText('No markets yet.')).toBeInTheDocument()
     expect(screen.queryByText('Nothing older here.')).toBeNull()
     expect(screen.queryByRole('link', { name: 'Show more' })).toBeNull()
+  })
+})
+
+describe('MarketsPage: search and whose markets', () => {
+  const match = (rows: MarketSummary[], extra: Partial<KeysetPage<MarketSummary>> = {}): KeysetPage<MarketSummary> => ({ rows, next: null, windowed: false, ...extra })
+
+  async function renderNarrowed(page: KeysetPage<MarketSummary>, searchParams: Record<string, string>) {
+    listMatchingMarkets.mockResolvedValue(page)
+    render(await MarketsPage({ params: Promise.resolve({}), searchParams: Promise.resolve(searchParams) }))
+  }
+
+  it('lists a search as one flat list across statuses, reading neither status list', async () => {
+    await renderNarrowed(match([market(1, 'open'), market(2, 'resolved'), market(3, 'voided')]), { q: '  rain ' })
+
+    expect(listMatchingMarkets).toHaveBeenCalledWith({}, { top: null, bottom: null }, 'all', { q: 'rain', mine: null, userId: 'p-me' }, expect.any(String))
+    expect(listOpenMarkets).not.toHaveBeenCalled()
+    expect(listResolvedMarkets).not.toHaveBeenCalled()
+    expect(screen.getAllByRole('link', { name: /Market [123]/ })).toHaveLength(3)
+    expect(outline()).toEqual([])
+    expect(document.getElementById('markets-matches-caption')).toHaveTextContent('3 markets match “rain”. Clear search')
+    expect(screen.getByRole('link', { name: 'Clear search' })).toHaveAttribute('href', '/markets')
+  })
+
+  it('keeps the search in the status tabs and the chips, and the chip in the search', async () => {
+    await renderNarrowed(match([market(1, 'open')]), { q: 'rain', status: 'open', mine: 'bet' })
+
+    expect(listMatchingMarkets).toHaveBeenCalledWith({}, { top: null, bottom: null }, 'open', { q: 'rain', mine: 'bet', userId: 'p-me' }, expect.any(String))
+    expect(screen.getByRole('link', { name: 'Resolved' })).toHaveAttribute('href', '/markets?q=rain&status=resolved&mine=bet')
+    const chips = screen.getByRole('navigation', { name: 'Whose markets' })
+    expect(within(chips).getByRole('link', { name: 'I bet on' })).toHaveAttribute('aria-current', 'page')
+    expect(within(chips).getByRole('link', { name: 'I made' })).toHaveAttribute('href', '/markets?q=rain&status=open&mine=made')
+    expect(within(chips).getByRole('link', { name: 'Everyone’s' })).toHaveAttribute('href', '/markets?q=rain&status=open')
+    expect(document.getElementById('markets-matches-caption')).toHaveTextContent('1 market you bet on matches “rain”.')
+    expect(screen.getByRole('searchbox', { name: 'Search markets by title' })).toHaveValue('rain')
+  })
+
+  it('lists a chip on its own without a search', async () => {
+    await renderNarrowed(match([market(1, 'open')]), { mine: 'made' })
+    expect(listMatchingMarkets).toHaveBeenCalledWith({}, { top: null, bottom: null }, 'all', { q: '', mine: 'made', userId: 'p-me' }, expect.any(String))
+    expect(document.getElementById('markets-matches-caption')).toHaveTextContent('1 market you made. Show everyone’s markets')
+  })
+
+  it('ignores an unknown chip and an empty search, showing the grouped lists', async () => {
+    await renderPage({ rows: [market(1, 'open')], next: null, windowed: false }, EMPTY, { mine: 'everyone', q: '*' })
+    expect(listMatchingMarkets).not.toHaveBeenCalled()
+    expect(outline()).toEqual(['Open'])
+  })
+
+  it('searches in the page without a reload, keeping the tab and the chip', async () => {
+    await renderNarrowed(match([market(1, 'open')]), { q: 'rain', status: 'awaiting', mine: 'made' })
+    const box = screen.getByRole('searchbox', { name: 'Search markets by title' })
+    fireEvent.change(box, { target: { value: '  potluck   night ' } })
+    fireEvent.submit(box.closest('form')!)
+    expect(push).toHaveBeenCalledWith('/markets?q=potluck+night&status=awaiting&mine=made')
+  })
+
+  it('says nothing matches, and offers to search every status or clear the search', async () => {
+    await renderNarrowed(match([]), { q: 'potluk', status: 'open' })
+    expect(screen.getByText('No open markets match “potluk”.')).toBeInTheDocument()
+    expect(screen.getByText('Check the spelling, or search all markets.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Search all markets' })).toHaveAttribute('href', '/markets?q=potluk')
+    expect(screen.getByRole('link', { name: 'Clear search' })).toHaveAttribute('href', '/markets?status=open')
+  })
+
+  it('does not offer to search all markets when the status is already All', async () => {
+    await renderNarrowed(match([]), { q: 'potluk' })
+    expect(screen.getByText('Check the spelling, or try fewer words.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Search all markets' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Clear search' })).toHaveAttribute('href', '/markets')
+  })
+
+  it('names the whose-markets filter in the empty state, with no search to clear', async () => {
+    await renderNarrowed(match([]), { mine: 'bet' })
+    expect(screen.getByText('No markets you bet on yet.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Search all markets' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Show everyone’s markets' })).toHaveAttribute('href', '/markets')
+  })
+
+  it('pages a long result list with Show more under the match prefix, without a count', async () => {
+    await renderNarrowed(match([market(1, 'open')], { next: { kind: 'extend', cursor: 'NEXT', firstId: market(2, 'open').id } }), { q: 'm' })
+    expect(document.getElementById('markets-matches-caption')).toHaveTextContent('Newest markets match “m”.')
+    const showMore = screen.getByRole('link', { name: 'Show more' })
+    expect(showMore).toHaveAttribute('href', '/markets?q=m&match=NEXT')
+    fireEvent.click(showMore)
+    expect(requestShowMoreFocus).toHaveBeenCalledWith(`market-match-${market(2, 'open').id}`)
+  })
+
+  it('reads the match list’s own cursor', async () => {
+    const bottom = { ts: '2026-09-10T10:00:00Z', id: market(9, 'open').id }
+    await renderNarrowed(match([market(1, 'open')]), { q: 'm', match: encodeCursor(bottom) })
+    expect(listMatchingMarkets).toHaveBeenCalledWith({}, { top: null, bottom }, 'all', expect.anything(), expect.any(String))
   })
 })

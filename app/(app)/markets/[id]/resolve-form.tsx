@@ -14,6 +14,7 @@ import { resolveMarketAction, type ActionState } from '@/lib/markets/resolve-mar
 import { formatLine } from '@/lib/markets/kind'
 import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import { Input } from '@/components/ui/field'
+import { labelClass } from '@/components/ui/page'
 
 const FORM_ID = 'resolve-form'
 
@@ -173,7 +174,7 @@ export function ResolveForm({
           />
         </Field>
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1.5 text-[15px] font-bold">Proof (optional)</legend>
+          <legend className={`mb-1.5 ${labelClass}`}>Proof (optional)</legend>
           <ProofPicker id="resolve-proof" value={drafts} onChange={setDrafts} />
         </fieldset>
         <FormSubmitButton block>{override ? 'Override resolution' : 'Resolve market'}</FormSubmitButton>
@@ -189,8 +190,8 @@ export function ResolveForm({
           <>
             <strong className="text-ink">{winner} wins.</strong>{' '}
             {override
-              ? 'The previous payouts are reversed, then winning bets and parlay legs are paid out on this outcome.'
-              : 'Winning bets and parlay legs are paid out straight away.'}
+              ? 'The previous payouts are reversed, then winning solo bets on this outcome are paid. Every parlay with a pick here is settled again on the new result.'
+              : 'Winning solo bets are paid straight away. A parlay with a pick here is lost if that pick lost, and pays once every pick has won.'}
           </>
         }
         confirmLabel="Confirm outcome"

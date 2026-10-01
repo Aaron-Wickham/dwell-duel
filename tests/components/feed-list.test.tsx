@@ -108,8 +108,8 @@ describe('FeedList', () => {
         events={[event]}
         heading="Recent activity"
         headingId="recent-activity"
-        aboveList={<a href="/x">Back to newest</a>}
-        belowList={<a href="/y">Show more</a>}
+        aboveList={<a href="#newest">Back to newest</a>}
+        belowList={<a href="#more">Show more</a>}
       />,
     )
     const card = screen.getByRole('heading', { name: 'Recent activity' }).closest('section')!
@@ -128,8 +128,8 @@ describe('FeedList', () => {
         heading="Events"
         headingId="feed-events"
         headingHidden
-        aboveList={<a href="/x">Back to newest</a>}
-        belowList={<a href="/y">Show more</a>}
+        aboveList={<a href="#newest">Back to newest</a>}
+        belowList={<a href="#more">Show more</a>}
       />,
     )
     expect(screen.getByText('Nothing yet.')).toBeInTheDocument()

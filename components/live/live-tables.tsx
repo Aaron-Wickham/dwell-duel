@@ -1,10 +1,10 @@
 'use client'
 
 import { createContext, useContext, useEffect, useId, useMemo, useSyncExternalStore, type ReactNode } from 'react'
-import type { LiveSubscription } from './live-refresh'
+import type { LiveSubscription, LiveTableSubscription } from './live-refresh'
 
 function entryId(subscription: LiveSubscription): string {
-  return `${subscription.table}|${subscription.filter ?? ''}`
+  return 'topic' in subscription ? `#${subscription.topic}` : `${subscription.table}|${subscription.filter}`
 }
 
 function dedupeSorted(subscriptions: LiveSubscription[]): LiveSubscription[] {
@@ -25,7 +25,7 @@ export function subscriptionKey(subscriptions: LiveSubscription[]): string {
 // effect, and readers subscribe with useSyncExternalStore. That keeps registration out of the
 // render path entirely -- no setState-in-effect, no extra render per page.
 class LiveTableRegistry {
-  readonly base: LiveSubscription
+  readonly base: LiveTableSubscription
   private readonly registered = new Map<string, LiveSubscription[]>()
   private readonly listeners = new Set<() => void>()
   // Just the registered page declarations, without the base -- what LiveRefresh's page channel
@@ -88,7 +88,7 @@ export function usePageSubscriptions(): LiveSubscription[] {
 // The base subscription is fixed for the registry's whole lifetime (set once from the signed-in
 // user's id), so unlike the page declarations it needs no external-store subscription of its
 // own -- reading it straight through context is enough.
-export function useLiveBaseSubscription(): LiveSubscription | null {
+export function useLiveBaseSubscription(): LiveTableSubscription | null {
   const registry = useContext(LiveTablesContext)
   return registry ? registry.base : null
 }

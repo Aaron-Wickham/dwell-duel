@@ -7,6 +7,7 @@ import type { ThemeChoice } from '@/lib/theme/theme'
 import { setHapticsAction, setReduceMotionAction } from '@/lib/preferences/set-preference'
 import { useDeviceReducesMotion } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
+import { labelClass } from '@/components/ui/page'
 
 const THEMES: { value: ThemeChoice; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -48,13 +49,13 @@ export function ThemeSetting({ initial }: { initial: ThemeChoice }) {
   )
   return (
     <fieldset className="flex flex-col gap-1.5">
-      <legend className="mb-1.5 text-[15px] font-bold">Theme</legend>
+      <legend className={`mb-1.5 ${labelClass}`}>Theme</legend>
       <div className="grid grid-cols-3 gap-1.5 rounded-[14px] bg-sunk p-1">
         {THEMES.map(({ value, label }) => (
           <label
             key={value}
             className={cn(
-              'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] font-bold text-ink2',
+              'pressable flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] font-bold text-ink2',
               theme === value && 'bg-surface text-ink shadow-tab',
             )}
           >

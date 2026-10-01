@@ -4,7 +4,7 @@ import { legTally, tallySummary } from '@/lib/parlays/get-parlay'
 import type { ParlayView } from '@/lib/parlays/list-parlays'
 import { cn } from '@/lib/utils'
 
-export const LEG_PILL: Record<LegStatus, string> = {
+const LEG_PILL: Record<LegStatus, string> = {
   open: 'bg-gold-soft text-gold',
   awaiting: 'bg-gold-soft text-gold',
   won: 'bg-acc-soft text-acc-text',
@@ -12,7 +12,7 @@ export const LEG_PILL: Record<LegStatus, string> = {
   voided: 'bg-sunk text-ink2',
 }
 
-export const LEG_LABEL: Record<LegStatus, string> = {
+const LEG_LABEL: Record<LegStatus, string> = {
   open: 'Open',
   awaiting: 'Awaiting resolution',
   won: 'Won',

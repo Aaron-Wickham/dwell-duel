@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { FileText, ImagePlus, Link2, Paperclip, X } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/field'
+import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { Message } from '@/components/ui/message'
 import { isWebLink, PROOF_FILE_ACCEPT, PROOF_FILE_TYPES, PROOF_IMAGE_ACCEPT, PROOF_MAX_BYTES, PROOF_MAX_FILES, PROOF_MAX_ITEMS, type ProofDraft } from '@/lib/proof/types'
 import { cn } from '@/lib/utils'
@@ -70,6 +71,10 @@ export function ProofPicker({
       setLinkInvalid(true)
       return setProblem('Links must start with http:// or https://.')
     }
+    if (url.length > TEXT_LIMITS.proofLink) {
+      setLinkInvalid(true)
+      return setProblem(tooLong('Link', TEXT_LIMITS.proofLink))
+    }
     setLinkInvalid(false)
     add([{ key: crypto.randomUUID(), kind: 'link', url }])
     setLink('')
@@ -125,6 +130,7 @@ export function ProofPicker({
           type="url"
           inputMode="url"
           placeholder="https://"
+          maxLength={TEXT_LIMITS.proofLink}
           value={link}
           onChange={(e) => {
             setLink(e.target.value)

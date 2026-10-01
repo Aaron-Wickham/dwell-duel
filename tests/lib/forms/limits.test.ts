@@ -18,6 +18,7 @@ describe('TEXT_LIMITS', () => {
       resolutionNote: 1000,
       commentBody: 280,
       voidReason: 500,
+      proofLink: 2000,
     })
   })
 })

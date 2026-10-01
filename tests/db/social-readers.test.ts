@@ -123,6 +123,8 @@ describe('listFeed', () => {
 describe('getLeaderboardPage', () => {
   it('ranks every member by net worth, sharing ranks on ties', async () => {
     const carol = await makeMember('Carol')
+    // Only invited members are ranked (0093).
+    await ensureInvited(await clientFor(carol))
     await setBalanceViaLedger(alice.id, 150)
     await setBalanceViaLedger(bob.id, 150)
     await setBalanceViaLedger(carol.id, 90)
@@ -147,6 +149,7 @@ describe('getLeaderboardPage', () => {
 describe('getMemberStanding', () => {
   it('ranks on the net-worth board, and counts the total membership', async () => {
     const carol = await makeMember('Carol')
+    await ensureInvited(await clientFor(carol))
     await setBalanceViaLedger(alice.id, 150)
     await setBalanceViaLedger(bob.id, 90)
     await setBalanceViaLedger(carol.id, 90)

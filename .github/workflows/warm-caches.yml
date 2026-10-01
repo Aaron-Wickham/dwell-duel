@@ -3,13 +3,17 @@ name: Warm caches
 # CI runs only on pull requests, and GitHub scopes a cache saved on a PR to that PR, so the
 # Supabase image cache (#238) has to be saved on main for every PR to restore it. This saves it
 # whenever the setup that decides the images changes, weekly so it never ages out of GitHub's
-# 7-day eviction, and by hand.
+# 7-day eviction, and by hand. The web-caches job does the same for the npm, Next build and
+# Playwright caches, whenever the lockfile changes (#277). GitHub disables a scheduled workflow
+# after 60 days without repository activity; merged PRs count, so a quiet spell is the only risk.
+# Re-enable from the Actions tab, or run the workflow by hand.
 on:
   push:
     branches: [main]
     paths:
       - '.github/actions/local-supabase/**'
       - '.github/workflows/warm-caches.yml'
+      - 'package-lock.json'
   schedule:
     - cron: '17 6 * * 1'
   workflow_dispatch:
@@ -29,3 +33,38 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       # Restores the images on a hit (keeping the entry fresh), or pulls and saves them on a miss.
       - uses: ./.github/actions/local-supabase
+  # PRs restore these from main (a PR's own cache is scoped to it), and CI no longer saves them.
+  web-caches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # Saves the npm cache after the job when the lockfile's entry isn't there yet.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # The build reads the keys the local stack writes to .env.local.
+      - uses: ./.github/actions/local-supabase
+
+      - name: Cache the Next.js build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            next-${{ runner.os }}-
+
+      - run: npm run build
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - run: npx playwright install --with-deps chromium

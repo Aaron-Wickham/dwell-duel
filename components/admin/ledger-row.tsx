@@ -5,14 +5,19 @@ import { LocalTime } from '@/components/ui/local-time'
 import { focusTarget } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
 
-export function LedgerRow({ entry, domId }: { entry: LedgerEntry; domId?: string }) {
+// `showMember` is off where the page is already about that one member.
+export function LedgerRow({ entry, domId, showMember = true }: { entry: LedgerEntry; domId?: string; showMember?: boolean }) {
   const sign = entry.amount > 0 ? '+' : entry.amount < 0 ? '−' : ''
   const amountClass = entry.amount > 0 ? 'text-win' : entry.amount < 0 ? 'text-loss' : 'text-ink2'
 
   return (
     <li {...focusTarget(domId)} className="flex items-start gap-3 py-3.5">
       <p className="min-w-0 grow break-words">
-        <Link href={`/members/${entry.profileId}`} transitionTypes={['nav-forward']}>{entry.memberName}</Link>:{' '}
+        {showMember && (
+          <>
+            <Link href={`/members/${entry.profileId}`} transitionTypes={['nav-forward']}>{entry.memberName}</Link>:{' '}
+          </>
+        )}
         <span className={cn('font-extrabold tabular-nums', amountClass)}>
           {sign}
           {Math.abs(entry.amount)} DC

@@ -149,7 +149,7 @@ export function inlineText(nodes: Inline[]): string {
   return nodes.map((n) => (n.type === 'text' || n.type === 'code' ? n.text : inlineText(n.children))).join('')
 }
 
-export function slugify(text: string): string {
+function slugify(text: string): string {
   return text
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')

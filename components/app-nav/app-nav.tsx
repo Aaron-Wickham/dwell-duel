@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { IntentLink } from '@/components/ui/intent-link'
 import { usePathname } from 'next/navigation'
 import { LazyMotion, MotionConfig } from 'motion/react'
 import * as m from 'motion/react-m'
@@ -15,7 +15,7 @@ import { ICON_POP, PILL_TRANSITION } from '@/lib/ui/motion'
 import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
 import { BalanceNumber } from './balance-number'
-import { NAV_ITEMS, activeNavId, type NavId } from './nav-items'
+import { NAV_ITEMS, activeNavId, tabAriaLabel, type NavId } from './nav-items'
 
 const loadMotionFeatures = () => import('@/lib/ui/motion-features').then((mod) => mod.default)
 
@@ -31,7 +31,8 @@ const ICONS: Record<NavId, LucideIcon> = {
 // Tapping your balance shows where your coins are. The chip keeps its 36px look inside a 44px link.
 function BalanceChip({ balance, active }: { balance: number; active: boolean }) {
   return (
-    <Link
+    <IntentLink
+      prefetchOnTouch
       href="/bets"
       aria-current={active ? 'page' : undefined}
       className="pressable inline-flex min-h-11 shrink-0 items-center rounded-full no-underline"
@@ -42,7 +43,7 @@ function BalanceChip({ balance, active }: { balance: number; active: boolean }) 
           <BalanceNumber value={balance} />
         </AnimatedText>
       </span>
-    </Link>
+    </IntentLink>
   )
 }
 
@@ -50,7 +51,8 @@ export type NavMember = { id: string; name: string; avatarSrc: string | null }
 
 function ProfileLink({ me, active }: { me: NavMember; active: boolean }) {
   return (
-    <Link
+    <IntentLink
+      prefetchOnTouch
       href={`/members/${me.id}`}
       aria-label="Your profile"
       aria-current={active ? 'page' : undefined}
@@ -59,13 +61,13 @@ function ProfileLink({ me, active }: { me: NavMember; active: boolean }) {
       <span
         className={cn(
           'flex size-9 items-center justify-center rounded-full',
-          active && 'ring-2 ring-lime ring-offset-2 ring-offset-surface md:ring-primary',
+          active && 'ring-2 ring-primary ring-offset-2 ring-offset-surface',
         )}
       >
         <Avatar name={me.name} src={me.avatarSrc} size="nav" />
       </span>
       <NavPendingHint className="inset-x-3 bottom-0 h-0.5" />
-    </Link>
+    </IntentLink>
   )
 }
 
@@ -90,7 +92,8 @@ function DesktopLink({
   attention?: number
 }) {
   return (
-    <Link
+    <IntentLink
+      prefetchOnTouch
       href={href}
       transitionTypes={transitionTypes}
       aria-current={active ? 'page' : undefined}
@@ -115,7 +118,7 @@ function DesktopLink({
       <AttentionNote id="admin-attention-desktop" count={attention} />
       <AttentionBadge count={attention} className="-top-1 -right-1" />
       <NavPendingHint className="inset-x-3.5 bottom-1 h-0.5" />
-    </Link>
+    </IntentLink>
   )
 }
 
@@ -230,7 +233,8 @@ export function AppNav({
           <span className="grow" />
           <BalanceChip balance={balance} active={active === 'bets'} />
           {adminHref && (
-            <Link
+            <IntentLink
+              prefetchOnTouch
               href={adminHref}
               transitionTypes={['nav-forward']}
               aria-label="Admin"
@@ -238,14 +242,14 @@ export function AppNav({
               aria-current={active === 'admin' ? 'page' : undefined}
               className={cn(
                 'pressable relative inline-flex size-11 shrink-0 items-center justify-center rounded-control no-underline',
-                active === 'admin' ? 'bg-lime text-on-lime' : 'text-ink hover:bg-sunk',
+                active === 'admin' ? 'border-[1.5px] border-primary bg-lime text-on-lime' : 'text-ink hover:bg-sunk',
               )}
             >
               <ShieldCheck aria-hidden="true" className="size-[22px]" />
               <AttentionNote id="admin-attention-mobile" count={adminAttention} />
               <AttentionBadge count={adminAttention} className="top-1 right-1" />
               <NavPendingHint className="inset-x-3 bottom-1 h-0.5" />
-            </Link>
+            </IntentLink>
           )}
           <ProfileLink me={me} active={onMyProfile} />
         </header>
@@ -259,11 +263,12 @@ export function AppNav({
             const Icon = ICONS[item.id]
             const isActive = active === item.id
             return (
-              <Link
+              <IntentLink
+                prefetchOnTouch
                 key={item.id}
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
-                aria-label={item.shortLabel === item.label ? undefined : item.label}
+                aria-label={tabAriaLabel(item)}
                 onClick={haptics.tap}
                 className={cn(
                   'pressable relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-[14px] text-xs leading-[1.1] no-underline',
@@ -283,7 +288,7 @@ export function AppNav({
                     <m.span
                       layoutId="tabbar-pill"
                       aria-hidden="true"
-                      className="absolute inset-0 -z-10 rounded-full bg-lime"
+                      className="absolute inset-0 -z-10 rounded-full border-[1.5px] border-primary bg-lime"
                       transition={PILL_TRANSITION}
                     />
                   )}
@@ -309,7 +314,7 @@ export function AppNav({
                   {item.shortLabel}
                 </span>
                 <NavPendingHint className="bottom-0.5 left-1/2 h-0.5 w-5 -translate-x-1/2" />
-              </Link>
+              </IntentLink>
             )
           })}
         </nav>

@@ -153,4 +153,18 @@ describe('OutcomeRow', () => {
     expect(screen.getByRole('button', { name: 'Add to slip Yes' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Add to slip No' })).toBeInTheDocument()
   })
+
+  // #279: parlay money shows beside the odds, never in them.
+  it('shows the parlay money riding on the outcome under the bar, outside the chance and the pool', () => {
+    renderRow('add', { riding: 45 })
+    const riding = screen.getByText('+45 DC riding in parlays')
+    expect(riding.closest('p')).toHaveClass('text-ink2')
+    expect(screen.getByText('75% (60 DC)', { selector: '.sr-only' })).toBeInTheDocument()
+    expect(screen.getByText('1.33× payout per DC', { selector: '.sr-only' })).toBeInTheDocument()
+  })
+
+  it('shows no parlay line when nothing rides on the outcome', () => {
+    renderRow('add', { riding: 0 })
+    expect(screen.queryByText(/riding in parlays/)).toBeNull()
+  })
 })

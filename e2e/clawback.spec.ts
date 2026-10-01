@@ -4,7 +4,7 @@ import { clientForEmail } from '../tests/db/fixtures'
 import { serviceClient } from '../tests/db/helpers'
 
 // e2e/global-setup.ts seeds Bob beside Alice, the signed-in admin. Bob bets through his own
-// session; Alice resolves, takes most of his winnings back on /admin/members, then tries to
+// session; Alice resolves, takes most of his winnings back on his Admin page, then tries to
 // override. Alice's own balance never moves, so the specs that read it are unaffected.
 test('an override is blocked, naming the member who has spent their winnings', async ({ page }) => {
   const db = serviceClient()
@@ -53,13 +53,14 @@ test('an override is blocked, naming the member who has spent their winnings', a
 
   const { data: afterWin, error: balanceErr } = await db.from('profiles').select('balance').eq('id', bob.id).single()
   if (balanceErr) throw balanceErr
-  await page.goto('/admin/members')
-  const bobRow = page.getByRole('listitem').filter({ has: page.getByRole('link', { name: 'Bob', exact: true }) })
-  await bobRow.getByLabel('Amount').fill(String(20 - afterWin.balance))
-  await bobRow.getByLabel('Reason').fill('Spent elsewhere')
-  await bobRow.getByRole('button', { name: 'Adjust Bob' }).click()
+  // The balance form lives on Bob's own Admin page (#254).
+  await page.goto(`/admin/members/${bob.id}`)
+  const adjust = page.getByRole('region', { name: 'Adjust balance' })
+  await adjust.getByLabel('Amount').fill(String(20 - afterWin.balance))
+  await adjust.getByLabel('Reason').fill('Spent elsewhere')
+  await adjust.getByRole('button', { name: 'Adjust Bob' }).click()
   await page.getByRole('alertdialog', { name: 'Adjust Bob’s balance?' }).getByRole('button', { name: 'Adjust balance' }).click()
-  await expect(bobRow.getByText('20 DC', { exact: true })).toBeVisible()
+  await expect(page.getByText('20 DC', { exact: true })).toBeVisible()
 
   await page.goto(marketPath)
   await page.getByLabel('Winning outcome').selectOption({ label: 'No' })

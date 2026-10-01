@@ -37,16 +37,16 @@ test.describe('phone', () => {
   test('the tab bar and top bar reach every destination', async ({ page }) => {
     await page.goto('/')
     const tabs = page.getByRole('navigation', { name: 'Primary' })
-    for (const name of ['Markets', 'My bets', 'Tasks', 'Feed', 'Leaderboard']) {
+    for (const name of ['Markets', 'My bets', 'Tasks', 'Feed', 'Leaders, leaderboard']) {
       await expect(tabs.getByRole('link', { name, exact: true })).toBeVisible()
     }
     const banner = page.getByRole('banner')
     await expect(banner.getByRole('link', { name: 'Admin', exact: true })).toBeVisible()
     await expect(banner.getByRole('link', { name: 'Your profile' })).toBeVisible()
 
-    await tabs.getByRole('link', { name: 'Leaderboard', exact: true }).click()
+    await tabs.getByRole('link', { name: 'Leaders, leaderboard', exact: true }).click()
     await expect(page).toHaveURL(/\/leaderboard$/)
-    await expect(tabs.getByRole('link', { name: 'Leaderboard', exact: true })).toHaveAttribute('aria-current', 'page')
+    await expect(tabs.getByRole('link', { name: 'Leaders, leaderboard', exact: true })).toHaveAttribute('aria-current', 'page')
   })
 })
 

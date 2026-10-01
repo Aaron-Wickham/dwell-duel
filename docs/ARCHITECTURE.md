@@ -17,7 +17,7 @@ Next.js 16 on Vercel ── proxy.ts: signed-out requests → /sign-in
 Supabase (one hosted project: production)
   ├─ Auth: Google only, invite-gated
   ├─ Postgres: tables + RLS + security-definer RPCs (all money moves here)
-  ├─ Realtime: 13 published tables drive live page refreshes
+  ├─ Realtime: filtered Postgres Changes plus Broadcast pings (0092) drive live page refreshes
   └─ Storage: `avatars` (public), `proof` (private, signed URLs)
 
 Web push: server actions, pg_cron (every minute, via pg_net) and the daily
@@ -42,7 +42,7 @@ itself.
 | Styling | Tailwind v4 with CSS-variable tokens (`app/globals.css`), light and dark |
 | UI pieces | Base UI (dialogs, drawers), lucide-react icons, Motion (loaded lazily), NumberFlow, Recharts (the market page's chart and the leaderboard's race chart; cards draw plain SVG), sonner toasts |
 | Data | Supabase: Postgres, Auth, Realtime, Storage (`@supabase/ssr`) |
-| Hosting | Vercel (production only, plus a daily cron), with `@vercel/analytics` and `@vercel/speed-insights` |
+| Hosting | Vercel (production only, plus a daily cron), with `@vercel/analytics` (10% of events kept) and `@vercel/speed-insights` (`sampleRate` 0.05), sampled in `lib/app-shell/analytics-sampling.ts` to stay inside Hobby's quotas (#278; Analytics samples per event, so its visit and visitor counts read about 10x low); `engines.node` pins Vercel to Node 22, the major `.nvmrc` and CI use |
 | Tests | Vitest (unit, component, DB against local Supabase), Playwright (e2e) |
 
 ## Routes
@@ -54,20 +54,21 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | Route | What it is |
 |---|---|
 | `/` | Home: greeting, balance hero (balance, rank, At stake, Pending), a new member's Getting started card, Markets to resolve, the weekly recap (Sundays and Mondays), tiles |
-| `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then resolved and voided newest first, each paged. `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) narrows it: open and awaiting read the open list split at the close time (`listOpenMarkets`' `bound`), resolved reads only the resolved list (`listResolvedMarkets`, voided included) |
+| `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then those awaiting resolution (oldest close first), then resolved and voided newest first. The All tab reads these as three keyset lists, each with its own Show more (`?open=`, `?awaiting=`, `?resolved=`), so open markets lead page one however many wait on a result (#261); the open and awaiting lists are `listOpenMarkets` split at one `now` (its `bound`). `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) reads just one list. `?q=` (a title search, `lib/markets/search.ts`: trimmed, `*` and control characters dropped, 80 characters, then `ilike` with `\`, `%` and `_` escaped, sent as its own filter parameter, backed by a trigram index) and `?mine=bet|made` (the `i_bet_on` computed column, 0094, or `created_by`) switch it to one flat list of matches, newest first and paged under `?match=` (`listMatchingMarkets`), whatever their status, which the status tab still narrows; the search box (`MarketSearch`) and the "Whose markets" `FilterChips` keep each other and the status tab in the URL. Card sparklines come from `market_sparks` (0095) through Next's data cache, one entry per list, keyed by a hash of its markets' `sparkVersion`s (the summed `pool_version` while open, `settled` after): a render costs one cache read per list, and a live refresh reads from Supabase only a list whose markets moved (`lib/markets/sparklines.ts`, #252; the budget is below) |
 | `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under. `?from=<id>` pre-fills it from a market (Duplicate) |
-| `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
+| `/markets/[id]` | A market: the viewer's own position (#262: each solo bet with "Pays ~" and Cancel, each parlay leg linking to its parlay, then results and the net once settled; read from `my_market_position`'s keys before anything streams, so a viewer with nothing on the market gets no card and no skeleton), chart, outcomes (with each outcome's "riding in parlays" figure from `market_parlay_riding`, #279, display only), the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
 | `/parlays` | Redirects to `/bets` (kept for old links) |
 | `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its odds (an estimate from `parlay_leg_odds` until its market closes) and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`: the page checks the parlay exists first (so an unknown id is a real 404), then streams the body behind `<Suspense>` with `ParlayDetailSkeleton` |
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
-| `/feed` | Everyone's activity, with reactions, live |
-| `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`) |
-| `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings |
+| `/feed` | Everyone's activity, with reactions, live; a "Show" `SubNav` (`?show=all|results|mine`, `lib/social/feed-filter.ts`) narrows it to results (`RESULT_KINDS`, voids included) or your own events plus results and voids on markets you have a stake in and voids of markets you created (`my_activity_events()`, 0094, whose `UNION ALL` branches each use an index) |
+| `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`). On a phone the Net worth board has a compact standing card with Jump to me (`?at=me`): `getJumpToMeTop` reads the 10 members above you through `rankedAbove` and the page opens a `readOrdered` window there, with focus on your row; any cursor in the URL overrides it, and Back to the top drops it |
+| `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings. `/members` alone redirects to the leaderboard |
 | `/profile` | Edit your name, photo and bio |
 | `/settings` | Theme, your profile, haptics, reduced motion, notifications, How it works, sign out |
 | `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`) |
-| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role; Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); the ledger opens with the owner's Economy card |
+| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role, in `app/(app)/admin/(sections)/` under its layout's Admin header and tabs; `/admin` alone redirects to the first one the role can see (`adminHref`); Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); Tasks pages its review queue oldest first with "Show more", signs proof only for the rows shown (an extended range caps at 150 rows, then starts a fresh window), and reads its "waiting" chip from `my_review_counts` (`lib/tasks/list-task-completions.ts`, #255); the ledger opens with the owner's Economy card, and `?member=<id>` narrows it to one member's movements (#254). Members and Invites (#254) each have a search box (`SearchField`, `?q=`) and two tabs (`SubNav`, `?show=`): Members' Active · Removed, paged A–Z by `admin_members` with `NAME_ORDER` (`lib/pagination/name-cursor.ts`), as compact read-only rows; Invites' Waiting · Claimed, paged newest first with `INVITE_ORDER` (`lib/invites/list-invites.ts`) |
+| `/admin/members/[id]` | One member's Admin page (#254), outside the sections' layout so their name is the `<h1>`: email, join and last sign-in, balance, Coin history (their last five movements and "Open in Ledger"), and for the owner Adjust balance, Role and Access (Remove from DwellDuel, or Invite again for a removed member). No `loading.tsx`: the member is found first (an unknown id is a real 404) and the coin history streams behind `<Suspense>` |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/not-invited` and `/offline`. The API has three routes.
@@ -194,9 +195,12 @@ spending coins should get a trigger and a `write_limits()` row.
   `sparkline` (0070): the card's
   40-point series, written by a trigger the moment the market resolves or
   voids (`cache_market_sparkline`, so `resolve_market_core` and
-  `void_market` needn't know), null while it's open. `/markets` reads it for
-  settled markets and only computes open ones live (#204).
-- `market_outcomes`: labels and `pool_total`, the real DC bet on each.
+  `void_market` needn't know), null while it's open. Since 0095 the app no
+  longer reads it (`market_sparks` serves every card, cached by version);
+  the column and trigger stay until a later PR drops them.
+- `market_outcomes`: labels and `pool_total`, the real DC bet on each, and
+  `pool_version` (0095), bumped by a trigger on every change to
+  `pool_total` (each bet and cancellation): the list's sparkline cache key.
 - `bets`: live stakes only. A cancelled bet moves to `cancelled_bets`.
 - `market_resolutions`: each resolution or override, with its required
   note, `actual_value` for an Over/Under, and a link to the one it
@@ -337,10 +341,16 @@ Also: `create_market`, `update_market` (creator or admin, before close; the
 title is fixed once anyone else has bet, solo or as a parlay leg, 0065), `member_emails` (admin only:
 members can't select `profiles.email`), `member_activity` (admin only, 0050:
 each member's join date, `profiles.created_at`, and last sign-in from
-`auth.users`, for Admin → Members), `stray_proof_objects` (service role:
-the daily cron deletes proof files nothing attached), `expired_proof_attachments`,
-`mark_proof_expired`, `stray_avatar_objects` and `storage_usage` (service role,
-0089), `proof_upload_quota_ok` and `avatar_upload_quota_ok` (the upload policies' per-day caps: 30 proof files / 60 MB, 10 avatars), `proof_is_attached` (the delete guard, security definer),
+`auth.users`, for Admin → Members), `admin_members(query, id)` and
+`admin_member_counts(query)` (admin only, 0093: Admin → Members' rows with
+email, sign-ins and whether each member was removed, searched by name or
+email; the page pages it through PostgREST), `reinvite_member` (owner only,
+0093: a removed member's invite back, claimed by them), `stray_proof_objects`
+(service role: the daily cron deletes proof files nothing attached),
+`expired_proof_attachments`, `mark_proof_expired`, `stray_avatar_objects`
+and `storage_usage` (service role, 0089), `proof_upload_quota_ok` and
+`avatar_upload_quota_ok` (the upload policies' per-day caps: 30 proof files
+/ 60 MB, 10 avatars), `proof_is_attached` (the delete guard, security definer),
 `set_member_role`, `delete_market` (refuses a market with any bet, cancelled
 bet or parlay leg; the market page shows the button only when the pool is
 empty and `lib/markets/bet-history.ts`'s two head counts find nothing),
@@ -350,7 +360,12 @@ untouched; 0073: their `auth.sessions` too, so no device can refresh), `update_m
 cards' 40-point sparklines and the market chart's 200 points, sampled in
 SQL so no page reads every bet; both prepend a seeded market's even
 opening split through `withSeededStart`, since the function returns points
-only at bets),
+only at bets), `market_sparks` (0095: `market_sparklines` at most 24 points,
+compact as `[epoch seconds, share, ...]` in `outcome_ids` order, shares to
+4 decimals, about a tenth of the bytes; what `/markets` reads. Security
+definer and refused to anyone not invited, so the answer is the same for
+every member and safe to cache for all of them; a refusal is an error,
+which is never cached),
 `markets_to_resolve` (0049, security invoker: the closed, unresolved
 markets waiting on the caller, capped at 10 with an uncapped `total`; a
 creator's own at once, and for reviewers and admins any left 48 hours or
@@ -360,7 +375,13 @@ the next moment the list could grow, from `nextResolveCheckAt`),
 `my_at_stake`, `parlay_limits`, `pick_quotes(outcome_ids)` and
 `parlay_leg_odds(parlay_ids)` (0074: a pick's leg odds and floor for the
 caller, and each parlay leg's set or estimated odds for its owner, both built on the service-only `pick_quote(profile, outcome)` that
-`settle_parlay` prices with), and from 0071 (#206, #210)
+`settle_parlay` prices with), `my_market_position(market)` and
+`market_parlay_riding(market)` (0096, security invoker: the keys of the
+caller's own bets and parlays on one market, settled ones included, for
+the market page's Your position card; and per outcome the stakes of
+pending parlays with a leg on it, each parlay's whole stake on every pick,
+sums only, never whose; display only, so nothing that prices or pays
+reads it), and from 0071 (#206, #210)
 `my_current_task_completions()` (security invoker: the newest completion of
 the current period per task, filtered in SQL with `compute_period_key`, so
 the Tasks page reads O(tasks) rows and no period keys), `my_onboarding()`
@@ -376,7 +397,8 @@ as they're returned), `push_market_result(market)` (every solo bettor and
 parlay-leg holder, with their payout and refund from the current
 resolution; cancelled bets live elsewhere, so never count),
 `push_task_reviews(ids)` and `push_new_market(market)` (everyone but the
-creator who opted in). Review alerts (0058) add `push_task_alerts(completion)`
+creator who opted in; ordered by profile, so `notifyNewMarket` reads it
+1,000 rows at a time, past PostgREST's `max_rows`, #254). Review alerts (0058) add `push_task_alerts(completion)`
 (reviewers and above except the submitter, `review_alerts` on) and
 `push_market_alerts()` (admins and above except the market's creator, who has
 the reminder, `resolve_reminders` on; each market claimed once as `market_alert`).
@@ -394,7 +416,7 @@ The leaderboard's extras (0059, `lib/social/leaderboard-extras.ts`) sit on the T
 
 The leaderboard (0051) reads two boards through `rpc()`, each returning
 `id, display_name, avatar_path, score, rank` with a competition rank over
-every member, computed before PostgREST applies the page's filters, and
+every invited member, computed before PostgREST applies the page's filters, and
 paged by `readOrdered` with `RANK_ORDER` on `(score desc, display_name,
 id)`. `leaderboard_net_worth` (security invoker) scores balance plus
 `stakes_riding`, summed once for the board; the member page and Home's rank
@@ -406,7 +428,14 @@ leaving out `starting_grant`, `task_completed`, `admin_adjustment` and any
 type added later; since 0055 that list is `betting_ledger_types()`, shared
 with `member_stats`. `settle_season(p_month default last month)` (service role
 only) posts a finished month's top positive profit as a `season_champion`
-event, ties going to whoever reached the total first.
+event, ties going to whoever reached the total first. Since 0093 (#265) a
+removed member (no invite left, `invited_member_ids()`) is out of both
+boards, `member_standing`'s rank and count (their own row keeps its net
+worth with a null rank, "Not ranked" on their profile), `season_profits`
+and so the race and the champion, and from `weekly_recap`'s best call and
+top tasker; their coins, bets and history stay. `leaderboard_awards`
+(0074) leaves them out by the same rule, read from `invited_member_ids()`
+since 0097.
 
 **The economy panel** (0052, #86). `economy_summary(p_month_start)` is owner
 only and backs the Economy card above Admin → Ledger's list
@@ -497,6 +526,14 @@ after it ships. They roughly follow the project's history:
 | 0089 | Storage caps and retention (#253): proof bucket 3 MB and no Word files, a per-member daily upload quota, `record_proof` caps (5 attachments, 3 files, 6 MB), submitted proof can't be deleted, `proof_attachments.expired_at` with `expired_proof_attachments` / `mark_proof_expired`, `stray_avatar_objects`, `storage_usage` |
 | 0090 | Write limits (#273): `write_limits()`, `write_rate_counters` and the `enforce_write_limit` trigger on markets, comments, reactions, task submissions and bet cancels; `cap_push_subscriptions` keeps a member's ten most recently used push devices |
 | 0091 | Default privileges (#274): nothing postgres creates in `public` grants `anon` anything, and no new function is executable by `PUBLIC`; anon's leftover sequence grants go; `has_stake_in_market` answers false to an uninvited caller. `uninvited_auth_users()` (#275), service role only, for the daily cron's cleanup |
+| 0092 | Live pings (#250): `live_pings`, `send_live_ping` and the unlogged `live_ping_queue`. Row triggers on `markets`, `market_outcomes`, `activity_events`, `feed_reactions`, `tasks` and `task_completions` queue their topic once per transaction, and the queue's deferred trigger sends it at commit: one private Broadcast ping per topic per transaction, at most one per topic every `live_ping_interval_ms()`. The `realtime.messages` policy lets only invited members join (reviewers and above for `live:reviews`) |
+| 0093 | Admin at 1,000 and removed members unranked (#254, #265): `invited_member_ids()`; `leaderboard_net_worth`, `member_standing`, `season_profits` and `weekly_recap`'s best call and top tasker over invited members only; `admin_members`, `admin_member_counts` and `reinvite_member`; `allowed_emails` indexes on `claimed_by` and `(created_at desc, email desc)` |
+| 0094 | Finding things (#264): `markets_title_trgm_idx` (pg_trgm) for the title search, the computed column `markets.i_bet_on` and `my_activity_events()` (the Feed's Mine: own events plus results and voids on markets you have a bet or parlay leg on, and voids of markets you created); both security invoker with no `SET` clause so they inline |
+| 0095 | Compact sparklines (#252): `market_sparks(p_market_ids, p_points default 24)` and `market_outcomes.pool_version` with its `bump_pool_version` trigger |
+| 0096 | The market page's Your position card and "riding in parlays" figure (#262, #279): `my_market_position(market)` and `market_parlay_riding(market)` |
+| 0097 | `leaderboard_awards` reads who is in from `invited_member_ids()` (0093) instead of its own copy of the rule (0074); every award is unchanged |
+
+Numbers 0075, 0077–0082 and 0084–0088 were reserved by branches that merged later under higher numbers, so they are unused.
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
@@ -515,8 +552,20 @@ production's latest. Backups and restoring are in `docs/OPERATIONS.md`.
 ## Key flows
 
 **Signing in.** Google OAuth only; Supabase has every other provider
-switched off. `/callback` exchanges the code, and a member whose email
-isn't in `allowed_emails` lands on `/not-invited`. The `profiles` trigger
+switched off, and the sign-in button passes `prompt=select_account`, so
+Google always shows its account chooser. `/callback` exchanges the code, and a member whose email
+isn't in `allowed_emails` lands on `/not-invited`. A signed-out request
+for an app page is sent to `/sign-in?next=<path>`; the sign-in page keeps
+`next` in the short-lived `sign-in-next` cookie (path `/callback`) for the
+round trip through Google, and `/callback` sends the member there instead
+of Home. Both ends pass it through `safeNextPath` (`lib/auth/next-path.ts`):
+only a same-site app path, never `//host`, a backslash or a scheme. A
+cookie, rather than `/callback?next=` in `redirectTo`, keeps Supabase's
+redirect allow-list to exact URLs. A refused sign-in goes to `/not-invited?next=…`
+with the email in the httpOnly `not-invited-email` cookie (path
+`/not-invited`, five minutes), never the URL; the page keeps it in client state and
+clears it through `POST /not-invited/clear` (a route handler, since a
+Server Action that changes a cookie re-renders the page), and its "Try another account" keeps `next`. The `profiles` trigger
 creates the profile and the 100 DC starting grant. `requireUser` reads
 claims and throws `AuthUnavailableError` (not "signed out") when Auth
 itself is down. Signups stay open, since Google sign-in creates the
@@ -536,7 +585,9 @@ of picks (`lib/parlays/slip.ts`). `SlipProvider` in the signed-in layout
 holds those picks, each marked Solo or Parlay, with optimistic add, remove
 and mode switches. Stakes live only in client state. The layout also
 hands it the member's balance, for the quick-stake chips' Max (the balance
-less the slip's other stakes). The floating
+less the slip's other stakes), the balance strip at the top of the slip
+("N DC left after this slip" or "N DC short") and the line under Place
+saying why it can't be tapped; at 0 DC that line points to Tasks. The floating
 `SlipSheet` sends everything to `place_slip_v2` in one call; it either all
 succeeds or nothing is placed. Only its button is in every page's first
 load: the drawer (`SlipDrawer`) loads the first time the slip opens, or
@@ -615,20 +666,120 @@ remove failed) and `storage usage` (`storage_usage()`: its `storageMb` is in
 the cron response, and the step fails, so the heartbeat pings `/fail`, past
 800 MB). That is the ops check: when it fails, shorten the retention windows.
 
-**Live updates.** A page declares the tables it shows with
-`<LiveTables subscriptions={pageSubscriptions.x(…)}>`. `LiveRefresh` keeps
-a long-lived channel on the member's own profile, which carries their
-balance and avatar, plus a per-page channel. A change to a subscribed
-table triggers `router.refresh()`, so the server re-renders with fresh
-data. Thirteen tables are published (`LIVE_TABLES`; `market_outcomes`
-since 0070, so `/markets` follows pools rather than every bet, and the
-leaderboard follows only `markets`, never every profile, #204, #205). A filtered channel never
-receives a DELETE, so a page that must hear one either watches the table
-unfiltered (the feed and member activity watch `feed_reactions` that way,
-since taking a reaction back is a delete) or has the delete write
-something it can hear: a cancelled bet inserts into `cancelled_bets`, and a
-deleted comment is an UPDATE, which the market page's channel filtered to
-its market receives.
+**Live updates.** A page declares what it shows with
+`<LiveTables subscriptions={pageSubscriptions.x(…)}>`, in two kinds:
+
+- **Rows**, `{ table, filter }`: Postgres Changes on a table in
+  `LIVE_TABLES`, always filtered to one market, member, parlay or row, so
+  only the pages about that thing hear it.
+- **Topics**, `{ topic }`: anything group-wide. A row trigger on each
+  live table (0092) queues its topic once per transaction in
+  `live_ping_queue`, and that table's deferred trigger calls
+  `send_live_ping` as the transaction commits. The deferral lives on the
+  queue, not the live tables, because Postgres won't ALTER a table with
+  pending trigger events, which would break a migration that writes a
+  live table and then alters it. `send_live_ping` sends an empty private
+  Broadcast message on `live:<topic>`: once per topic per
+  transaction, however many rows it writes (a resolution with 150 winners
+  sends one `activity` ping, not 150), and at most once per topic every
+  `live_ping_interval_ms()` (5 s, mirrored by `LIVE_PING_INTERVAL_MS`).
+  The throttle is judged at commit and only a committed ping holds a
+  change back: when another transaction holds the topic's row, the ping
+  is sent anyway rather than waited for (so a bet never blocks or
+  deadlocks), since that transaction could still roll back.
+  The topics are `LIVE_TOPICS`: `markets` (market rows), `pools`
+  (`market_outcomes`, which every bet moves), `activity`, `reactions`,
+  `tasks` and `reviews` (`task_completions`). The `realtime.messages`
+  policy lets only invited members join them, and only reviewers and above
+  join `reviews`; no client can send on them.
+
+`LiveRefresh` keeps a channel on the member's own profile (their balance
+and avatar) for the whole visit, a per-page Postgres Changes channel, and
+one private channel per topic. A row change refreshes after a 400 ms
+debounce (2 s at most under a steady stream). A topic ping refreshes
+`TOPIC_REFRESH_DELAY_MS` after it: 15 s for `pools` and `activity`, which
+every bet moves and which `/markets` and the feed follow, and 6 s for the
+rest. A ping that arrives while its topic's refresh is waiting folds into
+it and books one follow-up a full delay after itself. So there is always
+a refresh at least an interval plus a second after the latest ping, and
+a held-back change, which committed less than an interval after a ping,
+is always read. A hidden tab never
+refreshes, and after `HIDDEN_CLOSE_MS` (60 s) hidden it removes every
+channel, so the socket closes and stops counting as a connection;
+becoming visible reopens them and refreshes. Before any channel opens,
+and again on waking, `LiveRefresh` awaits `realtime.setAuth()`: a join
+sent before the client has read the session goes out as anon, and the
+server then refuses every filtered Postgres Changes subscription
+("invalid column for filter", since anon may read no column) and every
+private topic (#310). A channel that can't join (`CHANNEL_ERROR`,
+`TIMED_OUT`, for example past the connection cap), or whose Postgres
+Changes the server refuses after the join in an error `system` message,
+makes the page poll with `router.refresh()` every `POLL_MS` (60 s) while
+visible, until it joins or is rebuilt, and warns once in the console.
+
+A filtered channel never receives a DELETE, so a page that must hear one
+follows a topic (taking a reaction back is a delete, and the feed and
+member activity follow `reactions`) or has the delete write something it
+can hear: a cancelled bet inserts into `cancelled_bets`, and a deleted
+comment is an UPDATE, which the market page's channel filtered to its
+market receives. The market page also follows the viewer's own `parlays`
+(filtered to them), so its Your position card hears their parlay settle on
+another market. Another member's parlay settling elsewhere writes nothing
+to this market's rows, so the "riding in parlays" figure catches up on the
+next refresh: following every parlay would refresh every open market page.
+The publication still holds `market_outcomes`, `tasks`
+and `feed_reactions`, which nothing follows row by row any more; dropping
+them is a later, non-additive change.
+
+**Proxy and prefetch.** `proxy.ts` runs on page loads, RSC navigations,
+`router.refresh()` and server actions, where it refreshes the session
+cookie and turns a signed-out page load into a real redirect. It skips
+Link prefetches (the `next-router-prefetch` or `purpose: prefetch`
+header, #251) and static files: a prefetch of a signed-in page is its own
+invocation, the prefetched layout's `requireUser` still guards it, and the
+navigation that follows runs the proxy.
+
+Every signed-in page is dynamic, and a prefetch down to its
+`loading.tsx` isn't cached (Next's `staleTimes.dynamic` is 0), so a link
+prefetched on sight is a render every time it scrolls into view. The nav,
+`SubNav` and the dense list rows (market cards, feed rows, leaderboard
+rows, My bets rows) link through `IntentLink`
+(`components/ui/intent-link.tsx`), which prefetches only on intent: a
+pointer over the link or keyboard focus, and a finger coming down for the
+nav and `SubNav` (`prefetchOnTouch`), so a tab tap still gets a head
+start. A list row's tap navigates without one and streams its skeleton
+first.
+
+**Free-tier budget at 1,000 members** (#250, #251). A model, not a
+measurement: after merge, read Supabase → Realtime usage and Vercel →
+Usage (Active CPU, Invocations) once a month and replace these guesses.
+Assumptions: 300 members active a day, 5 visits each of 5 page loads
+(7,500 renders, 6,000 of them client navigations), 60% of navigations on
+a phone and half from the nav or a sub-nav, 10 viewport prefetches a
+visit before #251, 1,500 bets and 20 resolutions a day over about 14
+waking hours, and at a typical moment 10 open `/markets` tabs, 25 tabs
+following `markets`, 6 on the feed and 3 on each busy market page.
+
+| Limit (Free / Hobby) | Before #250/#251 | Now |
+|---|---|---|
+| Realtime messages, 2M a month | about 1.2M from bets and resolutions, plus every idle desktop tab receiving everything: over 2M | pings: `pools` about 1,300 a day to 10 tabs, `activity` 1,400 to 6, `markets` 100 to 25, `reactions` 200 to 9, `reviews` 150 to 2, about 29k deliveries a day; rows (own profile, market pages) about 6k a day; about 1.05M a month, and hidden tabs add nothing after 60 s |
+| Realtime messages, 100 a second | a 150-winner resolution sent 150 rows to every feed tab: 1,500 in a second with 10 tabs | the same resolution sends one ping per topic: about 45. The ceiling is now one topic's subscribers, since one ping reaches them all in the same second: about 90 open `/markets` tabs |
+| Concurrent connections, 200 | one per open tab, hidden ones included | one per visible tab (hidden ones close after 60 s): about 10 to 30 typically; 200 when a fifth of members open the app at once, and past that new tabs poll every 60 s instead of failing silently |
+| Vercel invocations, 1M a month | 7.5k renders + 15k prefetches + about 7.5k live refreshes a day, each with a proxy run: about 60k a day, 1.8M a month | 7.5k renders and 7.5k proxy runs; about 5.4k intent prefetches (1.8k nav taps on phones, 3.6k hovers and focuses on desktop), with no proxy; about 5.5k live refreshes (the 15 s wait on `/markets` and the feed folds about a third of them together) and 5.5k proxy runs: about 31k a day, 0.94M a month |
+| Vercel Data Cache (counted as ISR reads and writes; about 1M reads and 200k writes a month on Hobby, check the current figures) | none | `/markets` sparklines (#252): one read per list per render. About 1.5k `/markets` visits and 4k live refreshes a day, up to 3 lists each on All: at most 16.5k reads a day, about 0.5M a month. A write only when a list's key moves: the open list on a `pools` ping (at most about 1,300 a day), the others on a `markets` ping (about 100): about 1.4k a day, 42k a month |
+| Supabase egress, 5 GB a month | about 720 KB of sparkline JSON on every `/markets` render (100 cards), about 4 GB a day | sparklines only on a cache miss: the open list's 50 cards at about 0.85 KB each, about 43 KB, about 1,300 times a day: about 56 MB a day, 1.7 GB a month at most, uncompressed (PostgREST gzips when asked, so likely about a quarter of that; unverified); settled lists are read about once a week |
+| Vercel Active CPU, 4 h a month | about 900k renders a month: 2.5 h at 10 ms of CPU each, 5 h at 20 ms | about 550k renders a month: 1.5 h at 10 ms, 3.1 h at 20 ms; the proxy's local JWT check adds about 0.3 h at 3 ms |
+
+Read Vercel → Usage → Data Cache and Supabase → Usage → Egress too: the
+sparkline cache trades Supabase egress for cache reads, and the open
+list's refetch on every pool change is the biggest remaining egress term
+(fewer cards per list, or a key per smaller group of cards, are the levers).
+
+Realtime fits with headroom. Vercel fits too, but only just: about 6% under
+the invocation limit on these guesses, and going over pauses the app for
+up to 30 days. Read Vercel → Usage within the first weeks at scale; the
+next levers are moving `my_role` into the JWT (CPU), caching the
+viewer-independent reads, or Vercel Pro.
 
 **Long lists.** Keyset pagination (`lib/pagination`) with "Show more".
 Each list keeps its place in URL cursors, jumps to a fresh window after
@@ -712,8 +863,8 @@ Admin layout shows admins and the owner a warning (`ClosingAlertsWarning`,
 missing. Only this route stamps it: the daily keep-alive doesn't,
 so it can't hide a dead schedule. Without push keys nothing is sent, so the
 warning never shows. The signed-in
-layout reads `getReviewCounts` for the Admin button's badge, follows
-`task_completions` (and `markets` for admins) live, and refreshes at the next
+layout reads `getReviewCounts` for the Admin button's badge, follows the
+`reviews` topic (and `markets` for admins) live, and refreshes at the next
 market close. The wording is `lib/push/messages.ts`: payloads are `{ title,
 body, url }`, with an in-app `url`. The OS already names the app, so the
 title says what happened ("New market", "You won 26 DC") and the body
@@ -730,7 +881,14 @@ layout renders them as attributes on `<html>` (`data-theme`,
 `data-haptics`, `data-motion`), so they apply before any script runs.
 `motion-reduce:` in CSS covers both the device setting and the app's own.
 Sonner only hears the device setting, so `globals.css` stills its toasts
-under `data-motion="reduce"` itself.
+under `data-motion="reduce"` itself. Its error toasts take the `--loss` tokens like its
+success ones take `--acc-*` (`components/ui/toaster.tsx`), so they meet AA in both themes.
+`app/global-error.tsx` replaces the root layout, so it re-applies the theme, motion and haptics
+attributes the root layout put on `<html>` back once it mounts (read at module load, since the cookies are httpOnly).
+
+**Not found.** `app/(app)/[...missing]/page.tsx` calls `notFound()` for any URL that matches no
+route, so the 404 renders inside the signed-in layout (nav and tab bar) instead of falling to
+the bare root `app/not-found.tsx`; signed out, the layout passes the page through unchanged.
 
 **Motion.** Every curve and duration is a token in `globals.css`'s
 `@theme static` block (`--ease-ios`, `--ease-pop`, `--duration-press` …
@@ -742,14 +900,24 @@ slide, `PILL_SLIDE` / `PILL_TRANSITION`: 280ms on the iOS curve.
 The three dialogs share `components/ui/dialog-classes.ts`. `pressable`
 shrinks every control on press and, under a mouse only, grows it; a
 tappable card adds `hover-lift` and lifts onto `--lift-shadow`
-instead, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins).
+instead, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244; My bets' parlay and bet tiles too, #269), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins).
 
 **Getting started.** Home's onboarding card (`components/home/onboarding-card.tsx`)
-reads its three steps from real data in `lib/home/onboarding.ts`, with
-head-only counts: a photo (`profiles.avatar_path`), any bet or parlay
-(`bets`, `cancelled_bets`, `parlays`) and any task submission. It hides
-itself once all three are done. Dismissing it sets the `onboarding`
-cookie, which skips those reads, so it never flashes back.
+has five steps (four on a browser that can never get push, which
+`useDevicePush` reports as `unsupported`; Safari on an iPhone not yet
+installed and a blocked permission still count as off). Reading How it works is the `read-how-it-works` cookie,
+which that page sets from the browser (`components/docs/mark-how-it-works-read.tsx`).
+Turning on notifications is per device, so the card asks the browser for
+a push subscription itself (`lib/push/use-device-push.ts`). The other three
+come from `my_onboarding()` (`lib/home/onboarding.ts`): a photo
+(`profiles.avatar_path`), any bet or parlay and any task submission. It
+hides itself once all five are done. Dismissing it sets the `onboarding`
+cookie, which skips those reads, so it never flashes back. Once it's
+dismissed, the installed app with no push subscription shows
+`NotificationsCard` in its place (InstallCard never shows there), until
+Not now, which is remembered in `localStorage`. At exactly 0 DC the Home
+hero points to Tasks, with what active tasks pay (`getTaskRewardRange`,
+read only at 0 DC).
 
 **Weekly recap** (0056, #81). On Sundays and Mondays in America/New_York,
 Home shows `components/home/weekly-recap-card.tsx`. `lib/home/recap-week.ts`
@@ -833,11 +1001,20 @@ value never stops production booting.
   after a miss): they come from AWS's public registry, whose anonymous data
   limit GitHub's runners share and hit (#238). A cache saved on a PR is scoped to that PR, so
   `.github/workflows/warm-caches.yml` saves it on `main` (when the setup
-  changes, weekly, and by hand) for every PR to restore. Every third-party action is
+  changes, weekly, and by hand) for every PR to restore; its `web-caches` job
+  does the same for the npm, Next build and Playwright caches when
+  `package-lock.json` changes, and CI only restores them (a Next cache keyed
+  on the source saved an entry per push and broke GitHub's 10 GB limit, #277).
+  `cleanup-caches.yml` deletes a PR's caches when it closes. GitHub disables
+  scheduled workflows after 60 days without repository activity (merged PRs
+  count); if the closing-alerts backup or warm-caches stops, re-enable it in
+  the Actions tab. Every third-party action is
   pinned to a commit SHA with its tag in a trailing comment
   (`uses: actions/checkout@<sha> # v7`); Dependabot's `github-actions`
   ecosystem (`.github/dependabot.yml`) keeps the SHA pins up to date in its
-  weekly PR, so don't bump one by hand to a bare tag.
+  weekly PR, so don't bump one by hand to a bare tag; a test (`tests/lib/deploy/repo-config.test.ts`)
+  fails on an unpinned `uses:`, and the repo setting "Require actions to be pinned to a
+  full-length commit SHA" enforces it on GitHub's side.
 - **Deploys** (`.github/workflows/deploy-production.yml`): Vercel's Git
   integration is off for `main` (`vercel.json`'s `git.deploymentEnabled`).
   Each push to `main` runs the workflow instead, one at a time (waiting runs
@@ -880,7 +1057,8 @@ value never stops production booting.
 - **Security headers** (`next.config.ts`): a Content Security Policy that
   only allows scripts from the app itself (and `va.vercel-scripts.com`, for
   Vercel Analytics and Speed Insights) and connections to the app and its
-  Supabase project, plus `X-Frame-Options: DENY`, `nosniff` and a referrer policy. A
+  Supabase project, plus `X-Frame-Options: DENY`, `nosniff`, a referrer policy and
+  a `Permissions-Policy` denying camera, microphone and location. `poweredByHeader` is off. A
   new third-party origin (analytics, an image host) has to be added to the
   CSP there.
 - **Required env vars** are checked at boot (`lib/env/required.ts`):

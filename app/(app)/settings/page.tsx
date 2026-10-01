@@ -64,7 +64,12 @@ export default async function SettingsPage() {
           </SectionCard>
         </div>
         <div className="flex flex-col gap-5 md:gap-7">
-          <SectionCard title="Notifications" titleId="settings-notifications">
+          {/* Home's Turn on notifications links here; the margin keeps the heading clear of the bar. */}
+          <SectionCard
+            title="Notifications"
+            titleId="settings-notifications"
+            className="[&_h2]:scroll-mt-[calc(64px+var(--safe-top)+40px)] md:[&_h2]:scroll-mt-[calc(72px+var(--safe-top)+48px)]"
+          >
             <NotificationSettings
               userId={user.id}
               publicKey={vapidKeys()?.publicKey ?? null}

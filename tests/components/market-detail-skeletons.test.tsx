@@ -12,6 +12,8 @@ import {
   MarketBetsSkeleton,
   MarketChartSkeleton,
   MarketCommentsSkeleton,
+  MarketOutcomesSkeleton,
+  MarketPositionSkeleton,
 } from '@/components/markets/market-detail-skeletons'
 
 // The fallbacks sit on the page beside real content, so like a route skeleton they must add
@@ -30,17 +32,25 @@ function expectOnlyHiddenBlocks(container: HTMLElement) {
   expect(container).toHaveTextContent(/^$/)
 }
 
+// The chart and outcomes sit in the page's left-top wrapper, bets and comments in its left-bottom
+// one, so those carry no grid placement of their own; the position and bet column do.
 describe.each<[string, ReactElement, string[]]>([
-  ['market-chart', <MarketChartSkeleton key="chart" />, ['lg:col-start-1', 'lg:row-start-1']],
-  ['market-bets', <MarketBetsSkeleton key="bets" />, ['lg:col-start-1', 'lg:row-start-3']],
-  ['market-comments', <MarketCommentsSkeleton key="comments" />, ['lg:col-start-1', 'lg:row-start-4']],
+  ['market-position', <MarketPositionSkeleton key="position" rows={2} />, ['lg:col-start-2', 'lg:row-start-1']],
+  ['market-chart', <MarketChartSkeleton key="chart" />, []],
+  ['market-outcomes', <MarketOutcomesSkeleton key="outcomes" outcomes={2} />, []],
+  ['market-bet-form', <MarketActionsSkeleton key="actions" hasPosition />, ['lg:col-start-2', 'lg:row-span-2', 'lg:row-start-2']],
+  // With no Your position card the bet column starts level with the chart, not in an empty row's wake.
+  ['market-bet-form', <MarketActionsSkeleton key="actions-alone" hasPosition={false} />, ['lg:col-start-2', 'lg:row-span-3', 'lg:row-start-1']],
+  ['market-bets', <MarketBetsSkeleton key="bets" />, []],
+  ['market-comments', <MarketCommentsSkeleton key="comments" />, []],
 ])('the %s skeleton', (name, element, placement) => {
   it('is named, holds its grid cell, announces nothing itself, and shows nothing but hidden blocks', () => {
     const { container } = render(element)
 
     const screenEl = container.querySelector(`[data-skeleton="${name}"]`)
     expect(screenEl).not.toBeNull()
-    expect(screenEl).toHaveClass(...placement)
+    if (placement.length > 0) expect(screenEl).toHaveClass(...placement)
+    else expect(screenEl?.className ?? '').not.toMatch(/lg:(col|row)-/)
     expectOnlyHiddenBlocks(container)
   })
 })
@@ -58,29 +68,29 @@ describe('the market chart skeleton', () => {
 
 describe('the market actions skeleton', () => {
   it('draws the bet column as a heading and a short paragraph, with nothing to fill in', () => {
-    const { container } = render(<MarketActionsSkeleton outcomes={2} />)
+    const { container } = render(<MarketActionsSkeleton hasPosition={false} />)
 
     const card = container.querySelector('[data-skeleton="market-bet-form"] .rounded-card')!
     expect(card).toHaveClass('gap-2')
     expect(card.querySelectorAll('.skeleton.h-12, .skeleton.h-11')).toHaveLength(0)
     expect(card.querySelectorAll('.skeleton.h-5')).toHaveLength(2)
   })
+})
 
-  it('stands in for the outcomes card and the bet column, each in its own grid cell', () => {
-    const { container } = render(<MarketActionsSkeleton outcomes={2} />)
-
-    const [outcomes, betForm] = Array.from(container.querySelectorAll('[data-skeleton]'))
-    expect(outcomes).toHaveAttribute('data-skeleton', 'market-outcomes')
-    expect(outcomes).toHaveClass('lg:col-start-1', 'lg:row-start-2')
-    expect(betForm).toHaveAttribute('data-skeleton', 'market-bet-form')
-    expect(betForm).toHaveClass('lg:col-start-2', 'lg:row-span-4', 'lg:row-start-1')
-    expectOnlyHiddenBlocks(container)
-  })
-
+describe('the market outcomes skeleton', () => {
   it('draws one outcome row per outcome', () => {
-    const { container } = render(<MarketActionsSkeleton outcomes={4} />)
+    const { container } = render(<MarketOutcomesSkeleton outcomes={4} />)
 
     const rows = container.querySelector('[data-skeleton="market-outcomes"] .divide-y')
     expect(rows?.children).toHaveLength(4)
+  })
+})
+
+describe('the market position skeleton', () => {
+  it('draws a row per bet or parlay, at most four, in the card’s primary border', () => {
+    const { container } = render(<MarketPositionSkeleton rows={6} />)
+
+    expect(container.querySelector('.rounded-card')).toHaveClass('border-2', 'border-primary')
+    expect(container.querySelector('[data-skeleton="market-position"] .divide-y')?.children).toHaveLength(4)
   })
 })

@@ -2,6 +2,7 @@ import { TEXT_LIMITS } from '@/lib/forms/limits'
 import type { SearchParams } from '@/lib/pagination/cursor'
 import type { KeysetOrder } from '@/lib/pagination/keyset'
 import { isUuid } from '@/lib/uuid'
+import { decodeTextCursor, quote, toBase64Url } from '@/lib/pagination/text-cursor'
 
 // A leaderboard's position: score desc, display_name asc, id asc, the same order its read uses.
 // The score is net worth on the main board and the month's profit on This month.
@@ -9,35 +10,15 @@ export type RankCursor = { score: number; name: string; id: string }
 export type RankPageParams = { top: RankCursor | null; bottom: RankCursor | null }
 
 // Long enough for the longest valid cursor: 80 code points of JSON-escaped name plus the rest.
-const BASE64URL = /^[A-Za-z0-9_-]{1,1000}$/
-
-// A display name can be any text, so the JSON goes through UTF-8 before btoa, which only takes
-// single-byte characters. TextDecoder's fatal mode turns a tampered byte sequence into an error.
-function toBase64Url(text: string): string {
-  let binary = ''
-  for (const byte of new TextEncoder().encode(text)) binary += String.fromCharCode(byte)
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-}
-
-function fromBase64Url(raw: string): string {
-  const base64 = raw.replace(/-/g, '+').replace(/_/g, '/')
-  const binary = atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4))
-  return new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(binary, (c) => c.charCodeAt(0)))
-}
+const MAX_CURSOR = 1000
 
 export function encodeRankCursor(cursor: RankCursor): string {
   return toBase64Url(JSON.stringify([cursor.score, cursor.name, cursor.id]))
 }
 
 export function decodeRankCursor(raw: string | string[] | undefined | null): RankCursor | null {
-  if (typeof raw !== 'string' || !BASE64URL.test(raw)) return null
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(fromBase64Url(raw))
-  } catch {
-    return null
-  }
-  if (!Array.isArray(parsed) || parsed.length !== 3) return null
+  const parsed = decodeTextCursor(raw, MAX_CURSOR)
+  if (!parsed || parsed.length !== 3) return null
   const [score, name, id] = parsed
   // The score is a bigint, so any safe integer is a literal Postgres can store; a month's profit
   // can be negative. Past that range a tampered link falls back to the first page, not an error.
@@ -51,12 +32,6 @@ export function readRankPageParams(searchParams: SearchParams, param: string): R
   return { top: decodeRankCursor(searchParams[`${param}_from`]), bottom: decodeRankCursor(searchParams[param]) }
 }
 
-// PostgREST reads a double-quoted value up to the next unescaped quote, taking \" and \\ as
-// escapes, so any display name reaches the query as a literal and never as filter syntax.
-function quote(value: string | number): string {
-  return `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
-}
-
 // The members after c in the board's order (below) or before it, and c itself when inclusive.
 // Unlike keyset.ts these carry no redundant seek bound: the boards are computed rows with no index
 // in this order, and the whole membership is a few hundred rows.
@@ -68,6 +43,11 @@ function beside(c: RankCursor, below: boolean, inclusive: boolean): string {
     `or(score.${score}.${quote(c.score)},and(score.eq.${quote(c.score)},` +
     `or(display_name.${name}.${quote(c.name)},and(display_name.eq.${quote(c.name)},id.${id}.${quote(c.id)}))))`
   )
+}
+
+// The members ranked above c, for reading a few rows back from a member's own place.
+export function rankedAbove(c: RankCursor): string {
+  return beside(c, false, false)
 }
 
 export const RANK_ORDER: KeysetOrder<RankCursor> = {

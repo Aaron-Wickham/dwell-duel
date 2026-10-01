@@ -41,7 +41,25 @@ describe('CreateMarketForm preview', () => {
   })
 })
 
+const CLOSE_HINT = 'Betting stops at this time, so set it before the answer is known. The outcomes and close time can’t be changed later.'
+
 describe('CreateMarketForm', () => {
+  it('says what the close time does and what can never change, line included for an over/under (#266)', async () => {
+    const user = userEvent.setup()
+    render(<CreateMarketForm />)
+    expect(screen.getByLabelText('Close time')).toHaveAccessibleDescription(CLOSE_HINT)
+    await user.click(screen.getByRole('radio', { name: 'Over/Under' }))
+    expect(screen.getByLabelText('Close time')).toHaveAccessibleDescription(
+      'Betting stops at this time, so set it before the answer is known. The line, outcomes and close time can’t be changed later.',
+    )
+    expect(screen.getByRole('region', { name: 'Preview' })).toHaveTextContent('If you bet on it, a reviewer resolves it.')
+  })
+
+  it('leaves the reviewer note out for an admin, who may resolve a market they bet on', () => {
+    render(<CreateMarketForm admin />)
+    expect(screen.getByRole('region', { name: 'Preview' })).not.toHaveTextContent('a reviewer resolves it')
+  })
+
   it('labels the title and close time fields, and defaults to a binary market', () => {
     render(<CreateMarketForm />)
     expect(screen.getByLabelText('Title')).toBeInTheDocument()
@@ -94,7 +112,7 @@ describe('CreateMarketForm', () => {
 
     const closeTime = screen.getByLabelText('Close time')
     expect(closeTime).toHaveAttribute('aria-invalid', 'true')
-    expect(closeTime).toHaveAccessibleDescription('Choose a close time in the future.')
+    expect(closeTime).toHaveAccessibleDescription(`${CLOSE_HINT} Choose a close time in the future.`)
 
     const title = screen.getByLabelText('Title')
     expect(title).toHaveAttribute('aria-invalid', 'false')

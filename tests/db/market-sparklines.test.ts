@@ -3,6 +3,7 @@ import { serviceClient, type TestClient, reconcilePoolTotals } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
 import { pgQuery } from './pg-query'
 import { buildProbabilitySeries, type SeriesPoint } from '@/lib/markets/probability-series'
+import { computeOdds } from '@/lib/markets/odds'
 
 let alice: Member
 let bob: Member
@@ -457,5 +458,133 @@ describe('markets.sparkline cache (0070)', () => {
     const { error } = await aliceClient.rpc('resolve_market', { p_note: 'Fixed', p_market_id: market.marketId, p_outcome_id: market.outcomeIds[1] })
     if (error) throw error
     expect(await cached(market.marketId)).toEqual(first)
+  })
+})
+
+// #252: the cards' compact series, at most 24 points, and the version the app caches them under.
+describe('market_sparks (0095)', () => {
+  interface SparkRow {
+    market_id: string
+    outcome_ids: string[]
+    points: number[][]
+  }
+
+  async function sparks(client: TestClient, marketIds: string[]): Promise<SparkRow[]> {
+    const { data, error } = await client.rpc('market_sparks', { p_market_ids: marketIds })
+    if (error) throw error
+    return data as unknown as SparkRow[] // points is Json in the generated type
+  }
+
+  async function poolVersions(market: TestMarket): Promise<number> {
+    const { data, error } = await serviceClient().from('market_outcomes').select('pool_version').eq('market_id', market.marketId)
+    if (error) throw error
+    return data.reduce((sum, o) => sum + o.pool_version, 0)
+  }
+
+  it('is market_sparklines at 24 points, as [epoch seconds, share, ...] in the list’s outcome order, shares to 4 decimals', async () => {
+    const market = await createTestMarket(aliceClient, ['Zebra', 'Apple', 'Mango'])
+    await insertBets(market, 100)
+
+    const [row] = await sparks(bobClient, [market.marketId])
+    const verbose = await pointsOf(bobClient, market, 24)
+    const { data: outcomes } = await serviceClient().from('market_outcomes').select('id, label').eq('market_id', market.marketId).order('label')
+    const order = outcomes!.map((o) => o.id as string)
+
+    expect(row.market_id).toBe(market.marketId)
+    // Created together, so the tie falls to the label, as the list's own order does.
+    expect(row.outcome_ids).toEqual(order)
+    expect(row.points).toHaveLength(24)
+    row.points.forEach(([t, ...shares], i) => {
+      expect(t).toBe(Math.floor(Date.parse(verbose[i].t) / 1000))
+      expect(shares).toEqual(order.map((id) => Math.round(verbose[i].shares[id] * 10_000) / 10_000))
+    })
+    expect(JSON.stringify(row.points).length).toBeLessThan(JSON.stringify(verbose).length / 5)
+  })
+
+  it('never returns more than 24 points, whatever it is asked for, and every bet below that', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await insertBets(market, 10)
+    const { data, error } = await bobClient.rpc('market_sparks', { p_market_ids: [market.marketId], p_points: 200 })
+    if (error) throw error
+    expect((data as unknown as SparkRow[])[0].points).toHaveLength(10)
+
+    await insertBets(market, 30)
+    const { data: more } = await bobClient.rpc('market_sparks', { p_market_ids: [market.marketId], p_points: 200 })
+    expect((more as unknown as SparkRow[])[0].points).toHaveLength(24)
+  })
+
+  it('returns no row for a market nobody has bet on', async () => {
+    const quiet = await createTestMarket(aliceClient, ['Yes', 'No'])
+    const busy = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await placeBet(aliceClient, busy, 0, 5)
+    expect((await sparks(bobClient, [quiet.marketId, busy.marketId])).map((r) => r.market_id)).toEqual([busy.marketId])
+  })
+
+  // The app caches the answer for every member, so it mustn't depend on who asked: anyone not
+  // invited (a member removed mid-render, say) gets an error, never an empty series to cache.
+  it('refuses an uninvited caller with an error rather than an empty answer, and is closed to anon', async () => {
+    const busy = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await placeBet(aliceClient, busy, 0, 5)
+
+    const carol = await makeMember('Carol')
+    const { data, error } = await (await clientFor(carol)).rpc('market_sparks', { p_market_ids: [busy.marketId] })
+    expect(data).toBeNull()
+    expect(error).toMatchObject({ code: '42501', message: 'not invited' })
+
+    const [fn] = await pgQuery<{ anon: boolean; authenticated: boolean; security_definer: boolean }>(`
+      select
+        has_function_privilege('anon', 'public.market_sparks(uuid[], integer)', 'execute') as anon,
+        has_function_privilege('authenticated', 'public.market_sparks(uuid[], integer)', 'execute') as authenticated,
+        p.prosecdef as security_definer
+      from pg_proc p
+      where p.oid = 'public.market_sparks(uuid[], integer)'::regprocedure
+    `)
+    expect(fn).toEqual({ anon: false, authenticated: true, security_definer: true })
+  })
+
+  it('ends on the chance the card shows: the seeded effective pools, as computeOdds reads them', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No', 'Maybe'], { seed: 20 })
+    await placeBet(aliceClient, market, 0, 10)
+    await placeBet(bobClient, market, 1, 25)
+    await placeBet(aliceClient, market, 0, 7)
+
+    const [row] = await sparks(bobClient, [market.marketId])
+    const { data: outcomes, error } = await bobClient
+      .from('market_outcomes')
+      .select('id, label, pool_total')
+      .eq('market_id', market.marketId)
+    if (error) throw error
+    const { data: m } = await bobClient.from('markets').select('seed_per_outcome').eq('id', market.marketId).single()
+    const odds = computeOdds(outcomes, m!.seed_per_outcome)
+
+    const [, ...last] = row.points.at(-1)!
+    row.outcome_ids.forEach((id, i) => {
+      const chance = odds.find((o) => o.outcomeId === id)!.impliedProbability!
+      expect(last[i]).toBeCloseTo(chance, 3)
+      expect(Math.round(last[i] * 100)).toBe(Math.round(chance * 100))
+    })
+  })
+
+  it('moves the market’s pool version with every bet and every cancellation, and with nothing else', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    expect(await poolVersions(market)).toBe(0)
+
+    await placeBet(aliceClient, market, 0, 5)
+    await placeBet(bobClient, market, 1, 5)
+    expect(await poolVersions(market)).toBe(2)
+
+    const { data: bet } = await serviceClient().from('bets').select('id').eq('profile_id', bob.id).eq('market_id', market.marketId).single()
+    const { error } = await bobClient.rpc('cancel_bet', { p_bet_id: bet!.id })
+    if (error) throw error
+    expect(await poolVersions(market)).toBe(3)
+
+    // A bet of the same size after the cancel leaves the pools where they were before it, with a
+    // different series; the version still moves.
+    await placeBet(bobClient, market, 1, 5)
+    expect(await poolVersions(market)).toBe(4)
+
+    const { error: labelErr } = await serviceClient().from('market_outcomes').update({ label: 'Yep' }).eq('id', market.outcomeIds[0])
+    if (labelErr) throw labelErr
+    expect(await poolVersions(market)).toBe(4)
   })
 })

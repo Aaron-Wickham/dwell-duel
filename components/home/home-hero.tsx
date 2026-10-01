@@ -4,7 +4,8 @@ import { cn } from '@/lib/utils'
 import { AnimatedNumber } from '@/components/ui/animated-number'
 import { AnimatedText } from '@/components/ui/animated-text'
 import { eyebrowClass } from '@/components/ui/page'
-import { atStakeDetail, pendingDetail } from '@/lib/home/copy'
+import { Message } from '@/components/ui/message'
+import { atStakeDetail, pendingDetail, taskRewardsDetail, type RewardRange } from '@/lib/home/copy'
 
 function StatTile({ href, label, value, detail }: { href: string; label: string; value: number; detail: string }) {
   return (
@@ -28,7 +29,8 @@ function StatTile({ href, label, value, detail }: { href: string; label: string;
 }
 
 // The balance with the rank beside it, then what's riding and what's waiting on review. On a
-// phone the stats sit under the balance; from lg they fill the rest of the row.
+// phone the stats sit under the balance; from lg they fill the rest of the row. At exactly 0 DC
+// a note points to Tasks, the only way to earn more (#260).
 export function HomeHero({
   balance,
   rank,
@@ -37,6 +39,7 @@ export function HomeHero({
   atStakeWagers,
   pendingCount,
   pendingDc,
+  taskRewards = null,
 }: {
   balance: number
   rank: number
@@ -45,11 +48,13 @@ export function HomeHero({
   atStakeWagers: number
   pendingCount: number
   pendingDc: number
+  taskRewards?: RewardRange | null
 }) {
+  const rewards = taskRewardsDetail(taskRewards)
   return (
     <section
       aria-labelledby="home-hero-heading"
-      className="flex flex-col gap-4 rounded-[22px] bg-hero p-[18px] text-on-hero md:p-7 lg:flex-row lg:items-center lg:gap-6"
+      className="flex flex-col gap-4 rounded-[22px] bg-hero p-[18px] text-on-hero md:p-7 lg:flex-row lg:flex-wrap lg:items-center lg:gap-6"
     >
       <h2 id="home-hero-heading" className="sr-only">
         Your balance
@@ -76,6 +81,15 @@ export function HomeHero({
         <StatTile href="/bets" label="At stake" value={atStakeDc} detail={atStakeDetail(atStakeWagers)} />
         {pendingCount > 0 && <StatTile href="/tasks" label="Pending" value={pendingDc} detail={pendingDetail(pendingCount)} />}
       </div>
+      {balance === 0 && (
+        <Message tone="gold" className="lg:basis-full">
+          You’re out of Dwell Coin. Earn more with{' '}
+          <Link href="/tasks" className="text-inherit">
+            Tasks
+          </Link>
+          {rewards ? `: ${rewards}.` : '.'}
+        </Message>
+      )}
     </section>
   )
 }

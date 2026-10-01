@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import Link from 'next/link'
+import { IntentLink } from '@/components/ui/intent-link'
 import type { LucideIcon } from 'lucide-react'
 import type { Segment } from '@/lib/social/describe-event'
 import { focusTarget } from '@/lib/pagination/row-id'
@@ -41,9 +41,9 @@ export function FeedItem({
             typeof segment === 'string' ? (
               <span key={i}>{segment}</span>
             ) : (
-              <Link key={i} href={segment.href} transitionTypes={['nav-forward']}>
+              <IntentLink key={i} href={segment.href} transitionTypes={['nav-forward']}>
                 {segment.text}
-              </Link>
+              </IntentLink>
             ),
           )}
         </p>

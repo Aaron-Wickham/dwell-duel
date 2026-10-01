@@ -2,7 +2,7 @@ import { cache } from 'react'
 import type { DbClient } from '@/lib/supabase/database'
 
 // supabase/migrations/0040_roles.sql: owner > admin > reviewer > member.
-export const ROLES = ['owner', 'admin', 'reviewer', 'member'] as const
+const ROLES = ['owner', 'admin', 'reviewer', 'member'] as const
 export type Role = (typeof ROLES)[number]
 
 const RANK: Record<Role, number> = { owner: 3, admin: 2, reviewer: 1, member: 0 }

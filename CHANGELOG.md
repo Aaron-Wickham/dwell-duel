@@ -13,6 +13,11 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **A failed read of the closing-alerts health no longer takes down Admin.** The banner says it couldn't check and every Admin page still loads (#256).
 - **The daily cron runs every step even when one fails.** A Storage error in proof cleanup no longer skips key pruning, the champion post or the reminders; the failures are listed at the end with a 502 (#259).
 
+### Security
+- **Members' writes are rate-limited.** Each member can make at most 20 markets a day, 10 comments a minute (200 a day), 60 reactions a minute (1,000 a day), 30 task submissions a day and 20 bet cancels an hour; going over shows a message saying so. Admins and the owner aren't limited, and a member keeps notifications on their ten most recently used devices (#273).
+- **New database objects grant signed-out visitors nothing by default,** and a schema-wide test fails on any table without RLS, any grant to `anon`, or any new SECURITY DEFINER function a signed-in account can call that hasn't been reviewed (#274).
+- **Google accounts that were never invited are deleted a day later** by the daily cron, instead of staying in Auth forever (#275).
+
 ## v0.5.2-beta — 2026-09-30
 
 An Admin › Markets tab for the markets waiting on a result, with tab counts that add up to the Admin badge, and rows inside cards that tint on hover instead of floating like a button inside a button.

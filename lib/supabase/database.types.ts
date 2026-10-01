@@ -627,6 +627,7 @@ export type Database = {
           sparkline: Json | null
           status: string
           title: string
+          void_reason: string | null
         }
         Insert: {
           close_at: string
@@ -643,6 +644,7 @@ export type Database = {
           sparkline?: Json | null
           status?: string
           title: string
+          void_reason?: string | null
         }
         Update: {
           close_at?: string
@@ -659,6 +661,7 @@ export type Database = {
           sparkline?: Json | null
           status?: string
           title?: string
+          void_reason?: string | null
         }
         Relationships: [
           {
@@ -1562,7 +1565,10 @@ export type Database = {
         Args: { p_avatar_path: string; p_bio: string; p_display_name: string }
         Returns: undefined
       }
-      void_market: { Args: { p_market_id: string }; Returns: undefined }
+      void_market: {
+        Args: { p_market_id: string; p_reason?: string }
+        Returns: undefined
+      }
       weekly_recap: {
         Args: { p_week: string }
         Returns: {

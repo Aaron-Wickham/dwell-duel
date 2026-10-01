@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import {
   seedMembers,
   clientFor,
@@ -15,9 +14,9 @@ import { CLAWBACK_PREFIX } from '@/lib/markets/clawback'
 let alice: Member
 let bob: Member
 let carol: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let carolClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let carolClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -31,7 +30,7 @@ beforeEach(async () => {
   await ensureInvited(bobClient)
 })
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number) {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number) {
   const { error } = await client.rpc('place_bet', {
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcomeIndex],
@@ -220,7 +219,7 @@ describe('resolve_market and void_market lock order', () => {
 
   it('credits and debits members in profile order, so concurrent resolutions cannot deadlock', async () => {
     const resolveLoops = memberLoops(await definition('resolve_market_core(uuid,uuid)'))
-    const voidLoops = memberLoops(await definition('void_market(uuid)'))
+    const voidLoops = memberLoops(await definition('void_market(uuid, text)'))
 
     expect(resolveLoops).toHaveLength(3)
     expect(voidLoops).toHaveLength(1)
@@ -236,7 +235,7 @@ describe('resolve_market and void_market lock order', () => {
 
   it('locks every profile it could touch, in id order, in one statement before any write', async () => {
     const resolveDef = await definition('resolve_market_core(uuid,uuid)')
-    const voidDef = await definition('void_market(uuid)')
+    const voidDef = await definition('void_market(uuid, text)')
 
     expect(resolveDef).toMatch(upfrontLock)
     expect(voidDef).toMatch(upfrontLock)

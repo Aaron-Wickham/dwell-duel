@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, type Member } from './fixtures'
 
 let alice: Member
@@ -44,7 +45,7 @@ describe('tasks table', () => {
     const { error } = await db
       .from('tasks')
       .insert({ title: 'Bad task', reward_amount: 0, created_by: alice.id })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '23514', message: 'tasks_reward_amount_check' })
   })
 
   it('rejects a repeatable task with no period', async () => {
@@ -52,7 +53,7 @@ describe('tasks table', () => {
     const { error } = await db
       .from('tasks')
       .insert({ title: 'Bad task', reward_amount: 10, is_repeatable: true, created_by: alice.id })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '23514', message: 'period_matches_repeatable' })
   })
 
   it('rejects a one-time task with a period set', async () => {
@@ -60,7 +61,7 @@ describe('tasks table', () => {
     const { error } = await db
       .from('tasks')
       .insert({ title: 'Bad task', reward_amount: 10, period: 'weekly', created_by: alice.id })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '23514', message: 'period_matches_repeatable' })
   })
 })
 
@@ -99,7 +100,7 @@ describe('task_completions table', () => {
       .from('task_completions')
       .insert({ task_id: task!.id, profile_id: alice.id, reward_amount: 10, period_key: 'once' })
 
-    expect(error).not.toBeNull()
+    expectError(error, { code: '23505', message: 'task_completions_one_active_per_period' })
   })
 
   it('allows a fresh row for the same task/profile/period once the prior one is rejected', async () => {

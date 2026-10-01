@@ -17,6 +17,7 @@ const event: FeedEvent = {
   legCount: null,
   taskTitle: null,
   resolutionNote: null,
+  voidReason: null,
   creatorStake: null,
   season: null,
 }
@@ -35,6 +36,34 @@ describe('FeedList', () => {
     render(<FeedList now={NOW} events={[event]} heading="Recent activity" headingId="recent-activity" />)
     const card = screen.getByRole('heading', { name: 'Recent activity' }).closest('section')
     expect(card).toHaveClass('pb-1', 'md:pb-1', 'md:pt-[18px]')
+  })
+
+  it('shows a void with its reason under it', () => {
+    render(
+      <FeedList
+        now={NOW}
+        events={[{ ...event, id: 'void:m1', kind: 'market_voided', outcomeLabel: null, amount: null, voidReason: 'The picnic moved indoors.' }]}
+        heading="Recent activity"
+        headingId="recent-activity"
+      />,
+    )
+    const item = screen.getByRole('listitem')
+    expect(item).toHaveTextContent('Alice voided Social layer market')
+    expect(item).toHaveTextContent('The picnic moved indoors.')
+  })
+
+  it('leaves out a kind it doesn’t know, keeping the rest', () => {
+    const unknown = { ...event, id: 'future:1', kind: 'market_renamed' as FeedEvent['kind'] }
+    render(<FeedList now={NOW} events={[unknown, event]} heading="Recent activity" headingId="recent-activity" />)
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    expect(screen.getByRole('listitem')).toHaveTextContent('Alice bet 5 DC on Yes in Social layer market')
+  })
+
+  it('shows the empty state when every event is of a kind it doesn’t know', () => {
+    const unknown = { ...event, id: 'future:1', kind: 'market_renamed' as FeedEvent['kind'] }
+    render(<FeedList now={NOW} events={[unknown]} heading="Recent activity" headingId="recent-activity" />)
+    expect(screen.queryByRole('listitem')).toBeNull()
+    expect(screen.getByText('Nothing yet.')).toBeInTheDocument()
   })
 
   it('renders the empty state inside the card, under a visible heading', () => {

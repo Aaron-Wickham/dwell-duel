@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, clientFor, type Member, giveRole } from './fixtures'
 
 let alice: Member
@@ -17,7 +18,7 @@ describe('adjust_balance', () => {
       p_amount: 10,
       p_reason: 'test',
     })
-    expect(error).not.toBeNull()
+    expectError(error, 'only the owner can adjust a balance')
   })
 
   it('rejects an admin who is not the owner', async () => {
@@ -35,7 +36,7 @@ describe('adjust_balance', () => {
       p_amount: 0,
       p_reason: 'test',
     })
-    expect(error).not.toBeNull()
+    expectError(error, 'adjustment amount must not be zero')
   })
 
   it('rejects a missing reason', async () => {
@@ -44,9 +45,10 @@ describe('adjust_balance', () => {
     const { error } = await adminClient.rpc('adjust_balance', {
       p_profile_id: alice.id,
       p_amount: 10,
-      p_reason: null,
+      // Deliberately not a string: the function must refuse a missing reason itself.
+      p_reason: null as unknown as string,
     })
-    expect(error).not.toBeNull()
+    expectError(error, 'a reason is required for a balance adjustment')
   })
 
   it('rejects a blank (whitespace-only) reason', async () => {
@@ -57,7 +59,7 @@ describe('adjust_balance', () => {
       p_amount: 10,
       p_reason: '   ',
     })
-    expect(error).not.toBeNull()
+    expectError(error, 'a reason is required for a balance adjustment')
   })
 
   it('credits a balance through the real ledger', async () => {
@@ -118,7 +120,7 @@ describe('adjust_balance', () => {
       p_amount: -(before!.balance + 1),
       p_reason: 'Would go negative',
     })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '23514', message: 'profiles_balance_check' })
 
     const { data: after } = await serviceClient().from('profiles').select('balance').eq('id', alice.id).single()
     expect(after!.balance).toBe(before!.balance)

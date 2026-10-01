@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
+import { expectError } from './assertions'
 import {
   seedMembers,
   makeMember,
@@ -16,9 +16,9 @@ import {
 let alice: Member
 let bob: Member
 let olive: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let oliveClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let oliveClient: TestClient
 
 type Summary = {
   month_start: string
@@ -59,7 +59,7 @@ async function summary(at: string = new Date().toISOString()): Promise<Summary> 
   ) as unknown as Summary
 }
 
-async function bet(client: SupabaseClient, market: TestMarket, outcome: number, amount: number): Promise<number> {
+async function bet(client: TestClient, market: TestMarket, outcome: number, amount: number): Promise<number> {
   const { error } = await client.rpc('place_bet', {
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcome],
@@ -153,7 +153,7 @@ async function playScenario(): Promise<void> {
   const cancelled = await bet(bobClient, m4, 1, 3)
   const { error: cancelErr } = await bobClient.rpc('cancel_bet', { p_bet_id: cancelled })
   if (cancelErr) throw cancelErr
-  const { error: voidErr } = await oliveClient.rpc('void_market', { p_market_id: m4.marketId })
+  const { error: voidErr } = await oliveClient.rpc('void_market', { p_market_id: m4.marketId, p_reason: 'Voided in a test' })
   if (voidErr) throw voidErr
 
   // Still at stake: Alice's 12 on an open market and Bob's pending 4 DC parlay.
@@ -180,12 +180,12 @@ describe('economy_summary', () => {
 
   it('is not callable signed out', async () => {
     const { error } = await anonClient().rpc('economy_summary', { p_month_start: new Date().toISOString() })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for function economy_summary' })
   })
 
   it('keeps economy_flows away from members', async () => {
     const { error } = await bobClient.rpc('economy_flows', { p_from: '-infinity', p_to: 'infinity' })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for function economy_flows' })
   })
 
   it('bounds the month midnight to midnight in America/New_York', async () => {
@@ -261,6 +261,7 @@ describe('economy_summary', () => {
       .from('coin_transactions')
       .insert({ profile_id: bob.id, amount: 7, type: 'mystery' })
     expect(error).toBeNull()
+    skipLedgerCheck('this test writes the balance without its ledger row to make the unclassified-type gap the panel reports')
     await serviceClient().from('profiles').update({ balance: 107 }).eq('id', bob.id)
 
     const s = await summary()

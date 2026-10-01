@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { type TestClient, setBalanceViaLedger } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, type Member, giveRole } from './fixtures'
 import { pgQuery } from './pg-query'
 import { listFeed } from '@/lib/social/list-feed'
@@ -11,8 +10,8 @@ const NO_PAGE: PageParams = { top: null, bottom: null }
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -123,10 +122,9 @@ describe('listFeed', () => {
 describe('getLeaderboardPage', () => {
   it('ranks every member by net worth, sharing ranks on ties', async () => {
     const carol = await makeMember('Carol')
-    const db = serviceClient()
-    await db.from('profiles').update({ balance: 150 }).eq('id', alice.id)
-    await db.from('profiles').update({ balance: 150 }).eq('id', bob.id)
-    await db.from('profiles').update({ balance: 90 }).eq('id', carol.id)
+    await setBalanceViaLedger(alice.id, 150)
+    await setBalanceViaLedger(bob.id, 150)
+    await setBalanceViaLedger(carol.id, 90)
 
     const board = await getLeaderboardPage(bobClient, 'all', { top: null, bottom: null })
     expect(board.rows.map((m) => [m.displayName, m.score, m.rank])).toEqual([
@@ -148,10 +146,9 @@ describe('getLeaderboardPage', () => {
 describe('getMemberStanding', () => {
   it('ranks on the net-worth board, and counts the total membership', async () => {
     const carol = await makeMember('Carol')
-    const db = serviceClient()
-    await db.from('profiles').update({ balance: 150 }).eq('id', alice.id)
-    await db.from('profiles').update({ balance: 90 }).eq('id', bob.id)
-    await db.from('profiles').update({ balance: 90 }).eq('id', carol.id)
+    await setBalanceViaLedger(alice.id, 150)
+    await setBalanceViaLedger(bob.id, 90)
+    await setBalanceViaLedger(carol.id, 90)
 
     const standing = await getMemberStanding(bobClient, bob.id)
     expect(standing).toMatchObject({ id: bob.id, displayName: 'Bob', balance: 90, score: 90, rank: 2, memberCount: 3 })

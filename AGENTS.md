@@ -269,7 +269,11 @@ a line to `CHANGELOG.md` under the next release.
   `activity_feed`. Triggers in 0035 keep it equal to what `activity_feed`
   would show. A new feed kind, or a new way of writing a source table,
   needs a trigger change plus a step in `tests/db/activity-events.test.ts`'s
-  equivalence scenario. No trigger watches `market_resolutions`. A feed
+  equivalence scenario. A kind with no source row for a trigger to follow
+  (`season_champion`, `market_voided`) is inserted by the function that
+  makes the event instead, left out of that equivalence check, and tested
+  on its own. `FeedList` skips a kind it doesn't know, so a new kind reaches
+  the database before the build that renders it without breaking the feed. No trigger watches `market_resolutions`. A feed
   row is a sentence, not a card: its member and market names are its links
   and tap targets, and the row itself doesn't press, lift or open anything
   (decided in #187), since one row can name two destinations.
@@ -294,11 +298,15 @@ a line to `CHANGELOG.md` under the next release.
   `update_my_profile`; members have no direct update on `profiles`.
 - **Migrations apply themselves on merge, before the app deploys.**
   Merging to `main` runs the Deploy Production workflow with no approval
-  step: it pushes any new migrations, then triggers Vercel through a deploy
-  hook (Vercel's own Git deploys are off for `main`). The old app keeps
-  serving while a migration applies, so keep migrations additive (new
-  tables, columns and functions), and ship a destructive change in its own
-  PR after the code stops using it.
+  step: it dry-runs against production, and when production lacks any
+  migration it takes an encrypted backup (`scripts/backup/backup.sh`) and
+  pushes them, then triggers Vercel through a deploy hook (Vercel's own Git
+  deploys are off for `main`). It runs only from `main`, with its secrets
+  in the `Production` environment; never add a prod secret at repository
+  level. The old app keeps serving while a migration applies, so keep
+  migrations additive (new tables, columns and functions), and ship a
+  destructive change in its own PR after the code stops using it. Backups
+  and restore: `docs/OPERATIONS.md`.
 
 ## Testing
 
@@ -309,14 +317,27 @@ a line to `CHANGELOG.md` under the next release.
   tests (`tests/db/`) refuse to run against anything but localhost. If
   storage uploads then fail with `42P10` (the local Storage service holds
   stale state after a reset), run `npx supabase stop && npx supabase start`.
+- **DB tests are typed and name what a refusal was for.** `serviceClient()`,
+  `clientFor()`, `clientForEmail()` and `anonClient()` return `TestClient` (`SupabaseClient<Database>`),
+  so a renamed RPC argument fails `npm run typecheck`. A negative test calls
+  `expectError(error, 'the message' | { code, message })` (`tests/db/assertions.ts`),
+  never `expect(error).not.toBeNull()`, which also passes on a missing function.
+  `tests/db/setup.ts` runs `assertLedgerConsistent()` after every DB test
+  (balances equal their ledger, pools equal live bets, a parlay's `credited` equals
+  its payout rows). Shape balances with `setBalanceViaLedger`; a test that seeds
+  raw rows on purpose calls `skipLedgerCheck('why')`. Slip tests call `place_slip_v2`.
 - **CI runs on pull requests only,** as three parallel jobs (`static`,
   `db`, `web`) summed up by the one required check, `ci-ok`. A PR must be
   up to date with `main` to merge: after another PR lands, run
   `gh pr update-branch <n>` and let CI run again. Merging to `main` only
-  deploys, so nothing tests the merge commit separately.
+  deploys, so nothing tests the merge commit separately. `ci-ok` has no
+  bypass: `gh pr merge --admin` skips only the review rule, so a red PR
+  can't merge.
 
 ## Migrations
 
 - Sequential, zero-padded numbering (`00NN_description.sql`) in
   `supabase/migrations/`. Never edit a past migration in place — add a
-  new one.
+  new one. A new migration must be numbered after `main`'s newest
+  (`scripts/check-migration-order.sh` fails CI otherwise); renumber after
+  another PR takes the number.

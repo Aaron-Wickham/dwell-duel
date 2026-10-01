@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { listMyWagers, type WagerBucket } from '@/lib/bets/list-my-wagers'
 import type { ParlayView } from '@/lib/parlays/list-parlays'
+import type { TestClient } from './helpers'
 
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   const [alice, seededBob] = await seedMembers()
@@ -63,7 +63,7 @@ describe('getSlipView', () => {
   it('has no odds for an outcome nobody has bet on, and marks a voided market not open', async () => {
     const a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Fresh' })
     const b = await seededMarket('Market B')
-    const { error } = await aliceClient.rpc('void_market', { p_market_id: b.marketId })
+    const { error } = await aliceClient.rpc('void_market', { p_market_id: b.marketId, p_reason: 'Voided in a test' })
     expect(error).toBeNull()
 
     const view = await getSlipView(bobClient, [solo(a.outcomeIds[0]), solo(b.outcomeIds[0])], bob.id)
@@ -121,7 +121,7 @@ describe('parlays on My bets', () => {
       ]),
     )
 
-    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: b.marketId })
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: b.marketId, p_reason: 'Voided in a test' })
     expect(voidErr).toBeNull()
 
     expect(await myParlays('open')).toEqual([])

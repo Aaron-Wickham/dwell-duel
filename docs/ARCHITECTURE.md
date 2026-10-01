@@ -121,7 +121,11 @@ the task catalogue and invite list, which are allowed by policy.
 
 - `allowed_emails`: the invite list. Only invited Google accounts get in. Adding one
   sends nothing: Admin → Invites offers a "Copy invite message" to send
-  the invitee yourself (`lib/invites/invite-message.ts`).
+  the invitee yourself (`lib/invites/invite-message.ts`). An admin may delete
+  only an unclaimed row (`admin_delete_invites`, 0073); a claimed one goes
+  only through `remove_member`. Members' insert grant covers only `email` and
+  `invited_by`, which defaults to and must equal the caller; `claimed_by` is
+  the profile trigger's alone.
 - `profiles`: one per member. Display name, bio, `avatar_path`, `balance`
   and `role` (owner › admin › reviewer › member). A trigger creates it on
   first sign-in and grants 100 DC.
@@ -141,7 +145,9 @@ the task catalogue and invite list, which are allowed by policy.
 - `markets`: title, description, kind (`binary`, `multiple_choice`,
   `over_under`), `line` (Over/Under only), `close_at`, status (`open`,
   `resolved`, `voided`), `seed_per_outcome` (20 DC by default),
-  `current_resolution_id`, `edited_at`, `settled_at` (0066: when it
+  `current_resolution_id`, `edited_at`, `void_reason` (0073: required by
+  `void_market`, at most 500 characters, `TEXT_LIMITS.voidReason`; null for
+  older voids), `settled_at` (0066: when it
   left `open`; the Resolved list's order and a voided chart's shaded zone) and
   `sparkline` (0070): the card's
   40-point series, written by a trigger the moment the market resolves or
@@ -189,12 +195,15 @@ the task catalogue and invite list, which are allowed by policy.
 **Feed**
 
 - `activity_events`: one row per feed item (bets, parlays, new markets,
-  results, wins and approved tasks), kept in step by triggers (0035). The
+  results, voids, wins and approved tasks), kept in step by triggers (0035). The
   feed and member activity read only this table. `season_champion` (0051)
-  is the one kind no trigger writes: `settle_season` inserts it, keyed
-  `season:YYYY-MM`, so it has no source row and the DB tests' equivalence
-  check against `activity_feed` leaves it out. `actor_id` cascades, so a
-  champion's events go with their profile.
+  and `market_voided` (0073) are the kinds no trigger writes: `settle_season`
+  inserts the first, keyed `season:YYYY-MM`, and `void_market` the second,
+  keyed `void:<market id>`, with the reason read from `markets.void_reason`.
+  Neither has a row in `activity_feed`, so the DB tests' equivalence check
+  leaves them out. `actor_id` cascades, so a champion's events go with
+  their profile. `FeedList` skips any kind missing from its `EVENT_ICONS`,
+  so a kind added by a migration can't break a build that predates it.
 - `feed_reactions` (0053): one row per member, event and kind (`fire`,
   `pray`, `laugh`, `clap`), keyed `(event_id, profile_id, kind)` and
   cascading with the event and the member. Members insert and delete their
@@ -247,11 +256,17 @@ the task catalogue and invite list, which are allowed by policy.
 | `cancel_bet` | bettor | Refunds a bet before its market closes |
 | `resolve_market` | after close, the creator or a reviewer with no stake; an admin any time | Needs a note; may take proof; pays winners from the seeded pool (everyone is refunded when the winning pool is empty); an admin override must name a different outcome (0066), reverses the old payouts first and is blocked if a past winner has already spent them. Stamps `settled_at` on the first resolution only. Nobody but an admin resolves a market they have a stake in (`has_stake_in_market`, 0046); `can_resolve_market` answers the same question for the page |
 | `resolve_over_under` | same | Picks Over or Under from the actual number, then resolves |
-| `void_market` | creator or admin | Refunds every bet; parlays drop the voided leg; stamps `settled_at` |
+| `void_market` | before close, the creator; an admin any time | Needs a reason (0073), stored in `void_reason` and posted to the feed as `market_voided`; refunds every bet; parlays drop the voided leg; stamps `settled_at`. `p_reason` defaults to null only so the previous build's call is refused cleanly |
 | `settle_parlay` | trigger | Runs when a leg's market resolves or voids |
 | `submit_task_completion` | member | Submits a task with an optional note and proof |
 | `approve_task_completion`, `reject_task_completion`, `review_task_completions` | reviewer+, never on their own submission | Pays or rejects submissions, one at a time or in bulk |
 | `adjust_balance` | owner | A manual correction, with a required reason |
+
+A creator's or author's own-row branch (resolving, voiding or editing their
+market, deleting their comment) checks `is_invited()` as well (0073), as the
+role branches already do through `has_role`; `tests/db/definer-writers.test.ts`
+fails on any member-callable security definer writer that neither checks the
+invite nor is listed there as role-gated or delegating.
 
 Also: `create_market`, `update_market` (creator or admin, before close; the
 title is fixed once anyone else has bet, solo or as a parlay leg, 0065), `member_emails` (admin only:
@@ -264,7 +279,7 @@ bet or parlay leg; the market page shows the button only when the pool is
 empty and `lib/markets/bet-history.ts`'s two head counts find nothing),
 `delete_task`, `remove_bet` and `remove_member` (owner only; 0068: back to
 member, `allowed_emails` row and push subscriptions gone, coins and bets
-untouched), `update_my_profile`, `record_proof`, `market_sparklines` (the
+untouched; 0073: their `auth.sessions` too, so no device can refresh), `update_my_profile`, `record_proof`, `market_sparklines` (the
 cards' 40-point sparklines and the market chart's 200 points, sampled in
 SQL so no page reads every bet; both prepend a seeded market's even
 opening split through `withSeededStart`, since the function returns points
@@ -400,16 +415,22 @@ after it ships. They roughly follow the project's history:
 | 0070 | Speed at scale (#204, #205): `markets.sparkline` filled by the `cache_market_sparkline` trigger when a market resolves or voids (backfilled), `market_outcomes` in the realtime publication, and `parlays_pending_profile_idx` for `stakes_riding` |
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
+| 0073 | Permissions (#288, #289, #290): own-row branches of `resolve_market_core`, `can_resolve_market`, `void_market`, `update_market` and `delete_market_comment` need `is_invited()`; `remove_member` deletes the member's `auth.sessions`; `admin_delete_invites` only for unclaimed invites, and the invite insert grant narrowed to `email` and `invited_by` (the caller); `void_market(p_market_id, p_reason)` needs a reason (`markets.void_reason`, 500-character check), is admin-only after close and posts a `market_voided` feed event |
 | 0085 | Live pings (#250): `live_pings`, `send_live_ping` and the unlogged `live_ping_queue`. Row triggers on `markets`, `market_outcomes`, `activity_events`, `feed_reactions`, `tasks` and `task_completions` queue their topic once per transaction, and the queue's deferred trigger sends it at commit: one private Broadcast ping per topic per transaction, at most one per topic every `live_ping_interval_ms()`. The `realtime.messages` policy lets only invited members join (reviewers and above for `live:reviews`) |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
 Every merge to `main` runs the **Deploy Production** workflow, with no
-approval step: a dry run and the push when the merge touched
-`supabase/migrations/`, then the app deploy through a Vercel deploy hook.
-The app never goes live before its migrations; a failed migration fails the
-run and leaves the old app live. Migrations stay additive anyway, because
-the old app is still serving while they apply.
+approval step: a dry run against production, and when production is missing
+any migration, an encrypted pre-migration backup and the push; then the app
+deploy through a Vercel deploy hook. What's pending comes from production's
+migration history, not the merge's diff, so a migration an earlier run
+failed to apply goes out with the next. The app never goes live before its
+migrations; a failed backup or migration fails the run and leaves the old
+app live. Migrations stay additive anyway, because the old app is still
+serving while they apply. CI fails a PR whose new migration isn't numbered
+after `main`'s newest, since `db push` refuses one that sorts before
+production's latest. Backups and restoring are in `docs/OPERATIONS.md`.
 
 ## Key flows
 
@@ -686,12 +707,13 @@ leaves out empty lines and hides when every one is empty.
   Vercel preview deploys are off on purpose (see the README).
 - **CI** (`.github/workflows/ci.yml`) runs on every PR (not on `main`: the
   ruleset requires a PR to be up to date, so the tested head is the merge
-  result) as three parallel jobs: `static` (lint, the type check), `db`
+  result) as three parallel jobs: `static` (the migration-order check,
+  lint, the type check), `db`
   (a throwaway local Supabase, the generated-types drift check, Vitest's
   `db` project, serially) and `web` (Vitest's `unit` project, a production
   build with `.next/cache` restored, Playwright against its own local
   Supabase). `ci-ok` needs all three and is the ruleset's one required
-  check. Both Supabase jobs start the stack through
+  check, with no bypass. Both Supabase jobs start the stack through
   `.github/actions/local-supabase`, which keeps Supabase's images in the
   Actions cache per CLI version (loaded before `supabase start`, saved
   after a miss): they come from AWS's public registry, whose anonymous data
@@ -704,17 +726,28 @@ leaves out empty lines and hides when every one is empty.
   weekly PR, so don't bump one by hand to a bare tag.
 - **Deploys** (`.github/workflows/deploy-production.yml`): Vercel's Git
   integration is off for `main` (`vercel.json`'s `git.deploymentEnabled`).
-  Each push to `main` runs the workflow instead, one at a time and with no
-  approval step: when `supabase/migrations/` changed, a dry run and then
-  the push; then a POST to the Vercel deploy hook in the
-  `VERCEL_DEPLOY_HOOK_URL` repository secret. With a `VERCEL_TOKEN` secret
+  Each push to `main` runs the workflow instead, one at a time (waiting runs
+  queue in order, `queue: max`) and with no approval step: a dry run against
+  production; when anything is pending, `scripts/backup/backup.sh`'s
+  encrypted dump and then the push; then, if the run's commit is still
+  `main`'s head, a POST to the Vercel deploy hook in the
+  `VERCEL_DEPLOY_HOOK_URL` secret. Every job runs only from `main` and takes
+  its secrets from the GitHub `Production` environment, which only `main`
+  may deploy to. With a `VERCEL_TOKEN` secret
   the run then polls Vercel's deployments API for this commit's production
   deployment and fails when it ends in ERROR or CANCELED, or isn't live
   within 15 minutes; without the token it says so and stops at the hook,
   and only Vercel's own email reports a failed build. GitHub's
   "failed workflows only" notification is what turns a failed migration,
   hook call, build or closing-alerts backup ping into an email. Redeploy by
-  hand with "Run workflow" on it.
+  hand with "Run workflow" on it, from `main`.
+- **Backups** (`.github/workflows/backups.yml`, `scripts/backup/`): a
+  nightly `supabase db dump` of roles, schema and data (auth and storage
+  rows included) and a weekly copy of the `proof` and `avatars` buckets,
+  each age-encrypted and committed to the private `dwell-duel-backups`
+  repo, 60 days kept (and always the newest 14 per folder). Each job first
+  runs `mask-secrets.sh` as its own step, and `backup.sh` refuses to run in
+  Actions without it. `docs/OPERATIONS.md` is the runbook.
 - **Checking the installed app** (`npm run check:ios`,
   `scripts/ios-standalone-check.mjs`): Playwright has no standalone mode,
   so the installed iPhone app is checked in the iOS Simulator by hand before

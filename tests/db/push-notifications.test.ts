@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { rpcLoose, serviceClient, type RpcName, type TestClient } from './helpers'
 import { pgQuery } from './pg-query'
 import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, createTestTask, ensureInvited, type Member, giveRole } from './fixtures'
 import { isPushEndpoint, PUSH_HOSTS } from '@/lib/push/subscription'
@@ -10,11 +9,11 @@ let bob: Member
 let carol: Member
 let dave: Member
 let admin: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let carolClient: SupabaseClient
-let daveClient: SupabaseClient
-let adminClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let carolClient: TestClient
+let daveClient: TestClient
+let adminClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -52,8 +51,8 @@ async function closeNow(marketId: string): Promise<void> {
   if (error) throw error
 }
 
-async function rpcOk<T>(client: SupabaseClient, fn: string, args?: Record<string, unknown>): Promise<T> {
-  const { data, error } = await client.rpc(fn, args)
+async function rpcOk<T>(client: TestClient, fn: RpcName, args?: Record<string, unknown>): Promise<T> {
+  const { data, error } = await rpcLoose(client, fn, args)
   if (error) throw error
   return data as T
 }
@@ -178,7 +177,7 @@ describe('push_subscriptions RLS', () => {
       ['push_new_market', { p_market_id: '00000000-0000-0000-0000-000000000000' }],
       ['push_wants', { p_profile_id: alice.id, p_kind: 'results' }],
     ] as const) {
-      const { error } = await adminClient.rpc(fn, args)
+      const { error } = await rpcLoose(adminClient, fn, args)
       expect(error?.code, fn).toBe('42501')
     }
   })
@@ -271,7 +270,7 @@ describe('recipients', () => {
     await subscribe(bob)
     await subscribe(carol)
     await setPrefs(carol, { results: false })
-    await rpcOk(aliceClient, 'void_market', { p_market_id: market.marketId })
+    await rpcOk(aliceClient, 'void_market', { p_market_id: market.marketId, p_reason: 'Voided in a test' })
 
     const rows = await rpcOk<ResultRow[]>(serviceClient(), 'push_market_result', { p_market_id: market.marketId })
     expect(rows).toEqual([
@@ -366,7 +365,7 @@ async function setRole(m: Member, role: 'reviewer' | 'admin' | 'owner'): Promise
 }
 
 // A reviewer on the invite list, as a real one always is: push_wants skips anyone who isn't.
-async function makeReviewer(name: string): Promise<{ member: Member; client: SupabaseClient }> {
+async function makeReviewer(name: string): Promise<{ member: Member; client: TestClient }> {
   const member = await makeMember(name)
   await setRole(member, 'reviewer')
   const client = await clientFor(member)
@@ -507,7 +506,7 @@ describe('review alerts (0058)', () => {
     await closeNow(closed.marketId)
     await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Not closed yet' })
 
-    const counts = async (c: SupabaseClient) => (await rpcOk<{ tasks: number; markets: number }[]>(c, 'my_review_counts'))[0]
+    const counts = async (c: TestClient) => (await rpcOk<{ tasks: number; markets: number }[]>(c, 'my_review_counts'))[0]
     expect(await counts(aliceClient)).toEqual({ tasks: 0, markets: 0 })
     expect(await counts(reviewerClient)).toEqual({ tasks: 2, markets: 0 })
     // The admin's own submission never counts for them.

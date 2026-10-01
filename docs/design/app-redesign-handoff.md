@@ -1,6 +1,13 @@
-# App redesign — handoff from the mockup
+# App design — the visual source of truth
 
-The approved mockup is a Design canvas:
+How DwellDuel looks and behaves, as built. It started as the handoff from
+the approved mockup (v0.2) and is kept up to date with the app: when a
+change alters a screen, a token or a component's behaviour, update this
+doc in the same PR. Where the mockup and the app differ, the app and this
+doc win; new designs are drawn on the canvas and approved before they're
+built.
+
+The mockup is a Design canvas:
 **https://claude.ai/artifact/DkowpVq9ZMm7Gn9rL4cTqw**
 
 - **Pages:** Light, Dark, Components, System.
@@ -23,49 +30,46 @@ The approved mockup is a Design canvas:
 | Feed | `app/(app)/feed` |
 | Leaderboard | `app/(app)/leaderboard` |
 | Profile | `app/(app)/members/[id]` |
-| AdminInvites / AdminTasks / AdminMembers / AdminLedger | `app/(app)/admin/*` |
-| NotFound | `app/not-found.tsx` |
+| AdminInvites / AdminTasks / AdminMembers / AdminLedger | `app/(app)/admin/(sections)/*` |
+| (no artboard; built like AdminTasks' queue) AdminMarkets: closed markets with no result, oldest first | `app/(app)/admin/(sections)/markets` |
+| (no artboard) one member's Admin page | `app/(app)/admin/members/[id]` |
+| (no artboard) Parlay breakdown, How it works, Edit profile | `app/(app)/parlays/[id]`, `app/(app)/how-it-works`, `app/(app)/profile` |
+| NotFound | `app/(app)/[...missing]` inside the app shell, `app/not-found.tsx` signed out |
 | EmptyStates | the empty branch of every list |
 
 ## Brand
 
-- **Logo pack:** `/Users/aaronwickham/Documents/DwellDuel Logo Pack/` (see its README for the favicon `<head>` snippet and usage rules).
+- **Where the brand lives in the repo:** the symbol's art is `components/brand/symbol-paths.ts`, drawn by `components/brand/wordmark.tsx`; the favicons, app icons and social image are in `public/` (`favicon.svg`, `favicon-*.png`, `apple-touch-icon-180.png`, `android-chrome-*.png`, `maskable-512.png`, `og-image-1200x630.png`) and the iOS launch screens in `public/splash/`. `scripts/generate-favicons.mjs` and `scripts/generate-splash.mjs` rebuild them from `symbol-paths.ts`. The original logo pack is Aaron's; ask him for it.
 - **Wordmark:**
-  - Symbol from `svg/dwellduel-symbol.svg`. The D is `#03272D` on light and `#FFFFFF` on dark; the leaves are always `#72DB2B`.
+  - The symbol: the D is `--sym-d` (`#03272D` on light, `#FFFFFF` on dark); the leaves are always lime `#72DB2B`.
   - Text "DWELLDUEL" in Manrope ExtraBold, uppercase, `-0.03em` tracking.
-  - "DUEL" is `#3FAE14` on light and `#72DB2B` on dark.
+  - "DWELL" is `--wm-a` and "DUEL" is `--wm-b` (`#3FAE14` on light, `#72DB2B` on dark).
 - **Font:** Manrope (400–800) via `next/font/google`, for the whole UI.
 
 ## Tokens (Tailwind v4, `app/globals.css`)
 
 Theme is `data-theme` on `<html>`. It follows `prefers-color-scheme` until the member picks Light or Dark in Settings, which persists the choice in a cookie read by the root layout, so there's no flash on load. Choosing System clears it.
 
-```css
-@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+`app/globals.css` is the only place colours are defined, and it's the
+source of truth for their values: `:root` for light, `[data-theme="dark"]`
+(and the system preference when no choice is saved) for dark. Markup uses
+them through Tailwind utilities (`bg-surface`, `text-ink2`, `border-line`),
+never a raw colour. The groups:
 
-:root {
-  --bg: #F3F6F1; --surface: #FCFDFB; --sunk: #E6EDE6;
-  --ink: #03272D; --ink2: #46605E; --line: #D5DFD8; --line-s: #7A8F8B;
-  --primary: #03272D; --on-primary: #FFFFFF; --lime: #72DB2B; --link: #03272D;
-  --acc-soft: #E3F4D5; --acc-text: #2A6E0B;
-  --gold: #855600; --gold-soft: #F6E7C4;
-  --win: #2A6E0B; --loss: #A8281C; --loss-soft: #FAE1DD;
-  --focus: #03272D; --hero: #E3F4D5;
-  --s1: #03272D; --s2: #2A6E0B; --s3: #855600; --s4: #3155B8; /* chart series */
-}
-[data-theme="dark"] {
-  --bg: #021B1F; --surface: #07282E; --sunk: #0D343B;
-  --ink: #EAF4EE; --ink2: #A3BDB8; --line: #17434A; --line-s: #5E8883;
-  --primary: #72DB2B; --on-primary: #03272D; --link: #8BE651;
-  --acc-soft: #143A1E; --acc-text: #8BE651;
-  --gold: #F0C15A; --gold-soft: #3A2E14;
-  --win: #8BE651; --loss: #FF9585; --loss-soft: #3D1C17;
-  --focus: #72DB2B; --hero: #0D3A41;
-  --s1: #EAF4EE; --s2: #8BE651; --s3: #F0C15A; --s4: #9DB0FF;
-}
-```
+| Tokens | For |
+|---|---|
+| `--bg`, `--surface`, `--sunk` | the page, cards, and sunken panels and hover tints |
+| `--ink`, `--ink2`, `--line`, `--line-s` | text, secondary text, hairlines, stronger borders |
+| `--primary`, `--on-primary`, `--lime`, `--on-lime`, `--link`, `--focus` | buttons, the lime accent and what sits on it, links, focus rings |
+| `--acc-soft`, `--acc-text`, `--win`, `--win-soft`, `--loss`, `--loss-soft`, `--gold`, `--gold-soft` | chips, wins, losses and warnings |
+| `--hero`, `--on-hero`, `--hero-2`, `--hero-num`, `--hero-inset` | Home's balance hero |
+| `--s1` … `--s6` | chart series, one per outcome |
+| `--wm-a`, `--wm-b`, `--sym-d`, `--splash`, `--on-splash`, `--status-band` | the wordmark, the launch screen and the iOS status bar |
+| `--shadow`, `--overlay-shadow`, `--lift-shadow`, `--scrim` | cards, dialogs, hover lift, the dialog backdrop |
+| `--safe-top`, `--safe-bottom` | the iPhone's safe areas, non-zero only in the installed app |
+| `--ease-*`, `--duration-*` | motion, in the `@theme static` block (mirrored by `lib/ui/motion.ts`) |
 
-Every text pairing above passes WCAG AA; I checked them with a script.
+Every text pairing passes WCAG AA in both themes; check a new one before using it.
 
 **Lime is never used as text on the light background.** It appears only as a fill behind teal text (active tab, count badges, rank badges).
 
@@ -100,7 +104,7 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 |---|---|---|
 | Markets | wide | Three columns of market cards. |
 | Market | wide | Chart and outcomes (7fr) beside betting, resolution and the rest (5fr). |
-| Leaderboard | wide | Podium across the top. This month: rankings (7fr) beside the race chart, the awards as a 2×2 grid and past champions (5fr). Net worth: rankings (7fr) beside a "Your standing" card (5fr); on a phone the card is hidden. |
+| Leaderboard | wide | Podium across the top. This month: rankings (7fr) beside the race chart, the awards as a 2×2 grid and past champions (5fr). Net worth: rankings (7fr) beside a "Your standing" card (5fr); on a phone that card is hidden, and a compact standing card with Jump to me sits above the list instead. |
 | Feed | reading | One centred stream. |
 | My bets | wide | Open, Settled and Cancelled show bets as cards in three columns (a solo bet's status sits at the bottom of its card); Coins stays a list. |
 | Member | wide | Photo, name, bio and a two-column Stats card (5fr) beside Recent activity (7fr). |
@@ -119,9 +123,10 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 ## Navigation (one `<AppNav>` in the signed-in layout)
 
 - **There's no Home tab.** The wordmark links home and is marked current there.
-- **Desktop:** a 72px top bar with the wordmark, then Markets, My bets, Tasks, Feed and Leaderboard, a divider, then Admin (admins only). On the right: the balance chip (a link to My bets) and your avatar (a link to your profile). The active item is a filled pill.
+- **Desktop:** a 72px top bar with the wordmark, then Markets, My bets, Tasks, Feed and Leaderboard, a divider, then Admin (reviewers and above). On the right: the balance chip (a link to My bets) and your avatar (a link to your profile). The active item is a filled pill.
 - **Phone:**
-  - Top bar (64px): wordmark, balance chip, an Admin shield icon (admins only), avatar.
+  - Top bar (64px): wordmark, balance chip, an Admin shield icon (reviewers and above), avatar.
+- **Admin** opens the first section the role can see: Tasks (the approval queue) for a reviewer, Invites for an admin or the owner. It carries a red count of what waits on the viewer: other members' task submissions (reviewers and above) and closed markets with no result (admins and above), and the Tasks and Markets tabs show their share of it. Inside Admin, the sections are a `SubNav` (Invites, Tasks, Markets, Members, Ledger, each shown by role); a reviewer, with only Tasks, gets no tabs.
   - Bottom tab bar with 5 tabs: Markets, Bets, Tasks, Feed, Leaders. Bets has `aria-label="My bets"`; Leaders has `aria-label="Leaderboard"`.
 - **The slip** is its own floating button (`SlipSheet`), not a tab badge.
 
@@ -130,51 +135,20 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 | Component | Props (see each artboard's `renderVals`) | Build with |
 |---|---|---|
 | `AppNav` (TopBar + TabBar) | size, theme, current tab | lucide-react icons, motion `layoutId` for the active pill |
-| `ProbabilityChart` | per range: series `{label, color, values[]}`, times; `compact` flag | Recharts v3 via the shadcn/ui Chart wrapper: one `<Line type="stepAfter">` per outcome, a crosshair tooltip, and end-of-line labels showing name and % |
-| `MarketCard` | market, compact chart, outcomes with % and weekly change | reuses `ProbabilityChart` with `compact` |
+| `ProbabilityChart` (the market page only, loaded lazily) | per range: one series per outcome, with times | Recharts v3 through `components/ui/chart.tsx` (adapted from shadcn/ui's chart and copied in): one `<Line type="stepAfter">` per outcome, a crosshair tooltip, and end-of-line labels showing name and % |
+| `MarketCard` | market, sparkline, outcomes with % and weekly change | `MarketSparkline` (`components/markets/market-sparkline.tsx`): the same window and colours as `ProbabilityChart`, drawn as plain SVG so the list server-renders it and ships no chart library |
 | `OutcomeRow` | label, % and pool, bar, payout multiplier, state `add` / `inslip` / `disabled` / `none`, winner | Button variants with cva |
 | `SlipPick` | market, outcome, odds or stale | — |
 
-Also build: Button (primary / secondary / danger / quiet; md and sm), Field (label, hint and inline error), StatusChip, Card and Message (error / ok / gold). Every repeated piece in the mockup comes from these.
+The shared primitives are in `components/ui/`: Button (primary / secondary / danger / quiet; md and sm), Field (label, hint and inline error), StatusChip, Card, Message (error / ok / gold), `SectionCard`, `EmptyState`, `SubNav`, `ShowMore`, `SearchField`, `FilterChips`, the confirm dialogs and the skeletons. Every repeated piece comes from these.
 
 ### Chart data
 
-The chart needs no new table.
-
-- **Data points:** an outcome's chance at any moment is its share of the pool, so recompute every outcome's pool share after each bet, using that market's `bets` rows ordered by time.
-- **Ranges:** 1D, 1W and All; hide the range buttons when there's only one.
+- **Data points:** an outcome's chance at a moment is its share of the pool with the seed counted (`effectivePools`), so a new market starts at an even split. SQL samples the series, so no page reads every bet: `market_sparklines` gives the market page's chart 200 points (`lib/markets/chart-series.ts`), and `market_sparks` gives each card at most 24 compact points, cached per list in Next's data cache and keyed by its markets' pool versions (`lib/markets/sparklines.ts`). Both prepend the seeded opening split (`withSeededStart`).
+- **Ranges:** 1D, 1W and All, each offered only when the data spans it; hide the range buttons when there's only one.
 - **Closed markets:** shade the area after the close time and label it "Closed {date}" or "Resolved: {outcome}".
-- **No bets yet:** show "No bets yet — the chart starts with the first bet."
+- **No bets:** "No bets were placed on this market."
 
-## Libraries
+## History
 
-| Library | Plan |
-|---|---|
-| recharts (v3), via the shadcn/ui `chart` component | add |
-| `@number-flow/react` | add, for odds %, balance and payout numbers |
-| Base UI | add: Drawer, Select, Checkbox, Dialog, ToggleGroup. **Confirm the current package name before installing.** Then **remove `vaul`**, which is unmaintained, and `@radix-ui/react-dialog`. |
-| lucide-react, motion, sonner, class-variance-authority, clsx, tailwind-merge | already installed; keep |
-
-## Copy
-
-Every string the brief listed is used verbatim; tests look for those.
-
-These strings were written for the mockup and need a sign-off before they land:
-- "Insufficient balance — you have 120 DC. Try a smaller amount."
-- "Add at least one more pick to place a parlay."
-- "Remove the pick that's no longer available to place this parlay."
-- "Your slip is empty."
-- "Awaiting resolution"
-- "Winning outcome: {x}"
-- "Add a reason — it's shown in the ledger next to this adjustment."
-- "Page not found" / "This page wandered off…"
-- "Friendly bets. Faithful study."
-
-## Suggested build order (one PR each)
-
-1. **Theme, tokens and logo:** tokens, Manrope, the theme toggle with persistence, the wordmark, favicons.
-2. **`AppNav`:** replaces the per-page link rows.
-3. **Primitives:** Button, Field, Card, StatusChip, Message.
-4. **Restyle screens, route by route:** auth → home → markets → parlays → tasks/feed/leaderboard/profile → admin → 404. Add the empty states along the way.
-5. **Charts:** `ProbabilityChart` plus the chart data query, on Market detail and `MarketCard`.
-6. **Polish:** NumberFlow, sonner toasts, the Base UI drawer, and removing vaul.
+The mockup's library plan (Recharts, NumberFlow, Base UI in place of vaul and Radix), its copy sign-offs and its suggested build order were all done by v0.2.0-beta. They're in git history and in `docs/archive/` if you need the detail.

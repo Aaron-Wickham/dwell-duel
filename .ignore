@@ -1,0 +1,3 @@
+# ripgrep (and editors and agents built on it) skips these: dated plans and specs that name
+# identifiers the code no longer has. They stay readable in docs/archive/.
+docs/archive/

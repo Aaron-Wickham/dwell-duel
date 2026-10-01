@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { render, screen } from '@testing-library/react'
@@ -71,6 +71,13 @@ describe('the How it works page', () => {
     expect(container.querySelector('#how-the-slip-solo-bets-and-parlays')?.tagName).toBe('H2')
   })
 
+  it('keeps Settings’ Your data link pointed at the privacy section (#286)', () => {
+    const { container } = render(<HowItWorksPage />)
+    const heading = container.querySelector('#how-your-data')
+    expect(heading?.tagName).toBe('H2')
+    expect(heading).toHaveTextContent('Your data')
+  })
+
   it('points every in-body link at a section on the page, with the headings kept clear of the bar at every width', () => {
     const { container } = render(<HowItWorksPage />)
     const navs = container.querySelectorAll('nav')
@@ -111,5 +118,37 @@ describe('Markdown links', () => {
     const { parseInline } = await import('@/lib/docs/markdown')
     const { container } = render(<p><InlineContent nodes={parseInline('[board](#the-leaderboard), [same](#how-the-leaderboard)')} /></p>)
     expect([...container.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(['#how-the-leaderboard', '#how-the-leaderboard'])
+  })
+})
+
+describe('arriving at a section from another page', () => {
+  const original = Element.prototype.scrollIntoView
+  function renderAt(hash: string): string[] {
+    window.history.replaceState(null, '', `/how-it-works${hash}`)
+    const scrolled: string[] = []
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this.id)
+    }
+    render(<HowItWorksPage />)
+    return scrolled
+  }
+  afterEach(() => {
+    Element.prototype.scrollIntoView = original
+    window.history.replaceState(null, '', '/')
+    vi.useRealTimers()
+  })
+
+  it('scrolls to the section in the URL once the doc has rendered, as a client navigation past the skeleton does not (#286)', () => {
+    expect(renderAt('#how-your-data')).toEqual(['how-your-data'])
+  })
+
+  it('ignores a malformed hash instead of throwing', () => {
+    expect(() => renderAt('#%E0%A4%A')).not.toThrow()
+    expect(renderAt('#%E0%A4%A')).toEqual([])
+  })
+
+  it('leaves the restored position alone on back and forward', () => {
+    window.dispatchEvent(new PopStateEvent('popstate'))
+    expect(renderAt('#how-your-data')).toEqual([])
   })
 })

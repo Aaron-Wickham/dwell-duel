@@ -12,7 +12,8 @@ Browser / installed app (PWA)
   ▼
 Next.js 16 on Vercel ── proxy.ts: signed-out requests → /sign-in
   │  server components read with the member's own Supabase session
-  │  server actions call Postgres RPCs; nothing writes tables directly
+  │  server actions call Postgres RPCs for everything that moves coins or
+  │  changes access; a few own-row writes go straight to tables under RLS
   ▼
 Supabase (one hosted project: production)
   ├─ Auth: Google only, invite-gated
@@ -65,9 +66,9 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`). On a phone the Net worth board has a compact standing card with Jump to me (`?at=me`): `getJumpToMeTop` reads the 10 members above you through `rankedAbove` and the page opens a `readOrdered` window there, with focus on your row; any cursor in the URL overrides it, and Back to the top drops it |
 | `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings. `/members` alone redirects to the leaderboard |
 | `/profile` | Edit your name, photo and bio |
-| `/settings` | Theme, your profile, haptics, reduced motion, notifications, How it works, sign out |
-| `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`) |
-| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role, in `app/(app)/admin/(sections)/` under its layout's Admin header and tabs; `/admin` alone redirects to the first one the role can see (`adminHref`); Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); Tasks pages its review queue oldest first with "Show more", signs proof only for the rows shown (an extended range caps at 150 rows, then starts a fresh window), and reads its "waiting" chip from `my_review_counts` (`lib/tasks/list-task-completions.ts`, #255); the ledger opens with the owner's Economy card, and `?member=<id>` narrows it to one member's movements (#254). Members and Invites (#254) each have a search box (`SearchField`, `?q=`) and two tabs (`SubNav`, `?show=`): Members' Active · Removed, paged A–Z by `admin_members` with `NAME_ORDER` (`lib/pagination/name-cursor.ts`), as compact read-only rows; Invites' Waiting · Claimed, paged newest first with `INVITE_ORDER` (`lib/invites/list-invites.ts`) |
+| `/settings` | Theme, your profile, haptics, reduced motion, notifications, How it works and Your data (How it works' privacy section, `/how-it-works#how-your-data`), sign out |
+| `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`). A link to a section from another page (`#how-<slug>`) lands on it through `ScrollToHash`, since a client navigation looks for the id while the skeleton shows |
+| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role, in `app/(app)/admin/(sections)/` under its layout's Admin header (whose description links `docs/ADMIN-GUIDE.md` on GitHub) and tabs; `/admin` alone redirects to the first one the role can see (`adminHref`); Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); Tasks pages its review queue oldest first with "Show more", signs proof only for the rows shown (an extended range caps at 150 rows, then starts a fresh window), and reads its "waiting" chip from `my_review_counts` (`lib/tasks/list-task-completions.ts`, #255); the ledger opens with the owner's Economy card, and `?member=<id>` narrows it to one member's movements (#254). Members and Invites (#254) each have a search box (`SearchField`, `?q=`) and two tabs (`SubNav`, `?show=`): Members' Active · Removed, paged A–Z by `admin_members` with `NAME_ORDER` (`lib/pagination/name-cursor.ts`), as compact read-only rows; Invites' Waiting · Claimed, paged newest first with `INVITE_ORDER` (`lib/invites/list-invites.ts`) |
 | `/admin/members/[id]` | One member's Admin page (#254), outside the sections' layout so their name is the `<h1>`: email, join and last sign-in, balance, Coin history (their last five movements and "Open in Ledger"), and for the owner Adjust balance, Role and Access (Remove from DwellDuel, or Invite again for a removed member). No `loading.tsx`: the member is found first (an unknown id is a real 404) and the coin history streams behind `<Suspense>` |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
@@ -118,18 +119,28 @@ lib/            logic by area: admin, app-shell, auth, bets, docs, economy, env,
                 offline, pagination, parlays, preferences, profile, proof, push,
                 social, supabase, tasks, theme, toast, ui…
 supabase/       migrations/00NN_*.sql, config.toml
-tests/          components/, lib/, db/ (Vitest), plus e2e/ (Playwright)
+tests/          app/ (route handlers), components/, lib/, db/ (Vitest)
+e2e/            Playwright specs
 scripts/        generate-splash.mjs, generate-favicons.mjs, ios-standalone-check.mjs
                 (npm run check:ios), seed-scale.mjs
 public/         sw.js (service worker), icons, favicons, iOS splash screens
-docs/           this file, HOW-IT-WORKS, design handoff, dated specs and plans
+docs/           this file, HOW-IT-WORKS, OPERATIONS, ADMIN-GUIDE, RELEASING, GETTING-STARTED,
+                the design handoff, and archive/ (dated specs and plans, history only)
 ```
 
 ## Data model
 
 Every table has row-level security. Members read what the app shows them.
-Almost every write goes through an RPC; the exceptions are admin writes to
-the task catalogue and invite list, which are allowed by policy.
+Everything that moves coins, changes a role or settles a market goes through
+an RPC. A few writes go straight to a table, each allowed by its own RLS
+policy: admins' writes to the task catalogue (`tasks`) and the invite list
+(`allowed_emails`, insert and an unclaimed row's delete); a member's own
+`profiles` row, once, at first sign-in (`insert_own_profile`, invite
+checked); their own `feed_reactions` (insert and delete), `market_comments` (insert),
+`notification_prefs` (insert and update) and `push_subscriptions` (delete);
+and uploads to the `proof` and `avatars` Storage buckets, under their
+bucket policies. Don't read "no direct writes" into RLS reviews: check each
+table's policies.
 
 **Grants.** `anon` (the signed-out publishable key) can reach nothing in
 `public`. Since 0091, nothing postgres creates there grants `anon` anything
@@ -297,8 +308,9 @@ spending coins should get a trigger and a `write_limits()` row.
   `lib/push/subscription.ts`'s `PUSH_HOSTS`, a DB test keeping them
   equal, and `sendPush` checks again before every send.
 - `notification_prefs`: one row per member, `resolve_reminders`,
-  `results` and `task_reviews` (default on) and `new_markets` (default
-  off). No row means the defaults. Own row only, select, insert and update.
+  `results`, `task_reviews` and `review_alerts` (0058; default on, and
+  shown only to reviewers and above) and `new_markets` (default off). No
+  row means the defaults. Own row only, select, insert and update.
 - `push_log`: what must go out only once, keyed `(kind, ref)`; today only
   `resolve_reminder` and `market_alert` per market. Service role only.
 - `cron_heartbeats` (0061): when each scheduled job last ran without an
@@ -406,8 +418,8 @@ Since 0071 (#207) the closing alerts read `due_resolve_reminders()` and
 `due_market_alerts()` instead, which pick the same recipients but claim
 nothing; the route sends one market at a time and claims through
 `claim_push_log(kind, refs)` only the markets at least one device took, so
-a failed push is due again next run. The two claiming functions stay until a
-later migration drops them.
+a failed push is due again next run. Nothing calls the two claiming
+functions since; dropping them is destructive, so it waits for its own PR.
 `my_review_counts()` (security invoker) counts what waits on the caller: other
 members' pending task submissions for a reviewer and above, closed unresolved
 markets for an admin and above.
@@ -813,7 +825,8 @@ posts the result to `/api/push/resync`, a JSON-only route that makes the same
 save as Settings. A device turned on before this shipped gets its memory the
 next time Settings is opened. Signing out deletes this device's subscription first
 (`app/(app)/settings/sign-out-button.tsx`), so a shared phone's next member
-never sees the last one's notifications. Its four checkboxes save `notification_prefs`. Sending is
+never sees the last one's notifications. Its checkboxes (four, and a fifth,
+Tasks to review, for reviewers and above) save `notification_prefs`. Sending is
 server-only (`lib/push/send.ts`, `web-push`): it reads the recipients'
 subscriptions with the service-role client, sends up to six at a time, and
 deletes a subscription whose push service answers 404 or 410, and reports
@@ -1063,5 +1076,8 @@ value never stops production booting.
   CSP there.
 - **Required env vars** are checked at boot (`lib/env/required.ts`):
   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-  always; `SUPABASE_SECRET_KEY`, `CRON_SECRET`,
-  `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` in production.
+  always, and `SUPABASE_SECRET_KEY` and `CRON_SECRET` in production; a
+  missing one stops the server serving. `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and
+  `VAPID_PRIVATE_KEY` only warn (#210): production boots without them, logs
+  "Push notifications are off until they are set" and sends nothing. Every
+  variable and how to rotate it is in `docs/OPERATIONS.md`.

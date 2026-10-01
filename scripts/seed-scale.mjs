@@ -1,5 +1,5 @@
 // Adds about 10× today's data to the LOCAL database, for measuring query plans at the scale the
-// data-layer spec targets (docs/superpowers/specs/2026-09-26-data-layer-scale-design.md):
+// data-layer spec targets (docs/archive/superpowers/specs/2026-09-26-data-layer-scale-design.md):
 // 500 members, 200 markets, 20,000 bets with their ledger rows, resolutions and their payouts,
 // overrides, voids, parlays and task completions. Development only: it refuses any database that
 // isn't local, and CI never runs it. It only adds rows, tagged per run so it can run again;

@@ -6,6 +6,10 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Reliability
+- **Storage can't fill up the free 1 GB plan (#253).** Proof photos are smaller (1200px, quality 0.7, WebP), a submission takes at most 5 attachments with 3 files and 6 MB of files, and the proof bucket takes 3 MB a file and no Word files. The database enforces per-submission caps and a daily per-member upload quota, so the Storage API can't get round them. Submitted proof can no longer be deleted by its owner. Proof of a reviewed task expires after 30 days and resolution proof after 90 (the rows stay, marked expired), avatar files nothing points at are swept daily, and the daily cron reports Storage use and fails past 800 MB. The retention rule is in How it works.
+- **Production errors are captured, and there's a health route and a cron heartbeat.** Uncaught server errors and browser crashes go to Sentry (errors only, PII scrubbed) when `NEXT_PUBLIC_SENTRY_DSN` is set; `/api/health` answers 200 only while Supabase is reachable, for an uptime monitor; and the daily cron pings healthchecks.io (`HEALTHCHECKS_KEEP_ALIVE_URL`), with a fail ping when a step failed. All three are off when unset (#256).
+
 ## v0.6.0-beta — 2026-10-01
 
 Parlays are now priced at close from other members' real money, with new caps (at most 5× a leg, 20× a parlay and 1,000 DC paid), winners split exactly the real pool instead of the seed, and every void says why. Behind the scenes there are nightly encrypted backups and a restore point before every migration, deploy guardrails that push whatever production is missing and run only from `main`, error monitoring with a health route and cron heartbeat, a cron that finishes every step even when one fails, more reliable notifications, retry-safe market, comment and task actions, a stricter rule that removing a member ends their access, and a database test suite that checks the money after every test.

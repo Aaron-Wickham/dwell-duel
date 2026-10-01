@@ -70,8 +70,11 @@ export async function updateProfileAction(_prevState: ActionState, formData: For
   }
 
   // Best effort: the profile already points at the new photo, so an old file left behind costs
-  // only storage.
-  if (oldPath && oldPath !== nextPath) await supabase.storage.from('avatars').remove([oldPath])
+  // only storage, and the daily cron sweeps avatars no profile points at (0077).
+  if (oldPath && oldPath !== nextPath) {
+    const { error: removeError } = await supabase.storage.from('avatars').remove([oldPath])
+    if (removeError) console.error('Old avatar not removed', removeError)
+  }
 
   // Names and photos show on every page's lists, so refresh them all.
   revalidatePath('/', 'layout')

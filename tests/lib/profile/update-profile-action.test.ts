@@ -64,6 +64,15 @@ describe('updateProfileAction', () => {
     expect(revalidatePath).toHaveBeenCalledWith('/', 'layout')
   })
 
+  it('still saves when the old photo cannot be removed, and logs it for the cron sweep to collect', async () => {
+    remove.mockResolvedValue({ data: null, error: { message: 'storage down' } })
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const state = await updateProfileAction(undefined, profileForm({ photo: jpeg() }))
+    expect(state).toEqual({ saved: true })
+    expect(log).toHaveBeenCalledWith('Old avatar not removed', expect.anything())
+    log.mockRestore()
+  })
+
   it('removes the new photo again when update_my_profile fails, and keeps the old one', async () => {
     supabase.rpc.mockResolvedValue({ data: null, error: { message: 'not allowed' } })
 

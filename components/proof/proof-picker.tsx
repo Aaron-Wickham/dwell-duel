@@ -5,7 +5,7 @@ import { FileText, ImagePlus, Link2, Paperclip, X } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/field'
 import { Message } from '@/components/ui/message'
-import { isWebLink, PROOF_FILE_ACCEPT, PROOF_FILE_TYPES, PROOF_MAX_BYTES, PROOF_MAX_ITEMS, type ProofDraft } from '@/lib/proof/types'
+import { isWebLink, PROOF_FILE_ACCEPT, PROOF_FILE_TYPES, PROOF_IMAGE_ACCEPT, PROOF_MAX_BYTES, PROOF_MAX_FILES, PROOF_MAX_ITEMS, type ProofDraft } from '@/lib/proof/types'
 import { cn } from '@/lib/utils'
 
 // The labels stand in for their hidden file inputs, so they take the input's focus ring and, once
@@ -41,6 +41,7 @@ export function ProofPicker({
 
   const problemId = `${id}-problem`
   const room = PROOF_MAX_ITEMS - value.length
+  const fileRoom = PROOF_MAX_FILES - value.filter((d) => d.kind !== 'link').length
   // A problem describes every way of adding proof; the parent's note describes the whole picker.
   const describedByAll = [describedBy, problem ? problemId : null].filter(Boolean).join(' ') || undefined
 
@@ -56,9 +57,11 @@ export function ProofPicker({
     const picked = Array.from(files ?? [])
     const tooBig = picked.find((f) => kind === 'file' && f.size > PROOF_MAX_BYTES)
     const wrongType = picked.find((f) => kind === 'file' && !PROOF_FILE_TYPES.includes(f.type))
-    if (tooBig) return setProblem(`${tooBig.name} is over 10 MB.`)
-    if (wrongType) return setProblem(`${wrongType.name} isn’t a PDF, Word or text file.`)
-    add(picked.map((file) => ({ key: crypto.randomUUID(), kind, file })))
+    if (tooBig) return setProblem(`${tooBig.name} is over 3 MB.`)
+    if (wrongType) return setProblem(`${wrongType.name} isn’t a PDF or text file.`)
+    const fits = picked.slice(0, Math.max(0, fileRoom))
+    add(fits.map((file) => ({ key: crypto.randomUUID(), kind, file })))
+    if (fits.length < picked.length) setProblem(`Add at most ${PROOF_MAX_FILES} photos or files.`)
   }
 
   function addLink() {
@@ -79,10 +82,10 @@ export function ProofPicker({
           <input
             id={`${id}-photos`}
             type="file"
-            accept="image/*"
+            accept={PROOF_IMAGE_ACCEPT}
             multiple
             className="peer sr-only"
-            disabled={room <= 0}
+            disabled={room <= 0 || fileRoom <= 0}
             aria-describedby={describedByAll}
             onChange={(e) => {
               addFiles(e.target.files, 'image')
@@ -100,7 +103,7 @@ export function ProofPicker({
             type="file"
             accept={PROOF_FILE_ACCEPT}
             className="peer sr-only"
-            disabled={room <= 0}
+            disabled={room <= 0 || fileRoom <= 0}
             aria-describedby={describedByAll}
             onChange={(e) => {
               addFiles(e.target.files, 'file')

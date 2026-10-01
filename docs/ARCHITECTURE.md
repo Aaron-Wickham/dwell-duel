@@ -73,7 +73,8 @@ Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/not-invited` and `/offline`. The API has three routes.
 `/api/cron/keep-alive`, which a daily Vercel cron calls so the free
 Supabase project never pauses. It also deletes unattached proof files and
-attempt keys older than a day, calls `settle_season()` to post last
+attempt keys older than a day, expires reviewed proof, removes avatar files
+no profile points at, reports Storage use (#253, below), calls `settle_season()` to post last
 month's champion to the feed (a no-op once it's posted), and runs
 `sendClosingAlerts`, the daily backstop for the closing alerts: both the
 creator's reminder to resolve and the admins' alert for a closed market
@@ -95,7 +96,8 @@ doesn't, `Cache-Control: no-store`, no member data, and outside the proxy
 (`proxy.ts`'s matcher) so it doesn't depend on Auth.
 
 The daily keep-alive runs its steps independently (database touch, proof
-cleanup, key cleanup, season settle, resolve reminders): a failing step is
+cleanup, proof retention, avatar cleanup, storage usage, key cleanup, season
+settle, resolve reminders): a failing step is
 logged, captured and named in the response, the rest still run, and the
 route answers 502 at the end if any failed (#259). It then pings the
 heartbeat, below.
@@ -306,7 +308,9 @@ title is fixed once anyone else has bet, solo or as a parlay leg, 0065), `member
 members can't select `profiles.email`), `member_activity` (admin only, 0050:
 each member's join date, `profiles.created_at`, and last sign-in from
 `auth.users`, for Admin → Members), `stray_proof_objects` (service role:
-the daily cron deletes proof files nothing attached),
+the daily cron deletes proof files nothing attached), `expired_proof_attachments`,
+`mark_proof_expired`, `stray_avatar_objects` and `storage_usage` (service role,
+0089), `proof_upload_quota_ok` and `avatar_upload_quota_ok` (the upload policies' per-day caps: 30 proof files / 60 MB, 10 avatars), `proof_is_attached` (the delete guard, security definer),
 `set_member_role`, `delete_market` (refuses a market with any bet, cancelled
 bet or parlay leg; the market page shows the button only when the pool is
 empty and `lib/markets/bet-history.ts`'s two head counts find nothing),
@@ -460,6 +464,7 @@ after it ships. They roughly follow the project's history:
 | 0074 | Parlay pricing and the seed (#287, #272): leg odds set at close or settlement from other members' real money, no seed (`pick_quote`, `pick_quotes`, `parlay_leg_odds`, nullable `parlay_legs.locked_odds`); a 50 DC from 2 members floor and no legs on your own markets; `parlay_limits()` gains `max_payout`, `min_leg_pool` and `min_leg_bettors`, the cap drops to 20×, a leg counts at most 5× and one member's pending parlays on a market can pay at most 1,000 DC (`parlay_limits()` gains `max_leg_odds`; `parlay_max_payout`); `parlays.max_multiplier` (pending parlays from before move to 20×) and `odds_at_close`; payouts are the real pool (`pool_payout`, `market_resolutions.payout_seed` backfilled for history); `apply_coin_transaction` cuts a credit to fit the balance and `refund_room` a refund; `remove_bet` stops at close; `leaderboard_awards` leaves out removed members; `economy_summary` splits payout rounding from older results' seed payouts |
 | 0076 | Push failure pruning (#257): `push_subscriptions.failure_count` and `first_failed_at`, the service-role `record_push_results()`, `save_push_subscription` resetting the streak, and the closing-alerts lease (`cron_leases`, `claim_cron_lease`, `release_cron_lease`) and give-up counter (`push_attempts`, `record_push_failures`) |
 | 0083 | `create_market_v2` (#258): `create_market` plus an attempt key, returning `{market_id, replayed}` so a replayed create returns the first market and skips its push; `create_market` now wraps it. `attempt_key` columns, unique where set, on `market_comments` and `tasks` |
+| 0089 | Storage caps and retention (#253): proof bucket 3 MB and no Word files, a per-member daily upload quota, `record_proof` caps (5 attachments, 3 files, 6 MB), submitted proof can't be deleted, `proof_attachments.expired_at` with `expired_proof_attachments` / `mark_proof_expired`, `stray_avatar_objects`, `storage_usage` |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
@@ -545,6 +550,28 @@ role changes ask the same way. Files upload straight from the browser to the
 private `proof` bucket (`lib/proof/upload.ts`), then `record_proof`
 checks the paths when the RPC runs. Pages show proof through short-lived
 signed URLs made with the viewer's own session.
+
+**Storage caps and retention (#253, 0089).** The free plan holds 1 GB across
+the `proof` and `avatars` buckets, so the limits live in the database, not
+only the browser. The `proof` bucket takes 3 MB a file and images, PDF and
+plain text only. `proof_insert` also calls `proof_upload_quota_ok()`: at most
+30 uploads and 60 MB per member per rolling day. `record_proof` takes at
+most 5 attachments, 3 of them files, 6 MB of files together (read from
+Storage's own object size, not the client's). `proof_delete_own` only lets a
+member delete an upload no `proof_attachments` row holds (`proof_is_attached`, so RLS can't hide the row; `record_proof` and a unique index on `storage_path` keep one file to one attachment), so submitted proof
+can't be removed. The browser shrinks photos to 1200px at quality 0.7 (WebP,
+JPEG where WebP can't be encoded; `lib/proof/downscale.ts`) and mirrors the
+caps in `lib/proof/types.ts`. The daily keep-alive runs three storage steps:
+`proof retention` (`expired_proof_attachments(30, 90)` lists attachments of
+task submissions reviewed over 30 days ago and of resolutions over 90 days
+old; it removes the files, then `mark_proof_expired` stamps
+`proof_attachments.expired_at` and keeps the row, and `toProofViews` /
+`ProofList` show "expired" instead of a link), `avatar cleanup`
+(`stray_avatar_objects`: avatar files over a day old that no
+`profiles.avatar_path` names, which also covers a replaced avatar whose
+remove failed) and `storage usage` (`storage_usage()`: its `storageMb` is in
+the cron response, and the step fails, so the heartbeat pings `/fail`, past
+800 MB). That is the ops check: when it fails, shorten the retention windows.
 
 **Live updates.** A page declares the tables it shows with
 `<LiveTables subscriptions={pageSubscriptions.x(…)}>`. `LiveRefresh` keeps

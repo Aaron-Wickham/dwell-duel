@@ -4,6 +4,7 @@ import { readKeyset, type KeysetPage } from '@/lib/pagination/keyset'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { describeCreatorStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
 import { seasonOfEventId } from './season'
+import { RESULT_KINDS, type FeedShow } from './feed-filter'
 
 interface FeedRow {
   id: string
@@ -62,7 +63,7 @@ function toFeedEvent(r: FeedRow): FeedEvent {
 // wait for them. Its result comes back on the page as `alongside`.
 export async function listFeed<T = undefined>(
   supabase: DbClient,
-  opts: { actorId?: string; page: PageParams; alongside?: (eventIds: string[]) => Promise<T> },
+  opts: { actorId?: string; show?: FeedShow; page: PageParams; alongside?: (eventIds: string[]) => Promise<T> },
 ): Promise<KeysetPage<FeedEvent> & { alongside: T }> {
   // The range read and its key probe share one builder, so the two can't drift apart on filters. Its column
   // list is a runtime string, so the generated types can't follow it, and each reader casts its rows.
@@ -75,6 +76,9 @@ export async function listFeed<T = undefined>(
       .order('id', { ascending: false })
       .limit(limit)
     if (opts.actorId) query = query.eq('actor_id', opts.actorId)
+    if (opts.show === 'results') query = query.in('kind', [...RESULT_KINDS])
+    // is_mine (0087) is the caller's own events plus results on markets they have a stake in.
+    if (opts.show === 'mine') query = query.filter('is_mine', 'is', true)
     if (filter) query = query.or(filter)
     return query
   }

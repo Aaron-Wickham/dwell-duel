@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   RANK_ORDER,
+  rankedAbove,
   decodeRankCursor,
   encodeRankCursor,
   readRankPageParams,
@@ -165,5 +166,14 @@ describe('RANK_ORDER filters', () => {
 
   it('encodes a next cursor that decodes to the same member', () => {
     expect(decodeRankCursor(RANK_ORDER.encode(keyOf(BOARD[3])))).toEqual(keyOf(BOARD[3]))
+  })
+})
+
+describe('rankedAbove', () => {
+  it('selects exactly the members ranked before the cursor, excluding it', () => {
+    for (const at of [0, 1, 13, 30, 48]) {
+      const above = select(rankedAbove(keyOf(BOARD[at]))).map((m) => m.id)
+      expect(above).toEqual(BOARD.slice(0, at).map((m) => m.id))
+    }
   })
 })

@@ -70,6 +70,11 @@ function beside(c: RankCursor, below: boolean, inclusive: boolean): string {
   )
 }
 
+// The members ranked above c, for reading a few rows back from a member's own place.
+export function rankedAbove(c: RankCursor): string {
+  return beside(c, false, false)
+}
+
 export const RANK_ORDER: KeysetOrder<RankCursor> = {
   range: ({ top, bottom }) => {
     if (top && bottom) return `and(${beside(top, true, true)},${beside(bottom, false, true)})`

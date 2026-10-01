@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient, deleteAuthUser } from './helpers'
 import { seedMembers, makeMember, clientFor, ensureInvited } from './fixtures'
-import { getLeaderboardPage } from '@/lib/social/leaderboard'
+import { getJumpToMeTop, getLeaderboardPage, JUMP_CONTEXT } from '@/lib/social/leaderboard'
 import { showMoreHref } from '@/lib/pagination/cursor'
 import { encodeRankCursor, readRankPageParams, type RankCursor } from '@/lib/pagination/rank-cursor'
 
@@ -135,5 +135,34 @@ describe('getLeaderboardPage', () => {
     const page = await getLeaderboardPage(bobClient, 'all', readRankPageParams({ before_from: overflow }, 'before'))
     expect(page.windowed).toBe(false)
     expect(summary(page.rows)).toEqual(summary(board.slice(0, 50)))
+  })
+})
+
+describe('getJumpToMeTop', () => {
+  it('starts a window JUMP_CONTEXT rows above the member, so their row has neighbours', async () => {
+    const top = await getJumpToMeTop(bobClient, 'all', board[30].id)
+    expect(top).toEqual(keyOf(board[30 - JUMP_CONTEXT]))
+
+    const page = await getLeaderboardPage(bobClient, 'all', { top, bottom: null })
+    expect(page.windowed).toBe(true)
+    expect(page.rows.findIndex((m) => m.id === board[30].id)).toBe(JUMP_CONTEXT)
+    expect(page.rows[0].rank).toBe(board[30 - JUMP_CONTEXT].rank)
+  })
+
+  it('reads the window from inside a tie, ranking it against the whole board', async () => {
+    const mid = TIE_START + 3
+    const top = await getJumpToMeTop(bobClient, 'all', board[mid].id)
+    expect(top).toEqual(keyOf(board[mid - JUMP_CONTEXT]))
+    const page = await getLeaderboardPage(bobClient, 'all', { top, bottom: null })
+    expect(page.rows.find((m) => m.id === board[mid].id)?.rank).toBe(48)
+  })
+
+  it('has no window for a member within the first JUMP_CONTEXT places, who is on the first page already', async () => {
+    expect(await getJumpToMeTop(bobClient, 'all', board[JUMP_CONTEXT - 1].id)).toBeNull()
+    expect(await getJumpToMeTop(bobClient, 'all', board[JUMP_CONTEXT].id)).toEqual(keyOf(board[0]))
+  })
+
+  it('has no window for a member who is not on the board', async () => {
+    expect(await getJumpToMeTop(bobClient, 'month', board[30].id)).toBeNull()
   })
 })

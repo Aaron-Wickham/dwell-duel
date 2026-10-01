@@ -1185,13 +1185,22 @@ export type Database = {
         Returns: undefined
       }
       group_time_zone: { Args: never; Returns: string }
+      has_bet_on_market: { Args: { p_market_id: string }; Returns: boolean }
       has_role: { Args: { p_min: string }; Returns: boolean }
       has_stake_in_market: {
         Args: { p_market_id: string; p_profile_id: string }
         Returns: boolean
       }
+      i_bet_on: {
+        Args: { m: Database["public"]["Tables"]["markets"]["Row"] }
+        Returns: boolean
+      }
       is_admin: { Args: never; Returns: boolean }
       is_invited: { Args: never; Returns: boolean }
+      is_mine: {
+        Args: { e: Database["public"]["Tables"]["activity_events"]["Row"] }
+        Returns: boolean
+      }
       is_push_endpoint: { Args: { p_endpoint: string }; Returns: boolean }
       leaderboard_awards: {
         Args: never

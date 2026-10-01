@@ -1,6 +1,6 @@
 import type { DbClient } from '@/lib/supabase/database'
 import { readOrdered, type KeysetPage } from '@/lib/pagination/keyset'
-import { RANK_ORDER, type RankCursor, type RankPageParams } from '@/lib/pagination/rank-cursor'
+import { RANK_ORDER, rankedAbove, type RankCursor, type RankPageParams } from '@/lib/pagination/rank-cursor'
 import { avatarUrl } from '@/lib/profile/avatar'
 
 // `all` ranks net worth, balance plus DC riding on open bets; `month` ranks this calendar
@@ -51,6 +51,33 @@ export async function getLeaderboardPage(supabase: DbClient, board: Board, page:
     ...result,
     rows: result.rows.map((r) => ({ id: r.id, displayName: r.display_name, avatarSrc: avatarUrl(r.avatar_path), score: r.score, rank: r.rank })),
   }
+}
+
+// How many members "Jump to me" shows above the member's own row, so the row has neighbours.
+export const JUMP_CONTEXT = 10
+
+// Where a window that puts the member JUMP_CONTEXT rows from its top starts, for `?at=me`: a
+// RankCursor to read from (the `top` of a RankPageParams). Null when the member isn't on the board
+// or has fewer than that many above them, which means they're in the first page already.
+export async function getJumpToMeTop(supabase: DbClient, board: Board, memberId: string): Promise<RankCursor | null> {
+  const fn = BOARD_FUNCTIONS[board]
+  const me = await supabase.rpc(fn).select('id, display_name, score').eq('id', memberId).maybeSingle()
+  if (me.error) throw me.error
+  if (!me.data) return null
+  const above = await supabase
+    .rpc(fn)
+    .select('id, display_name, score')
+    .or(rankedAbove({ score: me.data.score, name: me.data.display_name, id: me.data.id }))
+    // Nearest first, so the last of JUMP_CONTEXT rows is the one the window starts on.
+    .order('score', { ascending: true })
+    .order('display_name', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(JUMP_CONTEXT)
+  if (above.error) throw above.error
+  const rows = above.data ?? []
+  if (rows.length < JUMP_CONTEXT) return null
+  const top = rows[rows.length - 1]
+  return { score: top.score, name: top.display_name, id: top.id }
 }
 
 // The member's row on the net-worth board, so Home, the member page and the leaderboard agree.

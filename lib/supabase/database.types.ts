@@ -1036,6 +1036,38 @@ export type Database = {
           },
         ]
       }
+      write_rate_counters: {
+        Row: {
+          action: string
+          profile_id: string
+          window_seconds: number
+          window_start: string
+          writes: number
+        }
+        Insert: {
+          action: string
+          profile_id: string
+          window_seconds: number
+          window_start: string
+          writes: number
+        }
+        Update: {
+          action?: string
+          profile_id?: string
+          window_seconds?: number
+          window_start?: string
+          writes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "write_rate_counters_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       activity_feed: {
@@ -1522,6 +1554,12 @@ export type Database = {
         Args: { p_attachments?: Json; p_note?: string; p_task_id: string }
         Returns: string
       }
+      uninvited_auth_users: {
+        Args: { p_limit?: number }
+        Returns: {
+          id: string
+        }[]
+      }
       update_market: {
         Args: { p_description: string; p_market_id: string; p_title: string }
         Returns: undefined
@@ -1554,6 +1592,14 @@ export type Database = {
           upset_outcome_label: string
           week_end: string
           week_start: string
+        }[]
+      }
+      write_limits: {
+        Args: never
+        Returns: {
+          action: string
+          max_writes: number
+          window_seconds: number
         }[]
       }
     }

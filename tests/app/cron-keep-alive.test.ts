@@ -5,12 +5,14 @@ const rpc = vi.fn()
 const settleSeason = vi.fn()
 const remove = vi.fn()
 const pruneKeys = vi.fn()
+const deleteUser = vi.fn()
 vi.mock('@/lib/supabase/service-role', () => ({
   serviceRoleClient: () => ({
     from: (table: string) =>
       table === 'idempotency_keys' ? { delete: () => ({ lt: pruneKeys }) } : { select: () => ({ limit: profiles }) },
     rpc: (fn: string, args?: unknown) => (fn === 'settle_season' ? settleSeason(args) : rpc(fn, args)),
     storage: { from: () => ({ remove }) },
+    auth: { admin: { deleteUser } },
   }),
 }))
 
@@ -25,6 +27,7 @@ beforeEach(() => {
   remove.mockReset().mockResolvedValue({ error: null })
   pruneKeys.mockReset().mockResolvedValue({ error: null })
   settleSeason.mockReset().mockResolvedValue({ data: null, error: null })
+  deleteUser.mockReset().mockResolvedValue({ error: null })
 })
 
 describe('keep-alive cron', () => {
@@ -35,17 +38,21 @@ describe('keep-alive cron', () => {
   })
 
   it('touches the database and removes stray proof files through the Storage API', async () => {
-    rpc.mockResolvedValue({ data: [{ name: 'task/u/1/a.txt' }, { name: 'task/u/2/b.jpg' }], error: null })
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'stray_proof_objects'
+        ? { data: [{ name: 'task/u/1/a.txt' }, { name: 'task/u/2/b.jpg' }], error: null }
+        : { data: [], error: null },
+    )
     const res = await GET(authorized())
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ ok: true, strayProofRemoved: 2, seasonChampion: null, resolveReminders: 0, marketAlerts: 0 })
+    expect(await res.json()).toEqual({ ok: true, strayProofRemoved: 2, uninvitedUsersRemoved: 0, seasonChampion: null, resolveReminders: 0, marketAlerts: 0 })
     expect(rpc).toHaveBeenCalledWith('stray_proof_objects', { p_limit: 500 })
     expect(remove).toHaveBeenCalledWith(['task/u/1/a.txt', 'task/u/2/b.jpg'])
   })
 
   it('skips the Storage call when nothing is stray', async () => {
     const res = await GET(authorized())
-    expect(await res.json()).toEqual({ ok: true, strayProofRemoved: 0, seasonChampion: null, resolveReminders: 0, marketAlerts: 0 })
+    expect(await res.json()).toEqual({ ok: true, strayProofRemoved: 0, uninvitedUsersRemoved: 0, seasonChampion: null, resolveReminders: 0, marketAlerts: 0 })
     expect(remove).not.toHaveBeenCalled()
   })
 
@@ -74,6 +81,29 @@ describe('keep-alive cron', () => {
     pruneKeys.mockResolvedValue({ error: new Error('down') })
     vi.spyOn(console, 'error').mockImplementation(() => {})
     expect((await GET(authorized())).status).toBe(502)
+  })
+
+  it('deletes uninvited sign-ins through the Auth admin API, 50 a run (#275)', async () => {
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'uninvited_auth_users' ? { data: [{ id: 'u1' }, { id: 'u2' }], error: null } : { data: [], error: null },
+    )
+    const res = await GET(authorized())
+    expect(rpc).toHaveBeenCalledWith('uninvited_auth_users', { p_limit: 50 })
+    expect(deleteUser.mock.calls).toEqual([['u1'], ['u2']])
+    expect(await res.json()).toMatchObject({ ok: true, uninvitedUsersRemoved: 2 })
+  })
+
+  it('tries every uninvited sign-in when one delete fails, then reports the step as failed', async () => {
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'uninvited_auth_users' ? { data: [{ id: 'u1' }, { id: 'u2' }], error: null } : { data: [], error: null },
+    )
+    deleteUser.mockResolvedValueOnce({ error: new Error('auth down') })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const res = await GET(authorized())
+    expect(deleteUser).toHaveBeenCalledTimes(2)
+    expect(res.status).toBe(502)
+    expect(await res.json()).toMatchObject({ ok: false, failed: ['uninvited sign-in cleanup'] })
+    expect(settleSeason).toHaveBeenCalled()
   })
 
   it("settles last month's season every run, with no month so the database picks it", async () => {

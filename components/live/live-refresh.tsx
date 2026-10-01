@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { RealtimeChannel } from '@supabase/supabase-js'
-import { subscriptionKey, useLiveBaseSubscription, usePageSubscriptions } from './live-tables'
+import { subscriptionKey, useLiveBaseSubscription, useLiveMemberId, usePageSubscriptions } from './live-tables'
 
 // Every table a page may follow row by row, always through a filter naming one market, member,
 // parlay or row. supabase/migrations/0032 and 0035 publish them to the realtime publication (0037
@@ -75,11 +75,22 @@ type Scheduler = {
 
 const IDLE_SCHEDULER: Scheduler = { refresh() {}, topicPing() {}, status() {}, gone() {} }
 
-// A fresh topic per Postgres Changes channel: RealtimeClient.channel(topic) hands back the
-// still-closing channel of a reused topic, so rebuilding the page channel on the same topic after a
-// page's declarations change would reuse a channel that's mid-teardown instead of opening a new
-// one. One counter shared by both channels keeps every topic this component ever opens unique.
+// Every channel is private, so the project can refuse public channels: anyone holding the
+// publishable key could otherwise open as many as they liked. Joining a private channel needs a
+// realtime.messages policy for its topic (0092 for live:*, 0100 for live-member:*). A fresh object
+// per channel, since RealtimeChannel writes its defaults into the options it's given.
+const privateChannel = () => ({ config: { private: true } })
+
+// A Postgres Changes channel's topic is live-member:<the member's id>:base or :page, then :<n>,
+// and only that member may join it (0100). A fresh <n> per channel: RealtimeClient.channel(topic)
+// hands back the still-closing channel of a reused topic, so rebuilding the page channel on the
+// same topic after a page's declarations change would reuse a channel that's mid-teardown instead
+// of opening a new one. One counter shared by both channels keeps every topic this component ever
+// opens unique.
 let generation = 0
+export function memberTopic(memberId: string, channel: 'base' | 'page', n: number): string {
+  return `live-member:${memberId}:${channel}:${n}`
+}
 
 // A Broadcast channel's topic is fixed (its RLS policy names it), so a topic being reopened waits
 // for its previous channel's removal to finish instead.
@@ -115,6 +126,7 @@ function subscribeChannel(channel: RealtimeChannel, key: string, scheduler: () =
 export function LiveRefresh(): null {
   const router = useRouter()
   const base = useLiveBaseSubscription()
+  const memberId = useLiveMemberId()
   const declared = usePageSubscriptions()
   const tables = declared.filter((s): s is LiveTableSubscription => 'table' in s)
   const topics = declared.flatMap((s) => ('topic' in s ? [s.topic] : []))
@@ -264,15 +276,15 @@ export function LiveRefresh(): null {
   // The base `profiles` channel. The member's own balance must stay live through a navigation that
   // rebuilds the page's channels, so this never depends on the page's declarations.
   useEffect(() => {
-    if (!base || !awake) return
+    if (!base || !memberId || !awake) return
     let cancelled = false
     let teardown: (() => void) | undefined
 
     loadClient()
       .then((supabase) => {
         if (cancelled) return
-        const key = `live-base:${++generation}`
-        const channel = supabase.channel(key)
+        const key = memberTopic(memberId, 'base', ++generation)
+        const channel = supabase.channel(key, privateChannel())
         channel.on('postgres_changes', { event: '*', schema: 'public', table: base.table, filter: base.filter }, () =>
           scheduler().refresh(),
         )
@@ -290,19 +302,19 @@ export function LiveRefresh(): null {
       cancelled = true
       teardown?.()
     }
-  }, [base, awake])
+  }, [base, memberId, awake])
 
   // The page's Postgres Changes channel, rebuilt whenever its declarations change.
   useEffect(() => {
-    if (tables.length === 0 || !awake) return
+    if (tables.length === 0 || !memberId || !awake) return
     let cancelled = false
     let teardown: (() => void) | undefined
 
     loadClient()
       .then((supabase) => {
         if (cancelled) return
-        const key = `live-refresh:${++generation}`
-        const channel = supabase.channel(key)
+        const key = memberTopic(memberId, 'page', ++generation)
+        const channel = supabase.channel(key, privateChannel())
         for (const { table, filter } of tables) {
           channel.on('postgres_changes', { event: '*', schema: 'public', table, filter }, () => scheduler().refresh())
         }
@@ -323,7 +335,7 @@ export function LiveRefresh(): null {
     // The key, not `tables` itself, decides when to rebuild: the registry hands back a fresh array
     // on every registration change even when its tables and filters repeat.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tablesKey, awake])
+  }, [tablesKey, memberId, awake])
 
   // One private Broadcast channel per topic the page declares.
   useEffect(() => {
@@ -337,7 +349,7 @@ export function LiveRefresh(): null {
           const name = `live:${topic}`
           await closingTopics.get(name)
           if (cancelled) return
-          const channel = supabase.channel(name, { config: { private: true } })
+          const channel = supabase.channel(name, privateChannel())
           channel.on('broadcast', { event: 'changed' }, () => scheduler().topicPing(topic))
           subscribeChannel(channel, name, scheduler)
           teardowns.push(() => {

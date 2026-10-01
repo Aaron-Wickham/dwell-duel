@@ -13,6 +13,7 @@ before v0.4.0 used other headings.)
 ## Unreleased
 
 ### Security
+- **Every live-update channel is private.** The member's own balance channel and each page's row channels now join private Realtime topics only that member may open (0100), as the group-wide pings already did, so Supabase's "Allow public access to channels" can be switched off and nobody holding the public key can open channels and spend the message quota.
 - **`rls_auto_enable()` can't be called signed out.** Supabase's platform function behind automatic RLS loses EXECUTE for `PUBLIC` as well as `anon` and `authenticated` (0099), clearing the Security Advisor's warning.
 
 ### Fixes

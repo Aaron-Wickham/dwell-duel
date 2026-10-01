@@ -245,7 +245,7 @@ a line to `CHANGELOG.md` under the next release.
   `lib/live/page-subscriptions.ts` and `components/live/live-tables.tsx`.
 - **`LiveRefresh` keeps a base channel** for the member's own profile, a
   page channel for the page's row subscriptions, rebuilt on every
-  navigation, and one private channel per topic. The database judges its
+  navigation, and one channel per topic. The database judges its
   throttle at commit (a deferred trigger on `live_ping_queue`), and a
   topic always refreshes at least an interval plus a second after its
   latest ping, so a change the throttle held back is still read; keep
@@ -254,6 +254,14 @@ a line to `CHANGELOG.md` under the next release.
   page poll every 60 s. A page's subscriptions live in
   `page-subscriptions`; the budget they're held to is in
   `docs/ARCHITECTURE.md`.
+- **Every Realtime channel is private** (`{ config: { private: true } }`,
+  0100), so production keeps Supabase's "Allow public access to channels"
+  off. The base and page channels join `live-member:<member id>:base|page:<n>`
+  (`memberTopic`), which only that invited member may join; topics join
+  `live:<topic>` (0092). A new channel needs a topic a `realtime.messages`
+  SELECT policy covers, with Broadcast read even when it carries only
+  Postgres Changes, since that's all a private join checks. Await
+  `realtime.setAuth()` before any join (#310): one sent as anon is refused.
 - **An Auth failure isn't "signed out."** `requireUser` reads claims
   through `readClaims` (`lib/auth/auth-unavailable.ts`) and throws
   `AuthUnavailableError` when Auth itself is unavailable; `getRole`

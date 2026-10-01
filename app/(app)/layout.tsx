@@ -26,7 +26,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   const [{ data: profile, error }, role, slipView] = await Promise.all([
     supabase.from('profiles').select('balance, display_name, avatar_path').eq('id', user.id).maybeSingle(),
     getRole(supabase),
-    readSlip().then((slip) => getSlipView(supabase, slip, user.id)),
+    readSlip().then((slip) => getSlipView(supabase, slip)),
   ])
   if (error) throw error
   const isAdmin = atLeast(role, 'admin')

@@ -13,7 +13,7 @@ interface FeedRow {
   market_id: string | null
   amount: number | null
   actor: { display_name: string } | null
-  market: { title: string; created_by: string } | null
+  market: { title: string; created_by: string; void_reason: string | null } | null
   outcome: { label: string } | null
   task_completion: { task: { title: string } | null } | null
   parlay: { parlay_legs: { id: string }[] } | null
@@ -32,7 +32,7 @@ interface FeedRow {
 // (MAX_PICKS, lib/parlays/odds.ts), so this never grows with the size of the table.
 const FEED_COLUMNS =
   'id, kind, occurred_at, actor_id, market_id, amount, ' +
-  'actor:profiles!activity_events_actor_id_fkey!inner(display_name), market:markets(title, created_by), outcome:market_outcomes(label), ' +
+  'actor:profiles!activity_events_actor_id_fkey!inner(display_name), market:markets(title, created_by, void_reason), outcome:market_outcomes(label), ' +
   'task_completion:task_completions(task:tasks(title)), parlay:parlays(parlay_legs(id)), resolution:market_resolutions(note)'
 const FEED_KEY_COLUMNS = { ts: 'occurred_at', id: 'id' }
 
@@ -52,6 +52,7 @@ function toFeedEvent(r: FeedRow): FeedEvent {
     legCount: r.parlay ? r.parlay.parlay_legs.length : null,
     taskTitle: r.task_completion?.task?.title ?? null,
     resolutionNote: r.resolution?.note ?? null,
+    voidReason: r.kind === 'market_voided' ? (r.market?.void_reason ?? null) : null,
     creatorStake: null,
     season: r.kind === 'season_champion' ? seasonOfEventId(r.id) : null,
   }

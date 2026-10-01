@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
+import { expectError } from './assertions'
+import { pgQuery } from './pg-query'
 import {
   seedMembers,
   makeMember,
@@ -16,9 +17,9 @@ import {
 let alice: Member
 let bob: Member
 let olive: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let oliveClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let oliveClient: TestClient
 
 type Summary = {
   month_start: string
@@ -30,6 +31,8 @@ type Summary = {
   task_rewards_added: number
   seed_payouts_added: number
   seed_payouts_removed: number
+  payout_rounding_added: number
+  payout_rounding_removed: number
   house_parlays_added: number
   house_parlays_removed: number
   owner_adjustments_added: number
@@ -59,7 +62,7 @@ async function summary(at: string = new Date().toISOString()): Promise<Summary> 
   ) as unknown as Summary
 }
 
-async function bet(client: SupabaseClient, market: TestMarket, outcome: number, amount: number): Promise<number> {
+async function bet(client: TestClient, market: TestMarket, outcome: number, amount: number): Promise<number> {
   const { error } = await client.rpc('place_bet', {
     p_market_id: market.marketId,
     p_outcome_id: market.outcomeIds[outcome],
@@ -123,17 +126,22 @@ async function playScenario(): Promise<void> {
   if (approveErr) throw approveErr
 
   // A seeded market (20 a side) resolved with a winner. Alice 30 on Yes, Bob 10 on No: Yes pays
-  // Alice floor(30 x (40 + 40) / (30 + 20)) = 48 against 40 staked, so the seed adds 8.
+  // Alice the real pool, 40, against 40 staked; the seed is never paid, so it adds nothing.
   const m1 = await createTestMarket(oliveClient, ['Yes', 'No'], { title: 'Seeded', seed: 20 })
   await bet(aliceClient, m1, 0, 30)
   await bet(bobClient, m1, 1, 10)
   await resolve(m1, 0)
 
-  // Two parlays on two unbet seeded markets, every leg locked at (0 + 40) / (0 + 20) = 2x.
-  // Bob's Yes-Yes wins 10 x 4 = 40 (the house adds 30); his No-No loses its 5 at the first
-  // resolution (the house removes 5).
+  // Two parlays on two seeded markets where Alice has 25 on No and Olive 25 on Yes, the parlay
+  // floor, so every leg prices at 50 / 25 = 2x at close. Bob's Yes-Yes wins 10 x 4 = 40 (the house
+  // adds 30); his No-No loses its 5 at the first resolution (the house removes 5). Olive's Yes
+  // pays her the real pool, 25 x 50 / 25 = 50, so nothing is added on either market.
   const m2 = await createTestMarket(oliveClient, ['Yes', 'No'], { title: 'Leg one', seed: 20 })
   const m3 = await createTestMarket(oliveClient, ['Yes', 'No'], { title: 'Leg two', seed: 20 })
+  for (const m of [m2, m3]) {
+    await bet(aliceClient, m, 1, 25)
+    await bet(oliveClient, m, 0, 25)
+  }
   await parlay([m2.outcomeIds[0], m3.outcomeIds[0]], 10)
   await parlay([m2.outcomeIds[1], m3.outcomeIds[1]], 5)
   await resolve(m2, 0)
@@ -143,8 +151,7 @@ async function playScenario(): Promise<void> {
   await adjust(alice, 25)
   await adjust(bob, -5)
 
-  // Override m1 to No: Alice's 48 is taken back and Bob is paid floor(10 x 80 / 30) = 26, so
-  // that event removes 22 and the market's seed nets 26 - 40 = -14 over its life.
+  // Override m1 to No: Alice's 40 is taken back and Bob is paid the 40, so that event nets 0.
   await resolve(m1, 1)
 
   // Stakes that move and come back, which create nothing: a cancelled bet and a voided market.
@@ -153,13 +160,17 @@ async function playScenario(): Promise<void> {
   const cancelled = await bet(bobClient, m4, 1, 3)
   const { error: cancelErr } = await bobClient.rpc('cancel_bet', { p_bet_id: cancelled })
   if (cancelErr) throw cancelErr
-  const { error: voidErr } = await oliveClient.rpc('void_market', { p_market_id: m4.marketId })
+  const { error: voidErr } = await oliveClient.rpc('void_market', { p_market_id: m4.marketId, p_reason: 'Voided in a test' })
   if (voidErr) throw voidErr
 
-  // Still at stake: Alice's 12 on an open market and Bob's pending 4 DC parlay.
+  // Still at stake: 100 DC of solo bets on two open markets (Alice's 12 and Olive's 38 on one,
+  // Alice's 1 and Olive's 49 on the other, the parlay floor) and Bob's pending 4 DC parlay.
   const m5 = await createTestMarket(oliveClient, ['Yes', 'No'], { title: 'Open one', seed: 20 })
   const m6 = await createTestMarket(oliveClient, ['Yes', 'No'], { title: 'Open two', seed: 20 })
   await bet(aliceClient, m5, 0, 12)
+  await bet(oliveClient, m5, 0, 38)
+  await bet(aliceClient, m6, 1, 1)
+  await bet(oliveClient, m6, 1, 49)
   await parlay([m5.outcomeIds[1], m6.outcomeIds[0]], 4)
 }
 
@@ -180,12 +191,12 @@ describe('economy_summary', () => {
 
   it('is not callable signed out', async () => {
     const { error } = await anonClient().rpc('economy_summary', { p_month_start: new Date().toISOString() })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for function economy_summary' })
   })
 
   it('keeps economy_flows away from members', async () => {
     const { error } = await bobClient.rpc('economy_flows', { p_from: '-infinity', p_to: 'infinity' })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for function economy_flows' })
   })
 
   it('bounds the month midnight to midnight in America/New_York', async () => {
@@ -204,18 +215,20 @@ describe('economy_summary', () => {
 
     expect(s.starting_grants_added).toBe(300)
     expect(s.task_rewards_added).toBe(10)
-    expect(s.seed_payouts_added).toBe(8)
-    expect(s.seed_payouts_removed).toBe(22)
+    expect(s.seed_payouts_added).toBe(0)
+    expect(s.seed_payouts_removed).toBe(0)
+    expect(s.payout_rounding_added).toBe(0)
+    expect(s.payout_rounding_removed).toBe(0)
     expect(s.house_parlays_added).toBe(30)
     expect(s.house_parlays_removed).toBe(5)
     expect(s.owner_adjustments_added).toBe(25)
     expect(s.owner_adjustments_removed).toBe(5)
 
-    expect(s.bets_at_stake).toBe(12)
+    expect(s.bets_at_stake).toBe(100)
     expect(s.parlays_at_stake).toBe(4)
-    // Alice 100 - 30 + 48 + 25 - 48 - 7 + 7 - 12 = 83; Bob 100 + 10 - 10 - 10 - 5 + 40 - 5 + 26
-    // - 3 + 3 - 4 = 142; Olive 100.
-    expect(s.balances).toBe(325)
+    // Alice 100 - 30 + 40 - 25 - 25 + 25 - 40 - 7 + 7 - 12 - 1 = 32; Bob 100 + 10 - 10 - 10 - 5
+    // + 40 - 5 + 40 - 3 + 3 - 4 = 156; Olive 100 - 25 - 25 + 50 + 50 - 38 - 49 = 63.
+    expect(s.balances).toBe(251)
     expect(s.unclassified).toBe(0)
   })
 
@@ -229,9 +242,9 @@ describe('economy_summary', () => {
 
     // Starting balances are the grants, so this is grants + minted - destroyed = balances + at stake.
     expect(s.all_time_added - s.all_time_removed).toBe(circulation(s))
-    expect(s.all_time_added).toBe(373)
-    expect(s.all_time_removed).toBe(32)
-    expect(circulation(s)).toBe(341)
+    expect(s.all_time_added).toBe(365)
+    expect(s.all_time_removed).toBe(10)
+    expect(circulation(s)).toBe(355)
   })
 
   it('counts each flow in the month it happened and every month in the all-time totals', async () => {
@@ -256,11 +269,34 @@ describe('economy_summary', () => {
     expect(now.all_time_added - now.all_time_removed).toBe(circulation(now))
   })
 
+  it('counts what payouts round down as payout rounding, and an older seeded result as seed', async () => {
+    // Alice 2 and Bob 1 on Yes, Olive 2 on No: Yes pays floor(2 × 5 / 3) = 3 and floor(5 / 3) = 1,
+    // so 1 DC of the 5 DC pool stays unpaid.
+    async function splitThree(title: string): Promise<TestMarket> {
+      const m = await createTestMarket(oliveClient, ['Yes', 'No'], { title })
+      await bet(aliceClient, m, 0, 2)
+      await bet(bobClient, m, 0, 1)
+      await bet(oliveClient, m, 1, 2)
+      await resolve(m, 0)
+      return m
+    }
+    await splitThree('Rounds down')
+    const older = await splitThree('Older result')
+    // As 0074 leaves a resolution from before it, which counted the market's seed.
+    await pgQuery(`update public.market_resolutions set payout_seed = 20 where market_id = '${older.marketId}'`)
+
+    const s = await summary()
+    expect([s.payout_rounding_added, s.payout_rounding_removed]).toEqual([0, 1])
+    expect([s.seed_payouts_added, s.seed_payouts_removed]).toEqual([0, 1])
+    expect(s.all_time_added - s.all_time_removed).toBe(circulation(s))
+  })
+
   it('shows a ledger type it doesn’t know as unclassified, and the gap it leaves', async () => {
     const { error } = await serviceClient()
       .from('coin_transactions')
       .insert({ profile_id: bob.id, amount: 7, type: 'mystery' })
     expect(error).toBeNull()
+    skipLedgerCheck('this test writes the balance without its ledger row to make the unclassified-type gap the panel reports')
     await serviceClient().from('profiles').update({ balance: 107 }).eq('id', bob.id)
 
     const s = await summary()

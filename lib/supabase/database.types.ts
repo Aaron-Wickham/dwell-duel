@@ -538,6 +538,7 @@ export type Database = {
           market_id: string
           note: string | null
           outcome_id: string
+          payout_seed: number
           resolved_at: string
           resolved_by: string
           reversed_at: string | null
@@ -549,6 +550,7 @@ export type Database = {
           market_id: string
           note?: string | null
           outcome_id: string
+          payout_seed?: number
           resolved_at?: string
           resolved_by: string
           reversed_at?: string | null
@@ -560,6 +562,7 @@ export type Database = {
           market_id?: string
           note?: string | null
           outcome_id?: string
+          payout_seed?: number
           resolved_at?: string
           resolved_by?: string
           reversed_at?: string | null
@@ -612,6 +615,7 @@ export type Database = {
           sparkline: Json | null
           status: string
           title: string
+          void_reason: string | null
         }
         Insert: {
           close_at: string
@@ -628,6 +632,7 @@ export type Database = {
           sparkline?: Json | null
           status?: string
           title: string
+          void_reason?: string | null
         }
         Update: {
           close_at?: string
@@ -644,6 +649,7 @@ export type Database = {
           sparkline?: Json | null
           status?: string
           title?: string
+          void_reason?: string | null
         }
         Relationships: [
           {
@@ -703,21 +709,21 @@ export type Database = {
       parlay_legs: {
         Row: {
           id: string
-          locked_odds: number
+          locked_odds: number | null
           market_id: string
           outcome_id: string
           parlay_id: string
         }
         Insert: {
           id?: string
-          locked_odds: number
+          locked_odds?: number | null
           market_id: string
           outcome_id: string
           parlay_id: string
         }
         Update: {
           id?: string
-          locked_odds?: number
+          locked_odds?: number | null
           market_id?: string
           outcome_id?: string
           parlay_id?: string
@@ -751,6 +757,8 @@ export type Database = {
           created_at: string
           credited: number
           id: string
+          max_multiplier: number
+          odds_at_close: boolean
           profile_id: string
           settled_at: string | null
           stake: number
@@ -760,6 +768,8 @@ export type Database = {
           created_at?: string
           credited?: number
           id?: string
+          max_multiplier: number
+          odds_at_close?: boolean
           profile_id: string
           settled_at?: string | null
           stake: number
@@ -769,6 +779,8 @@ export type Database = {
           created_at?: string
           credited?: number
           id?: string
+          max_multiplier?: number
+          odds_at_close?: boolean
           profile_id?: string
           settled_at?: string | null
           stake?: number
@@ -1210,6 +1222,8 @@ export type Database = {
           owner_adjustments_added: number
           owner_adjustments_removed: number
           parlays_at_stake: number
+          payout_rounding_added: number
+          payout_rounding_removed: number
           seed_payouts_added: number
           seed_payouts_removed: number
           starting_grants_added: number
@@ -1389,16 +1403,55 @@ export type Database = {
           task_id: string
         }[]
       }
+      parlay_leg_odds: {
+        Args: { p_parlay_ids: string[] }
+        Returns: {
+          known: boolean
+          odds: number
+          outcome_id: string
+          parlay_id: string
+        }[]
+      }
       parlay_limits: {
         Args: never
         Returns: {
+          max_leg_odds: number
           max_legs: number
           max_multiplier: number
+          max_payout: number
+          min_leg_bettors: number
+          min_leg_pool: number
         }[]
       }
+      parlay_max_payout: { Args: { p_parlay_id: string }; Returns: number }
       period_index: {
         Args: { p_key: string; p_period: string }
         Returns: number
+      }
+      pick_quote: {
+        Args: { p_outcome_id: string; p_profile_id: string }
+        Returns: {
+          market_id: string
+          meets_floor: boolean
+          odds: number
+          other_bettors: number
+          others_on_pick: number
+          others_total: number
+          own_market: boolean
+        }[]
+      }
+      pick_quotes: {
+        Args: { p_outcome_ids: string[] }
+        Returns: {
+          market_id: string
+          meets_floor: boolean
+          odds: number
+          other_bettors: number
+          others_on_pick: number
+          others_total: number
+          outcome_id: string
+          own_market: boolean
+        }[]
       }
       ping_closing_alerts: { Args: never; Returns: number }
       place_bet: {
@@ -1426,6 +1479,16 @@ export type Database = {
           p_singles: Json
         }
         Returns: Json
+      }
+      pool_payout: {
+        Args: {
+          p_outcomes?: number
+          p_seed?: number
+          p_stake: number
+          p_total_pool: number
+          p_winning_pool: number
+        }
+        Returns: number
       }
       push_endpoint_host: { Args: { p_endpoint: string }; Returns: string }
       push_hosts: { Args: never; Returns: string[] }
@@ -1504,6 +1567,10 @@ export type Database = {
       }
       record_push_results: {
         Args: { p_delivered: string[]; p_failed: string[] }
+        Returns: number
+      }
+      refund_room: {
+        Args: { p_amount: number; p_profile_id: string }
         Returns: number
       }
       reject_task_completion: {
@@ -1585,7 +1652,10 @@ export type Database = {
         Args: { p_avatar_path: string; p_bio: string; p_display_name: string }
         Returns: undefined
       }
-      void_market: { Args: { p_market_id: string }; Returns: undefined }
+      void_market: {
+        Args: { p_market_id: string; p_reason?: string }
+        Returns: undefined
+      }
       weekly_recap: {
         Args: { p_week: string }
         Returns: {

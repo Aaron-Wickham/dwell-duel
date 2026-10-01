@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, makeMember, clientFor, ensureInvited, createTestTask, type Member, giveRole } from './fixtures'
 
 let alice: Member
@@ -35,7 +36,7 @@ describe('tasks write policy', () => {
     const aliceClient = await clientFor(alice)
     await ensureInvited(aliceClient)
     const { error } = await aliceClient.from('tasks').insert({ title: 'Sneaky', reward_amount: 10 })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'new row violates row-level security policy for table "tasks"' })
   })
 
   it('lets an admin insert and update a task', async () => {
@@ -153,7 +154,7 @@ describe('task_completions direct writes', () => {
     const { error } = await aliceClient
       .from('task_completions')
       .insert({ task_id: taskId, profile_id: alice.id, reward_amount: 999, period_key: 'once' })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for table task_completions' })
 
     const { count } = await serviceClient()
       .from('task_completions')
@@ -174,7 +175,7 @@ describe('task_completions direct writes', () => {
       .from('task_completions')
       .update({ status: 'approved' })
       .eq('id', completionId as string)
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for table task_completions' })
 
     const { data: row } = await serviceClient()
       .from('task_completions')

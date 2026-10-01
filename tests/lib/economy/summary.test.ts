@@ -12,12 +12,14 @@ const ROW: EconomySummaryRow = {
   task_rewards_added: 10,
   seed_payouts_added: 8,
   seed_payouts_removed: 22,
+  payout_rounding_added: 1,
+  payout_rounding_removed: 4,
   house_parlays_added: 30,
   house_parlays_removed: 5,
   owner_adjustments_added: 25,
   owner_adjustments_removed: 5,
-  all_time_added: 373,
-  all_time_removed: 32,
+  all_time_added: 377,
+  all_time_removed: 36,
   unclassified: 0,
 }
 
@@ -28,22 +30,29 @@ describe('toEconomySummary', () => {
     expect(s.betsAtStake).toBe(12)
   })
 
-  it('lists the five sources in order, with no removed figure for grants or task rewards', () => {
+  it('lists the sources in order, with no removed figure for grants or task rewards', () => {
     const s = toEconomySummary(ROW)
     expect(s.sources.map((x) => [x.label, x.added, x.removed])).toEqual([
       ['Starting grants', 300, null],
       ['Task rewards', 10, null],
-      ['Seed payouts', 8, 22],
+      ['Seed payouts (older results)', 8, 22],
+      ['Payout rounding', 1, 4],
       ['House-paid parlays', 30, 5],
       ['Owner adjustments', 25, 5],
     ])
-    expect(s.monthAdded).toBe(373)
-    expect(s.monthRemoved).toBe(32)
+    expect(s.monthAdded).toBe(374)
+    expect(s.monthRemoved).toBe(36)
+  })
+
+  it('leaves out the seed row in a month no older result was paid or overridden', () => {
+    const s = toEconomySummary({ ...ROW, seed_payouts_added: 0, seed_payouts_removed: 0 })
+    expect(s.sources.map((x) => x.key)).not.toContain('seed_payouts')
+    expect(s.sources.map((x) => x.key)).toContain('payout_rounding')
   })
 
   it('reports how far the all-time totals are from what is in circulation', () => {
     expect(toEconomySummary(ROW).discrepancy).toBe(0)
-    expect(toEconomySummary({ ...ROW, all_time_added: 380 }).discrepancy).toBe(7)
+    expect(toEconomySummary({ ...ROW, all_time_added: 384 }).discrepancy).toBe(7)
   })
 })
 

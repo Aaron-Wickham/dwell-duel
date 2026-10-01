@@ -63,6 +63,7 @@ const event = (id: string): FeedEvent => ({
   legCount: null,
   taskTitle: null,
   resolutionNote: null,
+  voidReason: null,
   creatorStake: null,
   season: null,
 })

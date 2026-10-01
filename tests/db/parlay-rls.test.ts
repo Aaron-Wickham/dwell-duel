@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, type Member, giveRole } from './fixtures'
 
 let alice: Member
@@ -11,7 +10,7 @@ beforeEach(async () => {
 })
 
 interface SeededParlays {
-  aliceClient: SupabaseClient
+  aliceClient: TestClient
   marketId: string
   outcomeIds: string[]
   aliceParlayId: string
@@ -27,8 +26,8 @@ async function seedParlays(): Promise<SeededParlays> {
   const { data: parlays, error } = await db
     .from('parlays')
     .insert([
-      { profile_id: alice.id, stake: 10 },
-      { profile_id: bob.id, stake: 10 },
+      { profile_id: alice.id, stake: 10, max_multiplier: 20 },
+      { profile_id: bob.id, stake: 10, max_multiplier: 20 },
     ])
     .select('id, profile_id')
   if (error) throw error
@@ -83,7 +82,7 @@ describe('parlays / parlay_legs select policies', () => {
 describe('direct table writes', () => {
   it('rejects a direct insert into parlays', async () => {
     const aliceClient = await clientFor(alice)
-    const { error } = await aliceClient.from('parlays').insert({ profile_id: alice.id, stake: 10 })
+    const { error } = await aliceClient.from('parlays').insert({ profile_id: alice.id, stake: 10, max_multiplier: 20 })
     expect(error?.code).toBe('42501')
 
     const { count } = await serviceClient().from('parlays').select('*', { count: 'exact', head: true })

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, giveRole } from './fixtures'
 
 let alice: Member
@@ -99,7 +100,7 @@ describe('direct table writes', () => {
       kind: 'binary',
       close_at: new Date(Date.now() + 60_000).toISOString(),
     })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for table markets' })
 
     const db = serviceClient()
     const { count } = await db.from('markets').select('*', { count: 'exact', head: true }).eq('title', 'Sneaky')
@@ -116,7 +117,7 @@ describe('direct table writes', () => {
       profile_id: alice.id,
       amount: 10,
     })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for table bets' })
 
     const db = serviceClient()
     const { count } = await db.from('bets').select('*', { count: 'exact', head: true }).eq('market_id', marketId)
@@ -128,7 +129,7 @@ describe('direct table writes', () => {
     const { outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'])
 
     const { error } = await aliceClient.from('market_outcomes').update({ pool_total: 999 }).eq('id', outcomeIds[0])
-    expect(error).not.toBeNull()
+    expectError(error, { code: '42501', message: 'permission denied for table market_outcomes' })
     expect(error?.code).toBe('42501')
 
     const db = serviceClient()

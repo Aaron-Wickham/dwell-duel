@@ -14,6 +14,7 @@ const pickFor = (outcomeId: string, outcomeLabel: string): SlipPick => ({
   parlay: false,
   open: true,
   oddsBp: 13333,
+  legBlock: null,
   outcomePool: 60,
   totalPool: 80,
 })

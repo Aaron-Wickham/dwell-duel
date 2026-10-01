@@ -100,8 +100,9 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
 
   let parlay: NonNullable<NonNullable<PlaceSlipState>['placed']>['parlay'] = null
   if (parlayId) {
-    const { data: lockedLegs } = await supabase.from('parlay_legs').select('locked_odds').eq('parlay_id', parlayId)
-    const legBps = (lockedLegs ?? []).map((l) => lockedOddsToBp(l.locked_odds))
+    // A leg's odds are set when its market closes; for now, what the pools would give it (0074).
+    const { data: legOdds } = await supabase.rpc('parlay_leg_odds', { p_parlay_ids: [parlayId] })
+    const legBps = (legOdds ?? []).map((l) => lockedOddsToBp(l.odds))
     const { data: stakeRow } = summary.replayed
       ? await supabase.from('parlays').select('stake').eq('id', parlayId).maybeSingle()
       : { data: null }

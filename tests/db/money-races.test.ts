@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
+import { serviceClient, type TestClient, setBalanceViaLedger } from './helpers'
+import { expectError } from './assertions'
+import { seedMembers, clientFor, createTestMarket, createTestTask, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 
 // #72: the money paths under concurrency. Each race fires its calls together with Promise.all; the
 // market row lock (for update) must serialize them so that whichever order Postgres picks, money
 // moves exactly once. Alice is an admin (she may resolve before close); Bob only bets.
 let alice: Member
 let bob: Member
-let admin: SupabaseClient
-let bobClient: SupabaseClient
+let admin: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -26,11 +26,10 @@ async function balanceOf(member: Member): Promise<number> {
 }
 
 async function setBalance(member: Member, balance: number) {
-  const { error } = await serviceClient().from('profiles').update({ balance }).eq('id', member.id)
-  if (error) throw error
+  await setBalanceViaLedger(member.id, balance)
 }
 
-const bet = (client: SupabaseClient, m: TestMarket, outcome: number, amount: number) =>
+const bet = (client: TestClient, m: TestMarket, outcome: number, amount: number) =>
   client.rpc('place_bet', { p_market_id: m.marketId, p_outcome_id: m.outcomeIds[outcome], p_amount: amount })
 
 const resolve = (m: TestMarket, outcome: number) =>
@@ -87,7 +86,7 @@ describe('money races (#72)', () => {
     expect((await bet(bobClient, market, 0, 10)).error).toBeNull()
 
     const [voided, resolved] = await Promise.all([
-      admin.rpc('void_market', { p_market_id: market.marketId }),
+      admin.rpc('void_market', { p_market_id: market.marketId, p_reason: 'Voided in a test' }),
       resolve(market, 0),
     ])
     expect([voided.error, resolved.error].filter((e) => e === null)).toHaveLength(1)
@@ -106,7 +105,7 @@ describe('money races (#72)', () => {
     const a = await createTestMarket(admin, ['Yes', 'No'], { seed: 20, title: 'A' })
     const b = await createTestMarket(admin, ['Yes', 'No'], { seed: 20, title: 'B' })
     const slip = (m: TestMarket) =>
-      bobClient.rpc('place_slip', {
+      bobClient.rpc('place_slip_v2', {
         p_singles: [{ outcome_id: m.outcomeIds[0], amount: 40 }, { outcome_id: m.outcomeIds[1], amount: 20 }],
         p_parlay_outcome_ids: [],
         p_parlay_stake: 0,
@@ -122,5 +121,39 @@ describe('money races (#72)', () => {
       .eq('profile_id', bob.id)
       .in('market_id', [a.marketId, b.marketId])
     expect(count).toBe(2)
+  })
+
+  it('a cancel racing a resolve: Bob is either refunded or paid, never both', async () => {
+    const paid = await soloReference([[0, 10]], 0)
+    const market = await createTestMarket(admin, ['Yes', 'No'], { seed: 20 })
+    expect((await bet(bobClient, market, 0, 10)).error).toBeNull()
+    const { data: placed } = await serviceClient().from('bets').select('id').eq('market_id', market.marketId).single()
+
+    const [cancelled, resolved] = await Promise.all([
+      bobClient.rpc('cancel_bet', { p_bet_id: placed!.id }),
+      resolve(market, 0),
+    ])
+    expect(resolved.error).toBeNull()
+
+    if (cancelled.error === null) {
+      expect(await balanceOf(bob)).toBe(100)
+    } else {
+      expectError(cancelled.error, /bet not found|can no longer be cancelled/)
+      expect(await balanceOf(bob)).toBe(paid)
+    }
+  })
+
+  it('two approvals of one completion at once reward it once', async () => {
+    const { taskId } = await createTestTask(alice, { rewardAmount: 30 })
+    const { data: completionId, error } = await bobClient.rpc('submit_task_completion', { p_task_id: taskId })
+    expect(error).toBeNull()
+
+    const results = await Promise.all([
+      admin.rpc('approve_task_completion', { p_completion_id: completionId! }),
+      admin.rpc('approve_task_completion', { p_completion_id: completionId! }),
+    ])
+    expect(results.filter((r) => r.error === null)).toHaveLength(1)
+    expectError(results.find((r) => r.error !== null)!.error, 'completion is not pending')
+    expect(await balanceOf(bob)).toBe(130)
   })
 })

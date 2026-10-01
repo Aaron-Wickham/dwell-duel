@@ -10,7 +10,7 @@ import { getMarket, type MarketDetail } from '@/lib/markets/get-market'
 import { getResolutionProof } from '@/lib/markets/resolution-proof'
 import { ProofList } from '@/components/proof/proof-list'
 import { getChartSeries } from '@/lib/markets/chart-series'
-import { computeOdds, effectivePools, type OutcomeOdds } from '@/lib/markets/odds'
+import { computeOdds, type OutcomeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt, marketCardStatus } from '@/lib/markets/market-status'
 import { rowState } from '@/lib/markets/row-state'
@@ -48,7 +48,7 @@ import { EditMarketDialog } from './edit-market-dialog'
 import { ShareButton } from './share-button'
 import { listMarketEdits } from '@/lib/markets/market-edits'
 import { formatLine } from '@/lib/markets/kind'
-import { VoidButton } from './void-button'
+import { VoidForm } from './void-form'
 
 // No loading.tsx for this route (and the markets list's own loading.tsx sits in the (list)
 // group, so it doesn't wrap this one): the market must be found before anything streams, so an
@@ -197,6 +197,11 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
             )}
           </section>
         )}
+        {market.status === 'voided' && market.voidReason && (
+          <section aria-label="Why it was voided" className="flex max-w-[68ch] flex-col gap-3">
+            <p className="whitespace-pre-line break-words">{market.voidReason}</p>
+          </section>
+        )}
       </div>
 
       {/* Each section's fallback carries the same grid placement as the section itself. The
@@ -299,7 +304,8 @@ async function MarketActions({
   // a reviewer with no stake in the market; an admin at any time.
   const canResolve = market.status === 'open' && resolvable.data === true
   const canOverride = market.status === 'resolved' && admin
-  const canVoid = market.status === 'open' && (isCreator || admin)
+  // void_market (0073): an admin at any time; the creator only until the market closes.
+  const canVoid = market.status === 'open' && (admin || (isCreator && canBet))
   // delete_market (0040) refuses a market with bets, cancelled bets or parlay legs. An empty pool is
   // the cheap first check; only the owner of an empty market pays for the other two (#221).
   const canDelete = role === 'owner' && totalPool === 0 && !(await hasBetHistory(supabase, market.id))
@@ -363,8 +369,9 @@ async function MarketActions({
         )}
         <ul className="flex flex-col divide-y divide-line">
           {odds.map((o, index) => {
-            const effective = effectivePools(o.poolTotal, totalPool, market.seedPerOutcome, odds.length)
-            const oddsBp = legOddsBp(effective.total, effective.pool)
+            // What a DC on this outcome pays from the real pool now (0074: the seed is never paid),
+            // so an outcome nobody has backed shows no payout yet.
+            const oddsBp = legOddsBp(totalPool, o.poolTotal)
             return (
             <li key={o.outcomeId}>
               <OutcomeRow
@@ -382,9 +389,12 @@ async function MarketActions({
                   marketTitle: market.title,
                   parlay: false,
                   open: canBet,
-                  oddsBp,
-                  outcomePool: effective.pool,
-                  totalPool: effective.total,
+                  // A new pick starts Solo and shows only until the slip's own read (getSlipView)
+                  // replaces it, so its parlay figures are the plain pool's, not a quote.
+                  oddsBp: oddsBp ?? 10_000,
+                  legBlock: null,
+                  outcomePool: o.poolTotal,
+                  totalPool,
                 }}
                 addAction={addToSlipAction.bind(null, o.outcomeId)}
                 removeAction={removeFromSlipAction.bind(null, o.outcomeId)}
@@ -428,7 +438,7 @@ async function MarketActions({
                 />
               )}
               {canVoid && (
-                <VoidButton marketId={market.id} className={showResolve ? 'border-t border-line pt-4' : undefined} />
+                <VoidForm marketId={market.id} className={showResolve ? 'border-t border-line pt-4' : undefined} />
               )}
               {canDelete && (
                 <div className={showResolve || canVoid ? 'border-t border-line pt-4' : undefined}>

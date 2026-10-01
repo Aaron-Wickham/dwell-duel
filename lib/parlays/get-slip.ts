@@ -51,7 +51,8 @@ export async function getSlipView(supabase: DbClient, entries: SlipEntry[]): Pro
     supabase.rpc('pick_quotes', { p_outcome_ids: ids }),
   ])
   if (error) throw error
-  if (quoteError) throw quoteError
+  // Someone no longer invited reads no outcomes (RLS) and is refused quotes: an empty slip, either way.
+  if (quoteError && quoteError.code !== '42501') throw quoteError
 
   const rows = data ?? []
   const quoteOf = new Map((quotes ?? []).map((q) => [q.outcome_id, q]))

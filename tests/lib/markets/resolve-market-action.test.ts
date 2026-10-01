@@ -48,6 +48,16 @@ describe('resolveMarketAction', () => {
     expect(revalidatePath).not.toHaveBeenCalled()
   })
 
+  it('logs an unexpected database error and shows generic copy, not its text (#256)', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    supabase.rpc.mockResolvedValue({ data: null, error: { code: '57014', message: 'canceling statement due to statement timeout' } })
+
+    const state = await resolveMarketAction('market-1', undefined, outcomeForm('outcome-1'))
+
+    expect(state).toEqual({ formError: 'Something went wrong. Try again.', field: 'outcome' })
+    expect(log).toHaveBeenCalled()
+  })
+
   it('words the same-outcome refusal for the admin (#198)', async () => {
     supabase.rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'that outcome is already the result' } })
 

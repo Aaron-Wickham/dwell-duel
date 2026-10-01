@@ -1,5 +1,6 @@
 import type { DbClient } from '@/lib/supabase/database'
 import { atLeast, type Role } from '@/lib/auth/roles'
+import { reportError } from '@/lib/observability/report'
 import { vapidKeys } from '@/lib/push/config'
 
 export const CLOSING_ALERTS_JOB = 'closing-alerts'
@@ -8,7 +9,8 @@ export const CLOSING_ALERTS_JOB = 'closing-alerts'
 // missed calls rather than flagging one slow start.
 export const CLOSING_ALERTS_STALE_MS = 30 * 60 * 1000
 
-export type ClosingAlertsHealth = { stale: false } | { stale: true; lastRunAt: string | null }
+// `unknown` is a failed read: the banner says it couldn't check, where a throw would take down every Admin page.
+export type ClosingAlertsHealth = { stale: false; unknown?: true } | { stale: true; lastRunAt: string | null }
 
 export function closingAlertsHealth(lastRunAt: string | null, now: number): ClosingAlertsHealth {
   if (lastRunAt !== null && now - Date.parse(lastRunAt) <= CLOSING_ALERTS_STALE_MS) return { stale: false }
@@ -25,7 +27,12 @@ export async function readClosingAlertsHealth(
   env: Record<string, string | undefined> = process.env,
 ): Promise<ClosingAlertsHealth> {
   if (!atLeast(role, 'admin') || !vapidKeys(env)) return { stale: false }
-  const { data, error } = await supabase.from('cron_heartbeats').select('last_run_at').eq('name', CLOSING_ALERTS_JOB).maybeSingle()
-  if (error) throw error
-  return closingAlertsHealth(data?.last_run_at ?? null, now)
+  try {
+    const { data, error } = await supabase.from('cron_heartbeats').select('last_run_at').eq('name', CLOSING_ALERTS_JOB).maybeSingle()
+    if (error) throw error
+    return closingAlertsHealth(data?.last_run_at ?? null, now)
+  } catch (error) {
+    reportError('Reading the closing-alerts heartbeat failed', error)
+    return { stale: false, unknown: true }
+  }
 }

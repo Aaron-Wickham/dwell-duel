@@ -129,6 +129,15 @@ describe('placeSlipAction', () => {
     expect(writeSlip).not.toHaveBeenCalled()
   })
 
+  it('logs an unexpected database error and shows generic copy, not its text (#256)', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    rpc.mockResolvedValue({ data: null, error: { message: 'This operation was aborted' } })
+
+    const result = await placeSlipAction(undefined, form([['pick', `${A}:solo`], ['stake:' + A, '3']]))
+    expect(result).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(log).toHaveBeenCalled()
+  })
+
   it('reports a balance shortfall with the current balance', async () => {
     rpc.mockResolvedValue({ data: null, error: { code: '23514', message: 'new row violates check constraint "profiles_balance_check"' } })
     from.mockReturnValue({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { balance: 7 } }) }) }) })

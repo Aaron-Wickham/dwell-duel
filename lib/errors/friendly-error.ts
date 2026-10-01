@@ -1,3 +1,5 @@
+import { reportError } from '@/lib/observability/report'
+
 export const GENERIC_ERROR = 'Something went wrong. Try again.'
 
 // `match` is either an RPC's exact `raise exception` text or a constraint's name, which Postgres
@@ -13,7 +15,7 @@ export function friendlyError<F extends string>(
 ): { formError: string; field?: F } {
   const hit = known.find(({ match }) => error.message === match || error.message.includes(`"${match}"`))
   if (!hit) {
-    console.error(context, error)
+    reportError(context, error)
     return { formError: GENERIC_ERROR }
   }
   return hit.field ? { formError: hit.formError, field: hit.field } : { formError: hit.formError }

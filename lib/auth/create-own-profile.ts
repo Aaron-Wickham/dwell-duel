@@ -1,4 +1,5 @@
 import type { DbClient } from '@/lib/supabase/database'
+import { reportError } from '@/lib/observability/report'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 
 export type CreateOwnProfileResult = { ok: true } | { ok: false; reason: 'not_invited' | 'error' }
@@ -36,5 +37,7 @@ export async function createOwnProfile(
   // balance/is_admin, so in practice this means "not invited."
   if (error.code === '42501') return { ok: false, reason: 'not_invited' }
 
+  // The code and not the error: a unique violation's detail can quote the member's email.
+  reportError('Sign-in: creating the profile failed', new Error(`profiles insert failed: ${error.code ?? 'no code'}`))
   return { ok: false, reason: 'error' }
 }

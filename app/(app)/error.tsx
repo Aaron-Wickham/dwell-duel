@@ -11,5 +11,5 @@ export default function Error({ error, retry }: { error: Error & { digest?: stri
   useEffect(() => {
     reloadOnceForStaleChunk(error)
   }, [error])
-  return <ErrorCard retry={retry} />
+  return <ErrorCard retry={retry} digest={error.digest} />
 }

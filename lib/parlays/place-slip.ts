@@ -2,6 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
+import { GENERIC_ERROR } from '@/lib/errors/friendly-error'
+import { isDeliberateRaise } from '@/lib/errors/deliberate-raise'
+import { reportError } from '@/lib/observability/report'
 import { insufficientBalanceMessage, isBalanceCheckViolation } from '@/lib/errors/balance-error'
 import { combineOdds, lockedOddsToBp, potentialPayout } from './odds'
 import { parseSlipError } from './slip-errors'
@@ -80,6 +83,10 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
     if (isBalanceCheckViolation(error)) {
       const { data: profile } = await supabase.from('profiles').select('balance').eq('id', user.id).maybeSingle()
       if (profile) return { formError: insufficientBalanceMessage(profile.balance) }
+    }
+    if (!isDeliberateRaise(error)) {
+      reportError('place_slip failed', error)
+      return { formError: GENERIC_ERROR }
     }
     return parseSlipError(error.message)
   }

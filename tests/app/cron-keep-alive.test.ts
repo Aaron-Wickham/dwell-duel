@@ -89,10 +89,49 @@ describe('keep-alive cron', () => {
     expect((await GET(authorized())).status).toBe(502)
   })
 
-  it('still reports a database failure first', async () => {
+  it('runs every other step when the database touch fails, and names what failed', async () => {
     profiles.mockResolvedValue({ error: new Error('paused') })
     vi.spyOn(console, 'error').mockImplementation(() => {})
-    expect((await GET(authorized())).status).toBe(502)
-    expect(rpc).not.toHaveBeenCalled()
+    const res = await GET(authorized())
+    expect(res.status).toBe(502)
+    expect(await res.json()).toMatchObject({ ok: false, failed: ['database'] })
+    expect(settleSeason).toHaveBeenCalled()
+    expect(pruneKeys).toHaveBeenCalled()
+  })
+
+  it('a proof-cleanup failure still prunes keys, settles the season and sends reminders (#259)', async () => {
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'stray_proof_objects' ? { data: [{ name: 'bad/name' }], error: null } : { data: [], error: null },
+    )
+    remove.mockResolvedValue({ error: new Error('storage down') })
+    vi.stubEnv('NEXT_PUBLIC_VAPID_PUBLIC_KEY', 'public')
+    vi.stubEnv('VAPID_PRIVATE_KEY', 'private')
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const res = await GET(authorized())
+    expect(res.status).toBe(502)
+    expect(await res.json()).toMatchObject({ ok: false, failed: ['proof cleanup'], seasonChampion: null })
+    expect(pruneKeys).toHaveBeenCalled()
+    expect(settleSeason).toHaveBeenCalled()
+    expect(rpc).toHaveBeenCalledWith('due_resolve_reminders', undefined)
+  })
+
+  it('lists every step that failed, not just the first', async () => {
+    pruneKeys.mockResolvedValue({ error: new Error('down') })
+    settleSeason.mockResolvedValue({ data: null, error: new Error('down') })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const res = await GET(authorized())
+    expect((await res.json()).failed).toEqual(['key cleanup', 'season settle'])
+  })
+
+  it('pings the heartbeat on success and its /fail URL on failure', async () => {
+    vi.stubEnv('HEALTHCHECKS_KEEP_ALIVE_URL', 'https://hc-ping.com/abc')
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('OK'))
+    await GET(authorized())
+    expect(fetchSpy.mock.calls[0][0]).toBe('https://hc-ping.com/abc')
+    pruneKeys.mockResolvedValue({ error: new Error('down') })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await GET(authorized())
+    expect(fetchSpy.mock.calls[1][0]).toBe('https://hc-ping.com/abc/fail')
+    fetchSpy.mockRestore()
   })
 })

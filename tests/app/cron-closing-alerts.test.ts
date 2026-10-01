@@ -161,6 +161,18 @@ describe('closing-alerts cron', () => {
     expect(rpc).toHaveBeenCalledWith('record_cron_heartbeat', { p_name: 'closing-alerts' })
   })
 
+  it('pings the optional healthchecks URL on a healthy run and its /fail on a 502 (#256)', async () => {
+    vi.stubEnv('HEALTHCHECKS_CLOSING_ALERTS_URL', 'https://hc-ping.com/closing')
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('OK'))
+    expect((await GET(authorized())).status).toBe(200)
+    expect(fetchSpy.mock.calls[0][0]).toBe('https://hc-ping.com/closing')
+    rpc.mockResolvedValue({ data: null, error: new Error('down') })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect((await GET(authorized())).status).toBe(502)
+    expect(fetchSpy.mock.calls[1][0]).toBe('https://hc-ping.com/closing/fail')
+    fetchSpy.mockRestore()
+  })
+
   it('records the run after sending, for the Admin pages’ warning', async () => {
     vi.stubEnv('NEXT_PUBLIC_VAPID_PUBLIC_KEY', 'public-key')
     vi.stubEnv('VAPID_PRIVATE_KEY', 'private-key')

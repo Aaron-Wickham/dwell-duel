@@ -14,7 +14,8 @@ function contentSecurityPolicy(): string {
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: ${supabase}`,
     "font-src 'self' data:",
-    `connect-src 'self' ${supabase} ${realtime}`,
+    // Sentry's ingest hosts (o123.ingest.us.sentry.io and the like), for client error reports.
+    `connect-src 'self' ${supabase} ${realtime} https://*.sentry.io`,
     "worker-src 'self'",
     "manifest-src 'self'",
     "object-src 'none'",

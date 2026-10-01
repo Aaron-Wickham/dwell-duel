@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { serverClient } from '@/lib/supabase/server'
 import { createOwnProfile } from '@/lib/auth/create-own-profile'
+import { reportError } from '@/lib/observability/report'
 import { FALLBACK_NAME } from '@/lib/profile/fallback-name'
 
 export async function GET(request: Request) {
@@ -11,7 +12,8 @@ export async function GET(request: Request) {
     const supabase = await serverClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
-    if (!error) {
+    if (error) reportError('Sign-in: code exchange failed', error)
+    else {
       const {
         data: { user },
       } = await supabase.auth.getUser()

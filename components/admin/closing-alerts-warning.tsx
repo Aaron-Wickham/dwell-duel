@@ -4,6 +4,13 @@ import type { ClosingAlertsHealth } from '@/lib/admin/cron-health'
 import { relativeTime } from '@/lib/social/relative-time'
 
 export function ClosingAlertsWarning({ health, now }: { health: ClosingAlertsHealth; now: number }) {
+  if (!health.stale && health.unknown) {
+    return (
+      <Message tone="gold" icon={CircleAlert}>
+        Couldn’t check whether closing alerts are running. The rest of Admin still works; reload to check again.
+      </Message>
+    )
+  }
   if (!health.stale) return null
   const when = health.lastRunAt ? `last ran ${relativeTime(health.lastRunAt, now)}` : 'haven’t run yet'
   return (

@@ -89,7 +89,7 @@ describe('timestamp invariants', () => {
     const db = serviceClient()
     const { data: parlay, error: insertErr } = await db
       .from('parlays')
-      .insert({ profile_id: bob.id, stake: 10 })
+      .insert({ profile_id: bob.id, stake: 10, max_multiplier: 20 })
       .select('id')
       .single()
     expect(insertErr).toBeNull()
@@ -144,7 +144,7 @@ describe('timestamp invariants', () => {
     expect(cleanCompletion.error).toBeNull()
     const cleanParlay = await db
       .from('parlays')
-      .insert({ profile_id: bob.id, stake: 10, status: 'won', credited: 20, settled_at: new Date().toISOString() })
+      .insert({ profile_id: bob.id, stake: 10, max_multiplier: 20, status: 'won', credited: 20, settled_at: new Date().toISOString() })
       .select('id')
       .single()
     expect(cleanParlay.error).toBeNull()
@@ -166,7 +166,7 @@ describe('timestamp invariants', () => {
         alter table public.parlays disable trigger activity_events_from_parlay;
         insert into public.task_completions (task_id, profile_id, status, reward_amount, period_key)
           values ('${taskId}', '${bob.id}', 'approved', 10, 'once');
-        insert into public.parlays (profile_id, stake, status, credited) values ('${bob.id}', 10, 'won', 20);
+        insert into public.parlays (profile_id, stake, max_multiplier, status, credited) values ('${bob.id}', 10, 20, 'won', 20);
         ${readGuardBlock()}
         do $$ begin raise exception 'the guard let the violating rows through'; end $$;
       `),

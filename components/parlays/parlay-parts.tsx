@@ -68,15 +68,16 @@ export function ParlayStatusChip({
   }
 }
 
-// The third figure of the card and the detail's hero: what it pays while open, then what it did.
-export function outcomeFigure(p: Pick<ParlayView, 'status' | 'credited' | 'stake' | 'potentialPayout'>): {
+// The third figure of the card and the detail's hero: what it pays while open (an estimate until
+// every leg's odds are set at close), then what it did.
+export function outcomeFigure(p: Pick<ParlayView, 'status' | 'credited' | 'stake' | 'potentialPayout' | 'estimated'>): {
   label: string
   value: string
   tone: 'win' | 'loss' | 'plain'
 } {
   switch (p.status) {
     case 'pending':
-      return { label: 'Pays if all win', value: `${p.potentialPayout} DC`, tone: 'win' }
+      return { label: 'Pays if all win', value: `${p.estimated ? '~' : ''}${p.potentialPayout} DC`, tone: 'win' }
     case 'won':
       return { label: 'Won', value: `${p.credited} DC`, tone: 'win' }
     case 'lost':

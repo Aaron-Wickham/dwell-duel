@@ -118,7 +118,7 @@ describe('weekly_recap', () => {
   })
 
   it("names the week's best call and biggest upset, from results that still stand", async () => {
-    // A: Bob's 10 of 30 effective on Yes, of 80: floor(10 × 80 / 30) = 26, a 16 DC profit, at 37.5%.
+    // A: Bob's 10 of the real 40: floor(10 × 40 / 10) = 40, a 30 DC profit, at a seeded 37.5%.
     const a = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20, title: 'Market A' })
     await bet(bobClient, a, 0, 10)
     await bet(carolClient, a, 1, 30)
@@ -157,7 +157,7 @@ describe('weekly_recap', () => {
       best_market_id: a.marketId,
       best_market_title: 'Market A',
       best_stake: 10,
-      best_payout: 26,
+      best_payout: 40,
       upset_market_id: b.marketId,
       upset_market_title: 'Market B',
       upset_outcome_label: 'Yes',

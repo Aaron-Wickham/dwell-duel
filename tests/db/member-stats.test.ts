@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient, type TestClient } from './helpers'
+import { serviceClient, setBalanceViaLedger, type TestClient } from './helpers'
 import {
   seedMembers,
   makeMember,
@@ -9,7 +9,7 @@ import {
   createTestTask,
   ensureInvited,
   type Member,
-  type TestMarket, giveRole } from './fixtures'
+  type TestMarket, giveRole, backers, backLeg } from './fixtures'
 import { pgQuery } from './pg-query'
 import { readMemberStats, type MemberStats } from '@/lib/members/stats'
 
@@ -98,9 +98,16 @@ describe('member_stats', () => {
     await resolve(overridden, 0)
     await resolve(overridden, 1)
 
-    // A won parlay at 3.00× and 2.00× (seeded, nobody else betting): 6.00×, paying 60 on 10.
+    // A won parlay at 3.00× and 2.00× (the backers' money at close, seed left out): 6.00×, paying
+    // 60 on 10.
     const three = await createTestMarket(aliceClient, ['A', 'B', 'C'], { seed: 20 })
     const two = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    const [first, second] = await backers()
+    for (const { id } of [first, second]) await setBalanceViaLedger(id, 500)
+    await bet(first.client, three, 0, 20)
+    await bet(second.client, three, 1, 40)
+    await bet(first.client, two, 0, 25)
+    await bet(second.client, two, 1, 25)
     await parlay(bobClient, [three.outcomeIds[0], two.outcomeIds[0]], 10)
     await resolve(three, 0)
     await resolve(two, 0)
@@ -108,6 +115,7 @@ describe('member_stats', () => {
     // A lost parlay: one leg loses while the other is still open.
     const lostLeg = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     const stillOpen = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    for (const market of [lostLeg, stillOpen]) await backLeg(market, 1)
     await parlay(bobClient, [lostLeg.outcomeIds[0], stillOpen.outcomeIds[0]], 10)
     await resolve(lostLeg, 1)
 

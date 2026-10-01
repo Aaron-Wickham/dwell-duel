@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient, type TestClient, type SlipSummary, setBalanceViaLedger } from './helpers'
 import { expectError } from './assertions'
-import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backLeg, insertLockedParlay } from './fixtures'
 import { pgQuery } from './pg-query'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { describeCreatorStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
@@ -44,57 +44,70 @@ async function member(name: string, role: 'member' | 'reviewer' | 'admin'): Prom
 const resolve = (client: TestClient, market: TestMarket, index = 0) =>
   client.rpc('resolve_market', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[index], p_note: 'Checked' })
 
-describe('#57 parlay legs lock without your own stakes', () => {
-  it("can't be pumped by betting against yourself and cancelling", async () => {
+describe('#57 parlay legs are priced without your own stakes', () => {
+  async function pricedLegs(parlayId: string): Promise<Record<string, number>> {
+    const { data } = await serviceClient().from('parlay_legs').select('market_id, locked_odds').eq('parlay_id', parlayId)
+    return Object.fromEntries(data!.map((l) => [l.market_id, Number(l.locked_odds)]))
+  }
+
+  it("can't be pumped by betting against yourself, cancelled or not", async () => {
+    await giveRole(alice, 'admin')
     const a = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    for (const m of [a, b]) await backLeg(m, 1)
     const pumpA = await bet(bobClient, a, 0, 1000)
-    const pumpB = await bet(bobClient, b, 0, 1000)
+    await bet(bobClient, b, 0, 1000)
 
     const { data: parlayId, error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[1], b.outcomeIds[1]], p_stake: 10 })
     expect(error).toBeNull()
-    for (const id of [pumpA, pumpB]) await bobClient.rpc('cancel_bet', { p_bet_id: id })
+    await bobClient.rpc('cancel_bet', { p_bet_id: pumpA })
+    for (const m of [a, b]) expect((await resolve(aliceClient, m, 1)).error).toBeNull()
 
-    const { data: legs } = await serviceClient().from('parlay_legs').select('locked_odds').eq('parlay_id', parlayId as string)
-    // Without Bob's 1000s, each market is just its seed: 40 / 20 = 2.00, not 52.
-    expect(legs!.map((l) => Number(l.locked_odds))).toEqual([2, 2])
+    // Without Bob's 1000s, each market is the backers' 50 DC, all on No: 50 / 50 = 1.00, not 21.
+    expect(Object.values(await pricedLegs(parlayId as string))).toEqual([1, 1])
   })
 
-  it("still moves with everyone else's money", async () => {
+  it("moves with everyone else's money until close", async () => {
+    await giveRole(alice, 'admin')
     const a = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
-    await bet(aliceClient, a, 0, 60)
+    for (const m of [a, b]) await backLeg(m, 1)
     const { data: parlayId } = await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[1], b.outcomeIds[1]], p_stake: 10 })
-    const { data: legs } = await serviceClient().from('parlay_legs').select('market_id, locked_odds').eq('parlay_id', parlayId as string)
-    // A's No: (60 + 40) / 20 = 5.00.
-    expect(Number(legs!.find((l) => l.market_id === a.marketId)!.locked_odds)).toBe(5)
+    await bet(aliceClient, a, 0, 60)
+    for (const m of [a, b]) expect((await resolve(aliceClient, m, 1)).error).toBeNull()
+    // A's No at close: (60 + 50) / 50 = 2.20.
+    expect((await pricedLegs(parlayId as string))[a.marketId]).toBe(2.2)
   })
 
   it('shows the same odds in the slip before you place it', async () => {
     const a = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    for (const m of [a, b]) await backLeg(m, 1)
     await bet(bobClient, a, 0, 1000)
     const view = await getSlipView(bobClient, [
       { outcomeId: a.outcomeIds[1], parlay: true },
       { outcomeId: b.outcomeIds[1], parlay: true },
-    ], bob.id)
-    expect(view.picks.map((p) => p.oddsBp)).toEqual([20_000, 20_000])
-    // Alice's view of the same leg still counts Bob's money: (1000 + 40) / 20 = 52.00.
-    const aliceView = await getSlipView(aliceClient, [{ outcomeId: a.outcomeIds[1], parlay: true }], alice.id)
-    expect(aliceView.picks[0].oddsBp).toBe(520_000)
+    ])
+    expect(view.picks.map((p) => p.oddsBp)).toEqual([10_000, 10_000])
+    // Alice's view of the same leg still counts Bob's money: (1000 + 50) / 50 = 21, held to 5.00.
+    await ensureInvited(aliceClient)
+    const aliceView = await getSlipView(aliceClient, [{ outcomeId: a.outcomeIds[1], parlay: true }])
+    expect(aliceView.picks[0]).toMatchObject({ oddsBp: 50_000, legBlock: 'own_market' })
   })
 
   it('leaves out your singles placed in the same slip', async () => {
+    await giveRole(alice, 'admin')
     const a = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    for (const m of [a, b]) await backLeg(m, 1)
     const { data: summary, error } = await bobClient.rpc('place_slip_v2', {
       p_singles: [{ outcome_id: a.outcomeIds[0], amount: 500 }],
       p_parlay_outcome_ids: [a.outcomeIds[1], b.outcomeIds[1]],
       p_parlay_stake: 10,
     })
     expect(error).toBeNull()
-    const { data: legs } = await serviceClient().from('parlay_legs').select('locked_odds').eq('parlay_id', (summary as SlipSummary).parlay_id!)
-    expect(legs!.map((l) => Number(l.locked_odds))).toEqual([2, 2])
+    for (const m of [a, b]) expect((await resolve(aliceClient, m, 1)).error).toBeNull()
+    expect(Object.values(await pricedLegs((summary as SlipSummary).parlay_id!))).toEqual([1, 1])
   })
 })
 
@@ -108,12 +121,14 @@ describe('#58 nobody but an admin resolves a market they have a stake in', () =>
   })
 
   it('counts a pending parlay leg as a stake', async () => {
+    const { client: rita } = await member('Rita', 'reviewer')
     const m = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     const other = await createTestMarket(bobClient, ['Yes', 'No'], { seed: 20 })
-    const { error } = await aliceClient.rpc('place_parlay', { p_outcome_ids: [m.outcomeIds[0], other.outcomeIds[0]], p_stake: 5 })
+    for (const market of [m, other]) await backLeg(market, 0)
+    const { error } = await rita.rpc('place_parlay', { p_outcome_ids: [m.outcomeIds[0], other.outcomeIds[0]], p_stake: 5 })
     if (error) throw error
     await close(m)
-    expect((await resolve(aliceClient, m)).error?.message).toBe('you have a stake in this market, so someone else resolves it')
+    expect((await resolve(rita, m)).error?.message).toBe('you have a stake in this market, so someone else resolves it')
   })
 
   it('still lets a creator with no stake resolve after close, and not before', async () => {
@@ -266,8 +281,11 @@ describe('#84 the creator’s stake is shown', () => {
     await bet(aliceClient, m, 0, 30)
     await bet(aliceClient, m, 0, 10)
     await bet(bobClient, m, 1, 50)
-    const { error } = await aliceClient.rpc('place_parlay', { p_outcome_ids: [m.outcomeIds[1], other.outcomeIds[0]], p_stake: 5 })
-    if (error) throw error
+    // A creator can't put their own market in a parlay since 0074, but one placed before still shows.
+    await insertLockedParlay(alice.id, 5, [
+      { market: m, outcomeIndex: 1, lockedOdds: 2 },
+      { market: other, outcomeIndex: 0, lockedOdds: 2 },
+    ])
 
     const stakes = await getCreatorStakes(bobClient, [
       { id: m.marketId, createdBy: alice.id },

@@ -33,6 +33,7 @@ const pick = (outcomeId: string, outcomeLabel: string, marketId = 'm1'): SlipPic
   parlay: false,
   open: true,
   oddsBp: 20_000,
+  legBlock: null,
   outcomePool: 10,
   totalPool: 20,
 })

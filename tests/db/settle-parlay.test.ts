@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient, type TestClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
+import { serviceClient, setBalanceViaLedger, type TestClient } from './helpers'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backers } from './fixtures'
 import { lockedOddsToBp, potentialPayout } from '@/lib/parlays/odds'
 
 let alice: Member
@@ -16,21 +16,25 @@ beforeEach(async () => {
   // Alice creates, seeds, resolves, overrides, and voids every market; as
   // an admin she can resolve before close_at and override a resolution.
   await giveRole(alice, 'admin')
+  // The backers fund every market's pool, so they get enough DC for the longest parlay here.
+  for (const { id } of await backers()) await setBalanceViaLedger(id, 1000)
 })
 
-// Every market is seeded 5 on its first outcome and 15 on its second:
-// the first locks at 20 / 5 = 4x, the second at 20 / 15 = 4/3x.
+// Backer1 stakes 13 on every market's first outcome and Backer2 39 on its second: 52 DC from two
+// members, over the parlay floor. At close the first prices at 52 / 13 = 4x, the second at
+// 52 / 39 = 4/3x.
 async function seededMarket(
   title: string,
   labels: string[] = ['Yes', 'No'],
-  pools: [number, number] = [5, 15],
+  pools: [number, number] = [13, 39],
 ): Promise<TestMarket> {
   const market = await createTestMarket(aliceClient, labels, { title })
-  for (const [index, amount] of [
-    [0, pools[0]],
-    [1, pools[1]],
+  const [first, second] = await backers()
+  for (const [index, amount, client] of [
+    [0, pools[0], first.client],
+    [1, pools[1], second.client],
   ] as const) {
-    const { error } = await aliceClient.rpc('place_bet', {
+    const { error } = await client.rpc('place_bet', {
       p_market_id: market.marketId,
       p_outcome_id: market.outcomeIds[index],
       p_amount: amount,
@@ -90,7 +94,7 @@ async function bobTransactions(): Promise<{ amount: number; type: string }[]> {
 }
 
 describe('parlay settlement', () => {
-  it('pays stake x the product of locked odds once every leg wins', async () => {
+  it('pays stake x the product of each leg’s odds at close once every leg wins', async () => {
     const a = await seededMarket('Market A')
     const b = await seededMarket('Market B')
     const id = await placeParlay([a.outcomeIds[0], b.outcomeIds[0]], 10)
@@ -121,13 +125,25 @@ describe('parlay settlement', () => {
     expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: 17 })
   })
 
-  it('caps the multiplier at 100x', async () => {
-    const markets = [await seededMarket('Market A'), await seededMarket('Market B'), await seededMarket('Market C'), await seededMarket('Market D')]
-    // 4 x 4 x 4 x 4 = 256, capped to 100
+  it('caps the multiplier at 20x', async () => {
+    const markets = [await seededMarket('Market A'), await seededMarket('Market B'), await seededMarket('Market C')]
+    // 4 x 4 x 4 = 64, capped to 20
     const id = await placeParlay(markets.map((m) => m.outcomeIds[0]), 10)
 
     for (const m of markets) await resolve(m, 0)
+    expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: 200 })
+  })
+
+  it('pays a parlay at most 1,000 DC', async () => {
+    const a = await seededMarket('Market A')
+    const b = await seededMarket('Market B')
+    const c = await seededMarket('Market C')
+    // 20x (capped) of 60 is 1,200 DC, over the payout cap.
+    const id = await placeParlay([a.outcomeIds[0], b.outcomeIds[0], c.outcomeIds[0]], 60)
+
+    for (const m of [a, b, c]) await resolve(m, 0)
     expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: 1000 })
+    expect(await bobBalance()).toBe(100 - 60 + 1000)
   })
 
   it('loses as soon as one leg loses, even with another leg still open, and stays lost', async () => {
@@ -158,7 +174,7 @@ describe('parlay settlement', () => {
     expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: 160 })
   })
 
-  it('pays a single surviving leg at its locked odds', async () => {
+  it('pays a single surviving leg at its odds', async () => {
     const a = await seededMarket('Market A')
     const b = await seededMarket('Market B')
     const id = await placeParlay([a.outcomeIds[0], b.outcomeIds[0]], 10)
@@ -292,20 +308,25 @@ describe('parlay settlement', () => {
   })
 
   it('pays exactly the payout the app displays', async () => {
-    // 10/3 locks at 3.3333 and 3/1 at 3.0000: exact odds would be 10x; the locked product is 9.9999x.
-    const a = await seededMarket('Market A', ['Yes', 'No'], [3, 7])
-    const b = await seededMarket('Market B', ['Yes', 'No'], [1, 2])
+    // 100/30 prices at 3.3333 and 60/20 at 3.0000: exact odds would be 10x; the product is 9.9999x.
+    const a = await seededMarket('Market A', ['Yes', 'No'], [30, 70])
+    const b = await seededMarket('Market B', ['Yes', 'No'], [20, 40])
     const id = await placeParlay([a.outcomeIds[0], b.outcomeIds[0]], 10)
 
-    const { data: legs } = await serviceClient().from('parlay_legs').select('locked_odds').eq('parlay_id', id)
-    const legBps = legs!.map((l) => lockedOddsToBp(l.locked_odds))
-    expect([...legBps].sort((x, y) => x - y)).toEqual([30_000, 33_333])
-    const displayed = potentialPayout(10, legBps)
-    expect(displayed).toBe(99)
+    // While the markets are open the page shows the odds the pools give now; nothing moves before
+    // close here, so they're what the legs settle at.
+    const { data: estimate, error } = await bobClient.rpc('parlay_leg_odds', { p_parlay_ids: [id] })
+    expect(error).toBeNull()
+    const estimateBps = estimate!.map((l) => lockedOddsToBp(l.odds))
+    expect(estimate!.every((l) => !l.known)).toBe(true)
+    expect(potentialPayout(10, estimateBps)).toBe(99)
 
     await resolve(a, 0)
     await resolve(b, 0)
-    expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: displayed })
+    const { data: legs } = await serviceClient().from('parlay_legs').select('locked_odds').eq('parlay_id', id)
+    const legBps = legs!.map((l) => lockedOddsToBp(l.locked_odds!))
+    expect([...legBps].sort((x, y) => x - y)).toEqual([30_000, 33_333])
+    expect(await parlayRow(id)).toMatchObject({ status: 'won', credited: potentialPayout(10, legBps) })
   })
 
   it('refuses to re-resolve a market to the same outcome, leaving the parlay and its transactions alone (#198)', async () => {

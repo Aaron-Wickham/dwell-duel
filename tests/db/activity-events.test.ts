@@ -10,7 +10,7 @@ import {
   createTestTask,
   ensureInvited,
   type Member,
-  type TestMarket, giveRole } from './fixtures'
+  type TestMarket, giveRole, backLeg } from './fixtures'
 import { pgQuery } from './pg-query'
 
 let alice: Member
@@ -143,15 +143,17 @@ async function fullScenario(): Promise<void> {
   const b = await createTestMarket(aliceClient, ['Red', 'Blue', 'Green'], { title: 'Scenario B', seed: 20 })
   expect(await mismatches()).toEqual([])
 
-  // Seeded like every real market, so no outcome is ever empty (a parlay leg's odds leave out the
-  // bettor's own stake, 0046). Bob's stake makes A's payout floor a fraction: effective pool
-  // 46 + 40 = 86, winning pool 16 + 20 = 36, floor(11 × 86 / 36) = floor(26.27) = 26.
+  // Seeded like every real market. The backers' 25 DC each give both markets the parlay floor
+  // (0074). Bob's stake makes A's payout floor a fraction: effective pool 96 + 40 = 136, winning
+  // pool 16 + 20 = 36, floor(11 × 136 / 36) = floor(41.56) = 41.
   await bet(bobClient, a, 0, 11)
   await bet(carolClient, a, 1, 30)
   await bet(aliceClient, a, 0, 5)
   await bet(bobClient, b, 0, 4)
   await bet(carolClient, b, 1, 6)
   await bet(aliceClient, b, 2, 2)
+  await backLeg(a, 1)
+  await backLeg(b, 2)
   expect(await mismatches()).toEqual([])
 
   // A cancelled bet leaves both the view and the table.
@@ -221,8 +223,8 @@ describe('activity_events', () => {
     `)
     // Every kind is covered, and the override really did hide rows, so the comparison isn't vacuous.
     expect(kinds).toEqual([
-      { kind: 'bet_placed', visible: 6, hidden: 0 },
-      { kind: 'bet_won', visible: 1, hidden: 2 },
+      { kind: 'bet_placed', visible: 10, hidden: 0 },
+      { kind: 'bet_won', visible: 3, hidden: 2 },
       { kind: 'market_created', visible: 2, hidden: 0 },
       { kind: 'market_resolved', visible: 1, hidden: 1 },
       { kind: 'market_voided', visible: 1, hidden: 0 },
@@ -231,7 +233,7 @@ describe('activity_events', () => {
       { kind: 'season_champion', visible: 1, hidden: 0 },
       { kind: 'task_completed', visible: 2, hidden: 0 },
     ])
-    expect(await feedCount()).toBe(15)
+    expect(await feedCount()).toBe(21)
   })
 
   it("backfills, from activity_feed, the same rows the triggers wrote", async () => {
@@ -255,7 +257,7 @@ describe('activity_events', () => {
         ) d) as differing,
         (select count(*)::integer from pg_temp.backfill) as backfilled
     `)
-    expect(result).toEqual({ differing: 0, backfilled: 15 })
+    expect(result).toEqual({ differing: 0, backfilled: 21 })
   })
 
   it("hides exactly the old resolution's rows on an override, and shows a new resolution's rows when it goes back", async () => {
@@ -310,6 +312,7 @@ describe('activity_events', () => {
     for (const m of [a, b]) {
       await bet(aliceClient, m, 0, 5)
       await bet(aliceClient, m, 1, 15)
+      await backLeg(m, 1)
     }
     const parlayId = await placeParlay(bobClient, [a.outcomeIds[0], b.outcomeIds[0]], 10)
     await resolve(a, 0)
@@ -350,6 +353,7 @@ describe('activity_events', () => {
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Direct B' })
     await bet(aliceClient, a, 0, 5)
     await bet(aliceClient, b, 0, 5)
+    for (const m of [a, b]) await backLeg(m, 1)
     const parlayId = await placeParlay(bobClient, [a.outcomeIds[0], b.outcomeIds[0]], 10)
     const { taskId } = await createTestTask(alice, { title: 'Seeded task', rewardAmount: 9 })
 

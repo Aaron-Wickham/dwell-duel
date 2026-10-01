@@ -47,12 +47,14 @@ const ROW: EconomySummaryRow = {
   task_rewards_added: 10,
   seed_payouts_added: 8,
   seed_payouts_removed: 22,
+  payout_rounding_added: 0,
+  payout_rounding_removed: 3,
   house_parlays_added: 30,
   house_parlays_removed: 5,
   owner_adjustments_added: 0,
   owner_adjustments_removed: 5,
-  all_time_added: 348,
-  all_time_removed: 7,
+  all_time_added: 351,
+  all_time_removed: 10,
   unclassified: 0,
 }
 
@@ -76,7 +78,8 @@ describe('EconomyCard', () => {
 
     expect(within(rowFor('Starting grants')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+300 DC', '—'])
     expect(within(rowFor('Task rewards')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+10 DC', '—'])
-    expect(within(rowFor('Seed payouts')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+8 DC', '−22 DC'])
+    expect(within(rowFor('Seed payouts (older results)')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+8 DC', '−22 DC'])
+    expect(within(rowFor('Payout rounding')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0 DC', '−3 DC'])
     expect(within(rowFor('House-paid parlays')).getAllByRole('cell').map((c) => c.textContent)).toEqual([
       '+30 DC',
       '−5 DC',
@@ -85,8 +88,8 @@ describe('EconomyCard', () => {
       '0 DC',
       '−5 DC',
     ])
-    // 348 added less 32 removed.
-    expect(within(rowFor('Net change')).getByRole('cell').textContent).toBe('+316 DC')
+    // 348 added less 35 removed.
+    expect(within(rowFor('Net change')).getByRole('cell').textContent).toBe('+313 DC')
   })
 
   it('says the ledger reconciles when the all-time totals match what is in circulation', () => {
@@ -95,7 +98,7 @@ describe('EconomyCard', () => {
   })
 
   it('says by how much it doesn’t, and flags ledger rows of a type it doesn’t count', () => {
-    render(<EconomyCard summary={toEconomySummary({ ...ROW, all_time_added: 350, unclassified: 1 })} />)
+    render(<EconomyCard summary={toEconomySummary({ ...ROW, all_time_added: 353, unclassified: 1 })} />)
     expect(
       screen.getByText('Doesn’t reconcile with the ledger: off by 2 DC. 1 ledger row has a type the panel doesn’t count.'),
     ).toBeInTheDocument()

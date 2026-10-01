@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { serviceClient, type TestClient, type SlipSummary } from './helpers'
 import { expectError } from './assertions'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backLeg } from './fixtures'
 
 // #61: a repeat of an attempt key returns the first call's result instead of acting again.
 let alice: Member
@@ -19,6 +19,9 @@ beforeEach(async () => {
   for (const client of [aliceClient, bobClient]) await ensureInvited(client)
   a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'A', seed: 20 })
   b = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'B', seed: 20 })
+  // The parlay floor (0074) for both of the slip's parlay legs.
+  await backLeg(a, 0)
+  await backLeg(b, 1)
 })
 
 async function balanceOf(member: Member): Promise<number> {

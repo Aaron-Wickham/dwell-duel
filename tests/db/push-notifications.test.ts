@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { rpcLoose, serviceClient, type RpcName, type TestClient } from './helpers'
 import { pgQuery } from './pg-query'
-import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, createTestTask, ensureInvited, type Member, giveRole } from './fixtures'
+import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, createTestTask, ensureInvited, type Member, giveRole, backLeg } from './fixtures'
 import { isPushEndpoint, PUSH_HOSTS } from '@/lib/push/subscription'
 
 let alice: Member
@@ -240,6 +240,8 @@ describe('recipients', () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Will it rain?', seed: 20 })
     const other = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Other leg', seed: 20 })
     await rpcOk(bobClient, 'place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0], p_amount: 10 })
+    // Backer1 and Backer2 put 25 each on No in both markets, so Carol's parlay can have them as legs.
+    for (const m of [market, other]) await backLeg(m, 1)
     await rpcOk(carolClient, 'place_parlay', { p_outcome_ids: [market.outcomeIds[0], other.outcomeIds[0]], p_stake: 5 })
     await rpcOk(daveClient, 'place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[1], p_amount: 10 })
     const { data: daveBet } = await serviceClient().from('bets').select('id').eq('profile_id', dave.id).single()
@@ -252,14 +254,15 @@ describe('recipients', () => {
 
     const rows = byProfile(await rpcOk<ResultRow[]>(serviceClient(), 'push_market_result', { p_market_id: market.marketId }))
     expect(Object.keys(rows).sort()).toEqual([admin.id, bob.id, carol.id].sort())
-    // 10 × (20 real + 40 seed) ÷ (10 + 20), rounded down.
-    expect(rows[bob.id]).toMatchObject({ status: 'resolved', outcome_label: 'Yes', is_override: false, won: 20, has_solo: true })
+    // Bob's share of the real pool: 10 × 70 ÷ 10.
+    expect(rows[bob.id]).toMatchObject({ status: 'resolved', outcome_label: 'Yes', is_override: false, won: 70, has_solo: true })
     expect(rows[carol.id]).toMatchObject({ won: 0, has_solo: false })
     expect(rows[admin.id]).toMatchObject({ won: 0, has_solo: true })
 
     await rpcOk(adminClient, 'resolve_market', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[1], p_note: 'Recount' })
     const overridden = byProfile(await rpcOk<ResultRow[]>(serviceClient(), 'push_market_result', { p_market_id: market.marketId }))
-    expect(overridden[admin.id]).toMatchObject({ outcome_label: 'No', is_override: true, won: 20 })
+    // 10 × 70 ÷ 60 = 11.67, rounded down.
+    expect(overridden[admin.id]).toMatchObject({ outcome_label: 'No', is_override: true, won: 11 })
     expect(overridden[bob.id]).toMatchObject({ is_override: true, won: 0 })
   })
 

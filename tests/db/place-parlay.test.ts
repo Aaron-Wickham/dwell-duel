@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient, type TestClient, expectError } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backers } from './fixtures'
 
 let alice: Member

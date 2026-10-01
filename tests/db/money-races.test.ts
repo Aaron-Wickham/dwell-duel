@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient, type TestClient, expectError, setBalanceViaLedger } from './helpers'
+import { serviceClient, type TestClient, setBalanceViaLedger } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, clientFor, createTestMarket, createTestTask, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
 
 // #72: the money paths under concurrency. Each race fires its calls together with Promise.all; the

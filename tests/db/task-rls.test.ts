@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient, expectError } from './helpers'
+import { serviceClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, makeMember, clientFor, ensureInvited, createTestTask, type Member, giveRole } from './fixtures'
 
 let alice: Member

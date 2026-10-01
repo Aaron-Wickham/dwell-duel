@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient, type TestClient, type SlipSummary, expectError, setBalanceViaLedger } from './helpers'
+import { serviceClient, type TestClient, type SlipSummary, setBalanceViaLedger } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backLeg, insertLockedParlay } from './fixtures'
 import { pgQuery } from './pg-query'
 import { getSlipView } from '@/lib/parlays/get-slip'

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient, type TestClient, expectError, skipLedgerCheck } from './helpers'
+import { serviceClient, type TestClient, skipLedgerCheck } from './helpers'
+import { expectError } from './assertions'
 import {
   seedMembers,
   makeMember,

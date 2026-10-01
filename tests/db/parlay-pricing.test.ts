@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { anonClient, clientFor, createTestMarket, ensureInvited, giveRole, insertLockedParlay, makeMember, seedMembers, backers, type Member, type TestMarket } from './fixtures'
-import { expectError, rpcLoose, serviceClient, setBalanceViaLedger, type TestClient } from './helpers'
+import { rpcLoose, serviceClient, setBalanceViaLedger, type TestClient } from './helpers'
+import { expectError } from './assertions'
 import { lockedOddsToBp } from '@/lib/parlays/odds'
 
 // 0074: parlays stay house-paid, and each leg is priced from real money when its market closes or

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { rpcLoose, serviceClient, type TestClient, expectError } from './helpers'
+import { rpcLoose, serviceClient, type TestClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, type Member, giveRole } from './fixtures'
 
 let owner: Member

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { serviceClient, type TestClient, expectError } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, clientFor, createTestTask, anonClient, type Member } from './fixtures'
 
 // my_task_streaks (0054, #82): consecutive periods with an approved completion, ending in the

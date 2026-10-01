@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { serviceClient, type TestClient, type SlipSummary, expectError } from './helpers'
+import { serviceClient, type TestClient, type SlipSummary } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backLeg } from './fixtures'
 
 // #61: a repeat of an attempt key returns the first call's result instead of acting again.

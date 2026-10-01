@@ -302,7 +302,7 @@ a line to `CHANGELOG.md` under the next release.
 - **DB tests are typed and name what a refusal was for.** `serviceClient()`,
   `clientFor()`, `clientForEmail()` and `anonClient()` return `TestClient` (`SupabaseClient<Database>`),
   so a renamed RPC argument fails `npm run typecheck`. A negative test calls
-  `expectError(error, 'the message' | { code, message })` (`tests/db/helpers.ts`),
+  `expectError(error, 'the message' | { code, message })` (`tests/db/assertions.ts`),
   never `expect(error).not.toBeNull()`, which also passes on a missing function.
   `tests/db/setup.ts` runs `assertLedgerConsistent()` after every DB test
   (balances equal their ledger, pools equal live bets, a parlay's `credited` equals

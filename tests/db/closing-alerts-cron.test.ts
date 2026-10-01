@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { pgQuery } from './pg-query'
-import { serviceClient, type TestClient, expectError } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, clientFor, anonClient, ensureInvited, createTestMarket, type Member } from './fixtures'
 
 // GitHub dropped most runs of the ten-minute workflow (#189), so pg_cron is the timer now: every

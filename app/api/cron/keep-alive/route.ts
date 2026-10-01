@@ -4,6 +4,7 @@ import { serviceRoleClient } from '@/lib/supabase/service-role'
 import { sendClosingAlerts } from '@/lib/push/notify'
 import { flushErrors, reportError } from '@/lib/observability/report'
 import { pingHeartbeat } from '@/lib/observability/heartbeat'
+import { pruneUninvitedUsers } from '@/lib/auth/prune-uninvited-users'
 
 /**
  * Supabase pauses free-tier projects after 7 days with no database
@@ -23,8 +24,9 @@ import { pingHeartbeat } from '@/lib/observability/heartbeat'
  * heartbeat's fail ping), and a clean run pings the heartbeat, so a run that never happens shows
  * as a late ping.
  */
-// Five database calls, a Storage remove of up to 500 objects, settle_season and the pushes can
-// take tens of seconds: fine under Fluid compute, fatal under the legacy 10s limit.
+// Six database calls, a Storage remove of up to 500 objects, up to 50 Auth user deletes,
+// settle_season and the pushes can take tens of seconds: fine under Fluid compute, fatal under the
+// legacy 10s limit.
 export const maxDuration = 60
 
 const STORAGE_ALERT_BYTES = 800 * 1024 * 1024
@@ -110,6 +112,15 @@ const steps: { name: string; run: (db: Db) => Promise<Record<string, unknown>> }
         .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
       if (error) throw error
       return {}
+    },
+  },
+  {
+    // Anyone can finish Google sign-in; the account of someone never invited is deleted a day
+    // later (#275), 50 a run: plenty for a trickle of stray sign-ins, and a backlog clears over days.
+    name: 'uninvited sign-in cleanup',
+    run: async (db) => {
+      const { removed, failed } = await pruneUninvitedUsers(db, 50)
+      return { uninvitedUsersRemoved: removed, uninvitedUsersFailed: failed }
     },
   },
   {

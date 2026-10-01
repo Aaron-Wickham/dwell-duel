@@ -72,9 +72,10 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/not-invited` and `/offline`. The API has three routes.
 `/api/cron/keep-alive`, which a daily Vercel cron calls so the free
-Supabase project never pauses. It also deletes unattached proof files and
-attempt keys older than a day, expires reviewed proof, removes avatar files
-no profile points at, reports Storage use (#253, below), calls `settle_season()` to post last
+Supabase project never pauses. It also deletes unattached proof files,
+attempt keys older than a day and uninvited sign-ins (below), expires
+reviewed proof, removes avatar files no profile points at, reports Storage
+use (#253, below), calls `settle_season()` to post last
 month's champion to the feed (a no-op once it's posted), and runs
 `sendClosingAlerts`, the daily backstop for the closing alerts: both the
 creator's reminder to resolve and the admins' alert for a closed market
@@ -96,8 +97,8 @@ doesn't, `Cache-Control: no-store`, no member data, and outside the proxy
 (`proxy.ts`'s matcher) so it doesn't depend on Auth.
 
 The daily keep-alive runs its steps independently (database touch, proof
-cleanup, proof retention, avatar cleanup, storage usage, key cleanup, season
-settle, resolve reminders): a failing step is
+cleanup, proof retention, avatar cleanup, storage usage, key cleanup,
+uninvited sign-in cleanup, season settle, resolve reminders): a failing step is
 logged, captured and named in the response, the rest still run, and the
 route answers 502 at the end if any failed (#259). It then pings the
 heartbeat, below.
@@ -128,6 +129,35 @@ docs/           this file, HOW-IT-WORKS, design handoff, dated specs and plans
 Every table has row-level security. Members read what the app shows them.
 Almost every write goes through an RPC; the exceptions are admin writes to
 the task catalogue and invite list, which are allowed by policy.
+
+**Grants.** `anon` (the signed-out publishable key) can reach nothing in
+`public`. Since 0091, nothing postgres creates there grants `anon` anything
+by default, and no new function is executable by `PUBLIC`; `authenticated`
+keeps Supabase's defaults, so a new function or table still needs its
+`revoke ... from public, anon` and the grants it means. A new table still
+needs `enable row level security` (production's automatic-RLS event trigger
+is a backstop, not the rule). `tests/db/schema-privileges.test.ts` sweeps the
+schema: RLS on every table, no `anon` table, column, sequence or function
+grant (bar the `cache_market_sparkline` trigger), and a checked-in list of
+every SECURITY DEFINER function a signed-in account can call. Adding one to
+that list is the review step: a definer function skips RLS, so it must check
+its caller (`is_invited`, `has_role`, `auth.uid()`) itself.
+
+**Write limits** (0090, #273). A member's own inserts into `markets`,
+`market_comments`, `feed_reactions`, `task_completions` and `cancelled_bets`
+pass `enforce_write_limit`, a BEFORE INSERT trigger that counts them per
+fixed window in `write_rate_counters` (one row per member, action and
+window, out of members' reach) and raises SQLSTATE `DD429` once a window is
+full: 20 markets a day, 10 comments a minute and 200 a day, 60 reactions a
+minute and 1,000 a day, 30 task submissions a day, 20 bet cancels an hour.
+The limits live in `write_limits()`, mirrored by `WRITE_LIMITS` in
+`lib/forms/limits.ts` (a DB test keeps them equal), whose
+`RATE_LIMIT_ERRORS` word each raise for its action. The service role, admins
+and the owner aren't counted, nor is a row written for someone else (the
+owner removing a bet). Push devices are capped instead: saving an eleventh
+subscription drops the member's least recently used one
+(`cap_push_subscriptions`). A new member-written table that can grow without
+spending coins should get a trigger and a `write_limits()` row.
 
 **People**
 
@@ -465,6 +495,8 @@ after it ships. They roughly follow the project's history:
 | 0076 | Push failure pruning (#257): `push_subscriptions.failure_count` and `first_failed_at`, the service-role `record_push_results()`, `save_push_subscription` resetting the streak, and the closing-alerts lease (`cron_leases`, `claim_cron_lease`, `release_cron_lease`) and give-up counter (`push_attempts`, `record_push_failures`) |
 | 0083 | `create_market_v2` (#258): `create_market` plus an attempt key, returning `{market_id, replayed}` so a replayed create returns the first market and skips its push; `create_market` now wraps it. `attempt_key` columns, unique where set, on `market_comments` and `tasks` |
 | 0089 | Storage caps and retention (#253): proof bucket 3 MB and no Word files, a per-member daily upload quota, `record_proof` caps (5 attachments, 3 files, 6 MB), submitted proof can't be deleted, `proof_attachments.expired_at` with `expired_proof_attachments` / `mark_proof_expired`, `stray_avatar_objects`, `storage_usage` |
+| 0090 | Write limits (#273): `write_limits()`, `write_rate_counters` and the `enforce_write_limit` trigger on markets, comments, reactions, task submissions and bet cancels; `cap_push_subscriptions` keeps a member's ten most recently used push devices |
+| 0091 | Default privileges (#274): nothing postgres creates in `public` grants `anon` anything, and no new function is executable by `PUBLIC`; anon's leftover sequence grants go; `has_stake_in_market` answers false to an uninvited caller. `uninvited_auth_users()` (#275), service role only, for the daily cron's cleanup |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
@@ -487,7 +519,17 @@ switched off. `/callback` exchanges the code, and a member whose email
 isn't in `allowed_emails` lands on `/not-invited`. The `profiles` trigger
 creates the profile and the 100 DC starting grant. `requireUser` reads
 claims and throws `AuthUnavailableError` (not "signed out") when Auth
-itself is down.
+itself is down. Signups stay open, since Google sign-in creates the
+`auth.users` row before the invite check can run, so anyone who finishes
+Google's consent leaves a row with their name, email and picture. The daily
+keep-alive deletes those (#275): `uninvited_auth_users()` (0091, service role
+only) lists up to 50 a run that are a day old or more and have no profile,
+invite or ledger row, and `pruneUninvitedUsers` (`lib/auth/prune-uninvited-users.ts`)
+deletes each through the Auth admin API. A delete that fails is reported
+to Sentry and skipped rather than failing the step, so one account Auth
+won't delete can't turn every run red; only a failed listing does. A member, a removed member (who
+keeps their profile) and an invitee who hasn't finished signing in are
+never listed.
 
 **Betting through the slip.** An outcome's "Add to slip" writes a cookie
 of picks (`lib/parlays/slip.ts`). `SlipProvider` in the signed-in layout

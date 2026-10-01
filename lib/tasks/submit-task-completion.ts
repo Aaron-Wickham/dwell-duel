@@ -4,12 +4,13 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
 import { afterAction, notifyTaskSubmitted } from '@/lib/push/notify'
-import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
+import { RATE_LIMIT_ERRORS, TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import type { ProofRecord } from '@/lib/proof/types'
 
 export type ActionState = { formError?: string; field?: 'note' } | undefined
 
-// submit_task_completion's raises (0019, 0042, 0046), its attachment checks included.
+// submit_task_completion's raises (0019, 0042, 0046), its attachment checks included, and the write
+// limit (0090).
 const SUBMIT_TASK_ERRORS: readonly KnownError<'note'>[] = [
   { match: 'not invited', formError: 'Only invited members can submit a task.' },
   { match: 'task not found or inactive', formError: 'This task is no longer available.' },
@@ -24,6 +25,7 @@ const SUBMIT_TASK_ERRORS: readonly KnownError<'note'>[] = [
   { match: "that file can't be attached here", formError: 'That file can’t be attached here.' },
   { match: "an attachment didn't finish uploading; try again", formError: 'An attachment didn’t finish uploading. Try again.' },
   { match: 'unknown attachment kind', formError: 'Your attachments didn’t come through. Try again.' },
+  RATE_LIMIT_ERRORS.task_submission,
 ]
 
 // The files are already in storage by now (lib/proof/upload.ts); `attachments` is the JSON of

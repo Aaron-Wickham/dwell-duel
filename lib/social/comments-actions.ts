@@ -3,7 +3,7 @@
 import { refresh } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
-import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
+import { RATE_LIMIT_ERRORS, TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { isUuid } from '@/lib/uuid'
 
 const ATTEMPT_KEY_INDEX = 'market_comments_attempt_key_idx'
@@ -31,7 +31,9 @@ export async function postCommentAction(marketId: string, _prev: CommentState, f
   // 23505 on the key's index: this attempt already posted, which is what was asked for.
   if (error && !(error.code === '23505' && error.message.includes(ATTEMPT_KEY_INDEX))) {
     // 23503: the market was deleted while the form was open.
-    return { formError: error.code === '23503' ? 'This market no longer exists.' : 'Couldn’t post your comment. Try again.' }
+    if (error.code === '23503') return { formError: 'This market no longer exists.' }
+    if (error.message === RATE_LIMIT_ERRORS.comment.match) return { formError: RATE_LIMIT_ERRORS.comment.formError }
+    return { formError: 'Couldn’t post your comment. Try again.' }
   }
 
   refresh()

@@ -17,7 +17,8 @@ This page explains the rules.
   invite nobody has used yet; once someone has signed in with it, only the
   owner can remove them (see [Roles](#roles)).
   Sign in with that Google account; any other account lands on a "not
-  invited" page.
+  invited" page, and what Google shared about it (name, email, picture)
+  is deleted the next day.
 - **Everyone starts with 100 DC.** Every coin you gain or spend is a line
   in the ledger, so a balance can always be explained. Your own lines are
   under My bets → Coins.
@@ -391,6 +392,25 @@ markets they created, or delete their comments. Their
 coins, bets and history stay where they are. If they sign in again they
 land on the not-invited page, and inviting them again brings them back as
 a member.
+
+## Limits
+
+So that one account, or a stolen session, can't flood the app, each
+member can make at most:
+
+| What | How many |
+|---|---|
+| New markets | 20 a day |
+| Comments | 10 a minute, 200 a day |
+| Reactions | 60 a minute, 1,000 a day |
+| Task submissions | 30 a day |
+| Bet cancels | 20 an hour |
+
+Each count starts with your first one and resets once its minute, hour
+or day has passed. Going over just refuses that one, with a message
+saying so; nothing else changes. Admins and the owner have no limits.
+Notifications stay on your ten most recently used devices: turning them
+on for an eleventh turns off the one you've used least recently.
 
 ## Around the app
 

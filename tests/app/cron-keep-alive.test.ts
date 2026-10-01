@@ -6,12 +6,14 @@ const settleSeason = vi.fn()
 const remove = vi.fn()
 const bucketOf = vi.fn()
 const pruneKeys = vi.fn()
+const deleteUser = vi.fn()
 vi.mock('@/lib/supabase/service-role', () => ({
   serviceRoleClient: () => ({
     from: (table: string) =>
       table === 'idempotency_keys' ? { delete: () => ({ lt: pruneKeys }) } : { select: () => ({ limit: profiles }) },
     rpc: (fn: string, args?: unknown) => (fn === 'settle_season' ? settleSeason(args) : rpc(fn, args)),
     storage: { from: (bucket: string) => (bucketOf(bucket), { remove }) },
+    auth: { admin: { deleteUser } },
   }),
 }))
 
@@ -27,9 +29,10 @@ beforeEach(() => {
   remove.mockReset().mockResolvedValue({ error: null })
   pruneKeys.mockReset().mockResolvedValue({ error: null })
   settleSeason.mockReset().mockResolvedValue({ data: null, error: null })
+  deleteUser.mockReset().mockResolvedValue({ error: null })
 })
 
-const quiet = { strayProofRemoved: 0, proofExpired: 0, strayAvatarsRemoved: 0, storageMb: 0, seasonChampion: null, resolveReminders: 0, marketAlerts: 0 }
+const quiet = { strayProofRemoved: 0, proofExpired: 0, strayAvatarsRemoved: 0, storageMb: 0, uninvitedUsersRemoved: 0, uninvitedUsersFailed: 0, seasonChampion: null, resolveReminders: 0, marketAlerts: 0 }
 
 // Every other rpc answers with nothing, so one step's rows don't leak into the next.
 function onlyRpc(name: string, data: unknown) {
@@ -83,6 +86,48 @@ describe('keep-alive cron', () => {
     pruneKeys.mockResolvedValue({ error: new Error('down') })
     vi.spyOn(console, 'error').mockImplementation(() => {})
     expect((await GET(authorized())).status).toBe(502)
+  })
+
+  it('deletes uninvited sign-ins through the Auth admin API, 50 a run (#275)', async () => {
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'uninvited_auth_users' ? { data: [{ id: 'u1' }, { id: 'u2' }], error: null } : { data: [], error: null },
+    )
+    const res = await GET(authorized())
+    expect(rpc).toHaveBeenCalledWith('uninvited_auth_users', { p_limit: 50 })
+    expect(deleteUser.mock.calls).toEqual([['u1'], ['u2']])
+    expect(await res.json()).toMatchObject({ ok: true, uninvitedUsersRemoved: 2 })
+  })
+
+  it('reports a delete that keeps failing without failing the step, so one stuck account never 502s every run', async () => {
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'uninvited_auth_users' ? { data: [{ id: 'stuck' }, { id: 'u2' }], error: null } : { data: [], error: null },
+    )
+    deleteUser.mockImplementation(async (id: string) => ({ error: id === 'stuck' ? new Error('Database error deleting user') : null }))
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const res = await GET(authorized())
+    expect(deleteUser).toHaveBeenCalledTimes(2)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ ok: true, uninvitedUsersRemoved: 1, uninvitedUsersFailed: 1 })
+    expect(log).toHaveBeenCalled()
+
+    // Alone, it still doesn't fail the run.
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'uninvited_auth_users' ? { data: [{ id: 'stuck' }], error: null } : { data: [], error: null },
+    )
+    const alone = await GET(authorized())
+    expect(alone.status).toBe(200)
+    expect(await alone.json()).toMatchObject({ ok: true, uninvitedUsersRemoved: 0, uninvitedUsersFailed: 1 })
+  })
+
+  it('fails the step when the list itself fails', async () => {
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'uninvited_auth_users' ? { data: null, error: new Error('down') } : { data: [], error: null },
+    )
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const res = await GET(authorized())
+    expect(res.status).toBe(502)
+    expect(await res.json()).toMatchObject({ ok: false, failed: ['uninvited sign-in cleanup'] })
+    expect(settleSeason).toHaveBeenCalled()
   })
 
   it("settles last month's season every run, with no month so the database picks it", async () => {

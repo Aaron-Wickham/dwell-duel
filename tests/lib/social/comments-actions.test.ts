@@ -50,6 +50,14 @@ describe('postCommentAction', () => {
     expect(await postCommentAction('not-a-uuid', undefined, form('Hi'))).toEqual({ formError: 'This market no longer exists.' })
     expect(refresh).not.toHaveBeenCalled()
   })
+
+  it('words the write limit (#273), keeping the comment out of the thread', async () => {
+    insert.mockResolvedValue({ error: { code: 'DD429', message: 'you have posted too many comments recently; try again later' } })
+    expect(await postCommentAction(MARKET, undefined, form('Hi'))).toEqual({
+      formError: 'You can post up to 10 comments a minute and 200 a day. Try again in a little while.',
+    })
+    expect(refresh).not.toHaveBeenCalled()
+  })
 })
 
 describe('deleteCommentAction', () => {

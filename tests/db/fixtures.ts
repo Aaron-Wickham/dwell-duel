@@ -224,11 +224,21 @@ export async function createTestMarket(
   })
   if (error) throw error
 
-  const { error: seedErr } = await serviceClient()
+  const { data: created, error: seedErr } = await serviceClient()
     .from('markets')
     .update({ seed_per_outcome: opts?.seed ?? 0 })
     .eq('id', marketId as string)
+    .select('created_by')
+    .single()
   if (seedErr) throw seedErr
+
+  // Some suites have one member make dozens of markets; the daily limit (0090) has its own tests.
+  const { error: limitErr } = await serviceClient()
+    .from('write_rate_counters')
+    .delete()
+    .eq('profile_id', created.created_by)
+    .eq('action', 'market')
+  if (limitErr) throw limitErr
 
   const { data: outcomes, error: outcomesErr } = await serviceClient()
     .from('market_outcomes')

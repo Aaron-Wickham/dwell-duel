@@ -80,6 +80,35 @@ Supabase Vault secrets (`app_url`, `cron_secret`), the pg_cron jobs, the
 migration history table, Auth settings (the Google provider, site and
 redirect URLs), API keys, and Vercel's environment variables.
 
+### Keeping secrets out of the logs
+
+This repo is public, and so are its Actions logs. The runner masks a
+secret's whole value, but not the password inside `SUPABASE_DB_URL`, which a
+tool can print on its own, percent-decoded or re-encoded, nor the base64
+header `git` authenticates to the backups repo with. So:
+
+- **Every job that uses `SUPABASE_DB_URL` or `BACKUP_REPO_TOKEN` runs
+  `scripts/backup/mask-secrets.sh` as its own step first**, with those
+  secrets in its `env`. It registers an `::add-mask::` for every form of
+  them and records what it masked in `BACKUP_MASKED`; `backup.sh db` and
+  `backup.sh push` refuse to run in Actions without it. A mask must be
+  printed on a step's own stdout: one printed inside `$(...)` is captured
+  instead and never registered, which is why it can't live in `backup.sh`.
+- **`backup.sh` prints only sealed file paths on stdout.** Everything else
+  goes to stderr, and the Supabase CLI's and `git`'s output passes through
+  `redact` (`scripts/backup/secrets.sh`), which blanks every form of the
+  secrets even if a mask is missing. `restore.sh` does the same for `psql`.
+- **The workflow checks what it captured** with
+  `scripts/backup/check-sealed.sh` before using it: every line must be a
+  sealed file in the output folder, and a line that isn't fails the step
+  without being printed.
+- `tests/lib/deploy/` guards all three: the workflows' step order, and the
+  scripts run with stub tools that echo a fake password.
+
+Never add `set -x` to these scripts or echo a variable that holds a secret.
+A secret that does reach a log must be rotated: deleting the run's log isn't
+enough, since anyone may have read it.
+
 ### The key
 
 The private key is kept offline, never in GitHub. Aaron made it once with

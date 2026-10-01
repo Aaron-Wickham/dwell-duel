@@ -100,6 +100,38 @@ describe('deploy order', () => {
     }
   })
 
+  // A ::add-mask:: line printed inside $(...) is captured, never registered, so the masks come
+  // from a step of their own, given every backup secret the job uses, before backup.sh runs.
+  it.each([
+    ['deploy-production.yml', deployJobs],
+    ['backups.yml', backupJobs],
+  ])('%s: every job with a backup secret masks it in its own step first', (_, blocks) => {
+    const maskStep = /- name: Mask secrets env: ((?:[A-Z_]+: \$\{\{ secrets\.[A-Z_]+ \}\} )+)run: scripts\/backup\/mask-secrets\.sh(?: |$)/
+    let guarded = 0
+    for (const [name, block] of Object.entries(blocks)) {
+      const secrets = ['SUPABASE_DB_URL', 'BACKUP_REPO_TOKEN'].filter((s) => block.includes(`${s}: \${{ secrets.${s} }}`))
+      if (secrets.length === 0) continue
+      guarded++
+      const mask = block.match(maskStep)
+      expect(mask, name).not.toBeNull()
+      const [start, end] = [mask!.index!, mask!.index! + mask![0].length]
+      for (const secret of secrets) {
+        const first = block.indexOf(`${secret}: \${{ secrets.${secret} }}`)
+        expect(first > start && first < end, `${name}: ${secret} is first given to the mask step`).toBe(true)
+      }
+      expect(block.indexOf('$(scripts/backup/backup.sh'), name).toBeGreaterThan(end)
+      for (const capture of block.matchAll(/SEALED=\$\(scripts\/backup\/backup\.sh [^)]*"\$OUT"[^)]*\) (.*?) mapfile -t FILES <<<"\$SEALED"/g)) {
+        expect(capture[1], name).toBe('scripts/backup/check-sealed.sh "$OUT" <<<"$SEALED"')
+      }
+      expect(block.match(/SEALED=\$\(/g)?.length, name).toBe(block.match(/check-sealed\.sh "\$OUT" <<<"\$SEALED"/g)?.length)
+    }
+    expect(guarded).toBeGreaterThan(0)
+  })
+
+  it('leaves masking to mask-secrets.sh: backup.sh prints no ::add-mask::', () => {
+    expect(readFileSync(path.join(root, 'scripts/backup/backup.sh'), 'utf8')).not.toContain('::add-mask::')
+  })
+
   // A migration can't land between the nightly dump's schema and data files.
   it('queues the nightly database backup behind deploys', () => {
     expect(backupJobs.database).toContain('concurrency: group: prod-db cancel-in-progress: false queue: max')

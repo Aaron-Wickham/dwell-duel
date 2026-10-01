@@ -4,6 +4,10 @@
 #
 #   restore.sh <backup-dir> <db-url>
 set -euo pipefail
+set +x
+
+# shellcheck source=scripts/backup/secrets.sh
+source "$(dirname "${BASH_SOURCE[0]}")/secrets.sh"
 
 [ "$#" -eq 2 ] || {
   echo "usage: restore.sh <backup-dir> <db-url>" >&2
@@ -18,9 +22,14 @@ for file in roles schema data; do
   }
 done
 
+# psql's messages, with the URL and its password blanked. Its exit status is kept.
+quietly_psql() {
+  psql --dbname "$db_url" "$@" 2>&1 | SUPABASE_DB_URL="$db_url" redact >&2
+}
+
 # The roles file also grants platform settings the postgres role may not re-grant, and those
 # already exist in any Supabase project, so an error here is reported but doesn't stop the restore.
-psql --dbname "$db_url" --quiet --file "$dir/roles.sql" || echo "Some role statements failed; see above." >&2
+quietly_psql --quiet --file "$dir/roles.sql" || echo "Some role statements failed; see above." >&2
 
 # Schema and data in one transaction, so a failure leaves the database as it was. Triggers are off
 # while the rows load, as they were written. The data dump has a COPY for every table, empty or
@@ -32,7 +41,7 @@ awk '
   { print }
 ' "$dir/data.sql" >"$dir/data.nonempty.sql"
 
-psql --dbname "$db_url" --quiet --single-transaction --variable ON_ERROR_STOP=1 \
+quietly_psql --quiet --single-transaction --variable ON_ERROR_STOP=1 \
   --file "$dir/schema.sql" \
   --command 'SET session_replication_role = replica' \
   --file "$dir/data.nonempty.sql"

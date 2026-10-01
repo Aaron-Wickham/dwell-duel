@@ -12,6 +12,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Deploys push whatever production is missing.** Deploy Production asks production which migrations it lacks on every run instead of reading the merge's diff, so one a failed run left behind goes out with the next; waiting runs queue instead of replacing each other; and a run that main has moved past no longer fails waiting on a build it never started (#249).
 - **CI fails a migration numbered out of order.** A PR's new migration must be numbered after main's newest (#249).
 - **Deploy Production runs only from main,** with its secrets in the Production environment, and `ci-ok` is required for every merge (#291).
+- **Backup jobs register secret masks before running.** Each job masks its backup secrets in a step of its own, the backup scripts blank them from every tool's output, and the workflows check that a backup printed only its file paths before pushing them.
 
 ## v0.5.2-beta — 2026-09-30
 

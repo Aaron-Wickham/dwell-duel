@@ -15,10 +15,17 @@
 # db and storage write one sealed file, <out-dir>/<UTC time>-<label>.tar.gz.age, encrypted to
 # $BACKUP_AGE_RECIPIENT, and print its path(s). Nothing unencrypted leaves the temporary directory,
 # and nothing from the dump is printed.
+#
+# Workflows capture stdout to read those paths, so stdout carries nothing else; everything else
+# goes to stderr, with the secrets blanked. Inside Actions, db and push refuse to run unless an
+# earlier step ran mask-secrets.sh.
 set -euo pipefail
+set +x
 umask 077
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/backup/secrets.sh
+source "$REPO_ROOT/scripts/backup/secrets.sh"
 BUCKETS=(proof avatars)
 # GitHub rejects files over 100 MB.
 PART_SIZE=95m
@@ -70,25 +77,23 @@ seal() {
   fi
 }
 
-# GitHub masks the whole secret, not the password inside it, which an error could print alone.
-mask_db_password() {
+need_masked() {
   [ -n "${GITHUB_ACTIONS:-}" ] || return 0
-  local rest="${SUPABASE_DB_URL#*://}"
-  case "$rest" in *@*) ;; *) return 0 ;; esac
-  local userinfo="${rest%@*}"
-  case "$userinfo" in *:*) ;; *) return 0 ;; esac
-  local password="${userinfo#*:}"
-  [ -n "$password" ] || return 0
-  echo "::add-mask::$password"
-  local decoded
-  decoded="$(printf '%b' "${password//%/\\x}")"
-  if [ "$decoded" != "$password" ]; then echo "::add-mask::$decoded"; fi
+  case ",${BACKUP_MASKED:-}," in
+    *",$1,"*) ;;
+    *) die "Run scripts/backup/mask-secrets.sh in an earlier step with this step's secrets, so they are masked first." ;;
+  esac
+}
+
+# A tool's output, all of it to stderr, with the secrets blanked. Its exit status is kept.
+quietly() {
+  "$@" 2>&1 | redact >&2
 }
 
 dump_db() {
   local label="$1" out_dir="$2"
   [ -n "${SUPABASE_DB_URL:-}" ] || die "SUPABASE_DB_URL is not set."
-  mask_db_password
+  need_masked db-url
   need supabase age gzip tar
   need_recipient
   out_dir="$(absolute_dir "$out_dir")"
@@ -96,10 +101,10 @@ dump_db() {
   mkdir "$WORK/db"
   # Run from the repo so the CLI dumps with the Postgres major version in supabase/config.toml.
   cd "$REPO_ROOT"
-  supabase db dump --db-url "$SUPABASE_DB_URL" --role-only -f "$WORK/db/roles.sql" >&2
-  supabase db dump --db-url "$SUPABASE_DB_URL" -f "$WORK/db/schema.sql" >&2
+  quietly supabase db dump --db-url "$SUPABASE_DB_URL" --role-only -f "$WORK/db/roles.sql"
+  quietly supabase db dump --db-url "$SUPABASE_DB_URL" -f "$WORK/db/schema.sql"
   # Every schema but the platform's own, so auth.users and storage.objects come along.
-  supabase db dump --db-url "$SUPABASE_DB_URL" --data-only --use-copy -f "$WORK/db/data.sql" >&2
+  quietly supabase db dump --db-url "$SUPABASE_DB_URL" --data-only --use-copy -f "$WORK/db/data.sql"
   for file in roles schema data; do
     [ -s "$WORK/db/$file.sql" ] || die "The $file dump is empty."
   done
@@ -160,12 +165,18 @@ push_backups() {
   local repo="${BACKUP_REPO:-Aaron-Wickham/dwell-duel-backups}"
   local keep_days="${BACKUP_RETENTION_DAYS:-60}"
   local keep_min="${BACKUP_KEEP_MIN:-14}"
+  need_masked repo-token
   need git
-  local auth
-  auth="$(printf 'x-access-token:%s' "$BACKUP_REPO_TOKEN" | base64 | tr -d '\n')"
-  if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::add-mask::$auth"; fi
+  # Through the environment rather than -c, so the header isn't on a command line.
+  export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.extraHeader
+  GIT_CONFIG_VALUE_0="Authorization: Basic $(repo_auth "$BACKUP_REPO_TOKEN")"
+  export GIT_CONFIG_VALUE_0
   local files=()
-  for file in "$@"; do files+=("$(cd "$(dirname "$file")" && pwd)/$(basename "$file")"); done
+  for file in "$@"; do
+    # Not named: a caller that captured something other than a path would print it here.
+    [ -f "$file" ] || die "One of the files to push doesn't exist."
+    files+=("$(cd "$(dirname "$file")" && pwd)/$(basename "$file")")
+  done
   make_work
   local cutoff
   cutoff="$(cutoff_date "$keep_days")"
@@ -173,7 +184,7 @@ push_backups() {
   for attempt in 1 2 3 4 5; do
     rm -rf "$WORK/repo"
     git init -q -b main "$WORK/repo"
-    local g=(git -C "$WORK/repo" -c "http.extraHeader=Authorization: Basic $auth"
+    local g=(git -C "$WORK/repo"
       -c user.name="DwellDuel backups" -c user.email="backups@users.noreply.github.com")
     "${g[@]}" remote add origin "${BACKUP_REMOTE:-https://github.com/$repo.git}"
     local lease=""
@@ -185,8 +196,8 @@ push_backups() {
     cp "${files[@]}" "$WORK/repo/$subdir/"
     prune "$WORK/repo/$subdir" "$cutoff" "$keep_min"
     "${g[@]}" add -A
-    "${g[@]}" commit -q -m "Backups as of $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    if "${g[@]}" push -q --force-with-lease="main:$lease" origin HEAD:main; then
+    quietly "${g[@]}" commit -q -m "Backups as of $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    if quietly "${g[@]}" push -q --force-with-lease="main:$lease" origin HEAD:main; then
       echo "Pushed ${#files[@]} file(s) to $repo/$subdir; kept backups from $cutoff on, and at least the newest $keep_min." >&2
       return 0
     fi

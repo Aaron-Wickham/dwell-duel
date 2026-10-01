@@ -46,6 +46,8 @@ export async function GET(request: Request) {
         }
         if (result.reason === 'not_invited') {
           await supabase.auth.signOut({ scope: 'local' })
+          // next rides on in /not-invited's URL now, so the cookie mustn't linger for a later sign-in.
+          await clearNext()
           // Says which account was refused, and keeps the destination for the right one.
           if (user.email) {
             ;(await cookies()).set(NOT_INVITED_EMAIL_COOKIE, user.email, {

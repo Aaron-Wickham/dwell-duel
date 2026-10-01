@@ -7,7 +7,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { safeNextPath } from '@/lib/auth/next-path'
 import { NOT_INVITED_EMAIL_COOKIE } from '@/lib/auth/not-invited'
 import { cn } from '@/lib/utils'
-import { ClearNotInvitedEmail } from './clear-email'
+import { RefusedEmail } from './refused-email'
 
 export default async function NotInvitedPage({ searchParams }: PageProps<'/not-invited'>) {
   const email = (await cookies()).get(NOT_INVITED_EMAIL_COOKIE)?.value ?? null
@@ -22,11 +22,7 @@ export default async function NotInvitedPage({ searchParams }: PageProps<'/not-i
           <Mail className="size-6" />
         </span>
         <h1 className={h1Class}>Not invited</h1>
-        {email && (
-          <p className="break-words">
-            You signed in as <strong>{email}</strong>.
-          </p>
-        )}
+        <RefusedEmail email={email} />
         <p className="text-ink2">
           This Google account isn’t on the invite list yet. Ask a DwellDuel admin to add it, then sign in again.
         </p>
@@ -36,7 +32,6 @@ export default async function NotInvitedPage({ searchParams }: PageProps<'/not-i
         >
           Try another account
         </Link>
-        {email && <ClearNotInvitedEmail />}
       </Card>
     </main>
   )

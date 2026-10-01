@@ -56,6 +56,9 @@ test('not-invited names the refused account once, and Try another account keeps 
   await expect(page.getByText('You signed in as wrong@example.com.')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Try another account' })).toHaveAttribute('href', '/sign-in?next=%2Fmarkets')
   await expect.poll(async () => (await page.context().cookies()).some((c) => c.name === 'not-invited-email')).toBe(false)
+  // Clearing the cookie mustn't re-render the email away: it stays on screen afterwards.
+  await page.waitForTimeout(2000)
+  await expect(page.getByText('You signed in as wrong@example.com.')).toBeVisible()
   await page.reload()
   await expect(page.getByText(/You signed in as/)).toHaveCount(0)
 })

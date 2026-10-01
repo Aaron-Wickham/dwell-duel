@@ -459,8 +459,9 @@ only a same-site app path, never `//host`, a backslash or a scheme. A
 cookie, rather than `/callback?next=` in `redirectTo`, keeps Supabase's
 redirect allow-list to exact URLs. A refused sign-in goes to `/not-invited?next=…`
 with the email in the httpOnly `not-invited-email` cookie (path
-`/not-invited`, five minutes), never the URL; the page shows it and clears
-it with a server action, and its "Try another account" keeps `next`. The `profiles` trigger
+`/not-invited`, five minutes), never the URL; the page keeps it in client state and
+clears it through `POST /not-invited/clear` (a route handler, since a
+Server Action that changes a cookie re-renders the page), and its "Try another account" keeps `next`. The `profiles` trigger
 creates the profile and the 100 DC starting grant. `requireUser` reads
 claims and throws `AuthUnavailableError` (not "signed out") when Auth
 itself is down.

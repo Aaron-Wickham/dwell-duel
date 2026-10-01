@@ -90,6 +90,8 @@ describe('auth callback (#194)', () => {
     expect(location).toBe('https://www.dwellduel.com/not-invited?next=%2Fmarkets%2Fabc')
     expect(location).not.toContain('mo%40example.com')
     expect(location).not.toContain('mo@example.com')
+    // next now rides in the URL, so its cookie is cleared rather than left for a later sign-in.
+    expect(setCookie).toHaveBeenCalledWith('sign-in-next', '', { path: '/callback', maxAge: 0 })
     expect(setCookie).toHaveBeenCalledWith('not-invited-email', 'mo@example.com', {
       path: '/not-invited',
       maxAge: 300,

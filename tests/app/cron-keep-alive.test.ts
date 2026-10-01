@@ -4,13 +4,14 @@ const profiles = vi.fn()
 const rpc = vi.fn()
 const settleSeason = vi.fn()
 const remove = vi.fn()
+const bucketOf = vi.fn()
 const pruneKeys = vi.fn()
 vi.mock('@/lib/supabase/service-role', () => ({
   serviceRoleClient: () => ({
     from: (table: string) =>
       table === 'idempotency_keys' ? { delete: () => ({ lt: pruneKeys }) } : { select: () => ({ limit: profiles }) },
     rpc: (fn: string, args?: unknown) => (fn === 'settle_season' ? settleSeason(args) : rpc(fn, args)),
-    storage: { from: () => ({ remove }) },
+    storage: { from: (bucket: string) => (bucketOf(bucket), { remove }) },
   }),
 }))
 
@@ -22,10 +23,18 @@ beforeEach(() => {
   vi.stubEnv('CRON_SECRET', 's3cret')
   profiles.mockReset().mockResolvedValue({ error: null })
   rpc.mockReset().mockResolvedValue({ data: [], error: null })
+  bucketOf.mockReset()
   remove.mockReset().mockResolvedValue({ error: null })
   pruneKeys.mockReset().mockResolvedValue({ error: null })
   settleSeason.mockReset().mockResolvedValue({ data: null, error: null })
 })
+
+const quiet = { strayProofRemoved: 0, proofExpired: 0, strayAvatarsRemoved: 0, storageMb: 0, seasonChampion: null, resolveReminders: 0, marketAlerts: 0 }
+
+// Every other rpc answers with nothing, so one step's rows don't leak into the next.
+function onlyRpc(name: string, data: unknown) {
+  rpc.mockImplementation(async (fn: string) => ({ data: fn === name ? data : [], error: null }))
+}
 
 describe('keep-alive cron', () => {
   it('refuses a request without the cron secret', async () => {
@@ -35,17 +44,17 @@ describe('keep-alive cron', () => {
   })
 
   it('touches the database and removes stray proof files through the Storage API', async () => {
-    rpc.mockResolvedValue({ data: [{ name: 'task/u/1/a.txt' }, { name: 'task/u/2/b.jpg' }], error: null })
+    onlyRpc('stray_proof_objects', [{ name: 'task/u/1/a.txt' }, { name: 'task/u/2/b.jpg' }])
     const res = await GET(authorized())
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ ok: true, strayProofRemoved: 2, seasonChampion: null, resolveReminders: 0, marketAlerts: 0 })
+    expect(await res.json()).toEqual({ ok: true, ...quiet, strayProofRemoved: 2 })
     expect(rpc).toHaveBeenCalledWith('stray_proof_objects', { p_limit: 500 })
     expect(remove).toHaveBeenCalledWith(['task/u/1/a.txt', 'task/u/2/b.jpg'])
   })
 
   it('skips the Storage call when nothing is stray', async () => {
     const res = await GET(authorized())
-    expect(await res.json()).toEqual({ ok: true, strayProofRemoved: 0, seasonChampion: null, resolveReminders: 0, marketAlerts: 0 })
+    expect(await res.json()).toEqual({ ok: true, ...quiet })
     expect(remove).not.toHaveBeenCalled()
   })
 
@@ -55,7 +64,7 @@ describe('keep-alive cron', () => {
   })
 
   it('reports a failed cleanup as a 502, so the cron log shows it', async () => {
-    rpc.mockResolvedValue({ data: [{ name: 'task/u/1/a.txt' }], error: null })
+    onlyRpc('stray_proof_objects', [{ name: 'task/u/1/a.txt' }])
     remove.mockResolvedValue({ error: new Error('storage down') })
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const res = await GET(authorized())
@@ -133,5 +142,49 @@ describe('keep-alive cron', () => {
     await GET(authorized())
     expect(fetchSpy.mock.calls[1][0]).toBe('https://hc-ping.com/abc/fail')
     fetchSpy.mockRestore()
+  })
+
+  describe('storage housekeeping (#253)', () => {
+    it('deletes the files of expired proof, then stamps their rows', async () => {
+      onlyRpc('expired_proof_attachments', [
+        { id: 'a1', storage_path: 'task/u/1/a.webp' },
+        { id: 'a2', storage_path: 'resolution/m/2/b.pdf' },
+      ])
+      const res = await GET(authorized())
+      expect(await res.json()).toMatchObject({ ok: true, proofExpired: 2 })
+      expect(rpc).toHaveBeenCalledWith('expired_proof_attachments', { p_task_days: 30, p_resolution_days: 90, p_limit: 500 })
+      expect(bucketOf).toHaveBeenCalledWith('proof')
+      expect(remove).toHaveBeenCalledWith(['task/u/1/a.webp', 'resolution/m/2/b.pdf'])
+      expect(rpc).toHaveBeenCalledWith('mark_proof_expired', { p_ids: ['a1', 'a2'] })
+      expect(remove.mock.invocationCallOrder[0]).toBeLessThan(rpc.mock.invocationCallOrder[rpc.mock.calls.findIndex((c) => c[0] === 'mark_proof_expired')])
+    })
+
+    it('leaves the rows unstamped when the files could not be removed, so the next run retries', async () => {
+      onlyRpc('expired_proof_attachments', [{ id: 'a1', storage_path: 'task/u/1/a.webp' }])
+      remove.mockResolvedValue({ error: new Error('storage down') })
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      const res = await GET(authorized())
+      expect((await res.json()).failed).toEqual(['proof retention'])
+      expect(rpc).not.toHaveBeenCalledWith('mark_proof_expired', expect.anything())
+    })
+
+    it('removes avatar files no profile points at', async () => {
+      onlyRpc('stray_avatar_objects', [{ name: 'u/old.jpg' }])
+      const res = await GET(authorized())
+      expect(await res.json()).toMatchObject({ ok: true, strayAvatarsRemoved: 1 })
+      expect(bucketOf).toHaveBeenCalledWith('avatars')
+      expect(remove).toHaveBeenCalledWith(['u/old.jpg'])
+    })
+
+    it('reports storage in MB, and fails the run past 800 MB of the 1 GB plan', async () => {
+      onlyRpc('storage_usage', [{ bucket_id: 'proof', objects: 10, bytes: '104857600' }, { bucket_id: 'avatars', objects: 1, bytes: 1048576 }])
+      expect(await (await GET(authorized())).json()).toMatchObject({ ok: true, storageMb: 101 })
+
+      onlyRpc('storage_usage', [{ bucket_id: 'proof', objects: 10, bytes: 900 * 1048576 }])
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      const res = await GET(authorized())
+      expect(res.status).toBe(502)
+      expect((await res.json()).failed).toEqual(['storage usage'])
+    })
   })
 })

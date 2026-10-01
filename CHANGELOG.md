@@ -16,6 +16,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ### Fixes
 - **A balance can't run past the ledger's integer ceiling.** A credit that would take a balance past 2,147,483,647 DC is cut to fit, so it can never block a resolution (#287).
+- **This month's awards leave out removed members**, so an award goes to the next member still in (#287).
 - **The owner can remove a bet only until its market closes**, the same moment members stop being able to cancel one (#272).
 - **Voids follow the same rule as results, and say why.** Until a market closes, its creator or an admin can void it; once it has closed, only an admin can. Every void needs a reason (up to 500 characters), which shows on the market page and, with the void itself, in the feed (#290).
 - **The feed skips an event kind it doesn't recognise** instead of failing, so a new kind can reach the database before the build that shows it (#290).

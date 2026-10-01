@@ -26,6 +26,7 @@
 --    A refund (cancel_bet, remove_bet) is cut the same way, and cancelled_bets records what was
 --    refunded.
 -- 6. remove_bet refuses once the market has closed, like cancel_bet (#272).
+-- 7. This month's awards leave out removed members, as the boards do (#265's rule).
 --
 -- Additive: every function keeps its signature, so the build before this one keeps calling them
 -- while it deploys. parlay_limits() gains columns (nothing in the app calls it). locked_odds becomes
@@ -843,8 +844,8 @@ $$;
 
 -- ─── Best parlay figures ─────────────────────────────────────────────────────
 -- 0055's member_stats and 0060's leaderboard_awards, with each parlay capped at its own
--- max_multiplier rather than today's parlay_limits(), so a parlay placed under the 100× cap keeps
--- the figure it was paid on.
+-- max_multiplier rather than today's parlay_limits(), so a parlay settled under the 100× cap keeps
+-- the figure it was paid on. leaderboard_awards also leaves out removed members.
 create or replace function public.member_stats(p_profile_id uuid)
 returns table (
   bets_won integer,
@@ -969,12 +970,21 @@ begin
   end if;
 
   return query
+  -- Members still in DwellDuel: a removed member (remove_member deletes their invite) wins no award.
+  -- The same rule as invited_member_ids() (#265): an invite by email, or one they claimed.
+  with members as (
+    select p.id
+    from public.profiles p
+    where exists (select 1 from public.allowed_emails a where a.email = lower(p.email))
+       or exists (select 1 from public.allowed_emails a where a.claimed_by = p.id)
+  )
   (
     select 'biggest_win'::text, p.id, p.display_name, p.avatar_path, (t.amount - b.amount)::numeric, m.title
     from public.coin_transactions t
     join public.bets b on b.id = (t.meta ->> 'bet_id')::bigint
     join public.markets m on m.id = b.market_id and m.current_resolution_id = (t.meta ->> 'resolution_id')::uuid
     join public.profiles p on p.id = t.profile_id
+    join members cm on cm.id = p.id
     where t.type = 'bet_won' and t.created_at >= v_from and t.created_at < v_to and t.amount > b.amount
     order by (t.amount - b.amount) desc, t.id
     limit 1
@@ -996,6 +1006,7 @@ begin
       group by pa.id, pa.profile_id, pa.credited, pa.max_multiplier
     ) x
     join public.profiles p on p.id = x.profile_id
+    join members cm on cm.id = p.id
     order by 5 desc, x.credited desc, x.id
     limit 1
   )
@@ -1014,6 +1025,7 @@ begin
       group by b.profile_id
     ) x
     join public.profiles p on p.id = x.profile_id
+    join members cm on cm.id = p.id
     where x.won + x.lost >= 5
     order by round(x.won::numeric / (x.won + x.lost), 4) desc, x.won + x.lost desc, p.display_name, p.id
     limit 1
@@ -1031,6 +1043,7 @@ begin
       group by z.profile_id
     ) y
     join public.profiles p on p.id = y.profile_id
+    join members cm on cm.id = p.id
     order by y.n desc, p.display_name, p.id
     limit 1
   );

@@ -112,6 +112,28 @@ describe('leaderboard_awards', () => {
     expect(Number(award(rows, 'most_active')?.value)).toBe(3)
   })
 
+  it('leaves a removed member out, and gives the award to the next member still in', async () => {
+    // Bob's 10 against Carol's 30 gains 30; Carol's 10 against Bob's 5 gains 5.
+    const big = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Bob wins this one' })
+    await bet(bobClient, big, 0, 10)
+    await bet(carolClient, big, 1, 30)
+    await resolve(big, 0)
+    const small = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Carol wins this one' })
+    await bet(carolClient, small, 0, 10)
+    await bet(bobClient, small, 1, 5)
+    await resolve(small, 0)
+    expect(award(await awards(aliceClient), 'biggest_win')).toMatchObject({ profile_id: bob.id })
+
+    const olive = await makeMember('Olive')
+    await giveRole(olive, 'owner')
+    expect((await (await clientFor(olive)).rpc('remove_member', { p_profile_id: bob.id })).error).toBeNull()
+
+    const rows = await awards(aliceClient)
+    expect(award(rows, 'biggest_win')).toMatchObject({ profile_id: carol.id, detail: 'Carol wins this one' })
+    expect(Number(award(rows, 'biggest_win')?.value)).toBe(5)
+    expect(rows.map((r) => r.profile_id)).not.toContain(bob.id)
+  })
+
   it('gives best parlay the multiplier the parlay page and the Stats card show, not the floored payout over the stake', async () => {
     // Bob's 30 and Backer1's 20 on Yes against Backer2's 20 on No: 70 / 50 = 1.40× at close. The
     // other leg is 2.00×, and a third is voided and drops out. 3 DC at 2.80× pays floor(8.4) = 8,

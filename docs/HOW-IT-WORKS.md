@@ -273,7 +273,8 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   solo bets and parlays placed this month). A tie on Biggest win goes to
   the payout that came first, and on Best parlay to the parlay that paid
   more. Sharpshooter and Most active go to whoever has more of what's
-  counted, then the name.
+  counted, then the name. A removed member wins no award; it goes to the
+  next member still in.
 - **Past champions** lists the months already crowned.
 - **Monthly champion:** when a month ends, whoever finished it with the
   top profit is posted to the feed early on the 1st, Eastern time ("Alice

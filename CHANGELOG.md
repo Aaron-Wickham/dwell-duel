@@ -24,6 +24,9 @@ before v0.4.0 used other headings.)
 - **Sentry no longer reports a skipped page transition.** Rotating a phone or opening the keyboard mid-navigation made the browser skip the animation, and React left that rejection unhandled; those events are now dropped.
 - **A Supabase error reported to Sentry says what failed.** A timed-out or refused call is sent as an error named for its step (for example "Closing alerts failed: TimeoutError: …") with the caller's stack, instead of a bare message with no frame of ours.
 
+### Polish
+- **The privacy page lists a contact email** for questions about your data.
+
 ## v0.7.0-beta — 2026-10-01
 
 Finding things and knowing where you stand are much easier. Markets has a title search and "I bet on" / "I made" filters, the Feed has Results and Mine tabs, and a market you have money on now shows a **Your position** card with each bet, what it pays and how it ended. Each outcome shows the DC riding on it in pending parlays, without moving the odds. New members get a clearer start: How it works comes first, 0 DC points to Tasks instead of a dead end, and the slip shows your balance and what's left after you bet. Lists load faster, and live updates are lighter and stay within the free-plan limits, falling back to a refresh every minute if a connection can't be made. Signing in returns you to the link you opened, and accessibility and layout polish touches the tab bar, toasts, My bets and long names. For admins, Members and Invites have search, tabs and paging, each member has their own Admin page, and the task review queue pages instead of loading everything. Behind the scenes there are caps and retention on stored files, limits on how fast members can write, a Your data section on what DwellDuel keeps, and new Admin guide, Operations, Releasing and Security docs.

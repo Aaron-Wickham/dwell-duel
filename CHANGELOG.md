@@ -6,6 +6,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Fixes
+- **Live updates no longer die on a fresh page load.** The live channels could join before the app had read your session, as a signed-out visitor, and the server then refused them, so your balance and the page stopped updating until a reload. They now wait for your session, and a refused channel falls back to refreshing every minute (#310).
+
 ### Under the hood
 - **Live updates fit the free tiers at 1,000 members.** Group-wide changes (markets, pools, the feed, reactions, tasks and the review queue) now arrive as one private Broadcast ping per topic per transaction, at most one every 5 seconds, instead of a message per row to every open page, so a 150-winner resolution sends one ping rather than 150; only invited members can join, and only reviewers the review queue. A tab hidden for a minute closes its live channels and catches up when it returns, and a channel that can't join (past the connection cap, say) falls back to refreshing every minute instead of going quiet. The busiest topics, bets moving pools and the feed, refresh an open `/markets` or feed at most every 15 seconds. The proxy no longer runs on link prefetches, and the nav, tabs and long lists prefetch a page when you point at, focus or (for the nav) touch its link rather than whenever it scrolls into view. The Realtime and Vercel budget is modelled in `docs/ARCHITECTURE.md` (#250, #251).
 

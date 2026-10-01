@@ -88,15 +88,19 @@ const closingTopics = new Map<string, Promise<unknown>>()
 type Client = Awaited<ReturnType<typeof loadSupabaseClient>>
 
 // Loaded on mount rather than imported, so the Supabase client stays off every page's critical
-// path. A private channel's join carries the member's token, so it's set before any channel opens.
+// path.
 async function loadSupabaseClient() {
   const { browserClient } = await import('@/lib/supabase/client')
-  const supabase = browserClient()
-  await supabase.realtime.setAuth().catch(() => {})
-  return supabase
+  return browserClient()
 }
 
 function subscribeChannel(channel: RealtimeChannel, key: string, scheduler: () => Scheduler) {
+  // The server can accept a join and then refuse its Postgres Changes ("Unable to subscribe to
+  // changes…", an invalid filter column for a join that went out without the member's token, #310)
+  // in a later system message, which never reaches the subscribe callback, so it's heard here.
+  channel.on('system', {}, (payload: { status?: string }) => {
+    if (payload?.status === 'error') scheduler().status(key, 'CHANNEL_ERROR')
+  })
   // Postgres Changes has no replay, and a ping missed while the socket was down is gone too: the
   // first SUBSCRIBED is the initial join, and every later one follows a reconnect, so it refreshes.
   let joined = false
@@ -129,6 +133,12 @@ export function LiveRefresh(): null {
   // The channel effects can fire in the same commit, so they share one dynamic import instead of
   // each starting their own.
   const clientRef = useRef<Promise<Client> | null>(null)
+  // A fresh client is still reading the session from its cookies, and a join sent before that goes
+  // out without the member's token, as anon: every filtered Postgres Changes subscription and every
+  // private topic is then refused (#310). So the token is set before any channel opens, and again
+  // when a sleeping tab wakes, since it may have expired meanwhile (setAuth reads it through
+  // getSession, which refreshes an expired one).
+  const authRef = useRef<Promise<void> | null>(null)
   function loadClient() {
     // A rejection clears the cached promise: offline or a stale chunk is often transient, and the
     // next navigation should try again rather than replay one bad load for the rest of the mount.
@@ -136,7 +146,10 @@ export function LiveRefresh(): null {
       clientRef.current = null
       throw error
     })
-    return clientRef.current
+    return clientRef.current.then((supabase) => {
+      authRef.current ??= supabase.realtime.setAuth().catch(() => {})
+      return authRef.current.then(() => supabase)
+    })
   }
 
   // The scheduler, the visibility listener and the polling fallback: set up once for the mount.
@@ -228,7 +241,10 @@ export function LiveRefresh(): null {
         // channels, so returning catches up straight away.
         refresh()
       } else if (hiddenTimer === undefined) {
-        hiddenTimer = setTimeout(() => setAwake(false), HIDDEN_CLOSE_MS)
+        hiddenTimer = setTimeout(() => {
+          authRef.current = null
+          setAwake(false)
+        }, HIDDEN_CLOSE_MS)
       }
     }
     document.addEventListener('visibilitychange', onVisibilityChange)

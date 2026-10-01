@@ -6,11 +6,13 @@ import { LiveTables, LiveTablesProvider } from '@/components/live/live-tables'
 import type { LiveSubscription } from '@/components/live/live-refresh'
 
 type Status = 'SUBSCRIBED' | 'CLOSED' | 'CHANNEL_ERROR' | 'TIMED_OUT'
-type Handler = () => void
+type Handler = (payload?: unknown) => void
 type OnConfig = { event: string; schema?: string; table?: string; filter?: string }
 
 interface MockChannel {
   topic: string
+  // Whether the Realtime token had been set when subscribe() was called.
+  authedAtSubscribe?: boolean
   options?: { config: { private?: boolean } }
   on: ReturnType<typeof vi.fn>
   subscribe: ReturnType<typeof vi.fn>
@@ -21,6 +23,7 @@ interface MockChannel {
 
 const mocks = vi.hoisted(() => {
   const channels: MockChannel[] = []
+  const state = { authed: false }
 
   function makeChannel(topic: string, options?: MockChannel['options']): MockChannel {
     const handlersByTable = new Map<string, Handler[]>()
@@ -34,14 +37,16 @@ const mocks = vi.hoisted(() => {
       on: vi.fn(),
       subscribe: vi.fn(),
     }
-    // Postgres Changes handlers are keyed by table, Broadcast ones by `broadcast:<event>`.
+    // Postgres Changes handlers are keyed by table, Broadcast ones by `broadcast:<event>`, and the
+    // system-message handler by `system`.
     channel.on = vi.fn((type: string, config: OnConfig, handler: Handler) => {
-      const key = type === 'broadcast' ? `broadcast:${config.event}` : config.table!
+      const key = type === 'broadcast' ? `broadcast:${config.event}` : type === 'system' ? 'system' : config.table!
       handlersByTable.set(key, [...(handlersByTable.get(key) ?? []), handler])
       configsByTable.set(key, [...(configsByTable.get(key) ?? []), config])
       return channel
     })
     channel.subscribe = vi.fn((callback: (status: Status) => void) => {
+      channel.authedAtSubscribe = state.authed
       channel.report = callback
       return channel
     })
@@ -55,7 +60,12 @@ const mocks = vi.hoisted(() => {
       return channel
     }),
     removeChannel: vi.fn((_channel: MockChannel): Promise<string> => Promise.resolve('ok')),
-    realtime: { setAuth: vi.fn(() => Promise.resolve()) },
+    realtime: {
+      setAuth: vi.fn((): Promise<void> => {
+        state.authed = true
+        return Promise.resolve()
+      }),
+    },
   }
   const refresh = vi.fn()
   // Next's real useRouter() returns a stable object across renders; a fresh one on every call
@@ -69,6 +79,7 @@ const mocks = vi.hoisted(() => {
   let failNextImport = false
   return {
     channels,
+    state,
     client,
     browserClient: vi.fn(() => client),
     refresh,
@@ -184,6 +195,7 @@ beforeEach(() => {
   mocks.client.removeChannel.mockClear()
   mocks.client.removeChannel.mockImplementation(() => Promise.resolve('ok'))
   mocks.client.realtime.setAuth.mockClear()
+  mocks.state.authed = false
   mocks.browserClient.mockClear()
   mocks.refresh.mockClear()
   mocks.consumeImportFailure() // clears a leftover flag from a test that failed before using it
@@ -225,7 +237,7 @@ describe('LiveRefresh', () => {
     expect(container).toBeEmptyDOMElement()
     expect(page).toBeUndefined()
     expect(mocks.client.channel).toHaveBeenCalledTimes(1)
-    expect(base.on).toHaveBeenCalledTimes(1)
+    expect(base.on.mock.calls.filter(([type]) => type === 'postgres_changes')).toHaveLength(1)
     expect(base.on).toHaveBeenCalledWith(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'profiles', filter: 'id=eq.member-1' },
@@ -676,6 +688,103 @@ describe('LiveRefresh', () => {
     vi.advanceTimersByTime(POLL_MS * 2)
 
     expect(mocks.refresh).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  // #310: a join sent before the client has read the session goes out as anon, and the server then
+  // refuses every filtered Postgres Changes subscription and every private topic.
+  function holdAuth(): () => Promise<void> {
+    let release: () => void = () => {}
+    mocks.client.realtime.setAuth.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          release = () => {
+            mocks.state.authed = true
+            resolve()
+          }
+        }),
+    )
+    return async () => {
+      release()
+      await settle()
+    }
+  }
+
+  it('sets the Realtime token before the base, page and topic channels subscribe', async () => {
+    const releaseAuth = holdAuth()
+    render(<Harness subscriptions={[{ table: 'bets', filter: 'market_id=eq.market-1' }, { topic: 'markets' }]} />)
+    await act(() => vi.dynamicImportSettled())
+    await settle()
+
+    expect(mocks.client.realtime.setAuth).toHaveBeenCalledTimes(1)
+    expect(mocks.channels.filter((c) => c.subscribe.mock.calls.length > 0)).toEqual([])
+
+    await releaseAuth()
+
+    const subscribed = mocks.channels.filter((c) => c.subscribe.mock.calls.length > 0)
+    expect(subscribed.map((c) => c.topic.replace(/:\d+$/, ''))).toEqual(
+      expect.arrayContaining(['live-base', 'live-refresh', 'live:markets']),
+    )
+    expect(subscribed.every((c) => c.authedAtSubscribe)).toBe(true)
+  })
+
+  it('sets the token again before reopening channels when a sleeping tab wakes', async () => {
+    const { base, page } = await mount([{ table: 'bets', filter: 'market_id=eq.market-1' }, { topic: 'markets' }])
+    expect(mocks.client.realtime.setAuth).toHaveBeenCalledTimes(1)
+
+    hide()
+    await act(async () => {
+      vi.advanceTimersByTime(HIDDEN_CLOSE_MS)
+    })
+    await settle()
+    expect(mocks.client.removeChannel).toHaveBeenCalledWith(base)
+    expect(mocks.client.removeChannel).toHaveBeenCalledWith(page)
+
+    mocks.state.authed = false
+    const releaseAuth = holdAuth()
+    const opened = mocks.channels.length
+    await act(async () => show())
+    await settle()
+
+    expect(mocks.client.realtime.setAuth).toHaveBeenCalledTimes(2)
+    expect(mocks.channels.slice(opened).filter((c) => c.subscribe.mock.calls.length > 0)).toEqual([])
+
+    await releaseAuth()
+
+    const reopened = mocks.channels.slice(opened)
+    expect(reopened).toHaveLength(3)
+    expect(reopened.every((c) => c.subscribe.mock.calls.length === 1 && c.authedAtSubscribe)).toBe(true)
+  })
+
+  it('polls when the server refuses a joined channel its Postgres Changes in a system message', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { base, page } = await mount([{ table: 'bets', filter: 'market_id=eq.market-1' }])
+    base.report('SUBSCRIBED')
+    page!.report('SUBSCRIBED')
+
+    // An ok system message ("Subscribed to PostgreSQL") changes nothing.
+    page!.handlersByTable.get('system')![0]({ status: 'ok', message: 'Subscribed to PostgreSQL' } as never)
+    vi.advanceTimersByTime(POLL_MS)
+    expect(mocks.refresh).not.toHaveBeenCalled()
+
+    base.handlersByTable.get('system')![0]({
+      status: 'error',
+      message: 'Unable to subscribe to changes with given parameters. … invalid column for filter id',
+    } as never)
+    vi.advanceTimersByTime(POLL_MS)
+    expect(mocks.refresh).toHaveBeenCalledTimes(1)
+    expect(warn).toHaveBeenCalledTimes(1)
+    vi.advanceTimersByTime(POLL_MS)
+    expect(mocks.refresh).toHaveBeenCalledTimes(2)
+    warn.mockRestore()
+  })
+
+  it('polls when a private topic join is refused', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await mount([{ topic: 'reviews' }])
+    currentTopicChannel('reviews')!.report('CHANNEL_ERROR')
+    vi.advanceTimersByTime(POLL_MS)
+    expect(mocks.refresh).toHaveBeenCalledTimes(1)
     warn.mockRestore()
   })
 })

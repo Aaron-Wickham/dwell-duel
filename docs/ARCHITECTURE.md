@@ -505,10 +505,16 @@ a held-back change, which committed less than an interval after a ping,
 is always read. A hidden tab never
 refreshes, and after `HIDDEN_CLOSE_MS` (60 s) hidden it removes every
 channel, so the socket closes and stops counting as a connection;
-becoming visible reopens them and refreshes. A channel that can't join
-(`CHANNEL_ERROR`, `TIMED_OUT`, for example past the connection cap) makes
-the page poll with `router.refresh()` every `POLL_MS` (60 s) while visible,
-until it joins, and warns once in the console.
+becoming visible reopens them and refreshes. Before any channel opens,
+and again on waking, `LiveRefresh` awaits `realtime.setAuth()`: a join
+sent before the client has read the session goes out as anon, and the
+server then refuses every filtered Postgres Changes subscription
+("invalid column for filter", since anon may read no column) and every
+private topic (#310). A channel that can't join (`CHANNEL_ERROR`,
+`TIMED_OUT`, for example past the connection cap), or whose Postgres
+Changes the server refuses after the join in an error `system` message,
+makes the page poll with `router.refresh()` every `POLL_MS` (60 s) while
+visible, until it joins or is rebuilt, and warns once in the console.
 
 A filtered channel never receives a DELETE, so a page that must hear one
 follows a topic (taking a reaction back is a delete, and the feed and

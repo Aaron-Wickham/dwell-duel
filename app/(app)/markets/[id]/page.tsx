@@ -327,7 +327,7 @@ async function MarketActions({
         and payouts have been sent.
       </>
     ) : market.status === 'voided' ? (
-      'This market was voided. Every bet was refunded, and parlays dropped this leg and carried on with the rest.'
+      'This market was voided. Every bet was refunded, and parlays dropped this leg and carried on with the rest (a parlay with no legs left was refunded).'
     ) : (
       <>
         This market closed <LocalTime iso={market.closeAt} format="dateTime" /> and is awaiting resolution.

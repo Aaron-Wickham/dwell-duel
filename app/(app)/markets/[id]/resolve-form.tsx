@@ -189,8 +189,8 @@ export function ResolveForm({
           <>
             <strong className="text-ink">{winner} wins.</strong>{' '}
             {override
-              ? 'The previous payouts are reversed, then winning bets and parlay legs are paid out on this outcome.'
-              : 'Winning bets and parlay legs are paid out straight away.'}
+              ? 'The previous payouts are reversed, then winning solo bets on this outcome are paid. Every parlay with a pick here is settled again on the new result.'
+              : 'Winning solo bets are paid straight away. A parlay with a pick here is lost if that pick lost, and pays once every pick has won.'}
           </>
         }
         confirmLabel="Confirm outcome"

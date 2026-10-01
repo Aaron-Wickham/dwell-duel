@@ -5,8 +5,7 @@ import { pgQuery } from './pg-query'
 // its `revoke ... from public, anon` or `enable row level security` fails here instead of exposing
 // an object to anyone holding the publishable key.
 
-// A trigger function: EXECUTE isn't checked when a trigger fires, so this grant opens nothing.
-const ANON_EXECUTABLE = ['cache_market_sparkline']
+const ANON_EXECUTABLE: string[] = []
 
 // Every SECURITY DEFINER function a signed-in account can call. A definer function skips RLS, so
 // each one must check who is calling (is_invited, has_role, auth.uid()) itself. Adding one here is
@@ -111,7 +110,7 @@ describe('schema-wide privileges', () => {
     expect(granted).toEqual([])
   })
 
-  it('lets anon execute no function in public but the allowlisted trigger', async () => {
+  it('lets anon execute no function in public', async () => {
     const executable = await pgQuery<{ proname: string }>(`
       select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'execute')

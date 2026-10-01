@@ -150,7 +150,7 @@ keeps Supabase's defaults, so a new function or table still needs its
 needs `enable row level security` (production's automatic-RLS event trigger
 is a backstop, not the rule). `tests/db/schema-privileges.test.ts` sweeps the
 schema: RLS on every table, no `anon` table, column, sequence or function
-grant (bar the `cache_market_sparkline` trigger), and a checked-in list of
+grant, and a checked-in list of
 every SECURITY DEFINER function a signed-in account can call. Adding one to
 that list is the review step: a definer function skips RLS, so it must check
 its caller (`is_invited`, `has_role`, `auth.uid()`) itself.
@@ -202,13 +202,9 @@ spending coins should get a trigger and a `write_limits()` row.
   `current_resolution_id`, `edited_at`, `void_reason` (0073: required by
   `void_market`, at most 500 characters, `TEXT_LIMITS.voidReason`; null for
   older voids), `settled_at` (0066: when it
-  left `open`; the Resolved list's order and a voided chart's shaded zone) and
-  `sparkline` (0070): the card's
-  40-point series, written by a trigger the moment the market resolves or
-  voids (`cache_market_sparkline`, so `resolve_market_core` and
-  `void_market` needn't know), null while it's open. Since 0095 the app no
-  longer reads it (`market_sparks` serves every card, cached by version);
-  the column and trigger stay until a later PR drops them.
+  left `open`; the Resolved list's order and a voided chart's shaded zone).
+  The `sparkline` column and its trigger (0070) are gone (0098):
+  `market_sparks` serves every card, cached by version.
 - `market_outcomes`: labels and `pool_total`, the real DC bet on each, and
   `pool_version` (0095), bumped by a trigger on every change to
   `pool_total` (each bet and cancellation): the list's sparkline cache key.
@@ -403,20 +399,19 @@ the Tasks page reads O(tasks) rows and no period keys), `my_onboarding()`
 
 Push recipients (0057) come from service-role-only functions, so members
 can't call them: `push_wants(profile, kind)` (still invited, a device
-subscribed, the kind not turned off), `push_resolve_reminders()` (closed,
-unresolved markets whose creator may resolve them, claimed in `push_log`
-as they're returned), `push_market_result(market)` (every solo bettor and
+subscribed, the kind not turned off), `push_market_result(market)` (every solo bettor and
 parlay-leg holder, with their payout and refund from the current
 resolution; cancelled bets live elsewhere, so never count),
 `push_task_reviews(ids)` and `push_new_market(market)` (everyone but the
 creator who opted in; ordered by profile, so `notifyNewMarket` reads it
 1,000 rows at a time, past PostgREST's `max_rows`, #254). Review alerts (0058) add `push_task_alerts(completion)`
 (reviewers and above except the submitter, `review_alerts` on) and
-`push_market_alerts()` (admins and above except the market's creator, who has
-the reminder, `resolve_reminders` on; each market claimed once as `market_alert`).
-Since 0071 (#207) the closing alerts read `due_resolve_reminders()` and
-`due_market_alerts()` instead, which pick the same recipients but claim
-nothing; the route sends one market at a time and claims through
+the closing alerts' recipients. Since 0071 (#207) they come from
+`due_resolve_reminders()` (closed, unresolved markets whose creator may
+resolve them) and `due_market_alerts()` (admins and above except the
+market's creator, who has the reminder, `resolve_reminders` on), which claim
+nothing; 0098 dropped the claiming `push_resolve_reminders()` and
+`push_market_alerts()` they replaced; the route sends one market at a time and claims through
 `claim_push_log(kind, refs)` only the markets at least one device took, so
 a failed push is due again next run. Nothing calls the two claiming
 functions since; dropping them is destructive, so it waits for its own PR.
@@ -544,6 +539,7 @@ after it ships. They roughly follow the project's history:
 | 0095 | Compact sparklines (#252): `market_sparks(p_market_ids, p_points default 24)` and `market_outcomes.pool_version` with its `bump_pool_version` trigger |
 | 0096 | The market page's Your position card and "riding in parlays" figure (#262, #279): `my_market_position(market)` and `market_parlay_riding(market)` |
 | 0097 | `leaderboard_awards` reads who is in from `invited_member_ids()` (0093) instead of its own copy of the rule (0074); every award is unchanged |
+| 0098 | Destructive cleanup of what the app stopped using: `market_outcomes`, `tasks` and `feed_reactions` leave the realtime publication, `markets.sparkline` with its trigger and `cache_market_sparkline`, and the claiming `push_resolve_reminders` and `push_market_alerts` |
 
 Numbers 0075, 0077–0082 and 0084–0088 were reserved by branches that merged later under higher numbers, so they are unused.
 
@@ -739,9 +735,8 @@ market receives. The market page also follows the viewer's own `parlays`
 another market. Another member's parlay settling elsewhere writes nothing
 to this market's rows, so the "riding in parlays" figure catches up on the
 next refresh: following every parlay would refresh every open market page.
-The publication still holds `market_outcomes`, `tasks`
-and `feed_reactions`, which nothing follows row by row any more; dropping
-them is a later, non-additive change.
+`market_outcomes`, `tasks` and `feed_reactions` left the publication in
+0098, since nothing follows them row by row any more.
 
 **Proxy and prefetch.** `proxy.ts` runs on page loads, RSC navigations,
 `router.refresh()` and server actions, where it refreshes the session

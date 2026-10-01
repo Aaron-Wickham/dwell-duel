@@ -166,14 +166,12 @@ describe('push_subscriptions RLS', () => {
     const { data: log } = await adminClient.from('push_log').select('*')
     expect(log ?? []).toEqual([])
     for (const [fn, args] of [
-      ['push_resolve_reminders', undefined],
       ['due_resolve_reminders', undefined],
       ['due_market_alerts', undefined],
       ['claim_push_log', { p_kind: 'market_alert', p_refs: [] }],
       ['push_market_result', { p_market_id: '00000000-0000-0000-0000-000000000000' }],
       ['push_task_reviews', { p_completion_ids: [] }],
       ['push_task_alerts', { p_completion_id: '00000000-0000-0000-0000-000000000000' }],
-      ['push_market_alerts', undefined],
       ['push_new_market', { p_market_id: '00000000-0000-0000-0000-000000000000' }],
       ['push_wants', { p_profile_id: alice.id, p_kind: 'results' }],
     ] as const) {
@@ -281,42 +279,6 @@ describe('recipients', () => {
     ])
   })
 
-  it('reminds a creator once per closed market they can resolve', async () => {
-    await subscribe(alice)
-    await subscribe(bob)
-    const due = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Due' })
-    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Still open' })
-    const staked = await createTestMarket(bobClient, ['Yes', 'No'], { title: 'Creator bet on it' })
-    await rpcOk(bobClient, 'place_bet', { p_market_id: staked.marketId, p_outcome_id: staked.outcomeIds[0], p_amount: 5 })
-    const resolved = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Resolved' })
-    for (const m of [due, staked, resolved]) await closeNow(m.marketId)
-    await rpcOk(aliceClient, 'resolve_market', { p_market_id: resolved.marketId, p_outcome_id: resolved.outcomeIds[0], p_note: 'Done' })
-
-    expect(await rpcOk(serviceClient(), 'push_resolve_reminders')).toEqual([{ market_id: due.marketId, title: 'Due', profile_id: alice.id }])
-    expect(await rpcOk(serviceClient(), 'push_resolve_reminders')).toEqual([])
-  })
-
-  it('reminds an admin creator even with a stake', async () => {
-    await subscribe(admin)
-    const market = await createTestMarket(adminClient, ['Yes', 'No'], { title: 'Admin bet on it' })
-    await rpcOk(adminClient, 'place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0], p_amount: 5 })
-    await closeNow(market.marketId)
-    expect(await rpcOk(serviceClient(), 'push_resolve_reminders')).toEqual([
-      { market_id: market.marketId, title: 'Admin bet on it', profile_id: admin.id },
-    ])
-  })
-
-  it("holds a reminder for a creator who has them off, and sends it once they're back on", async () => {
-    await subscribe(alice)
-    await setPrefs(alice, { resolve_reminders: false })
-    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Due' })
-    await closeNow(market.marketId)
-
-    expect(await rpcOk(serviceClient(), 'push_resolve_reminders')).toEqual([])
-    await setPrefs(alice, { resolve_reminders: true })
-    expect(await rpcOk(serviceClient(), 'push_resolve_reminders')).toEqual([{ market_id: market.marketId, title: 'Due', profile_id: alice.id }])
-  })
-
   it('tells a submitter about their reviewed task, with the reason, unless they turned it off', async () => {
     const { taskId } = await createTestTask(admin, { title: 'Read Psalm 23', rewardAmount: 10 })
     const insert = async (m: Member) => {
@@ -402,7 +364,7 @@ describe('due reads and claims (0071)', () => {
     expect(await rpcOk(serviceClient(), 'claim_push_log', { p_kind: 'resolve_reminder', p_refs: [due.marketId] })).toBe(0)
   })
 
-  it('picks the same reminder recipients push_resolve_reminders did, and the same alert recipients push_market_alerts did', async () => {
+  it('picks reminder recipients and alert recipients without claiming them', async () => {
     const { member: reviewer } = await makeReviewer('Rae')
     for (const m of [alice, bob, reviewer, admin]) await subscribe(m)
     const due = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Due' })
@@ -469,35 +431,6 @@ describe('review alerts (0058)', () => {
     await subscribe(admin)
     await rpcOk(adminClient, 'approve_task_completion', { p_completion_id: completion })
     expect(await rpcOk(serviceClient(), 'push_task_alerts', { p_completion_id: completion })).toEqual([])
-  })
-
-  it('alerts admins, not reviewers or the creator, once per closed market', async () => {
-    const { member: reviewer } = await makeReviewer('Rae')
-    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Sermon past noon?' })
-    await closeNow(market.marketId)
-    for (const m of [alice, reviewer, admin]) await subscribe(m)
-
-    const rows = await rpcOk<{ market_id: string; title: string; profile_id: string }[]>(serviceClient(), 'push_market_alerts')
-    expect(rows).toEqual([{ market_id: market.marketId, title: 'Sermon past noon?', profile_id: admin.id }])
-    expect(await rpcOk(serviceClient(), 'push_market_alerts')).toEqual([])
-  })
-
-  it('does not alert for a market that is still open, and tells the admin who made it only through the reminder', async () => {
-    const open = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Still open' })
-    const own = await createTestMarket(adminClient, ['Yes', 'No'], { title: 'Admin made it' })
-    await closeNow(own.marketId)
-    await subscribe(admin)
-
-    expect(open.marketId).not.toBe(own.marketId)
-    expect(await rpcOk(serviceClient(), 'push_market_alerts')).toEqual([])
-  })
-
-  it('holds a market alert until an admin has notifications on', async () => {
-    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Due' })
-    await closeNow(market.marketId)
-    expect(await rpcOk(serviceClient(), 'push_market_alerts')).toEqual([])
-    await subscribe(admin)
-    expect(await rpcOk<unknown[]>(serviceClient(), 'push_market_alerts')).toHaveLength(1)
   })
 
   it('counts what is waiting on the caller by role', async () => {

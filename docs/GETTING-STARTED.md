@@ -288,16 +288,21 @@ changes, and which docs you updated.
   route, table or rule.
 - `AGENTS.md` when you add a convention.
 
-**Merging needs:** CI's `test` check green, an approval from Aaron (the code
+**Merging needs:** CI's `ci-ok` check green, an approval from Aaron (the code
 owner; a new push after approval asks for a fresh review), and every review
-conversation resolved. On merge, the Deploy Production workflow applies any
-new migrations and then deploys through Vercel. There is no undo button, so
-the checklist matters.
+conversation resolved. Nobody can merge past a red or missing `ci-ok`:
+`gh pr merge --admin` only skips the review rule, never CI. On merge, the
+Deploy Production workflow backs up the database, applies any migrations
+production doesn't have yet and then deploys through Vercel. It runs only
+from `main`. There is no undo button for a migration, so the checklist
+matters; `docs/OPERATIONS.md` covers backups and rollback.
 
 ### If your change needs a migration
 
 - Add a new file `supabase/migrations/00NN_description.sql`, next number in
-  sequence, zero-padded. **Never edit a past migration.**
+  sequence, zero-padded. **Never edit a past migration.** If another PR
+  takes your number first, renumber yours above `main`'s newest; CI fails
+  until you do.
 - Keep it **additive** (new tables, columns, functions). The old app keeps
   serving while a migration applies. A destructive change ships in its own PR
   after the code stops using it.

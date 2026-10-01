@@ -439,11 +439,16 @@ after it ships. They roughly follow the project's history:
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
 Every merge to `main` runs the **Deploy Production** workflow, with no
-approval step: a dry run and the push when the merge touched
-`supabase/migrations/`, then the app deploy through a Vercel deploy hook.
-The app never goes live before its migrations; a failed migration fails the
-run and leaves the old app live. Migrations stay additive anyway, because
-the old app is still serving while they apply.
+approval step: a dry run against production, and when production is missing
+any migration, an encrypted pre-migration backup and the push; then the app
+deploy through a Vercel deploy hook. What's pending comes from production's
+migration history, not the merge's diff, so a migration an earlier run
+failed to apply goes out with the next. The app never goes live before its
+migrations; a failed backup or migration fails the run and leaves the old
+app live. Migrations stay additive anyway, because the old app is still
+serving while they apply. CI fails a PR whose new migration isn't numbered
+after `main`'s newest, since `db push` refuses one that sorts before
+production's latest. Backups and restoring are in `docs/OPERATIONS.md`.
 
 ## Key flows
 
@@ -649,12 +654,13 @@ leaves out empty lines and hides when every one is empty.
   Vercel preview deploys are off on purpose (see the README).
 - **CI** (`.github/workflows/ci.yml`) runs on every PR (not on `main`: the
   ruleset requires a PR to be up to date, so the tested head is the merge
-  result) as three parallel jobs: `static` (lint, the type check), `db`
+  result) as three parallel jobs: `static` (the migration-order check,
+  lint, the type check), `db`
   (a throwaway local Supabase, the generated-types drift check, Vitest's
   `db` project, serially) and `web` (Vitest's `unit` project, a production
   build with `.next/cache` restored, Playwright against its own local
   Supabase). `ci-ok` needs all three and is the ruleset's one required
-  check. Both Supabase jobs start the stack through
+  check, with no bypass. Both Supabase jobs start the stack through
   `.github/actions/local-supabase`, which keeps Supabase's images in the
   Actions cache per CLI version (loaded before `supabase start`, saved
   after a miss): they come from AWS's public registry, whose anonymous data
@@ -667,17 +673,28 @@ leaves out empty lines and hides when every one is empty.
   weekly PR, so don't bump one by hand to a bare tag.
 - **Deploys** (`.github/workflows/deploy-production.yml`): Vercel's Git
   integration is off for `main` (`vercel.json`'s `git.deploymentEnabled`).
-  Each push to `main` runs the workflow instead, one at a time and with no
-  approval step: when `supabase/migrations/` changed, a dry run and then
-  the push; then a POST to the Vercel deploy hook in the
-  `VERCEL_DEPLOY_HOOK_URL` repository secret. With a `VERCEL_TOKEN` secret
+  Each push to `main` runs the workflow instead, one at a time (waiting runs
+  queue in order, `queue: max`) and with no approval step: a dry run against
+  production; when anything is pending, `scripts/backup/backup.sh`'s
+  encrypted dump and then the push; then, if the run's commit is still
+  `main`'s head, a POST to the Vercel deploy hook in the
+  `VERCEL_DEPLOY_HOOK_URL` secret. Every job runs only from `main` and takes
+  its secrets from the GitHub `Production` environment, which only `main`
+  may deploy to. With a `VERCEL_TOKEN` secret
   the run then polls Vercel's deployments API for this commit's production
   deployment and fails when it ends in ERROR or CANCELED, or isn't live
   within 15 minutes; without the token it says so and stops at the hook,
   and only Vercel's own email reports a failed build. GitHub's
   "failed workflows only" notification is what turns a failed migration,
   hook call, build or closing-alerts backup ping into an email. Redeploy by
-  hand with "Run workflow" on it.
+  hand with "Run workflow" on it, from `main`.
+- **Backups** (`.github/workflows/backups.yml`, `scripts/backup/`): a
+  nightly `supabase db dump` of roles, schema and data (auth and storage
+  rows included) and a weekly copy of the `proof` and `avatars` buckets,
+  each age-encrypted and committed to the private `dwell-duel-backups`
+  repo, 60 days kept (and always the newest 14 per folder). Each job first
+  runs `mask-secrets.sh` as its own step, and `backup.sh` refuses to run in
+  Actions without it. `docs/OPERATIONS.md` is the runbook.
 - **Checking the installed app** (`npm run check:ios`,
   `scripts/ios-standalone-check.mjs`): Playwright has no standalone mode,
   so the installed iPhone app is checked in the iOS Simulator by hand before

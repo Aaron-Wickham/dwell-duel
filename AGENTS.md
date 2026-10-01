@@ -284,11 +284,15 @@ a line to `CHANGELOG.md` under the next release.
   `update_my_profile`; members have no direct update on `profiles`.
 - **Migrations apply themselves on merge, before the app deploys.**
   Merging to `main` runs the Deploy Production workflow with no approval
-  step: it pushes any new migrations, then triggers Vercel through a deploy
-  hook (Vercel's own Git deploys are off for `main`). The old app keeps
-  serving while a migration applies, so keep migrations additive (new
-  tables, columns and functions), and ship a destructive change in its own
-  PR after the code stops using it.
+  step: it dry-runs against production, and when production lacks any
+  migration it takes an encrypted backup (`scripts/backup/backup.sh`) and
+  pushes them, then triggers Vercel through a deploy hook (Vercel's own Git
+  deploys are off for `main`). It runs only from `main`, with its secrets
+  in the `Production` environment; never add a prod secret at repository
+  level. The old app keeps serving while a migration applies, so keep
+  migrations additive (new tables, columns and functions), and ship a
+  destructive change in its own PR after the code stops using it. Backups
+  and restore: `docs/OPERATIONS.md`.
 
 ## Testing
 
@@ -312,10 +316,14 @@ a line to `CHANGELOG.md` under the next release.
   `db`, `web`) summed up by the one required check, `ci-ok`. A PR must be
   up to date with `main` to merge: after another PR lands, run
   `gh pr update-branch <n>` and let CI run again. Merging to `main` only
-  deploys, so nothing tests the merge commit separately.
+  deploys, so nothing tests the merge commit separately. `ci-ok` has no
+  bypass: `gh pr merge --admin` skips only the review rule, so a red PR
+  can't merge.
 
 ## Migrations
 
 - Sequential, zero-padded numbering (`00NN_description.sql`) in
   `supabase/migrations/`. Never edit a past migration in place — add a
-  new one.
+  new one. A new migration must be numbered after `main`'s newest
+  (`scripts/check-migration-order.sh` fails CI otherwise); renumber after
+  another PR takes the number.

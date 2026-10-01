@@ -128,7 +128,7 @@ describe('attachment guards', () => {
   })
 
   it('has the unique and retention indexes', async () => {
-    const names = (await pgQuery<{ indexname: string }>("select indexname from pg_indexes where tablename = 'proof_attachments'")).map((r) => r.indexname)
+    const names = (await pgQuery<{ indexname: string }>("select indexname from pg_indexes where schemaname = 'public' and tablename = 'proof_attachments'")).map((r) => r.indexname)
     expect(names).toContain('proof_attachments_storage_path_key')
     expect(names).toContain('proof_attachments_unexpired_idx')
   })

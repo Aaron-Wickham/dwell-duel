@@ -192,11 +192,16 @@ $$;
 -- the existing rows hold no duplicate (record_proof never refused one before), so the migration can't
 -- fail; the check in record_proof covers the rest.
 do $$
+declare
+  v_dupes integer;
 begin
-  if not exists (
+  select count(*) into v_dupes from (
     select 1 from public.proof_attachments where storage_path is not null group by storage_path having count(*) > 1
-  ) then
+  ) d;
+  if v_dupes = 0 then
     create unique index proof_attachments_storage_path_key on public.proof_attachments (storage_path) where storage_path is not null;
+  else
+    raise warning 'proof_attachments_storage_path_key skipped: % storage_path value(s) are attached more than once', v_dupes;
   end if;
 end $$;
 

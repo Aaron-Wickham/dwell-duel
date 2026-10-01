@@ -212,7 +212,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
             </div>
           }
         >
-          {q ? 'Check the spelling, or search all markets.' : 'Bet on a market, or make one, and it shows up here.'}
+          {q ? (filter === 'all' ? 'Check the spelling, or try fewer words.' : 'Check the spelling, or search all markets.') : 'Bet on a market, or make one, and it shows up here.'}
         </EmptyState>
       )
     }
@@ -262,7 +262,16 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       />
       <div className="flex flex-col gap-5 md:flex-row md:flex-wrap md:items-center">
         <MarketSearch key={q} q={q} status={filter} mine={mine} />
-        <div className="flex flex-col md:order-3 md:basis-full">
+        <FilterChips
+          className="order-3 md:order-2"
+          label="Whose markets"
+          items={([null, 'bet', 'made'] as const).map((m) => ({
+            href: marketsHref({ status: filter, q, mine: m }),
+            label: MINE_LABELS[m ?? 'all'],
+            current: m === mine,
+          }))}
+        />
+        <div className="order-2 flex flex-col md:order-3 md:basis-full">
           <SubNav
             label="Filter markets"
             items={MARKET_FILTERS.map((f) => ({
@@ -272,14 +281,6 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
             }))}
           />
         </div>
-        <FilterChips
-          label="Whose markets"
-          items={([null, 'bet', 'made'] as const).map((m) => ({
-            href: marketsHref({ status: filter, q, mine: m }),
-            label: MINE_LABELS[m ?? 'all'],
-            current: m === mine,
-          }))}
-        />
       </div>
       <LiveTables subscriptions={pageSubscriptions.markets()} />
       <ShowMoreFocus />

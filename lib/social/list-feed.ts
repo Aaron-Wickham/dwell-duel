@@ -68,17 +68,18 @@ export async function listFeed<T = undefined>(
   // The range read and its key probe share one builder, so the two can't drift apart on filters. Its column
   // list is a runtime string, so the generated types can't follow it, and each reader casts its rows.
   const feedQuery = (columns: string, filter: string | null, limit: number) => {
-    let query = supabase
-      .from('activity_events')
-      .select(columns)
+    // "Mine" reads my_activity_events() (0087), whose two UNION ALL branches each use an index, as the
+    // leaderboard reads its board functions; the filters below reach both. It returns the table's own
+    // rows, so the select and the embeds are the same.
+    const table = () => supabase.from('activity_events').select(columns)
+    const source = opts.show === 'mine' ? (supabase.rpc('my_activity_events').select(columns) as unknown as ReturnType<typeof table>) : table()
+    let query = source
       .is('hidden_at', null)
       .order('occurred_at', { ascending: false })
       .order('id', { ascending: false })
       .limit(limit)
     if (opts.actorId) query = query.eq('actor_id', opts.actorId)
     if (opts.show === 'results') query = query.in('kind', [...RESULT_KINDS])
-    // is_mine (0087) is the caller's own events plus results on markets they have a stake in.
-    if (opts.show === 'mine') query = query.filter('is_mine', 'is', true)
     if (filter) query = query.or(filter)
     return query
   }

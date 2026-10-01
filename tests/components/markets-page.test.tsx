@@ -308,6 +308,13 @@ describe('MarketsPage: search and whose markets', () => {
     expect(screen.getByRole('link', { name: 'Clear search' })).toHaveAttribute('href', '/markets?status=open')
   })
 
+  it('does not offer to search all markets when the status is already All', async () => {
+    await renderNarrowed(match([]), { q: 'potluk' })
+    expect(screen.getByText('Check the spelling, or try fewer words.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Search all markets' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Clear search' })).toHaveAttribute('href', '/markets')
+  })
+
   it('names the whose-markets filter in the empty state, with no search to clear', async () => {
     await renderNarrowed(match([]), { mine: 'bet' })
     expect(screen.getByText('No markets you bet on yet.')).toBeInTheDocument()

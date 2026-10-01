@@ -177,4 +177,28 @@ describe('the title search index', () => {
     )
     expect(rows.map((r) => r['QUERY PLAN']).join('\n')).toContain('markets_title_trgm_idx')
   })
+
+  it('reads Mine through indexes, not by walking the whole feed, with a realistic number of events', async () => {
+    // Bob has most of the feed; Alice has ten events and a stake in one resolved market, so a
+    // per-row test would have to walk everything newer than her tenth event to fill a page.
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Mine plan' })
+    await bet(aliceClient, market)
+    await pgQuery(
+      `insert into public.activity_events (id, kind, occurred_at, actor_id)
+         select 'seed:b:' || g, 'task_completed', now() - g * interval '1 minute', '${bob.id}' from generate_series(1, 30000) g;
+       insert into public.activity_events (id, kind, occurred_at, actor_id)
+         select 'seed:a:' || g, 'task_completed', now() - g * interval '2 days', '${alice.id}' from generate_series(1, 10) g;
+       analyze public.activity_events;`,
+    )
+    const rows = await pgQuery<{ 'QUERY PLAN': string }>(
+      `set local request.jwt.claims = '{"sub":"${alice.id}","role":"authenticated"}';
+       explain select id from public.my_activity_events()
+         where hidden_at is null and occurred_at <= now() + interval '1 day'
+         order by occurred_at desc, id desc limit 51`,
+    )
+    const plan = rows.map((r) => r['QUERY PLAN']).join('\n')
+    expect(plan).not.toMatch(/Seq Scan on activity_events/)
+    expect(plan).not.toMatch(/activity_events_feed_idx/)
+    expect(plan).toMatch(/activity_events_actor_id_idx|activity_events_actor_idx/)
+  })
 })

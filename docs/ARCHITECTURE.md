@@ -61,7 +61,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/parlays` | Redirects to `/bets` (kept for old links) |
 | `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its locked odds and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`: the page checks the parlay exists first (so an unknown id is a real 404), then streams the body behind `<Suspense>` with `ParlayDetailSkeleton` |
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
-| `/feed` | Everyone's activity, with reactions, live; a "Show" `SubNav` (`?show=all|results|mine`, `lib/social/feed-filter.ts`) narrows it to results (`RESULT_KINDS`) or your own events plus results on markets you have a stake in (the `is_mine` computed column, 0087) |
+| `/feed` | Everyone's activity, with reactions, live; a "Show" `SubNav` (`?show=all|results|mine`, `lib/social/feed-filter.ts`) narrows it to results (`RESULT_KINDS`) or your own events plus results on markets you have a stake in (`my_activity_events()`, 0087, whose two `UNION ALL` branches each use an index) |
 | `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`). On a phone the Net worth board has a compact standing card with Jump to me (`?at=me`): `getJumpToMeTop` reads the 10 members above you through `rankedAbove` and the page opens a `readOrdered` window there, with focus on your row; any cursor in the URL overrides it, and Back to the top drops it |
 | `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings |
 | `/profile` | Edit your name, photo and bio |
@@ -400,7 +400,7 @@ after it ships. They roughly follow the project's history:
 | 0070 | Speed at scale (#204, #205): `markets.sparkline` filled by the `cache_market_sparkline` trigger when a market resolves or voids (backfilled), `market_outcomes` in the realtime publication, and `parlays_pending_profile_idx` for `stakes_riding` |
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
-| 0087 | Finding things (#264): `markets_title_trgm_idx` (pg_trgm) for the title search, `has_bet_on_market(uuid)`, and the computed columns `markets.i_bet_on` and `activity_events.is_mine` that PostgREST filters on (security invoker, the caller's own bets and parlay legs in any state) |
+| 0087 | Finding things (#264): `markets_title_trgm_idx` (pg_trgm) for the title search, the computed column `markets.i_bet_on` and `my_activity_events()` (the Feed's Mine: own events plus results on markets you have a bet or parlay leg on); both security invoker with no `SET` clause so they inline |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 

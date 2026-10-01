@@ -6,9 +6,9 @@ export type FilterChip = { href: string; label: string; current: boolean }
 // A row of single-choice filters kept in the URL, lighter than a SubNav's tabs: they narrow the
 // list a tab already picked. The chosen chip is filled; each is a real link, so a chip works
 // without script and a view can be shared.
-export function FilterChips({ label, items }: { label: string; items: FilterChip[] }) {
+export function FilterChips({ label, items, className }: { label: string; items: FilterChip[]; className?: string }) {
   return (
-    <nav aria-label={label} className="no-callout flex flex-wrap items-center gap-2">
+    <nav aria-label={label} className={cn('no-callout flex flex-wrap items-center gap-2', className)}>
       {items.map(({ href, label: itemLabel, current }) => (
         <Link
           key={href}

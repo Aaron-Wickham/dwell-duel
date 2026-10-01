@@ -1185,7 +1185,6 @@ export type Database = {
         Returns: undefined
       }
       group_time_zone: { Args: never; Returns: string }
-      has_bet_on_market: { Args: { p_market_id: string }; Returns: boolean }
       has_role: { Args: { p_min: string }; Returns: boolean }
       has_stake_in_market: {
         Args: { p_market_id: string; p_profile_id: string }
@@ -1197,10 +1196,6 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_invited: { Args: never; Returns: boolean }
-      is_mine: {
-        Args: { e: Database["public"]["Tables"]["activity_events"]["Row"] }
-        Returns: boolean
-      }
       is_push_endpoint: { Args: { p_endpoint: string }; Returns: boolean }
       leaderboard_awards: {
         Args: never
@@ -1310,6 +1305,29 @@ export type Database = {
           parlays_won: number
           tasks_completed: number
         }[]
+      }
+      my_activity_events: {
+        Args: never
+        Returns: {
+          actor_id: string
+          amount: number | null
+          bet_id: number | null
+          hidden_at: string | null
+          id: string
+          kind: string
+          market_id: string | null
+          occurred_at: string
+          outcome_id: string | null
+          parlay_id: string | null
+          resolution_id: string | null
+          task_completion_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "activity_events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       my_at_stake: {
         Args: never

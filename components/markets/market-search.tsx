@@ -22,7 +22,7 @@ export function MarketSearch({ q, status, mine }: { q: string; status: MarketFil
   }
 
   return (
-    <form role="search" action="/markets" method="get" onSubmit={onSubmit} className="flex w-full items-start gap-2 md:max-w-[520px] md:flex-1">
+    <form role="search" action="/markets" method="get" onSubmit={onSubmit} className="order-1 flex w-full items-start gap-2 md:max-w-[520px] md:flex-1">
       {status !== 'all' && <input type="hidden" name="status" value={status} />}
       {mine && <input type="hidden" name="mine" value={mine} />}
       <label htmlFor={id} className="sr-only">

@@ -1,10 +1,12 @@
+import { Fragment } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChartColumn, Plus } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { listResolvedMarkets, listOpenMarkets } from '@/lib/markets/list-markets'
+import { listResolvedMarkets, listOpenMarkets, type MarketSummary } from '@/lib/markets/list-markets'
+import type { KeysetPage } from '@/lib/pagination/keyset'
 import { computeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { marketCardStatus, type MarketCardStatus } from '@/lib/markets/market-status'
@@ -29,7 +31,6 @@ const GROUPS: { id: MarketCardStatus; heading: string }[] = [
   { id: 'voided', heading: 'Voided' },
 ]
 
-const OPEN_GROUPS: MarketCardStatus[] = ['open', 'awaiting']
 const EMPTY_TITLES: Record<MarketFilter, string> = {
   all: 'No markets yet.',
   open: 'No open markets.',
@@ -44,17 +45,20 @@ const EMPTY_BODIES: Record<MarketFilter, string> = {
   resolved: 'Resolved and voided markets show up here.',
 }
 
-// The open list holds both sides of the close time unless a tab picks one.
-const OPEN_LIST_DESCRIPTIONS: Record<Exclude<MarketFilter, 'resolved'>, string> = {
-  all: 'Open and awaiting markets',
-  open: 'Open markets',
-  awaiting: 'Markets awaiting resolution',
-}
+const NO_ROWS: KeysetPage<MarketSummary> = { rows: [], next: null, windowed: false }
 
-const NO_ROWS = { rows: [], next: null, windowed: false } as const
+// The All tab reads three lists, each with its own Show more, so markets still taking bets come
+// first however many are waiting on a result (#261). The open and awaiting lists are the two sides
+// of the close time; the Open and Awaiting tabs read just theirs.
+type ListId = 'open' | 'awaiting' | 'resolved'
+type List = { id: ListId; groups: MarketCardStatus[]; filters: MarketFilter[]; description: string }
+const LISTS: List[] = [
+  { id: 'open', groups: ['open'], filters: ['all', 'open'], description: 'Open markets' },
+  { id: 'awaiting', groups: ['awaiting'], filters: ['all', 'awaiting'], description: 'Markets awaiting resolution' },
+  { id: 'resolved', groups: ['resolved', 'voided'], filters: ['all', 'resolved'], description: 'Resolved markets' },
+]
 
-const OPEN_ROW_ID_PREFIX = 'market-open'
-const RESOLVED_ROW_ID_PREFIX = 'market-resolved'
+const rowIdPrefix = (list: ListId) => `market-${list}`
 
 export default async function MarketsPage(props: PageProps<'/markets'>) {
   const searchParams = await props.searchParams
@@ -65,24 +69,24 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now()
   const now = new Date(nowMs)
-  const openParams = readPageParams(searchParams, 'open')
-  const [open, resolved] = await Promise.all([
-    filter === 'resolved'
-      ? NO_ROWS
-      : filter === 'all'
-        ? listOpenMarkets(supabase, openParams)
-        : listOpenMarkets(supabase, openParams, { upcoming: filter === 'open', at: now.toISOString() }),
-    filter === 'all' || filter === 'resolved' ? listResolvedMarkets(supabase, readPageParams(searchParams, 'resolved')) : NO_ROWS,
-  ])
-  // A market can resolve or void between the two concurrent reads above, and then come back from
-  // both. It only ever moves from open to resolved or voided, so the resolved list's copy is the
-  // fresher one: the open copy is dropped rather than rendering the market twice, with duplicate
-  // React keys and duplicate `market-resolved-*` DOM/title ids.
+  const at = now.toISOString()
+  const read = async ({ id, filters }: List): Promise<KeysetPage<MarketSummary>> => {
+    if (!filters.includes(filter)) return NO_ROWS
+    const params = readPageParams(searchParams, id)
+    if (id === 'resolved') return listResolvedMarkets(supabase, params)
+    return listOpenMarkets(supabase, params, { upcoming: id === 'open', at })
+  }
+  const [open, awaiting, resolved] = await Promise.all(LISTS.map(read))
+  const pages: Record<ListId, KeysetPage<MarketSummary>> = { open, awaiting, resolved }
+  // A market can resolve or void between the concurrent reads above, and then come back from
+  // two lists. It only ever moves from open to resolved or voided, so the resolved list's copy is
+  // the fresher one: the open copy is dropped rather than rendering the market twice, with
+  // duplicate React keys and DOM/title ids. The open and awaiting lists split at one instant, so
+  // they never share a market.
   const resolvedIds = new Set(resolved.rows.map((m) => m.id))
-  const markets = [
-    ...open.rows.filter((m) => !resolvedIds.has(m.id)).map((m) => [m, OPEN_ROW_ID_PREFIX] as const),
-    ...resolved.rows.map((m) => [m, RESOLVED_ROW_ID_PREFIX] as const),
-  ]
+  const markets = LISTS.flatMap(({ id }) =>
+    pages[id].rows.filter((m) => id === 'resolved' || !resolvedIds.has(m.id)).map((m) => [m, id] as const),
+  )
   const sparklinesByMarket = await readSparklines(
     supabase,
     markets.map(([m]) => ({
@@ -90,11 +94,11 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       seedPerOutcome: m.seedPerOutcome,
       createdAt: m.createdAt,
       outcomeIds: m.outcomes.map((o) => o.id),
-      sparkline: m.sparkline,
+      version: m.sparkVersion,
     })),
   )
 
-  const cards = markets.map(([market, prefix]) => {
+  const cards = markets.map(([market, list]) => {
     const odds = computeOdds(
       market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })),
       market.seedPerOutcome,
@@ -112,7 +116,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
             now: nowMs,
           }
         : undefined
-    return {
+    const card = {
       id: market.id,
       title: market.title,
       status: marketCardStatus(market.status, market.closeAt, now),
@@ -129,27 +133,33 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       })),
       resolvedOutcomeLabel: market.resolvedOutcomeLabel,
       chart,
-      domId: rowDomId(prefix, market.id),
+      domId: rowDomId(rowIdPrefix(list), market.id),
       now: nowMs,
     }
+    return { list, card }
   })
 
-  const groups = GROUPS.map((group) => ({
-    ...group,
-    markets: cards.filter((card) => card.status === group.id),
-  })).filter((group) => group.markets.length > 0)
-  const openGroups = groups.filter((group) => OPEN_GROUPS.includes(group.id))
-  const resolvedGroups = groups.filter((group) => !OPEN_GROUPS.includes(group.id))
+  // Each list's groups hold only its own cards: a market that closes between two Show mores has
+  // already moved to the awaiting list.
+  const listGroups = (list: List) =>
+    GROUPS.filter((group) => list.groups.includes(group.id))
+      .map((group) => ({
+        ...group,
+        markets: cards.filter((c) => c.list === list.id && c.card.status === group.id).map((c) => c.card),
+      }))
+      .filter((group) => group.markets.length > 0)
+  const lists = LISTS.map((list) => ({ ...list, page: pages[list.id], groups: listGroups(list) }))
+  const nothing = lists.every((list) => list.groups.length === 0 && !list.page.windowed)
 
   // Each list's window says where it starts above its own groups: Back to newest, or, when the
   // window has no rows left, that there's nothing older, where those groups would have been.
-  const windowTop = (list: typeof open, param: string) => {
+  const windowTop = (list: KeysetPage<MarketSummary>, param: string) => {
     if (!list.windowed) return null
     const href = newestHref('/markets', searchParams, param)
     return list.rows.length > 0 ? <BackToNewest href={href} /> : <NothingOlder href={href} />
   }
 
-  const renderGroup = (group: (typeof groups)[number]) => (
+  const renderGroup = (group: ReturnType<typeof listGroups>[number]) => (
     <section key={group.id} aria-labelledby={`markets-${group.id}-heading`} className="flex flex-col gap-3">
       <h2 id={`markets-${group.id}-heading`} className={h2Class}>
         {group.heading}
@@ -187,7 +197,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       />
       <LiveTables subscriptions={pageSubscriptions.markets()} />
       <ShowMoreFocus />
-      {groups.length === 0 && !open.windowed && !resolved.windowed ? (
+      {nothing ? (
         <EmptyState
           icon={ChartColumn}
           title={EMPTY_TITLES[filter]}
@@ -205,26 +215,22 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
         </EmptyState>
       ) : (
         <>
-          {windowTop(open, 'open')}
-          {openGroups.map(renderGroup)}
-          {open.next && (
-            <ShowMore
-              href={showMoreHref('/markets', searchParams, 'open', open.next)}
-              fresh={open.next.kind === 'window'}
-              focusId={rowDomId(OPEN_ROW_ID_PREFIX, open.next.firstId)}
-              description={OPEN_LIST_DESCRIPTIONS[filter === 'resolved' ? 'all' : filter]}
-            />
-          )}
-          {windowTop(resolved, 'resolved')}
-          {resolvedGroups.map(renderGroup)}
-          {resolved.next && (
-            <ShowMore
-              href={showMoreHref('/markets', searchParams, 'resolved', resolved.next)}
-              fresh={resolved.next.kind === 'window'}
-              focusId={rowDomId(RESOLVED_ROW_ID_PREFIX, resolved.next.firstId)}
-              description="Resolved markets"
-            />
-          )}
+          {lists.map(({ id, description, page, groups }) => {
+            return (
+              <Fragment key={id}>
+                {windowTop(page, id)}
+                {groups.map(renderGroup)}
+                {page.next && (
+                  <ShowMore
+                    href={showMoreHref('/markets', searchParams, id, page.next)}
+                    fresh={page.next.kind === 'window'}
+                    focusId={rowDomId(rowIdPrefix(id), page.next.firstId)}
+                    description={description}
+                  />
+                )}
+              </Fragment>
+            )
+          })}
         </>
       )}
     </Page>

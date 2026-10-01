@@ -459,3 +459,98 @@ describe('markets.sparkline cache (0070)', () => {
     expect(await cached(market.marketId)).toEqual(first)
   })
 })
+
+// #252: the cards' compact series, at most 24 points, and the version the app caches them under.
+describe('market_sparks (0088)', () => {
+  interface SparkRow {
+    market_id: string
+    outcome_ids: string[]
+    points: number[][]
+  }
+
+  async function sparks(client: TestClient, marketIds: string[]): Promise<SparkRow[]> {
+    const { data, error } = await client.rpc('market_sparks', { p_market_ids: marketIds })
+    if (error) throw error
+    return data as unknown as SparkRow[] // points is Json in the generated type
+  }
+
+  async function poolVersions(market: TestMarket): Promise<number> {
+    const { data, error } = await serviceClient().from('market_outcomes').select('pool_version').eq('market_id', market.marketId)
+    if (error) throw error
+    return data.reduce((sum, o) => sum + o.pool_version, 0)
+  }
+
+  it('is market_sparklines at 24 points, as [epoch seconds, share, ...] in the list’s outcome order, shares to 4 decimals', async () => {
+    const market = await createTestMarket(aliceClient, ['Zebra', 'Apple', 'Mango'])
+    await insertBets(market, 100)
+
+    const [row] = await sparks(bobClient, [market.marketId])
+    const verbose = await pointsOf(bobClient, market, 24)
+    const { data: outcomes } = await serviceClient().from('market_outcomes').select('id, label').eq('market_id', market.marketId).order('label')
+    const order = outcomes!.map((o) => o.id as string)
+
+    expect(row.market_id).toBe(market.marketId)
+    // Created together, so the tie falls to the label, as the list's own order does.
+    expect(row.outcome_ids).toEqual(order)
+    expect(row.points).toHaveLength(24)
+    row.points.forEach(([t, ...shares], i) => {
+      expect(t).toBe(Math.floor(Date.parse(verbose[i].t) / 1000))
+      expect(shares).toEqual(order.map((id) => Math.round(verbose[i].shares[id] * 10_000) / 10_000))
+    })
+    expect(JSON.stringify(row.points).length).toBeLessThan(JSON.stringify(verbose).length / 5)
+  })
+
+  it('never returns more than 24 points, whatever it is asked for, and every bet below that', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await insertBets(market, 10)
+    const { data, error } = await bobClient.rpc('market_sparks', { p_market_ids: [market.marketId], p_points: 200 })
+    if (error) throw error
+    expect((data as unknown as SparkRow[])[0].points).toHaveLength(10)
+
+    await insertBets(market, 30)
+    const { data: more } = await bobClient.rpc('market_sparks', { p_market_ids: [market.marketId], p_points: 200 })
+    expect((more as unknown as SparkRow[])[0].points).toHaveLength(24)
+  })
+
+  it('returns no row for a market nobody has bet on, and nothing to an uninvited member', async () => {
+    const quiet = await createTestMarket(aliceClient, ['Yes', 'No'])
+    const busy = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await placeBet(aliceClient, busy, 0, 5)
+    expect((await sparks(bobClient, [quiet.marketId, busy.marketId])).map((r) => r.market_id)).toEqual([busy.marketId])
+
+    const carol = await makeMember('Carol')
+    expect(await sparks(await clientFor(carol), [busy.marketId])).toEqual([])
+    const [fn] = await pgQuery<{ anon: boolean; authenticated: boolean; security_definer: boolean }>(`
+      select
+        has_function_privilege('anon', 'public.market_sparks(uuid[], integer)', 'execute') as anon,
+        has_function_privilege('authenticated', 'public.market_sparks(uuid[], integer)', 'execute') as authenticated,
+        p.prosecdef as security_definer
+      from pg_proc p
+      where p.oid = 'public.market_sparks(uuid[], integer)'::regprocedure
+    `)
+    expect(fn).toEqual({ anon: false, authenticated: true, security_definer: false })
+  })
+
+  it('moves the market’s pool version with every bet and every cancellation, and with nothing else', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'])
+    expect(await poolVersions(market)).toBe(0)
+
+    await placeBet(aliceClient, market, 0, 5)
+    await placeBet(bobClient, market, 1, 5)
+    expect(await poolVersions(market)).toBe(2)
+
+    const { data: bet } = await serviceClient().from('bets').select('id').eq('profile_id', bob.id).eq('market_id', market.marketId).single()
+    const { error } = await bobClient.rpc('cancel_bet', { p_bet_id: bet!.id })
+    if (error) throw error
+    expect(await poolVersions(market)).toBe(3)
+
+    // A bet of the same size after the cancel leaves the pools where they were before it, with a
+    // different series; the version still moves.
+    await placeBet(bobClient, market, 1, 5)
+    expect(await poolVersions(market)).toBe(4)
+
+    const { error: labelErr } = await serviceClient().from('market_outcomes').update({ label: 'Yep' }).eq('id', market.outcomeIds[0])
+    if (labelErr) throw labelErr
+    expect(await poolVersions(market)).toBe(4)
+  })
+})

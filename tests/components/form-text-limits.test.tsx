@@ -31,11 +31,11 @@ vi.mock('@/lib/profile/update-profile', () => ({ updateProfileAction: actions.up
 vi.mock('@/lib/invites/actions', () => ({ addInviteAction: actions.addInviteAction, revokeInviteAction: actions.revokeInviteAction }))
 
 import { CreateMarketForm } from '@/app/(app)/markets/new/create-market-form'
-import { CreateTaskForm } from '@/app/(app)/admin/tasks/create-task-form'
-import { EditTaskForm } from '@/app/(app)/admin/tasks/edit-task-form'
-import { PendingApprovals, type PendingRow } from '@/app/(app)/admin/tasks/pending-approvals'
+import { CreateTaskForm } from '@/app/(app)/admin/(sections)/tasks/create-task-form'
+import { EditTaskForm } from '@/app/(app)/admin/(sections)/tasks/edit-task-form'
+import { PendingApprovals, type PendingRow } from '@/app/(app)/admin/(sections)/tasks/pending-approvals'
 import { AdjustBalanceForm } from '@/app/(app)/admin/members/adjust-balance-form'
-import { AddInviteForm } from '@/app/(app)/admin/invites/add-invite-form'
+import { AddInviteForm } from '@/app/(app)/admin/(sections)/invites/add-invite-form'
 import { ProfileForm } from '@/app/(app)/profile/profile-form'
 
 const GENESIS: TaskSummary = {

@@ -26,7 +26,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 
 import { RoleForm } from '@/app/(app)/admin/members/role-form'
 import { MemberIdentity } from '@/app/(app)/admin/members/member-identity'
-import { TaskCatalogItem } from '@/app/(app)/admin/tasks/task-catalog-item'
+import { TaskCatalogItem } from '@/app/(app)/admin/(sections)/tasks/task-catalog-item'
 import { BetList } from '@/components/markets/bet-list'
 
 const BEN: MemberSummary = { id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, role: 'reviewer', joinedAt: null, lastSignInAt: null }

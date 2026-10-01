@@ -28,10 +28,10 @@ vi.mock('@/lib/tasks/review-task-completion', () => ({
 vi.mock('@/lib/tasks/create-task', () => ({ createTaskAction }))
 vi.mock('@/lib/tasks/update-task', () => ({ updateTaskAction }))
 
-import { PendingApprovals, type PendingRow } from '@/app/(app)/admin/tasks/pending-approvals'
-import { ReviewButtons } from '@/app/(app)/admin/tasks/review-buttons'
-import { CreateTaskForm } from '@/app/(app)/admin/tasks/create-task-form'
-import { TaskCatalogItem } from '@/app/(app)/admin/tasks/task-catalog-item'
+import { PendingApprovals, type PendingRow } from '@/app/(app)/admin/(sections)/tasks/pending-approvals'
+import { ReviewButtons } from '@/app/(app)/admin/(sections)/tasks/review-buttons'
+import { CreateTaskForm } from '@/app/(app)/admin/(sections)/tasks/create-task-form'
+import { TaskCatalogItem } from '@/app/(app)/admin/(sections)/tasks/task-catalog-item'
 
 const PENDING: PendingRow[] = [
   {

@@ -35,7 +35,7 @@ vi.mock('@/lib/economy/summary', async (importOriginal) => ({
   readEconomySummary,
 }))
 
-import AdminLedgerPage from '@/app/(app)/admin/ledger/page'
+import AdminLedgerPage from '@/app/(app)/admin/(sections)/ledger/page'
 
 const ROW: EconomySummaryRow = {
   month_start: '2026-09-01T04:00:00+00:00',

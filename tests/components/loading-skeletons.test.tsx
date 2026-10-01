@@ -17,11 +17,11 @@ import SettingsLoading from '@/app/(app)/settings/loading'
 import HowItWorksLoading from '@/app/(app)/how-it-works/loading'
 import FeedLoading from '@/app/(app)/feed/loading'
 import LeaderboardLoading from '@/app/(app)/leaderboard/loading'
-import AdminInvitesLoading from '@/app/(app)/admin/invites/loading'
-import AdminTasksLoading from '@/app/(app)/admin/tasks/loading'
-import AdminMembersLoading from '@/app/(app)/admin/members/loading'
-import AdminLedgerLoading from '@/app/(app)/admin/ledger/loading'
-import AdminMarketsLoading from '@/app/(app)/admin/markets/loading'
+import AdminInvitesLoading from '@/app/(app)/admin/(sections)/invites/loading'
+import AdminTasksLoading from '@/app/(app)/admin/(sections)/tasks/loading'
+import AdminMembersLoading from '@/app/(app)/admin/(sections)/members/loading'
+import AdminLedgerLoading from '@/app/(app)/admin/(sections)/ledger/loading'
+import AdminMarketsLoading from '@/app/(app)/admin/(sections)/markets/loading'
 
 const SKELETONS: [string, ComponentType][] = [
   ['home', HomeLoading],

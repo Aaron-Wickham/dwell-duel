@@ -24,7 +24,7 @@ vi.mock('@/lib/auth/roles', async (importOriginal) => ({
 const { listAllTransactions } = vi.hoisted(() => ({ listAllTransactions: vi.fn() }))
 vi.mock('@/lib/ledger/list-transactions', () => ({ listAllTransactions }))
 
-import AdminLedgerPage from '@/app/(app)/admin/ledger/page'
+import AdminLedgerPage from '@/app/(app)/admin/(sections)/ledger/page'
 
 describe('AdminLedgerPage', () => {
   it('shows "Nothing older here" instead of the empty state when a fresh window comes back with no rows', async () => {

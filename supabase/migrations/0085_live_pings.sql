@@ -97,6 +97,7 @@ create unlogged table public.live_ping_queue (
 );
 alter table public.live_ping_queue enable row level security;
 revoke all on public.live_ping_queue from public, anon, authenticated;
+revoke all on sequence public.live_ping_queue_id_seq from public, anon, authenticated;
 
 create function public.live_ping_trigger()
 returns trigger

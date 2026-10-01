@@ -192,11 +192,12 @@ a line to `CHANGELOG.md` under the next release.
   trigger calling `live_ping_trigger('<topic>')`, a seeded `live_pings`
   row and the `realtime.messages` policy's topic list, all in a migration.
   Never put a deferred trigger on a live table: its pending events make
-  any later ALTER of that table in the same transaction fail (55006). Never follow a whole table
-  unfiltered: every open page would get a message per row anyone writes.
-  Prefer the narrowest source that moves with what the page shows
-  (`/markets` follows the `pools` topic, not `bets`), and never follow
-  `profiles` group-wide: every coin movement updates one.
+  any later ALTER of that table in the same transaction fail (55006).
+  Never follow a whole table unfiltered: every open page would get a
+  message per row anyone writes. Prefer the narrowest source that moves
+  with what the page shows (`/markets` follows the `pools` topic, not
+  `bets`), and never follow `profiles` group-wide: every coin movement
+  updates one.
 - **E2e specs await `serverActionSettled`** after an optimistic action,
   before navigating away.
 
@@ -226,14 +227,15 @@ a line to `CHANGELOG.md` under the next release.
 - **A page declares what it shows live** with
   `<LiveTables subscriptions={pageSubscriptions.x(…)}>`, from
   `lib/live/page-subscriptions.ts` and `components/live/live-tables.tsx`.
-- **`LiveRefresh` keeps a base channel** for the member's own profile,
-  a page channel for the page's row subscriptions, rebuilt on every
+- **`LiveRefresh` keeps a base channel** for the member's own profile, a
+  page channel for the page's row subscriptions, rebuilt on every
   navigation, and one private channel per topic. The database judges its
-  throttle at commit (a deferred trigger on `live_ping_queue`), and a topic always refreshes at
-  least an interval plus a second after its latest ping, so a change the
-  throttle held back is still read; keep every `TOPIC_REFRESH_DELAY_MS`
-  above `LIVE_PING_INTERVAL_MS`. A tab hidden for 60 s closes them all, and
-  a channel that can't join makes the page poll every 60 s. A page's subscriptions live in
+  throttle at commit (a deferred trigger on `live_ping_queue`), and a
+  topic always refreshes at least an interval plus a second after its
+  latest ping, so a change the throttle held back is still read; keep
+  every `TOPIC_REFRESH_DELAY_MS` above `LIVE_PING_INTERVAL_MS`. A tab
+  hidden for 60 s closes them all, and a channel that can't join makes the
+  page poll every 60 s. A page's subscriptions live in
   `page-subscriptions`; the budget they're held to is in
   `docs/ARCHITECTURE.md`.
 - **An Auth failure isn't "signed out."** `requireUser` reads claims

@@ -56,7 +56,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/` | Home: greeting, balance hero (balance, rank, At stake, Pending), a new member's Getting started card, Markets to resolve, the weekly recap (Sundays and Mondays), tiles |
 | `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then resolved and voided newest first, each paged. `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) narrows it: open and awaiting read the open list split at the close time (`listOpenMarkets`' `bound`), resolved reads only the resolved list (`listResolvedMarkets`, voided included) |
 | `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under. `?from=<id>` pre-fills it from a market (Duplicate) |
-| `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
+| `/markets/[id]` | A market: the viewer's own position (#262: each solo bet with "Pays ~" and Cancel, each parlay leg linking to its parlay, then results and the net once settled; read from `my_market_position`'s keys before anything streams, so a viewer with nothing on the market gets no card and no skeleton), chart, outcomes (with each outcome's "riding in parlays" figure from `market_parlay_riding`, #279, display only), the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
 | `/parlays` | Redirects to `/bets` (kept for old links) |
 | `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its odds (an estimate from `parlay_leg_odds` until its market closes) and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`: the page checks the parlay exists first (so an unknown id is a real 404), then streams the body behind `<Suspense>` with `ParlayDetailSkeleton` |
@@ -303,7 +303,13 @@ the next moment the list could grow, from `nextResolveCheckAt`),
 `my_at_stake`, `parlay_limits`, `pick_quotes(outcome_ids)` and
 `parlay_leg_odds(parlay_ids)` (0074: a pick's leg odds and floor for the
 caller, and each parlay leg's set or estimated odds for its owner, both built on the service-only `pick_quote(profile, outcome)` that
-`settle_parlay` prices with), and from 0071 (#206, #210)
+`settle_parlay` prices with), `my_market_position(market)` and
+`market_parlay_riding(market)` (0082, security invoker: the keys of the
+caller's own bets and parlays on one market, settled ones included, for
+the market page's Your position card; and per outcome the stakes of
+pending parlays with a leg on it, each parlay's whole stake on every pick,
+sums only, never whose; display only, so nothing that prices or pays
+reads it), and from 0071 (#206, #210)
 `my_current_task_completions()` (security invoker: the newest completion of
 the current period per task, filtered in SQL with `compute_period_key`, so
 the Tasks page reads O(tasks) rows and no period keys), `my_onboarding()`
@@ -435,6 +441,7 @@ after it ships. They roughly follow the project's history:
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
 | 0073 | Permissions (#288, #289, #290): own-row branches of `resolve_market_core`, `can_resolve_market`, `void_market`, `update_market` and `delete_market_comment` need `is_invited()`; `remove_member` deletes the member's `auth.sessions`; `admin_delete_invites` only for unclaimed invites, and the invite insert grant narrowed to `email` and `invited_by` (the caller); `void_market(p_market_id, p_reason)` needs a reason (`markets.void_reason`, 500-character check), is admin-only after close and posts a `market_voided` feed event |
 | 0074 | Parlay pricing and the seed (#287, #272): leg odds set at close or settlement from other members' real money, no seed (`pick_quote`, `pick_quotes`, `parlay_leg_odds`, nullable `parlay_legs.locked_odds`); a 50 DC from 2 members floor and no legs on your own markets; `parlay_limits()` gains `max_payout`, `min_leg_pool` and `min_leg_bettors`, the cap drops to 20×, a leg counts at most 5× and one member's pending parlays on a market can pay at most 1,000 DC (`parlay_limits()` gains `max_leg_odds`; `parlay_max_payout`); `parlays.max_multiplier` (pending parlays from before move to 20×) and `odds_at_close`; payouts are the real pool (`pool_payout`, `market_resolutions.payout_seed` backfilled for history); `apply_coin_transaction` cuts a credit to fit the balance and `refund_room` a refund; `remove_bet` stops at close; `leaderboard_awards` leaves out removed members; `economy_summary` splits payout rounding from older results' seed payouts |
+| 0082 | The market page's Your position card and "riding in parlays" figure (#262, #279): `my_market_position(market)` and `market_parlay_riding(market)` |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
@@ -529,7 +536,11 @@ unfiltered (the feed and member activity watch `feed_reactions` that way,
 since taking a reaction back is a delete) or has the delete write
 something it can hear: a cancelled bet inserts into `cancelled_bets`, and a
 deleted comment is an UPDATE, which the market page's channel filtered to
-its market receives.
+its market receives. The market page also follows the viewer's own `parlays`
+(filtered to them), so its Your position card hears their parlay settle on
+another market. Another member's parlay settling elsewhere writes nothing
+to this market's rows, so the "riding in parlays" figure catches up on the
+next refresh: following every parlay would refresh every open market page.
 
 **Long lists.** Keyset pagination (`lib/pagination`) with "Show more".
 Each list keeps its place in URL cursors, jumps to a fresh window after

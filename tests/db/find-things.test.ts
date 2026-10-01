@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, giveRole, type Member, type TestMarket } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, giveRole, backLeg, type Member, type TestMarket } from './fixtures'
 import { listMatchingMarkets, type MarketNarrow } from '@/lib/markets/list-markets'
 import { listFeed } from '@/lib/social/list-feed'
 import type { PageParams } from '@/lib/pagination/cursor'
@@ -70,7 +70,7 @@ describe('listMatchingMarkets: search', () => {
     for (const m of [awaiting, done]) await db.from('markets').update({ close_at: past }).eq('id', m.marketId)
     const { error } = await aliceClient.rpc('resolve_market', { p_note: 'Done', p_market_id: done.marketId, p_outcome_id: done.outcomeIds[0] })
     if (error) throw error
-    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId })
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId, p_reason: 'Asked twice' })
     if (voidErr) throw voidErr
 
     expect((await titles(bobClient, bob, 'Match')).sort()).toEqual(['Match awaiting', 'Match done', 'Match open', 'Match voided'])
@@ -114,6 +114,8 @@ describe('listMatchingMarkets: whose markets', () => {
     const legB = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Bob leg B', seed: 10 })
     const other = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Only Alice bets' })
     await bet(bobClient, solo)
+    // A parlay leg needs other members' money on its market (0074).
+    for (const leg of [legA, legB]) await backLeg(leg, 1)
     const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [legA.outcomeIds[0], legB.outcomeIds[0]], p_stake: 3 })
     if (error) throw error
     await bet(aliceClient, other)

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { reconcileBalances, serviceClient, setBalanceViaLedger } from './helpers'
 import { pgQuery } from './pg-query'
 import { seedMembers, makeMember, makeAuthUserWithoutProfile, clientFor, ensureInvited, giveRole, type Member } from './fixtures'
 import { countMembers, getAdminMember, listMembersPage } from '@/lib/members/list-members'
@@ -136,8 +136,7 @@ describe('reinvite_member', () => {
 
 describe('removed members aren’t ranked (#265)', () => {
   it('leaves them off the net-worth board and out of every rank and count, keeping their net worth', async () => {
-    const db = serviceClient()
-    await db.from('profiles').update({ balance: 500 }).eq('id', carol.id)
+    await setBalanceViaLedger(carol.id, 500)
     expect((await getMemberStanding(bobClient, bob.id))?.memberCount).toBe(3)
     await remove(carol)
 
@@ -157,6 +156,7 @@ describe('removed members aren’t ranked (#265)', () => {
          ('${carol.id}', 300, 'bet_won', '${now}'), ('${bob.id}', 20, 'bet_won', '${now}'),
          ('${carol.id}', 300, 'bet_won', '2026-06-15T12:00:00Z'), ('${bob.id}', 20, 'bet_won', '2026-06-15T12:00:00Z')`,
     )
+    await reconcileBalances()
     await remove(carol)
 
     const month = await getLeaderboardPage(bobClient, 'month', FIRST)

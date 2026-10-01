@@ -483,9 +483,10 @@ on for an eleventh turns off the one you've used least recently.
 - **Feed:** everyone's bets, parlays, new markets, results, voids (with
   their reason), wins, approved tasks and each month's champion, with their
   reactions, updated live. See [Reactions and comments](#reactions-and-comments).
-  The tabs narrow it: **All**, **Results** (markets resolved, bets and
-  parlays won, each month's champion) and **Mine** (your own bets, markets
-  and wins, plus the result of any market you have a bet or a parlay leg on).
+  The tabs narrow it: **All**, **Results** (markets resolved or voided,
+  bets and parlays won, each month's champion) and **Mine** (your own bets,
+  markets and wins, plus the result or void of any market you have a bet or
+  a parlay leg on, and the void of any market you made).
 - **Finding a market:** on Markets, type in the search box to find a market
   by any words in its title (not case-sensitive, up to 80 characters), and
   use **I bet on** or **I made** to see only your own. They combine with the

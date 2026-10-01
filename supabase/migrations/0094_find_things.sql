@@ -32,10 +32,12 @@ as $$
 $$;
 
 -- The Feed's "Mine" tab: the caller's own events, plus results on markets they have a stake in
--- (a bet or a parlay leg, in any state). Two UNION ALL branches, each on its own index (the actor
--- index; the member's bets and parlays, then the market index), so the cursor's filter, the order
--- and the limit read through `.rpc().select()` reach both, instead of a per-row test walking the
--- whole feed. Security invoker: RLS on activity_events still applies.
+-- (a bet or a parlay leg, in any state), plus voids of those markets and of markets they created:
+-- a void is a market's outcome too. UNION ALL branches, each on its own index (the actor index;
+-- the member's bets, parlays and markets, then the market index), so the cursor's filter, the
+-- order and the limit read through `.rpc().select()` reach every branch, instead of a per-row test
+-- walking the whole feed. The two kinds are separate branches so neither returns an event twice.
+-- Security invoker: RLS on activity_events still applies.
 create function public.my_activity_events()
 returns setof public.activity_events
 language sql
@@ -53,6 +55,18 @@ as $$
       union
       select l.market_id from public.parlay_legs l join public.parlays p on p.id = l.parlay_id
       where p.profile_id = (select auth.uid())
+    )
+  union all
+  select e.* from public.activity_events e
+  where e.kind = 'market_voided' and e.hidden_at is null
+    and e.actor_id is distinct from (select auth.uid())
+    and e.market_id in (
+      select b.market_id from public.bets b where b.profile_id = (select auth.uid())
+      union
+      select l.market_id from public.parlay_legs l join public.parlays p on p.id = l.parlay_id
+      where p.profile_id = (select auth.uid())
+      union
+      select m.id from public.markets m where m.created_by = (select auth.uid())
     )
 $$;
 

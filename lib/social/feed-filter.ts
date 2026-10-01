@@ -9,8 +9,8 @@ export const FEED_SHOW_LABELS: Record<FeedShow, string> = {
   mine: 'Mine',
 }
 
-// What "Results" means: a market settling, a winning bet or parlay, a season ending.
-export const RESULT_KINDS = ['market_resolved', 'bet_won', 'parlay_won', 'season_champion'] as const
+// What "Results" means: a market settling (resolved or voided), a winning bet or parlay, a season ending.
+export const RESULT_KINDS = ['market_resolved', 'market_voided', 'bet_won', 'parlay_won', 'season_champion'] as const
 
 const FEED_PATH = '/feed'
 

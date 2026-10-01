@@ -144,7 +144,16 @@ describe('listFeed: show', () => {
     const results = await listFeed(bobClient, { page: FIRST, show: 'results' })
     expect(all.rows.some((e) => e.kind === 'bet_placed')).toBe(true)
     expect(results.rows.length).toBeGreaterThan(0)
-    expect(results.rows.every((e) => ['market_resolved', 'bet_won', 'parlay_won', 'season_champion'].includes(e.kind))).toBe(true)
+    expect(results.rows.every((e) => ['market_resolved', 'market_voided', 'bet_won', 'parlay_won', 'season_champion'].includes(e.kind))).toBe(true)
+  })
+
+  it('Results includes voids, since a void is how a market ended', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Voided one' })
+    const { error } = await aliceClient.rpc('void_market', { p_market_id: market.marketId, p_reason: 'Asked twice' })
+    if (error) throw error
+
+    const results = await listFeed(bobClient, { page: FIRST, show: 'results' })
+    expect(results.rows.map((e) => `${e.kind}:${e.marketTitle ?? ''}`)).toContain('market_voided:Voided one')
   })
 
   it('Mine is the member’s own events plus results on markets they have a stake in', async () => {
@@ -167,6 +176,40 @@ describe('listFeed: show', () => {
     expect(summary).toContain('market_resolved:Both bet:other')
     expect(summary).not.toContain('market_resolved:Alice only:other')
     expect(mine.rows.filter((e) => e.actorId !== bob.id).every((e) => e.kind === 'market_resolved' && e.marketTitle === 'Both bet')).toBe(true)
+  })
+
+  it('Mine includes voids of markets the member has a stake in or made, by whoever voided them, and no others', async () => {
+    const betOn = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Bob bet, voided' })
+    const legA = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Bob leg, voided' })
+    const legB = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Bob other leg' })
+    const made = await createTestMarket(bobClient, ['Yes', 'No'], { title: 'Bob made, voided' })
+    const notHis = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Not Bob’s, voided' })
+    await bet(bobClient, betOn)
+    // A parlay leg needs other members' money on its market (0074).
+    for (const leg of [legA, legB]) await backLeg(leg, 1)
+    const { error: parlayErr } = await bobClient.rpc('place_parlay', { p_outcome_ids: [legA.outcomeIds[0], legB.outcomeIds[0]], p_stake: 3 })
+    if (parlayErr) throw parlayErr
+    // Alice is an admin, so she voids all of them, Bob's own market included.
+    for (const m of [betOn, legA, made, notHis]) {
+      const { error } = await aliceClient.rpc('void_market', { p_market_id: m.marketId, p_reason: 'Asked twice' })
+      if (error) throw error
+    }
+
+    const mine = await listFeed(bobClient, { page: FIRST, show: 'mine' })
+    const voids = mine.rows.filter((e) => e.kind === 'market_voided').map((e) => e.marketTitle)
+    expect(voids.sort()).toEqual(['Bob bet, voided', 'Bob leg, voided', 'Bob made, voided'])
+    // No event comes back from two branches.
+    expect(new Set(mine.rows.map((e) => e.id)).size).toBe(mine.rows.length)
+  })
+
+  it('lists a void once when the member both made the market and bet on it', async () => {
+    const market = await createTestMarket(bobClient, ['Yes', 'No'], { title: 'Made and bet' })
+    await bet(bobClient, market)
+    const { error } = await aliceClient.rpc('void_market', { p_market_id: market.marketId, p_reason: 'Asked twice' })
+    if (error) throw error
+
+    const mine = await listFeed(bobClient, { page: FIRST, show: 'mine' })
+    expect(mine.rows.filter((e) => e.kind === 'market_voided' && e.marketTitle === 'Made and bet')).toHaveLength(1)
   })
 })
 

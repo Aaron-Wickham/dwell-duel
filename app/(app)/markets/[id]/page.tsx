@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
-import { ChevronDown, CopyPlus, Ticket, Trophy } from 'lucide-react'
+import { ChevronDown, CopyPlus, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
@@ -13,13 +13,9 @@ import { getChartSeries } from '@/lib/markets/chart-series'
 import { computeOdds, type OutcomeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt, marketCardStatus } from '@/lib/markets/market-status'
-import { rowState } from '@/lib/markets/row-state'
 import { readPageParams } from '@/lib/pagination/cursor'
 import { isUuid } from '@/lib/uuid'
 import { readSlip } from '@/lib/parlays/slip'
-import { legOddsBp } from '@/lib/parlays/odds'
-import { MAX_SLIP_PICKS, SLIP_FULL_MESSAGE } from '@/lib/parlays/parse-slip'
-import { addToSlipAction, removeFromSlipAction } from '@/lib/parlays/slip-actions'
 import { BackLink } from '@/components/ui/back-link'
 import { buttonVariants } from '@/components/ui/button'
 import { LoadingStatus } from '@/components/ui/loading-status'
@@ -34,12 +30,16 @@ import {
   MarketBetsSkeleton,
   MarketChartSkeleton,
   MarketCommentsSkeleton,
+  MarketOutcomesSkeleton,
+  MarketPositionSkeleton,
 } from '@/components/markets/market-detail-skeletons'
 import { STATUS_LABEL, STATUS_TONE } from '@/components/markets/market-card'
-import { OutcomeRow } from '@/components/markets/outcome-row'
 import { ProbabilityChart } from '@/components/markets/probability-chart-lazy'
 import { MarketBets } from './market-bets'
 import { MarketComments } from './market-comments'
+import { MarketOutcomes } from './market-outcomes'
+import { MarketPosition } from './market-position'
+import { getPositionKeys } from '@/lib/markets/position'
 import { ResolveForm } from './resolve-form'
 import { describeCreatorStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
 import { DeleteMarketButton } from './delete-market-button'
@@ -52,8 +52,8 @@ import { VoidForm } from './void-form'
 
 // No loading.tsx for this route (and the markets list's own loading.tsx sits in the (list)
 // group, so it doesn't wrap this one): the market must be found before anything streams, so an
-// unknown id still gets a real 404 status. The chart, the outcomes and bet column, the bets and
-// the comments each stream in behind their own skeleton.
+// unknown id still gets a real 404 status. Your position, the chart, the outcomes, the bet column,
+// the bets and the comments each stream in behind their own skeleton.
 export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>) {
   const { id } = await props.params
   const searchParams = await props.searchParams
@@ -64,12 +64,16 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // The slip is only a cookie, so reading it here costs nothing.
   const [market, slipEntries] = await Promise.all([getMarket(supabase, id), readSlip()])
   if (!market) notFound()
-  const [resolution, edits, role, creatorStakes] = await Promise.all([
+  // The position keys are read before anything streams, so a viewer with nothing on the market gets
+  // no card and no skeleton for one: a placeholder that then vanished would shift the page.
+  const [resolution, edits, role, creatorStakes, positionKeys] = await Promise.all([
     market.status === 'resolved' ? getResolutionProof(supabase, market.id) : null,
     market.editedAt ? listMarketEdits(supabase, market.id) : [],
     getRole(supabase),
     getCreatorStakes(supabase, [{ id: market.id, createdBy: market.createdBy }]),
+    getPositionKeys(supabase, market.id),
   ])
+  const positionRows = positionKeys.betIds.length + positionKeys.parlayIds.length
   const creatorStake = describeCreatorStake(creatorStakes.get(market.id), market.status === 'open' ? 'has' : 'had')
 
   const odds = computeOdds(
@@ -110,7 +114,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
 
   return (
     <Page transition="drill-down">
-      <LiveTables subscriptions={pageSubscriptions.marketDetail(market.id)} />
+      <LiveTables subscriptions={pageSubscriptions.marketDetail(market.id, user.id)} />
       <BackLink href="/markets">Markets</BackLink>
 
       <div className="flex flex-col gap-3">
@@ -207,38 +211,49 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
       {/* Each section's fallback carries the same grid placement as the section itself. The
           fallbacks announce nothing themselves (SkeletonScreen announce={false});
           LoadingStatus wraps them in one combined status, scoped to just these, for as
-          long as any of them is still showing. */}
+          long as any of them is still showing.
+          On a phone it's one column, Your position first. From lg the right column is Your
+          position over the bet card and resolve tools, and the left stacks the chart and outcomes
+          (spanning both of those rows, so a long position card can't open a gap under the chart)
+          over bets and comments. Spacing is margins, not a row gap, so with no position card the
+          right column starts level with the chart. */}
       <LoadingStatus>
-        <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_auto_1fr] lg:items-start lg:gap-7">
-          <Suspense fallback={<MarketChartSkeleton />}>
-            <MarketChart market={market} odds={odds} now={now} />
+        <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-x-7 lg:gap-y-0">
+          {positionRows > 0 && (
+            <Suspense fallback={<MarketPositionSkeleton rows={positionRows} />}>
+              <MarketPosition market={market} keys={positionKeys} now={now} />
+            </Suspense>
+          )}
+          <div className="flex flex-col gap-5 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:mb-7 lg:gap-7">
+            <Suspense fallback={<MarketChartSkeleton />}>
+              <MarketChart market={market} odds={odds} now={now} />
+            </Suspense>
+            <Suspense fallback={<MarketOutcomesSkeleton outcomes={market.outcomes.length} />}>
+              <MarketOutcomes market={market} odds={odds} slip={slip} canBet={canBet} />
+            </Suspense>
+          </div>
+          <Suspense fallback={<MarketActionsSkeleton />}>
+            <MarketActions market={market} odds={odds} isCreator={isCreator} canBet={canBet} />
           </Suspense>
-          <Suspense fallback={<MarketActionsSkeleton outcomes={market.outcomes.length} />}>
-            <MarketActions
-              market={market}
-              odds={odds}
-              slip={slip}
-              isCreator={isCreator}
-              canBet={canBet}
-            />
-          </Suspense>
-          <Suspense fallback={<MarketBetsSkeleton />}>
-            <MarketBets
-              market={market}
-              viewerId={user.id}
-              canBet={canBet}
-              page={readPageParams(searchParams, 'bets')}
-              searchParams={searchParams}
-            />
-          </Suspense>
-          <Suspense fallback={<MarketCommentsSkeleton />}>
-            <MarketComments
-              marketId={market.id}
-              viewerId={user.id}
-              page={readPageParams(searchParams, 'comments')}
-              searchParams={searchParams}
-            />
-          </Suspense>
+          <div className="flex flex-col gap-5 lg:col-start-1 lg:row-start-3 lg:gap-7">
+            <Suspense fallback={<MarketBetsSkeleton />}>
+              <MarketBets
+                market={market}
+                viewerId={user.id}
+                canBet={canBet}
+                page={readPageParams(searchParams, 'bets')}
+                searchParams={searchParams}
+              />
+            </Suspense>
+            <Suspense fallback={<MarketCommentsSkeleton />}>
+              <MarketComments
+                marketId={market.id}
+                viewerId={user.id}
+                page={readPageParams(searchParams, 'comments')}
+                searchParams={searchParams}
+              />
+            </Suspense>
+          </div>
         </div>
       </LoadingStatus>
     </Page>
@@ -261,7 +276,7 @@ async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: 
 
   return (
     <ContentReveal>
-      <SectionCard title="Chance over time" titleId="chart-title" className="gap-3 lg:col-start-1 lg:row-start-1">
+      <SectionCard title="Chance over time" titleId="chart-title" className="gap-3">
         <ProbabilityChart
           outcomes={chartOutcomes}
           points={chart.points}
@@ -278,13 +293,11 @@ async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: 
 async function MarketActions({
   market,
   odds,
-  slip,
   isCreator,
   canBet,
 }: {
   market: MarketDetail
   odds: OutcomeOdds[]
-  slip: string[]
   isCreator: boolean
   canBet: boolean
 }) {
@@ -311,9 +324,6 @@ async function MarketActions({
   const canDelete = role === 'owner' && totalPool === 0 && !(await hasBetHistory(supabase, market.id))
   const showResolve = canResolve || canOverride
 
-  const marketInSlip = market.outcomes.some((o) => slip.includes(o.id))
-  const slipFull = slip.length >= MAX_SLIP_PICKS && !marketInSlip
-
   const closedCopy =
     market.status === 'resolved' ? (
       <>
@@ -323,8 +333,8 @@ async function MarketActions({
             {' '}
             on <LocalTime iso={market.resolvedAt} format="day" />
           </>
-        )}{' '}
-        and payouts have been sent.
+        )}
+        . Solo bets have been paid; parlays pay once every pick has settled.
       </>
     ) : market.status === 'voided' ? (
       'This market was voided, and every bet and parlay leg was refunded.'
@@ -356,57 +366,7 @@ async function MarketActions({
 
   return (
     <ContentReveal>
-      <SectionCard
-        title="Outcomes"
-        titleId="outcomes-title"
-        action={<span className="text-sm text-ink2 tabular-nums">{totalPool} DC in the pool</span>}
-        className="gap-1 lg:col-start-1 lg:row-start-2"
-      >
-        {canBet && slipFull && (
-          <Message tone="gold" icon={Ticket} id="slip-full-note" className="mt-2">
-            {SLIP_FULL_MESSAGE}
-          </Message>
-        )}
-        <ul className="flex flex-col divide-y divide-line">
-          {odds.map((o, index) => {
-            // What a DC on this outcome pays from the real pool now (0074: the seed is never paid),
-            // so an outcome nobody has backed shows no payout yet.
-            const oddsBp = legOddsBp(totalPool, o.poolTotal)
-            return (
-            <li key={o.outcomeId}>
-              <OutcomeRow
-                label={o.label}
-                poolTotal={o.poolTotal}
-                probability={o.impliedProbability}
-                oddsBp={oddsBp}
-                series={outcomeSeries(market.kind, o.label, index)}
-                state={rowState(o.outcomeId, { slip, canBet, slipFull })}
-                winner={market.status === 'resolved' && o.label === market.resolvedOutcomeLabel}
-                slipPick={{
-                  outcomeId: o.outcomeId,
-                  outcomeLabel: o.label,
-                  marketId: market.id,
-                  marketTitle: market.title,
-                  parlay: false,
-                  open: canBet,
-                  // A new pick starts Solo and shows only until the slip's own read (getSlipView)
-                  // replaces it, so its parlay figures are the plain pool's, not a quote.
-                  oddsBp: oddsBp ?? 10_000,
-                  legBlock: null,
-                  outcomePool: o.poolTotal,
-                  totalPool,
-                }}
-                addAction={addToSlipAction.bind(null, o.outcomeId)}
-                removeAction={removeFromSlipAction.bind(null, o.outcomeId)}
-                disabledReasonId={slipFull ? 'slip-full-note' : undefined}
-              />
-            </li>
-            )
-          })}
-        </ul>
-      </SectionCard>
-
-      <div className="flex flex-col gap-5 lg:col-start-2 lg:row-span-4 lg:row-start-1 lg:gap-7">
+      <div className="flex flex-col gap-5 lg:col-start-2 lg:row-span-2 lg:row-start-2 lg:gap-7">
         {canBet ? (
           <SectionCard title="Place a bet" titleId="bet-title" className="gap-2">
             <p className="text-ink2">

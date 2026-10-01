@@ -1,27 +1,13 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { ResultChip } from '@/components/bets/result-chip'
 import { CancelBetButton } from '@/components/markets/cancel-bet-button'
 import { LocalTime } from '@/components/ui/local-time'
 import { StatusChip } from '@/components/ui/status-chip'
 import { PlacedParlay } from '@/components/parlays/placed-parlay'
-import type { MyBet, MyCancelledBet } from '@/lib/bets/list-my-bets'
+import type { MyCancelledBet } from '@/lib/bets/list-my-bets'
 import type { Wager } from '@/lib/bets/list-my-wagers'
 import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
-
-function ResultChip({ result }: { result: MyBet['result'] }) {
-  switch (result.kind) {
-    case 'open':
-      return <StatusChip tone="open">Open</StatusChip>
-    case 'awaiting':
-      return <StatusChip tone="wait">Awaiting resolution</StatusChip>
-    case 'won':
-      return <StatusChip tone="done">Won {result.payout} DC</StatusChip>
-    case 'lost':
-      return <StatusChip tone="lost">Lost</StatusChip>
-    case 'refunded':
-      return <StatusChip tone="void">{result.reason === 'no_winners' ? 'Refunded · no winners' : 'Refunded'}</StatusChip>
-  }
-}
 
 // A list with dividers on a phone; at lg, a grid of cards like the markets page. Each card
 // stretches to its row's height, so its status sits at the same place across a row.

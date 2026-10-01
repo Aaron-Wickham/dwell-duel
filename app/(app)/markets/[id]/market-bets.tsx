@@ -34,7 +34,7 @@ export async function MarketBets({
 
   return (
     <ContentReveal>
-      <SectionCard title="Bets" titleId="bets-title" className="gap-1 lg:col-start-1 lg:row-start-3">
+      <SectionCard title="Bets" titleId="bets-title" className="gap-1">
         <ShowMoreFocus />
         {betsPage.windowed && betsPage.rows.length > 0 && (
           <div className="flex flex-col py-2">

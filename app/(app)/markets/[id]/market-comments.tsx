@@ -46,7 +46,7 @@ export async function MarketComments({
 
   return (
     <ContentReveal>
-      <SectionCard title="Comments" titleId="comments-title" className="gap-3 lg:col-start-1 lg:row-start-4">
+      <SectionCard title="Comments" titleId="comments-title" className="gap-3">
         {comments.next && (
           <div className="flex flex-col">
             <ShowMore

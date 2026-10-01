@@ -69,49 +69,42 @@ DwellDuel uses **pari-mutuel** betting: every DC bet on a market goes into
 one pot, and the people who picked the winner split it in proportion to
 their stakes.
 
-To give a brand-new market sensible odds, each outcome starts with a
-**20 DC seed**: virtual money that counts toward the odds but belongs to
-nobody. The house covers it when it's paid out, but only against real
-opposing money (below).
+**Payout if it wins** = your stake × all DC on the market ÷ DC on the
+winning outcome, rounded down. The winners split exactly the real pool:
+nothing is added, so if nobody bet against you, you get your stake back.
 
-For an outcome, with *S* the seed per outcome and *n* the number of
-outcomes:
+**The house adds nothing to a solo bet.** To give a thin market a sensible
+look, each outcome's **chance** counts a **20 DC seed**: virtual money that
+belongs to nobody and is never paid out. With *S* the seed per outcome and
+*n* the number of outcomes:
 
 - **Chance** = (DC on this outcome + S) ÷ (all DC on the market + S × n)
-- **Payout if it wins** = your stake × (all DC + S × n) ÷ (DC on the
-  winning outcome + S), rounded down, but never more than your stake ×
-  (all DC + the opposing stake) ÷ (DC on the winning outcome)
 
-**The house covers it**, but only as far as someone really lost. The
-*opposing stake* is what members who had nothing on the winning outcome
-staked on the other outcomes. The seed can add to the winners' payouts at
-most that much in total, so a market nobody bet against pays its winners
-exactly their stakes back, however many outcomes it had, and your own bet
-on another outcome never counts as opposing money. With plenty of money
-on both sides the limit doesn't bite, and the payout is the seeded one.
+So a brand-new Yes/No market shows 50% / 50%, not 0% / 0%, and its chart
+starts there. The seed only shapes the chance, the charts and the
+sparklines. Each outcome's **"× payout per DC"** is the real pool's (all DC
+÷ DC on that outcome), and an outcome nobody has backed shows none yet.
 
-**A worked example.** On a new Yes/No market, both sides show 50% and
-2.00×. Then Alice bets 10 DC on Yes and Bob bets 30 DC on No.
+**A worked example.** On a new Yes/No market, both sides show 50%. Then
+Alice bets 10 DC on Yes and Bob bets 30 DC on No.
 
 - Yes: (10 + 20) ÷ (40 + 40) = **37.5%**. No: (30 + 20) ÷ 80 = **62.5%**.
-- If Yes wins, Alice gets 10 × 80 ÷ 30 = **26 DC** (a 16 DC profit).
-- If No wins, Bob gets 30 × 80 ÷ 50 = **48 DC** (an 18 DC profit).
-- Had Bob not bet, Alice alone on Yes would get her 10 DC back: nobody
-  bet against her, so the seed adds nothing.
+- If Yes wins, Alice gets 10 × 40 ÷ 10 = **40 DC** (a 30 DC profit).
+- If No wins, Bob gets 30 × 40 ÷ 30 = **40 DC** (a 10 DC profit).
+- Had Bob not bet, Alice alone on Yes would get her 10 DC back.
 
 Your payout isn't fixed when you bet. It moves as others bet, until the
-market closes. The percentages, charts and "Pays ~" estimates all use the
-same formula as the real payout. The odds a market shows are the seeded
-ones, so a lone bet can show more than it will pay until someone bets
-against it; the slip's "Pays ~" takes that into account.
+market closes. The slip's "Pays ~" and My bets work it out with the same
+formula as the real payout. (Some older results counted the seed in their
+payouts, and My bets still shows what they paid.)
 
 - **Cancelling:** you can cancel a bet for a full refund until the market
   closes. Cancelled bets appear under My bets → Cancelled.
-- **No winners:** if nobody bet on the winning outcome, everyone is
-  refunded. My bets marks such a bet "Refunded · no winners". (A parlay
-  pick on that outcome still counts as won, because parlays don't go into
-  the pool, but at 1.00×: nobody else backed it, so it has no odds. See
-  below.)
+- **No winners:** if nobody bet on the winning outcome, there is no one
+  to split the pool, so everyone is refunded. My bets marks such a bet
+  "Refunded · no winners". (A parlay pick on that outcome still counts as
+  won, because parlays don't go into the pool, but at 1.00×: nobody else
+  backed it, so it has no odds. See below.)
 
 ## The slip, solo bets and parlays
 
@@ -145,8 +138,13 @@ stake × the multiplier, rounded down.
   has seeded odds for solo bets, but nothing real to price a leg on.
 - **Not your own markets:** you can't put a market you created in a
   parlay.
-- **Caps:** the multiplier is capped at **20×**, and a parlay pays at most
-  **1,000 DC**, so its stake can be at most 1,000 DC.
+- **Caps:** a leg counts at most **5×**, the multiplier is capped at
+  **20×**, and a parlay pays at most **1,000 DC**, so its stake can be at
+  most 1,000 DC.
+- **Your parlays on one market:** all your pending parlays with a leg on
+  the same market can pay at most **1,000 DC** between them, counting each
+  at the most it could pay (unset legs at 5×). Past that, a new parlay on
+  that market is refused until some of them settle.
 - **A leg with no real odds counts 1.00×.** If, when its market closes, it
   no longer has 50 DC from 2 other members (say someone cancelled), or
   nobody else has money on your pick, the leg still has to win, but it
@@ -161,8 +159,9 @@ stake × the multiplier, rounded down.
   they don't move a market's percentages (the same way Kalshi and
   Polymarket keep their "Combos" separate).
 - A parlay placed before odds were set at close keeps the odds it locked
-  when it was placed, and its 100× cap, but it too pays at most 1,000 DC
-  (or its stake back, if it staked more than that).
+  when it was placed, under the same 20× and 1,000 DC caps. One that
+  staked more than 1,000 DC still gets at least its stake back if it wins,
+  so a win is never a loss. (One already settled keeps what it was paid.)
 
 **My bets** shows your solo bets and parlays together, newest first, under
 Open, Settled and Cancelled. Only you can see it. Everyone can see who

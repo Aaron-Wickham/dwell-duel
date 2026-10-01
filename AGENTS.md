@@ -158,14 +158,17 @@ a line to `CHANGELOG.md` under the next release.
   script checks `reducedMotion()` from `lib/ui/reduced-motion.ts`.
 - **Segmented tabs are `SubNav`** (`components/ui/sub-nav.tsx`, a client
   component whose pill slides between tabs), with tab state in the URL, as My bets' `?tab=` and the admin sections do.
-- **Odds are seeded** (0041): every outcome's pool counts
-  `markets.seed_per_outcome` virtual DC. Odds, chance, payout estimates and
-  charts go through `effectivePools` (`lib/markets/odds.ts`), the same maths
-  `resolve_market` pays on (the seed's top-up limited to the opposing
-  stake, 0074). Parlay limits live in SQL `parlay_limits()`, mirrored by
-  `MAX_PICKS` / `MAX_MULTIPLIER` / `MAX_PAYOUT` / `MIN_LEG_*`; a DB test
-  keeps them equal. A parlay leg's odds are set at close from real money
-  (`pick_quote`), so the slip and parlay views show `~` estimates until then.
+- **The seed is for display; payouts are the real pool** (0041, 0074). Every
+  outcome's *chance* counts `markets.seed_per_outcome` virtual DC: chance,
+  charts and sparklines go through `effectivePools` (`lib/markets/odds.ts`),
+  mirrored by `market_sparklines`. Payouts never count it: payout figures
+  ("× payout per DC", "Pays ~", My bets) go through `poolPayout` /
+  `soloPayout`, mirrored by SQL `pool_payout()`, which `resolve_market_core`
+  pays with; a DB test keeps the two equal. Parlay limits live in SQL
+  `parlay_limits()`, mirrored by `MAX_PICKS` / `MAX_MULTIPLIER` /
+  `MAX_PAYOUT` / `MIN_LEG_*` / `MAX_LEG_ODDS`; a DB test keeps them equal. A
+  parlay leg's odds are set at close from real money (`pick_quote`), so the
+  slip and parlay views show `~` estimates until then.
 - **Proof files** (0042) live in the private `proof` bucket and upload from
   the browser (`lib/proof/upload.ts`), never through a server action. Show
   them with `toProofViews` (signed URLs made with the viewer's own client)

@@ -58,4 +58,21 @@ describe('HomeHero', () => {
     render(<HomeHero {...BASE} />)
     for (const link of screen.getAllByRole('link')) expect(link).toHaveClass('min-h-11', 'pressable', 'no-underline')
   })
+
+  it('points a member at exactly 0 DC to Tasks, with what tasks pay (#260)', () => {
+    render(<HomeHero {...BASE} balance={0} taskRewards={{ min: 5, max: 25 }} />)
+    const hero = screen.getByRole('region', { name: 'Your balance' })
+    expect(hero).toHaveTextContent('You’re out of Dwell Coin. Earn more with Tasks: they pay 5–25 DC.')
+    expect(screen.getByRole('link', { name: 'Tasks' })).toHaveAttribute('href', '/tasks')
+  })
+
+  it('still points to Tasks when there are none to quote', () => {
+    render(<HomeHero {...BASE} balance={0} />)
+    expect(screen.getByRole('region', { name: 'Your balance' })).toHaveTextContent('You’re out of Dwell Coin. Earn more with Tasks.')
+  })
+
+  it('says nothing about earning while there is any DC left', () => {
+    render(<HomeHero {...BASE} balance={1} taskRewards={{ min: 5, max: 25 }} />)
+    expect(screen.queryByText(/out of Dwell Coin/)).toBeNull()
+  })
 })

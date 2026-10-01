@@ -43,10 +43,38 @@ describe('the How it works page', () => {
     }
   })
 
+  it('opens with the short version, then a collapsed On this page list for phones linking every section below it (#260)', () => {
+    const { container } = render(<HowItWorksPage />)
+    const h2s = headings(2)
+    expect(h2s[0]).toBe('The short version')
+    const details = container.querySelector('details')!
+    expect(details).not.toHaveAttribute('open')
+    expect(details).toHaveClass('lg:hidden')
+    expect(details.previousElementSibling).toBe(screen.getByRole('region', { name: 'The short version' }))
+    expect(details.querySelector('summary')).toHaveTextContent('On this page')
+    const links = [...screen.getByRole('navigation', { name: 'On this page', hidden: true }).querySelectorAll('a')]
+    expect(links.map((a) => a.textContent)).toEqual(h2s.slice(1))
+    for (const link of links) {
+      expect(link).toHaveClass('min-h-11')
+      expect(container.querySelector(link.getAttribute('href')!)?.tagName).toBe('H2')
+    }
+  })
+
+  it('marks Getting started’s How it works step done on this device once opened', () => {
+    document.cookie = 'read-how-it-works=; Max-Age=0; Path=/'
+    render(<HowItWorksPage />)
+    expect(document.cookie).toMatch(/(^|; )read-how-it-works=1/)
+  })
+
+  it('keeps the slip’s How parlays pay link pointed at a real section', () => {
+    const { container } = render(<HowItWorksPage />)
+    expect(container.querySelector('#how-the-slip-solo-bets-and-parlays')?.tagName).toBe('H2')
+  })
+
   it('points every in-body link at a section on the page, with the headings kept clear of the bar at every width', () => {
     const { container } = render(<HowItWorksPage />)
-    const nav = screen.getByRole('navigation', { name: 'Contents' })
-    const inBody = [...container.querySelectorAll('a[href^="#"]')].filter((a) => !nav.contains(a))
+    const navs = container.querySelectorAll('nav')
+    const inBody = [...container.querySelectorAll('a[href^="#"]')].filter((a) => ![...navs].some((nav) => nav.contains(a)))
     expect(inBody.length).toBeGreaterThan(0)
     for (const link of inBody) {
       const target = container.querySelector(link.getAttribute('href')!)

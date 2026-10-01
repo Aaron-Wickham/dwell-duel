@@ -22,8 +22,25 @@ describe('SignInButton', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }))
     expect(signInWithOAuth).toHaveBeenCalledWith({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/callback` },
+      options: { redirectTo: `${window.location.origin}/callback`, queryParams: { prompt: 'select_account' } },
     })
+  })
+
+  it('remembers a safe next path for the callback, and forgets an unsafe one (#263)', async () => {
+    const cookies: string[] = []
+    vi.spyOn(document, 'cookie', 'set').mockImplementation((value: string) => void cookies.push(value))
+
+    params = new URLSearchParams('next=/markets/abc')
+    const { unmount } = render(<SignInButton />)
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }))
+    expect(cookies.at(-1)).toMatch(/^sign-in-next=%2Fmarkets%2Fabc; Path=\/callback; Max-Age=600; SameSite=Lax/)
+    unmount()
+
+    params = new URLSearchParams('next=//evil.example')
+    render(<SignInButton />)
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }))
+    expect(cookies.at(-1)).toMatch(/^sign-in-next=; Path=\/callback; Max-Age=0/)
+    vi.restoreAllMocks()
   })
 
   it('says it is opening Google while the redirect loads, and ignores a second tap', async () => {

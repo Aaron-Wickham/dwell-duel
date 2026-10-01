@@ -39,6 +39,18 @@ describe('proxy', () => {
     expect(new URL(response.headers.get('location')!).pathname).toBe('/sign-in')
   })
 
+  it('carries the page asked for to sign-in as a safe next path (#263)', async () => {
+    getClaims.mockResolvedValue({ data: null, error: null })
+
+    const deep = new URL((await proxy(request('/markets/abc?from=share'))).headers.get('location')!)
+    expect(deep.pathname).toBe('/sign-in')
+    expect(deep.searchParams.get('next')).toBe('/markets/abc?from=share')
+
+    // Home is where sign-in lands anyway, and any other query is dropped with it.
+    const home = new URL((await proxy(request('/?x=1'))).headers.get('location')!)
+    expect(home.search).toBe('')
+  })
+
   it('redirects a signed-out HEAD of an app path to /sign-in', async () => {
     getClaims.mockResolvedValue({ data: null, error: null })
 

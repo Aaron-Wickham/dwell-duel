@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isAppPath } from '@/lib/auth/app-paths'
+import { safeNextPath } from '@/lib/auth/next-path'
 import { isAuthUnavailable, readClaims } from '@/lib/auth/auth-unavailable'
 import { fetchWithTimeout, SERVER_FETCH_TIMEOUT_MS } from '@/lib/supabase/timeout-fetch'
 
@@ -35,8 +36,10 @@ export async function proxy(request: NextRequest) {
   const isPageLoad = request.method === 'GET' || request.method === 'HEAD'
   if (!data && isPageLoad && isAppPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone()
+    // The page asked for comes along, so a shared market link still lands on the market (#263).
+    const next = safeNextPath(`${request.nextUrl.pathname}${request.nextUrl.search}`)
     url.pathname = '/sign-in'
-    url.search = ''
+    url.search = next ? `?next=${encodeURIComponent(next)}` : ''
     const redirect = NextResponse.redirect(url)
     response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie))
     return redirect

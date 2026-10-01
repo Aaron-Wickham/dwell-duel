@@ -56,6 +56,16 @@ function placeableParlayStake(picks: SlipPick[], parlayStake: string): number {
   return picks.filter((p) => p.parlay).length >= 2 ? (wholeDc(parlayStake) ?? 0) : 0
 }
 
+type SlipStakes = { picks: SlipPick[]; stakes: Record<string, string>; parlayStake: string }
+
+function slipTotal({ picks, stakes, parlayStake }: SlipStakes): number {
+  return picks.filter((p) => !p.parlay).reduce((sum, p) => sum + (wholeDc(stakes[p.outcomeId]) ?? 0), 0) + placeableParlayStake(picks, parlayStake)
+}
+
+// Where the Place button points when it can't be pressed, or when the stakes are more than the
+// balance; slip-panel.tsx renders this id once, under the button.
+const WHY_ID = 'slip-why'
+
 // What a stake can use: the balance, less every other stake the slip already holds. A solo pick's
 // chips leave out its own stake, and the parlay's leave out the parlay's.
 function availableFor(
@@ -120,6 +130,8 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
   const name = `${pick.outcomeLabel}, ${pick.marketTitle}`
   const odds = pickOdds(pick)
   const blockId = `slip-pick-block-${pick.outcomeId}`
+  // Every stake counts toward the shortfall, so each filled one is marked and points to the why.
+  const overBudget = stake !== null && slipTotal(slip) > slip.balance
 
   return (
     <li className="flex flex-col gap-3 py-4">
@@ -187,8 +199,8 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
                   value={stakes[pick.outcomeId] ?? ''}
                   onChange={(e) => setStake(pick.outcomeId, e.target.value)}
                   className="w-28"
-                  aria-invalid={Boolean(error)}
-                  aria-describedby={error ? errorId : undefined}
+                  aria-invalid={Boolean(error) || overBudget}
+                  aria-describedby={error ? errorId : overBudget ? WHY_ID : undefined}
                 />
                 {stake !== null && (
                   <span className="text-sm text-ink2">
@@ -223,7 +235,7 @@ const LOST_RESPONSE = 'We couldn’t confirm your bets. Check your connection an
 
 export function SlipPanel() {
   const slip = useSlip()
-  const { picks, parlayStake, setParlayStake, stakes, attemptKeyRef, lostResponse, setLostResponse, clearStakes, setOpen } = slip
+  const { picks, parlayStake, setParlayStake, stakes, balance, attemptKeyRef, lostResponse, setLostResponse, clearStakes, setOpen } = slip
   const [state, formAction] = useActionState<PlaceSlipState, FormData>(async (prev, formData) => {
     attemptKeyRef.current ??= crypto.randomUUID()
     formData.set('idempotency_key', attemptKeyRef.current)
@@ -281,7 +293,9 @@ export function SlipPanel() {
   const solosReady = solos.every((p) => wholeDc(stakes[p.outcomeId]) !== null)
   const allOpen = picks.every((p) => p.open)
   const betCount = solos.length + (legs.length > 0 ? 1 : 0)
-  const total = solos.reduce((sum, p) => sum + (wholeDc(stakes[p.outcomeId]) ?? 0), 0) + placeableParlayStake(picks, parlayStake)
+  const total = slipTotal(slip)
+  const short = total > balance
+  const parlayOverBudget = short && placeableParlayStake(picks, parlayStake) > 0
   const parlayError = state?.parlayError
   const legNote =
     legs.length === 1
@@ -289,6 +303,24 @@ export function SlipPanel() {
       : legs.length > MAX_PICKS
         ? `A parlay can have at most ${MAX_PICKS} picks.`
         : null
+  // The first thing holding Place back, said under it (#260). A pick that's no longer available
+  // has its own note above the button. At 0 DC nothing can be placed, so that says where to earn.
+  const broke = balance === 0
+  const why = broke
+    ? null
+    : !solosReady
+        ? 'Enter a stake for each Solo pick.'
+        : legNote
+          ? legNote
+          : legsBlocked
+            ? 'Switch the picks that can’t be in a parlay to Solo.'
+            : legs.length > 0 && parlayStakeDc === null
+              ? 'Enter a stake for the parlay.'
+              : parlayStakeDc !== null && parlayStakeDc > MAX_PAYOUT
+                ? `Stake at most ${MAX_PAYOUT} DC on the parlay.`
+                : short
+                  ? `This slip needs ${total} DC; you have ${balance} DC.`
+                  : null
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -300,9 +332,17 @@ export function SlipPanel() {
           {picks.length} {picks.length === 1 ? 'pick' : 'picks'}
         </span>
       </div>
+      <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-[12px] bg-sunk px-3 py-2.5 text-sm">
+        <span>
+          Balance <strong className="tabular-nums">{balance} DC</strong>
+        </span>
+        <span className={cn('tabular-nums', short ? 'font-extrabold text-loss' : 'text-ink2')}>
+          {short ? `${total - balance} DC short` : `${balance - total} DC left after this slip`}
+        </span>
+      </p>
       <p className="text-sm text-ink2">
         Each pick is a Solo bet with its own stake, or part of one Parlay that pays only if all its picks win.{' '}
-        <Link href="/how-it-works#the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']}>
+        <Link href="/how-it-works#how-the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']}>
           How parlays pay
         </Link>
       </p>
@@ -346,8 +386,8 @@ export function SlipPanel() {
                 value={parlayStake}
                 onChange={(e) => setParlayStake(e.target.value)}
                 className="w-28 bg-surface"
-                aria-invalid={Boolean(parlayError)}
-                aria-describedby={parlayError ? 'slip-parlay-error' : undefined}
+                aria-invalid={Boolean(parlayError) || parlayOverBudget}
+                aria-describedby={parlayError ? 'slip-parlay-error' : parlayOverBudget ? WHY_ID : undefined}
               />
               {parlayStakeDc !== null && parlayStakeDc > MAX_PAYOUT ? (
                 <span className="text-sm text-ink2">A parlay pays at most {MAX_PAYOUT} DC, so stake at most {MAX_PAYOUT} DC.</span>
@@ -388,11 +428,26 @@ export function SlipPanel() {
       )}
       <FormSubmitButton
         block
-        disabled={!allOpen || !solosReady || !parlayReady}
-        aria-describedby={!allOpen ? 'slip-blocked' : formError ? 'slip-error' : undefined}
+        disabled={!allOpen || !solosReady || !parlayReady || short}
+        aria-describedby={!allOpen ? 'slip-blocked' : formError ? 'slip-error' : broke || why ? WHY_ID : undefined}
       >
         {`Place ${betCount} ${betCount === 1 ? 'bet' : 'bets'}${total > 0 ? ` · ${total} DC` : ''}`}
       </FormSubmitButton>
+      {broke ? (
+        <Message tone="gold" id={WHY_ID}>
+          You have 0 DC. Earn more with{' '}
+          <Link href="/tasks" className="text-inherit">
+            Tasks
+          </Link>
+          , then come back to this slip.
+        </Message>
+      ) : (
+        why && (
+          <p id={WHY_ID} className="text-sm text-ink2">
+            {why}
+          </p>
+        )
+      )}
     </form>
   )
 }

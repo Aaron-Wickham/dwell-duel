@@ -326,4 +326,80 @@ describe('SlipPanel', () => {
       expect(parlay.getByLabelText('Stake (DC)')).toHaveValue(10)
     })
   })
+
+  describe('the balance and why Place is held back (#260)', () => {
+    const stakeOf = (n: number) => screen.getByLabelText('Stake (DC)', { selector: `#slip-stake-${pick(n).outcomeId}` })
+
+    it('shows the balance and what the slip leaves, as stakes change', async () => {
+      renderPanel(viewOf(pick(1), pick(2)), 120)
+      expect(screen.getByText('Balance', { exact: false })).toHaveTextContent('Balance 120 DC')
+      expect(screen.getByText('120 DC left after this slip')).toBeInTheDocument()
+      await userEvent.type(stakeOf(1), '20')
+      expect(screen.getByText('100 DC left after this slip')).toBeInTheDocument()
+    })
+
+    it('says to enter a stake for each Solo pick, and the button points to it', async () => {
+      renderPanel(viewOf(pick(1), pick(2)), 120)
+      await userEvent.type(stakeOf(1), '20')
+      const place = screen.getByRole('button', { name: 'Place 2 bets · 20 DC' })
+      expect(place).toHaveAttribute('aria-disabled', 'true')
+      expect(place).toHaveAccessibleDescription('Enter a stake for each Solo pick.')
+    })
+
+    it('says how short the slip is, marks the stakes and holds Place', async () => {
+      renderPanel(viewOf(pick(1), pick(2)), 10)
+      await userEvent.type(stakeOf(1), '20')
+      await userEvent.type(stakeOf(2), '10')
+      expect(screen.getByText('20 DC short')).toHaveClass('text-loss')
+      const place = screen.getByRole('button', { name: 'Place 2 bets · 30 DC' })
+      expect(place).toHaveAttribute('aria-disabled', 'true')
+      expect(place).toHaveAccessibleDescription('This slip needs 30 DC; you have 10 DC.')
+      expect(stakeOf(1)).toHaveAttribute('aria-invalid', 'true')
+      expect(stakeOf(1)).toHaveAccessibleDescription('This slip needs 30 DC; you have 10 DC.')
+
+      await userEvent.clear(stakeOf(2))
+      await userEvent.type(stakeOf(2), '0')
+      await userEvent.clear(stakeOf(1))
+      await userEvent.type(stakeOf(1), '5')
+      expect(stakeOf(1)).toHaveAttribute('aria-invalid', 'false')
+    })
+
+    it('counts a parlay stake toward the shortfall too', async () => {
+      renderPanel(viewOf(pick(1, { parlay: true }), pick(2, { parlay: true })), 10)
+      const parlay = within(screen.getByRole('region', { name: 'Parlay · 2 picks' }))
+      await userEvent.type(parlay.getByLabelText('Stake (DC)'), '15')
+      expect(screen.getByText('5 DC short')).toBeInTheDocument()
+      expect(parlay.getByLabelText('Stake (DC)')).toHaveAttribute('aria-invalid', 'true')
+      expect(screen.getByRole('button', { name: 'Place 1 bet · 15 DC' })).toHaveAttribute('aria-disabled', 'true')
+    })
+
+    it('asks for the parlay’s stake when that’s all that is missing', () => {
+      renderPanel(viewOf(pick(1, { parlay: true }), pick(2, { parlay: true })), 50)
+      expect(screen.getByRole('button', { name: 'Place 1 bet' })).toHaveAccessibleDescription('Enter a stake for the parlay.')
+    })
+
+    it('says nothing under a slip that is ready to place', async () => {
+      renderPanel(viewOf(pick(1)), 50)
+      await userEvent.type(stakeOf(1), '10')
+      const place = screen.getByRole('button', { name: 'Place 1 bet · 10 DC' })
+      expect(place).not.toHaveAttribute('aria-disabled')
+      expect(place).not.toHaveAttribute('aria-describedby')
+    })
+
+    it('points a member at 0 DC to Tasks, keeping the picks', async () => {
+      renderPanel(viewOf(pick(1), pick(2)), 0)
+      expect(screen.getByText('Balance', { exact: false })).toHaveTextContent('Balance 0 DC')
+      const place = screen.getByRole('button', { name: 'Place 2 bets' })
+      expect(place).toHaveAccessibleDescription('You have 0 DC. Earn more with Tasks, then come back to this slip.')
+      expect(screen.getByRole('link', { name: 'Tasks' })).toHaveAttribute('href', '/tasks')
+      await userEvent.type(stakeOf(1), '20')
+      expect(screen.getByText('20 DC short')).toBeInTheDocument()
+      expect(screen.getAllByRole('listitem')).toHaveLength(2)
+    })
+
+    it('links How parlays pay to its section’s id on How it works', () => {
+      renderPanel(viewOf(pick(1)))
+      expect(screen.getByRole('link', { name: 'How parlays pay' })).toHaveAttribute('href', '/how-it-works#how-the-slip-solo-bets-and-parlays')
+    })
+  })
 })

@@ -12,6 +12,7 @@ import { outcomeSeries } from '@/lib/markets/outcome-series'
 import type { SeriesPoint } from '@/lib/markets/probability-series'
 import { chartClosedAt, type MarketCardStatus } from '@/lib/markets/market-status'
 import { focusTarget } from '@/lib/pagination/row-id'
+import { rowTitleClass } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
 
 // What a market's state is called, everywhere it's shown: here, and on the market page's chip.
@@ -120,7 +121,7 @@ export function MarketCard({
           {edited && ' · Edited'}
         </span>
       </div>
-      <h3 id={titleId} className="break-words text-[18px] font-extrabold leading-[1.3] tracking-[-0.01em]">
+      <h3 id={titleId} className={cn(rowTitleClass, 'break-words')}>
         {preview ? (
           title
         ) : (

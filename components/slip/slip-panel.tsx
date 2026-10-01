@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
-import { h2Class, labelClass } from '@/components/ui/page'
+import { h2Class, labelClass, rowTitleClass } from '@/components/ui/page'
 import { StatusChip } from '@/components/ui/status-chip'
 import type { SlipPick } from '@/lib/parlays/get-slip'
 import {
@@ -129,7 +129,7 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
           <Link href={`/markets/${pick.marketId}`} transitionTypes={['nav-forward']} className="hit-area text-sm">
             {pick.marketTitle}
           </Link>
-          <span className="text-[17px] font-extrabold leading-[1.3]">{pick.outcomeLabel}</span>
+          <span className={rowTitleClass}>{pick.outcomeLabel}</span>
         </div>
         {pick.open ? (
           odds !== null && <span className="text-lg font-extrabold tabular-nums">{odds}</span>

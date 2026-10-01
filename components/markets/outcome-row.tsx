@@ -9,6 +9,7 @@ import type { Series } from '@/lib/markets/outcome-series'
 import type { OutcomeRowState } from '@/lib/markets/row-state'
 import type { SlipPick } from '@/lib/parlays/get-slip'
 import { formatOdds } from '@/lib/parlays/odds'
+import { rowTitleClass } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
 
 // Re-exported for existing importers (e.g. this file's own test) -- the type lives in
@@ -47,7 +48,7 @@ export function OutcomeRow({
       <div className="flex items-center justify-between gap-3">
         <span className="flex min-w-0 flex-wrap items-center gap-2">
           <span aria-hidden="true" className={cn('size-2.5 shrink-0 rounded-full', SERIES_BG[series])} />
-          <span className="min-w-0 text-[17px] font-extrabold wrap-break-word">{label}</span>
+          <span className={cn(rowTitleClass, 'min-w-0 wrap-break-word')}>{label}</span>
           {winner && (
             <StatusChip tone="done">
               <Trophy aria-hidden="true" className="size-4" />

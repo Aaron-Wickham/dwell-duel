@@ -63,11 +63,11 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
 | `/feed` | Everyone's activity, with reactions, live; a "Show" `SubNav` (`?show=all|results|mine`, `lib/social/feed-filter.ts`) narrows it to results (`RESULT_KINDS`) or your own events plus results on markets you have a stake in (`my_activity_events()`, 0087, whose two `UNION ALL` branches each use an index) |
 | `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`). On a phone the Net worth board has a compact standing card with Jump to me (`?at=me`): `getJumpToMeTop` reads the 10 members above you through `rankedAbove` and the page opens a `readOrdered` window there, with focus on your row; any cursor in the URL overrides it, and Back to the top drops it |
-| `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings |
+| `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings. `/members` alone redirects to the leaderboard |
 | `/profile` | Edit your name, photo and bio |
 | `/settings` | Theme, your profile, haptics, reduced motion, notifications, How it works, sign out |
 | `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`) |
-| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role, in `app/(app)/admin/(sections)/` under its layout's Admin header and tabs; Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); Tasks pages its review queue oldest first with "Show more", signs proof only for the rows shown (an extended range caps at 150 rows, then starts a fresh window), and reads its "waiting" chip from `my_review_counts` (`lib/tasks/list-task-completions.ts`, #255); the ledger opens with the owner's Economy card, and `?member=<id>` narrows it to one member's movements (#254). Members and Invites (#254) each have a search box (`SearchField`, `?q=`) and two tabs (`SubNav`, `?show=`): Members' Active · Removed, paged A–Z by `admin_members` with `NAME_ORDER` (`lib/pagination/name-cursor.ts`), as compact read-only rows; Invites' Waiting · Claimed, paged newest first with `INVITE_ORDER` (`lib/invites/list-invites.ts`) |
+| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role, in `app/(app)/admin/(sections)/` under its layout's Admin header and tabs; `/admin` alone redirects to the first one the role can see (`adminHref`); Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); Tasks pages its review queue oldest first with "Show more", signs proof only for the rows shown (an extended range caps at 150 rows, then starts a fresh window), and reads its "waiting" chip from `my_review_counts` (`lib/tasks/list-task-completions.ts`, #255); the ledger opens with the owner's Economy card, and `?member=<id>` narrows it to one member's movements (#254). Members and Invites (#254) each have a search box (`SearchField`, `?q=`) and two tabs (`SubNav`, `?show=`): Members' Active · Removed, paged A–Z by `admin_members` with `NAME_ORDER` (`lib/pagination/name-cursor.ts`), as compact read-only rows; Invites' Waiting · Claimed, paged newest first with `INVITE_ORDER` (`lib/invites/list-invites.ts`) |
 | `/admin/members/[id]` | One member's Admin page (#254), outside the sections' layout so their name is the `<h1>`: email, join and last sign-in, balance, Coin history (their last five movements and "Open in Ledger"), and for the owner Adjust balance, Role and Access (Remove from DwellDuel, or Invite again for a removed member). No `loading.tsx`: the member is found first (an unknown id is a real 404) and the coin history streams behind `<Suspense>` |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
@@ -851,7 +851,14 @@ layout renders them as attributes on `<html>` (`data-theme`,
 `data-haptics`, `data-motion`), so they apply before any script runs.
 `motion-reduce:` in CSS covers both the device setting and the app's own.
 Sonner only hears the device setting, so `globals.css` stills its toasts
-under `data-motion="reduce"` itself.
+under `data-motion="reduce"` itself. Its error toasts take the `--loss` tokens like its
+success ones take `--acc-*` (`components/ui/toaster.tsx`), so they meet AA in both themes.
+`app/global-error.tsx` replaces the root layout, so it re-applies the theme, motion and haptics
+attributes the root layout put on `<html>` back once it mounts (read at module load, since the cookies are httpOnly).
+
+**Not found.** `app/(app)/[...missing]/page.tsx` calls `notFound()` for any URL that matches no
+route, so the 404 renders inside the signed-in layout (nav and tab bar) instead of falling to
+the bare root `app/not-found.tsx`; signed out, the layout passes the page through unchanged.
 
 **Motion.** Every curve and duration is a token in `globals.css`'s
 `@theme static` block (`--ease-ios`, `--ease-pop`, `--duration-press` …
@@ -863,7 +870,7 @@ slide, `PILL_SLIDE` / `PILL_TRANSITION`: 280ms on the iOS curve.
 The three dialogs share `components/ui/dialog-classes.ts`. `pressable`
 shrinks every control on press and, under a mouse only, grows it; a
 tappable card adds `hover-lift` and lifts onto `--lift-shadow`
-instead, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins).
+instead, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244; My bets' parlay and bet tiles too, #269), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins).
 
 **Getting started.** Home's onboarding card (`components/home/onboarding-card.tsx`)
 reads its three steps from real data in `lib/home/onboarding.ts`, with

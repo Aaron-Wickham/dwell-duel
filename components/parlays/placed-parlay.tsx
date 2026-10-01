@@ -30,7 +30,7 @@ export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: st
 
   return (
     <li {...focusTarget(domId, titleId)} className="py-3 lg:py-0">
-      <div className="pressable hover-lift relative flex flex-col gap-3 rounded-[14px] border border-line p-3.5 md:p-4 lg:h-full">
+      <div className="pressable hover-tint relative flex flex-col gap-3 rounded-[14px] border border-line p-3.5 [--tint-inset:0] before:rounded-[inherit] md:p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-0.5">
             <Link

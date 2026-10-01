@@ -71,7 +71,7 @@ export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSumma
           aria-describedby={state?.field === 'reward_amount' ? errorId : undefined}
         />
       </Field>
-      <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
+      <label className="pressable inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
         <input
           name="proof_required"
           type="checkbox"

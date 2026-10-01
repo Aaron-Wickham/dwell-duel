@@ -121,10 +121,11 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
   const clippedNote = clippedNotes.length === 0 ? null : `${clippedNotes.join(' and ')}, so everyone else stays readable.`
 
   return (
-    <SectionCard title="The race" titleId="leaderboard-race">
-      <p className="text-sm text-ink2">
-        Net betting profit for this month’s top {series.length}, move by move since the first bet settled.
-      </p>
+    <SectionCard
+      title="The race"
+      titleId="leaderboard-race"
+      description={`Net betting profit for this month’s top ${series.length}, move by move since the first bet settled.`}
+    >
       <div className="flex flex-col gap-2">
         <div className="relative h-[220px] md:h-[260px]">
           <div

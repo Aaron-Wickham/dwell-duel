@@ -55,7 +55,7 @@ export function ThemeSetting({ initial }: { initial: ThemeChoice }) {
           <label
             key={value}
             className={cn(
-              'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] font-bold text-ink2',
+              'pressable flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] font-bold text-ink2',
               theme === value && 'bg-surface text-ink shadow-tab',
             )}
           >

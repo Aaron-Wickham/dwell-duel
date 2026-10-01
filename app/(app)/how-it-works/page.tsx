@@ -27,7 +27,7 @@ export default function HowItWorksPage() {
           <ul className="flex flex-col">
             {sections.map((section) => (
               <li key={section.slug}>
-                <a href={`#${SECTION_ID_PREFIX}${section.slug}`} className="flex min-h-11 items-center py-1 font-bold text-ink2 no-underline">
+                <a href={`#${SECTION_ID_PREFIX}${section.slug}`} className="pressable flex min-h-11 items-center py-1 font-bold text-ink2 no-underline">
                   {inlineText(section.title)}
                 </a>
               </li>

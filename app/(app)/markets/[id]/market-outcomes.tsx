@@ -28,7 +28,9 @@ export async function MarketOutcomes({
   canBet: boolean
 }) {
   const { supabase } = await requireUser()
-  const riding = await getParlayRiding(supabase, market.id)
+  // A voided market's legs dropped out of their parlays, but parlay_legs has no status of its own,
+  // so the read would still count them.
+  const riding = market.status === 'voided' ? new Map<string, number>() : await getParlayRiding(supabase, market.id)
 
   const totalPool = odds.reduce((sum, o) => sum + o.poolTotal, 0)
   const marketInSlip = market.outcomes.some((o) => slip.includes(o.id))

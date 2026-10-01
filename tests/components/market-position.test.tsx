@@ -205,13 +205,13 @@ describe('MarketPosition', () => {
 })
 
 describe('MarketOutcomes', () => {
-  async function renderOutcomes(riding: Map<string, number>) {
+  async function renderOutcomes(riding: Map<string, number>, status: MarketDetail['status'] = 'open') {
     getParlayRiding.mockResolvedValue(riding)
     const odds = [
       { outcomeId: 'o-yes', label: 'Yes', poolTotal: 60, impliedProbability: 0.75 },
       { outcomeId: 'o-no', label: 'No', poolTotal: 20, impliedProbability: 0.25 },
     ]
-    render(<SlipProvider view={EMPTY_SLIP}>{await MarketOutcomes({ market, odds, slip: [], canBet: true })}</SlipProvider>)
+    render(<SlipProvider view={EMPTY_SLIP}>{await MarketOutcomes({ market: { ...market, status }, odds, slip: [], canBet: status === 'open' })}</SlipProvider>)
   }
 
   it('shows each outcome’s parlay money and says once that it never moves the odds', async () => {
@@ -234,5 +234,13 @@ describe('MarketOutcomes', () => {
     await renderOutcomes(new Map())
     expect(screen.queryByText(/riding in parlays/)).toBeNull()
     expect(screen.queryByText(/Parlays are paid by DwellDuel/)).toBeNull()
+  })
+
+  // A voided market's legs dropped out of their parlays, though parlay_legs still names them.
+  it('shows neither the figure nor the note on a voided market, and doesn’t ask', async () => {
+    await renderOutcomes(new Map([['o-yes', 45]]), 'voided')
+    expect(screen.queryByText(/riding in parlays/)).toBeNull()
+    expect(screen.queryByText(/Parlays are paid by DwellDuel/)).toBeNull()
+    expect(getParlayRiding).not.toHaveBeenCalled()
   })
 })

@@ -302,7 +302,7 @@ export function SlipPanel() {
       </div>
       <p className="text-sm text-ink2">
         Each pick is a Solo bet with its own stake, or part of one Parlay that pays only if all its picks win.{' '}
-        <Link href="/how-it-works#the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']}>
+        <Link href="/how-it-works#how-the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']}>
           How parlays pay
         </Link>
       </p>

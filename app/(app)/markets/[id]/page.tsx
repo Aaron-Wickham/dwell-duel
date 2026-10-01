@@ -25,8 +25,10 @@ import { Page, h1Class } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { StatusChip } from '@/components/ui/status-chip'
 import { ContentReveal } from '@/components/nav/page-transition'
+import { cn } from '@/lib/utils'
 import {
   MarketActionsSkeleton,
+  actionsPlacement,
   MarketBetsSkeleton,
   MarketChartSkeleton,
   MarketCommentsSkeleton,
@@ -212,11 +214,12 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           fallbacks announce nothing themselves (SkeletonScreen announce={false});
           LoadingStatus wraps them in one combined status, scoped to just these, for as
           long as any of them is still showing.
-          On a phone it's one column, Your position first. From lg the right column is Your
-          position over the bet card and resolve tools, and the left stacks the chart and outcomes
-          (spanning both of those rows, so a long position card can't open a gap under the chart)
-          over bets and comments. Spacing is margins, not a row gap, so with no position card the
-          right column starts level with the chart. */}
+          On a phone it's one column, Your position first. From lg the left column stacks the chart
+          and outcomes (rows 1-2) over bets and comments (row 3). On the right, Your position takes
+          row 1 and the bet column rows 2-3; with no card the bet column takes rows 1-3 instead,
+          since an empty row 1 would get half the chart's height. Spacing is margins, not a row
+          gap. Rows are shared, so a card taller than the chart and outcomes together pushes the
+          bets down to its bottom; a member rarely has that many bets on one market. */}
       <LoadingStatus>
         <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_auto_1fr] lg:items-start lg:gap-x-7 lg:gap-y-0">
           {positionRows > 0 && (
@@ -232,8 +235,8 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
               <MarketOutcomes market={market} odds={odds} slip={slip} canBet={canBet} />
             </Suspense>
           </div>
-          <Suspense fallback={<MarketActionsSkeleton />}>
-            <MarketActions market={market} odds={odds} isCreator={isCreator} canBet={canBet} />
+          <Suspense fallback={<MarketActionsSkeleton hasPosition={positionRows > 0} />}>
+            <MarketActions market={market} odds={odds} isCreator={isCreator} canBet={canBet} hasPosition={positionRows > 0} />
           </Suspense>
           <div className="flex flex-col gap-5 lg:col-start-1 lg:row-start-3 lg:gap-7">
             <Suspense fallback={<MarketBetsSkeleton />}>
@@ -295,11 +298,13 @@ async function MarketActions({
   odds,
   isCreator,
   canBet,
+  hasPosition,
 }: {
   market: MarketDetail
   odds: OutcomeOdds[]
   isCreator: boolean
   canBet: boolean
+  hasPosition: boolean
 }) {
   const { supabase, user } = await requireUser()
   const [role, resolvable, stake] = await Promise.all([
@@ -366,7 +371,7 @@ async function MarketActions({
 
   return (
     <ContentReveal>
-      <div className="flex flex-col gap-5 lg:col-start-2 lg:row-span-2 lg:row-start-2 lg:gap-7">
+      <div className={cn('flex flex-col gap-5 lg:col-start-2 lg:gap-7', actionsPlacement(hasPosition))}>
         {canBet ? (
           <SectionCard title="Place a bet" titleId="bet-title" className="gap-2">
             <p className="text-ink2">

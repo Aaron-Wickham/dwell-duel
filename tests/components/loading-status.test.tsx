@@ -65,7 +65,7 @@ describe('LoadingStatus', () => {
         <MarketPositionSkeleton rows={2} />
         <MarketChartSkeleton />
         <MarketOutcomesSkeleton outcomes={2} />
-        <MarketActionsSkeleton />
+        <MarketActionsSkeleton hasPosition />
         <MarketBetsSkeleton />
       </LoadingStatus>,
     )
@@ -77,7 +77,7 @@ describe('LoadingStatus', () => {
     // One section resolving (its fallback unmounts) while the others are still pending.
     rerender(
       <LoadingStatus>
-        <MarketActionsSkeleton />
+        <MarketActionsSkeleton hasPosition />
         <MarketBetsSkeleton />
       </LoadingStatus>,
     )

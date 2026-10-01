@@ -38,7 +38,9 @@ describe.each<[string, ReactElement, string[]]>([
   ['market-position', <MarketPositionSkeleton key="position" rows={2} />, ['lg:col-start-2', 'lg:row-start-1']],
   ['market-chart', <MarketChartSkeleton key="chart" />, []],
   ['market-outcomes', <MarketOutcomesSkeleton key="outcomes" outcomes={2} />, []],
-  ['market-bet-form', <MarketActionsSkeleton key="actions" />, ['lg:col-start-2', 'lg:row-span-2', 'lg:row-start-2']],
+  ['market-bet-form', <MarketActionsSkeleton key="actions" hasPosition />, ['lg:col-start-2', 'lg:row-span-2', 'lg:row-start-2']],
+  // With no Your position card the bet column starts level with the chart, not in an empty row's wake.
+  ['market-bet-form', <MarketActionsSkeleton key="actions-alone" hasPosition={false} />, ['lg:col-start-2', 'lg:row-span-3', 'lg:row-start-1']],
   ['market-bets', <MarketBetsSkeleton key="bets" />, []],
   ['market-comments', <MarketCommentsSkeleton key="comments" />, []],
 ])('the %s skeleton', (name, element, placement) => {
@@ -66,7 +68,7 @@ describe('the market chart skeleton', () => {
 
 describe('the market actions skeleton', () => {
   it('draws the bet column as a heading and a short paragraph, with nothing to fill in', () => {
-    const { container } = render(<MarketActionsSkeleton />)
+    const { container } = render(<MarketActionsSkeleton hasPosition={false} />)
 
     const card = container.querySelector('[data-skeleton="market-bet-form"] .rounded-card')!
     expect(card).toHaveClass('gap-2')

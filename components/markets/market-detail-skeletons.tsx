@@ -76,12 +76,18 @@ export function MarketOutcomesSkeleton({ outcomes }: { outcomes: number }) {
   )
 }
 
-export function MarketActionsSkeleton() {
+// The bet column's grid rows from lg: under Your position when there is one, otherwise from the
+// top, level with the chart (app/(app)/markets/[id]/page.tsx).
+export function actionsPlacement(hasPosition: boolean): string {
+  return hasPosition ? 'lg:row-span-2 lg:row-start-2' : 'lg:row-span-3 lg:row-start-1'
+}
+
+export function MarketActionsSkeleton({ hasPosition }: { hasPosition: boolean }) {
   return (
     <SkeletonScreen
       name="market-bet-form"
       announce={false}
-      className="flex flex-col gap-5 lg:col-start-2 lg:row-span-2 lg:row-start-2 lg:gap-7"
+      className={`flex flex-col gap-5 lg:col-start-2 lg:gap-7 ${actionsPlacement(hasPosition)}`}
     >
       {/* "Place a bet" or "Betting closed": a heading and a short paragraph, nothing to fill in. */}
       <SkeletonCard className="gap-2">

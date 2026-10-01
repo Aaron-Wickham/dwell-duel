@@ -1,7 +1,15 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { placeSolo } from './slip'
 import { backers, clientForEmail } from '../tests/db/fixtures'
 import { serviceClient, type TestClient } from '../tests/db/helpers'
+
+// The review's screenshots, when run beside the remediation workspace; nowhere otherwise.
+const SHOTS = process.env.B14_SHOTS ?? 'test-results/b14-shots'
+
+// A navigation's view transition cross-fades for a moment; a screenshot waits it out.
+async function settle(page: Page): Promise<void> {
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))))
+}
 
 type Market = { id: string; url: string; outcome: (label: string) => string }
 
@@ -111,6 +119,9 @@ test('Your position lists each bet with Pays ~ and Cancel, and a parlay leg; par
   ])
   expect(posBox!.x).toBeGreaterThan(chartBox!.x + chartBox!.width)
   expect(posBox!.y + posBox!.height).toBeLessThanOrEqual(betBox!.y)
+  expect(Math.abs(posBox!.y - chartBox!.y)).toBeLessThanOrEqual(1)
+  await settle(page)
+  await page.screenshot({ path: `${SHOTS}/fix1-desktop-with-card.png`, fullPage: true })
 })
 
 test('once the market resolves, Your position shows each result, the net and the parlay leg’s state', async ({ page }) => {
@@ -150,4 +161,15 @@ test('a member with nothing on the market sees no Your position card', async ({ 
   await page.goto(market.url)
   await expect(page.getByRole('region', { name: 'Outcomes' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Your position' })).toHaveCount(0)
+
+  // From lg the bet column starts level with the chart, with no empty row above it.
+  await page.setViewportSize({ width: 1280, height: 900 })
+  const [chartBox, betBox] = await Promise.all([
+    page.getByRole('region', { name: 'Chance over time' }).boundingBox(),
+    page.getByRole('region', { name: 'Place a bet' }).boundingBox(),
+  ])
+  expect(betBox!.x).toBeGreaterThan(chartBox!.x + chartBox!.width)
+  expect(Math.abs(betBox!.y - chartBox!.y)).toBeLessThanOrEqual(1)
+  await settle(page)
+  await page.screenshot({ path: `${SHOTS}/fix1-desktop-no-card.png`, fullPage: true })
 })

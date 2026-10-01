@@ -19,7 +19,7 @@ export interface MemberSummary {
 
 export type MemberCounts = { active: number; removed: number }
 
-// admin_members (0086) reads emails and sign-ins, which only admins may (0046, 0050). The
+// admin_members (0093) reads emails and sign-ins, which only admins may (0046, 0050). The
 // generated types call last_sign_in_at non-null, but a member who has never signed in has none.
 type MemberRow = {
   id: string

@@ -38,7 +38,7 @@ export function readInvitePageParams(searchParams: SearchParams, param: string):
 }
 
 // keyset.ts's filters with the email quoted, since an email isn't a plain token. The plain
-// created_at bound beside the tiebreak OR is what lets allowed_emails_created_idx (0086) seek.
+// created_at bound beside the tiebreak OR is what lets allowed_emails_created_idx (0093) seek.
 function beside(c: InviteCursor, older: boolean, inclusive: boolean): string {
   const ts = quote(c.ts)
   const op = older ? 'lt' : 'gt'

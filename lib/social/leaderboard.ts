@@ -94,7 +94,7 @@ export async function getMemberStanding(supabase: DbClient, memberId: string): P
   if (standing.error) throw standing.error
   const member = profile.data
   if (!member || !standing.data) return null
-  // The generated types can't see that member_standing (0086) returns no rank for a removed member.
+  // The generated types can't see that member_standing (0093) returns no rank for a removed member.
   const rank: number | null = standing.data.rank
 
   return {

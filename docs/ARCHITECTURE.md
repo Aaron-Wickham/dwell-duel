@@ -17,7 +17,7 @@ Next.js 16 on Vercel ── proxy.ts: signed-out requests → /sign-in
 Supabase (one hosted project: production)
   ├─ Auth: Google only, invite-gated
   ├─ Postgres: tables + RLS + security-definer RPCs (all money moves here)
-  ├─ Realtime: filtered Postgres Changes plus Broadcast pings (0085) drive live page refreshes
+  ├─ Realtime: filtered Postgres Changes plus Broadcast pings (0092) drive live page refreshes
   └─ Storage: `avatars` (public), `proof` (private, signed URLs)
 
 Web push: server actions, pg_cron (every minute, via pg_net) and the daily
@@ -54,14 +54,14 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | Route | What it is |
 |---|---|
 | `/` | Home: greeting, balance hero (balance, rank, At stake, Pending), a new member's Getting started card, Markets to resolve, the weekly recap (Sundays and Mondays), tiles |
-| `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then those awaiting resolution (oldest close first), then resolved and voided newest first. The All tab reads these as three keyset lists, each with its own Show more (`?open=`, `?awaiting=`, `?resolved=`), so open markets lead page one however many wait on a result (#261); the open and awaiting lists are `listOpenMarkets` split at one `now` (its `bound`). `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) reads just one list. `?q=` (a title search, `lib/markets/search.ts`: trimmed, `*` and control characters dropped, 80 characters, then `ilike` with `\`, `%` and `_` escaped, sent as its own filter parameter, backed by a trigram index) and `?mine=bet|made` (the `i_bet_on` computed column, 0087, or `created_by`) switch it to one flat list of matches, newest first and paged under `?match=` (`listMatchingMarkets`), whatever their status, which the status tab still narrows; the search box (`MarketSearch`) and the "Whose markets" `FilterChips` keep each other and the status tab in the URL. Card sparklines come from `market_sparks` (0088) through Next's data cache, one entry per list, keyed by a hash of its markets' `sparkVersion`s (the summed `pool_version` while open, `settled` after): a render costs one cache read per list, and a live refresh reads from Supabase only a list whose markets moved (`lib/markets/sparklines.ts`, #252; the budget is below) |
+| `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then those awaiting resolution (oldest close first), then resolved and voided newest first. The All tab reads these as three keyset lists, each with its own Show more (`?open=`, `?awaiting=`, `?resolved=`), so open markets lead page one however many wait on a result (#261); the open and awaiting lists are `listOpenMarkets` split at one `now` (its `bound`). `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) reads just one list. `?q=` (a title search, `lib/markets/search.ts`: trimmed, `*` and control characters dropped, 80 characters, then `ilike` with `\`, `%` and `_` escaped, sent as its own filter parameter, backed by a trigram index) and `?mine=bet|made` (the `i_bet_on` computed column, 0094, or `created_by`) switch it to one flat list of matches, newest first and paged under `?match=` (`listMatchingMarkets`), whatever their status, which the status tab still narrows; the search box (`MarketSearch`) and the "Whose markets" `FilterChips` keep each other and the status tab in the URL. Card sparklines come from `market_sparks` (0095) through Next's data cache, one entry per list, keyed by a hash of its markets' `sparkVersion`s (the summed `pool_version` while open, `settled` after): a render costs one cache read per list, and a live refresh reads from Supabase only a list whose markets moved (`lib/markets/sparklines.ts`, #252; the budget is below) |
 | `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under. `?from=<id>` pre-fills it from a market (Duplicate) |
 | `/markets/[id]` | A market: the viewer's own position (#262: each solo bet with "Pays ~" and Cancel, each parlay leg linking to its parlay, then results and the net once settled; read from `my_market_position`'s keys before anything streams, so a viewer with nothing on the market gets no card and no skeleton), chart, outcomes (with each outcome's "riding in parlays" figure from `market_parlay_riding`, #279, display only), the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
 | `/parlays` | Redirects to `/bets` (kept for old links) |
 | `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its odds (an estimate from `parlay_leg_odds` until its market closes) and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`: the page checks the parlay exists first (so an unknown id is a real 404), then streams the body behind `<Suspense>` with `ParlayDetailSkeleton` |
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
-| `/feed` | Everyone's activity, with reactions, live; a "Show" `SubNav` (`?show=all|results|mine`, `lib/social/feed-filter.ts`) narrows it to results (`RESULT_KINDS`) or your own events plus results on markets you have a stake in (`my_activity_events()`, 0087, whose two `UNION ALL` branches each use an index) |
+| `/feed` | Everyone's activity, with reactions, live; a "Show" `SubNav` (`?show=all|results|mine`, `lib/social/feed-filter.ts`) narrows it to results (`RESULT_KINDS`) or your own events plus results on markets you have a stake in (`my_activity_events()`, 0094, whose two `UNION ALL` branches each use an index) |
 | `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`). On a phone the Net worth board has a compact standing card with Jump to me (`?at=me`): `getJumpToMeTop` reads the 10 members above you through `rankedAbove` and the page opens a `readOrdered` window there, with focus on your row; any cursor in the URL overrides it, and Back to the top drops it |
 | `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings. `/members` alone redirects to the leaderboard |
 | `/profile` | Edit your name, photo and bio |
@@ -195,11 +195,11 @@ spending coins should get a trigger and a `write_limits()` row.
   `sparkline` (0070): the card's
   40-point series, written by a trigger the moment the market resolves or
   voids (`cache_market_sparkline`, so `resolve_market_core` and
-  `void_market` needn't know), null while it's open. Since 0088 the app no
+  `void_market` needn't know), null while it's open. Since 0095 the app no
   longer reads it (`market_sparks` serves every card, cached by version);
   the column and trigger stay until a later PR drops them.
 - `market_outcomes`: labels and `pool_total`, the real DC bet on each, and
-  `pool_version` (0088), bumped by a trigger on every change to
+  `pool_version` (0095), bumped by a trigger on every change to
   `pool_total` (each bet and cancellation): the list's sparkline cache key.
 - `bets`: live stakes only. A cancelled bet moves to `cancelled_bets`.
 - `market_resolutions`: each resolution or override, with its required
@@ -342,10 +342,10 @@ title is fixed once anyone else has bet, solo or as a parlay leg, 0065), `member
 members can't select `profiles.email`), `member_activity` (admin only, 0050:
 each member's join date, `profiles.created_at`, and last sign-in from
 `auth.users`, for Admin → Members), `admin_members(query, id)` and
-`admin_member_counts(query)` (admin only, 0086: Admin → Members' rows with
+`admin_member_counts(query)` (admin only, 0093: Admin → Members' rows with
 email, sign-ins and whether each member was removed, searched by name or
 email; the page pages it through PostgREST), `reinvite_member` (owner only,
-0086: a removed member's invite back, claimed by them), `stray_proof_objects`
+0093: a removed member's invite back, claimed by them), `stray_proof_objects`
 (service role: the daily cron deletes proof files nothing attached),
 `expired_proof_attachments`, `mark_proof_expired`, `stray_avatar_objects`
 and `storage_usage` (service role, 0089), `proof_upload_quota_ok` and
@@ -360,7 +360,7 @@ untouched; 0073: their `auth.sessions` too, so no device can refresh), `update_m
 cards' 40-point sparklines and the market chart's 200 points, sampled in
 SQL so no page reads every bet; both prepend a seeded market's even
 opening split through `withSeededStart`, since the function returns points
-only at bets), `market_sparks` (0088: `market_sparklines` at most 24 points,
+only at bets), `market_sparks` (0095: `market_sparklines` at most 24 points,
 compact as `[epoch seconds, share, ...]` in `outcome_ids` order, shares to
 4 decimals, about a tenth of the bytes; what `/markets` reads. Security
 definer and refused to anyone not invited, so the answer is the same for
@@ -376,7 +376,7 @@ the next moment the list could grow, from `nextResolveCheckAt`),
 `parlay_leg_odds(parlay_ids)` (0074: a pick's leg odds and floor for the
 caller, and each parlay leg's set or estimated odds for its owner, both built on the service-only `pick_quote(profile, outcome)` that
 `settle_parlay` prices with), `my_market_position(market)` and
-`market_parlay_riding(market)` (0082, security invoker: the keys of the
+`market_parlay_riding(market)` (0096, security invoker: the keys of the
 caller's own bets and parlays on one market, settled ones included, for
 the market page's Your position card; and per outcome the stakes of
 pending parlays with a leg on it, each parlay's whole stake on every pick,
@@ -428,13 +428,14 @@ leaving out `starting_grant`, `task_completed`, `admin_adjustment` and any
 type added later; since 0055 that list is `betting_ledger_types()`, shared
 with `member_stats`. `settle_season(p_month default last month)` (service role
 only) posts a finished month's top positive profit as a `season_champion`
-event, ties going to whoever reached the total first. Since 0086 (#265) a
+event, ties going to whoever reached the total first. Since 0093 (#265) a
 removed member (no invite left, `invited_member_ids()`) is out of both
 boards, `member_standing`'s rank and count (their own row keeps its net
 worth with a null rank, "Not ranked" on their profile), `season_profits`
 and so the race and the champion, and from `weekly_recap`'s best call and
-top tasker; their coins, bets and history stay. (`leaderboard_awards` is
-left to a later migration.)
+top tasker; their coins, bets and history stay. `leaderboard_awards`
+(0074) leaves them out by the same rule, read from `invited_member_ids()`
+since 0097.
 
 **The economy panel** (0052, #86). `economy_summary(p_month_start)` is owner
 only and backs the Economy card above Admin → Ledger's list
@@ -525,11 +526,14 @@ after it ships. They roughly follow the project's history:
 | 0089 | Storage caps and retention (#253): proof bucket 3 MB and no Word files, a per-member daily upload quota, `record_proof` caps (5 attachments, 3 files, 6 MB), submitted proof can't be deleted, `proof_attachments.expired_at` with `expired_proof_attachments` / `mark_proof_expired`, `stray_avatar_objects`, `storage_usage` |
 | 0090 | Write limits (#273): `write_limits()`, `write_rate_counters` and the `enforce_write_limit` trigger on markets, comments, reactions, task submissions and bet cancels; `cap_push_subscriptions` keeps a member's ten most recently used push devices |
 | 0091 | Default privileges (#274): nothing postgres creates in `public` grants `anon` anything, and no new function is executable by `PUBLIC`; anon's leftover sequence grants go; `has_stake_in_market` answers false to an uninvited caller. `uninvited_auth_users()` (#275), service role only, for the daily cron's cleanup |
-| 0085 | Live pings (#250): `live_pings`, `send_live_ping` and the unlogged `live_ping_queue`. Row triggers on `markets`, `market_outcomes`, `activity_events`, `feed_reactions`, `tasks` and `task_completions` queue their topic once per transaction, and the queue's deferred trigger sends it at commit: one private Broadcast ping per topic per transaction, at most one per topic every `live_ping_interval_ms()`. The `realtime.messages` policy lets only invited members join (reviewers and above for `live:reviews`) |
-| 0088 | Compact sparklines (#252): `market_sparks(p_market_ids, p_points default 24)` and `market_outcomes.pool_version` with its `bump_pool_version` trigger |
-| 0086 | Admin at 1,000 and removed members unranked (#254, #265): `invited_member_ids()`; `leaderboard_net_worth`, `member_standing`, `season_profits` and `weekly_recap`'s best call and top tasker over invited members only; `admin_members`, `admin_member_counts` and `reinvite_member`; `allowed_emails` indexes on `claimed_by` and `(created_at desc, email desc)` |
-| 0087 | Finding things (#264): `markets_title_trgm_idx` (pg_trgm) for the title search, the computed column `markets.i_bet_on` and `my_activity_events()` (the Feed's Mine: own events plus results on markets you have a bet or parlay leg on); both security invoker with no `SET` clause so they inline |
-| 0082 | The market page's Your position card and "riding in parlays" figure (#262, #279): `my_market_position(market)` and `market_parlay_riding(market)` |
+| 0092 | Live pings (#250): `live_pings`, `send_live_ping` and the unlogged `live_ping_queue`. Row triggers on `markets`, `market_outcomes`, `activity_events`, `feed_reactions`, `tasks` and `task_completions` queue their topic once per transaction, and the queue's deferred trigger sends it at commit: one private Broadcast ping per topic per transaction, at most one per topic every `live_ping_interval_ms()`. The `realtime.messages` policy lets only invited members join (reviewers and above for `live:reviews`) |
+| 0093 | Admin at 1,000 and removed members unranked (#254, #265): `invited_member_ids()`; `leaderboard_net_worth`, `member_standing`, `season_profits` and `weekly_recap`'s best call and top tasker over invited members only; `admin_members`, `admin_member_counts` and `reinvite_member`; `allowed_emails` indexes on `claimed_by` and `(created_at desc, email desc)` |
+| 0094 | Finding things (#264): `markets_title_trgm_idx` (pg_trgm) for the title search, the computed column `markets.i_bet_on` and `my_activity_events()` (the Feed's Mine: own events plus results on markets you have a bet or parlay leg on); both security invoker with no `SET` clause so they inline |
+| 0095 | Compact sparklines (#252): `market_sparks(p_market_ids, p_points default 24)` and `market_outcomes.pool_version` with its `bump_pool_version` trigger |
+| 0096 | The market page's Your position card and "riding in parlays" figure (#262, #279): `my_market_position(market)` and `market_parlay_riding(market)` |
+| 0097 | `leaderboard_awards` reads who is in from `invited_member_ids()` (0093) instead of its own copy of the rule (0074); every award is unchanged |
+
+Numbers 0075, 0077–0082 and 0084–0088 were reserved by branches that merged later under higher numbers, so they are unused.
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
@@ -669,7 +673,7 @@ the cron response, and the step fails, so the heartbeat pings `/fail`, past
   `LIVE_TABLES`, always filtered to one market, member, parlay or row, so
   only the pages about that thing hear it.
 - **Topics**, `{ topic }`: anything group-wide. A row trigger on each
-  live table (0085) queues its topic once per transaction in
+  live table (0092) queues its topic once per transaction in
   `live_ping_queue`, and that table's deferred trigger calls
   `send_live_ping` as the transaction commits. The deferral lives on the
   queue, not the live tables, because Postgres won't ALTER a table with

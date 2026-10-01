@@ -1,6 +1,6 @@
 import type { DbClient } from '@/lib/supabase/database'
 
-// market_parlay_riding (0082): per outcome, the stakes of pending parlays with a leg on it, each
+// market_parlay_riding (0096): per outcome, the stakes of pending parlays with a leg on it, each
 // parlay's whole stake on every pick it rides on. Sums only, never whose. Display only: parlays are
 // paid by DwellDuel, not from the pool, so this never feeds effectivePools, odds or charts.
 export async function getParlayRiding(supabase: DbClient, marketId: string): Promise<Map<string, number>> {

@@ -22,7 +22,7 @@ export interface MarketSummary {
   settledAt: string | null
   outcomes: { id: string; label: string; poolTotal: number }[]
   // Moves whenever the card's sparkline can (#252): with every bet or cancellation while the
-  // market is open (0088's pool_version), and never once it has settled.
+  // market is open (0095's pool_version), and never once it has settled.
   sparkVersion: string
 }
 
@@ -88,7 +88,7 @@ type KeyRow = { id: string } & Partial<Record<MarketKeys['ts'], string | null>>
 export type CloseBound = { upcoming: boolean; at: string }
 
 // A title search and a whose-markets filter, ANDed onto the list. `made` needs the member's id;
-// `bet` is the i_bet_on computed column (0087), which reads the caller's own bets and parlay legs.
+// `bet` is the i_bet_on computed column (0094), which reads the caller's own bets and parlay legs.
 export type MarketNarrow = { q: string; mine: MineFilter | null; userId: string }
 
 // The range read and its key probe share one builder, so the two can't drift apart on filters. Its column list is a runtime string, so

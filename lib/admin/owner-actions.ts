@@ -10,7 +10,7 @@ import type { Database } from '@/lib/supabase/database'
 type Fns = Database['public']['Functions']
 
 // The raises of set_member_role, delete_market, delete_task, remove_bet (0040), remove_member (0068)
-// and reinvite_member (0086).
+// and reinvite_member (0093).
 const OWNER_ERRORS: readonly KnownError<never>[] = [
   { match: 'only the owner can change roles', formError: 'Only the owner can change roles.' },
   { match: 'role must be admin, reviewer or member', formError: 'Choose Admin, Reviewer or Member.' },
@@ -59,7 +59,7 @@ export async function removeMemberAction(profileId: string, _prev: ConfirmAction
   return run('remove_member', { p_profile_id: profileId })
 }
 
-// reinvite_member (0086): their invite back, claimed by them; their role stays Member.
+// reinvite_member (0093): their invite back, claimed by them; their role stays Member.
 export async function reinviteMemberAction(profileId: string, _prev: ConfirmActionState, _formData: FormData) {
   return run('reinvite_member', { p_profile_id: profileId })
 }

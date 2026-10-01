@@ -243,7 +243,7 @@ describe('#203 hygiene', () => {
   // Functions that deliberately have no search_path setting. A function with a SET clause can't be
   // inlined into the caller's plan, and each of these is only fast because it is inlined:
   //   market_sparklines: keeps its read on bets_market_created_idx (tests/db/market-sparklines.test.ts).
-  //   i_bet_on, my_activity_events (0087, #264): the Markets "I bet on" filter and the Feed's Mine
+  //   i_bet_on, my_activity_events (0094, #264): the Markets "I bet on" filter and the Feed's Mine
   //   tab push the caller's cursor, order and limit into the function's body, onto its indexes.
   // The exemption is safe only while each one is security invoker, plain SQL and names every table
   // and schema-qualified function, so no search_path can redirect a reference; the test below
@@ -329,7 +329,7 @@ describe('#84 the creator’s stake is shown', () => {
 })
 
 describe('#60 the admin Members list still shows emails', () => {
-  it('reads them through admin_members (0086) for an admin', async () => {
+  it('reads them through admin_members (0093) for an admin', async () => {
     const { client: ada } = await member('Ada', 'admin')
     expect((await getAdminMember(ada, bob.id))?.email).toBe(bob.email)
   })

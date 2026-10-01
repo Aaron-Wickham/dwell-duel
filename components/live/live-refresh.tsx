@@ -27,7 +27,7 @@ export const LIVE_TABLES = [
 export type LiveTable = (typeof LIVE_TABLES)[number]
 
 // Group-wide changes, which every open page of a kind hears, arrive as Broadcast pings from the
-// database (0085) instead: one per topic per transaction, and at most one per topic every
+// database (0092) instead: one per topic per transaction, and at most one per topic every
 // LIVE_PING_INTERVAL_MS, however many rows moved. Mirrored by public.live_pings' rows.
 export const LIVE_TOPICS = ['markets', 'pools', 'activity', 'reactions', 'tasks', 'reviews'] as const
 

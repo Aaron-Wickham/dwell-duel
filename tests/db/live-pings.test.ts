@@ -46,7 +46,7 @@ afterEach(async () => {
   for (const { client, channel } of open.splice(0)) await client.removeChannel(channel)
 })
 
-describe('live pings (0085)', () => {
+describe('live pings (0092)', () => {
   it('keeps the interval and the topic list equal to the client mirrors', async () => {
     const [interval] = await pgQuery<{ ms: number }>('select public.live_ping_interval_ms() as ms')
     expect(interval.ms).toBe(LIVE_PING_INTERVAL_MS)

@@ -12,7 +12,7 @@
 --
 -- Every function keeps its shape, so the previous build reads them unchanged while this deploys.
 --
--- One explicit transaction, like 0034-0085.
+-- One explicit transaction, like 0034-0092.
 begin;
 set local lock_timeout = '5s';
 

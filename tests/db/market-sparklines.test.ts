@@ -462,7 +462,7 @@ describe('markets.sparkline cache (0070)', () => {
 })
 
 // #252: the cards' compact series, at most 24 points, and the version the app caches them under.
-describe('market_sparks (0088)', () => {
+describe('market_sparks (0095)', () => {
   interface SparkRow {
     market_id: string
     outcome_ids: string[]

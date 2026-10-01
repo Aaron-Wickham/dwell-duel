@@ -111,7 +111,7 @@ describe('card sparklines and the market page chart (#110)', () => {
       shares: { [market.outcomeIds[0]]: 0.5, [market.outcomeIds[1]]: 0.5 },
     })
     expect(card).toHaveLength(3)
-    // The card's compact series (0088) keeps whole seconds and four decimals; the seeded start
+    // The card's compact series (0095) keeps whole seconds and four decimals; the seeded start
     // comes from the market's own created_at on both.
     expect(card).toEqual(
       chart.points.map((p, i) => ({

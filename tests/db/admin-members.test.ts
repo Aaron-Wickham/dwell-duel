@@ -8,7 +8,7 @@ import { getLeaderboardPage, getMemberStanding } from '@/lib/social/leaderboard'
 import { PAGE_SIZE, showMoreHref, type SearchParams } from '@/lib/pagination/cursor'
 import { readNamePageParams } from '@/lib/pagination/name-cursor'
 
-// 0086 (#254, #265): Admin › Members at scale, and removed members out of the rankings.
+// 0093 (#254, #265): Admin › Members at scale, and removed members out of the rankings.
 let owner: Member
 let bob: Member
 let carol: Member

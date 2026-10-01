@@ -197,7 +197,7 @@ a line to `CHANGELOG.md` under the next release.
   only in the provider's state, never in the cookie.
 - **The service worker never caches** per-member HTML, RSC payloads,
   server actions or Supabase responses.
-- **Live updates come in two kinds** (0085, #250). A row subscription is
+- **Live updates come in two kinds** (0092, #250). A row subscription is
   Postgres Changes on a `LIVE_TABLES` table and always has a filter; a new
   one goes in `LIVE_TABLES` and a realtime-publication migration. Anything
   group-wide is a topic (`LIVE_TOPICS`): a plain (not deferred) row

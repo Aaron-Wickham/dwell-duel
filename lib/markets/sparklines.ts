@@ -7,7 +7,7 @@ import { IN_CHUNK, chunk } from '@/lib/pagination/chunk'
 // `version` is the list's sparkVersion: it moves whenever the market's series can (#252).
 export type SparklineMarket = { id: string; version: string } & SeededMarket
 
-// market_sparks' compact form (0088): each point is [epoch seconds, share, ...], the shares in
+// market_sparks' compact form (0095): each point is [epoch seconds, share, ...], the shares in
 // outcomeIds' order. A market nobody has bet on has no points.
 export type CompactSparkline = { outcomeIds: string[]; points: number[][] }
 
@@ -46,7 +46,7 @@ export function batchKey(markets: Pick<SparklineMarket, 'id' | 'version'>[]): st
 // One Next data cache entry per list the page shows, keyed by its markets and their versions, so
 // a render costs one cache read per list (#252). A settled list's key never moves; the open
 // list's moves with each bet on one of its markets, and its next render refetches that list.
-// market_sparks answers the same for every invited member (0088), so one member's read serves
+// market_sparks answers the same for every invited member (0095), so one member's read serves
 // the next; it throws for anyone else, and a throw is never cached.
 async function cachedBatch(supabase: DbClient, markets: SparklineMarket[]): Promise<Record<string, CompactSparkline>> {
   const ids = markets.map((m) => m.id)

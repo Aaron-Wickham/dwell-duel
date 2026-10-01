@@ -202,7 +202,7 @@ describe('weekly_recap', () => {
     expect(await recap()).toMatchObject({ top_tasker_id: bob.id, top_tasker_name: 'Bob', top_tasker_count: 3 })
   })
 
-  // #265 (0086): a removed member is never named, however well their week went.
+  // #265 (0093): a removed member is never named, however well their week went.
   it('leaves a removed member out of the best call and the top tasker', async () => {
     // Bob's 10 of 30 on Yes, of 40: floor(10 × 40 / 10) = 40, a 30 DC profit; Carol's 10 on Yes in
     // C, of 15: 15, a 5 DC profit.
@@ -228,7 +228,7 @@ describe('weekly_recap', () => {
 
     expect(await recap(carolClient)).toMatchObject({ best_bettor_id: bob.id, top_tasker_id: bob.id, top_tasker_count: 2 })
 
-    // Removed: remove_member deletes the invite, which is all 0086 goes by.
+    // Removed: remove_member deletes the invite, which is all 0093 goes by.
     const { error } = await serviceClient().from('allowed_emails').delete().eq('email', bob.email.toLowerCase())
     if (error) throw error
     expect(await recap(carolClient)).toMatchObject({

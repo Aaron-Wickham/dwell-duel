@@ -31,7 +31,7 @@ export interface MarketPosition {
   legs: PositionLeg[]
 }
 
-// my_market_position (0082): the keys of the viewer's own bets and parlays on this market, oldest
+// my_market_position (0096): the keys of the viewer's own bets and parlays on this market, oldest
 // first. Empty means the page shows no position card at all.
 export async function getPositionKeys(supabase: DbClient, marketId: string): Promise<PositionKeys> {
   const { data, error } = await supabase.rpc('my_market_position', { p_market_id: marketId })

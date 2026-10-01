@@ -13,6 +13,8 @@ const ANON_EXECUTABLE = ['cache_market_sparkline']
 // the review step: check that it does.
 const AUTHENTICATED_DEFINER = [
   'adjust_balance',
+  // Admin › Members (0093): raises unless has_role('admin'); emails and sign-ins are admin-only.
+  'admin_members',
   'approve_task_completion',
   // Storage RLS helper (0089): counts only the caller's own avatar uploads today; returns a boolean.
   'avatar_upload_quota_ok',
@@ -27,11 +29,15 @@ const AUTHENTICATED_DEFINER = [
   'economy_summary',
   'has_role',
   'has_stake_in_market',
+  // Who is in (0093): ids only, and none for a signed-in caller who isn't invited themselves.
+  'invited_member_ids',
   'is_admin',
   'is_invited',
   'leaderboard_awards',
   'leaderboard_month',
   'leaderboard_race_steps',
+  // The markets list's sparklines (0095): raises unless invited; reads only, at most 24 points a market.
+  'market_sparks',
   'member_activity',
   'member_emails',
   'member_records',
@@ -51,6 +57,8 @@ const AUTHENTICATED_DEFINER = [
   // Storage RLS helper (0089): counts only the caller's own proof uploads today; returns a boolean.
   'proof_upload_quota_ok',
   'reject_task_completion',
+  // Owner only (0093): raises unless has_role('owner'); restores a removed member's invite.
+  'reinvite_member',
   'remove_bet',
   'remove_member',
   'resolve_market',

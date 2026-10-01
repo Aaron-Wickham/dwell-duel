@@ -141,7 +141,9 @@ placed on `lmsr` markets.
 
 Every money function branches on `pricing`.
 
-**`pools`:** one row per outcome, plus `shares numeric` (`q_i`). The
+**`pools`:** one row per outcome, plus `shares numeric` (the shares held by bets and the parlay book) and
+`q_offset numeric default 0`. The market maker's state is
+`q_i = shares + q_offset`; only converted markets have a non-zero offset. The
 existing DC column stays for `pool` markets until clean-up.
 
 **`bets`:** `shares numeric`, `cost integer`.

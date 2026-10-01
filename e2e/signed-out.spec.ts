@@ -142,7 +142,8 @@ test('with a Google client ID, sign-in shows Google’s button in redirect mode,
 
   const cookies = await page.context().cookies('http://localhost:3000/auth/google')
   const nonce = cookies.find((c) => c.name === 'google-nonce')
-  expect(nonce).toMatchObject({ path: '/auth/google', httpOnly: true, sameSite: 'None', secure: true })
+  // Plain http here: Lax and not Secure. Over https they're SameSite=None; Secure (unit-tested).
+  expect(nonce).toMatchObject({ path: '/auth/google', httpOnly: true, sameSite: 'Lax', secure: false })
   expect(decodeURIComponent(cookies.find((c) => c.name === 'sign-in-next')!.value)).toBe('/markets?from=share')
 
   // The stand-in's token passes the CSRF and nonce checks, so it reaches Supabase, which refuses it,
@@ -150,6 +151,9 @@ test('with a Google client ID, sign-in shows Google’s button in redirect mode,
   await page.getByRole('button', { name: 'Stand-in Google button' }).click()
   await expect(page).toHaveURL(/\/sign-in\?error=auth&next=%2Fmarkets%3Ffrom%3Dshare$/)
   await expect(page.getByText('Something went wrong signing you in. Try again.')).toBeVisible()
+  // Google's button again, and Supabase's redirect beside it, in case Google's path is what failed.
+  await expect(page.getByRole('button', { name: 'Stand-in Google button' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Try another way' })).toBeVisible()
 })
 
 test('with a Google client ID, sign-in falls back to Supabase’s redirect when Google’s script can’t load', async ({ page }) => {

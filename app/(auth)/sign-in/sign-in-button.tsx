@@ -17,7 +17,9 @@ function rememberNext(next: string | null) {
   document.cookie = `${NEXT_COOKIE}=${value}; Path=/callback; Max-Age=${maxAge}; SameSite=Lax${secure}`
 }
 
-export function SignInButton() {
+// `alternative`: shown under Google's own button after a failed sign-in, so a fault on that path
+// (a client ID Supabase doesn't list, a blocked CSRF cookie) never leaves members with no way in.
+export function SignInButton({ alternative = false }: { alternative?: boolean }) {
   const searchParams = useSearchParams()
   const next = safeNextPath(searchParams.get('next'))
   // Google's page can take a moment to arrive; until it does, the button says so.
@@ -50,14 +52,16 @@ export function SignInButton() {
 
   return (
     <div className="flex w-full flex-col gap-5">
-      <SignInError />
+      {!alternative && <SignInError />}
       {failed && <Message tone="error">Couldn’t open Google sign-in. Check your connection and try again.</Message>}
-      <Button type="button" onClick={signIn} block aria-disabled={redirecting || undefined}>
+      <Button type="button" variant={alternative ? 'secondary' : 'primary'} onClick={signIn} block aria-disabled={redirecting || undefined}>
         {redirecting ? (
           <>
             <LeafLoader />
             <span role="status">Opening Google…</span>
           </>
+        ) : alternative ? (
+          'Try another way'
         ) : (
           <>
             <span aria-hidden="true" className="flex size-[26px] items-center justify-center rounded-full bg-on-primary text-[15px] font-extrabold text-primary">

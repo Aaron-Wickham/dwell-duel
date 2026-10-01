@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createHash } from 'node:crypto'
-import { hashNonce, idTokenNonce, newNonce } from '@/lib/auth/google-sign-in'
+import { csrfMatches, hashNonce, idTokenNonce, newNonce } from '@/lib/auth/google-sign-in'
 
 const jwt = (payload: unknown) => `e30.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.sig`
 
@@ -22,5 +22,18 @@ describe('Google sign-in nonces', () => {
     expect(idTokenNonce(jwt({}))).toBeNull()
     expect(idTokenNonce('not-a-token')).toBeNull()
     expect(idTokenNonce('a.%%%.c')).toBeNull()
+  })
+})
+
+describe('csrfMatches', () => {
+  it('matches only an identical string token', () => {
+    expect(csrfMatches('abc123', 'abc123')).toBe(true)
+    expect(csrfMatches('abc123', 'abc124')).toBe(false)
+    expect(csrfMatches('abc123', 'abc12')).toBe(false)
+    expect(csrfMatches('abc123', 'abc1234')).toBe(false)
+    expect(csrfMatches(null, 'abc123')).toBe(false)
+    expect(csrfMatches('', '')).toBe(false)
+    expect(csrfMatches('abc123', null)).toBe(false)
+    expect(csrfMatches('abc123', new Blob(['abc123']))).toBe(false)
   })
 })

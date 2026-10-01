@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 
 // Google Identity Services in redirect mode: Google POSTs the ID token to this path on our own
 // domain, which is why its account chooser names dwellduel.com rather than the Supabase project.
@@ -11,8 +11,21 @@ export const GOOGLE_CSRF_COOKIE = 'g_csrf_token'
 // Long enough for a sign-in page left open a while; the nonce is single-use either way.
 export const GOOGLE_NONCE_MAX_AGE = 60 * 60
 
-// Google's POST is cross-site, and a Lax cookie isn't sent on a cross-site POST.
-export const GOOGLE_COOKIE_OPTIONS = { path: GOOGLE_LOGIN_PATH, httpOnly: true, sameSite: 'none', secure: true } as const
+// Google's POST is cross-site, and a Lax cookie isn't sent on a cross-site POST, so over https
+// they're SameSite=None (which needs Secure). Plain http (local dev) can't hold a Secure cookie in
+// every browser, so there they fall back to Lax: fine for a same-site POST, not for Google's.
+export function googleCookieOptions(origin: string) {
+  const https = origin.startsWith('https:')
+  return { path: GOOGLE_LOGIN_PATH, httpOnly: true, sameSite: https ? 'none' : 'lax', secure: https } as const
+}
+
+// Google's double submit, compared in constant time.
+export function csrfMatches(cookie: string | null, body: unknown): boolean {
+  if (!cookie || typeof body !== 'string') return false
+  const a = Buffer.from(cookie)
+  const b = Buffer.from(body)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
 
 export function newNonce(): string {
   return randomBytes(32).toString('base64url')

@@ -4,7 +4,7 @@ import { serverClient } from '@/lib/supabase/server'
 import { reportError } from '@/lib/observability/report'
 import { NEXT_COOKIE, safeNextPath } from '@/lib/auth/next-path'
 import { finishSignIn, signInFailed, type SignInError } from '@/lib/auth/finish-sign-in'
-import { GOOGLE_COOKIE_OPTIONS, GOOGLE_CSRF_COOKIE, GOOGLE_NONCE_COOKIE, hashNonce, idTokenNonce } from '@/lib/auth/google-sign-in'
+import { csrfMatches, GOOGLE_CSRF_COOKIE, GOOGLE_NONCE_COOKIE, googleCookieOptions, hashNonce, idTokenNonce } from '@/lib/auth/google-sign-in'
 
 // Google's sign-in button (redirect mode) POSTs here with the member's ID token. 303 everywhere:
 // the browser follows with a GET.
@@ -15,8 +15,8 @@ export async function POST(request: Request) {
   const rawNonce = jar.get(GOOGLE_NONCE_COOKIE)?.value ?? null
   const csrfCookie = jar.get(GOOGLE_CSRF_COOKIE)?.value ?? null
   // Single use, however this ends: a retry starts again from the sign-in page with a new nonce.
-  jar.set(GOOGLE_NONCE_COOKIE, '', { ...GOOGLE_COOKIE_OPTIONS, maxAge: 0 })
-  jar.set(NEXT_COOKIE, '', { ...GOOGLE_COOKIE_OPTIONS, maxAge: 0 })
+  jar.set(GOOGLE_NONCE_COOKIE, '', { ...googleCookieOptions(origin), maxAge: 0 })
+  jar.set(NEXT_COOKIE, '', { ...googleCookieOptions(origin), maxAge: 0 })
 
   const fail = (reason: string, error: SignInError = 'auth') => {
     reportError(`Sign-in with Google: ${reason}`, new Error(reason))
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const csrfBody = form?.get('g_csrf_token')
   if (typeof credential !== 'string' || !credential) return fail('no credential')
   // Google's double submit: only script on our own origin could have set the cookie to match.
-  if (!csrfCookie || csrfBody !== csrfCookie) return fail('CSRF token mismatch')
+  if (!csrfMatches(csrfCookie, csrfBody)) return fail('CSRF token mismatch')
   // A missing or different nonce is a sign-in that outlived its page, or one begun in another tab.
   if (!rawNonce) return fail('no nonce cookie', 'expired')
   if (idTokenNonce(credential) !== hashNonce(rawNonce)) return fail('nonce mismatch', 'expired')

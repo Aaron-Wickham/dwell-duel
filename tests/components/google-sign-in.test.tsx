@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { StrictMode } from 'react'
 
 let params = new URLSearchParams()
 vi.mock('next/navigation', () => ({ useSearchParams: () => params }))
-vi.mock('@/lib/supabase/client', () => ({ browserClient: () => ({ auth: { signInWithOAuth: vi.fn() } }) }))
+const signInWithOAuth = vi.fn(() => new Promise(() => {}))
+vi.mock('@/lib/supabase/client', () => ({ browserClient: () => ({ auth: { signInWithOAuth } }) }))
 const reportClientError = vi.fn()
 vi.mock('@/lib/observability/client', () => ({ reportClientError: (e: unknown) => reportClientError(e) }))
 
@@ -21,6 +24,7 @@ const fetchMock = vi.fn()
 beforeEach(() => {
   params = new URLSearchParams()
   initialize.mockClear()
+  signInWithOAuth.mockClear()
   renderButton.mockClear()
   reportClientError.mockClear()
   window.google = { accounts: { id: { initialize, renderButton } } }
@@ -83,6 +87,46 @@ describe('GoogleSignIn', () => {
     expect(script).not.toBeNull()
     script!.dispatchEvent(new Event('error'))
     expect(await screen.findByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument()
+  })
+
+  it('after a failed sign-in, offers Supabase’s redirect as well, so a fault on Google’s path can’t lock anyone out', async () => {
+    params = new URLSearchParams('error=auth&next=/tasks')
+    render(<GoogleSignIn clientId="c" />)
+    expect(await screen.findByRole('button', { name: 'Google’s button' })).toBeInTheDocument()
+    // One message, not one per button.
+    expect(screen.getAllByText('Something went wrong signing you in. Try again.')).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Try another way' }))
+    await waitFor(() =>
+      expect(signInWithOAuth).toHaveBeenCalledWith({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/callback`, queryParams: { prompt: 'select_account' } },
+      }),
+    )
+  })
+
+  it('offers no other way until a sign-in has failed', async () => {
+    render(<GoogleSignIn clientId="c" />)
+    await screen.findByRole('button', { name: 'Google’s button' })
+    expect(screen.queryByRole('button', { name: 'Try another way' })).toBeNull()
+  })
+
+  it('aborts a superseded nonce request, so only the newest nonce reaches Google (Strict Mode)', async () => {
+    const signals: AbortSignal[] = []
+    fetchMock.mockImplementation(async (_url: string, init: RequestInit) => {
+      signals.push(init.signal!)
+      return new Response(JSON.stringify({ nonce: `nonce-${signals.length}` }), { status: 200 })
+    })
+    render(
+      <StrictMode>
+        <GoogleSignIn clientId="c" />
+      </StrictMode>,
+    )
+    await screen.findByRole('button', { name: 'Google’s button' })
+    expect(signals).toHaveLength(2)
+    expect(signals[0].aborted).toBe(true)
+    expect(signals[1].aborted).toBe(false)
+    expect(initialize).toHaveBeenCalledOnce()
+    expect(initialize).toHaveBeenCalledWith(expect.objectContaining({ nonce: 'nonce-2' }))
   })
 
   it.each([

@@ -45,8 +45,9 @@ function loadGoogleId(): Promise<GoogleId> {
   return loading
 }
 
-async function fetchNonce(next: string | null): Promise<string> {
+async function fetchNonce(next: string | null, signal: AbortSignal): Promise<string> {
   const response = await fetch('/auth/google/nonce', {
+    signal,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ next }),
@@ -71,13 +72,18 @@ function prefersDark(): boolean {
 // POSTs the ID token to /auth/google on our domain, so its account chooser names dwellduel.com.
 // If Google's script can't load, the Supabase OAuth button takes its place.
 export function GoogleSignIn({ clientId }: { clientId: string }) {
-  const next = safeNextPath(useSearchParams().get('next'))
+  const searchParams = useSearchParams()
+  const next = safeNextPath(searchParams.get('next'))
+  const failedBefore = searchParams.has('error')
   const slot = useRef<HTMLDivElement>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading')
 
   useEffect(() => {
     let cancelled = false
-    Promise.race([Promise.all([loadGoogleId(), fetchNonce(next)]), timeout(LOAD_TIMEOUT_MS)])
+    // A rerun (Strict Mode, a new `next`) aborts the older request, so its response can't land after
+    // the newer one's and leave Google holding a hash of a nonce the cookie no longer has.
+    const abort = new AbortController()
+    Promise.race([Promise.all([loadGoogleId(), fetchNonce(next, abort.signal)]), timeout(LOAD_TIMEOUT_MS)])
       .then(([id, nonce]) => {
         const parent = slot.current
         if (cancelled || !parent) return
@@ -107,6 +113,7 @@ export function GoogleSignIn({ clientId }: { clientId: string }) {
       })
     return () => {
       cancelled = true
+      abort.abort()
     }
   }, [clientId, next])
 
@@ -125,6 +132,7 @@ export function GoogleSignIn({ clientId }: { clientId: string }) {
         )}
         <div ref={slot} data-testid="google-sign-in" className={state === 'loading' ? 'hidden' : 'flex w-full justify-center'} />
       </div>
+      {failedBefore && <SignInButton alternative />}
     </div>
   )
 }

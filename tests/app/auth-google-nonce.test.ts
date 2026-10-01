@@ -6,8 +6,8 @@ vi.mock('next/headers', () => ({ cookies: async () => ({ set: (...args: unknown[
 
 import { POST } from '@/app/(auth)/auth/google/nonce/route'
 
-const request = (body: unknown, site: string | null = 'same-origin') =>
-  new Request('https://www.dwellduel.com/auth/google/nonce', {
+const request = (body: unknown, site: string | null = 'same-origin', origin = 'https://www.dwellduel.com') =>
+  new Request(`${origin}/auth/google/nonce`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(site ? { 'Sec-Fetch-Site': site } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -52,6 +52,11 @@ describe('POST /auth/google/nonce', () => {
     setCookie.mockReset()
     await POST(request(undefined))
     expect(cookie('sign-in-next')?.[2]).toMatchObject({ maxAge: 0 })
+  })
+
+  it('drops Secure (and so SameSite=None) on plain http, so local dev keeps its cookies', async () => {
+    await POST(request({}, 'same-origin', 'http://localhost:3000'))
+    expect(cookie('google-nonce')?.[2]).toEqual({ path: '/auth/google', httpOnly: true, sameSite: 'lax', secure: false, maxAge: 3600 })
   })
 
   it('refuses a request from another site', async () => {

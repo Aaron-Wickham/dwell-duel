@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { NEXT_COOKIE, safeNextPath } from '@/lib/auth/next-path'
-import { GOOGLE_COOKIE_OPTIONS, GOOGLE_NONCE_COOKIE, GOOGLE_NONCE_MAX_AGE, hashNonce, newNonce } from '@/lib/auth/google-sign-in'
+import { googleCookieOptions, GOOGLE_NONCE_COOKIE, GOOGLE_NONCE_MAX_AGE, hashNonce, newNonce } from '@/lib/auth/google-sign-in'
 
 // The sign-in page asks for a nonce before it shows Google's button. The raw value stays in an
 // httpOnly cookie for /auth/google; the page only ever sees its hash, which goes to Google. `next`
@@ -19,11 +19,12 @@ export async function POST(request: Request) {
     // No body: no destination.
   }
 
+  const options = googleCookieOptions(new URL(request.url).origin)
   const nonce = newNonce()
   const jar = await cookies()
-  jar.set(GOOGLE_NONCE_COOKIE, nonce, { ...GOOGLE_COOKIE_OPTIONS, maxAge: GOOGLE_NONCE_MAX_AGE })
+  jar.set(GOOGLE_NONCE_COOKIE, nonce, { ...options, maxAge: GOOGLE_NONCE_MAX_AGE })
   // With no `next`, an older one is cleared, so it can't send this sign-in somewhere stale.
-  jar.set(NEXT_COOKIE, next ?? '', { ...GOOGLE_COOKIE_OPTIONS, maxAge: next ? GOOGLE_NONCE_MAX_AGE : 0 })
+  jar.set(NEXT_COOKIE, next ?? '', { ...options, maxAge: next ? GOOGLE_NONCE_MAX_AGE : 0 })
 
   return NextResponse.json({ nonce: hashNonce(nonce) }, { headers: { 'Cache-Control': 'no-store' } })
 }

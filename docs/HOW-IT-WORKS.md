@@ -26,8 +26,9 @@ This page explains the rules.
   invite nobody has used yet; once someone has signed in with it, only the
   owner can remove them (see [Roles](#roles)).
   Sign in with that Google account; any other account lands on a "not
-  invited" page. Google always asks which account to use, so "Try another
-  account" there lets you pick a different one.
+  invited" page, which says which account you used. Google always asks
+  which account to use, so "Try another account" there lets you pick a
+  different one.
 - **Links survive signing in.** Open a shared market link while signed
   out, and after signing in you land on that market, not Home.
 - **Everyone starts with 100 DC.** Every coin you gain or spend is a line
@@ -396,8 +397,9 @@ a member.
 - **Home:** your balance, rank, DC at stake and pending rewards, plus
   links to everything else. At 0 DC it points you to Tasks, the way to
   earn more. New members also get a **Getting started** card: read this
-  page, turn on notifications on this device, add your photo, place your
-  first bet and try a task. It goes away once you've done all five, or
+  page, turn on notifications on this device (left out on a browser that
+  can't get them), add your photo, place your first bet and try a task.
+  It goes away once you've done them all, or
   when you dismiss it. After that, the installed app without
   notifications asks once to turn them on, until you tap Not now.
 - **Weekly recap:** on Sundays and Mondays (Eastern time), Home recaps

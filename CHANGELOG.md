@@ -18,10 +18,10 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **Getting started has five steps, How it works first.** New members are pointed to How it works and to turning on notifications on this device, before the photo, first bet and first task. Once the card is gone, the installed app without notifications asks once to turn them on, in place of Get the app (#260).
 - **0 DC isn't a dead end.** At 0 DC, Home and the slip point to Tasks, Home with what tasks pay. The slip shows your balance and what's left after it (or how many DC short it is), and a line under Place says why it can't be tapped (#260).
 - **How it works opens with the short version**, has a collapsible "On this page" list on phones, keeps the formulas in "The maths", and says "shared pot" and "Monday–Sunday weeks" instead of jargon (#260).
-- **A link survives signing in.** A shared market link opened while signed out lands on that market after sign-in, not Home; only a same-site app path is accepted. Google always asks which account to use, so "Try another account" really offers another (#263).
+- **A link survives signing in.** A shared market link opened while signed out lands on that market after sign-in, not Home; only a same-site app path is accepted. Google always asks which account to use, so "Try another account" really offers another, and the not-invited page says which account was refused (#263).
 
 ### Fixes
-- **The void copy says what happens to parlays**: every bet is refunded, and parlays drop the voided leg and carry on with the rest (#266).
+- **The void copy says what happens to parlays**: every bet is refunded, and parlays drop the voided leg and carry on with the rest. The resolve and override confirmations no longer say parlay legs are paid out: winning solo bets are paid, and a parlay pays once every pick has won (#266).
 - **Home's Admin tile counts what the Admin badge counts**, approvals and markets to resolve, and opens the queue that has work in it (#266).
 - **Create market explains the close time**: betting stops then, so set it before the answer is known, and the outcomes, close time and line can't change later; the preview notes that a reviewer resolves a market you bet on (#266).
 - **Approved repeating tasks say when they open again**, such as "Again Monday, midnight ET" (#266).

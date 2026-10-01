@@ -457,7 +457,10 @@ round trip through Google, and `/callback` sends the member there instead
 of Home. Both ends pass it through `safeNextPath` (`lib/auth/next-path.ts`):
 only a same-site app path, never `//host`, a backslash or a scheme. A
 cookie, rather than `/callback?next=` in `redirectTo`, keeps Supabase's
-redirect allow-list to exact URLs. The `profiles` trigger
+redirect allow-list to exact URLs. A refused sign-in goes to `/not-invited?next=…`
+with the email in the httpOnly `not-invited-email` cookie (path
+`/not-invited`, five minutes), never the URL; the page shows it and clears
+it with a server action, and its "Try another account" keeps `next`. The `profiles` trigger
 creates the profile and the 100 DC starting grant. `requireUser` reads
 claims and throws `AuthUnavailableError` (not "signed out") when Auth
 itself is down.
@@ -628,7 +631,9 @@ tappable card adds `hover-lift` and lifts onto `--lift-shadow`
 instead, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins).
 
 **Getting started.** Home's onboarding card (`components/home/onboarding-card.tsx`)
-has five steps. Reading How it works is the `read-how-it-works` cookie,
+has five steps (four on a browser that can never get push, which
+`useDevicePush` reports as `unsupported`; Safari on an iPhone not yet
+installed and a blocked permission still count as off). Reading How it works is the `read-how-it-works` cookie,
 which that page sets from the browser (`components/docs/mark-how-it-works-read.tsx`).
 Turning on notifications is per device, so the card asks the browser for
 a push subscription itself (`lib/push/use-device-push.ts`). The other three

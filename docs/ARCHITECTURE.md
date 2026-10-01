@@ -465,7 +465,9 @@ Google's consent leaves a row with their name, email and picture. The daily
 keep-alive deletes those (#275): `uninvited_auth_users()` (0079, service role
 only) lists up to 50 a run that are a day old or more and have no profile,
 invite or ledger row, and `pruneUninvitedUsers` (`lib/auth/prune-uninvited-users.ts`)
-deletes each through the Auth admin API. A member, a removed member (who
+deletes each through the Auth admin API. A delete that fails is reported
+to Sentry and skipped rather than failing the step, so one account Auth
+won't delete can't turn every run red; only a failed listing does. A member, a removed member (who
 keeps their profile) and an invitee who hasn't finished signing in are
 never listed.
 

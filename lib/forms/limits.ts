@@ -39,7 +39,7 @@ export const WRITE_LIMITS = {
 export type WriteAction = keyof typeof WRITE_LIMITS
 
 // enforce_write_limit's raise for each action (SQLSTATE DD429), and what the member sees.
-const { market, comment, task_submission, bet_cancel } = WRITE_LIMITS
+const { market, comment, reaction, task_submission, bet_cancel } = WRITE_LIMITS
 
 export const RATE_LIMIT_ERRORS = {
   market: {
@@ -52,7 +52,7 @@ export const RATE_LIMIT_ERRORS = {
   },
   reaction: {
     match: 'you have added too many reactions recently; try again later',
-    formError: 'You’re reacting faster than we allow. Try again in a minute.',
+    formError: `You can add up to ${reaction[0].max} reactions a minute and ${reaction[1].max.toLocaleString('en-US')} a day. Try again in a little while.`,
   },
   task_submission: {
     match: 'you have submitted too many tasks recently; try again later',

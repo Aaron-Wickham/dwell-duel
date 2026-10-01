@@ -72,7 +72,10 @@ const steps: { name: string; run: (db: Db) => Promise<Record<string, unknown>> }
     // Anyone can finish Google sign-in; the account of someone never invited is deleted a day
     // later (#275), 50 a run: plenty for a trickle of stray sign-ins, and a backlog clears over days.
     name: 'uninvited sign-in cleanup',
-    run: async (db) => ({ uninvitedUsersRemoved: await pruneUninvitedUsers(db, 50) }),
+    run: async (db) => {
+      const { removed, failed } = await pruneUninvitedUsers(db, 50)
+      return { uninvitedUsersRemoved: removed, uninvitedUsersFailed: failed }
+    },
   },
   {
     // Last month's champion goes to the feed (#77). Every day, not just the 1st, so a missed run

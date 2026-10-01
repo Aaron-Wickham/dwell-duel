@@ -11,7 +11,13 @@
 -- The counts live in write_rate_counters, one small row per member, action and
 -- window, not in a scan of the source tables: an upsert's row lock makes the
 -- count exact under concurrent requests, and a raise rolls the increment back
--- with the insert. Only a member's own row counts (auth.uid() is the row's
+-- with the insert. The windows are fixed, not sliding: a window starts at the
+-- first write after the last one expired, so a member who fills one window
+-- just before it ends can fill the next straight after, up to twice the limit
+-- across the boundary. That's accepted: the point is a bound on growth, not
+-- an exact rate, and a fixed window needs one row per member, action and
+-- window instead of a row per write.
+-- Only a member's own row counts (auth.uid() is the row's
 -- owner), so the service role, and an admin removing someone else's bet, pass.
 -- Admins and the owner aren't limited at all: they're trusted with far more
 -- than this already, and set up markets for the group in bulk.

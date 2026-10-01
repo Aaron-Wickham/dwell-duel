@@ -59,10 +59,10 @@ describe('pruneUninvitedUsers', () => {
     const fresh = await makeAuthUserWithoutProfile('fresh@example.com')
     await Promise.all([age(stray, '2 days'), age(alice.id, '30 days')])
 
-    expect(await pruneUninvitedUsers(serviceClient(), 50)).toBe(1)
+    expect(await pruneUninvitedUsers(serviceClient(), 50)).toEqual({ removed: 1, failed: 0 })
     expect(await authUserExists(stray)).toBe(false)
     expect(await authUserExists(fresh)).toBe(true)
     expect(await authUserExists(alice.id)).toBe(true)
-    expect(await pruneUninvitedUsers(serviceClient(), 50)).toBe(0)
+    expect(await pruneUninvitedUsers(serviceClient(), 50)).toEqual({ removed: 0, failed: 0 })
   })
 })

@@ -45,14 +45,14 @@ describe('keep-alive cron', () => {
     )
     const res = await GET(authorized())
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ ok: true, strayProofRemoved: 2, uninvitedUsersRemoved: 0, seasonChampion: null, resolveReminders: 0, marketAlerts: 0 })
+    expect(await res.json()).toEqual({ ok: true, strayProofRemoved: 2, uninvitedUsersRemoved: 0, uninvitedUsersFailed: 0, seasonChampion: null, resolveReminders: 0, marketAlerts: 0 })
     expect(rpc).toHaveBeenCalledWith('stray_proof_objects', { p_limit: 500 })
     expect(remove).toHaveBeenCalledWith(['task/u/1/a.txt', 'task/u/2/b.jpg'])
   })
 
   it('skips the Storage call when nothing is stray', async () => {
     const res = await GET(authorized())
-    expect(await res.json()).toEqual({ ok: true, strayProofRemoved: 0, uninvitedUsersRemoved: 0, seasonChampion: null, resolveReminders: 0, marketAlerts: 0 })
+    expect(await res.json()).toEqual({ ok: true, strayProofRemoved: 0, uninvitedUsersRemoved: 0, uninvitedUsersFailed: 0, seasonChampion: null, resolveReminders: 0, marketAlerts: 0 })
     expect(remove).not.toHaveBeenCalled()
   })
 
@@ -93,14 +93,33 @@ describe('keep-alive cron', () => {
     expect(await res.json()).toMatchObject({ ok: true, uninvitedUsersRemoved: 2 })
   })
 
-  it('tries every uninvited sign-in when one delete fails, then reports the step as failed', async () => {
+  it('reports a delete that keeps failing without failing the step, so one stuck account never 502s every run', async () => {
     rpc.mockImplementation(async (fn: string) =>
-      fn === 'uninvited_auth_users' ? { data: [{ id: 'u1' }, { id: 'u2' }], error: null } : { data: [], error: null },
+      fn === 'uninvited_auth_users' ? { data: [{ id: 'stuck' }, { id: 'u2' }], error: null } : { data: [], error: null },
     )
-    deleteUser.mockResolvedValueOnce({ error: new Error('auth down') })
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    deleteUser.mockImplementation(async (id: string) => ({ error: id === 'stuck' ? new Error('Database error deleting user') : null }))
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const res = await GET(authorized())
     expect(deleteUser).toHaveBeenCalledTimes(2)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ ok: true, uninvitedUsersRemoved: 1, uninvitedUsersFailed: 1 })
+    expect(log).toHaveBeenCalled()
+
+    // Alone, it still doesn't fail the run.
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'uninvited_auth_users' ? { data: [{ id: 'stuck' }], error: null } : { data: [], error: null },
+    )
+    const alone = await GET(authorized())
+    expect(alone.status).toBe(200)
+    expect(await alone.json()).toMatchObject({ ok: true, uninvitedUsersRemoved: 0, uninvitedUsersFailed: 1 })
+  })
+
+  it('fails the step when the list itself fails', async () => {
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'uninvited_auth_users' ? { data: null, error: new Error('down') } : { data: [], error: null },
+    )
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const res = await GET(authorized())
     expect(res.status).toBe(502)
     expect(await res.json()).toMatchObject({ ok: false, failed: ['uninvited sign-in cleanup'] })
     expect(settleSeason).toHaveBeenCalled()

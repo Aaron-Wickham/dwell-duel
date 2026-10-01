@@ -209,6 +209,9 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   this month, and its winnings count next month. Only members who've bet
   or been paid this month appear.
 - **Ties share a rank** on both boards ("1, 1, 3").
+- **Only current members are ranked.** Someone the owner has removed drops
+  off both boards and out of "Rank X of N"; their profile still shows
+  their net worth, marked "Not ranked".
 - **Your standing** (Net worth, wide screens only): a card beside the
   rankings shows your rank, net worth, record and how far you are behind
   the member above you.
@@ -324,11 +327,13 @@ waiting on them: other members' task submissions (reviewers and above) and
 closed markets with no result (admins and above). It disappears at zero.
 
 A role only counts while you're invited. The owner can **remove a member**
-from Admin → Members: they go back to plain member, their invite is
-revoked and their devices stop getting notifications, straight away. Their
-coins, bets and history stay where they are. If they sign in again they
-land on the not-invited page, and inviting them again brings them back as
-a member.
+from their page under Admin → Members: they go back to plain member, their
+invite is revoked and their devices stop getting notifications, straight
+away. Their coins, bets and history stay where they are, but they're left
+out of both leaderboards, the "Rank X of N" count and the month's champion,
+and Admin → Members lists them under **Removed**. If they sign in again they
+land on the not-invited page. The owner's **Invite again** on their page
+(it asks first) brings them back as a member, ranked again.
 
 ## Around the app
 

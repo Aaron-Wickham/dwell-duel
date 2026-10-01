@@ -21,7 +21,7 @@ export interface ParlayDetail extends Omit<ParlayView, 'legs'> {
 // The select list is a runtime string, so the generated types can't follow it and the rows are
 // cast. The resolution is embedded through markets' own current_resolution_id, as list-parlays does.
 const DETAIL_COLUMNS =
-  'id, profile_id, stake, status, credited, max_multiplier, created_at, parlay_legs(outcome_id, locked_odds, market_outcomes(label), markets(id, title, status, close_at, market_outcomes(id, label), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at)))'
+  'id, profile_id, stake, status, credited, max_multiplier, odds_at_close, created_at, parlay_legs(outcome_id, locked_odds, market_outcomes(label), markets(id, title, status, close_at, market_outcomes(id, label), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at)))'
 
 interface DetailRow {
   id: string
@@ -30,6 +30,7 @@ interface DetailRow {
   status: ParlayView['status']
   credited: number
   max_multiplier: number
+  odds_at_close: boolean
   created_at: string
   parlay_legs: {
     outcome_id: string
@@ -75,6 +76,7 @@ export function toParlayDetail(row: DetailRow, ownerName: string, now: number, l
     status: row.status,
     credited: row.credited,
     maxMultiplier: row.max_multiplier,
+    lockedAtPlacement: !row.odds_at_close,
     multiplierBp,
     capped,
     estimated: counted.some((l) => !l.oddsKnown),

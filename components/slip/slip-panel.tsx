@@ -17,6 +17,7 @@ import {
   combineOdds,
   formatOdds,
   legOddsBp,
+  MAX_LEG_ODDS,
   MAX_MULTIPLIER,
   MAX_PAYOUT,
   MAX_PICKS,
@@ -101,8 +102,8 @@ const LEG_BLOCK_NOTE: Record<NonNullable<SlipPick['legBlock']>, string> = {
   floor: `A parlay pick needs at least ${MIN_LEG_POOL} DC from ${MIN_LEG_BETTORS} other members on its market. Switch it to Solo, or add it once more members have bet.`,
 }
 
-// A Solo pick shows the market's odds; a Parlay pick shows what its leg would be priced at if the
-// market closed now, which is only an estimate until it does.
+// A Solo pick shows what each DC on it would pay from the real pool now; a Parlay pick shows what
+// its leg would be priced at if the market closed now. Both are estimates until close.
 function pickOdds(pick: SlipPick): string | null {
   if (pick.parlay) return `~${formatOdds(pick.oddsBp)}×`
   const bp = legOddsBp(pick.totalPool, pick.outcomePool)
@@ -191,13 +192,7 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
                 />
                 {stake !== null && (
                   <span className="text-sm text-ink2">
-                    Pays ~
-                    {soloPayout(
-                      stake,
-                      { pool: pick.outcomePool, total: pick.totalPool },
-                      { pool: pick.realPool, total: pick.realTotal, opposing: pick.opposing },
-                    )}{' '}
-                    DC if it wins
+                    Pays ~{soloPayout(stake, pick.outcomePool, pick.totalPool)} DC if it wins
                   </span>
                 )}
               </div>
@@ -330,8 +325,8 @@ export function SlipPanel() {
             )}
           </div>
           <p className="text-sm text-ink2">
-            Each pick’s odds are set when its market closes, from other members’ money on it, so these
-            are estimates until then.
+            Each pick’s odds are set when its market closes, from other members’ money on it (at most{' '}
+            {MAX_LEG_ODDS}× a pick), so these are estimates until then.
           </p>
           {legNote ? (
             <p className="text-sm text-ink2">{legNote}</p>

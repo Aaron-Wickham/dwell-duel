@@ -1,5 +1,4 @@
 import type { DbClient } from '@/lib/supabase/database'
-import { effectivePools } from '@/lib/markets/odds'
 import { combineOdds, lockedOddsToBp } from './odds'
 import type { SlipEntry } from './parse-slip'
 
@@ -20,13 +19,9 @@ export interface SlipPick {
   // real odds are set at close, so the slip shows this as an estimate.
   oddsBp: number
   legBlock: LegBlock | null
-  // Effective pools, seed included, as resolve_market_core pays on (lib/markets/odds.ts).
+  // The real pools, no seed: what a solo payout is worked out from (soloPayout, 0074).
   outcomePool: number
   totalPool: number
-  // The real pools, and the opposing stake that limits the seed's top-up on a solo payout.
-  realPool: number
-  realTotal: number
-  opposing: number
 }
 
 export interface SlipView {
@@ -46,7 +41,7 @@ export async function getSlipView(supabase: DbClient, entries: SlipEntry[]): Pro
   const [{ data, error }, { data: quotes, error: quoteError }] = await Promise.all([
     supabase
       .from('market_outcomes')
-      .select('id, label, pool_total, markets(id, title, status, close_at, seed_per_outcome, market_outcomes(pool_total))')
+      .select('id, label, pool_total, markets(id, title, status, close_at, market_outcomes(pool_total))')
       .in('id', ids),
     supabase.rpc('pick_quotes', { p_outcome_ids: ids }),
   ])
@@ -62,8 +57,6 @@ export async function getSlipView(supabase: DbClient, entries: SlipEntry[]): Pro
     const row = rows.find((r) => r.id === entry.outcomeId)
     const quote = quoteOf.get(entry.outcomeId)
     if (!row || !quote) return []
-    const realTotal = row.markets.market_outcomes.reduce((sum, o) => sum + o.pool_total, 0)
-    const { pool, total } = effectivePools(row.pool_total, realTotal, row.markets.seed_per_outcome, row.markets.market_outcomes.length)
     return [
       {
         outcomeId: row.id,
@@ -74,11 +67,8 @@ export async function getSlipView(supabase: DbClient, entries: SlipEntry[]): Pro
         open: row.markets.status === 'open' && new Date(row.markets.close_at).getTime() > now,
         oddsBp: lockedOddsToBp(quote.odds),
         legBlock: quote.own_market ? 'own_market' : quote.meets_floor ? null : 'floor',
-        outcomePool: pool,
-        totalPool: total,
-        realPool: row.pool_total,
-        realTotal,
-        opposing: Number(quote.opposing),
+        outcomePool: row.pool_total,
+        totalPool: row.markets.market_outcomes.reduce((sum, o) => sum + o.pool_total, 0),
       },
     ]
   })

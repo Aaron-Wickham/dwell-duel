@@ -522,8 +522,8 @@ export type Database = {
           id: string
           market_id: string
           note: string | null
-          opposing_stake: number | null
           outcome_id: string
+          payout_seed: number
           resolved_at: string
           resolved_by: string
           reversed_at: string | null
@@ -534,8 +534,8 @@ export type Database = {
           id?: string
           market_id: string
           note?: string | null
-          opposing_stake?: number | null
           outcome_id: string
+          payout_seed?: number
           resolved_at?: string
           resolved_by: string
           reversed_at?: string | null
@@ -546,8 +546,8 @@ export type Database = {
           id?: string
           market_id?: string
           note?: string | null
-          opposing_stake?: number | null
           outcome_id?: string
+          payout_seed?: number
           resolved_at?: string
           resolved_by?: string
           reversed_at?: string | null
@@ -743,6 +743,7 @@ export type Database = {
           credited: number
           id: string
           max_multiplier: number
+          odds_at_close: boolean
           profile_id: string
           settled_at: string | null
           stake: number
@@ -753,6 +754,7 @@ export type Database = {
           credited?: number
           id?: string
           max_multiplier: number
+          odds_at_close?: boolean
           profile_id: string
           settled_at?: string | null
           stake: number
@@ -763,6 +765,7 @@ export type Database = {
           credited?: number
           id?: string
           max_multiplier?: number
+          odds_at_close?: boolean
           profile_id?: string
           settled_at?: string | null
           stake?: number
@@ -1364,6 +1367,7 @@ export type Database = {
       parlay_limits: {
         Args: never
         Returns: {
+          max_leg_odds: number
           max_legs: number
           max_multiplier: number
           max_payout: number
@@ -1371,6 +1375,7 @@ export type Database = {
           min_leg_pool: number
         }[]
       }
+      parlay_max_payout: { Args: { p_parlay_id: string }; Returns: number }
       period_index: {
         Args: { p_key: string; p_period: string }
         Returns: number
@@ -1381,7 +1386,6 @@ export type Database = {
           market_id: string
           meets_floor: boolean
           odds: number
-          opposing: number
           other_bettors: number
           others_on_pick: number
           others_total: number
@@ -1394,7 +1398,6 @@ export type Database = {
           market_id: string
           meets_floor: boolean
           odds: number
-          opposing: number
           other_bettors: number
           others_on_pick: number
           others_total: number
@@ -1428,6 +1431,16 @@ export type Database = {
           p_singles: Json
         }
         Returns: Json
+      }
+      pool_payout: {
+        Args: {
+          p_outcomes?: number
+          p_seed?: number
+          p_stake: number
+          p_total_pool: number
+          p_winning_pool: number
+        }
+        Returns: number
       }
       push_endpoint_host: { Args: { p_endpoint: string }; Returns: string }
       push_hosts: { Args: never; Returns: string[] }
@@ -1498,6 +1511,10 @@ export type Database = {
           p_prefix: string
           p_resolution_id: string
         }
+        Returns: number
+      }
+      refund_room: {
+        Args: { p_amount: number; p_profile_id: string }
         Returns: number
       }
       reject_task_completion: {

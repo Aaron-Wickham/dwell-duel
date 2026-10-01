@@ -1,4 +1,4 @@
--- #287, #272: how parlays and seeded payouts are priced.
+-- #287, #272: how parlays and payouts are priced.
 --
 -- Parlays stay paid by the house and out of the pools (the #51 decision). What changes:
 --
@@ -7,21 +7,24 @@
 --    market / other members' DC on the pick. Nobody can bet, cancel or have a bet removed once a
 --    market has closed or settled, so that pool is final; settle_parlay writes the odds into
 --    parlay_legs.locked_odds the first time it sees the leg's market closed or resolved, and they
---    never change after that. A leg whose final pool has less than the real-money floor (below),
---    or no other member's DC on the pick, counts 1.00×: it still has to win, but it doesn't
---    multiply.
+--    never change after that. A leg counts at most 5×. A leg whose final pool has less than the
+--    real-money floor (below), or no other member's DC on the pick, counts 1.00×: it still has to
+--    win, but it doesn't multiply.
 -- 2. A leg needs the floor when it's placed: at least 50 DC of other members' stakes on its market,
 --    from at least 2 other members. A leg on a market you created is refused.
 -- 3. Caps: a parlay multiplies to at most 20× and pays at most 1,000 DC (or its stake back, if a
---    stake placed before the cap was larger), and its stake can be at most 1,000 DC. Each parlay
---    keeps the multiplier cap it was placed under (parlays.max_multiplier): parlays placed before
---    this migration keep their locked odds and their 100× cap, and the payout cap applies to them.
--- 4. The seed's top-up on a solo payout is paid only against real opposing money: a winner is paid
---    at the lower of the seeded odds and (real pool + opposing stake) / winning pool, where the
---    opposing stake is what members who didn't back the result staked on other outcomes
---    (market_resolutions.opposing_stake). With the seed at 0 this is the plain pool payout, as before.
+--    stake placed before the cap was larger), and its stake can be at most 1,000 DC. One member's
+--    pending parlays with a leg on any one market can pay at most 1,000 DC between them, counting
+--    each at the most it could pay. Parlays still pending keep their locked odds and take the 20×
+--    cap; settled ones keep the cap they were paid under (parlays.max_multiplier).
+-- 4. Winners split exactly the real pool: stake × all DC on the market / DC on the winning outcome,
+--    rounded down (pool_payout). The seed only shapes the odds, chances and charts a thin market
+--    shows. Each resolution records the seed its payouts counted (market_resolutions.payout_seed:
+--    the market's seed before 0074, so history and the feed still read what was paid; 0 since).
 -- 5. apply_coin_transaction keeps a balance within the integer column: a credit that would take it
 --    past 2,147,483,647 DC is cut to fit, and the ledger row records what was actually credited.
+--    A refund (cancel_bet, remove_bet) is cut the same way, and cancelled_bets records what was
+--    refunded.
 -- 6. remove_bet refuses once the market has closed, like cancel_bet (#272).
 --
 -- Additive: every function keeps its signature, so the build before this one keeps calling them
@@ -44,14 +47,36 @@ comment on column public.parlay_legs.locked_odds is
 -- place_parlay (the only writer) always names the cap in force.
 alter table public.parlays add column max_multiplier integer not null default 100 check (max_multiplier >= 1);
 alter table public.parlays alter column max_multiplier drop default;
+update public.parlays set max_multiplier = 20 where status = 'pending';
+
+-- How a parlay's legs got their odds: locked when it was placed (every parlay before 0074, the
+-- default that fills them) or set at close. New rows are set at close.
+alter table public.parlays add column odds_at_close boolean not null default false;
+alter table public.parlays alter column odds_at_close set default true;
 
 comment on column public.parlays.max_multiplier is
-  'The multiplier cap in force when the parlay was placed (100 before 0074, then parlay_limits().max_multiplier).';
+  'The multiplier cap the parlay settles under: parlay_limits().max_multiplier, or 100 for a parlay settled before 0074.';
 
-alter table public.market_resolutions add column opposing_stake bigint check (opposing_stake >= 0);
+alter table public.market_resolutions add column payout_seed integer not null default 0 check (payout_seed >= 0);
+update public.market_resolutions r set payout_seed = m.seed_per_outcome from public.markets m where m.id = r.market_id;
 
-comment on column public.market_resolutions.opposing_stake is
-  'Stakes on the other outcomes from members with nothing on this one: the most the seed can add to its winners'' payouts. Null for resolutions before 0074, which paid the full seeded odds.';
+comment on column public.market_resolutions.payout_seed is
+  'The seed per outcome this resolution''s payouts counted: the market''s seed before 0074, 0 since (winners split the real pool).';
+
+-- What resolve_market_core pays a winner: their share of the pool, rounded down, counting p_seed
+-- per outcome only to reproduce a resolution from before 0074. lib/markets/odds.ts poolPayout
+-- mirrors it, and tests/db/seeded-odds.test.ts keeps the two equal.
+create function public.pool_payout(p_stake integer, p_winning_pool bigint, p_total_pool bigint, p_seed integer default 0, p_outcomes integer default 0)
+returns integer
+language sql
+immutable
+set search_path = ''
+as $$
+  select floor(p_stake::numeric * (p_total_pool + p_seed * p_outcomes) / (p_winning_pool + p_seed))::integer
+$$;
+
+revoke execute on function public.pool_payout(integer, bigint, bigint, integer, integer) from public, anon;
+grant execute on function public.pool_payout(integer, bigint, bigint, integer, integer) to authenticated, service_role;
 
 -- ─── Limits ──────────────────────────────────────────────────────────────────
 -- lib/parlays/odds.ts mirrors every column; tests/db/seeded-odds.test.ts keeps them equal. A new
@@ -59,12 +84,19 @@ comment on column public.market_resolutions.opposing_stake is
 drop function public.parlay_limits();
 
 create function public.parlay_limits()
-returns table (max_legs integer, max_multiplier integer, max_payout integer, min_leg_pool integer, min_leg_bettors integer)
+returns table (
+  max_legs integer,
+  max_multiplier integer,
+  max_payout integer,
+  min_leg_pool integer,
+  min_leg_bettors integer,
+  max_leg_odds integer
+)
 language sql
 immutable
 set search_path = ''
 as $$
-  select 10, 20, 1000, 50, 2
+  select 10, 20, 1000, 50, 2, 5
 $$;
 
 revoke execute on function public.parlay_limits() from public, anon;
@@ -75,11 +107,9 @@ grant execute on function public.parlay_limits() to authenticated, service_role;
 --   others_total    other members' DC on the market
 --   others_on_pick  other members' DC on this outcome
 --   other_bettors   how many other members have DC on the market
---   opposing        DC on other outcomes from other members with nothing on this one, the most
---                   the seed could add to a solo payout on it (resolve_market_core)
 --   meets_floor     the parlay leg floor (parlay_limits)
---   odds            the parlay leg's odds: others_total / others_on_pick to four places, or 1
---                   when the floor isn't met or nobody else backed the pick
+--   odds            the parlay leg's odds: others_total / others_on_pick to four places, at most
+--                   max_leg_odds, or 1 when the floor isn't met or nobody else backed the pick
 -- settle_parlay prices a leg with it once the pool is final, and pick_quotes shows the same
 -- figure while it can still move. Internal: members read it through pick_quotes.
 create function public.pick_quote(p_profile_id uuid, p_outcome_id uuid)
@@ -89,7 +119,6 @@ returns table (
   others_total bigint,
   others_on_pick bigint,
   other_bettors integer,
-  opposing bigint,
   meets_floor boolean,
   odds numeric
 )
@@ -114,18 +143,14 @@ as $$
     select
       coalesce(sum(amount), 0)::bigint as total,
       coalesce(sum(amount) filter (where outcome_id = p_outcome_id), 0)::bigint as on_pick,
-      count(distinct profile_id)::integer as bettors,
-      coalesce(sum(amount) filter (
-        where outcome_id <> p_outcome_id
-          and profile_id not in (select profile_id from others where outcome_id = p_outcome_id)
-      ), 0)::bigint as opposing
+      count(distinct profile_id)::integer as bettors
     from others
   )
-  select pick.market_id, pick.own_market, s.total, s.on_pick, s.bettors, s.opposing,
+  select pick.market_id, pick.own_market, s.total, s.on_pick, s.bettors,
          s.total >= l.min_leg_pool and s.bettors >= l.min_leg_bettors,
          case
            when s.total >= l.min_leg_pool and s.bettors >= l.min_leg_bettors and s.on_pick > 0
-             then trunc(s.total::numeric / s.on_pick, 4)
+             then least(trunc(s.total::numeric / s.on_pick, 4), l.max_leg_odds)
            else 1
          end
   from pick
@@ -137,7 +162,7 @@ revoke execute on function public.pick_quote(uuid, uuid) from public, anon, auth
 grant execute on function public.pick_quote(uuid, uuid) to service_role;
 
 -- The slip's picks, priced for the caller: what a parlay leg on each would get if its market
--- closed now, and what a solo bet's seed top-up is limited to. Bets are visible to every invited
+-- closed now. Bets are visible to every invited
 -- member, so these sums show nothing a member couldn't add up. At most 50 outcomes a call.
 create function public.pick_quotes(p_outcome_ids uuid[])
 returns table (
@@ -147,7 +172,6 @@ returns table (
   others_total bigint,
   others_on_pick bigint,
   other_bettors integer,
-  opposing bigint,
   meets_floor boolean,
   odds numeric
 )
@@ -200,10 +224,37 @@ $$;
 revoke execute on function public.parlay_leg_odds(uuid[]) from public, anon;
 grant execute on function public.parlay_leg_odds(uuid[]) to authenticated, service_role;
 
+-- ─── Exposure ────────────────────────────────────────────────────────────────
+-- The most a pending parlay could pay: its set odds, each unset leg at max_leg_odds, under its
+-- multiplier and payout caps. A voided leg has dropped out. place_parlay holds one member's pending
+-- parlays with a leg on any one market to max_payout between them. Internal.
+create function public.parlay_max_payout(p_parlay_id uuid)
+returns integer
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select least(
+           floor(pa.stake * least(coalesce(round(exp(sum(ln(coalesce(l.locked_odds, lim.max_leg_odds)))), 10), 1), pa.max_multiplier)),
+           greatest(lim.max_payout, pa.stake)
+         )::integer
+  from public.parlays pa
+  cross join public.parlay_limits() lim
+  left join public.parlay_legs l
+    on l.parlay_id = pa.id
+   and exists (select 1 from public.markets m where m.id = l.market_id and m.status <> 'voided')
+  where pa.id = p_parlay_id
+  group by pa.id, pa.stake, pa.max_multiplier, lim.max_leg_odds, lim.max_payout
+$$;
+
+revoke execute on function public.parlay_max_payout(uuid) from public, anon, authenticated;
+grant execute on function public.parlay_max_payout(uuid) to service_role;
+
 -- ─── place_parlay ────────────────────────────────────────────────────────────
 -- 0046's definition. The legs no longer lock odds; each must meet the floor and not be on one of
--- the bettor's own markets, and the stake is capped. Replaces the "no bets yet" check, which the
--- seed made unreachable.
+-- the bettor's own markets, the stake is capped, and so is what the member's parlays on each of
+-- these markets could pay. Replaces the "no bets yet" check, which the seed made unreachable.
 create or replace function public.place_parlay(p_outcome_ids uuid[], p_stake integer)
 returns uuid
 language plpgsql
@@ -217,6 +268,7 @@ declare
   v_market_count integer;
   v_parlay_id uuid;
   v_pick record;
+  v_most integer;
 begin
   if not public.is_invited() then
     raise exception 'not invited';
@@ -275,6 +327,30 @@ begin
     if not v_pick.meets_floor then
       raise exception '''%'' needs at least % DC from % other members before it can be a parlay pick',
         v_pick.title, v_limits.min_leg_pool, v_limits.min_leg_bettors;
+    end if;
+  end loop;
+
+  -- The most this parlay could pay: every leg at the leg cap, under both caps. With the markets
+  -- locked above, two parlays from the same member can't both slip under the exposure cap.
+  v_most := least(
+    floor(p_stake * least(power(v_limits.max_leg_odds::numeric, v_leg_count), v_limits.max_multiplier)),
+    greatest(v_limits.max_payout, p_stake)
+  )::integer;
+
+  for v_pick in
+    select m.title, coalesce(sum(public.parlay_max_payout(pa.id)), 0) as exposure
+    from public.markets m
+    left join public.parlays pa
+      on pa.profile_id = auth.uid()
+     and pa.status = 'pending'
+     and exists (select 1 from public.parlay_legs l where l.parlay_id = pa.id and l.market_id = m.id)
+    where m.id in (select market_id from public.market_outcomes where id = any(p_outcome_ids))
+    group by m.id, m.title
+    order by m.id
+  loop
+    if v_pick.exposure + v_most > v_limits.max_payout then
+      raise exception 'your parlays with ''%'' in them could already pay % DC, and one member''s parlays on a market can pay at most % DC in all',
+        v_pick.title, v_pick.exposure, v_limits.max_payout;
     end if;
   end loop;
 
@@ -374,7 +450,9 @@ begin
     v_target_credit := least(floor(v_stake * least(v_multiplier, v_max_multiplier)), greatest(v_max_payout, v_stake))::integer;
   end if;
 
-  if v_target_status = v_status and v_target_credit = v_credited then
+  -- A settled parlay's odds never move, so the same status means the same payout. A credit below
+  -- it was cut to fit the balance when it was paid, and stays as it is.
+  if v_target_status = v_status and (v_target_credit = v_credited or (v_status <> 'pending' and v_credited < v_target_credit)) then
     return;
   end if;
 
@@ -444,6 +522,96 @@ begin
 end;
 $$;
 
+-- ─── Refunds near the ceiling ────────────────────────────────────────────────
+-- How much of a refund the balance can take, so cancelled_bets records what was really refunded.
+-- One that can't take any is refused rather than recorded as a refund of nothing. Internal.
+create function public.refund_room(p_profile_id uuid, p_amount integer)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_room integer;
+begin
+  select least(p_amount::bigint, 2147483647 - balance)::integer into v_room
+  from public.profiles
+  where id = p_profile_id
+  for no key update;
+  if v_room <= 0 then
+    raise exception 'this balance is at its limit, so the bet can''t be refunded';
+  end if;
+  return v_room;
+end;
+$$;
+
+revoke execute on function public.refund_room(uuid, integer) from public, anon, authenticated;
+grant execute on function public.refund_room(uuid, integer) to service_role;
+
+-- ─── cancel_bet ──────────────────────────────────────────────────────────────
+-- 0046's definition; the cancelled bet records the refund the balance could take.
+create or replace function public.cancel_bet(p_bet_id bigint)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_market_id uuid;
+  v_status text;
+  v_close_at timestamptz;
+  v_bet public.bets%rowtype;
+  v_refund integer;
+begin
+  if not public.is_invited() then
+    raise exception 'not invited';
+  end if;
+
+  select market_id into v_market_id
+  from public.bets
+  where id = p_bet_id and profile_id = auth.uid();
+
+  if not found then
+    raise exception 'bet not found';
+  end if;
+
+  select status, close_at into v_status, v_close_at
+  from public.markets
+  where id = v_market_id
+  for update;
+
+  if v_status <> 'open' or now() >= v_close_at then
+    raise exception 'this market has closed, so the bet can no longer be cancelled';
+  end if;
+
+  -- Re-read under the market lock: a second cancel of the same bet that
+  -- waited on the lock finds nothing here and fails cleanly.
+  select * into v_bet
+  from public.bets
+  where id = p_bet_id and profile_id = auth.uid()
+  for update;
+
+  if not found then
+    raise exception 'bet not found';
+  end if;
+
+  v_refund := public.refund_room(v_bet.profile_id, v_bet.amount);
+  perform public.apply_coin_transaction(
+    v_bet.profile_id, v_refund, 'bet_cancelled',
+    jsonb_build_object('market_id', v_bet.market_id, 'outcome_id', v_bet.outcome_id, 'bet_id', v_bet.id)
+  );
+
+  insert into public.cancelled_bets (id, market_id, outcome_id, profile_id, amount, placed_at)
+  values (v_bet.id, v_bet.market_id, v_bet.outcome_id, v_bet.profile_id, v_refund, v_bet.created_at);
+
+  delete from public.bets where id = v_bet.id;
+
+  update public.market_outcomes
+  set pool_total = pool_total - v_bet.amount
+  where id = v_bet.outcome_id;
+end;
+$$;
+
 -- ─── remove_bet ──────────────────────────────────────────────────────────────
 -- 0040's definition; like cancel_bet, it stops at close_at, not only at resolution.
 create or replace function public.remove_bet(p_bet_id bigint)
@@ -457,6 +625,7 @@ declare
   v_status text;
   v_close_at timestamptz;
   v_bet public.bets%rowtype;
+  v_refund integer;
 begin
   if not public.has_role('owner') then
     raise exception 'only the owner can remove a bet';
@@ -477,13 +646,14 @@ begin
     raise exception 'bet not found';
   end if;
 
+  v_refund := public.refund_room(v_bet.profile_id, v_bet.amount);
   perform public.apply_coin_transaction(
-    v_bet.profile_id, v_bet.amount, 'bet_cancelled',
+    v_bet.profile_id, v_refund, 'bet_cancelled',
     jsonb_build_object('market_id', v_bet.market_id, 'outcome_id', v_bet.outcome_id, 'bet_id', v_bet.id, 'removed_by', auth.uid())
   );
 
   insert into public.cancelled_bets (id, market_id, outcome_id, profile_id, amount, placed_at)
-  values (v_bet.id, v_bet.market_id, v_bet.outcome_id, v_bet.profile_id, v_bet.amount, v_bet.created_at);
+  values (v_bet.id, v_bet.market_id, v_bet.outcome_id, v_bet.profile_id, v_refund, v_bet.created_at);
 
   delete from public.bets where id = v_bet.id;
 
@@ -492,8 +662,8 @@ end;
 $$;
 
 -- ─── resolve_market_core ─────────────────────────────────────────────────────
--- 0073's definition. The resolution records its opposing stake, and a winner's payout is the lower
--- of the seeded odds and (real pool + opposing stake) / winning pool.
+-- 0073's definition. Winners split the real pool (pool_payout, no seed); the resolution's
+-- payout_seed defaults to 0.
 create or replace function public.resolve_market_core(p_market_id uuid, p_outcome_id uuid)
 returns void
 language plpgsql
@@ -510,7 +680,6 @@ declare
   v_outcome_market_id uuid;
   v_total_pool bigint;
   v_winning_pool bigint;
-  v_opposing bigint;
   v_new_resolution_id uuid;
   v_is_admin boolean;
   v_txn record;
@@ -630,16 +799,8 @@ begin
     where id = v_current_resolution_id;
   end if;
 
-  -- What members with nothing on the result staked on the other outcomes: the most the seed can
-  -- add to its winners' payouts. Bets can't change once a market has closed or resolved.
-  select coalesce(sum(b.amount), 0) into v_opposing
-  from public.bets b
-  where b.market_id = p_market_id
-    and b.outcome_id <> p_outcome_id
-    and not exists (select 1 from public.bets w where w.outcome_id = p_outcome_id and w.profile_id = b.profile_id);
-
-  insert into public.market_resolutions (market_id, outcome_id, resolved_by, opposing_stake)
-  values (p_market_id, p_outcome_id, auth.uid(), v_opposing)
+  insert into public.market_resolutions (market_id, outcome_id, resolved_by)
+  values (p_market_id, p_outcome_id, auth.uid())
   returning id into v_new_resolution_id;
 
   update public.markets
@@ -663,12 +824,9 @@ begin
     for v_bet in select profile_id, amount, id from public.bets where outcome_id = p_outcome_id order by profile_id, id loop
       perform public.apply_coin_transaction(
         v_bet.profile_id,
-        floor(least(
-          v_bet.amount::numeric * (v_total_pool + v_seed * v_outcome_count) / (v_winning_pool + v_seed),
-          v_bet.amount::numeric * (v_total_pool + v_opposing) / v_winning_pool
-        ))::integer,
+        public.pool_payout(v_bet.amount, v_winning_pool, v_total_pool),
         'bet_won',
-        jsonb_build_object('market_id', p_market_id, 'resolution_id', v_new_resolution_id, 'bet_id', v_bet.id, 'seed_per_outcome', v_seed)
+        jsonb_build_object('market_id', p_market_id, 'resolution_id', v_new_resolution_id, 'bet_id', v_bet.id, 'seed_per_outcome', 0)
       );
     end loop;
   end if;
@@ -881,8 +1039,8 @@ $$;
 
 
 -- ─── activity_feed: the tests' oracle pays what resolve_market_core pays ─────
--- 0041's view; only the bet_won amount changes, to the lower of the seeded odds and the opposing
--- stake's limit (a resolution before 0074 has no opposing_stake and paid the seeded odds).
+-- 0041's view; only the bet_won amount changes, to pool_payout with the seed the resolution's
+-- payouts counted (the market's seed before 0074, 0 since).
 create or replace view public.activity_feed
 with (security_invoker = true)
 as
@@ -936,13 +1094,7 @@ union all
 select
   'win:' || b.id || ':' || r.id, 'bet_won', r.resolved_at, b.profile_id, p.display_name,
   m.id, m.title, o.label,
-  floor(least(
-    b.amount::numeric * (pools.total + m.seed_per_outcome * pools.n) / (o.pool_total + m.seed_per_outcome),
-    coalesce(
-      b.amount::numeric * (pools.total + r.opposing_stake) / o.pool_total,
-      b.amount::numeric * (pools.total + m.seed_per_outcome * pools.n) / (o.pool_total + m.seed_per_outcome)
-    )
-  ))::integer,
+  public.pool_payout(b.amount, o.pool_total, pools.total, r.payout_seed, pools.n::integer),
   null, null
 from public.markets m
 join public.market_resolutions r on r.id = m.current_resolution_id

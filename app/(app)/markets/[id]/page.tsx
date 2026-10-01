@@ -10,7 +10,7 @@ import { getMarket, type MarketDetail } from '@/lib/markets/get-market'
 import { getResolutionProof } from '@/lib/markets/resolution-proof'
 import { ProofList } from '@/components/proof/proof-list'
 import { getChartSeries } from '@/lib/markets/chart-series'
-import { computeOdds, effectivePools, type OutcomeOdds } from '@/lib/markets/odds'
+import { computeOdds, type OutcomeOdds } from '@/lib/markets/odds'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt, marketCardStatus } from '@/lib/markets/market-status'
 import { rowState } from '@/lib/markets/row-state'
@@ -369,8 +369,9 @@ async function MarketActions({
         )}
         <ul className="flex flex-col divide-y divide-line">
           {odds.map((o, index) => {
-            const effective = effectivePools(o.poolTotal, totalPool, market.seedPerOutcome, odds.length)
-            const oddsBp = legOddsBp(effective.total, effective.pool)
+            // What a DC on this outcome pays from the real pool now (0074: the seed is never paid),
+            // so an outcome nobody has backed shows no payout yet.
+            const oddsBp = legOddsBp(totalPool, o.poolTotal)
             return (
             <li key={o.outcomeId}>
               <OutcomeRow
@@ -390,13 +391,10 @@ async function MarketActions({
                   open: canBet,
                   // A new pick starts Solo and shows only until the slip's own read (getSlipView)
                   // replaces it, so its parlay figures are the plain pool's, not a quote.
-                  oddsBp: legOddsBp(totalPool, o.poolTotal) ?? 10_000,
+                  oddsBp: oddsBp ?? 10_000,
                   legBlock: null,
-                  outcomePool: effective.pool,
-                  totalPool: effective.total,
-                  realPool: o.poolTotal,
-                  realTotal: totalPool,
-                  opposing: totalPool - o.poolTotal,
+                  outcomePool: o.poolTotal,
+                  totalPool,
                 }}
                 addAction={addToSlipAction.bind(null, o.outcomeId)}
                 removeAction={removeFromSlipAction.bind(null, o.outcomeId)}

@@ -20,8 +20,10 @@ export interface ParlayView {
   stake: number
   status: 'pending' | 'won' | 'lost' | 'refunded'
   credited: number
-  // The parlay's own multiplier cap: 100x for parlays placed before 0074, MAX_MULTIPLIER since.
+  // The parlay's own multiplier cap: MAX_MULTIPLIER, or 100x for one settled before 0074.
   maxMultiplier: number
+  // Placed before 0074: every leg's odds were locked when it was placed, not set at close.
+  lockedAtPlacement: boolean
   multiplierBp: number
   capped: boolean
   // Some leg that still counts has no set odds yet, so the multiplier and payout are estimates.
@@ -50,12 +52,13 @@ export interface ParlayRow {
   status: ParlayView['status']
   credited: number
   max_multiplier: number
+  odds_at_close: boolean
   created_at: string
   parlay_legs: LegRow[]
 }
 
 export const PARLAY_COLUMNS =
-  'id, stake, status, credited, max_multiplier, created_at, parlay_legs(outcome_id, locked_odds, market_outcomes(label), markets(id, title, status, close_at, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id)))'
+  'id, stake, status, credited, max_multiplier, odds_at_close, created_at, parlay_legs(outcome_id, locked_odds, market_outcomes(label), markets(id, title, status, close_at, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id)))'
 
 // A leg's odds, keyed by `${parlayId}:${outcomeId}`, from parlay_leg_odds (0074).
 export type LegOdds = Map<string, { oddsBp: number; known: boolean }>
@@ -100,6 +103,7 @@ export function toParlayView(p: ParlayRow, now: number, legOdds: LegOdds): Parla
     status: p.status,
     credited: p.credited,
     maxMultiplier: p.max_multiplier,
+    lockedAtPlacement: !p.odds_at_close,
     multiplierBp,
     capped,
     estimated: counted.some((l) => !l.oddsKnown),

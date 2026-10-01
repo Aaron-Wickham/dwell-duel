@@ -1,34 +1,26 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { serverClient } from '@/lib/supabase/server'
 import { createOwnProfile } from '@/lib/auth/create-own-profile'
 import { FALLBACK_NAME } from '@/lib/profile/fallback-name'
 import { NEXT_COOKIE, safeNextPath } from '@/lib/auth/next-path'
-
-function cookieValue(request: Request, name: string): string | null {
-  for (const pair of request.headers.get('cookie')?.split(';') ?? []) {
-    const [key, ...rest] = pair.trim().split('=')
-    if (key !== name) continue
-    try {
-      return decodeURIComponent(rest.join('='))
-    } catch {
-      return null
-    }
-  }
-  return null
-}
+import { NOT_INVITED_EMAIL_COOKIE, NOT_INVITED_EMAIL_MAX_AGE, NOT_INVITED_PATH } from '@/lib/auth/not-invited'
 
 // The sign-in page's cookie names where to go after, checked again here: a cookie is only as
 // trustworthy as whatever last wrote it.
-function redirectClearingNext(url: string): NextResponse {
-  const response = NextResponse.redirect(url)
-  response.cookies.set(NEXT_COOKIE, '', { path: '/callback', maxAge: 0 })
-  return response
+async function readNext(): Promise<string | null> {
+  return safeNextPath((await cookies()).get(NEXT_COOKIE)?.value ?? null)
+}
+
+async function clearNext(): Promise<void> {
+  ;(await cookies()).set(NEXT_COOKIE, '', { path: '/callback', maxAge: 0 })
 }
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = safeNextPath(cookieValue(request, NEXT_COOKIE))
+  const next = await readNext()
+  const withNext = (path: string) => `${origin}${path}${next ? `${path.includes('?') ? '&' : '?'}next=${encodeURIComponent(next)}` : ''}`
 
   if (code) {
     const supabase = await serverClient()
@@ -49,11 +41,22 @@ export async function GET(request: Request) {
         )
 
         if (result.ok) {
-          return redirectClearingNext(`${origin}${next ?? '/'}`)
+          await clearNext()
+          return NextResponse.redirect(`${origin}${next ?? '/'}`)
         }
         if (result.reason === 'not_invited') {
           await supabase.auth.signOut({ scope: 'local' })
-          return redirectClearingNext(`${origin}/not-invited`)
+          // Says which account was refused, and keeps the destination for the right one.
+          if (user.email) {
+            ;(await cookies()).set(NOT_INVITED_EMAIL_COOKIE, user.email, {
+              path: NOT_INVITED_PATH,
+              maxAge: NOT_INVITED_EMAIL_MAX_AGE,
+              httpOnly: true,
+              sameSite: 'lax',
+              secure: origin.startsWith('https:'),
+            })
+          }
+          return NextResponse.redirect(withNext(NOT_INVITED_PATH))
         }
       }
 
@@ -67,5 +70,5 @@ export async function GET(request: Request) {
   }
 
   // Back to sign-in with the same destination, so trying again still lands there.
-  return NextResponse.redirect(`${origin}/sign-in?error=auth${next ? `&next=${encodeURIComponent(next)}` : ''}`)
+  return NextResponse.redirect(withNext('/sign-in?error=auth'))
 }

@@ -46,3 +46,16 @@ test('sign-in ignores a next that would leave the site', async ({ page }) => {
   const cookies = await page.context().cookies('http://localhost:3000/callback')
   expect(cookies.find((c) => c.name === 'sign-in-next')).toBeUndefined()
 })
+
+test('not-invited names the refused account once, and Try another account keeps the destination', async ({ page }) => {
+  // The callback sets this cookie when Google's account isn't invited; Google can't run here.
+  await page.context().addCookies([
+    { name: 'not-invited-email', value: 'wrong@example.com', domain: 'localhost', path: '/not-invited', httpOnly: true },
+  ])
+  await page.goto('/not-invited?next=%2Fmarkets')
+  await expect(page.getByText('You signed in as wrong@example.com.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Try another account' })).toHaveAttribute('href', '/sign-in?next=%2Fmarkets')
+  await expect.poll(async () => (await page.context().cookies()).some((c) => c.name === 'not-invited-email')).toBe(false)
+  await page.reload()
+  await expect(page.getByText(/You signed in as/)).toHaveCount(0)
+})

@@ -74,6 +74,7 @@ test.describe('Jump to me', () => {
   test.setTimeout(90_000)
 
   const extras: string[] = []
+  const extraEmails: string[] = []
 
   test.beforeAll(async () => {
     const db = serviceClient()
@@ -84,6 +85,12 @@ test.describe('Jump to me', () => {
           const member = await makeMember(`Jumper${String(i + j).padStart(2, '0')}`)
           const { error } = await db.from('profiles').update({ balance: 1_000_000 + i + j }).eq('id', member.id)
           if (error) throw error
+          // Only invited members are ranked (0093).
+          const { error: inviteErr } = await db
+            .from('allowed_emails')
+            .upsert({ email: member.email.toLowerCase(), claimed_by: member.id }, { onConflict: 'email' })
+          if (inviteErr) throw inviteErr
+          extraEmails.push(member.email.toLowerCase())
           return member.id
         }),
       )
@@ -93,6 +100,7 @@ test.describe('Jump to me', () => {
 
   test.afterAll(async () => {
     const db = serviceClient()
+    await db.from('allowed_emails').delete().in('email', extraEmails)
     await db.from('profiles').delete().in('id', extras)
     for (const id of extras) await deleteAuthUser(db, id)
   })

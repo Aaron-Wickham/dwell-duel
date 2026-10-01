@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Message } from '@/components/ui/message'
 import { LeafLoader } from '@/components/brand/leaf-loader'
 import { NEXT_COOKIE, NEXT_COOKIE_MAX_AGE, safeNextPath } from '@/lib/auth/next-path'
+import { SignInError } from './sign-in-error'
 
 // Only /callback reads it, and it outlives the round trip through Google by a few minutes at most.
 // With no `next`, an older one is cleared, so it can't send a later sign-in somewhere stale.
@@ -18,7 +19,6 @@ function rememberNext(next: string | null) {
 
 export function SignInButton() {
   const searchParams = useSearchParams()
-  const hasError = searchParams.get('error') === 'auth'
   const next = safeNextPath(searchParams.get('next'))
   // Google's page can take a moment to arrive; until it does, the button says so.
   const [redirecting, setRedirecting] = useState(false)
@@ -50,7 +50,7 @@ export function SignInButton() {
 
   return (
     <div className="flex w-full flex-col gap-5">
-      {hasError && <Message tone="error">Something went wrong signing you in. Try again.</Message>}
+      <SignInError />
       {failed && <Message tone="error">Couldn’t open Google sign-in. Check your connection and try again.</Message>}
       <Button type="button" onClick={signIn} block aria-disabled={redirecting || undefined}>
         {redirecting ? (

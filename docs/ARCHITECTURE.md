@@ -72,7 +72,9 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/admin/members/[id]` | One member's Admin page (#254), outside the sections' layout so their name is the `<h1>`: email, join and last sign-in, balance, Coin history (their last five movements and "Open in Ledger"), and for the owner Adjust balance, Role and Access (Remove from DwellDuel, or Invite again for a removed member). No `loading.tsx`: the member is found first (an unknown id is a real 404) and the coin history streams behind `<Suspense>` |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
-return), `/not-invited` and `/offline`. The API has three routes.
+return), `/auth/google` and `/auth/google/nonce` (Google's own button,
+below), `/privacy` (How it works' Your data section, for anyone, and the
+privacy policy Google's brand review reads), `/not-invited` and `/offline`. The API has three routes.
 `/api/cron/keep-alive`, which a daily Vercel cron calls so the free
 Supabase project never pauses. It also deletes unattached proof files,
 attempt keys older than a day and uninvited sign-ins (below), expires
@@ -561,14 +563,41 @@ production's latest. Backups and restoring are in `docs/OPERATIONS.md`.
 
 ## Key flows
 
-**Signing in.** Google OAuth only; Supabase has every other provider
-switched off, and the sign-in button passes `prompt=select_account`, so
-Google always shows its account chooser. `/callback` exchanges the code, and a member whose email
-isn't in `allowed_emails` lands on `/not-invited`. A signed-out request
+**Signing in.** Google only; Supabase has every other provider switched
+off. There are two ways in, chosen at build by `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+(optional, public):
+
+- **Without it, Supabase's redirect.** The sign-in button calls
+  `signInWithOAuth` with `prompt=select_account`, so Google always shows its
+  account chooser, and Google returns through Supabase to `/callback`, which
+  exchanges the code. The chooser names the Supabase project's domain.
+- **With it, Google's own button** (Google Identity Services, `ux_mode:
+  'redirect'`, never a popup, which the installed iPhone app can't do).
+  `GoogleSignIn` loads `accounts.google.com/gsi/client` and first POSTs to
+  `/auth/google/nonce`, which keeps a random nonce in the httpOnly
+  `google-nonce` cookie and returns its SHA-256 (hex), which goes to Google;
+  `next` rides in `sign-in-next` beside it. Both cookies have path
+  `/auth/google`, last an hour, and are `SameSite=None; Secure`, because
+  Google's POST back is cross-site and a Lax cookie isn't sent on one.
+  Google posts `credential` (the ID token) and `g_csrf_token` to
+  `/auth/google` on our domain, so the chooser says "continue to
+  dwellduel.com". The route checks Google's double submit (the body's
+  `g_csrf_token` equals the cookie Google's script set), that the token's
+  `nonce` claim is the hash of our cookie's raw nonce (a mismatch is a page
+  left too long or another tab: `?error=expired`), then calls
+  `signInWithIdToken` with the raw nonce, which verifies the token and sets
+  the session cookies. Both cookies are spent whatever happens, and every
+  answer is a 303. Google's chooser is shown on every click, as with
+  `prompt=select_account`; its button may name the last account used, but
+  only as a label. If Google's script or the nonce can't be had within ten
+  seconds, the page falls back to Supabase's button.
+
+Either way, `finishSignIn` (`lib/auth/finish-sign-in.ts`) does the rest, and
+a member whose email isn't in `allowed_emails` lands on `/not-invited`. A signed-out request
 for an app page is sent to `/sign-in?next=<path>`; the sign-in page keeps
-`next` in the short-lived `sign-in-next` cookie (path `/callback`) for the
-round trip through Google, and `/callback` sends the member there instead
-of Home. Both ends pass it through `safeNextPath` (`lib/auth/next-path.ts`):
+`next` in the short-lived `sign-in-next` cookie (path `/callback`, or
+`/auth/google` for Google's button) for the round trip through Google, and
+the route Google returns to sends the member there instead of Home. Both ends pass it through `safeNextPath` (`lib/auth/next-path.ts`):
 only a same-site app path, never `//host`, a backslash or a scheme. A
 cookie, rather than `/callback?next=` in `redirectTo`, keeps Supabase's
 redirect allow-list to exact URLs. A refused sign-in goes to `/not-invited?next=…`
@@ -1085,7 +1114,9 @@ value never stops production booting.
 - **Security headers** (`next.config.ts`): a Content Security Policy that
   only allows scripts from the app itself (and `va.vercel-scripts.com`, for
   Vercel Analytics and Speed Insights) and connections to the app and its
-  Supabase project, plus `X-Frame-Options: DENY`, `nosniff`, a referrer policy and
+  Supabase project (and, only when `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is set at
+  build, the `accounts.google.com/gsi/` script, style, frame and connect
+  paths Google documents for its button), plus `X-Frame-Options: DENY`, `nosniff`, a referrer policy and
   a `Permissions-Policy` denying camera, microphone and location. `poweredByHeader` is off. A
   new third-party origin (analytics, an image host) has to be added to the
   CSP there.
@@ -1094,5 +1125,7 @@ value never stops production booting.
   always, and `SUPABASE_SECRET_KEY` and `CRON_SECRET` in production; a
   missing one stops the server serving. `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and
   `VAPID_PRIVATE_KEY` only warn (#210): production boots without them, logs
-  "Push notifications are off until they are set" and sends nothing. Every
+  "Push notifications are off until they are set" and sends nothing.
+  `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is optional and isn't checked: it's fixed
+  at build, and without it sign-in uses Supabase's Google redirect. Every
   variable and how to rotate it is in `docs/OPERATIONS.md`.

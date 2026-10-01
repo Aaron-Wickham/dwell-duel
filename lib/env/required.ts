@@ -1,3 +1,5 @@
+// Not checked here: NEXT_PUBLIC_GOOGLE_CLIENT_ID is optional (sign-in falls back to Supabase's own
+// Google redirect without it), and it's fixed at build, so a check at boot would prove nothing.
 export const ALWAYS_REQUIRED = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'] as const
 export const PRODUCTION_REQUIRED = ['SUPABASE_SECRET_KEY', 'CRON_SECRET'] as const
 // Push degrades on its own without these (nothing is sent, Settings says notifications aren't

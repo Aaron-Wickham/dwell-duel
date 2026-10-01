@@ -67,7 +67,8 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/profile` | Edit your name, photo and bio |
 | `/settings` | Theme, your profile, haptics, reduced motion, notifications, How it works, sign out |
 | `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`) |
-| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role; Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); Tasks pages its review queue oldest first with "Show more", signs proof only for the rows shown (an extended range caps at 150 rows, then starts a fresh window), and reads its "waiting" chip from `my_review_counts` (`lib/tasks/list-task-completions.ts`, #255); the ledger opens with the owner's Economy card |
+| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role, in `app/(app)/admin/(sections)/` under its layout's Admin header and tabs; Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); Tasks pages its review queue oldest first with "Show more", signs proof only for the rows shown (an extended range caps at 150 rows, then starts a fresh window), and reads its "waiting" chip from `my_review_counts` (`lib/tasks/list-task-completions.ts`, #255); the ledger opens with the owner's Economy card, and `?member=<id>` narrows it to one member's movements (#254). Members and Invites (#254) each have a search box (`SearchField`, `?q=`) and two tabs (`SubNav`, `?show=`): Members' Active · Removed, paged A–Z by `admin_members` with `NAME_ORDER` (`lib/pagination/name-cursor.ts`), as compact read-only rows; Invites' Waiting · Claimed, paged newest first with `INVITE_ORDER` (`lib/invites/list-invites.ts`) |
+| `/admin/members/[id]` | One member's Admin page (#254), outside the sections' layout so their name is the `<h1>`: email, join and last sign-in, balance, Coin history (their last five movements and "Open in Ledger"), and for the owner Adjust balance, Role and Access (Remove from DwellDuel, or Invite again for a removed member). No `loading.tsx`: the member is found first (an unknown id is a real 404) and the coin history streams behind `<Suspense>` |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/not-invited` and `/offline`. The API has three routes.
@@ -340,10 +341,16 @@ Also: `create_market`, `update_market` (creator or admin, before close; the
 title is fixed once anyone else has bet, solo or as a parlay leg, 0065), `member_emails` (admin only:
 members can't select `profiles.email`), `member_activity` (admin only, 0050:
 each member's join date, `profiles.created_at`, and last sign-in from
-`auth.users`, for Admin → Members), `stray_proof_objects` (service role:
-the daily cron deletes proof files nothing attached), `expired_proof_attachments`,
-`mark_proof_expired`, `stray_avatar_objects` and `storage_usage` (service role,
-0089), `proof_upload_quota_ok` and `avatar_upload_quota_ok` (the upload policies' per-day caps: 30 proof files / 60 MB, 10 avatars), `proof_is_attached` (the delete guard, security definer),
+`auth.users`, for Admin → Members), `admin_members(query, id)` and
+`admin_member_counts(query)` (admin only, 0086: Admin → Members' rows with
+email, sign-ins and whether each member was removed, searched by name or
+email; the page pages it through PostgREST), `reinvite_member` (owner only,
+0086: a removed member's invite back, claimed by them), `stray_proof_objects`
+(service role: the daily cron deletes proof files nothing attached),
+`expired_proof_attachments`, `mark_proof_expired`, `stray_avatar_objects`
+and `storage_usage` (service role, 0089), `proof_upload_quota_ok` and
+`avatar_upload_quota_ok` (the upload policies' per-day caps: 30 proof files
+/ 60 MB, 10 avatars), `proof_is_attached` (the delete guard, security definer),
 `set_member_role`, `delete_market` (refuses a market with any bet, cancelled
 bet or parlay leg; the market page shows the button only when the pool is
 empty and `lib/markets/bet-history.ts`'s two head counts find nothing),
@@ -384,7 +391,8 @@ as they're returned), `push_market_result(market)` (every solo bettor and
 parlay-leg holder, with their payout and refund from the current
 resolution; cancelled bets live elsewhere, so never count),
 `push_task_reviews(ids)` and `push_new_market(market)` (everyone but the
-creator who opted in). Review alerts (0058) add `push_task_alerts(completion)`
+creator who opted in; ordered by profile, so `notifyNewMarket` reads it
+1,000 rows at a time, past PostgREST's `max_rows`, #254). Review alerts (0058) add `push_task_alerts(completion)`
 (reviewers and above except the submitter, `review_alerts` on) and
 `push_market_alerts()` (admins and above except the market's creator, who has
 the reminder, `resolve_reminders` on; each market claimed once as `market_alert`).
@@ -402,7 +410,7 @@ The leaderboard's extras (0059, `lib/social/leaderboard-extras.ts`) sit on the T
 
 The leaderboard (0051) reads two boards through `rpc()`, each returning
 `id, display_name, avatar_path, score, rank` with a competition rank over
-every member, computed before PostgREST applies the page's filters, and
+every invited member, computed before PostgREST applies the page's filters, and
 paged by `readOrdered` with `RANK_ORDER` on `(score desc, display_name,
 id)`. `leaderboard_net_worth` (security invoker) scores balance plus
 `stakes_riding`, summed once for the board; the member page and Home's rank
@@ -414,7 +422,13 @@ leaving out `starting_grant`, `task_completed`, `admin_adjustment` and any
 type added later; since 0055 that list is `betting_ledger_types()`, shared
 with `member_stats`. `settle_season(p_month default last month)` (service role
 only) posts a finished month's top positive profit as a `season_champion`
-event, ties going to whoever reached the total first.
+event, ties going to whoever reached the total first. Since 0086 (#265) a
+removed member (no invite left, `invited_member_ids()`) is out of both
+boards, `member_standing`'s rank and count (their own row keeps its net
+worth with a null rank, "Not ranked" on their profile), `season_profits`
+and so the race and the champion, and from `weekly_recap`'s best call and
+top tasker; their coins, bets and history stay. (`leaderboard_awards` is
+left to a later migration.)
 
 **The economy panel** (0052, #86). `economy_summary(p_month_start)` is owner
 only and backs the Economy card above Admin → Ledger's list
@@ -507,6 +521,7 @@ after it ships. They roughly follow the project's history:
 | 0091 | Default privileges (#274): nothing postgres creates in `public` grants `anon` anything, and no new function is executable by `PUBLIC`; anon's leftover sequence grants go; `has_stake_in_market` answers false to an uninvited caller. `uninvited_auth_users()` (#275), service role only, for the daily cron's cleanup |
 | 0085 | Live pings (#250): `live_pings`, `send_live_ping` and the unlogged `live_ping_queue`. Row triggers on `markets`, `market_outcomes`, `activity_events`, `feed_reactions`, `tasks` and `task_completions` queue their topic once per transaction, and the queue's deferred trigger sends it at commit: one private Broadcast ping per topic per transaction, at most one per topic every `live_ping_interval_ms()`. The `realtime.messages` policy lets only invited members join (reviewers and above for `live:reviews`) |
 | 0088 | Compact sparklines (#252): `market_sparks(p_market_ids, p_points default 24)` and `market_outcomes.pool_version` with its `bump_pool_version` trigger |
+| 0086 | Admin at 1,000 and removed members unranked (#254, #265): `invited_member_ids()`; `leaderboard_net_worth`, `member_standing`, `season_profits` and `weekly_recap`'s best call and top tasker over invited members only; `admin_members`, `admin_member_counts` and `reinvite_member`; `allowed_emails` indexes on `claimed_by` and `(created_at desc, email desc)` |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 

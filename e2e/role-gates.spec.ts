@@ -4,7 +4,9 @@ import { MEMBER_STORAGE_STATE_PATH } from './global-setup'
 import { clientForEmail } from '../tests/db/fixtures'
 import { serviceClient } from '../tests/db/helpers'
 
-const ADMIN_PAGES = ['/admin/invites', '/admin/markets', '/admin/members', '/admin/ledger', '/admin/tasks']
+// A member's Admin page (#254) sits outside the Admin sections' layout, so it checks the role itself.
+const MEMBER_PAGE = '/admin/members/00000000-0000-4000-8000-000000000000'
+const ADMIN_PAGES = ['/admin/invites', '/admin/markets', '/admin/members', MEMBER_PAGE, '/admin/ledger', '/admin/tasks']
 
 test('a plain member is sent home from every admin page', async ({ browser }) => {
   const member = await browser.newContext({ storageState: MEMBER_STORAGE_STATE_PATH })
@@ -27,7 +29,7 @@ test('a reviewer is sent from the admin-only pages to the approval queue', async
   const member = await browser.newContext({ storageState: MEMBER_STORAGE_STATE_PATH })
   try {
     const page = await member.newPage()
-    for (const path of ['/admin/members', '/admin/invites', '/admin/markets', '/admin/ledger']) {
+    for (const path of ['/admin/members', MEMBER_PAGE, '/admin/invites', '/admin/markets', '/admin/ledger']) {
       await page.goto(path)
       await expect(page).toHaveURL(/\/admin\/tasks$/)
       await expect(page.getByRole('heading', { level: 1, name: 'Admin' })).toBeVisible()

@@ -9,7 +9,8 @@ import type { Database } from '@/lib/supabase/database'
 
 type Fns = Database['public']['Functions']
 
-// The raises of set_member_role, delete_market, delete_task, remove_bet (0040) and remove_member (0068).
+// The raises of set_member_role, delete_market, delete_task, remove_bet (0040), remove_member (0068)
+// and reinvite_member (0086).
 const OWNER_ERRORS: readonly KnownError<never>[] = [
   { match: 'only the owner can change roles', formError: 'Only the owner can change roles.' },
   { match: 'role must be admin, reviewer or member', formError: 'Choose Admin, Reviewer or Member.' },
@@ -26,6 +27,8 @@ const OWNER_ERRORS: readonly KnownError<never>[] = [
   { match: "this market is no longer open, so the bet can't be removed", formError: 'This market is no longer open, so the bet can’t be removed.' },
   { match: 'only the owner can remove a member', formError: 'Only the owner can remove a member.' },
   { match: "the owner can't be removed", formError: 'The owner can’t be removed.' },
+  { match: 'only the owner can invite a member back', formError: 'Only the owner can invite a member back.' },
+  { match: 'this member has no email to invite', formError: 'There’s no email on file for this member, so there’s nothing to invite.' },
 ]
 
 // Each RPC checks the caller's role itself (0040); these actions only pass the request on and
@@ -54,6 +57,11 @@ export async function removeBetAction(betId: number, _prev: ConfirmActionState, 
 // remove_member (0068): back to member, invite gone, devices unsubscribed; coins and bets untouched.
 export async function removeMemberAction(profileId: string, _prev: ConfirmActionState, _formData: FormData) {
   return run('remove_member', { p_profile_id: profileId })
+}
+
+// reinvite_member (0086): their invite back, claimed by them; their role stays Member.
+export async function reinviteMemberAction(profileId: string, _prev: ConfirmActionState, _formData: FormData) {
+  return run('reinvite_member', { p_profile_id: profileId })
 }
 
 export type SetRoleState = { formError?: string; saved?: boolean } | undefined

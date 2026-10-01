@@ -42,7 +42,8 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
             <section className="flex flex-col gap-4">
               <MemberProfileHeader name={member.displayName} avatarSrc={member.avatarSrc} bio={member.bio}>
                 <p className="text-[18px] font-extrabold tabular-nums">
-                  {member.score} DC net worth · Rank {member.rank} of {member.memberCount}
+                  {member.score} DC net worth ·{' '}
+                  {member.rank === null ? 'Not ranked' : `Rank ${member.rank} of ${member.memberCount}`}
                 </p>
               </MemberProfileHeader>
               {member.id === user.id && (

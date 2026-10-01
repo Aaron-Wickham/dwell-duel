@@ -15,7 +15,7 @@ const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 // Date.parse accepts 30 February, year 0000 and a +23:00 offset, all of which Postgres rejects with
 // an error. A cursor that reaches the query must be one Postgres can read, or a tampered link
 // would show the error page instead of the first page.
-function isPostgresTimestamp(ts: string): boolean {
+export function isPostgresTimestamp(ts: string): boolean {
   if (!TS.test(ts) || Number.isNaN(Date.parse(ts))) return false
   const year = Number(ts.slice(0, 4))
   const month = Number(ts.slice(5, 7))

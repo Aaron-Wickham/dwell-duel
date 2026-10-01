@@ -15,7 +15,8 @@ export interface LeaderboardEntry {
   rank: number
 }
 
-export type MemberStanding = LeaderboardEntry & { balance: number; memberCount: number; bio: string | null }
+// rank is null for a removed member (#265): they keep their net worth but aren't ranked.
+export type MemberStanding = Omit<LeaderboardEntry, 'rank'> & { rank: number | null; balance: number; memberCount: number; bio: string | null }
 
 type BoardRow = { id: string; display_name: string; avatar_path: string | null; score: number; rank: number }
 
@@ -66,6 +67,8 @@ export async function getMemberStanding(supabase: DbClient, memberId: string): P
   if (standing.error) throw standing.error
   const member = profile.data
   if (!member || !standing.data) return null
+  // The generated types can't see that member_standing (0086) returns no rank for a removed member.
+  const rank: number | null = standing.data.rank
 
   return {
     id: member.id,
@@ -74,7 +77,7 @@ export async function getMemberStanding(supabase: DbClient, memberId: string): P
     bio: member.bio,
     balance: member.balance,
     score: standing.data.score,
-    rank: standing.data.rank,
+    rank,
     memberCount: standing.data.member_count,
   }
 }
@@ -96,7 +99,8 @@ export async function getYourStanding(supabase: DbClient, memberId: string): Pro
   const standing = await supabase.rpc('member_standing', { p_profile_id: memberId }).maybeSingle()
   if (standing.error) throw standing.error
   if (!standing.data) return null
-  const { rank, score, member_count: memberCount } = standing.data
+  const { rank, score, member_count: memberCount } = standing.data as { rank: number | null; score: number; member_count: number }
+  if (rank === null) return null
 
   const [sharing, higher] = await Promise.all([
     supabase.rpc('leaderboard_net_worth').select('id').eq('rank', rank).limit(2),

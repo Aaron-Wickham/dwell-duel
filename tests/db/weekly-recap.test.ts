@@ -202,6 +202,45 @@ describe('weekly_recap', () => {
     expect(await recap()).toMatchObject({ top_tasker_id: bob.id, top_tasker_name: 'Bob', top_tasker_count: 3 })
   })
 
+  // #265 (0086): a removed member is never named, however well their week went.
+  it('leaves a removed member out of the best call and the top tasker', async () => {
+    // Bob's 10 of 30 on Yes, of 40: floor(10 × 40 / 10) = 40, a 30 DC profit; Carol's 10 on Yes in
+    // C, of 15: 15, a 5 DC profit.
+    const a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Market A' })
+    await bet(bobClient, a, 0, 10)
+    await bet(carolClient, a, 1, 30)
+    await resolve(a, 0)
+    const c = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Market C' })
+    await bet(carolClient, c, 0, 10)
+    await bet(aliceClient, c, 1, 5)
+    await resolve(c, 0)
+    await dateResult(a, MIDWEEK)
+    await dateResult(c, MIDWEEK)
+
+    const { taskId } = await createTestTask(alice, { isRepeatable: true, period: 'daily' })
+    let period = 0
+    for (const member of [bob, bob, carol]) {
+      const { error } = await serviceClient()
+        .from('task_completions')
+        .insert({ task_id: taskId, profile_id: member.id, status: 'approved', reward_amount: 10, period_key: `r${period++}`, reviewed_at: MIDWEEK })
+      if (error) throw error
+    }
+
+    expect(await recap(carolClient)).toMatchObject({ best_bettor_id: bob.id, top_tasker_id: bob.id, top_tasker_count: 2 })
+
+    // Removed: remove_member deletes the invite, which is all 0086 goes by.
+    const { error } = await serviceClient().from('allowed_emails').delete().eq('email', bob.email.toLowerCase())
+    if (error) throw error
+    expect(await recap(carolClient)).toMatchObject({
+      best_bettor_id: carol.id,
+      best_bettor_name: 'Carol',
+      best_market_id: c.marketId,
+      top_tasker_id: carol.id,
+      top_tasker_name: 'Carol',
+      top_tasker_count: 1,
+    })
+  })
+
   it('lists the open markets closing the week after, the first three and how many', async () => {
     const closes: [string, string, string?][] = [
       ['Next Monday 00:00', END],

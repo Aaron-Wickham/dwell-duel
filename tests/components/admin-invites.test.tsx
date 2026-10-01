@@ -13,9 +13,9 @@ const { success, error: toastError } = vi.hoisted(() => ({ success: vi.fn(), err
 vi.mock('sonner', () => ({ toast: { success, error: toastError } }))
 
 import { InviteListItem } from '@/components/admin/invite-list-item'
-import { AddInviteForm } from '@/app/(app)/admin/invites/add-invite-form'
-import { RevokeInviteButton } from '@/app/(app)/admin/invites/revoke-invite-button'
-import { CopyInviteButton } from '@/app/(app)/admin/invites/copy-invite-button'
+import { AddInviteForm } from '@/app/(app)/admin/(sections)/invites/add-invite-form'
+import { RevokeInviteButton } from '@/app/(app)/admin/(sections)/invites/revoke-invite-button'
+import { CopyInviteButton } from '@/app/(app)/admin/(sections)/invites/copy-invite-button'
 
 const MESSAGE =
   "You're invited to DwellDuel, our group's friendly prediction market. Sign in at https://www.dwellduel.com with this Google account: newfriend@example.com"

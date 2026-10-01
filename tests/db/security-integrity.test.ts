@@ -6,7 +6,7 @@ import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, ty
 import { pgQuery } from './pg-query'
 import { getSlipView } from '@/lib/parlays/get-slip'
 import { describeCreatorStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
-import { listMembers } from '@/lib/members/list-members'
+import { getAdminMember } from '@/lib/members/list-members'
 
 // 0046: the release 0.3 security batch. Each block reproduces the hole it closes.
 let alice: Member
@@ -297,13 +297,12 @@ describe('#84 the creator’s stake is shown', () => {
 })
 
 describe('#60 the admin Members list still shows emails', () => {
-  it('reads them through member_emails for an admin', async () => {
+  it('reads them through admin_members (0086) for an admin', async () => {
     const { client: ada } = await member('Ada', 'admin')
-    const members = await listMembers(ada)
-    expect(members.find((m) => m.id === bob.id)?.email).toBe(bob.email)
+    expect((await getAdminMember(ada, bob.id))?.email).toBe(bob.email)
   })
 
   it('fails for a plain member instead of showing blanks', async () => {
-    await expect(listMembers(bobClient)).rejects.toThrow('only an admin can see member emails')
+    await expect(getAdminMember(bobClient, bob.id)).rejects.toThrow('only an admin can list members')
   })
 })

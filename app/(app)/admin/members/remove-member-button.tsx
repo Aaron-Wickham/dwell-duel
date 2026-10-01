@@ -18,7 +18,7 @@ export function RemoveMemberButton({ member }: { member: MemberSummary }) {
       }
       triggerLabel={`Remove ${member.displayName} from DwellDuel`}
       triggerVariant="danger"
-      triggerSize="sm"
+      block
       title={`Remove ${member.displayName} from DwellDuel?`}
       description={`${member.displayName} loses their invite and any role straight away, and their devices stop getting notifications. Their coins, bets and history stay, and inviting them again brings them back.`}
       confirmLabel="Remove member"

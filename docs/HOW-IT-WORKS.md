@@ -530,8 +530,9 @@ everywhere, your notifications stop and you drop off the leaderboards (see
 data deleted as well, say so: the app has no button for that yet, so the
 owner does it by hand.
 
-**Questions:** members can ask the owner directly. Anyone else can reach
-them through
+**Questions:** members can ask the owner directly. Anyone else can email
+[aaronmaxwellwickham1917@gmail.com](mailto:aaronmaxwellwickham1917@gmail.com)
+or reach them through
 [DwellDuel on GitHub](https://github.com/Aaron-Wickham/dwell-duel).
 
 ## Around the app

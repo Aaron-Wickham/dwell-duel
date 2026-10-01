@@ -143,6 +143,12 @@ a line to `CHANGELOG.md` under the next release.
   Every sliding pill uses the pill slide, and every dialog takes
   `components/ui/dialog-classes.ts`.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.
+- **Every action that creates something is retry-safe,** not only the ones
+  that move coins: `experimental.useOffline` replays an action whose
+  response was lost, even when it had committed. Creating a market, a
+  comment or a task sends an attempt key from `useAttemptKey`; a form whose
+  fields can be edited after a lost response uses its `fingerprintOf` so an
+  edit starts a new attempt (#267).
 - **Retry-safe money actions.** The slip and the balance adjustment send
   an attempt key (0047), held in a ref until the action succeeds and kept
   when the response is lost, so tapping again returns the first result.

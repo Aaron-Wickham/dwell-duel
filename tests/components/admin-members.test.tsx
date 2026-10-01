@@ -117,7 +117,7 @@ describe('AdjustBalanceForm confirmation (#65)', () => {
     expect(await screen.findByRole('alertdialog')).toHaveAccessibleDescription('Adds 25 DC to Ben’s balance of 60 DC, straight away.')
     await userEvent.click(screen.getByRole('button', { name: 'Adjust balance' }))
 
-    await waitFor(() => expect(success).toHaveBeenCalledWith('Balance adjusted.'))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Balance adjusted by +25 DC.'))
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
     expect(screen.getByLabelText('Amount')).toHaveValue(null)
     expect(screen.getByLabelText('Reason')).toHaveValue('')
@@ -135,5 +135,30 @@ describe('AdjustBalanceForm keeps what was filled in (#63)', () => {
     expect(screen.getByLabelText('Amount')).toHaveValue(-80)
     expect(screen.getByLabelText('Reason')).toHaveValue('Correction')
     expect(success).not.toHaveBeenCalled()
+  })
+  // #267: the key survives a lost response, but not an edit, or the corrected amount would be
+  // swallowed as a replay of the first one.
+  it('keeps the attempt key for an unchanged retry and starts a new one once amount or reason is edited', async () => {
+    adjustBalanceAction.mockRejectedValue(new Error('connection lost'))
+    render(<AdjustBalanceForm member={BEN} now={NOW} />)
+    const keyOf = (call: number) => (adjustBalanceAction.mock.calls[call][2] as FormData).get('idempotency_key')
+
+    await submit('5', 'Choir bonus')
+    await userEvent.click(await screen.findByRole('button', { name: 'Adjust balance' }))
+    await waitFor(() => expect(adjustBalanceAction).toHaveBeenCalledTimes(1))
+    await screen.findByText(/We couldn’t confirm the adjustment/)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Adjust Ben' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Adjust balance' }))
+    await waitFor(() => expect(adjustBalanceAction).toHaveBeenCalledTimes(2))
+    expect(keyOf(1)).toBe(keyOf(0))
+
+    await userEvent.clear(screen.getByLabelText('Amount'))
+    await userEvent.type(screen.getByLabelText('Amount'), '50')
+    await userEvent.click(screen.getByRole('button', { name: 'Adjust Ben' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Adjust balance' }))
+    await waitFor(() => expect(adjustBalanceAction).toHaveBeenCalledTimes(3))
+    expect(keyOf(2)).not.toBe(keyOf(0))
+    expect((adjustBalanceAction.mock.calls[2][2] as FormData).get('amount')).toBe('50')
   })
 })

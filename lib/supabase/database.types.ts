@@ -401,6 +401,7 @@ export type Database = {
       }
       market_comments: {
         Row: {
+          attempt_key: string | null
           body: string
           created_at: string
           deleted_at: string | null
@@ -410,6 +411,7 @@ export type Database = {
           profile_id: string
         }
         Insert: {
+          attempt_key?: string | null
           body: string
           created_at?: string
           deleted_at?: string | null
@@ -419,6 +421,7 @@ export type Database = {
           profile_id: string
         }
         Update: {
+          attempt_key?: string | null
           body?: string
           created_at?: string
           deleted_at?: string | null
@@ -1045,6 +1048,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          attempt_key: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -1057,6 +1061,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          attempt_key?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -1069,6 +1074,7 @@ export type Database = {
           title: string
         }
         Update: {
+          attempt_key?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -1177,6 +1183,18 @@ export type Database = {
           p_title: string
         }
         Returns: string
+      }
+      create_market_v2: {
+        Args: {
+          p_close_at: string
+          p_description: string
+          p_idempotency_key?: string
+          p_kind: string
+          p_line?: number
+          p_outcome_labels: string[]
+          p_title: string
+        }
+        Returns: Json
       }
       delete_market: { Args: { p_market_id: string }; Returns: undefined }
       delete_market_comment: {

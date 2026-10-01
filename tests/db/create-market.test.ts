@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import { randomUUID } from 'node:crypto'
 import { serviceClient } from './helpers'
 import { expectError } from './assertions'
-import { seedMembers, clientFor, ensureInvited, type Member } from './fixtures'
+import { seedMembers, clientFor, ensureInvited, giveRole, type Member } from './fixtures'
 
 let alice: Member
 
@@ -77,5 +78,80 @@ describe('create_market', () => {
       p_close_at: closeAt,
     })
     expectError(error, 'close time must be in the future')
+  })
+})
+
+// #258: Next replays an action whose response was lost, so a repeat of the key must not make a
+// second market.
+describe('create_market_v2 attempt key', () => {
+  const args = (key: string | null) => ({
+    p_title: 'Replayed market',
+    p_description: null,
+    p_kind: 'binary',
+    p_outcome_labels: ['Yes', 'No'],
+    p_close_at: new Date(Date.now() + 60_000).toISOString(),
+    p_idempotency_key: key ?? undefined,
+  })
+
+  it('returns the first market for a repeat of the key and creates no second row', async () => {
+    const client = await clientFor(alice)
+    await ensureInvited(client)
+    const key = randomUUID()
+
+    const first = await client.rpc('create_market_v2', args(key))
+    const second = await client.rpc('create_market_v2', args(key))
+    expect(first.error).toBeNull()
+    expect(second.error).toBeNull()
+    expect(first.data).toEqual({ market_id: expect.any(String), replayed: false })
+    expect(second.data).toEqual({ market_id: (first.data as { market_id: string }).market_id, replayed: true })
+
+    const { count } = await serviceClient().from('markets').select('id', { count: 'exact', head: true }).eq('created_by', alice.id)
+    expect(count).toBe(1)
+  })
+
+  it('makes a second market for a new key, and the old signature still works', async () => {
+    const client = await clientFor(alice)
+    await ensureInvited(client)
+    const a = await client.rpc('create_market_v2', args(randomUUID()))
+    const b = await client.rpc('create_market_v2', args(randomUUID()))
+    expect((a.data as { market_id: string }).market_id).not.toBe((b.data as { market_id: string }).market_id)
+    const { error } = await client.rpc('create_market', {
+      p_title: 'Old signature',
+      p_description: null,
+      p_kind: 'binary',
+      p_outcome_labels: ['Yes', 'No'],
+      p_close_at: new Date(Date.now() + 60_000).toISOString(),
+    })
+    expect(error).toBeNull()
+  })
+})
+
+describe('attempt_key columns', () => {
+  it('refuses a second comment or task with the same key', async () => {
+    const client = await clientFor(alice)
+    await ensureInvited(client)
+    const closeAt = new Date(Date.now() + 60_000).toISOString()
+    const { data: marketId } = await client.rpc('create_market', {
+      p_title: 'Thread', p_description: null, p_kind: 'binary', p_outcome_labels: ['Yes', 'No'], p_close_at: closeAt,
+    })
+    const key = randomUUID()
+    const row = { market_id: marketId as string, profile_id: alice.id, body: 'Hi', attempt_key: key }
+    expect((await client.from('market_comments').insert(row)).error).toBeNull()
+    const again = await client.from('market_comments').insert(row)
+    expectError(again.error, { code: '23505', message: 'market_comments_attempt_key_idx' })
+  })
+
+  it('makes a task once per attempt key', async () => {
+    const db = serviceClient()
+    await giveRole(alice, 'admin')
+    const client = await clientFor(alice)
+    await ensureInvited(client)
+    const key = randomUUID()
+    const row = { title: 'Read Genesis 1', reward_amount: 10, is_repeatable: false, attempt_key: key }
+    expect((await client.from('tasks').insert(row)).error).toBeNull()
+    const again = await client.from('tasks').insert(row)
+    expectError(again.error, { code: '23505', message: 'tasks_attempt_key_idx' })
+    const { count } = await db.from('tasks').select('id', { count: 'exact', head: true }).eq('attempt_key', key)
+    expect(count).toBe(1)
   })
 })

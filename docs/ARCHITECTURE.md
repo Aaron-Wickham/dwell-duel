@@ -103,7 +103,7 @@ lib/            logic by area: admin, app-shell, auth, bets, docs, economy, env,
                 errors, forms, home, invites, ledger, live, markets, members, nav,
                 offline, pagination, parlays, preferences, profile, proof, push,
                 social, supabase, tasks, theme, toast, ui…
-supabase/       migrations/0001…0074, config.toml
+supabase/       migrations/00NN_*.sql, config.toml
 tests/          components/, lib/, db/ (Vitest), plus e2e/ (Playwright)
 scripts/        generate-splash.mjs, generate-favicons.mjs, ios-standalone-check.mjs
                 (npm run check:ios), seed-scale.mjs
@@ -179,9 +179,15 @@ the task catalogue and invite list, which are allowed by policy.
 - `market_resolutions.payout_seed` (0074): the seed per outcome the
   resolution's payouts counted, the market's seed before 0074 and 0 since,
   so history (My bets, the feed oracle) reads what was paid.
-- `idempotency_keys` (0047): one row per slip or balance-adjustment
-  attempt, holding its result. Only `place_slip` and `adjust_balance` touch
-  it, and the daily cron prunes rows older than a day.
+- `idempotency_keys` (0047): one row per slip, balance-adjustment or
+  create-market attempt, holding its result. Only `place_slip`,
+  `adjust_balance` and `create_market_v2` touch it, and the daily cron
+  prunes rows older than a day. Comments and tasks, which return nothing,
+  carry the key as a unique `attempt_key` column instead (0083), and their
+  actions treat a repeat as success. `useOffline` replays any action whose
+  response was lost, so every action that creates something takes a key;
+  forms hold it with `useAttemptKey` (`lib/forms/attempt-key.ts`), which
+  starts a new one when the submitted fields change.
 
 **Tasks and proof**
 
@@ -402,7 +408,7 @@ subquery per row, so 0055 adds no index.
 
 ### Migrations
 
-Migrations are numbered in order, `0001`–`0074`, and none is ever edited
+Migrations are numbered sequentially from `0001`, and none is ever edited
 after it ships. They roughly follow the project's history:
 
 | Range | What they add |
@@ -443,6 +449,7 @@ after it ships. They roughly follow the project's history:
 | 0073 | Permissions (#288, #289, #290): own-row branches of `resolve_market_core`, `can_resolve_market`, `void_market`, `update_market` and `delete_market_comment` need `is_invited()`; `remove_member` deletes the member's `auth.sessions`; `admin_delete_invites` only for unclaimed invites, and the invite insert grant narrowed to `email` and `invited_by` (the caller); `void_market(p_market_id, p_reason)` needs a reason (`markets.void_reason`, 500-character check), is admin-only after close and posts a `market_voided` feed event |
 | 0074 | Parlay pricing and the seed (#287, #272): leg odds set at close or settlement from other members' real money, no seed (`pick_quote`, `pick_quotes`, `parlay_leg_odds`, nullable `parlay_legs.locked_odds`); a 50 DC from 2 members floor and no legs on your own markets; `parlay_limits()` gains `max_payout`, `min_leg_pool` and `min_leg_bettors`, the cap drops to 20×, a leg counts at most 5× and one member's pending parlays on a market can pay at most 1,000 DC (`parlay_limits()` gains `max_leg_odds`; `parlay_max_payout`); `parlays.max_multiplier` (pending parlays from before move to 20×) and `odds_at_close`; payouts are the real pool (`pool_payout`, `market_resolutions.payout_seed` backfilled for history); `apply_coin_transaction` cuts a credit to fit the balance and `refund_room` a refund; `remove_bet` stops at close; `leaderboard_awards` leaves out removed members; `economy_summary` splits payout rounding from older results' seed payouts |
 | 0076 | Push failure pruning (#257): `push_subscriptions.failure_count` and `first_failed_at`, the service-role `record_push_results()`, `save_push_subscription` resetting the streak, and the closing-alerts lease (`cron_leases`, `claim_cron_lease`, `release_cron_lease`) and give-up counter (`push_attempts`, `record_push_failures`) |
+| 0083 | `create_market_v2` (#258): `create_market` plus an attempt key, returning `{market_id, replayed}` so a replayed create returns the first market and skips its push; `create_market` now wraps it. `attempt_key` columns, unique where set, on `market_comments` and `tasks` |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 

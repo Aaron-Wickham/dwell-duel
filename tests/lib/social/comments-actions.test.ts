@@ -72,3 +72,17 @@ describe('deleteCommentAction', () => {
     expect(log).toHaveBeenCalled()
   })
 })
+
+describe('postCommentAction attempt key (#258)', () => {
+  const KEY = '3f0c1d52-6a52-4a0e-9a0b-0c5f3a9a4b11'
+
+  it('stores the key, and treats a repeat of it as posted', async () => {
+    const data = form('Hello')
+    data.set('idempotency_key', KEY)
+    await postCommentAction(MARKET, undefined, data)
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ attempt_key: KEY }))
+
+    insert.mockResolvedValue({ error: { code: '23505', message: 'duplicate key value violates unique constraint "market_comments_attempt_key_idx"' } })
+    expect(await postCommentAction(MARKET, undefined, data)).toEqual({ posted: true })
+  })
+})

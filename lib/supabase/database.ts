@@ -11,9 +11,10 @@ type Nullable<F extends keyof Fns, K extends keyof Fns[F]['Args']> = Omit<Fns[F]
 
 export type Database = Omit<Generated, 'public'> & {
   public: Omit<Generated['public'], 'Functions'> & {
-    Functions: Omit<Fns, 'compute_period_key' | 'create_market' | 'update_market' | 'update_my_profile'> & {
+    Functions: Omit<Fns, 'compute_period_key' | 'create_market' | 'create_market_v2' | 'update_market' | 'update_my_profile'> & {
       compute_period_key: Nullable<'compute_period_key', 'p_period'>
       create_market: Nullable<'create_market', 'p_description'>
+      create_market_v2: Nullable<'create_market_v2', 'p_description'>
       update_market: Nullable<'update_market', 'p_description'>
       update_my_profile: Nullable<'update_my_profile', 'p_avatar_path'>
     }

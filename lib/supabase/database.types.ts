@@ -648,7 +648,6 @@ export type Database = {
           line: number | null
           seed_per_outcome: number
           settled_at: string | null
-          sparkline: Json | null
           status: string
           title: string
           void_reason: string | null
@@ -665,7 +664,6 @@ export type Database = {
           line?: number | null
           seed_per_outcome?: number
           settled_at?: string | null
-          sparkline?: Json | null
           status?: string
           title: string
           void_reason?: string | null
@@ -682,7 +680,6 @@ export type Database = {
           line?: number | null
           seed_per_outcome?: number
           settled_at?: string | null
-          sparkline?: Json | null
           status?: string
           title?: string
           void_reason?: string | null
@@ -1671,14 +1668,6 @@ export type Database = {
       proof_upload_quota_ok: { Args: never; Returns: boolean }
       push_endpoint_host: { Args: { p_endpoint: string }; Returns: string }
       push_hosts: { Args: never; Returns: string[] }
-      push_market_alerts: {
-        Args: never
-        Returns: {
-          market_id: string
-          profile_id: string
-          title: string
-        }[]
-      }
       push_market_result: {
         Args: { p_market_id: string }
         Returns: {
@@ -1695,14 +1684,6 @@ export type Database = {
       push_new_market: {
         Args: { p_market_id: string }
         Returns: {
-          profile_id: string
-          title: string
-        }[]
-      }
-      push_resolve_reminders: {
-        Args: never
-        Returns: {
-          market_id: string
           profile_id: string
           title: string
         }[]

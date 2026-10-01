@@ -17,14 +17,11 @@ describe('supabase_realtime publication', () => {
         'bets',
         'cancelled_bets',
         'markets',
-        'market_outcomes',
         'market_resolutions',
         'parlays',
         'parlay_legs',
-        'tasks',
         'task_completions',
         'profiles',
-        'feed_reactions',
         'market_comments',
       ]),
     )
@@ -32,6 +29,11 @@ describe('supabase_realtime publication', () => {
 
   it('publishes every table LiveRefresh subscribes to', async () => {
     expect(await publishedTables()).toEqual(expect.arrayContaining([...LIVE_TABLES]))
+  })
+
+  it('no longer publishes the tables the Broadcast pings replaced (0098)', async () => {
+    const tables = await publishedTables()
+    for (const table of ['market_outcomes', 'tasks', 'feed_reactions']) expect(tables).not.toContain(table)
   })
 
   it('publishes inserts, updates and deletes', async () => {

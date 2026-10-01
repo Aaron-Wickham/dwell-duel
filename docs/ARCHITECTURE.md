@@ -54,7 +54,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | Route | What it is |
 |---|---|
 | `/` | Home: greeting, balance hero (balance, rank, At stake, Pending), a new member's Getting started card, Markets to resolve, the weekly recap (Sundays and Mondays), tiles |
-| `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then resolved and voided newest first, each paged. `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) narrows it: open and awaiting read the open list split at the close time (`listOpenMarkets`' `bound`), resolved reads only the resolved list (`listResolvedMarkets`, voided included) |
+| `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then those awaiting resolution (oldest close first), then resolved and voided newest first. The All tab reads these as three keyset lists, each with its own Show more (`?open=`, `?awaiting=`, `?resolved=`), so open markets lead page one however many wait on a result (#261); the open and awaiting lists are `listOpenMarkets` split at one `now` (its `bound`). `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) reads just one list. Card sparklines come from `market_sparks` (0088) through Next's data cache, keyed by market and `sparkVersion` (the summed `pool_version` while open, `settled` after), so a live refresh reads only the series that moved (`lib/markets/sparklines.ts`, #252) |
 | `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under. `?from=<id>` pre-fills it from a market (Duplicate) |
 | `/markets/[id]` | A market: chart, outcomes, the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
@@ -103,7 +103,7 @@ lib/            logic by area: admin, app-shell, auth, bets, docs, economy, env,
                 errors, forms, home, invites, ledger, live, markets, members, nav,
                 offline, pagination, parlays, preferences, profile, proof, push,
                 social, supabase, tasks, theme, toast, ui…
-supabase/       migrations/0001…0085, config.toml
+supabase/       migrations/0001…0088, config.toml
 tests/          components/, lib/, db/ (Vitest), plus e2e/ (Playwright)
 scripts/        generate-splash.mjs, generate-favicons.mjs, ios-standalone-check.mjs
                 (npm run check:ios), seed-scale.mjs
@@ -152,9 +152,12 @@ the task catalogue and invite list, which are allowed by policy.
   `sparkline` (0070): the card's
   40-point series, written by a trigger the moment the market resolves or
   voids (`cache_market_sparkline`, so `resolve_market_core` and
-  `void_market` needn't know), null while it's open. `/markets` reads it for
-  settled markets and only computes open ones live (#204).
-- `market_outcomes`: labels and `pool_total`, the real DC bet on each.
+  `void_market` needn't know), null while it's open. Since 0088 the app no
+  longer reads it (`market_sparks` serves every card, cached by version);
+  the column and trigger stay until a later PR drops them.
+- `market_outcomes`: labels and `pool_total`, the real DC bet on each, and
+  `pool_version` (0088), bumped by a trigger on every change to
+  `pool_total` (each bet and cancellation): the list's sparkline cache key.
 - `bets`: live stakes only. A cancelled bet moves to `cancelled_bets`.
 - `market_resolutions`: each resolution or override, with its required
   note, `actual_value` for an Over/Under, and a link to the one it
@@ -283,7 +286,9 @@ untouched; 0073: their `auth.sessions` too, so no device can refresh), `update_m
 cards' 40-point sparklines and the market chart's 200 points, sampled in
 SQL so no page reads every bet; both prepend a seeded market's even
 opening split through `withSeededStart`, since the function returns points
-only at bets),
+only at bets), `market_sparks` (0088: `market_sparklines` at most 24 points,
+compact as `[epoch seconds, share, ...]` in `outcome_ids` order, shares to
+4 decimals, about a tenth of the bytes; what `/markets` reads),
 `markets_to_resolve` (0049, security invoker: the closed, unresolved
 markets waiting on the caller, capped at 10 with an uncapped `total`; a
 creator's own at once, and for reviewers and admins any left 48 hours or
@@ -417,6 +422,7 @@ after it ships. They roughly follow the project's history:
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
 | 0073 | Permissions (#288, #289, #290): own-row branches of `resolve_market_core`, `can_resolve_market`, `void_market`, `update_market` and `delete_market_comment` need `is_invited()`; `remove_member` deletes the member's `auth.sessions`; `admin_delete_invites` only for unclaimed invites, and the invite insert grant narrowed to `email` and `invited_by` (the caller); `void_market(p_market_id, p_reason)` needs a reason (`markets.void_reason`, 500-character check), is admin-only after close and posts a `market_voided` feed event |
 | 0085 | Live pings (#250): `live_pings`, `send_live_ping` and the unlogged `live_ping_queue`. Row triggers on `markets`, `market_outcomes`, `activity_events`, `feed_reactions`, `tasks` and `task_completions` queue their topic once per transaction, and the queue's deferred trigger sends it at commit: one private Broadcast ping per topic per transaction, at most one per topic every `live_ping_interval_ms()`. The `realtime.messages` policy lets only invited members join (reviewers and above for `live:reviews`) |
+| 0088 | Compact sparklines (#252): `market_sparks(p_market_ids, p_points default 24)` and `market_outcomes.pool_version` with its `bump_pool_version` trigger |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 

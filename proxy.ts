@@ -45,8 +45,19 @@ export async function proxy(request: NextRequest) {
   return response
 }
 
+// Not on a Link prefetch (#251): a signed-in page is dynamic, so each prefetch is its own
+// invocation, and the proxy would double it. The prefetched layout's requireUser still guards it,
+// and the navigation that follows runs the proxy, which refreshes the session cookie and turns a
+// signed-out load into a real redirect.
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|manifest\\.webmanifest$|sw\\.js$|offline$|api/cron/|api/health$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    {
+      source:
+        '/((?!_next/static|_next/image|favicon.ico|manifest\\.webmanifest$|sw\\.js$|offline$|api/cron/|api/health$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml)$).*)',
+      missing: [
+        { type: 'header', key: 'next-router-prefetch' },
+        { type: 'header', key: 'purpose', value: 'prefetch' },
+      ],
+    },
   ],
 }

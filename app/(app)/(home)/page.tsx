@@ -90,7 +90,7 @@ export default async function Home() {
   return (
     <Page transition="tab">
       <PageHeader title={`Welcome, ${standing?.displayName ?? FALLBACK_NAME}`} />
-      <LiveTables subscriptions={pageSubscriptions.home({ me: user.id, admin: atLeast(role, 'reviewer') })} />
+      <LiveTables subscriptions={pageSubscriptions.home({ me: user.id, reviewer: atLeast(role, 'reviewer') })} />
       <HomeHero
         balance={standing?.balance ?? 0}
         rank={rank}

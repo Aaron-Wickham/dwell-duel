@@ -16,28 +16,27 @@ export const pageSubscriptions = {
     ]
   },
   // Every card's odds move with every bet, and every bet (or cancellation) moves its outcome's
-  // pool_total, so the list follows market_outcomes rather than every bets and cancelled_bets row
-  // (#204): one update per bet, from a table that changes for no other reason. LiveRefresh's
-  // debounce keeps a busy spell to one refresh every couple of seconds.
+  // pool_total, so the list follows the pools topic (market_outcomes) rather than every bets and
+  // cancelled_bets row (#204). The database pings it at most once every few seconds (#250).
   markets(): LiveSubscription[] {
-    return [{ table: 'markets' }, { table: 'market_outcomes' }]
+    return [{ topic: 'markets' }, { topic: 'pools' }]
   },
   // The HomeHero's pending-review count and the admin tile's pending-approvals count both only
   // change via task_completions -- a rejection moves no balance, so bets/profiles don't cover it.
-  // An admin needs every submission; a member only needs their own.
+  // A reviewer or above needs every submission; a member only needs their own.
   // profiles isn't watched here: every bet moves some balance, so watching all of them refreshed
   // every open Home on every bet (#68). The layout's base channel already follows this member's
   // own profile; the rank catches up on the next visit.
   // The hero's At stake moves when the member bets, cancels or places a parlay, and when a market
   // or parlay settles (markets, and parlays' own status).
-  home({ me, admin }: { me: string; admin: boolean }): LiveSubscription[] {
+  home({ me, reviewer }: { me: string; reviewer: boolean }): LiveSubscription[] {
     return [
-      { table: 'markets' },
-      { table: 'tasks' },
+      { topic: 'markets' },
+      { topic: 'tasks' },
       { table: 'bets', filter: `profile_id=eq.${me}` },
       { table: 'cancelled_bets', filter: `profile_id=eq.${me}` },
       { table: 'parlays', filter: `profile_id=eq.${me}` },
-      admin ? { table: 'task_completions' } : { table: 'task_completions', filter: `profile_id=eq.${me}` },
+      reviewer ? { topic: 'reviews' } : { table: 'task_completions', filter: `profile_id=eq.${me}` },
     ]
   },
   // Not profiles (#205): apply_coin_transaction updates a balance on every bet, win, task and parlay,
@@ -46,7 +45,7 @@ export const pageSubscriptions = {
   // what really reorders both boards, so only markets is followed; the rest catches up on the next
   // visit, or when the tab returns to the foreground.
   leaderboard(): LiveSubscription[] {
-    return [{ table: 'markets' }]
+    return [{ topic: 'markets' }]
   },
   // Only this member's profile (#68): their balance and name stay live, and their rank, which
   // other members' bets can move, catches up on the next visit. activity_events carries every kind
@@ -57,29 +56,30 @@ export const pageSubscriptions = {
       // A cancelled bet's event is deleted by cascade, which the filtered channel above can't see.
       { table: 'cancelled_bets', filter: `profile_id=eq.${memberId}` },
       { table: 'profiles', filter: `id=eq.${memberId}` },
-      // Unfiltered: a reaction row names its event, not the event's actor, and a filtered channel
-      // would never hear a reaction being taken back (a DELETE).
-      { table: 'feed_reactions' },
+      // Every reaction: a reaction row names its event, not the event's actor, and a filtered
+      // channel would never hear a reaction being taken back (a DELETE).
+      { topic: 'reactions' },
     ]
   },
-  // Every feed kind is a row in activity_events now. Reactions are watched unfiltered, so a
+  // Every feed kind is a row in activity_events. Reactions come through their own topic, so a
   // reaction taken back (a DELETE) still arrives.
   feed(): LiveSubscription[] {
-    return [{ table: 'activity_events' }, { table: 'feed_reactions' }]
+    return [{ topic: 'activity' }, { topic: 'reactions' }]
   },
   tasks(userId: string): LiveSubscription[] {
-    return [{ table: 'tasks' }, { table: 'task_completions', filter: `profile_id=eq.${userId}` }]
+    return [{ topic: 'tasks' }, { table: 'task_completions', filter: `profile_id=eq.${userId}` }]
   },
-  // markets, unfiltered, carries every status change and resolution that moves a bet between
-  // tabs or changes its result. It also carries parlay leg badges: settle_parlay writes nothing to
-  // parlays/parlay_legs when a leg wins while others in the same parlay are still open.
+  // The markets topic carries every status change and resolution that moves a bet between tabs or
+  // changes its result. It also carries parlay leg badges: settle_parlay writes nothing to
+  // parlays/parlay_legs when a leg wins while others in the same parlay are still open. A member's
+  // own legs are written with their parlay, and only a market's delete removes one (by cascade), so
+  // the parlays row and the markets topic cover them without following every member's legs.
   myBets(userId: string): LiveSubscription[] {
     return [
       { table: 'bets', filter: `profile_id=eq.${userId}` },
       { table: 'cancelled_bets', filter: `profile_id=eq.${userId}` },
       { table: 'parlays', filter: `profile_id=eq.${userId}` },
-      { table: 'parlay_legs' },
-      { table: 'markets' },
+      { topic: 'markets' },
     ]
   },
   // A parlay's page: its own row (status, credit), its legs, and every market, since a leg's
@@ -88,7 +88,7 @@ export const pageSubscriptions = {
     return [
       { table: 'parlays', filter: `id=eq.${parlayId}` },
       { table: 'parlay_legs', filter: `parlay_id=eq.${parlayId}` },
-      { table: 'markets' },
+      { topic: 'markets' },
     ]
   },
   // coin_transactions isn't published for realtime, but every row in it moves the member's own
@@ -97,6 +97,6 @@ export const pageSubscriptions = {
     return [{ table: 'profiles', filter: `id=eq.${userId}` }]
   },
   adminTasks(): LiveSubscription[] {
-    return [{ table: 'task_completions' }]
+    return [{ topic: 'reviews' }]
   },
 }

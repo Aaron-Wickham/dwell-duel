@@ -40,6 +40,16 @@ beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
 })
 
+// A parlay row written directly is settled on paper only; this gives it the payout row the real
+// settle_parlay would have written, so the ledger check still holds.
+async function payParlay(parlayId: string, profileId: string, amount: number): Promise<void> {
+  await pgQuery(`
+    insert into public.coin_transactions (profile_id, amount, type, meta)
+      values ('${profileId}', ${amount}, 'parlay_won', jsonb_build_object('parlay_id', '${parlayId}'));
+    update public.profiles set balance = balance + ${amount} where id = '${profileId}'
+  `)
+}
+
 describe('activity_events foreign key indexes', () => {
   it('indexes every column a source row delete looks events up by', async () => {
     const rows = await pgQuery<{ indexname: string; indexdef: string }>(
@@ -79,7 +89,7 @@ describe('timestamp invariants', () => {
     const db = serviceClient()
     const { data: parlay, error: insertErr } = await db
       .from('parlays')
-      .insert({ profile_id: bob.id, stake: 10 })
+      .insert({ profile_id: bob.id, stake: 10, max_multiplier: 20 })
       .select('id')
       .single()
     expect(insertErr).toBeNull()
@@ -93,6 +103,7 @@ describe('timestamp invariants', () => {
       .update({ status: 'won', credited: 20, settled_at: new Date().toISOString() })
       .eq('id', parlay!.id)
     expect(won.error).toBeNull()
+    await payParlay(parlay!.id, bob.id, 20)
   })
 
   it('adds both constraints validated', async () => {
@@ -133,8 +144,11 @@ describe('timestamp invariants', () => {
     expect(cleanCompletion.error).toBeNull()
     const cleanParlay = await db
       .from('parlays')
-      .insert({ profile_id: bob.id, stake: 10, status: 'won', credited: 20, settled_at: new Date().toISOString() })
+      .insert({ profile_id: bob.id, stake: 10, max_multiplier: 20, status: 'won', credited: 20, settled_at: new Date().toISOString() })
+      .select('id')
+      .single()
     expect(cleanParlay.error).toBeNull()
+    await payParlay(cleanParlay.data!.id, bob.id, 20)
 
     await expect(pgQuery(readGuardBlock())).resolves.toBeDefined()
 
@@ -152,7 +166,7 @@ describe('timestamp invariants', () => {
         alter table public.parlays disable trigger activity_events_from_parlay;
         insert into public.task_completions (task_id, profile_id, status, reward_amount, period_key)
           values ('${taskId}', '${bob.id}', 'approved', 10, 'once');
-        insert into public.parlays (profile_id, stake, status, credited) values ('${bob.id}', 10, 'won', 20);
+        insert into public.parlays (profile_id, stake, max_multiplier, status, credited) values ('${bob.id}', 10, 20, 'won', 20);
         ${readGuardBlock()}
         do $$ begin raise exception 'the guard let the violating rows through'; end $$;
       `),

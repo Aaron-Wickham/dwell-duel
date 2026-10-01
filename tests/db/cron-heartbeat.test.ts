@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, clientFor, anonClient, ensureInvited, type Member, giveRole } from './fixtures'
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 // A name of its own per test, since nothing clears cron_heartbeats between tests.
 let job: string
 
@@ -14,7 +14,7 @@ async function setRole(m: Member, role: 'member' | 'reviewer' | 'admin' | 'owner
   await giveRole(m, role)
 }
 
-async function readAs(client: SupabaseClient): Promise<{ name: string; last_run_at: string }[]> {
+async function readAs(client: TestClient): Promise<{ name: string; last_run_at: string }[]> {
   const { data, error } = await client.from('cron_heartbeats').select('name, last_run_at').eq('name', job)
   if (error) throw error
   return data
@@ -48,7 +48,7 @@ describe('record_cron_heartbeat', () => {
     await setRole(alice, 'owner')
     for (const client of [anonClient(), bobClient, aliceClient]) {
       const { error } = await client.rpc('record_cron_heartbeat', { p_name: job })
-      expect(error).not.toBeNull()
+      expectError(error, { code: '42501', message: 'permission denied for function record_cron_heartbeat' })
     }
     expect(await readAs(serviceClient())).toEqual([])
   })
@@ -76,11 +76,11 @@ describe('cron_heartbeats', () => {
   it('takes no direct writes, even from the owner', async () => {
     await setRole(alice, 'owner')
     const { error: insertErr } = await aliceClient.from('cron_heartbeats').insert({ name: `${job}-x`, last_run_at: new Date().toISOString() })
-    expect(insertErr).not.toBeNull()
+    expectError(insertErr, { code: '42501', message: 'permission denied for table cron_heartbeats' })
     const { error: updateErr } = await aliceClient.from('cron_heartbeats').update({ last_run_at: '2000-01-01T00:00:00Z' }).eq('name', job)
-    expect(updateErr).not.toBeNull()
+    expectError(updateErr, { code: '42501', message: 'permission denied for table cron_heartbeats' })
     const { error: deleteErr } = await aliceClient.from('cron_heartbeats').delete().eq('name', job)
-    expect(deleteErr).not.toBeNull()
+    expectError(deleteErr, { code: '42501', message: 'permission denied for table cron_heartbeats' })
     expect(await readAs(serviceClient())).toHaveLength(1)
   })
 })

@@ -12,6 +12,8 @@ export interface EconomySummaryRow {
   task_rewards_added: number | string
   seed_payouts_added: number | string
   seed_payouts_removed: number | string
+  payout_rounding_added: number | string
+  payout_rounding_removed: number | string
   house_parlays_added: number | string
   house_parlays_removed: number | string
   owner_adjustments_added: number | string
@@ -22,7 +24,7 @@ export interface EconomySummaryRow {
 }
 
 export interface EconomySource {
-  key: 'starting_grants' | 'task_rewards' | 'seed_payouts' | 'house_parlays' | 'owner_adjustments'
+  key: 'starting_grants' | 'task_rewards' | 'seed_payouts' | 'payout_rounding' | 'house_parlays' | 'owner_adjustments'
   label: string
   added: number
   // null where the source can only ever add.
@@ -50,11 +52,19 @@ export function toEconomySummary(row: EconomySummaryRow): EconomySummary {
   const sources: EconomySource[] = [
     { key: 'starting_grants', label: 'Starting grants', added: n(row.starting_grants_added), removed: null },
     { key: 'task_rewards', label: 'Task rewards', added: n(row.task_rewards_added), removed: null },
+    // Only results from before 0074 counted the seed, so this row shows only in a month one of
+    // them was paid or overridden.
     {
       key: 'seed_payouts',
-      label: 'Seed payouts',
+      label: 'Seed payouts (older results)',
       added: n(row.seed_payouts_added),
       removed: n(row.seed_payouts_removed),
+    },
+    {
+      key: 'payout_rounding',
+      label: 'Payout rounding',
+      added: n(row.payout_rounding_added),
+      removed: n(row.payout_rounding_removed),
     },
     {
       key: 'house_parlays',
@@ -69,6 +79,7 @@ export function toEconomySummary(row: EconomySummaryRow): EconomySummary {
       removed: n(row.owner_adjustments_removed),
     },
   ]
+  const shown = sources.filter((s) => s.key !== 'seed_payouts' || s.added !== 0 || s.removed !== 0)
   const inCirculation = n(row.balances) + n(row.bets_at_stake) + n(row.parlays_at_stake)
   return {
     monthStart: row.month_start,
@@ -77,7 +88,7 @@ export function toEconomySummary(row: EconomySummaryRow): EconomySummary {
     betsAtStake: n(row.bets_at_stake),
     parlaysAtStake: n(row.parlays_at_stake),
     inCirculation,
-    sources,
+    sources: shown,
     monthAdded: sources.reduce((sum, s) => sum + s.added, 0),
     monthRemoved: sources.reduce((sum, s) => sum + (s.removed ?? 0), 0),
     discrepancy: n(row.all_time_added) - n(row.all_time_removed) - inCirculation,

@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
-import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
+import { serviceClient, type TestClient } from './helpers'
+import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, insertLockedParlay } from './fixtures'
 import { getMarketsToResolve } from '@/lib/markets/markets-to-resolve'
 
 const HOUR = 3_600_000
@@ -10,10 +9,10 @@ let alice: Member
 let bob: Member
 let reviewer: Member
 let admin: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let reviewerClient: SupabaseClient
-let adminClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let reviewerClient: TestClient
+let adminClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -40,19 +39,19 @@ async function closedAgo(marketId: string, ms: number): Promise<void> {
   if (error) throw error
 }
 
-async function bet(client: SupabaseClient, market: TestMarket): Promise<void> {
+async function bet(client: TestClient, market: TestMarket): Promise<void> {
   const { error } = await client.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0], p_amount: 5 })
   if (error) throw error
 }
 
-async function market(title: string, closedMsAgo: number | null, bettors: SupabaseClient[] = []): Promise<TestMarket> {
+async function market(title: string, closedMsAgo: number | null, bettors: TestClient[] = []): Promise<TestMarket> {
   const m = await createTestMarket(aliceClient, ['Yes', 'No'], { title })
   for (const client of bettors) await bet(client, m)
   if (closedMsAgo !== null) await closedAgo(m.marketId, closedMsAgo)
   return m
 }
 
-const titles = async (client: SupabaseClient) => (await getMarketsToResolve(client)).markets.map((m) => m.title)
+const titles = async (client: TestClient) => (await getMarketsToResolve(client)).markets.map((m) => m.title)
 
 describe('markets_to_resolve', () => {
   it("nudges a creator about their own closed markets they can resolve, soonest closed first", async () => {
@@ -67,9 +66,11 @@ describe('markets_to_resolve', () => {
       p_outcome_id: resolved.outcomeIds[0],
     })
     if (error) throw error
-    const voided = await market('Voided', HOUR)
-    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId })
+    // Voided while open (after close only an admin may, 0073), then past its close like the rest.
+    const voided = await market('Voided', null)
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId, p_reason: 'Voided in a test' })
     if (voidErr) throw voidErr
+    await closedAgo(voided.marketId, HOUR)
 
     expect(await getMarketsToResolve(aliceClient)).toMatchObject({
       total: 2,
@@ -95,11 +96,13 @@ describe('markets_to_resolve', () => {
   })
 
   it('counts a creator parlay leg as a stake that needs someone else', async () => {
-    // Seeded, so a leg has odds to lock before anyone has bet.
+    // A creator can't put their own market in a parlay since 0074; one placed before still counts.
     const legA = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Creator parlay leg', seed: 20 })
     const legB = await createTestMarket(bobClient, ['Yes', 'No'], { title: 'Other leg', seed: 20 })
-    const { error } = await aliceClient.rpc('place_parlay', { p_outcome_ids: [legA.outcomeIds[0], legB.outcomeIds[0]], p_stake: 5 })
-    if (error) throw error
+    await insertLockedParlay(alice.id, 5, [
+      { market: legA, outcomeIndex: 0, lockedOdds: 2 },
+      { market: legB, outcomeIndex: 0, lockedOdds: 2 },
+    ])
     await closedAgo(legA.marketId, HOUR)
 
     expect(await titles(reviewerClient)).toEqual(['Creator parlay leg'])

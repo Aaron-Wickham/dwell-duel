@@ -5,6 +5,7 @@ export type FeedKind =
   | 'parlay_placed'
   | 'market_created'
   | 'market_resolved'
+  | 'market_voided'
   | 'bet_won'
   | 'parlay_won'
   | 'task_completed'
@@ -24,6 +25,8 @@ export interface FeedEvent {
   taskTitle: string | null
   // Why a market resolved the way it did (0042), for market_resolved events.
   resolutionNote: string | null
+  // Why a market was voided (0073), for market_voided events.
+  voidReason: string | null
   // For a result: what the market's creator had riding on it (#84).
   creatorStake: string | null
   // For a champion: the month they won, as YYYY-MM (0051).
@@ -50,6 +53,8 @@ export function describeEvent(e: FeedEvent): Segment[] {
       return [actor(e), ' opened ', market(e)]
     case 'market_resolved':
       return [market(e), ` resolved: ${e.outcomeLabel}`]
+    case 'market_voided':
+      return [actor(e), ' voided ', market(e)]
     case 'bet_won':
       return [actor(e), ` won ${e.amount} DC on `, market(e)]
     case 'parlay_won':
@@ -58,5 +63,8 @@ export function describeEvent(e: FeedEvent): Segment[] {
       return [actor(e), ` completed ${e.taskTitle} (+${e.amount} DC)`]
     case 'season_champion':
       return [actor(e), ` was ${e.season ? seasonName(e.season) : 'last month'}’s champion with ${signedDc(e.amount ?? 0)}`]
+    // A kind added after this build (FeedList leaves such rows out).
+    default:
+      return []
   }
 }

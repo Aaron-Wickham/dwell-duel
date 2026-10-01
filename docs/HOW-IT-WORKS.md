@@ -13,7 +13,9 @@ This page explains the rules.
 ## Getting in
 
 - **Invites only.** An admin adds your Google email under Admin → Invites.
-  Only admins can see members' email addresses.
+  Only admins can see members' email addresses. An admin can take back an
+  invite nobody has used yet; once someone has signed in with it, only the
+  owner can remove them (see [Roles](#roles)).
   Sign in with that Google account; any other account lands on a "not
   invited" page.
 - **Everyone starts with 100 DC.** Every coin you gain or spend is a line
@@ -67,34 +69,42 @@ DwellDuel uses **pari-mutuel** betting: every DC bet on a market goes into
 one pot, and the people who picked the winner split it in proportion to
 their stakes.
 
-To give a brand-new market sensible odds, each outcome starts with a
-**20 DC seed**: virtual money that counts toward the odds but belongs to
-nobody. The house covers it when it's paid out.
+**Payout if it wins** = your stake × all DC on the market ÷ DC on the
+winning outcome, rounded down. The winners split exactly the real pool:
+nothing is added, so if nobody bet against you, you get your stake back.
 
-For an outcome, with *S* the seed per outcome and *n* the number of
-outcomes:
+**The house adds nothing to a solo bet.** To give a thin market a sensible
+look, each outcome's **chance** counts a **20 DC seed**: virtual money that
+belongs to nobody and is never paid out. With *S* the seed per outcome and
+*n* the number of outcomes:
 
 - **Chance** = (DC on this outcome + S) ÷ (all DC on the market + S × n)
-- **Payout if it wins** = your stake × (all DC + S × n) ÷ (DC on the
-  winning outcome + S), rounded down
 
-**A worked example.** On a new Yes/No market, both sides show 50% and
-2.00×. Then Alice bets 10 DC on Yes and Bob bets 30 DC on No.
+So a brand-new Yes/No market shows 50% / 50%, not 0% / 0%, and its chart
+starts there. The seed only shapes the chance, the charts and the
+sparklines. Each outcome's **"× payout per DC"** is the real pool's (all DC
+÷ DC on that outcome), and an outcome nobody has backed shows none yet.
+
+**A worked example.** On a new Yes/No market, both sides show 50%. Then
+Alice bets 10 DC on Yes and Bob bets 30 DC on No.
 
 - Yes: (10 + 20) ÷ (40 + 40) = **37.5%**. No: (30 + 20) ÷ 80 = **62.5%**.
-- If Yes wins, Alice gets 10 × 80 ÷ 30 = **26 DC** (a 16 DC profit).
-- If No wins, Bob gets 30 × 80 ÷ 50 = **48 DC** (an 18 DC profit).
+- If Yes wins, Alice gets 10 × 40 ÷ 10 = **40 DC** (a 30 DC profit).
+- If No wins, Bob gets 30 × 40 ÷ 30 = **40 DC** (a 10 DC profit).
+- Had Bob not bet, Alice alone on Yes would get her 10 DC back.
 
 Your payout isn't fixed when you bet. It moves as others bet, until the
-market closes. The percentages, charts and "Pays ~" estimates all use the
-same formula as the real payout.
+market closes. The slip's "Pays ~" and My bets work it out with the same
+formula as the real payout. (Some older results counted the seed in their
+payouts, and My bets still shows what they paid.)
 
 - **Cancelling:** you can cancel a bet for a full refund until the market
   closes. Cancelled bets appear under My bets → Cancelled.
-- **No winners:** if nobody bet on the winning outcome, everyone is
-  refunded. My bets marks such a bet "Refunded · no winners". (A parlay
-  pick on that outcome still counts as won, because parlays don't go into
-  the pool.)
+- **No winners:** if nobody bet on the winning outcome, there is no one
+  to split the pool, so everyone is refunded. My bets marks such a bet
+  "Refunded · no winners". (A parlay pick on that outcome still counts as
+  won, because parlays don't go into the pool, but at 1.00×: nobody else
+  backed it, so it has no odds. See below.)
 
 ## The slip, solo bets and parlays
 
@@ -111,32 +121,56 @@ greyed out. Each pick is either:
 "Place" sends everything at once. If any single bet can't be placed, none
 of them are.
 
-**How parlays pay.** Each leg's odds are **locked when you place it**:
-that outcome's payout multiplier at that moment, seed included, **counting
-everyone's money except your own** on that market. So you can't raise your
-own parlay's odds by betting against it.
+**How parlays pay.** Each leg's odds are **set when its market closes**
+(or when it's resolved, if an admin resolves it earlier), from the final
+pool: **other members' DC on the market ÷ other members' DC on your
+pick**. Your own money on that market doesn't count, and neither does the
+seed. Until then the slip, My bets and the parlay's page show a "~"
+estimate from the pool as it stands, which moves as people bet and cancel,
+just as a solo bet's payout does. Once a market has closed nobody can bet
+on it or cancel, so the odds it sets are money really at risk.
 Multiplying the legs gives the parlay's multiplier, and the payout is the
 stake × the multiplier, rounded down.
 
-- Between 2 and **10** legs, one per market, with the multiplier capped
-  at **100×**.
-- Example: two legs on new Yes/No markets are 2.00× each, so 4.00×. A
-  5 DC parlay pays 20 DC if both win.
+- Between 2 and **10** legs, one per market.
+- **Real money first:** a pick can be a leg only if its market already
+  has at least **50 DC from at least 2 other members**. A brand-new market
+  has seeded odds for solo bets, but nothing real to price a leg on.
+- **Not your own markets:** you can't put a market you created in a
+  parlay.
+- **Caps:** a leg counts at most **5×**, the multiplier is capped at
+  **20×**, and a parlay pays at most **1,000 DC**, so its stake can be at
+  most 1,000 DC.
+- **Your parlays on one market:** all your pending parlays with a leg on
+  the same market can pay at most **1,000 DC** between them, counting each
+  at the most it could pay (unset legs at 5×). Past that, a new parlay on
+  that market is refused until some of them settle.
+- **A leg with no real odds counts 1.00×.** If, when its market closes, it
+  no longer has 50 DC from 2 other members (say someone cancelled), or
+  nobody else has money on your pick, the leg still has to win, but it
+  doesn't multiply. It can never raise the payout.
+- Example: a market with 25 DC on Yes and 35 DC on No from others prices
+  Yes at 60 ÷ 25 = 2.40×. Two such legs are 5.76×, so a 5 DC parlay pays
+  28 DC if both win.
 - It's lost as soon as one leg loses, and paid once every leg has won.
 - A leg whose market is voided drops out, and the parlay continues on the
   rest. If every leg is voided, the stake is refunded.
-- Parlays are paid by the house at their locked odds. They don't go into
-  any market's pool, so they don't move a market's percentages (the same
-  way Kalshi and Polymarket keep their "Combos" separate).
+- Parlays are paid by the house. They don't go into any market's pool, so
+  they don't move a market's percentages (the same way Kalshi and
+  Polymarket keep their "Combos" separate).
+- A parlay placed before odds were set at close keeps the odds it locked
+  when it was placed, under the same 20× and 1,000 DC caps. One that
+  staked more than 1,000 DC still gets at least its stake back if it wins,
+  so a win is never a loss. (One already settled keeps what it was paid.)
 
 **My bets** shows your solo bets and parlays together, newest first, under
 Open, Settled and Cancelled. Only you can see it. Everyone can see who
 bet what on each market, and bets and parlays also appear in the feed.
 
 Tap a parlay to open its **breakdown**: its stake, multiplier and what it
-pays (or paid), each pick with the odds locked when you placed it and
-where its market stands (Open, Awaiting resolution, Won, Lost or
-Voided), and a short sum showing how the multiplier adds
+pays (or paid), each pick with its odds (a "~" estimate until its market
+closes) and where its market stands (Open, Awaiting resolution, Won, Lost
+or Voided), and a short sum showing how the multiplier adds
 up. A voided pick is shown as left out, and the rest carry on.
 
 Its **Coins** tab is your coin history: every DC that came in or went
@@ -168,8 +202,11 @@ full ledger) can see it.
   taken back and the new winners paid; the confirmation says so first. If a past winner has already spent
   their winnings, the override is blocked and names who, so an admin can
   sort out balances first.
-- **Voids:** the creator or an admin can void an unresolved market, and
-  every bet on it is refunded.
+- **Voids:** until a market closes, its creator or an admin can void it;
+  once it has closed, only an admin can, the same way nobody with money on a
+  market settles it. Every void **must say why**, and the reason shows on
+  the market page and in the feed. Every bet on it is refunded, and a
+  parlay leg on it drops out.
 
 ## Tasks
 
@@ -236,7 +273,8 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   solo bets and parlays placed this month). A tie on Biggest win goes to
   the payout that came first, and on Best parlay to the parlay that paid
   more. Sharpshooter and Most active go to whoever has more of what's
-  counted, then the name.
+  counted, then the name. A removed member wins no award; it goes to the
+  next member still in.
 - **Past champions** lists the months already crowned.
 - **Monthly champion:** when a month ends, whoever finished it with the
   top profit is posted to the feed early on the 1st, Eastern time ("Alice
@@ -259,7 +297,7 @@ Every member's profile has a **Stats** card, which any member can see:
 - **Biggest win:** the largest payout minus its stake on a single solo
   bet, with the market. A payout an override took back doesn't count.
 - **Best parlay:** the won parlay with the highest multiplier (its winning
-  legs' odds multiplied, up to the 100× cap), and what it paid.
+  legs' odds multiplied, up to its cap), and what it paid.
 - **Markets created** and **Tasks completed** (approved submissions only).
 
 Until a member has a settled bet or parlay, the card says "No settled
@@ -306,6 +344,16 @@ open DwellDuel from there and turn them on in Settings. If you've blocked
 notifications for DwellDuel, allow them again in your browser's or
 phone's settings.
 
+**Notifications keep themselves connected.** If your browser replaces
+its notification connection, DwellDuel re-registers this device within a
+day of you opening the app (or straight away, where the browser tells it),
+on a device where you've turned notifications on or opened Settings since
+this update. A device the notification services keep rejecting is removed
+from your account after five rejected attempts spanning more than a day, or
+after 60 days without a delivery once it has also been failing for a day.
+Outages on the services' side, or ours, never count against your device.
+If yours was removed, turn notifications on again in Settings.
+
 **Signing out stops notifications on that device,** so on a shared phone
 the next person to sign in never sees yours. Turn them on again after you
 sign back in. Your other devices keep theirs.
@@ -314,18 +362,21 @@ sign back in. Your other devices keep theirs.
 
 | Role | Can also…
 |---|---|
-| **Member** | Bet, create and resolve their own markets, submit tasks |
+| **Member** | Bet, create and resolve their own markets (and void them before they close), submit tasks |
 | **Reviewer** | Approve and reject task submissions (not their own), and resolve closed markets they have no stake in |
 | **Admin** | Invite people, manage tasks, resolve, override or void any market, delete any comment, view members and the full ledger |
-| **Owner** (exactly one) | Adjust balances, grant and remove roles, remove a member, remove anyone's bet while its market is open (with a refund), and delete a market or task that hasn't been used |
+| **Owner** (exactly one) | Adjust balances, grant and remove roles, remove a member, remove anyone's bet until its market closes (with a refund), and delete a market or task that hasn't been used |
 
 Reviewers and above get a red count on the **Admin** button for what is
 waiting on them: other members' task submissions (reviewers and above) and
 closed markets with no result (admins and above). It disappears at zero.
 
-A role only counts while you're invited. The owner can **remove a member**
+A role only counts while you're invited, and so does what you can do with
+your own markets and comments. The owner can **remove a member**
 from Admin → Members: they go back to plain member, their invite is
-revoked and their devices stop getting notifications, straight away. Their
+revoked, they're signed out on every device and their devices stop getting
+notifications, straight away. They can no longer resolve, void or edit the
+markets they created, or delete their comments. Their
 coins, bets and history stay where they are. If they sign in again they
 land on the not-invited page, and inviting them again brings them back as
 a member.
@@ -347,8 +398,8 @@ a member.
   whoever got there first); and the markets closing in the week ahead.
   A line with nothing to report is left out, and a quiet week shows no
   recap at all.
-- **Feed:** everyone's bets, parlays, new markets, results, wins,
-  approved tasks and each month's champion, with their reactions, updated
+- **Feed:** everyone's bets, parlays, new markets, results, voids (with
+  their reason), wins, approved tasks and each month's champion, with their reactions, updated
   live. See [Reactions and comments](#reactions-and-comments).
 - **Leaderboard and profiles:** see [The leaderboard](#the-leaderboard)
   and [Profile stats](#profile-stats).

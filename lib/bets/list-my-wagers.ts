@@ -2,7 +2,7 @@ import type { DbClient } from '@/lib/supabase/database'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { chunk, IN_CHUNK } from '@/lib/pagination/chunk'
 import { readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
-import { PARLAY_COLUMNS, toParlayView, type ParlayRow, type ParlayView } from '@/lib/parlays/list-parlays'
+import { fetchLegOdds, PARLAY_COLUMNS, toParlayView, type ParlayRow, type ParlayView } from '@/lib/parlays/list-parlays'
 import { BET_COLUMNS, toMyBet, type BetRow, type MyBet } from './list-my-bets'
 
 export type WagerBucket = 'open' | 'settled'
@@ -66,6 +66,7 @@ export async function listMyWagers(
     else parlayIds.push(id.slice(7))
   }
   const [bets, parlays] = await Promise.all([fetchBets(supabase, betIds), fetchParlays(supabase, parlayIds)])
+  const legOdds = await fetchLegOdds(supabase, [...parlays.values()])
 
   const now = Date.now()
   const rows: Wager[] = []
@@ -75,7 +76,7 @@ export async function listMyWagers(
       if (bet) rows.push({ kind: 'bet', key: id, bet: toMyBet(bet, now) })
     } else {
       const parlay = parlays.get(id.slice(7))
-      if (parlay) rows.push({ kind: 'parlay', key: id, parlay: toParlayView(parlay, now) })
+      if (parlay) rows.push({ kind: 'parlay', key: id, parlay: toParlayView(parlay, now, legOdds) })
     }
   }
   return { ...keys, rows }

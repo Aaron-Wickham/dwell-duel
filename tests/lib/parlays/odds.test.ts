@@ -25,9 +25,14 @@ describe('combineOdds', () => {
     expect(combineOdds([33_333, 30_000])).toEqual({ multiplierBp: 99_999, capped: false })
   })
 
-  it('caps the product at 100x', () => {
-    expect(combineOdds([40_000, 40_000, 40_000])).toEqual({ multiplierBp: 640_000, capped: false })
-    expect(combineOdds([40_000, 40_000, 40_000, 40_000])).toEqual({ multiplierBp: 1_000_000, capped: true })
+  it('caps the product at 20x', () => {
+    expect(combineOdds([40_000, 40_000])).toEqual({ multiplierBp: 160_000, capped: false })
+    expect(combineOdds([40_000, 40_000, 40_000])).toEqual({ multiplierBp: 200_000, capped: true })
+  })
+
+  it('caps a parlay placed before 0074 at its own 100x', () => {
+    expect(combineOdds([40_000, 40_000, 40_000], 100)).toEqual({ multiplierBp: 640_000, capped: false })
+    expect(combineOdds([40_000, 40_000, 40_000, 40_000], 100)).toEqual({ multiplierBp: 1_000_000, capped: true })
   })
 
   it('treats no legs as 1x', () => {
@@ -45,9 +50,16 @@ describe('potentialPayout', () => {
     expect(potentialPayout(10, [13_333, 13_333])).toBe(17)
   })
 
-  it('caps at 100x the stake', () => {
-    expect(potentialPayout(10, [40_000, 40_000, 40_000])).toBe(640)
-    expect(potentialPayout(10, [40_000, 40_000, 40_000, 40_000])).toBe(1000)
+  it('caps at 20x the stake', () => {
+    expect(potentialPayout(10, [40_000, 40_000])).toBe(160)
+    expect(potentialPayout(10, [40_000, 40_000, 40_000])).toBe(200)
+  })
+
+  it('pays at most 1,000 DC, or the stake if a parlay placed before the cap staked more', () => {
+    expect(potentialPayout(60, [40_000, 40_000, 40_000])).toBe(1000)
+    expect(potentialPayout(10, [40_000, 40_000, 40_000], 100)).toBe(640)
+    expect(potentialPayout(30, [60_000, 60_000], 100)).toBe(1000)
+    expect(potentialPayout(1500, [20_000, 20_000], 100)).toBe(1500)
   })
 })
 
@@ -60,7 +72,7 @@ describe('formatOdds', () => {
 })
 
 describe('soloPayout', () => {
-  it('counts the stake in both pools, as resolve_market will', () => {
+  it('counts the stake in both real pools, as resolve_market_core will', () => {
     // 10 on an outcome holding 5 of a 20 pool: floor(10 × 30 / 15) = 20.
     expect(soloPayout(10, 5, 20)).toBe(20)
   })

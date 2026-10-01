@@ -12,7 +12,7 @@ export default defineConfig({
         test: { name: 'unit', include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'], exclude: ['tests/db/**'] },
       },
       {
-        test: { name: 'db', include: ['tests/db/**/*.test.ts'], fileParallelism: false, testTimeout: 15_000 },
+        test: { name: 'db', setupFiles: ['./tests/db/setup.ts'], include: ['tests/db/**/*.test.ts'], fileParallelism: false, testTimeout: 15_000 },
       },
     ],
   },

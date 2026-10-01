@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, setBalanceViaLedger, type TestClient } from './helpers'
 import {
   seedMembers,
   makeMember,
@@ -10,16 +9,16 @@ import {
   createTestTask,
   ensureInvited,
   type Member,
-  type TestMarket, giveRole } from './fixtures'
+  type TestMarket, giveRole, backers, backLeg } from './fixtures'
 import { pgQuery } from './pg-query'
 import { readMemberStats, type MemberStats } from '@/lib/members/stats'
 
 let alice: Member
 let bob: Member
 let carol: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
-let carolClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
+let carolClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -32,7 +31,7 @@ beforeEach(async () => {
   await giveRole(alice, 'admin')
 })
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<number> {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<number> {
   const { error } = await client.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[outcomeIndex], p_amount: amount })
   if (error) throw error
   const { data, error: readErr } = await serviceClient()
@@ -55,7 +54,7 @@ async function resolve(market: TestMarket, outcomeIndex: number): Promise<void> 
   if (error) throw error
 }
 
-async function parlay(client: SupabaseClient, outcomeIds: string[], stake: number): Promise<void> {
+async function parlay(client: TestClient, outcomeIds: string[], stake: number): Promise<void> {
   const { error } = await client.rpc('place_parlay', { p_outcome_ids: outcomeIds, p_stake: stake })
   if (error) throw error
 }
@@ -67,7 +66,7 @@ async function submitTask(title: string): Promise<string> {
   return data as string
 }
 
-async function stats(client: SupabaseClient, profileId: string): Promise<MemberStats> {
+async function stats(client: TestClient, profileId: string): Promise<MemberStats> {
   return readMemberStats(client as never, profileId)
 }
 
@@ -88,7 +87,7 @@ describe('member_stats', () => {
     // Refunded: the market is voided.
     const voided = await createTestMarket(aliceClient, ['Yes', 'No'])
     await bet(bobClient, voided, 0, 15)
-    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId })
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId, p_reason: 'Voided in a test' })
     if (voidErr) throw voidErr
 
     // Overridden: Bob first wins 50 on 10 (a gain of 40, which would be his biggest), then an
@@ -99,9 +98,16 @@ describe('member_stats', () => {
     await resolve(overridden, 0)
     await resolve(overridden, 1)
 
-    // A won parlay at 3.00× and 2.00× (seeded, nobody else betting): 6.00×, paying 60 on 10.
+    // A won parlay at 3.00× and 2.00× (the backers' money at close, seed left out): 6.00×, paying
+    // 60 on 10.
     const three = await createTestMarket(aliceClient, ['A', 'B', 'C'], { seed: 20 })
     const two = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    const [first, second] = await backers()
+    for (const { id } of [first, second]) await setBalanceViaLedger(id, 500)
+    await bet(first.client, three, 0, 20)
+    await bet(second.client, three, 1, 40)
+    await bet(first.client, two, 0, 25)
+    await bet(second.client, two, 1, 25)
     await parlay(bobClient, [three.outcomeIds[0], two.outcomeIds[0]], 10)
     await resolve(three, 0)
     await resolve(two, 0)
@@ -109,6 +115,7 @@ describe('member_stats', () => {
     // A lost parlay: one leg loses while the other is still open.
     const lostLeg = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     const stillOpen = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    for (const market of [lostLeg, stillOpen]) await backLeg(market, 1)
     await parlay(bobClient, [lostLeg.outcomeIds[0], stillOpen.outcomeIds[0]], 10)
     await resolve(lostLeg, 1)
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient } from './helpers'
+import { expectError } from './assertions'
 import { ensureInvited, seedMembers, clientFor, createTestMarket, type Member } from './fixtures'
 
 let alice: Member
@@ -41,7 +42,7 @@ describe('place_bet', () => {
       p_outcome_id: outcomeIds[0],
       p_amount: 1000,
     })
-    expect(error).not.toBeNull()
+    expectError(error, { code: '23514', message: 'profiles_balance_check' })
 
     const db = serviceClient()
     const { data: profile } = await db.from('profiles').select('balance').eq('id', bob.id).single()
@@ -66,7 +67,7 @@ describe('place_bet', () => {
       p_outcome_id: outcomeIds[0],
       p_amount: 10,
     })
-    expect(error).not.toBeNull()
+    expectError(error, 'market is not open for betting')
   })
 
   it('rejects an outcome that belongs to a different market', async () => {
@@ -80,7 +81,7 @@ describe('place_bet', () => {
       p_outcome_id: marketB.outcomeIds[0],
       p_amount: 10,
     })
-    expect(error).not.toBeNull()
+    expectError(error, 'outcome does not belong to this market')
   })
 
   it('stacks two bets on the same outcome', async () => {

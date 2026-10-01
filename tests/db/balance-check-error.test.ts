@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { isBalanceCheckViolation } from '@/lib/errors/balance-error'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, backLeg } from './fixtures'
+import type { TestClient } from './helpers'
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -42,6 +42,7 @@ describe('over-balance errors', () => {
         p_amount: 5,
       })
       if (betErr) throw betErr
+      await backLeg({ marketId, outcomeIds }, 1)
       legs.push(outcomeIds[0])
     }
 

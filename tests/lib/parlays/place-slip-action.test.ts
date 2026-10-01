@@ -45,10 +45,12 @@ describe('placeSlipAction', () => {
   })
 
   it('sends solo stakes and the parlay legs to place_slip_v2, then empties the slip', async () => {
-    rpc.mockResolvedValue({ data: { parlay_id: 'parlay-1', solos: 1, picks: [A, B, C], replayed: false }, error: null })
-    from.mockReturnValue({
-      select: () => ({ eq: async () => ({ data: [{ locked_odds: '2.0000' }, { locked_odds: '3.0000' }] }) }),
-    })
+    // A leg's odds are set at close, so the toast's multiplier is the estimate parlay_leg_odds gives now.
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'parlay_leg_odds'
+        ? { data: [{ odds: 2 }, { odds: 3 }], error: null }
+        : { data: { parlay_id: 'parlay-1', solos: 1, picks: [A, B, C], replayed: false }, error: null },
+    )
 
     const result = await placeSlipAction(
       undefined,
@@ -66,6 +68,7 @@ describe('placeSlipAction', () => {
       p_parlay_outcome_ids: [B, C],
       p_parlay_stake: 5,
     })
+    expect(rpc).toHaveBeenCalledWith('parlay_leg_odds', { p_parlay_ids: ['parlay-1'] })
     expect(writeSlip).toHaveBeenCalledWith([])
     expect(revalidatePath).toHaveBeenCalledWith('/', 'layout')
     expect(result).toEqual({ placed: { solos: 1, parlay: { legs: 2, multiplierBp: 60_000, potentialPayout: 30 } } })

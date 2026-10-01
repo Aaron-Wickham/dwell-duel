@@ -138,7 +138,7 @@ beforeAll(async () => {
 
   const { data: resolved, error: marketErr } = await db.from('markets').select('current_resolution_id').eq('id', marketId).single()
   if (marketErr) throw marketErr
-  resolutionId = resolved.current_resolution_id
+  resolutionId = resolved.current_resolution_id!
 
   const { data: oldest, error: ledgerErr } = await db
     .from('coin_transactions')

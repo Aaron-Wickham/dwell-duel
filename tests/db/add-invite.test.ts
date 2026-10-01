@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { addInvite } from '@/lib/invites/add-invite'
 import { serviceClient } from './helpers'
+import { expectError } from './assertions'
 import { seedMembers, clientFor, type Member, giveRole } from './fixtures'
 
 let admin: Member
@@ -69,5 +70,33 @@ describe('addInvite', () => {
       .eq('email', 'sneaky@example.com')
       .maybeSingle()
     expect(data).toBeNull()
+  })
+})
+
+// 0073: an admin's invite names only the email and themselves as the inviter.
+describe('admin_insert_invites', () => {
+  async function inviteRow(email: string) {
+    const { data } = await serviceClient().from('allowed_emails').select('invited_by, claimed_by').eq('email', email).maybeSingle()
+    return data
+  }
+
+  it('records the admin as the inviter when only the email is given', async () => {
+    const adminClient = await clientFor(admin)
+    expect((await adminClient.from('allowed_emails').insert({ email: 'plain@example.com' })).error).toBeNull()
+    expect(await inviteRow('plain@example.com')).toEqual({ invited_by: admin.id, claimed_by: null })
+  })
+
+  it('refuses another member as the inviter', async () => {
+    const adminClient = await clientFor(admin)
+    const { error } = await adminClient.from('allowed_emails').insert({ email: 'named@example.com', invited_by: member.id })
+    expectError(error, { code: '42501', message: 'row-level security policy for table "allowed_emails"' })
+    expect(await inviteRow('named@example.com')).toBeNull()
+  })
+
+  it('refuses an invite that arrives already claimed', async () => {
+    const adminClient = await clientFor(admin)
+    const { error } = await adminClient.from('allowed_emails').insert({ email: 'claimed@example.com', claimed_by: member.id })
+    expectError(error, { code: '42501', message: 'permission denied for table allowed_emails' })
+    expect(await inviteRow('claimed@example.com')).toBeNull()
   })
 })

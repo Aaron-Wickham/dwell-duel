@@ -52,7 +52,10 @@ describe('AdminInvitesPage (#254)', () => {
   it('shows waiting invites by default, each with when it was added and its actions', async () => {
     await renderPage()
     expect(listInvitesPage).toHaveBeenCalledWith({}, { query: '', claimed: false, page: { top: null, bottom: null } })
-    const row = within(screen.getByRole('region', { name: 'Invites' })).getByRole('listitem')
+    const section = screen.getByRole('region', { name: 'Invites' })
+    // Newest first, labelled like Members' A–Z.
+    expect(within(section).getByText('New')).toBeInTheDocument()
+    const row = within(section).getByRole('listitem')
     expect(row).toHaveTextContent('Added Sep 28')
     expect(within(row).getByRole('button', { name: 'Revoke newfriend@example.com' })).toBeInTheDocument()
   })

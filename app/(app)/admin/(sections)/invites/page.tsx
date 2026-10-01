@@ -55,7 +55,7 @@ export default async function AdminInvitesPage(props: PageProps<'/admin/invites'
         <SectionCard title="Invite someone" titleId="invite-someone">
           <AddInviteForm />
         </SectionCard>
-        <SectionCard title="Invites" titleId="invites" className="gap-1">
+        <SectionCard title="Invites" titleId="invites" action={<span className="text-sm text-ink2">New</span>} className="gap-1">
           <div className="flex flex-col gap-3 pt-2 pb-1">
             <SearchField action={PATH} label="Search invites" placeholder="Email" value={query} keep={claimed ? { show: 'claimed' } : {}} />
             <SubNav

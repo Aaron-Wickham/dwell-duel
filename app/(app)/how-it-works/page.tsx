@@ -8,6 +8,7 @@ import { eyebrowClass, Page, PageHeader } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { cardClass } from '@/components/ui/card'
 import { MarkHowItWorksRead } from '@/components/docs/mark-how-it-works-read'
+import { ScrollToHash } from '@/components/docs/scroll-to-hash'
 import type { DocSection } from '@/lib/docs/markdown'
 
 // Clears the sticky top bar (64px on a phone, 72px from md) when a link jumps to a heading, with
@@ -49,6 +50,7 @@ export default function HowItWorksPage() {
     <Page transition="drill-down" width="reading">
       <HistoryBackLink />
       <MarkHowItWorksRead />
+      <ScrollToHash />
       <PageHeader title={<InlineContent nodes={title} />} />
       <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start">
         <nav

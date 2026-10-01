@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { BookOpenText, UserRound } from 'lucide-react'
+import { BookOpenText, ShieldCheck, UserRound } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { resolvePreferences } from '@/lib/preferences/preferences'
@@ -79,15 +79,26 @@ export default async function SettingsPage() {
             />
           </SectionCard>
           <SectionCard title="Help" titleId="settings-help">
-            <p className="text-ink2">Odds, payouts, parlays, results and tasks, explained.</p>
-            <Link
-              href="/how-it-works"
-              transitionTypes={['nav-forward']}
-              className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'self-start no-underline')}
-            >
-              <BookOpenText aria-hidden="true" className="size-[18px]" />
-              How it works
-            </Link>
+            <p className="text-ink2">Odds, payouts, parlays, results and tasks, explained, and what DwellDuel keeps about you.</p>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/how-it-works"
+                transitionTypes={['nav-forward']}
+                className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
+              >
+                <BookOpenText aria-hidden="true" className="size-[18px]" />
+                How it works
+              </Link>
+              {/* The privacy note is How it works' Your data section (docs/HOW-IT-WORKS.md), so it renders in the app. */}
+              <Link
+                href="/how-it-works#how-your-data"
+                transitionTypes={['nav-forward']}
+                className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
+              >
+                <ShieldCheck aria-hidden="true" className="size-[18px]" />
+                Your data
+              </Link>
+            </div>
           </SectionCard>
           <SectionCard title="Account" titleId="settings-account">
             <SignOutButton />

@@ -8,6 +8,9 @@ import { ClosingAlertsWarning } from '@/components/admin/closing-alerts-warning'
 import { readClosingAlertsHealth } from '@/lib/admin/cron-health'
 import { getReviewCounts } from '@/lib/admin/review-counts'
 
+// docs/ADMIN-GUIDE.md on GitHub (the repo is public), so the guide is read where it's maintained.
+const ADMIN_GUIDE_URL = 'https://github.com/Aaron-Wickham/dwell-duel/blob/main/docs/ADMIN-GUIDE.md'
+
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   // Reviewers and up get the Admin header; each page keeps its own, stricter check, because a
   // layout doesn't re-render when you move between its pages.
@@ -30,7 +33,18 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <Page transition="drill-down">
       <div className="flex flex-col gap-4">
-        <PageHeader title="Admin" />
+        <PageHeader
+          title="Admin"
+          description={
+            <>
+              How to invite, resolve, void, review and more:{' '}
+              <a href={ADMIN_GUIDE_URL} target="_blank" rel="noreferrer">
+                the Admin guide
+              </a>
+              .
+            </>
+          }
+        />
         <AdminNav role={role} counts={counts} />
       </div>
       <ClosingAlertsWarning health={closingAlerts} now={now} />

@@ -3,9 +3,15 @@
 Thanks for helping. DwellDuel is a small, invite-only app, and every merge to
 `main` deploys straight to production, so changes go through a pull request.
 
+New here? [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) takes you from a
+fresh machine to your first merged PR, including what collaborator access
+allows and how to test anything that moves coins. This page is just the
+merge rules.
+
 ## How changes get in
 
-1. **Branch** from `main`. Nobody can push to `main` directly.
+1. **Branch** from `main` (in this repo if you have write access, otherwise
+   in a fork). Nobody can push to `main` directly.
 2. **Build it** following [AGENTS.md](AGENTS.md), the conventions every change
    follows. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains how the app
    fits together.
@@ -21,6 +27,8 @@ Thanks for helping. DwellDuel is a small, invite-only app, and every merge to
      again, so what was tested is what merges. CI runs on PRs only, and a
      merge to `main` deploys straight away;
    - every review conversation resolved.
+
+   Aaron merges once all four hold.
 6. Once it's merged, the **Deploy Production** workflow applies any new
    migrations, then deploys the app through Vercel.
 

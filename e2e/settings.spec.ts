@@ -81,3 +81,12 @@ test('the Notifications card saves which notifications you want', async ({ page 
   await card.getByRole('button', { name: 'Save choices' }).click()
   await expect(page.getByText('Notification choices saved.')).toBeVisible()
 })
+
+test('Settings links to How it works and to its Your data section (#286)', async ({ page }) => {
+  await page.goto('/settings')
+  const help = page.getByRole('region', { name: 'Help' })
+  await expect(help.getByRole('link', { name: 'How it works' })).toHaveAttribute('href', '/how-it-works')
+  await help.getByRole('link', { name: 'Your data' }).click()
+  await expect(page).toHaveURL(/\/how-it-works#how-your-data$/)
+  await expect(page.getByRole('heading', { level: 2, name: 'Your data' })).toBeInViewport()
+})

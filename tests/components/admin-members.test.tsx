@@ -120,7 +120,7 @@ describe('AdjustBalanceForm keeps what was filled in (#63)', () => {
   // swallowed as a replay of the first one.
   it('keeps the attempt key for an unchanged retry and starts a new one once amount or reason is edited', async () => {
     adjustBalanceAction.mockRejectedValue(new Error('connection lost'))
-    render(<AdjustBalanceForm member={BEN} now={NOW} />)
+    render(<AdjustBalanceForm member={BEN} />)
     const keyOf = (call: number) => (adjustBalanceAction.mock.calls[call][2] as FormData).get('idempotency_key')
 
     await submit('5', 'Choir bonus')

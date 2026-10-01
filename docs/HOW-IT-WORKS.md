@@ -459,6 +459,70 @@ saying so; nothing else changes. Admins and the owner have no limits.
 Notifications stay on your ten most recently used devices: turning them
 on for an eleventh turns off the one you've used least recently.
 
+## Your data
+
+What DwellDuel keeps about you, who can see it, and for how long.
+
+**What's stored**
+
+- **From Google, when you sign in:** your name, email address and the link
+  to your Google profile picture. DwellDuel never sees your Google
+  password.
+- **What you add:** your display name, photo and bio.
+- **What you do:** your bets, parlays and cancelled bets, the markets you
+  make and resolve, comments, reactions, task submissions with their notes
+  and proof, and every coin that moves (the ledger).
+- **Your devices:** for each device you turn notifications on, its
+  notification address and which browser it is, plus your notification
+  choices. Theme, vibration and animation settings are cookies on the
+  device itself. Your sign-in sessions and when you last signed in are
+  kept too.
+- **Diagnostics:** when something breaks, an error report with your name,
+  cookies and what you typed taken out, and anonymous page-view counts with
+  no cookies.
+
+**Who can see it**
+
+| What | Who |
+|---|---|
+| Your name, photo, bio, profile stats and leaderboard standing | Every member |
+| Your bets and parlays on each market, the markets you make, your comments and reactions, your approved tasks and your wins | Every member (they also show in the feed) |
+| Your email address, and when you joined and last signed in | Admins and the owner only; other members never see your email |
+| Your coin history (every DC in and out, with reasons) | You, and admins through the full ledger |
+| A task submission still waiting or rejected, its note and its proof | You, and reviewers and above |
+| A result's reason and proof | Every member |
+| Your notification devices and choices | Only you |
+
+Nobody outside the group can see anything: every page needs an invited
+sign-in. The owner, who runs DwellDuel, can see everything stored in the
+database.
+
+**Where it's kept:** the database, sign-ins and uploaded files are with
+Supabase, and the app runs on Vercel, both in the US (Ohio). Encrypted
+nightly backups are kept in a private GitHub repository.
+
+**How long it's kept**
+
+- **Proof files:** deleted 30 days after a task submission is reviewed,
+  and 90 days after a market is resolved (see **Proof limits and expiry**
+  under [Tasks](#tasks)). Links aren't files and stay.
+- **A Google account that wasn't invited:** what Google shared is deleted
+  the next day.
+- **A device's notification address:** deleted when you turn
+  notifications off or sign out on it, or after it keeps failing.
+- **A replaced profile photo:** deleted within a couple of days.
+- **Everything else** stays while DwellDuel runs, including after a member
+  is removed, so that everyone's results and balances still add up.
+- **Backups:** each nightly copy is kept for about 60 days, so anything
+  deleted is gone from the backups within about two months.
+
+**Leaving, or asking for your data to be deleted:** ask the owner. They
+can remove you straight away: your invite goes, you're signed out
+everywhere, your notifications stop and you drop off the leaderboards (see
+[Roles](#roles)). Your coins, bets and history stay. If you'd like your
+data deleted as well, say so: the app has no button for that yet, so the
+owner does it by hand.
+
 ## Around the app
 
 - **Home:** your balance, rank, DC at stake and pending rewards, plus
@@ -500,7 +564,7 @@ on for an eleventh turns off the one you've used least recently.
   Settings live.
 - **Settings:** theme (System, Light or Dark), vibration on taps (Android),
   reduced animations, your profile (photo and name), [notifications](#notifications), this How it works
-  page, and sign out. Signing out only signs out the device you're on, and
+  page, [what DwellDuel keeps about you](#your-data), and sign out. Signing out only signs out the device you're on, and
   stops its notifications; your other devices stay signed in.
 - **Install it:** add DwellDuel to your Home Screen for a full-screen app
   with a launch animation. It shows an offline page when you lose

@@ -3,11 +3,11 @@ import { serviceClient } from '../tests/db/helpers'
 
 test('the review queue pages oldest first, with Show more, and the waiting count covers the whole queue', async ({ page }) => {
   const db = serviceClient()
-  const { data: alice, error } = await db.from('profiles').select('id').eq('display_name', 'Alice').single()
+  const { data: bob, error } = await db.from('profiles').select('id').eq('display_name', 'Bob').single()
   if (error) throw error
   const { data: task, error: taskErr } = await db
     .from('tasks')
-    .insert({ title: 'Queue paging check', reward_amount: 1, is_repeatable: true, period: 'daily', created_by: alice.id })
+    .insert({ title: 'Queue paging check', reward_amount: 1, is_repeatable: true, period: 'daily', created_by: bob.id })
     .select('id')
     .single()
   if (taskErr) throw taskErr
@@ -17,7 +17,7 @@ test('the review queue pages oldest first, with Show more, and the waiting count
   const { error: insertErr } = await db.from('task_completions').insert(
     Array.from({ length: total }, (_, i) => ({
       task_id: task.id,
-      profile_id: alice.id,
+      profile_id: bob.id,
       status: 'pending',
       reward_amount: 1,
       period_key: `q${String(i).padStart(2, '0')}`,
@@ -34,7 +34,7 @@ test('the review queue pages oldest first, with Show more, and the waiting count
     await expect(row('00')).toBeVisible()
     await expect(row('49')).toBeVisible()
     await expect(row('50')).toHaveCount(0)
-    // The first button named Approve is still a row's, and the badge counts past the page.
+    // The signed-in owner reviews Bob's rows (never their own, 0046). The first button named Approve is still a row's, and the badge counts past the page.
     await expect(queue.getByRole('button', { name: 'Approve' }).first()).toBeVisible()
     await expect(queue.getByText(/\d+ waiting/)).toBeVisible()
 

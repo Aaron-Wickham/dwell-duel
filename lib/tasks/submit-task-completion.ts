@@ -44,6 +44,10 @@ export async function submitTaskCompletionAction(taskId: string, _prevState: Act
     return { formError: 'Your attachments didn’t come through. Try again.' }
   }
 
+  if (attachments.some((a) => a.kind === 'link' && a.url.length > TEXT_LIMITS.proofLink)) {
+    return { formError: tooLong('Link', TEXT_LIMITS.proofLink) }
+  }
+
   const { data: completionId, error } = await supabase.rpc('submit_task_completion', {
     p_task_id: taskId,
     p_note: note || undefined,

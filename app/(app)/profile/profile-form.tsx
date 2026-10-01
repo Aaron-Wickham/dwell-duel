@@ -126,8 +126,12 @@ export function ProfileForm({
           </fieldset>
         </div>
 
-        <SectionCard title="Preview" titleId="profile-preview-title" className="hidden lg:flex">
-          <p className="text-sm text-ink2">How your profile looks to other members.</p>
+        <SectionCard
+          title="Preview"
+          titleId="profile-preview-title"
+          description="How your profile looks to other members."
+          className="hidden lg:flex"
+        >
           <MemberProfileHeader name={name.trim() || displayName} avatarSrc={shownSrc} bio={bioText.trim() || null} heading={false} />
         </SectionCard>
       </div>

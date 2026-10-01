@@ -101,7 +101,7 @@ export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[];
                   {own ? (
                     <span aria-hidden="true" className="min-w-11 shrink-0" />
                   ) : (
-                  <label className="inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center">
+                  <label className="pressable inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center">
                     {/* Outside the bulk form (row forms can't nest inside it), so the form attribute joins it. */}
                     <input
                       type="checkbox"
@@ -142,7 +142,7 @@ export function PendingApprovals({ pending, viewerId }: { pending: PendingRow[];
 
           {/* After the rows, not above them as drawn: the e2e suite clicks the first button named "Approve", which must be a row's. */}
           <div className="flex flex-col gap-3 rounded-[14px] bg-sunk p-3.5">
-            <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
+            <label className="pressable inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
               <input
                 type="checkbox"
                 checked={allSelected}

@@ -6,6 +6,11 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 
 ## Unreleased
 
+### Polish
+- **Accessibility fixes (#268).** Error toasts use the app's loss colours (5.65:1 in light, 7.18:1 in dark, where Sonner's own red was 4.35:1), the phone tab bar's active pill, Admin button and profile ring, and SubNav's selected pill, now carry an edge that reaches 3:1 on the page in light mode, and the Leaders tab's accessible name is "Leaders, leaderboard", so voice control hears the word on screen.
+- **My bets on desktop (#269).** Parlay and bet tiles tint on hover like every other row inside a card, instead of lifting, and the grid aligns tiles to the top, so a tall parlay no longer stretches its neighbours.
+- **Smaller fixes (#270).** A proof link longer than 2000 characters is refused in the picker (and by the task and resolve actions) with a plain message, instead of failing the whole submission; market, outcome and slip titles share the row title size; the Preview and race cards put their line in the description slot; more tap targets press; removing outcomes in Create market keeps keyboard focus; the global error page follows your theme; unknown URLs show the 404 inside the app's header and tab bar, with copy that no longer blames a removed market; `/admin` opens its first section and `/members` the leaderboard; long names on the podium wrap over up to three lines instead of cutting off at one.
+
 ## v0.5.2-beta — 2026-09-30
 
 An Admin › Markets tab for the markets waiting on a result, with tab counts that add up to the Admin badge, and rows inside cards that tint on hover instead of floating like a button inside a button.

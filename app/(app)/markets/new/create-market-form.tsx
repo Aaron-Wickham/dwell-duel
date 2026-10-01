@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Textarea } from '@/components/ui/field'
@@ -58,9 +58,20 @@ export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
     setOutcomes((prev) => (prev.length >= MAX_OUTCOMES ? prev : [...prev, '']))
   }
 
+  // Removing the last row unmounts the focused button, and reaching the minimum disables it, so
+  // either would drop a keyboard user's focus onto <body>. It moves to the input beside it instead.
+  const focusOutcomeAfterRemove = useRef<number | null>(null)
   function removeOutcome(index: number) {
+    if (outcomes.length <= MIN_OUTCOMES) return
+    const left = outcomes.length - 1
+    if (index === left || left <= MIN_OUTCOMES) focusOutcomeAfterRemove.current = Math.min(index, left - 1)
     setOutcomes((prev) => (prev.length <= MIN_OUTCOMES ? prev : prev.filter((_, i) => i !== index)))
   }
+  useEffect(() => {
+    if (focusOutcomeAfterRemove.current === null) return
+    document.getElementById(`cm-outcome-${focusOutcomeAfterRemove.current}`)?.focus()
+    focusOutcomeAfterRemove.current = null
+  }, [outcomes])
 
   // Too few outcomes points at the first input; a too-long label points at its own.
   const outcomeInvalid = (index: number) =>

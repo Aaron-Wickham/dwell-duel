@@ -210,7 +210,7 @@ function PrefsForm({ prefs, reviewer }: { prefs: NotificationPrefs; reviewer: bo
         <legend className="mb-1.5 text-[15px] font-bold">Notify me about</legend>
         {(reviewer ? [...KINDS, REVIEWER_KIND] : KINDS).map(({ kind, label, hint }) => (
           <div key={kind} className="flex flex-col gap-0.5">
-            <label className="inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
+            <label className="pressable inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
               <input
                 type="checkbox"
                 name={kind}

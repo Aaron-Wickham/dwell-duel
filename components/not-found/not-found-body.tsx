@@ -10,7 +10,7 @@ export function NotFoundBody() {
           4<span className="text-wm-b">0</span>4
         </p>
         <h1 className={h1Class}>Page not found</h1>
-        <p className="text-ink2">This page wandered off. The link may be old, or the market was removed.</p>
+        <p className="text-ink2">This page wandered off. The link may be old, or what it pointed to was removed.</p>
         <Link href="/" className={buttonVariants({ variant: 'primary' })}>
           Back home
         </Link>

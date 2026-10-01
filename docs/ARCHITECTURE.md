@@ -63,11 +63,11 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
 | `/feed` | Everyone's activity, with reactions, live |
 | `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`) |
-| `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings |
+| `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings. `/members` alone redirects to the leaderboard |
 | `/profile` | Edit your name, photo and bio |
 | `/settings` | Theme, your profile, haptics, reduced motion, notifications, How it works, sign out |
 | `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`) |
-| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role; Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); the ledger opens with the owner's Economy card |
+| `/admin` redirects to the first section the role can see (`adminHref`) · `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role; Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); the ledger opens with the owner's Economy card |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/not-invited` and `/offline`. The API has two routes.
@@ -551,7 +551,14 @@ layout renders them as attributes on `<html>` (`data-theme`,
 `data-haptics`, `data-motion`), so they apply before any script runs.
 `motion-reduce:` in CSS covers both the device setting and the app's own.
 Sonner only hears the device setting, so `globals.css` stills its toasts
-under `data-motion="reduce"` itself.
+under `data-motion="reduce"` itself. Its error toasts take the `--loss` tokens like its
+success ones take `--acc-*` (`components/ui/toaster.tsx`), so they meet AA in both themes.
+`app/global-error.tsx` replaces the root layout, so it copies the theme, motion and haptics
+cookies onto `<html>` itself once it mounts.
+
+**Not found.** `app/(app)/[...missing]/page.tsx` calls `notFound()` for any URL that matches no
+route, so the 404 renders inside the signed-in layout (nav and tab bar) instead of falling to
+the bare root `app/not-found.tsx`; signed out, the layout passes the page through unchanged.
 
 **Motion.** Every curve and duration is a token in `globals.css`'s
 `@theme static` block (`--ease-ios`, `--ease-pop`, `--duration-press` …
@@ -563,7 +570,7 @@ slide, `PILL_SLIDE` / `PILL_TRANSITION`: 280ms on the iOS curve.
 The three dialogs share `components/ui/dialog-classes.ts`. `pressable`
 shrinks every control on press and, under a mouse only, grows it; a
 tappable card adds `hover-lift` and lifts onto `--lift-shadow`
-instead, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins).
+instead, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244; My bets' parlay and bet tiles too, #269), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins).
 
 **Getting started.** Home's onboarding card (`components/home/onboarding-card.tsx`)
 reads its three steps from real data in `lib/home/onboarding.ts`, with

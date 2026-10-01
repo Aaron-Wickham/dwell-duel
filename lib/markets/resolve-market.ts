@@ -41,6 +41,10 @@ export async function resolveMarketAction(
     return { formError: 'Your attachments didn’t come through. Try again.' }
   }
 
+  if (attachments.some((a) => a.kind === 'link' && a.url.length > TEXT_LIMITS.proofLink)) {
+    return { formError: tooLong('Link', TEXT_LIMITS.proofLink) }
+  }
+
   const { error } =
     actual !== null
       ? await supabase.rpc('resolve_over_under', { p_market_id: marketId, p_actual: actual, p_note: note, p_attachments: attachments })

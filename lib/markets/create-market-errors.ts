@@ -1,7 +1,8 @@
 import type { KnownError } from '@/lib/errors/friendly-error'
-import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
+import { RATE_LIMIT_ERRORS, TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 
-// create_market's raises (supabase/migrations/0043) and the constraints its inserts can trip.
+// create_market's raises (supabase/migrations/0043), the write limit (0078) and the constraints its
+// inserts can trip.
 export const CREATE_MARKET_ERRORS: readonly KnownError<'title' | 'description' | 'close_at' | 'outcomes' | 'line'>[] = [
   { match: 'not invited', formError: 'Only invited members can create markets.' },
   { match: 'invalid market kind', formError: 'Choose a market kind.' },
@@ -10,6 +11,7 @@ export const CREATE_MARKET_ERRORS: readonly KnownError<'title' | 'description' |
   { match: 'a binary market must have exactly 2 outcomes', formError: 'A Yes/No market needs exactly 2 outcomes.', field: 'outcomes' },
   { match: 'a market may have at most 6 outcomes', formError: 'A market can have at most 6 outcomes.', field: 'outcomes' },
   { match: 'close time must be in the future', formError: 'Choose a close time in the future.', field: 'close_at' },
+  RATE_LIMIT_ERRORS.market,
   { match: 'markets_title_length', formError: tooLong('Title', TEXT_LIMITS.marketTitle), field: 'title' },
   { match: 'markets_description_length', formError: tooLong('Description', TEXT_LIMITS.marketDescription), field: 'description' },
   { match: 'market_outcomes_label_length', formError: tooLong('Each outcome', TEXT_LIMITS.outcomeLabel), field: 'outcomes' },

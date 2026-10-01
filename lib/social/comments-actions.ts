@@ -3,7 +3,7 @@
 import { refresh } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
-import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
+import { RATE_LIMIT_ERRORS, TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { isUuid } from '@/lib/uuid'
 
 export type CommentState = { formError?: string; posted?: boolean } | undefined
@@ -24,7 +24,9 @@ export async function postCommentAction(marketId: string, _prev: CommentState, f
   const { error } = await supabase.from('market_comments').insert({ market_id: marketId, profile_id: user.id, body })
   if (error) {
     // 23503: the market was deleted while the form was open.
-    return { formError: error.code === '23503' ? 'This market no longer exists.' : 'Couldn’t post your comment. Try again.' }
+    if (error.code === '23503') return { formError: 'This market no longer exists.' }
+    if (error.message === RATE_LIMIT_ERRORS.comment.match) return { formError: RATE_LIMIT_ERRORS.comment.formError }
+    return { formError: 'Couldn’t post your comment. Try again.' }
   }
 
   refresh()

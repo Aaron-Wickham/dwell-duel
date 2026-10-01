@@ -20,7 +20,9 @@ import { Page, PageHeader } from '@/components/ui/page'
 import { HomeHero } from '@/components/home/home-hero'
 import { HomeTiles, type HomeTile } from '@/components/home/home-tiles'
 import { InstallCard } from '@/components/home/install-card'
-import { adminTileSubtitle, leaderboardTileSubtitle, marketsTileSubtitle } from '@/lib/home/copy'
+import { NotificationsCard } from '@/components/home/notifications-card'
+import { adminTileHref, adminTileSubtitle, leaderboardTileSubtitle, marketsTileSubtitle } from '@/lib/home/copy'
+import { getTaskRewardRange } from '@/lib/tasks/list-tasks'
 import { feedbackHref } from '@/lib/app-shell/feedback'
 import { FALLBACK_NAME } from '@/lib/profile/fallback-name'
 
@@ -56,6 +58,9 @@ export default async function Home() {
 
   const rank = standing?.rank ?? 0
   const memberCount = standing?.memberCount ?? 0
+  const balance = standing?.balance ?? 0
+  // Only a member with nothing left sees what tasks pay, so only they pay for the read.
+  const taskRewards = balance === 0 ? await getTaskRewardRange(supabase) : null
 
   const tiles: HomeTile[] = [
     { id: 'markets', href: '/markets', icon: ChartColumn, title: 'Markets', subtitle: marketsTileSubtitle(openMarketCount) },
@@ -73,10 +78,10 @@ export default async function Home() {
   if (adminLink) {
     tiles.push({
       id: 'admin',
-      href: adminLink,
+      href: adminTileHref(reviewCounts, adminLink),
       icon: ShieldCheck,
       title: 'Admin',
-      subtitle: adminTileSubtitle(reviewCounts.tasks),
+      subtitle: adminTileSubtitle(reviewCounts),
     })
   }
   tiles.push({
@@ -92,15 +97,17 @@ export default async function Home() {
       <PageHeader title={`Welcome, ${standing?.displayName ?? FALLBACK_NAME}`} />
       <LiveTables subscriptions={pageSubscriptions.home({ me: user.id, reviewer: atLeast(role, 'reviewer') })} />
       <HomeHero
-        balance={standing?.balance ?? 0}
+        balance={balance}
         rank={rank}
         memberCount={memberCount}
         atStakeDc={atStake.dc}
         atStakeWagers={atStake.wagers}
         pendingCount={pendingReviews.count}
         pendingDc={pendingReviews.dc}
+        taskRewards={taskRewards}
       />
       <OnboardingCard steps={onboarding} />
+      <NotificationsCard onboardingShown={onboarding !== null} />
       <MarketsToResolveCard {...marketsToResolve} />
       <RefreshAt at={nextResolveCheck} />
       <WeeklyRecapCard recap={weeklyRecap} />

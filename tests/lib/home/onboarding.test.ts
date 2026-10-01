@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { DbClient } from '@/lib/supabase/database'
 
-const jar = { get: vi.fn(), set: vi.fn() }
+const jar = { get: vi.fn(), has: vi.fn(), set: vi.fn() }
 vi.mock('next/headers', () => ({ cookies: async () => jar }))
 
 import { getOnboarding, ONBOARDING_COOKIE, ONBOARDING_DISMISSED } from '@/lib/home/onboarding'
 import { dismissOnboardingAction } from '@/lib/home/dismiss-onboarding'
+import { HOW_IT_WORKS_READ_COOKIE } from '@/lib/home/how-it-works-read'
 
 // my_onboarding (0071) answers the three steps in one row.
 function client(steps: { photo: boolean; bet: boolean; task: boolean }) {
@@ -15,15 +16,22 @@ function client(steps: { photo: boolean; bet: boolean; task: boolean }) {
 
 beforeEach(() => {
   jar.get.mockReset()
+  jar.has.mockReset().mockReturnValue(false)
   jar.set.mockReset()
 })
 
 describe('getOnboarding', () => {
   it('reads the three steps in one call', async () => {
     const { supabase, rpc } = client({ photo: true, bet: false, task: true })
-    expect(await getOnboarding(supabase)).toEqual({ photo: true, bet: false, task: true })
+    expect(await getOnboarding(supabase)).toEqual({ learn: false, photo: true, bet: false, task: true })
     expect(rpc).toHaveBeenCalledTimes(1)
     expect(rpc).toHaveBeenCalledWith('my_onboarding')
+  })
+
+  it('counts How it works as read once its page has set the cookie (#260)', async () => {
+    jar.has.mockImplementation((name: string) => name === HOW_IT_WORKS_READ_COOKIE)
+    const { supabase } = client({ photo: false, bet: false, task: false })
+    expect(await getOnboarding(supabase)).toEqual({ learn: true, photo: false, bet: false, task: false })
   })
 
   it('throws when the read fails, so Home shows its error page rather than a wrong checklist', async () => {

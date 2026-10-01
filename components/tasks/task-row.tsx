@@ -18,7 +18,8 @@ export function PendingReviewChip() {
 
 export type TaskRowState =
   | { kind: 'pending'; proofCount?: number }
-  | { kind: 'approved' }
+  // again: when a repeating task can be done again, from its period; null for a one-off.
+  | { kind: 'approved'; again?: string | null }
   // rejection: the latest submission was turned down; the reason is optional (#200).
   | { kind: 'available'; rejection?: { note: string | null } | null }
 
@@ -76,10 +77,13 @@ export function TaskRow({
           </>
         )}
         {state.kind === 'approved' && (
-          <StatusChip tone="open">
-            <Check aria-hidden="true" className="size-4" />
-            Approved
-          </StatusChip>
+          <>
+            <StatusChip tone="open">
+              <Check aria-hidden="true" className="size-4" />
+              Approved
+            </StatusChip>
+            {state.again && <p className="text-sm text-ink2">{state.again}</p>}
+          </>
         )}
         {state.kind === 'available' && (
           <>

@@ -14,7 +14,7 @@ import { createMarketAction, type ActionState } from '@/lib/markets/create-marke
 import { formatLine, type MarketKind } from '@/lib/markets/kind'
 import { computeOdds } from '@/lib/markets/odds'
 import { MarketCard } from '@/components/markets/market-card'
-import { h2Class } from '@/components/ui/page'
+import { h2Class, labelClass } from '@/components/ui/page'
 import { nextWeeklyClose } from '@/lib/markets/weekly-close'
 import { useTimeZone } from '@/components/ui/local-time'
 
@@ -107,7 +107,7 @@ export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
         </Field>
 
         <fieldset className="flex flex-col gap-1.5">
-          <legend className="text-[15px] font-bold">Type</legend>
+          <legend className={labelClass}>Type</legend>
           <div className="grid grid-cols-1 gap-1.5 rounded-[14px] bg-sunk p-1 md:grid-cols-3">
             <label className={toggleClass(kind === 'binary')}>
               <input
@@ -176,7 +176,7 @@ export function CreateMarketForm({ initial }: { initial?: MarketPrefill }) {
           </Field>
         ) : (
           <fieldset className="flex flex-col gap-2">
-            <legend className="text-[15px] font-bold">Outcomes</legend>
+            <legend className={labelClass}>Outcomes</legend>
             <span className="text-sm text-ink2">
               Up to {MAX_OUTCOMES} outcomes · {outcomes.length} of {MAX_OUTCOMES} used
             </span>

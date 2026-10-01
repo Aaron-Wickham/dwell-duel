@@ -1,5 +1,5 @@
 // Seasons are calendar months in America/New_York (0051), the same clock settle_season uses.
-const SEASON_TIME_ZONE = 'America/New_York'
+import { GROUP_TIME_ZONE } from '@/lib/group-time-zone'
 
 export function signedDc(amount: number): string {
   const sign = amount > 0 ? '+' : amount < 0 ? '−' : ''
@@ -21,9 +21,9 @@ export function seasonName(season: string, now: Date = new Date()): string {
 }
 
 export function currentSeasonName(now: Date = new Date()): string {
-  return now.toLocaleString('en-US', { month: 'long', timeZone: SEASON_TIME_ZONE })
+  return now.toLocaleString('en-US', { month: 'long', timeZone: GROUP_TIME_ZONE })
 }
 
 function currentSeasonYear(now: Date): number {
-  return Number(now.toLocaleString('en-US', { year: 'numeric', timeZone: SEASON_TIME_ZONE }))
+  return Number(now.toLocaleString('en-US', { year: 'numeric', timeZone: GROUP_TIME_ZONE }))
 }

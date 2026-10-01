@@ -1,6 +1,6 @@
 // The group lives on Eastern time, so the recap's days are America/New_York's, whatever zone the
 // server or the member is in. weekly_recap (0056) turns a week's Monday into instants the same way.
-const RECAP_TIME_ZONE = 'America/New_York'
+import { GROUP_TIME_ZONE } from '@/lib/group-time-zone'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -10,7 +10,7 @@ export type RecapWeek = { mode: 'so-far' | 'last'; monday: string; sunday: strin
 
 export function easternDay(now: Date): { date: string; weekday: number } {
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: RECAP_TIME_ZONE,
+    timeZone: GROUP_TIME_ZONE,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',

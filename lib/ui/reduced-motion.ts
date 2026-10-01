@@ -5,11 +5,11 @@ import { useSyncExternalStore } from 'react'
 const QUERY = '(prefers-reduced-motion: reduce)'
 
 // The Settings choice, set on <html> by the root layout and flipped in place by the Settings page.
-export function motionSettingReduced(): boolean {
+function motionSettingReduced(): boolean {
   return document.documentElement.dataset.motion === 'reduce'
 }
 
-export function deviceReducesMotion(): boolean {
+function deviceReducesMotion(): boolean {
   return window.matchMedia(QUERY).matches
 }
 

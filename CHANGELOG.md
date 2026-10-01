@@ -20,6 +20,7 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 - **The Markets tab opens on markets you can bet on.** Open markets now come first on the All tab however many are waiting on a result, with Awaiting resolution as its own list and its own Show more; before, 50 or more awaiting markets filled the first page. Home's open-market count leaves out markets past their close (#261).
 - **The task review queue pages.** Admin › Tasks lists the oldest 50 pending submissions with "Show more", signs proof files only for the rows on screen, and takes its "waiting" badge from the whole queue instead of the page shown (#255).
 - **Removed members are no longer ranked.** They drop off both leaderboards, out of "Rank X of N", the month's champion and the weekly recap's best call and top tasker; their profile still shows their net worth, marked "Not ranked". Admin › Members marks them Removed, and the owner can invite them again from their page, after a confirmation (#265).
+- **Creator stakes stay within the URL limit.** A deep feed window asks about each chunk of 50 markets with only that chunk's creators, not every creator on the page (#272).
 
 ### Under the hood
 - **Live updates fit the free tiers at 1,000 members.** Group-wide changes (markets, pools, the feed, reactions, tasks and the review queue) now arrive as one private Broadcast ping per topic per transaction, at most one every 5 seconds, instead of a message per row to every open page, so a 150-winner resolution sends one ping rather than 150; only invited members can join, and only reviewers the review queue. A tab hidden for a minute closes its live channels and catches up when it returns, and a channel that can't join (past the connection cap, say) falls back to refreshing every minute instead of going quiet. The busiest topics, bets moving pools and the feed, refresh an open `/markets` or feed at most every 15 seconds. The proxy no longer runs on link prefetches, and the nav, tabs and long lists prefetch a page when you point at, focus or (for the nav) touch its link rather than whenever it scrolls into view. The Realtime and Vercel budget is modelled in `docs/ARCHITECTURE.md` (#250, #251).
@@ -34,6 +35,9 @@ is live at [www.dwellduel.com](https://www.dwellduel.com), and every merge to
 ### Features
 - **Admin › Members and Invites work at a thousand members.** Both have a search box (Members by name or email, Invites by email), tabs (Members: Active · Removed; Invites: Waiting · Claimed) with counts, and "Show more" paging, so nobody past the 1,000th row is silently dropped. Members are compact read-only rows; each opens the member's own Admin page with Adjust balance, Role, their last coin movements ("Open in Ledger", which filters Admin › Ledger to them with `?member=`) and Remove from DwellDuel. New-market notifications now reach every opted-in member past the first 1,000 (#254).
 - **Lists can be narrowed.** Markets has a title search and "Everyone's · I bet on · I made" chips (a search or a chip lists matches as one flat list, newest first), the Feed has All, Results and Mine tabs, and on a phone the Net worth board has a compact standing card whose "Jump to me" opens the list ten ranks above your own row, so a member ranked 600 no longer pages down twelve times (#264).
+
+### Polish
+- **Code nits.** One `GROUP_TIME_ZONE` for seasons, the recap week and the economy month; one shared `labelClass` for field labels and legends; exports nothing else uses are no longer exported (#272).
 
 ## v0.6.0-beta — 2026-10-01
 

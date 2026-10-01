@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
-import { h2Class } from '@/components/ui/page'
+import { h2Class, labelClass } from '@/components/ui/page'
 import { StatusChip } from '@/components/ui/status-chip'
 import type { SlipPick } from '@/lib/parlays/get-slip'
 import {
@@ -174,7 +174,7 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
           {!pick.parlay && (
             <>
               <div className="flex flex-wrap items-center gap-3">
-                <label htmlFor={stakeId} className="text-[15px] font-bold">
+                <label htmlFor={stakeId} className={labelClass}>
                   Stake (DC)
                 </label>
                 <Input
@@ -332,7 +332,7 @@ export function SlipPanel() {
             <p className="text-sm text-ink2">{legNote}</p>
           ) : (
             <div className="flex flex-wrap items-center gap-3">
-              <label htmlFor="slip-parlay-stake" className="text-[15px] font-bold">
+              <label htmlFor="slip-parlay-stake" className={labelClass}>
                 Stake (DC)
               </label>
               <Input

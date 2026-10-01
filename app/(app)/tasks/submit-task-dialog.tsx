@@ -9,7 +9,7 @@ import { dialogBackdropClass, dialogPopupClass } from '@/components/ui/dialog-cl
 import { Field, Textarea } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
-import { h2Class } from '@/components/ui/page'
+import { h2Class, labelClass } from '@/components/ui/page'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import { discardProof, uploadProof } from '@/lib/proof/upload'
@@ -109,7 +109,7 @@ export function SubmitTaskDialog({
               />
             </Field>
             <fieldset className="flex flex-col gap-2">
-              <legend className="mb-1.5 text-[15px] font-bold">{proofRequired ? 'Proof' : 'Proof (optional)'}</legend>
+              <legend className={`mb-1.5 ${labelClass}`}>{proofRequired ? 'Proof' : 'Proof (optional)'}</legend>
               <ProofPicker id={`${id}-proof`} value={drafts} onChange={setDrafts} />
             </fieldset>
             {state?.formError && (

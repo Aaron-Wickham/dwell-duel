@@ -73,7 +73,8 @@ Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/not-invited` and `/offline`. The API has three routes.
 `/api/cron/keep-alive`, which a daily Vercel cron calls so the free
 Supabase project never pauses. It also deletes unattached proof files and
-attempt keys older than a day, calls `settle_season()` to post last
+attempt keys older than a day, expires reviewed proof, removes avatar files
+no profile points at, reports Storage use (#253, below), calls `settle_season()` to post last
 month's champion to the feed (a no-op once it's posted), and runs
 `sendClosingAlerts`, the daily backstop for the closing alerts: both the
 creator's reminder to resolve and the admins' alert for a closed market
@@ -95,7 +96,8 @@ doesn't, `Cache-Control: no-store`, no member data, and outside the proxy
 (`proxy.ts`'s matcher) so it doesn't depend on Auth.
 
 The daily keep-alive runs its steps independently (database touch, proof
-cleanup, key cleanup, season settle, resolve reminders): a failing step is
+cleanup, proof retention, avatar cleanup, storage usage, key cleanup, season
+settle, resolve reminders): a failing step is
 logged, captured and named in the response, the rest still run, and the
 route answers 502 at the end if any failed (#259). It then pings the
 heartbeat, below.
@@ -268,7 +270,9 @@ title is fixed once anyone else has bet, solo or as a parlay leg, 0065), `member
 members can't select `profiles.email`), `member_activity` (admin only, 0050:
 each member's join date, `profiles.created_at`, and last sign-in from
 `auth.users`, for Admin → Members), `stray_proof_objects` (service role:
-the daily cron deletes proof files nothing attached),
+the daily cron deletes proof files nothing attached), `expired_proof_attachments`,
+`mark_proof_expired`, `stray_avatar_objects` and `storage_usage` (service role,
+0077), `proof_upload_quota_ok` (the upload policy's per-day cap),
 `set_member_role`, `delete_market` (refuses a market with any bet, cancelled
 bet or parlay leg; the market page shows the button only when the pool is
 empty and `lib/markets/bet-history.ts`'s two head counts find nothing),
@@ -410,6 +414,7 @@ after it ships. They roughly follow the project's history:
 | 0070 | Speed at scale (#204, #205): `markets.sparkline` filled by the `cache_market_sparkline` trigger when a market resolves or voids (backfilled), `market_outcomes` in the realtime publication, and `parlays_pending_profile_idx` for `stakes_riding` |
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
+| 0077 | Storage caps and retention (#253): proof bucket 3 MB and no Word files, a per-member daily upload quota, `record_proof` caps (5 attachments, 3 files, 6 MB), submitted proof can't be deleted, `proof_attachments.expired_at` with `expired_proof_attachments` / `mark_proof_expired`, `stray_avatar_objects`, `storage_usage` |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
@@ -473,6 +478,28 @@ role changes ask the same way. Files upload straight from the browser to the
 private `proof` bucket (`lib/proof/upload.ts`), then `record_proof`
 checks the paths when the RPC runs. Pages show proof through short-lived
 signed URLs made with the viewer's own session.
+
+**Storage caps and retention (#253, 0077).** The free plan holds 1 GB across
+the `proof` and `avatars` buckets, so the limits live in the database, not
+only the browser. The `proof` bucket takes 3 MB a file and images, PDF and
+plain text only. `proof_insert` also calls `proof_upload_quota_ok()`: at most
+30 uploads and 60 MB per member per rolling day. `record_proof` takes at
+most 5 attachments, 3 of them files, 6 MB of files together (read from
+Storage's own object size, not the client's). `proof_delete_own` only lets a
+member delete an upload no `proof_attachments` row holds, so submitted proof
+can't be removed. The browser shrinks photos to 1200px at quality 0.7 (WebP,
+JPEG where WebP can't be encoded; `lib/proof/downscale.ts`) and mirrors the
+caps in `lib/proof/types.ts`. The daily keep-alive runs three storage steps:
+`proof retention` (`expired_proof_attachments(30, 90)` lists attachments of
+task submissions reviewed over 30 days ago and of resolutions over 90 days
+old; it removes the files, then `mark_proof_expired` stamps
+`proof_attachments.expired_at` and keeps the row, and `toProofViews` /
+`ProofList` show "expired" instead of a link), `avatar cleanup`
+(`stray_avatar_objects`: avatar files over a day old that no
+`profiles.avatar_path` names, which also covers a replaced avatar whose
+remove failed) and `storage usage` (`storage_usage()`: its `storageMb` is in
+the cron response, and the step fails, so the heartbeat pings `/fail`, past
+800 MB). That is the ops check: when it fails, shorten the retention windows.
 
 **Live updates.** A page declares the tables it shows with
 `<LiveTables subscriptions={pageSubscriptions.x(…)}>`. `LiveRefresh` keeps

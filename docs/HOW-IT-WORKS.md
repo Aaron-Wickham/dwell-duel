@@ -154,8 +154,8 @@ full ledger) can see it.
   what, bets and parlay picks alike ("Creator has 40 DC on Yes"), and so does
   its result in the feed. The resolver picks the winner (or, for an Over/Under,
   types the actual number) and **must say why**. They can attach photos,
-  files or links as proof. The reason and proof show on the market page
-  and in the feed. Before anything is paid, the app asks them to confirm,
+  files or links as proof (see **Proof limits and expiry** under Tasks). The
+  reason and proof show on the market page and in the feed. Before anything is paid, the app asks them to confirm,
   naming the winner ("Yes wins").
 - **Reminders:** bettors' DC and parlays wait on a market awaiting
   resolution until it's resolved, so Home shows **Markets to resolve** to
@@ -181,6 +181,17 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   Monday, and so on.
 - You submit a task once per period, with an optional note. Some tasks
   **require proof**: a photo, file or link.
+- **Proof limits and expiry.** Proof is a photo, a PDF or a text file, or a
+  link: up to 5 attachments, no more than 3 of them files, 3 MB a file and
+  6 MB of files together. Photos are shrunk on your device before they upload.
+  There's also a daily upload allowance (30 files or 60 MB), which an honest
+  submission never comes near. Once you've submitted proof you can't delete it.
+  So that the app's free storage doesn't fill up, the **files expire**: proof
+  on a task submission that has been approved or rejected is deleted **30 days
+  after the review**, and proof on a market's result **90 days after it was
+  resolved**. A pending submission's proof is kept until it's reviewed. After
+  expiry the row still says how many attachments there were and that they've
+  expired; links aren't files and stay.
 - A **reviewer** approves it, which pays the reward, or rejects it,
   optionally saying why. Your row then says "Not approved", with the
   reason if they gave one, and you can submit again. Nobody reviews their

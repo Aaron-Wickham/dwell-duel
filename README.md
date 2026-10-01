@@ -32,12 +32,13 @@ parlays; and everything that happens shows up in a live feed.
 - **Markets:** Yes/No, multiple choice (up to 6 outcomes) or Over/Under
   with a .5 line. Each has a live chance chart, a closing time and an edit
   history.
-- **Seeded shared-pool odds:** every outcome starts with 20 DC, so a new
-  market has odds from the start, and the percentages always match what
-  gets paid.
+- **Shared-pool odds with a seed:** each outcome's chance counts a 20 DC
+  seed, so a new market shows an even split from the start; winners split
+  exactly the real pool, and the seed is never paid out.
 - **One slip for every bet:** add outcomes from any market, mark each
   Solo or Parlay, and place them all at once.
-- **Parlays:** 2–10 legs, odds locked at placement, capped at 100×.
+- **Parlays:** 2–10 legs, each priced from other members' money when its
+  market closes, capped at 5× a leg, 20× a parlay and 1,000 DC paid.
 - **Results with receipts:** resolving needs a reason and can carry
   photos, files or links. Admins can override (blocked if a past winner has
   already spent their winnings) or void (everyone is refunded).
@@ -79,14 +80,17 @@ model, the key flows and the migrations.
 | Doc | For |
 |---|---|
 | [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) | New here? Tools, local Supabase, sign-in, tests and your first PR, in order |
-| [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) | The rules: odds, payouts, parlays, results, tasks, roles |
+| [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) | The rules: odds, payouts, parlays, results, tasks, roles, and what data the app keeps |
+| [docs/ADMIN-GUIDE.md](docs/ADMIN-GUIDE.md) | For reviewers, admins and the owner: invites, resolving, voiding, tasks, members and balances |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code fits together |
+| [docs/OPERATIONS.md](docs/OPERATIONS.md) | Running production: deploys, rollback, backups, rotating secrets, incidents, free-tier limits |
+| [docs/RELEASING.md](docs/RELEASING.md) | Cutting a release |
 | [AGENTS.md](AGENTS.md) | Conventions every change follows (read this before contributing) |
 | [CHANGELOG.md](CHANGELOG.md) | What shipped in each release |
 | [docs/design/app-redesign-handoff.md](docs/design/app-redesign-handoff.md) | The visual source of truth and the design canvas |
-| [docs/README.md](docs/README.md) | An index of every doc, including the dated specs and plans |
+| [docs/README.md](docs/README.md) | An index of every doc, including the archived specs and plans |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How changes get in: branches, pull requests and required review |
-| [SECURITY.md](SECURITY.md) | How to report a vulnerability privately |
+| [SECURITY.md](SECURITY.md) | The security policy: how to report a vulnerability privately, scope and the trust model |
 
 ## Development
 
@@ -169,10 +173,11 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
   (the subject is fixed as `https://www.dwellduel.com`). Generate them once
   with `npx web-push generate-vapid-keys`, and keep them: changing the pair
   stops every existing subscription from receiving, until each member
-  turns notifications on again. Production won't boot without them
-  (`lib/env/required.ts`); locally and in CI, sending is a no-op without
-  them. The public key is inlined at build time, so redeploy after
-  setting it.
+  turns notifications on again. Without them production still boots, but
+  logs "Push notifications are off until they are set" and sends nothing
+  (`lib/env/required.ts` only warns about them); locally and in CI,
+  sending is a no-op without them. The public key is inlined at build
+  time, so redeploy after setting it.
 - **Inviting someone** is purely in the app: add their email under Admin →
   Invites. Google's OAuth consent screen is published, so there's no
   Google Cloud step.
@@ -236,12 +241,7 @@ Dependabot opens weekly update PRs for npm packages and GitHub Actions
 
 ## Releases
 
-| Release | Date | Highlights |
-|---|---|---|
-| [v0.5.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.5.0-beta) | 2026-09-30 | The codebase review round: security fixes, slip and results bug fixes, loading that no longer jumps, faster live refresh, safer deploys, CI in half the time |
-| [v0.4.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.4.0-beta) | 2026-09-29 | Full-width desktop layouts, one motion language, review alerts, a markets filter, parlay breakdowns, a livelier leaderboard, deploys that wait for their migrations |
-| [v0.3.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.3.0-beta) | 2026-09-28 | Security fixes, retry-safe betting, a net-worth leaderboard with monthly champions, coin history, reactions and comments, streaks, profile stats, a weekly recap, push notifications, faster pages |
-| [v0.2.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.2.0-beta) | 2026-09-28 | Roles, seeded odds, 10-leg parlays, proof, Over/Under, market edits, My bets, Settings, a new Home, the launch animation |
-| [v0.1.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.1.0-beta) | 2026-09-27 | The first beta: markets, parlays, tasks, the coin ledger, the social layer, the installable app |
-
-Full notes are in [CHANGELOG.md](CHANGELOG.md).
+Every release, with its notes, is on
+[GitHub Releases](https://github.com/Aaron-Wickham/dwell-duel/releases), and
+[CHANGELOG.md](CHANGELOG.md) has the same notes in one file. How a release
+is cut is in [docs/RELEASING.md](docs/RELEASING.md).

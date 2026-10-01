@@ -15,6 +15,31 @@ Tailwind v4 · Supabase (Postgres, Auth, Realtime, Storage) · Vercel · Vitest 
 Playwright. All coin-moving logic lives in Postgres functions; the web app
 renders, validates and calls them.
 
+## Your first week
+
+A path for a new collaborator. Each step links to the section with the
+details.
+
+1. **Day 1: run it.** Install the tools, start local Supabase, sign in
+   and run the tests ([sections 1–6](#1-install-the-tools)). Seed some data
+   with the scale seeder so the pages have something on them.
+2. **Day 2: tour the code.** Read [AGENTS.md](../AGENTS.md), then
+   [ARCHITECTURE.md](ARCHITECTURE.md) with the app open beside it, following
+   one flow end to end: tap Place in the slip, find `place_slip_v2` in
+   `supabase/migrations/`, and its test in `tests/db/place-slip.test.ts`
+   ([section 7](#7-read-these-before-writing-code)). Read
+   [HOW-IT-WORKS.md](HOW-IT-WORKS.md) as a member would.
+3. **Day 3: pick something small.** Ask Aaron for an issue
+   ([section 8](#8-pick-up-an-issue)), comment on it to claim it, and branch.
+4. **Days 3–5: ship it.** Build it to the conventions, test it (for anything
+   that moves coins, see [Testing money paths](#testing-money-paths)), open
+   the PR and work through review and CI until it merges
+   ([section 9](#9-ship-a-change)).
+
+[Working as a collaborator](#10-working-as-a-collaborator) explains what your
+access lets you do and what it doesn't, and the [glossary](#glossary) the
+words the code and the docs use.
+
 ---
 
 ## 1. Install the tools
@@ -208,14 +233,66 @@ npx playwright install chromium
   holds stale state after a reset. Fix: `npx supabase stop && npx supabase start`.
 - `npm run test:e2e` starts its own production server on port 3000. Kill a
   running `npm run dev` first.
-- **One local database per machine.** Every checkout and git worktree talks
-  to the same Docker Supabase, and the DB tests wipe it between files. Two
-  test runs at once, or a `db:reset` during a run, fail hundreds of tests with
-  errors like "Could not find the 'role' column of 'profiles' in the schema
-  cache". Run one thing at a time, and if it still fails, restart the stack
-  and reset once more before digging in.
+- **One local database per machine.** Docker runs one Supabase, on fixed
+  ports, and every checkout and git worktree on the machine talks to that
+  same one. The DB tests wipe it between files, and `db:reset` rebuilds it
+  from the migrations of whichever checkout ran it. So two test runs at once,
+  or a `db:reset` from another branch during a run, fail hundreds of tests
+  with errors like "Could not find the 'role' column of 'profiles' in the
+  schema cache". Run one database thing at a time, run `npm run db:reset`
+  from the checkout you're testing before its DB tests, and if it still
+  fails, restart the stack and reset once more before digging in.
 - The e2e suite runs serially on purpose (one shared seeded session); it
-  takes about a minute.
+  takes a few minutes. Run one spec while you work and the whole suite
+  before you push.
+
+### Working in more than one checkout
+
+To keep a second branch going without stashing, add a git worktree:
+
+```bash
+git worktree add ../dwell-duel-123 -b 123-short-description origin/main
+cd ../dwell-duel-123
+npm install
+cp ../dwell-duel/.env.local .env.local   # the same local keys: it's the same local Supabase
+```
+
+Each worktree is its own folder with its own `node_modules` and `.next`,
+but they share the one local database (above) and port 3000. Run `npm run
+dev -- -p 3001` for a second dev server, and remember that `npm run
+test:e2e` always wants 3000. Remove a worktree with `git worktree remove
+../dwell-duel-123` once its PR has merged.
+
+### Testing money paths
+
+Anything that moves DC (bets, the slip, parlays, resolving, voiding, task
+rewards, balance adjustments) lives in a Postgres function, so it's tested
+against the real database in `tests/db/`, not mocked:
+
+- **Start from the fixtures** in `tests/db/fixtures.ts`: `makeMember` and
+  `seedMembers` for members, `clientFor(member)` for a client signed in as
+  them, `giveRole` for a role, `createTestMarket` and `createTestTask`, and
+  `backers()` / `backLeg()` for the other members' money a parlay leg needs.
+  `serviceClient()` (`tests/db/helpers.ts`) is the service role, for setup
+  only: call the function under test as the member who would call it.
+- **The ledger is checked after every test.** `tests/db/setup.ts` runs
+  `assertLedgerConsistent()`: every balance equals its ledger rows, every
+  outcome's pool equals its live bets, and every parlay's credit equals its
+  payout rows. Set a balance with `setBalanceViaLedger`, never a raw update;
+  a test that writes raw rows on purpose calls `skipLedgerCheck('why')`.
+- **Test the refusals as carefully as the happy path.** Wrong role, no
+  invite, a stake on the market, after close, a replayed attempt key. Check
+  the message with `expectError(error, 'the message')`
+  (`tests/db/assertions.ts`), never just "some error", which also passes
+  when the function doesn't exist.
+- **Races** go in `tests/db/money-races.test.ts`, which runs two members'
+  calls at once.
+- **If a rule changes,** the maths in [HOW-IT-WORKS.md](HOW-IT-WORKS.md)
+  changes with it, and where TypeScript mirrors SQL (`parlay_limits()` and
+  `lib/parlays/odds.ts`, `pool_payout()` and `poolPayout`) a DB test keeps the
+  two equal, so update both.
+- Then click it through once in the app, and cover the flow in `e2e/` if a
+  member would notice it breaking.
 
 ## 7. Read these before writing code
 
@@ -231,7 +308,8 @@ In this order. They're short and they'll save you a review round-trip.
    payouts and parlay maths there must stay true, so any rule change updates
    it.
 4. **[design/app-redesign-handoff.md](design/app-redesign-handoff.md)**: the
-   visual source of truth for UI work.
+   visual source of truth for UI work. The dated specs and plans in
+   `docs/archive/` are history: they name things the code no longer has.
 5. **[CONTRIBUTING.md](../CONTRIBUTING.md)**: how changes get in.
 
 Also note: `node_modules/next/dist/docs/` documents **this** version of
@@ -242,27 +320,33 @@ Next-specific code.
 ### The map
 
 ```
-app/(app)/        signed-in routes (home, markets, bets, tasks, feed, members, admin, settings)
+app/(app)/        signed-in routes: home, markets, bets, parlays, tasks, feed, leaderboard,
+                  members, profile, settings, how-it-works, admin
 app/(auth)/       sign-in, callback, not-invited, offline
-app/api/cron/     keep-alive and closing-alerts endpoints
+app/api/          cron/keep-alive, cron/closing-alerts, health, push/resync
 components/       ui/ (Page, SectionCard, Button, dialogs…), brand/, live/, and feature components
 lib/              server actions, Supabase clients, odds maths, pagination, auth, forms
-supabase/         migrations/ (0001…0064) and config.toml
-tests/            Vitest: unit, component (tests/components), and DB tests (tests/db)
+supabase/         migrations/ (every one, numbered; the newest is the last file) and config.toml
+tests/            Vitest: app/ (route handlers), components/, lib/, and DB tests in db/
 e2e/              Playwright specs
-docs/             everything you're reading, plus dated specs and plans in superpowers/
-scripts/          favicons, iOS splash, iOS standalone check, scale seeder
+docs/             everything you're reading; archive/ holds the dated specs and plans
+scripts/          favicons, iOS splash, iOS standalone check, scale seeder, backup/
 ```
 
 ## 8. Pick up an issue
 
-- **Issues:** https://github.com/Aaron-Wickham/dwell-duel/issues. Look for
-  `good first issue` and `help wanted`. Labels tell you the area
-  (`ui`, `parlays`, `tasks`, `economy`, `database` means a migration is needed,
-  `needs-design` means draw it before building).
+- **Ask Aaron.** The issue list is often empty or already spoken for, so
+  the quickest way to work is to ask him what's next; he'll open or point
+  you at an issue.
+- **Issues:** https://github.com/Aaron-Wickham/dwell-duel/issues. The
+  `good first issue` and `help wanted` labels exist, but they're only on an
+  issue when one is open and suitable. Labels tell you the area (`ui`,
+  `parlays`, `tasks`, `economy`, `database` means a migration is needed,
+  `needs-design` means it's drawn and approved before it's built).
 - **Board:** the "DwellDuel" GitHub project tracks what's in flight. Move
   your issue to In progress when you start.
-- **Comment on the issue** before starting so we don't both pick it up.
+- **Claim it by commenting on the issue** before starting, so two people
+  don't build the same thing.
 
 ## 9. Ship a change
 
@@ -288,10 +372,22 @@ changes, and which docs you updated.
   route, table or rule.
 - `AGENTS.md` when you add a convention.
 
-**Merging needs:** CI's `ci-ok` check green, an approval from Aaron (the code
-owner; a new push after approval asks for a fresh review), and every review
-conversation resolved. Nobody can merge past a red or missing `ci-ok`:
-`gh pr merge --admin` only skips the review rule, never CI. On merge, the
+**Merging needs:**
+
+- CI's one required check, `ci-ok`, green. It sums up three jobs (`static`:
+  the migration-order check, lint and the type check; `db`: the generated
+  types and the DB tests; `web`: unit tests, a production build and
+  Playwright). Nobody can merge past a red or missing `ci-ok`, not even
+  Aaron: `gh pr merge --admin` only skips the review rule, never CI.
+- The branch **up to date with `main`**. After another PR merges, update
+  yours ("Update branch" on the PR, or `gh pr update-branch <n>`) and wait
+  for CI to pass again, so what was tested is what merges.
+- An approval from Aaron (the code owner). A new push after approval
+  dismisses it and asks for a fresh review.
+- Every review conversation resolved.
+
+**Aaron merges.** Once it's green, approved and up to date, he merges it;
+you don't need to. On merge, the
 Deploy Production workflow backs up the database, applies any migrations
 production doesn't have yet and then deploys through Vercel. It runs only
 from `main`. There is no undo button for a migration, so the checklist
@@ -299,10 +395,12 @@ matters; `docs/OPERATIONS.md` covers backups and rollback.
 
 ### If your change needs a migration
 
-- Add a new file `supabase/migrations/00NN_description.sql`, next number in
-  sequence, zero-padded. **Never edit a past migration.** If another PR
-  takes your number first, renumber yours above `main`'s newest; CI fails
-  until you do.
+- Add a new file `supabase/migrations/00NN_description.sql`, numbered one
+  above the newest on `main` (`ls supabase/migrations | tail -1` after
+  `git pull`), zero-padded. **Never edit a past migration.** If another PR
+  takes your number first, renumber yours above `main`'s newest; CI's
+  migration-order check fails until you do, because production refuses a
+  migration that sorts before its latest.
 - Keep it **additive** (new tables, columns, functions). The old app keeps
   serving while a migration applies. A destructive change ships in its own PR
   after the code stops using it.
@@ -321,7 +419,68 @@ shell (tab bar, launch overlay, page height), run `npm run check:ios` on a
 booted iOS Simulator with the app installed. `docs/ARCHITECTURE.md`
 (Environments and deploys) explains the setup.
 
-## 10. Who to ask
+## 10. Working as a collaborator
+
+### Access and trust
+
+- **Branch in this repo, don't fork,** if you have write access: CI runs
+  the same either way, and Aaron can push a fix to your branch. Without
+  write access, fork and open the PR from the fork.
+- **Write access lets you** push branches, open and review PRs, and run
+  workflows. It doesn't let you push to `main`, merge without Aaron's
+  approval and a green `ci-ok`, or deploy: Deploy Production and the
+  Backups workflow run only from `main`, and their secrets live in the
+  GitHub `Production` environment, which nothing else can read.
+- **Never press "Run workflow" on Deploy Production or Backups.** Both
+  touch production. If something looks stuck, tell Aaron.
+- **You won't get production access**: not the Supabase or Vercel
+  dashboards, the production database, members' data or the secrets. You
+  don't need them; everything you build runs against local Supabase. Never
+  test against www.dwellduel.com with real members' accounts.
+- [SECURITY.md](../SECURITY.md) has the whole trust model, and how to report
+  anything that looks like a vulnerability (privately, never in an issue).
+
+### The review loop
+
+1. Open the PR and fill in the template. CI starts on its own.
+2. Aaron reviews. Answer each comment with a fix or a reply, and resolve
+   the conversation once it's settled.
+3. Every push after an approval dismisses it, so expect a fresh review of
+   the new commits.
+4. When `main` moves on, `gh pr update-branch <n>` and wait for CI again.
+5. Green, approved and up to date: Aaron merges, and Deploy Production
+   ships it within a few minutes.
+
+### Areas that need extra care
+
+- **Coins.** A change to what moves DC is a Postgres function in a new
+  migration, with DB tests for the refusals and the ledger check passing
+  ([Testing money paths](#testing-money-paths)). Never update a balance
+  from TypeScript.
+- **Migrations** apply on merge with no approval step and no undo: keep
+  them additive, and ship anything destructive in its own PR once the code
+  stops using it.
+- **Rules members see.** If odds, payouts, parlays, limits or roles change,
+  [HOW-IT-WORKS.md](HOW-IT-WORKS.md) changes in the same PR, and the app
+  renders it as its How it works page.
+- **Permissions.** A new `security definer` function checks its caller
+  itself (`is_invited()`, `has_role()`, `auth.uid()`) and is added to the
+  list in `tests/db/schema-privileges.test.ts`, which is the review step.
+
+### Using Claude or another AI agent
+
+- `CLAUDE.md` just includes `AGENTS.md`, so both point an agent at the
+  same conventions. AGENTS.md is authoritative; if the agent's habit and
+  AGENTS.md disagree, AGENTS.md wins.
+- This is Next.js 16, newer than most models know. Have the agent read the
+  guide in `node_modules/next/dist/docs/` before Next-specific code.
+- `next dev` re-adds a block at the top of AGENTS.md when it's missing.
+  Don't commit changes to that block; if your diff touches it, drop that
+  hunk.
+- Review what it wrote as you would a stranger's PR. You're the author of
+  everything you push.
+
+## 11. Who to ask
 
 **Aaron Wickham** ([@Aaron-Wickham](https://github.com/Aaron-Wickham)) owns
 the repo, the production Supabase project and the Vercel project. Anything involving production, secrets, inviting members or the
@@ -342,5 +501,24 @@ npm run lint           # ESLint
 npm run typecheck      # TypeScript
 npm run build          # production build
 npm run check:ios      # installed-app viewport check in the iOS Simulator
-node scripts/seed-scale.mjs   # ~10x realistic local data
+node scripts/seed-scale.mjs   # 500 members, 200 markets, 20,000 bets, locally
 ```
+
+## Glossary
+
+| Word | Means |
+|---|---|
+| **DC** | Dwell Coin, the play money. Every movement is a row in `coin_transactions` |
+| **Market** | A question members bet on: Yes/No, multiple choice or Over/Under |
+| **Pool** | The real DC bet on one outcome (`market_outcomes.pool_total`); winners split the whole market's pools |
+| **Seed** | 20 virtual DC per outcome (`seed_per_outcome`) that only shapes a market's chance and charts; never paid |
+| **Slip** | Where picks wait before they're placed, each Solo or Parlay; `place_slip_v2` places them all or none |
+| **Parlay** | Several picks combined into one bet that wins only if every pick wins, paid by the house |
+| **Leg** | One pick in a parlay (`parlay_legs`); its odds are set when its market closes |
+| **Open** | A market still taking bets, before its close time |
+| **Awaiting** | Past its close time, with no result yet |
+| **Settled** | Resolved or voided; for a bet or parlay, paid, lost or refunded |
+| **Resolve / override / void** | Name the winner and pay out / change a result / cancel the market and refund everyone |
+| **Attempt key** | A UUID a retryable action sends, so a replay returns the first result instead of acting twice |
+| **Reviewer** | The role that approves task submissions; see [Roles](HOW-IT-WORKS.md#roles) |
+

@@ -43,6 +43,10 @@ export interface PendingCompletion {
 // Oldest first, so the submission that has waited longest leads.
 const PENDING_KEYS: KeyColumns = { ts: 'submitted_at', id: 'id', isId: isUuid, ascending: true }
 
+// Every row shown has its proof signed, so a reviewer who keeps pressing "Show more" gets a fresh
+// window after three pages instead of a range of up to 500 signatures.
+const REVIEW_WINDOW_CAP = 150
+
 function pendingQuery<Columns extends string>(supabase: DbClient, columns: Columns, filter: string | null, limit: number) {
   let query = supabase.from('task_completions').select(columns).eq('status', 'pending')
   if (filter) query = query.or(filter)
@@ -75,6 +79,7 @@ export async function listPendingTaskCompletions(
       if (error) throw error
       return (data ?? []).map(keyOf)
     },
+    REVIEW_WINDOW_CAP,
   )
 
   // proof_attachments.kind is a CHECK-constrained text column, so the generated type says string.

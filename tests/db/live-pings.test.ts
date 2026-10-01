@@ -126,6 +126,21 @@ describe('live pings (0085)', () => {
     expect(await messagesSince('reactions', since)).toBe(1)
   })
 
+  // The deferred part lives on live_ping_queue, so a live table has no pending trigger events and a
+  // migration can write one and then alter it in the same transaction (55006 otherwise).
+  it('lets a transaction write a live table and then alter it, and still pings at commit', async () => {
+    await resetThrottle()
+    const since = await dbNow()
+    await pgQuery(`
+      insert into public.tasks (title, reward_amount, created_by) values ('Alter after write', 5, '${alice.id}');
+      alter table public.tasks drop constraint tasks_title_length;
+      alter table public.tasks add constraint tasks_title_length check (char_length(title) <= 120) not valid;
+    `)
+    expect(await messagesSince('tasks', since)).toBe(1)
+    const [queue] = await pgQuery<{ n: number }>('select count(*)::int as n from public.live_ping_queue')
+    expect(queue.n).toBe(0)
+  })
+
   it("won't let members call the ping function themselves", async () => {
     const client = await clientFor(alice)
     const { error } = await client.rpc('send_live_ping', { p_topic: 'markets' })

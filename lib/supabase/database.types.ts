@@ -384,6 +384,21 @@ export type Database = {
           },
         ]
       }
+      live_ping_queue: {
+        Row: {
+          id: number
+          topic: string
+        }
+        Insert: {
+          id?: never
+          topic: string
+        }
+        Update: {
+          id?: never
+          topic?: string
+        }
+        Relationships: []
+      }
       live_pings: {
         Row: {
           sent_at: string

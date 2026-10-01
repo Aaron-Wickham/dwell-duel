@@ -400,7 +400,7 @@ after it ships. They roughly follow the project's history:
 | 0070 | Speed at scale (#204, #205): `markets.sparkline` filled by the `cache_market_sparkline` trigger when a market resolves or voids (backfilled), `market_outcomes` in the realtime publication, and `parlays_pending_profile_idx` for `stakes_riding` |
 | 0071 | `my_current_task_completions()` (#206); `due_resolve_reminders()`, `due_market_alerts()` and `claim_push_log()` for claim-after-delivery (#207); `my_onboarding()` and `member_standing()` (#210) |
 | 0072 | `place_slip_v2` (#226): the slip's place returns what it placed (solo count, picks, parlay id) and whether the call replayed an earlier attempt's key, and stores that summary under the key; `place_slip` now wraps it and still returns the parlay id |
-| 0085 | Live pings (#250): `live_pings` and `send_live_ping`, deferred row triggers on `markets`, `market_outcomes`, `activity_events`, `feed_reactions`, `tasks` and `task_completions` that send one private Broadcast ping per topic per transaction, at most one per topic every `live_ping_interval_ms()`, and the `realtime.messages` policy that lets only invited members (reviewers and above for `live:reviews`) join |
+| 0085 | Live pings (#250): `live_pings` and `send_live_ping`, row triggers that queue a topic in the unlogged `live_ping_queue`, whose deferred trigger sends it at commit, on `markets`, `market_outcomes`, `activity_events`, `feed_reactions`, `tasks` and `task_completions` that send one private Broadcast ping per topic per transaction, at most one per topic every `live_ping_interval_ms()`, and the `realtime.messages` policy that lets only invited members (reviewers and above for `live:reviews`) join |
 
 No migration 0069: #203's `search_path` pin on `market_sparklines` would stop Postgres inlining it into the caller's plan and lose its use of `bets_market_created_idx`, so it stays unpinned (invoker rights, every name schema-qualified). A DB test guards that no function `anon` or `authenticated` can execute calls into `net.*`, since pg_net's own grants can't be revoked from a migration.
 
@@ -471,9 +471,14 @@ signed URLs made with the viewer's own session.
 - **Rows**, `{ table, filter }`: Postgres Changes on a table in
   `LIVE_TABLES`, always filtered to one market, member, parlay or row, so
   only the pages about that thing hear it.
-- **Topics**, `{ topic }`: anything group-wide. Deferred row triggers
-  (0085) call `send_live_ping` as the transaction commits, which sends an
-  empty private Broadcast message on `live:<topic>`: once per topic per
+- **Topics**, `{ topic }`: anything group-wide. A row trigger on each
+  live table (0085) queues its topic once per transaction in
+  `live_ping_queue`, and that table's deferred trigger calls
+  `send_live_ping` as the transaction commits. The deferral lives on the
+  queue, not the live tables, because Postgres won't ALTER a table with
+  pending trigger events, which would break a migration that writes a
+  live table and then alters it. `send_live_ping` sends an empty private
+  Broadcast message on `live:<topic>`: once per topic per
   transaction, however many rows it writes (a resolution with 150 winners
   sends one `activity` ping, not 150), and at most once per topic every
   `live_ping_interval_ms()` (5 s, mirrored by `LIVE_PING_INTERVAL_MS`).

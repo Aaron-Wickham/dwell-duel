@@ -188,9 +188,11 @@ a line to `CHANGELOG.md` under the next release.
 - **Live updates come in two kinds** (0085, #250). A row subscription is
   Postgres Changes on a `LIVE_TABLES` table and always has a filter; a new
   one goes in `LIVE_TABLES` and a realtime-publication migration. Anything
-  group-wide is a topic (`LIVE_TOPICS`): a row trigger calling
-  `send_live_ping`, a seeded `live_pings` row and the `realtime.messages`
-  policy's topic list, all in a migration. Never follow a whole table
+  group-wide is a topic (`LIVE_TOPICS`): a plain (not deferred) row
+  trigger calling `live_ping_trigger('<topic>')`, a seeded `live_pings`
+  row and the `realtime.messages` policy's topic list, all in a migration.
+  Never put a deferred trigger on a live table: its pending events make
+  any later ALTER of that table in the same transaction fail (55006). Never follow a whole table
   unfiltered: every open page would get a message per row anyone writes.
   Prefer the narrowest source that moves with what the page shows
   (`/markets` follows the `pools` topic, not `bets`), and never follow
@@ -227,7 +229,7 @@ a line to `CHANGELOG.md` under the next release.
 - **`LiveRefresh` keeps a base channel** for the member's own profile,
   a page channel for the page's row subscriptions, rebuilt on every
   navigation, and one private channel per topic. The database judges its
-  throttle at commit (deferred triggers), and a topic always refreshes at
+  throttle at commit (a deferred trigger on `live_ping_queue`), and a topic always refreshes at
   least an interval plus a second after its latest ping, so a change the
   throttle held back is still read; keep every `TOPIC_REFRESH_DELAY_MS`
   above `LIVE_PING_INTERVAL_MS`. A tab hidden for 60 s closes them all, and

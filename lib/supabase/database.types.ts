@@ -809,6 +809,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          expired_at: string | null
           file_name: string | null
           id: string
           kind: string
@@ -821,6 +822,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          expired_at?: string | null
           file_name?: string | null
           id?: string
           kind: string
@@ -833,6 +835,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          expired_at?: string | null
           file_name?: string | null
           id?: string
           kind?: string
@@ -1171,6 +1174,17 @@ export type Database = {
           unclassified: number
         }[]
       }
+      expired_proof_attachments: {
+        Args: {
+          p_limit?: number
+          p_resolution_days?: number
+          p_task_days?: number
+        }
+        Returns: {
+          id: string
+          storage_path: string
+        }[]
+      }
       feed_reaction_counts: {
         Args: { p_event_ids: string[] }
         Returns: {
@@ -1236,6 +1250,7 @@ export type Database = {
           step: number
         }[]
       }
+      mark_proof_expired: { Args: { p_ids: string[] }; Returns: number }
       market_sparklines: {
         Args: { p_market_ids: string[]; p_points?: number }
         Returns: {
@@ -1381,6 +1396,7 @@ export type Database = {
         }
         Returns: Json
       }
+      proof_upload_quota_ok: { Args: never; Returns: boolean }
       push_endpoint_host: { Args: { p_endpoint: string }; Returns: string }
       push_hosts: { Args: never; Returns: string[] }
       push_market_alerts: {
@@ -1512,6 +1528,20 @@ export type Database = {
       }
       settle_parlay: { Args: { p_parlay_id: string }; Returns: undefined }
       settle_season: { Args: { p_month?: string }; Returns: string }
+      storage_usage: {
+        Args: never
+        Returns: {
+          bucket_id: string
+          bytes: number
+          objects: number
+        }[]
+      }
+      stray_avatar_objects: {
+        Args: { p_limit?: number }
+        Returns: {
+          name: string
+        }[]
+      }
       stray_proof_objects: {
         Args: { p_limit?: number }
         Returns: {

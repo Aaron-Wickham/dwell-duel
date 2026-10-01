@@ -577,8 +577,9 @@ off. There are two ways in, chosen at build by `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
   `/auth/google/nonce`, which keeps a random nonce in the httpOnly
   `google-nonce` cookie and returns its SHA-256 (hex), which goes to Google;
   `next` rides in `sign-in-next` beside it. Both cookies have path
-  `/auth/google`, last an hour, and are `SameSite=None; Secure`, because
-  Google's POST back is cross-site and a Lax cookie isn't sent on one.
+  `/auth/google`, last an hour, and over https are `SameSite=None; Secure`,
+  because Google's POST back is cross-site and a Lax cookie isn't sent on
+  one (plain-http local dev gets Lax, without Secure).
   Google posts `credential` (the ID token) and `g_csrf_token` to
   `/auth/google` on our domain, so the chooser says "continue to
   dwellduel.com". The route checks Google's double submit (the body's
@@ -590,7 +591,10 @@ off. There are two ways in, chosen at build by `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
   answer is a 303. Google's chooser is shown on every click, as with
   `prompt=select_account`; its button may name the last account used, but
   only as a label. If Google's script or the nonce can't be had within ten
-  seconds, the page falls back to Supabase's button.
+  seconds, the page falls back to Supabase's button, and after any failed
+  sign-in (`?error=`) it shows Supabase's redirect as "Try another way" under
+  Google's button, so a fault on Google's path can't lock members out. The
+  CSRF values are compared in constant time.
 
 Either way, `finishSignIn` (`lib/auth/finish-sign-in.ts`) does the rest, and
 a member whose email isn't in `allowed_emails` lands on `/not-invited`. A signed-out request

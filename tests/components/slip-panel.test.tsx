@@ -29,9 +29,6 @@ const pick = (n: number, overrides: Partial<SlipPick> = {}): SlipPick => ({
   legBlock: null,
   outcomePool: 10,
   totalPool: 20,
-  realPool: 10,
-  realTotal: 20,
-  opposing: 10,
   ...overrides,
 })
 const viewOf = (...picks: SlipPick[]): SlipView => ({ picks, legBps: [], multiplierBp: 10_000, capped: false })

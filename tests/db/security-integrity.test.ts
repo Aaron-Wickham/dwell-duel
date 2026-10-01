@@ -88,10 +88,10 @@ describe('#57 parlay legs are priced without your own stakes', () => {
       { outcomeId: b.outcomeIds[1], parlay: true },
     ])
     expect(view.picks.map((p) => p.oddsBp)).toEqual([10_000, 10_000])
-    // Alice's view of the same leg still counts Bob's money: (1000 + 50) / 50 = 21.00.
+    // Alice's view of the same leg still counts Bob's money: (1000 + 50) / 50 = 21, held to 5.00.
     await ensureInvited(aliceClient)
     const aliceView = await getSlipView(aliceClient, [{ outcomeId: a.outcomeIds[1], parlay: true }])
-    expect(aliceView.picks[0]).toMatchObject({ oddsBp: 210_000, legBlock: 'own_market' })
+    expect(aliceView.picks[0]).toMatchObject({ oddsBp: 50_000, legBlock: 'own_market' })
   })
 
   it('leaves out your singles placed in the same slip', async () => {

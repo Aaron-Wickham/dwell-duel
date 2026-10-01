@@ -11,6 +11,7 @@ function parlay(overrides: Partial<ParlayView>): ParlayView {
     status: 'pending',
     credited: 0,
     maxMultiplier: 20,
+    lockedAtPlacement: false,
     multiplierBp: 160_000,
     capped: false,
     estimated: false,

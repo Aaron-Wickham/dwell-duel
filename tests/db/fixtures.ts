@@ -303,10 +303,10 @@ export async function backLeg(market: TestMarket, outcomeIndex: number, each = 2
 }
 
 /**
- * A parlay as place_parlay wrote one before 0074: every leg's odds locked at placement, and the
- * 100x cap. place_parlay can't make one any more, so it's written directly, with its stake debited
- * through the ledger as place_parlay would. For how a parlay still pending when 0074 applied
- * settles and shows.
+ * A parlay as place_parlay wrote one before 0074, as 0074 leaves it while still pending: every
+ * leg's odds locked at placement, and the 20x cap. place_parlay can't make one any more, so it's
+ * written directly, with its stake debited through the ledger as place_parlay would. For how such
+ * a parlay settles and shows.
  */
 export async function insertLockedParlay(
   profileId: string,
@@ -318,7 +318,7 @@ export async function insertLockedParlay(
     .join(', ')
   const [row] = await pgQuery<{ id: string }>(`
     with p as (
-      insert into public.parlays (profile_id, stake, max_multiplier) values ('${profileId}', ${stake}, 100) returning id
+      insert into public.parlays (profile_id, stake, max_multiplier, odds_at_close) values ('${profileId}', ${stake}, 20, false) returning id
     ),
     l as (
       insert into public.parlay_legs (parlay_id, market_id, outcome_id, locked_odds)

@@ -68,7 +68,7 @@ async function coinFlip(title: string, yes = 25, no = 25): Promise<TestMarket> {
   return market
 }
 
-describe('a parlay on outcomes whose answer is already known', () => {
+describe('legs on markets the bettor created, or nobody has bet on', () => {
   it('can’t use markets the bettor created, however much others have bet on them', async () => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     const own = await Promise.all(['Day one', 'Day two', 'Day three'].map((title) => createTestMarket(bobClient, days, { title, seed: 20 })))
@@ -88,7 +88,7 @@ describe('a parlay on outcomes whose answer is already known', () => {
   })
 })
 
-describe('perfectly correlated legs', () => {
+describe('legs on copies of one market', () => {
   it('multiply up to the caps and no further', async () => {
     // Seven copies of one coin flip, each with the floor: 2^7 = 128x uncapped.
     const copies: TestMarket[] = []
@@ -106,9 +106,9 @@ describe('pricing at close', () => {
     const b = await coinFlip('B', 25, 500)
     const id = await placeParlay([a.outcomeIds[0], b.outcomeIds[0]], 10)
 
-    // With 500 on No, each Yes would be 525 / 25 = 21x: the page shows the capped 20x as ~200 DC.
+    // With 500 on No, each Yes would be 525 / 25 = 21x, shown at the 5x leg cap.
     const { data: before } = await bobClient.rpc('parlay_leg_odds', { p_parlay_ids: [id] })
-    expect(before!.map((l) => lockedOddsToBp(l.odds))).toEqual([210_000, 210_000])
+    expect(before!.map((l) => lockedOddsToBp(l.odds))).toEqual([50_000, 50_000])
 
     // Backer2 takes the 500 back and leaves 25, so each Yes is 50 / 25 = 2x at close.
     for (const m of [a, b]) {
@@ -186,7 +186,7 @@ describe('pricing at close', () => {
 })
 
 describe('parlays placed before 0074', () => {
-  it('keep their locked odds and their 100x cap, and the 1,000 DC payout cap applies', async () => {
+  it('keep their locked odds under the 20x and 1,000 DC caps, and get at least their stake back', async () => {
     await setBalanceViaLedger(bob.id, 3000)
     const a = await coinFlip('A')
     const b = await coinFlip('B')
@@ -196,19 +196,58 @@ describe('parlays placed before 0074', () => {
       { market: b, outcomeIndex: 0, lockedOdds: 6 },
     ]
     const small = await insertLockedParlay(bob.id, 10, legs)
-    const capped = await insertLockedParlay(bob.id, 30, legs)
-    const doubleLegs = legs.map((l) => ({ ...l, lockedOdds: 2 }))
-    const large = await insertLockedParlay(bob.id, 1500, doubleLegs)
+    const capped = await insertLockedParlay(bob.id, 60, legs)
+    const large = await insertLockedParlay(bob.id, 1500, legs.map((l) => ({ ...l, lockedOdds: 2 })))
     await resolve(a, 0)
     await resolve(b, 0)
 
     expect(await legOdds(small, a)).toBe(6)
-    // 36x is under its own 100x cap: 360.
-    expect(await parlayRow(small)).toEqual({ status: 'won', credited: 360 })
-    // 30 x 36 = 1,080, over the payout cap.
+    // 36x is capped to 20x: 200.
+    expect(await parlayRow(small)).toEqual({ status: 'won', credited: 200 })
+    // 60 x 20 = 1,200, over the payout cap.
     expect(await parlayRow(capped)).toEqual({ status: 'won', credited: 1000 })
     // A stake above the cap still gets at least its stake back on a win.
     expect(await parlayRow(large)).toEqual({ status: 'won', credited: 1500 })
+  })
+})
+
+describe('a leg on a thin pick', () => {
+  it('counts at most 5x, however little others put on the pick', async () => {
+    // 1 DC on Yes against 49 on No meets the floor, and would price Yes at 50x.
+    const a = await coinFlip('A', 1, 49)
+    const b = await coinFlip('B')
+    const id = await placeParlay([a.outcomeIds[0], b.outcomeIds[0]], 10)
+    const { data: quotes } = await bobClient.rpc('pick_quotes', { p_outcome_ids: [a.outcomeIds[0]] })
+    expect(quotes![0].odds).toBe(5)
+    await resolve(a, 0)
+    await resolve(b, 0)
+    expect(await legOdds(id, a)).toBe(5)
+    expect(await parlayRow(id)).toEqual({ status: 'won', credited: 100 })
+  })
+})
+
+describe('one member’s exposure on a market', () => {
+  it('refuses another parlay on a market once the member’s parlays on it could pay 1,000 DC', async () => {
+    const a = await coinFlip('A')
+    const b = await coinFlip('B')
+    const c = await coinFlip('C')
+    const d = await coinFlip('D')
+    // Each 10 DC parlay could pay at most 200 (20x), so five of them reach 1,000.
+    for (let i = 0; i < 5; i++) await placeParlay([a.outcomeIds[0], b.outcomeIds[0]], 10)
+    const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0], c.outcomeIds[0]], p_stake: 10 })
+    expectError(error, "your parlays with 'A' in them could already pay 1000 DC, and one member's parlays on a market can pay at most 1000 DC in all")
+    // Markets none of them touch are still open to a parlay.
+    await placeParlay([c.outcomeIds[0], d.outcomeIds[0]], 10)
+  })
+
+  it('stops counting a parlay once it has settled', async () => {
+    const a = await coinFlip('A')
+    const b = await coinFlip('B')
+    const c = await coinFlip('C')
+    await placeParlay([a.outcomeIds[0], b.outcomeIds[0]], 50)
+    expectError((await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0], c.outcomeIds[0]], p_stake: 1 })).error, 'could already pay 1000 DC')
+    await resolve(b, 1)
+    await placeParlay([a.outcomeIds[0], c.outcomeIds[0]], 1)
   })
 })
 
@@ -224,13 +263,13 @@ describe('the quote readers', () => {
     expectError(error, { code: '42501', message: 'permission denied for function pick_quote' })
   })
 
-  it('give a member each pick’s leg odds, the floor and the opposing stake from their own side', async () => {
+  it('give a member each pick’s leg odds and the floor from their own side', async () => {
     const a = await coinFlip('A', 20, 30)
     await bet(bobClient, a, 1, 40)
     const { data, error } = await bobClient.rpc('pick_quotes', { p_outcome_ids: [a.outcomeIds[0], a.outcomeIds[1]] })
     expect(error).toBeNull()
     const byOutcome = Object.fromEntries(data!.map((q) => [q.outcome_id, q]))
-    expect(byOutcome[a.outcomeIds[0]]).toMatchObject({ others_total: 50, others_on_pick: 20, other_bettors: 2, opposing: 30, meets_floor: true, own_market: false, odds: 2.5 })
-    expect(byOutcome[a.outcomeIds[1]]).toMatchObject({ others_total: 50, others_on_pick: 30, other_bettors: 2, opposing: 20, meets_floor: true, odds: 1.6666 })
+    expect(byOutcome[a.outcomeIds[0]]).toMatchObject({ others_total: 50, others_on_pick: 20, other_bettors: 2, meets_floor: true, own_market: false, odds: 2.5 })
+    expect(byOutcome[a.outcomeIds[1]]).toMatchObject({ others_total: 50, others_on_pick: 30, other_bettors: 2, meets_floor: true, odds: 1.6666 })
   })
 })

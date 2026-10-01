@@ -53,11 +53,11 @@ describe('getSlipView', () => {
     const c = await seededMarket('Market C')
 
     const view = await getSlipView(bobClient, [solo(a.outcomeIds[1]), leg(b.outcomeIds[0]), leg(c.outcomeIds[0])])
-    const pools = { outcomePool: 13, totalPool: 52, realPool: 13, realTotal: 52, opposing: 39 }
+    const pools = { outcomePool: 13, totalPool: 52 }
     expect(view.picks).toEqual([
       {
         outcomeId: a.outcomeIds[1], outcomeLabel: 'No', marketId: a.marketId, marketTitle: 'Market A', parlay: false, open: true,
-        oddsBp: 13_333, legBlock: null, outcomePool: 39, totalPool: 52, realPool: 39, realTotal: 52, opposing: 13,
+        oddsBp: 13_333, legBlock: null, outcomePool: 39, totalPool: 52,
       },
       { outcomeId: b.outcomeIds[0], outcomeLabel: 'Yes', marketId: b.marketId, marketTitle: 'Market B', parlay: true, open: true, oddsBp: 40_000, legBlock: null, ...pools },
       { outcomeId: c.outcomeIds[0], outcomeLabel: 'Yes', marketId: c.marketId, marketTitle: 'Market C', parlay: true, open: true, oddsBp: 40_000, legBlock: null, ...pools },
@@ -173,11 +173,11 @@ describe('parlays on My bets', () => {
     expect(capped).toMatchObject({ status: 'pending', multiplierBp: 200_000, capped: true, potentialPayout: 1000 })
   })
 
-  it('shows a parlay placed before 0074 at its locked odds and its 100x cap', async () => {
+  it('shows a parlay placed before 0074 at its locked odds, under the 20x cap', async () => {
     const markets = await Promise.all(['A', 'B', 'C'].map((n) => seededMarket(`Market ${n}`)))
     await insertLockedParlay(bob.id, 10, markets.map((market) => ({ market, outcomeIndex: 0, lockedOdds: 4 })))
 
     const [locked] = await myParlays('open')
-    expect(locked).toMatchObject({ maxMultiplier: 100, multiplierBp: 640_000, capped: false, estimated: false, potentialPayout: 640 })
+    expect(locked).toMatchObject({ maxMultiplier: 20, lockedAtPlacement: true, multiplierBp: 200_000, capped: true, estimated: false, potentialPayout: 200 })
   })
 })

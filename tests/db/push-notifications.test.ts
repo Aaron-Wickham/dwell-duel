@@ -254,15 +254,15 @@ describe('recipients', () => {
 
     const rows = byProfile(await rpcOk<ResultRow[]>(serviceClient(), 'push_market_result', { p_market_id: market.marketId }))
     expect(Object.keys(rows).sort()).toEqual([admin.id, bob.id, carol.id].sort())
-    // 10 × (70 real + 40 seed) ÷ (10 + 20), rounded down.
-    expect(rows[bob.id]).toMatchObject({ status: 'resolved', outcome_label: 'Yes', is_override: false, won: 36, has_solo: true })
+    // Bob's share of the real pool: 10 × 70 ÷ 10.
+    expect(rows[bob.id]).toMatchObject({ status: 'resolved', outcome_label: 'Yes', is_override: false, won: 70, has_solo: true })
     expect(rows[carol.id]).toMatchObject({ won: 0, has_solo: false })
     expect(rows[admin.id]).toMatchObject({ won: 0, has_solo: true })
 
     await rpcOk(adminClient, 'resolve_market', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[1], p_note: 'Recount' })
     const overridden = byProfile(await rpcOk<ResultRow[]>(serviceClient(), 'push_market_result', { p_market_id: market.marketId }))
-    // 10 × (70 + 40) ÷ (60 + 20) = 13.75, and the opposing-stake limit 10 × (70 + 10) ÷ 60 = 13.33.
-    expect(overridden[admin.id]).toMatchObject({ outcome_label: 'No', is_override: true, won: 13 })
+    // 10 × 70 ÷ 60 = 11.67, rounded down.
+    expect(overridden[admin.id]).toMatchObject({ outcome_label: 'No', is_override: true, won: 11 })
     expect(overridden[bob.id]).toMatchObject({ is_override: true, won: 0 })
   })
 

@@ -107,7 +107,7 @@ describe('listMyWagers: solo bets', () => {
     expect(settled.rows.map((b) => [b.marketTitle, b.result])).toEqual([['Nobody picked No', { kind: 'refunded', reason: 'no_winners' }]])
   })
 
-  it('reports a seeded win as what resolve_market actually paid', async () => {
+  it('reports a win on a seeded market as what resolve_market actually paid', async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Seeded', seed: 20 })
     await bet(bobClient, market, 0, 10)
     await bet(aliceClient, market, 1, 20)
@@ -115,10 +115,10 @@ describe('listMyWagers: solo bets', () => {
     await closeAndResolve(market, 0)
     const { data: after } = await serviceClient().from('profiles').select('balance').eq('id', bob.id).single()
 
-    // floor(10 × (30 + 2 × 20) / (10 + 20)) = 23
+    // The real pool, the seed left out: floor(10 × 30 / 10) = 30.
     const settled = await myBets('settled')
-    expect(settled.rows.map((b) => b.result)).toEqual([{ kind: 'won', payout: 23 }])
-    expect(after!.balance - before!.balance).toBe(23)
+    expect(settled.rows.map((b) => b.result)).toEqual([{ kind: 'won', payout: 30 }])
+    expect(after!.balance - before!.balance).toBe(30)
   })
 
   it("shows an open market that's past close as awaiting its result", async () => {

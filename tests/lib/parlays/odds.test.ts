@@ -72,23 +72,16 @@ describe('formatOdds', () => {
 })
 
 describe('soloPayout', () => {
-  it('counts the stake in both pools, as resolve_market_core will', () => {
-    // 10 on an outcome holding 5 of a 20 pool, 15 of it against: floor(10 × 30 / 15) = 20.
-    expect(soloPayout(10, { pool: 5, total: 20 }, { pool: 5, total: 20, opposing: 15 })).toBe(20)
+  it('counts the stake in both real pools, as resolve_market_core will', () => {
+    // 10 on an outcome holding 5 of a 20 pool: floor(10 × 30 / 15) = 20.
+    expect(soloPayout(10, 5, 20)).toBe(20)
   })
 
   it('returns the stake on an outcome nobody else has bet on in an empty market', () => {
-    expect(soloPayout(10, { pool: 0, total: 0 }, { pool: 0, total: 0, opposing: 0 })).toBe(10)
+    expect(soloPayout(10, 0, 0)).toBe(10)
   })
 
   it('rounds down', () => {
-    expect(soloPayout(3, { pool: 5, total: 20 }, { pool: 5, total: 20, opposing: 15 })).toBe(Math.floor((3 * 23) / 8))
-  })
-
-  it('adds the seed only as far as the opposing stake reaches', () => {
-    // A lone 10 on a new three-way market: seeded 10 × 70 / 30 = 23, but nobody is against it.
-    expect(soloPayout(10, { pool: 20, total: 60 }, { pool: 0, total: 0, opposing: 0 })).toBe(10)
-    // 2 DC against: floor(10 × (12 + 2) / 10) = 14, under the seeded 24.
-    expect(soloPayout(10, { pool: 20, total: 62 }, { pool: 0, total: 2, opposing: 2 })).toBe(14)
+    expect(soloPayout(3, 5, 20)).toBe(Math.floor((3 * 23) / 8))
   })
 })

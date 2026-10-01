@@ -185,10 +185,10 @@ describe('leaderboard_month', () => {
     await bet(carolClient, market, 1, 30)
     await resolve(market, 0)
 
-    // Bob's 10 of an effective 20 + 10 on Yes, of a pool of 30 + 50: floor(10 × 80 / 30) = 26.
+    // Bob is the only one on Yes, so he takes the real pool: floor(10 × 40 / 10) = 40.
     const board = await getLeaderboardPage(aliceClient, 'month', NO_PAGE)
     expect(board.rows.map((m) => [m.displayName, m.score, m.rank])).toEqual([
-      ['Bob', 16, 1],
+      ['Bob', 30, 1],
       ['Carol', -30, 2],
     ])
   })

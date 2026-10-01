@@ -122,7 +122,7 @@ async function playScenario(): Promise<void> {
   if (approveErr) throw approveErr
 
   // A seeded market (20 a side) resolved with a winner. Alice 30 on Yes, Bob 10 on No: Yes pays
-  // Alice floor(30 x (40 + 40) / (30 + 20)) = 48 against 40 staked, so the seed adds 8.
+  // Alice the real pool, 40, against 40 staked; the seed is never paid, so it adds nothing.
   const m1 = await createTestMarket(oliveClient, ['Yes', 'No'], { title: 'Seeded', seed: 20 })
   await bet(aliceClient, m1, 0, 30)
   await bet(bobClient, m1, 1, 10)
@@ -131,7 +131,7 @@ async function playScenario(): Promise<void> {
   // Two parlays on two seeded markets where Alice has 25 on No and Olive 25 on Yes, the parlay
   // floor, so every leg prices at 50 / 25 = 2x at close. Bob's Yes-Yes wins 10 x 4 = 40 (the house
   // adds 30); his No-No loses its 5 at the first resolution (the house removes 5). Olive's Yes
-  // pays her floor(25 x 90 / 45) = 50, the real pool, so the seed adds nothing on either market.
+  // pays her the real pool, 25 x 50 / 25 = 50, so nothing is added on either market.
   const m2 = await createTestMarket(oliveClient, ['Yes', 'No'], { title: 'Leg one', seed: 20 })
   const m3 = await createTestMarket(oliveClient, ['Yes', 'No'], { title: 'Leg two', seed: 20 })
   for (const m of [m2, m3]) {
@@ -147,8 +147,7 @@ async function playScenario(): Promise<void> {
   await adjust(alice, 25)
   await adjust(bob, -5)
 
-  // Override m1 to No: Alice's 48 is taken back and Bob is paid floor(10 x 80 / 30) = 26, so
-  // that event removes 22 and the market's seed nets 26 - 40 = -14 over its life.
+  // Override m1 to No: Alice's 40 is taken back and Bob is paid the 40, so that event nets 0.
   await resolve(m1, 1)
 
   // Stakes that move and come back, which create nothing: a cancelled bet and a voided market.
@@ -212,8 +211,8 @@ describe('economy_summary', () => {
 
     expect(s.starting_grants_added).toBe(300)
     expect(s.task_rewards_added).toBe(10)
-    expect(s.seed_payouts_added).toBe(8)
-    expect(s.seed_payouts_removed).toBe(22)
+    expect(s.seed_payouts_added).toBe(0)
+    expect(s.seed_payouts_removed).toBe(0)
     expect(s.house_parlays_added).toBe(30)
     expect(s.house_parlays_removed).toBe(5)
     expect(s.owner_adjustments_added).toBe(25)
@@ -221,9 +220,9 @@ describe('economy_summary', () => {
 
     expect(s.bets_at_stake).toBe(100)
     expect(s.parlays_at_stake).toBe(4)
-    // Alice 100 - 30 + 48 - 25 - 25 + 25 - 48 - 7 + 7 - 12 - 1 = 32; Bob 100 + 10 - 10 - 10 - 5
-    // + 40 - 5 + 26 - 3 + 3 - 4 = 142; Olive 100 - 25 - 25 + 50 + 50 - 38 - 49 = 63.
-    expect(s.balances).toBe(237)
+    // Alice 100 - 30 + 40 - 25 - 25 + 25 - 40 - 7 + 7 - 12 - 1 = 32; Bob 100 + 10 - 10 - 10 - 5
+    // + 40 - 5 + 40 - 3 + 3 - 4 = 156; Olive 100 - 25 - 25 + 50 + 50 - 38 - 49 = 63.
+    expect(s.balances).toBe(251)
     expect(s.unclassified).toBe(0)
   })
 
@@ -237,9 +236,9 @@ describe('economy_summary', () => {
 
     // Starting balances are the grants, so this is grants + minted - destroyed = balances + at stake.
     expect(s.all_time_added - s.all_time_removed).toBe(circulation(s))
-    expect(s.all_time_added).toBe(373)
-    expect(s.all_time_removed).toBe(32)
-    expect(circulation(s)).toBe(341)
+    expect(s.all_time_added).toBe(365)
+    expect(s.all_time_removed).toBe(10)
+    expect(circulation(s)).toBe(355)
   })
 
   it('counts each flow in the month it happened and every month in the all-time totals', async () => {

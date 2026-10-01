@@ -17,9 +17,6 @@ const pickFor = (outcomeId: string, outcomeLabel: string): SlipPick => ({
   legBlock: null,
   outcomePool: 60,
   totalPool: 80,
-  realPool: 60,
-  realTotal: 80,
-  opposing: 0,
 })
 
 type NumberFlowProps = { value: number; suffix?: string; locales?: unknown; format?: { useGrouping?: boolean } }

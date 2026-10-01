@@ -60,6 +60,7 @@ const CASES: [string, () => ReactElement][] = [
             status: 'pending',
             credited: 0,
             maxMultiplier: 20,
+            lockedAtPlacement: false,
             multiplierBp: 40_000,
             capped: false,
             estimated: false,

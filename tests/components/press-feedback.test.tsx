@@ -23,7 +23,7 @@ import { Awards } from '@/components/leaderboard/awards'
 import { PastChampions } from '@/components/leaderboard/past-champions'
 import { CancelledBetRows, WagerRows } from '@/app/(app)/bets/bet-rows'
 import { MemberIdentity } from '@/app/(app)/admin/members/member-identity'
-import { MotionSettings } from '@/app/(app)/settings/settings-controls'
+import { MotionSettings, ThemeSetting } from '@/app/(app)/settings/settings-controls'
 import { CreateMarketForm } from '@/app/(app)/markets/new/create-market-form'
 
 const MEMBER = { id: 'm1', name: 'Grace', avatarSrc: null }
@@ -193,6 +193,38 @@ describe('press feedback', () => {
     )
     expect(container.querySelector('a')).toHaveClass('pressable', 'relative', 'hover-tint', 'lg:hover-lift', 'lg:before:hidden')
     expect(container.querySelector('a')).not.toHaveClass('hover-lift')
+  })
+
+  it('tints My bets’ parlay and bet tiles instead of lifting them inside the section card', () => {
+    const { container } = render(
+      <ul>
+        <PlacedParlay
+          parlay={{
+            id: 'p1',
+            stake: 5,
+            status: 'pending',
+            credited: 0,
+            multiplierBp: 40_000,
+            capped: false,
+            potentialPayout: 20,
+            createdAt: '2026-09-25T12:00:00Z',
+            legs: [{ marketId: 'k1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', lockedOddsBp: 20_000, status: 'open' }],
+          }}
+        />
+      </ul>,
+    )
+    const tile = container.querySelector('li > div')!
+    expect(tile).toHaveClass('pressable', 'relative', 'hover-tint')
+    expect(tile).not.toHaveClass('hover-lift')
+    const rows = readFileSync(path.resolve(import.meta.dirname, '../../app/(app)/bets/bet-rows.tsx'), 'utf8')
+    expect(rows).not.toMatch(/hover-lift/)
+  })
+
+  it('presses the theme choices', () => {
+    const { container } = render(<ThemeSetting initial="system" />)
+    const labels = container.querySelectorAll('label')
+    expect(labels).toHaveLength(3)
+    for (const label of labels) expect(label).toHaveClass('pressable')
   })
 
   it('tints the podium’s places instead of lifting them inside the podium card', () => {

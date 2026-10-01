@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseBlocks, parseDoc, parseInline } from '@/lib/docs/markdown'
+import { parseBlocks, parseDoc, parseInline, rebaseHashLinks } from '@/lib/docs/markdown'
 
 describe('parseInline', () => {
   it('reads bold, italics, code and links, nesting inside them', () => {
@@ -47,6 +47,21 @@ describe('parseDoc', () => {
     expect(doc.sections.map((s) => [s.slug, s.blocks.length])).toEqual([
       ['first-part', 2],
       ['second', 0],
+    ])
+  })
+})
+
+describe('rebaseHashLinks', () => {
+  it('points the doc’s own anchors at another page, everywhere a link can sit, and leaves other links alone', () => {
+    const blocks = parseBlocks(
+      ['See [Roles](#roles) and **[Tasks](#tasks)**.', '', '- [web](https://example.com)', '', '| a |', '|---|', '| [Limits](#limits) |'].join('\n'),
+    )
+    const hrefs = JSON.stringify(rebaseHashLinks(blocks, '/how-it-works#how-')).match(/"href":"[^"]+"/g)
+    expect(hrefs).toEqual([
+      '"href":"/how-it-works#how-roles"',
+      '"href":"/how-it-works#how-tasks"',
+      '"href":"https://example.com"',
+      '"href":"/how-it-works#how-limits"',
     ])
   })
 })

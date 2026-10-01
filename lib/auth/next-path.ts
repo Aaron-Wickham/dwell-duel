@@ -2,6 +2,9 @@ import { isAppPath } from './app-paths'
 
 // Where sign-in returns to (#263). The sign-in page keeps it in this cookie for the OAuth round trip,
 // rather than in redirectTo, so Supabase's redirect allow-list needn't take a query string.
+// Two cookies share this name, each scoped to the one route that reads it: path /callback, written
+// by the sign-in page for Supabase's redirect, and path /auth/google, written by /auth/google/nonce
+// for Google's own button. Each route clears only its own.
 export const NEXT_COOKIE = 'sign-in-next'
 export const NEXT_COOKIE_MAX_AGE = 60 * 10
 

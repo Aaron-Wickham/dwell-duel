@@ -461,12 +461,19 @@ on for an eleventh turns off the one you've used least recently.
 
 ## Your data
 
-What DwellDuel keeps about you, who can see it, and for how long.
+What DwellDuel keeps about you, who can see it, and for how long. This
+section is also public, at
+[dwellduel.com/privacy](https://www.dwellduel.com/privacy).
+
+**Who runs it:** Aaron Wickham, a member of the group, runs DwellDuel as
+a hobby, not a business. It has no ads, and nothing about you is sold or
+used for anything but running the app.
 
 **What's stored**
 
 - **From Google, when you sign in:** your name, email address and the link
-  to your Google profile picture. DwellDuel never sees your Google
+  to your Google profile picture, used only to sign you in, check your
+  invite and show your name and photo. DwellDuel never sees your Google
   password.
 - **What you add:** your display name, photo and bio.
 - **What you do:** your bets, parlays and cancelled bets, the markets you
@@ -522,6 +529,10 @@ everywhere, your notifications stop and you drop off the leaderboards (see
 [Roles](#roles)). Your coins, bets and history stay. If you'd like your
 data deleted as well, say so: the app has no button for that yet, so the
 owner does it by hand.
+
+**Questions:** members can ask the owner directly. Anyone else can reach
+them through
+[DwellDuel on GitHub](https://github.com/Aaron-Wickham/dwell-duel).
 
 ## Around the app
 

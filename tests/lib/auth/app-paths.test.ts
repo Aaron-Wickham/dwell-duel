@@ -45,6 +45,9 @@ describe('isAppPath', () => {
     for (const p of [
       '/sign-in',
       '/callback',
+      '/auth/google',
+      '/auth/google/nonce',
+      '/privacy',
       '/not-invited',
       '/offline',
       '/sw.js',

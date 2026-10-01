@@ -351,6 +351,7 @@ after changing one: Deploy Production → Run workflow, from `main`.
 | `CRON_SECRET` | The server refuses to boot | **Three places must match** (below) |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | The app boots, logs "Push notifications are off until they are set", and sends nothing; Settings says notifications aren't available | Below |
 | `NEXT_PUBLIC_SENTRY_DSN` | Errors aren't captured | Public by design; replace it only if it's being spammed: Sentry → the project → Client Keys → new key, set it, redeploy, disable the old key |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Sign-in uses Supabase's Google redirect, whose account chooser names the Supabase project instead of dwellduel.com | Public by design (it's in the page). Changes only with a new Google OAuth client: see [Google sign-in and brand verification](#google-sign-in-and-brand-verification) |
 | `HEALTHCHECKS_KEEP_ALIVE_URL`, `HEALTHCHECKS_CLOSING_ALERTS_URL` | No heartbeat pings, so each check goes late and emails | healthchecks.io → the check → its ping URL; set it, redeploy, then confirm the next ping arrives |
 
 **`CRON_SECRET`.** Vercel's cron, `pg_cron` and the Closing alerts
@@ -397,6 +398,57 @@ Update them under Settings → Environments → Production.
   add a secret; paste it into Supabase → Auth → Providers → Google; sign
   in once to check; then disable and delete the old secret.
 - **The backup key:** [The key](#the-key).
+
+## Google sign-in and brand verification
+
+Two ways in share one Google OAuth client (the one in Supabase → Auth →
+Providers → Google). With `NEXT_PUBLIC_GOOGLE_CLIENT_ID` set, the sign-in
+page shows Google's own button, Google posts the ID token to
+`/auth/google` on our domain, and the account chooser says "continue to
+dwellduel.com". Without it, sign-in goes through Supabase's redirect, whose
+chooser names `lymrpiivqvdnfcjmxksx.supabase.co`. The second is also the
+fallback when Google's script can't load.
+
+**Turning on Google's button** (each step is a setting outside the repo):
+
+1. Google Cloud → Google Auth Platform → Clients → the client
+   (`499057846503-erb8u68614jkmm4g6ti1t0ovoffdabl0.apps.googleusercontent.com`):
+   - **Authorized JavaScript origins:** add `https://www.dwellduel.com` and
+     `https://dwellduel.com`.
+   - **Authorized redirect URIs:** add `https://www.dwellduel.com/auth/google`
+     and `https://dwellduel.com/auth/google`. Google's `login_uri` must match
+     one exactly. Keep Supabase's
+     `https://lymrpiivqvdnfcjmxksx.supabase.co/auth/v1/callback` for the
+     fallback.
+   - Optional, to try it locally: origins `http://localhost` and
+     `http://localhost:3000`, redirect URI `http://localhost:3000/auth/google`.
+2. Supabase → Auth → Providers → Google: **Client IDs** must include that
+   client ID (Supabase checks the token was issued to it), and **Skip nonce
+   check** stays off.
+3. Vercel → Settings → Environment Variables (Production): set
+   `NEXT_PUBLIC_GOOGLE_CLIENT_ID` to the client ID, then redeploy (it's baked
+   into the build).
+4. Check: sign in on a desktop browser, in Safari on an iPhone and in the
+   installed app. Google's chooser should name dwellduel.com, and a deep
+   link should still land where it pointed.
+
+To turn it off, delete the variable and redeploy.
+
+**Brand verification** (so the consent screen shows DwellDuel's name and
+logo rather than an unverified app):
+
+1. Google Search Console → Add property → **Domain** → `dwellduel.com`;
+   add the TXT record it gives at the domain's DNS host and verify. The
+   Google account doing this must also be an Owner or Editor of the Cloud
+   project.
+2. Google Auth Platform → Branding: app name DwellDuel, the logo, support
+   email, **Application home page** `https://www.dwellduel.com` (a
+   signed-out visitor lands on `/sign-in`, which says what DwellDuel is and
+   links the privacy page), **Privacy policy**
+   `https://www.dwellduel.com/privacy`, and **Authorized domain**
+   `dwellduel.com`. Then submit for verification.
+3. `/privacy` is How it works' Your data section (`docs/HOW-IT-WORKS.md`),
+   public. Keep that section true: it's the policy Google reviews.
 
 ## Incidents
 

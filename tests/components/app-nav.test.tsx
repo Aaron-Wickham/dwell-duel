@@ -197,12 +197,12 @@ describe('AppNav', () => {
     pathname = '/members/me-1'
     const { unmount } = render(<Nav balance={120} isAdmin={false} />)
     for (const link of screen.getAllByRole('link', { name: 'Your profile' })) expect(link).toHaveAttribute('aria-current', 'page')
-    for (const link of screen.getAllByRole('link', { name: /^Leaders?,? ?(leaderboard)?$|^Leaderboard$/ })) expect(link).not.toHaveAttribute('aria-current')
+    for (const link of screen.getAllByRole('link', { name: /^(Leaders, leaderboard|Leaderboard)$/ })) expect(link).not.toHaveAttribute('aria-current')
     unmount()
     pathname = '/members/someone-else'
     render(<Nav balance={120} isAdmin={false} />)
     for (const link of screen.getAllByRole('link', { name: 'Your profile' })) expect(link).not.toHaveAttribute('aria-current')
-    for (const link of screen.getAllByRole('link', { name: /^Leaders?,? ?(leaderboard)?$|^Leaderboard$/ })) expect(link).toHaveAttribute('aria-current', 'page')
+    for (const link of screen.getAllByRole('link', { name: /^(Leaders, leaderboard|Leaderboard)$/ })) expect(link).toHaveAttribute('aria-current', 'page')
   })
 
   // #210: NumberFlow's script stays off every page's first load; the chip is text until the

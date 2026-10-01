@@ -67,7 +67,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/profile` | Edit your name, photo and bio |
 | `/settings` | Theme, your profile, haptics, reduced motion, notifications, How it works, sign out |
 | `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`) |
-| `/admin` redirects to the first section the role can see (`adminHref`) · `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role; Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); the ledger opens with the owner's Economy card |
+| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role; `/admin` alone redirects to the first one the role can see (`adminHref`); Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); the ledger opens with the owner's Economy card |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/not-invited` and `/offline`. The API has two routes.
@@ -553,8 +553,8 @@ layout renders them as attributes on `<html>` (`data-theme`,
 Sonner only hears the device setting, so `globals.css` stills its toasts
 under `data-motion="reduce"` itself. Its error toasts take the `--loss` tokens like its
 success ones take `--acc-*` (`components/ui/toaster.tsx`), so they meet AA in both themes.
-`app/global-error.tsx` replaces the root layout, so it copies the theme, motion and haptics
-cookies onto `<html>` itself once it mounts.
+`app/global-error.tsx` replaces the root layout, so it re-applies the theme, motion and haptics
+attributes the root layout put on `<html>` back once it mounts (read at module load, since the cookies are httpOnly).
 
 **Not found.** `app/(app)/[...missing]/page.tsx` calls `notFound()` for any URL that matches no
 route, so the 404 renders inside the signed-in layout (nav and tab bar) instead of falling to

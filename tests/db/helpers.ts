@@ -159,7 +159,14 @@ export async function ledgerViolations(): Promise<LedgerViolation[]> {
     select 'fixed parlay leg without factor and shares', l.id::text, 0, 1
     from public.parlay_legs l
     join public.parlays pa on pa.id = l.parlay_id
-    where (pa.multiplier is not null) <> (l.factor is not null and l.shares is not null)
+    where not pa.converted and (pa.multiplier is not null) <> (l.factor is not null and l.shares is not null)
+    union all
+    -- A pool parlay converted at release (0105) has a multiplier and payout, and each leg a factor
+    -- (its locked odds) but no parlay-book shares: it was paid by the house and never moved a pool.
+    select 'converted parlay leg without factor, or with shares', l.id::text, 0, 1
+    from public.parlay_legs l
+    join public.parlays pa on pa.id = l.parlay_id
+    where pa.converted and (pa.multiplier is null or pa.payout is null or l.factor is null or l.shares is not null)
     union all
     select 'parlay credited <> ledger', pa.id::text, pa.credited::int, coalesce(sum(t.amount), 0)::int
     from public.parlays pa
@@ -171,7 +178,7 @@ export async function ledgerViolations(): Promise<LedgerViolation[]> {
   `)
 }
 
-/** What place_slip_v2 answers with: what the call placed, and whether it replayed an earlier attempt. */
+/** What place_slip_v2 to v4 answer with: what the call placed, and whether it replayed an earlier attempt. */
 export type SlipSummary = { parlay_id: string | null; solos: number; picks: string[]; replayed: boolean }
 
 /**

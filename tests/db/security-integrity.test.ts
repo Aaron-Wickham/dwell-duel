@@ -100,7 +100,7 @@ describe('#57 parlay legs are priced without your own stakes', () => {
     const a = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
     for (const m of [a, b]) await backLeg(m, 1)
-    const { data: summary, error } = await bobClient.rpc('place_slip_v2', {
+    const { data: summary, error } = await bobClient.rpc('place_slip_v4', {
       p_singles: [{ outcome_id: a.outcomeIds[0], amount: 500 }],
       p_parlay_outcome_ids: [a.outcomeIds[1], b.outcomeIds[1]],
       p_parlay_stake: 10,

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { addToSlip, openSlip } from './slip'
-import { backers, clientForEmail } from '../tests/db/fixtures'
+import { backers, clientForEmail, createPoolMarket } from '../tests/db/fixtures'
 import { serviceClient } from '../tests/db/helpers'
 
 test('build a two-leg parlay in the slip, place it, and win it', async ({ page }) => {
@@ -16,7 +16,7 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
 
   for (const title of ['Parlay leg one?', 'Parlay leg two?']) {
     // Bob makes the markets: nobody can put a market they created in a parlay (0074).
-    const { data: marketId, error: createErr } = await bob.rpc('create_market', {
+    const { data: marketId, error: createErr } = await createPoolMarket(bob, {
       p_title: title,
       p_description: null,
       p_kind: 'binary',

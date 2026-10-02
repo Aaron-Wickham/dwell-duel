@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type PostgrestError } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import type { Database } from '@/lib/supabase/database'
 import { serviceClient, wipeDatabase, type TestClient } from './helpers'
@@ -205,6 +205,23 @@ export async function giveRole(member: Member, role: 'owner' | 'admin' | 'review
  * and parlay odds check the plain pool arithmetic; tests about seeded odds
  * (0041) pass `seed` explicitly.
  */
+export type CreateMarketArgs = Database['public']['Functions']['create_market_v3']['Args']
+
+/**
+ * A pool market, as create_market made one before 0105 refused the old build (with its 20 DC seed):
+ * the pool rules still settle markets made before release and stay until clean-up (#332), so their
+ * tests need one. Nothing in the app makes one any more, so this makes an lmsr market and turns it
+ * into a pool market while it has no bets. Answers like `rpc('create_market')` did.
+ */
+export async function createPoolMarket(client: TestClient, args: CreateMarketArgs): Promise<{ data: string; error: null } | { data: null; error: PostgrestError }> {
+  const { data, error } = await client.rpc('create_market_v3', args)
+  if (error) return { data: null, error }
+  const marketId = (data as { market_id: string }).market_id
+  const { error: poolErr } = await serviceClient().from('markets').update({ pricing: 'pool', seed_per_outcome: 20 }).eq('id', marketId)
+  if (poolErr) throw poolErr
+  return { data: marketId, error: null }
+}
+
 export async function createTestMarket(
   creatorClient: TestClient,
   labels: string[],
@@ -229,9 +246,9 @@ export async function createTestMarket(
     if (error) throw error
     marketId = (data as { market_id: string }).market_id
   } else {
-    const { data, error } = await creatorClient.rpc('create_market', args)
+    const { data, error } = await createPoolMarket(creatorClient, args)
     if (error) throw error
-    marketId = data as string
+    marketId = data!
   }
 
   const { data: created, error: seedErr } = await serviceClient()

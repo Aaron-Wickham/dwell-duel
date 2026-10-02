@@ -40,9 +40,9 @@ async function countFor(member: Member) {
   return { bets, parlays }
 }
 
-describe('place_slip_v2', () => {
+describe('place_slip_v4', () => {
   it('places solo bets and a parlay together', async () => {
-    const { data: summary, error } = await bobClient.rpc('place_slip_v2', {
+    const { data: summary, error } = await bobClient.rpc('place_slip_v4', {
       p_singles: [
         { outcome_id: a.outcomeIds[0], amount: 10 },
         { outcome_id: a.outcomeIds[1], amount: 4 },
@@ -60,7 +60,7 @@ describe('place_slip_v2', () => {
   })
 
   it('places solo bets alone, including on an outcome with no pool yet, and returns no parlay', async () => {
-    const { data, error } = await bobClient.rpc('place_slip_v2', {
+    const { data, error } = await bobClient.rpc('place_slip_v4', {
       p_singles: [{ outcome_id: a.outcomeIds[0], amount: 3 }],
       p_parlay_outcome_ids: [],
       p_parlay_stake: 0,
@@ -76,7 +76,7 @@ describe('place_slip_v2', () => {
       .update({ close_at: new Date(Date.now() - 1000).toISOString() })
       .eq('id', c.marketId)
 
-    const { error } = await bobClient.rpc('place_slip_v2', {
+    const { error } = await bobClient.rpc('place_slip_v4', {
       p_singles: [
         { outcome_id: a.outcomeIds[0], amount: 10 },
         { outcome_id: c.outcomeIds[1], amount: 5 },
@@ -90,7 +90,7 @@ describe('place_slip_v2', () => {
   })
 
   it('places nothing when the parlay fails, and says it was the parlay', async () => {
-    const { error } = await bobClient.rpc('place_slip_v2', {
+    const { error } = await bobClient.rpc('place_slip_v4', {
       p_singles: [{ outcome_id: a.outcomeIds[0], amount: 10 }],
       p_parlay_outcome_ids: [b.outcomeIds[0]],
       p_parlay_stake: 5,
@@ -101,7 +101,7 @@ describe('place_slip_v2', () => {
   })
 
   it('passes a balance shortfall through unprefixed, placing nothing', async () => {
-    const { error } = await bobClient.rpc('place_slip_v2', {
+    const { error } = await bobClient.rpc('place_slip_v4', {
       p_singles: [
         { outcome_id: a.outcomeIds[0], amount: 60 },
         { outcome_id: b.outcomeIds[1], amount: 60 },
@@ -116,11 +116,11 @@ describe('place_slip_v2', () => {
   })
 
   it('refuses an empty slip and an uninvited member', async () => {
-    const empty = await bobClient.rpc('place_slip_v2', { p_singles: [], p_parlay_outcome_ids: [], p_parlay_stake: 0 })
+    const empty = await bobClient.rpc('place_slip_v4', { p_singles: [], p_parlay_outcome_ids: [], p_parlay_stake: 0 })
     expect(empty.error?.message).toBe('your slip is empty')
 
     await serviceClient().from('allowed_emails').delete().eq('email', bob.email)
-    const uninvited = await bobClient.rpc('place_slip_v2', {
+    const uninvited = await bobClient.rpc('place_slip_v4', {
       p_singles: [{ outcome_id: a.outcomeIds[0], amount: 1 }],
       p_parlay_outcome_ids: [],
       p_parlay_stake: 0,

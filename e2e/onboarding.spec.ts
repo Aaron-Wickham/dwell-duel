@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { addToSlip, openSlip } from './slip'
 import { MEMBER_STORAGE_STATE_PATH } from './global-setup'
-import { clientForEmail } from '../tests/db/fixtures'
+import { clientForEmail, createPoolMarket } from '../tests/db/fixtures'
 import { serviceClient } from '../tests/db/helpers'
 
 // #260. Each test's context is fresh, so neither the dismissal nor How it works' read cookie
@@ -43,7 +43,7 @@ test('a member at 0 DC is pointed to Tasks on Home and in the slip, which keeps 
   const db = serviceClient()
   const { data: bob, error } = await db.from('profiles').select('id, balance').eq('email', 'bob@example.com').single()
   if (error) throw error
-  const { data: marketId, error: createErr } = await (await clientForEmail('bob@example.com')).rpc('create_market', {
+  const { data: marketId, error: createErr } = await createPoolMarket(await clientForEmail('bob@example.com'), {
     p_title: 'Will Bob find the Tasks page?',
     p_description: null,
     p_kind: 'binary',

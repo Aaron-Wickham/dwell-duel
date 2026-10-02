@@ -26,8 +26,11 @@ export interface ParlayView {
   // Placed before 0074: every leg's odds were locked when it was placed, not set at close.
   lockedAtPlacement: boolean
   // On lmsr markets (0104): the stake was split across the legs, and the multiplier and payout
-  // were fixed when it was placed. No cap applies.
+  // were fixed when it was placed. No cap applies, except to a pool parlay converted at release
+  // (0105), which keeps its pool caps.
   fixed: boolean
+  // A pool parlay converted at release (0105): its odds came from the pools and were fixed then.
+  converted: boolean
   multiplierBp: number
   capped: boolean
   // Some leg that still counts has no set odds yet, so the multiplier and payout are estimates.
@@ -60,12 +63,13 @@ export interface ParlayRow {
   odds_at_close: boolean
   multiplier: number | string | null
   payout: number | null
+  converted: boolean
   created_at: string
   parlay_legs: LegRow[]
 }
 
 export const PARLAY_COLUMNS =
-  'id, stake, status, credited, max_multiplier, odds_at_close, multiplier, payout, created_at, parlay_legs(outcome_id, locked_odds, factor, market_outcomes(label), markets(id, title, status, close_at, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id)))'
+  'id, stake, status, credited, max_multiplier, odds_at_close, multiplier, payout, converted, created_at, parlay_legs(outcome_id, locked_odds, factor, market_outcomes(label), markets(id, title, status, close_at, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id)))'
 
 // A leg's odds, keyed by `${parlayId}:${outcomeId}`, from parlay_leg_odds (0074).
 export type LegOdds = Map<string, { oddsBp: number; known: boolean }>
@@ -99,12 +103,22 @@ export function legOddsOf(
 }
 
 // The multiplier and payout of the legs that still count (a voided leg drops out, settle_parlay):
-// a fixed parlay's from its factors, exactly, with no cap; a pool parlay's from its odds, capped.
+// a fixed parlay's from its factors, exactly, with no cap; a pool parlay's from its odds, capped. A
+// converted parlay (0105) is fixed, with its pool caps: its stored payout, or with a leg voided, what
+// settle_parlay pays, least(capped payout of the rest, stored payout), which the caps already keep.
 export function parlayTerms(
-  p: Pick<ParlayRow, 'stake' | 'max_multiplier' | 'multiplier' | 'payout'>,
+  p: Pick<ParlayRow, 'stake' | 'max_multiplier' | 'multiplier' | 'payout' | 'converted'>,
   counted: { oddsBp: number; factor: number | string | null }[],
   anyVoided: boolean,
 ): Pick<ParlayView, 'fixed' | 'multiplierBp' | 'capped' | 'potentialPayout'> {
+  if (p.multiplier !== null && p.converted) {
+    const bps = counted.map((l) => l.oddsBp)
+    return {
+      fixed: true,
+      ...combineOdds(bps, p.max_multiplier),
+      potentialPayout: anyVoided || p.payout === null ? potentialPayout(p.stake, bps, p.max_multiplier) : p.payout,
+    }
+  }
   if (p.multiplier !== null) {
     const terms = fixedParlay(p.stake, counted.map((l) => l.factor ?? 1))
     return { fixed: true, multiplierBp: terms.multiplierBp, capped: false, potentialPayout: anyVoided ? terms.payout : (p.payout ?? terms.payout) }
@@ -139,6 +153,7 @@ export function toParlayView(p: ParlayRow, now: number, legOdds: LegOdds): Parla
     credited: p.credited,
     maxMultiplier: p.max_multiplier,
     lockedAtPlacement: !p.odds_at_close,
+    converted: p.converted,
     ...parlayTerms(p, counted.map((r) => ({ oddsBp: r.view.oddsBp, factor: r.factor })), counted.length < rows.length),
     estimated: counted.some((r) => !r.view.oddsKnown),
     createdAt: p.created_at,

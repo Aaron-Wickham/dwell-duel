@@ -105,7 +105,7 @@ describe('money races (#72)', () => {
     const a = await createTestMarket(admin, ['Yes', 'No'], { seed: 20, title: 'A' })
     const b = await createTestMarket(admin, ['Yes', 'No'], { seed: 20, title: 'B' })
     const slip = (m: TestMarket) =>
-      bobClient.rpc('place_slip_v2', {
+      bobClient.rpc('place_slip_v4', {
         p_singles: [{ outcome_id: m.outcomeIds[0], amount: 40 }, { outcome_id: m.outcomeIds[1], amount: 20 }],
         p_parlay_outcome_ids: [],
         p_parlay_stake: 0,

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient, type TestClient } from './helpers'
-import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, giveRole, insertLockedParlay } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, createPoolMarket, ensureInvited, type Member, giveRole, insertLockedParlay } from './fixtures'
 
 let alice: Member
 let bob: Member
@@ -22,7 +22,7 @@ beforeEach(async () => {
 const inAnHour = () => new Date(Date.now() + 3_600_000).toISOString()
 
 async function createOverUnder(client: TestClient, line: number) {
-  return client.rpc('create_market', {
+  return createPoolMarket(client, {
     p_title: 'Times Sean says "bet" in his teaching',
     p_description: null,
     p_kind: 'over_under',
@@ -39,7 +39,7 @@ async function outcomesOf(marketId: string) {
 
 describe('over/under markets', () => {
   it('makes the Over and Under outcomes from the line, ignoring any labels sent', async () => {
-    const { data: id, error } = await aliceClient.rpc('create_market', {
+    const { data: id, error } = await createPoolMarket(aliceClient, {
       p_title: 'Sermon length in minutes',
       p_description: null,
       p_kind: 'over_under',
@@ -58,7 +58,7 @@ describe('over/under markets', () => {
       const { error } = await createOverUnder(aliceClient, line)
       expect(error?.message, String(line)).toBe('the line must end in .5, like 3.5')
     }
-    const { error } = await aliceClient.rpc('create_market', {
+    const { error } = await createPoolMarket(aliceClient, {
       p_title: 'Yes or no',
       p_description: null,
       p_kind: 'binary',

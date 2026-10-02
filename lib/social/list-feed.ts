@@ -30,7 +30,7 @@ interface FeedRow {
 // still `!inner`, matching activity_feed's plain join on profiles: a row whose actor a viewer
 // can't see (RLS) is dropped, the same as the view never having a row to join in the first place,
 // instead of surfacing with an empty actorName. parlay_legs is capped at 10 rows per parlay
-// (MAX_PICKS, lib/parlays/odds.ts), so this never grows with the size of the table.
+// (6 since 0104: MAX_PICKS, lib/parlays/odds.ts), so this never grows with the size of the table.
 const FEED_COLUMNS =
   'id, kind, occurred_at, actor_id, market_id, amount, ' +
   'actor:profiles!activity_events_actor_id_fkey!inner(display_name), market:markets(title, created_by, void_reason), outcome:market_outcomes(label), ' +

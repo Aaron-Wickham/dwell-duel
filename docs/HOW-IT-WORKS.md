@@ -18,7 +18,7 @@ This page explains the rules.
   Bets are final.
 - On an older market, everyone's bets on an outcome make its pool, and the
   winners split the whole pot in proportion to what they bet.
-- A parlay joins 2–10 picks. It pays big, but only if every pick wins.
+- A parlay joins 2–6 picks. It pays big, but only if every pick wins.
 - Run low? Earn more DC with Bible-study tasks.
 
 ## Getting in
@@ -116,8 +116,9 @@ anyone does afterwards changes it.
   pays now, and you tap Place again to accept.
 - **Bets are final.** A bet on a new market can't be cancelled, and the
   owner can't remove it. (That's what makes the payout fixed.)
-- **Parlays can't include a new market yet.** Bet its picks Solo; parlays
-  on new markets are coming.
+- **Parlays on new markets pay a fixed amount too.** Your stake is split
+  across the picks, and what the parlay pays is set when you place it.
+  See "How parlays pay" below.
 
 ### The maths
 
@@ -141,8 +142,10 @@ when nobody backed the winner.
 
 **The house** pays winners out of what it sold shares for. On a new
 two-outcome market it can lose at most about 35 DC (*b* × ln 2), however
-people bet; the owner's economy panel shows its result as the **market
-maker** line.
+people bet on it solo; the owner's economy panel shows its result as the
+**market maker** line. Parlays on new markets are the house's too: it keeps
+a lost parlay's stake and pays a won one, with no cap, and that shows on
+the same line.
 
 ## Betting on older markets: shared pools with a seed
 
@@ -220,7 +223,47 @@ in the slip. Each pick is either:
 "Place" sends everything at once. If any single bet can't be placed, none
 of them are.
 
-**How parlays pay.** Each leg's odds are **set when its market closes**
+**How parlays pay.** A parlay's picks must all be on new markets or all
+on older ones: it can't mix the two, so switch one of them to Solo.
+
+- Between 2 and **6** legs, one per market.
+- It's lost as soon as one leg loses, and paid once every leg has won.
+- A leg whose market is voided drops out, and the parlay continues on the
+  rest. If every leg is voided, the stake is refunded.
+
+*On new markets*, a parlay's payout is **fixed when you place it**, like a
+solo bet's:
+
+- **Your stake is split evenly across the picks.** Each pick's share buys
+  shares in its outcome at that market's price, just as a solo bet of
+  that size would, so a parlay **moves each market's chance**. The shares
+  are held by DwellDuel (the "parlay book"), not by you: what you're paid
+  is the parlay's payout.
+- **Each leg's odds** are what its share of the stake bought: the shares ÷
+  the DC spent on them (1 ÷ the average price paid), to six decimal
+  places, rounded down. A leg never counts less than 1.00×.
+- **The multiplier** is the legs' odds multiplied together, and the
+  **payout** is the stake × the multiplier, rounded down to a whole DC.
+  The slip shows both exactly ("Pays 49 DC (4.96×) if every pick wins"),
+  with no "~". If the payout would be more than 2% lower by the time you
+  place it, nothing is placed: the slip shows the new payout and you tap
+  Place again.
+- **No other limits:** your own markets can be legs, a pick needs no
+  money from other members first, and there is no cap on the multiplier
+  or the payout. Your balance is the limit.
+- **A voided leg** drops out: the payout becomes the stake × the other
+  legs' odds, rounded down. With one leg left, it pays at that leg's odds.
+- **Bets are final:** a parlay can't be cancelled.
+- Example: market A is new, at 50% Yes; on market B, 30 shares of Yes
+  have been bought (about 65% Yes, 35% No). A 10 DC parlay on Yes in A and No in B spends 5 DC on each.
+  5 DC buys 9.545141 shares of A's Yes, so that leg is 9.545141 ÷ 5 =
+  **1.909028×** (and A's Yes moves to about 55%). 5 DC buys 12.995170
+  shares of B's No, so that leg is **2.599034×**. The multiplier is
+  1.909028 × 2.599034 = **4.96×**, so the parlay pays **49 DC** if both
+  win. If B is voided instead, it pays 10 × 1.909028 = **19 DC** when A's
+  Yes wins.
+
+*On older markets*, each leg's odds are **set when its market closes**
 (or when it's resolved, if an admin resolves it earlier), from the final
 pool: **other members' DC on the market ÷ other members' DC on your
 pick**. Your own money on that market doesn't count, and neither does the
@@ -231,8 +274,6 @@ on it or cancel, so the odds it sets are money really at risk.
 Multiplying the legs gives the parlay's multiplier, and the payout is the
 stake × the multiplier, rounded down.
 
-- Between 2 and **10** legs, one per market, and only on older markets
-  for now: a pick on a new market can't be a leg yet.
 - **Real money first:** a pick can be a leg only if its market already
   has at least **50 DC from at least 2 other members**. A brand-new market
   has seeded odds for solo bets, but nothing real to price a leg on.
@@ -252,22 +293,21 @@ stake × the multiplier, rounded down.
 - Example: a market with 25 DC on Yes and 35 DC on No from others prices
   Yes at 60 ÷ 25 = 2.40×. Two such legs are 5.76×, so a 5 DC parlay pays
   28 DC if both win.
-- It's lost as soon as one leg loses, and paid once every leg has won.
-- A leg whose market is voided drops out, and the parlay continues on the
-  rest. If every leg is voided, the stake is refunded.
-- Parlays are paid by the house. They don't go into any market's pool, so
-  they don't move a market's percentages (the same way Kalshi and
-  Polymarket keep their "Combos" separate).
-- **Riding in parlays.** So a busy parlay market doesn't look empty, each
-  outcome on a market page shows the DC in parlays still pending that ride
-  on it, as "+45 DC riding in parlays". Each parlay's full stake is counted
-  on every pick it rides on. It's shown for information only: it doesn't
-  change the pool, the chance, the "× payout per DC", the charts or
-  anyone's payout. It never says whose parlays they are.
+- Parlays on older markets are paid by the house. They don't go into any
+  market's pool, so they don't move its percentages (the same way Kalshi
+  and Polymarket keep their "Combos" separate).
 - A parlay placed before odds were set at close keeps the odds it locked
   when it was placed, under the same 20× and 1,000 DC caps. One that
   staked more than 1,000 DC still gets at least its stake back if it wins,
   so a win is never a loss. (One already settled keeps what it was paid.)
+
+**Riding in parlays.** So a busy parlay market doesn't look empty, each
+outcome on a market page shows the DC in parlays still pending that ride
+on it, as "+45 DC riding in parlays". Each parlay's full stake is counted
+on every pick it rides on. The figure itself is for information only: it
+isn't the chance, the "× payout per DC" or anyone's payout (on a new
+market, the parlay's share of its stake has already moved the chance like
+any bet). It never says whose parlays they are.
 
 **My bets** shows your solo bets and parlays together, newest first, under
 Open, Settled and Cancelled. Only you can see it. Everyone can see who
@@ -290,7 +330,9 @@ full ledger) can see it.
 - **Who resolves:** once a market has closed, its creator or any
   reviewer, or an admin at any time. **Nobody but an admin resolves a
   market they have money on** (a bet or a parlay leg), so a creator who bet
-  leaves it to a reviewer. A market whose creator has money on it shows
+  leaves it to a reviewer. A parlay leg counts even after its parlay has
+  been settled on another market, since an override there could bring it
+  back. A market whose creator has money on it shows
   what, bets and parlay picks alike ("Creator has 40 DC on Yes"), and so does
   its result in the feed. The resolver picks the winner (or, for an Over/Under,
   types the actual number) and **must say why**. They can attach photos,
@@ -310,7 +352,8 @@ full ledger) can see it.
   sort out balances first.
 - **Voids:** until a market closes, its creator or an admin can void it;
   once it has closed, only an admin can, the same way nobody with money on a
-  market settles it. Every void **must say why**, and the reason shows on
+  market settles it. A creator with money on their own market (a bet or a
+  parlay leg) can't void it at all: they ask an admin. Every void **must say why**, and the reason shows on
   the market page and in the feed. Every bet on it is refunded what it
   cost, and a parlay leg on it drops out.
 - **Paying out:** on a new market, each winning bet is paid its shares,
@@ -423,7 +466,8 @@ Every member's profile has a **Stats** card, which any member can see:
 - **Biggest win:** the largest payout minus its stake on a single solo
   bet, with the market. A payout an override took back doesn't count.
 - **Best parlay:** the won parlay with the highest multiplier (its winning
-  legs' odds multiplied, up to its cap), and what it paid.
+  legs' odds multiplied, up to its cap; on new markets, the multiplier fixed
+  when it was placed, less any voided legs), and what it paid.
 - **Markets created** and **Tasks completed** (approved submissions only).
 
 Until a member has a settled bet or parlay, the card says "No settled

@@ -116,14 +116,14 @@ describe('place_parlay', () => {
   it('rejects fewer than 2 picks', async () => {
     const a = await seededMarket('Market A', 25, 25)
     const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[0]], p_stake: 10 })
-    expect(error?.message).toContain('a parlay needs 2 to 10 picks')
+    expect(error?.message).toContain('a parlay needs 2 to 6 picks')
     await expectNothingPlaced()
   })
 
-  it('rejects more than 10 picks', async () => {
-    const ids = Array.from({ length: 11 }, () => randomUUID())
+  it('rejects more than 6 picks (0104)', async () => {
+    const ids = Array.from({ length: 7 }, () => randomUUID())
     const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: ids, p_stake: 10 })
-    expect(error?.message).toContain('a parlay needs 2 to 10 picks')
+    expect(error?.message).toContain('a parlay needs 2 to 6 picks')
     await expectNothingPlaced()
   })
 

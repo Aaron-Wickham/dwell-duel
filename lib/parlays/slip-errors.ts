@@ -1,7 +1,8 @@
 // place_slip (0039) prefixes a failure with the pick or the parlay it came from.
 const PICK_ERROR = /^pick ([0-9a-f-]{36}): (.+)$/i
 const PARLAY_ERROR = /^parlay: (.+)$/i
-// place_lmsr_bet (0102): the payout at commit is more than 2% under the one the slip showed.
+// place_lmsr_bet (0102) and place_lmsr_parlay (0104): the payout at commit is more than 2% under
+// the one the slip showed.
 const PRICE_MOVED = /^price_moved:(\d+)$/
 
 function sentence(message: string): string {
@@ -29,6 +30,15 @@ export function parseSlipError(message: string): {
     return { pickErrors: { [pick[1]]: sentence(pick[2]) } }
   }
   const parlay = PARLAY_ERROR.exec(message)
-  if (parlay) return { parlayError: sentence(parlay[1]) }
+  if (parlay) {
+    const moved = PRICE_MOVED.exec(parlay[1])
+    if (moved) {
+      return {
+        parlayError: `The price moved, so this parlay now pays ${moved[1]} DC if every pick wins. Tap Place again to bet at the new price.`,
+        priceMoved: true,
+      }
+    }
+    return { parlayError: sentence(parlay[1]) }
+  }
   return { formError: sentence(message) }
 }

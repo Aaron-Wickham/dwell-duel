@@ -1,8 +1,7 @@
 import type { DbClient } from '@/lib/supabase/database'
 import { isUuid } from '@/lib/uuid'
 import { legStatus, type LegStatus } from './leg-status'
-import { combineOdds, lockedOddsToBp, potentialPayout } from './odds'
-import { fetchLegOdds, type LegOdds, type ParlayLegView, type ParlayView } from './list-parlays'
+import { fetchLegOdds, legOddsOf, parlayTerms, type LegOdds, type ParlayLegView, type ParlayView } from './list-parlays'
 
 export interface ParlayLegDetail extends ParlayLegView {
   closeAt: string
@@ -21,7 +20,7 @@ export interface ParlayDetail extends Omit<ParlayView, 'legs'> {
 // The select list is a runtime string, so the generated types can't follow it and the rows are
 // cast. The resolution is embedded through markets' own current_resolution_id, as list-parlays does.
 const DETAIL_COLUMNS =
-  'id, profile_id, stake, status, credited, max_multiplier, odds_at_close, created_at, parlay_legs(outcome_id, locked_odds, market_outcomes(label), markets(id, title, status, close_at, market_outcomes(id, label), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at)))'
+  'id, profile_id, stake, status, credited, max_multiplier, odds_at_close, multiplier, payout, created_at, parlay_legs(outcome_id, locked_odds, factor, market_outcomes(label), markets(id, title, status, close_at, market_outcomes(id, label), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at)))'
 
 interface DetailRow {
   id: string
@@ -31,10 +30,13 @@ interface DetailRow {
   credited: number
   max_multiplier: number
   odds_at_close: boolean
+  multiplier: number | string | null
+  payout: number | null
   created_at: string
   parlay_legs: {
     outcome_id: string
     locked_odds: number | string | null
+    factor: number | string | null
     market_outcomes: { label: string }
     markets: {
       id: string
@@ -50,13 +52,11 @@ interface DetailRow {
 export function toParlayDetail(row: DetailRow, ownerName: string, now: number, legOdds: LegOdds): ParlayDetail {
   const legs = row.parlay_legs.map((l): ParlayLegDetail => {
     const resolution = l.markets.current_resolution
-    const quoted = l.locked_odds === null ? legOdds.get(`${row.id}:${l.outcome_id}`) : undefined
     return {
       marketId: l.markets.id,
       marketTitle: l.markets.title,
       outcomeLabel: l.market_outcomes.label,
-      oddsBp: l.locked_odds !== null ? lockedOddsToBp(l.locked_odds) : (quoted?.oddsBp ?? 10_000),
-      oddsKnown: l.locked_odds !== null || (quoted?.known ?? false),
+      ...legOddsOf(row.id, l, legOdds),
       status: legStatus(l.markets.status, resolution?.outcome_id ?? null, l.outcome_id, l.markets.close_at, now),
       closeAt: l.markets.close_at,
       marketStatus: l.markets.status,
@@ -64,10 +64,7 @@ export function toParlayDetail(row: DetailRow, ownerName: string, now: number, l
       resolvedAt: resolution?.resolved_at ?? null,
     }
   })
-  // A voided leg drops out, and the parlay carries on with the rest (settle_parlay).
-  const counted = legs.filter((l) => l.status !== 'voided')
-  const activeBps = counted.map((l) => l.oddsBp)
-  const { multiplierBp, capped } = combineOdds(activeBps, row.max_multiplier)
+  const counted = legs.flatMap((l, i) => (l.status === 'voided' ? [] : [{ oddsBp: l.oddsBp, factor: row.parlay_legs[i].factor, known: l.oddsKnown }]))
   return {
     id: row.id,
     ownerId: row.profile_id,
@@ -77,10 +74,8 @@ export function toParlayDetail(row: DetailRow, ownerName: string, now: number, l
     credited: row.credited,
     maxMultiplier: row.max_multiplier,
     lockedAtPlacement: !row.odds_at_close,
-    multiplierBp,
-    capped,
-    estimated: counted.some((l) => !l.oddsKnown),
-    potentialPayout: potentialPayout(row.stake, activeBps, row.max_multiplier),
+    ...parlayTerms(row, counted, counted.length < legs.length),
+    estimated: counted.some((l) => !l.known),
     createdAt: row.created_at,
     legs,
   }

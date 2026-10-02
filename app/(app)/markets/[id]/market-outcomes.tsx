@@ -78,7 +78,7 @@ export async function MarketOutcomes({
                   // A new pick starts Solo and shows only until the slip's own read (getSlipView)
                   // replaces it, so its parlay figures are the plain pool's, not a quote.
                   oddsBp: oddsBp ?? 10_000,
-                  legBlock: lmsr ? 'lmsr' : null,
+                  legBlock: null,
                   outcomePool: o.poolTotal,
                   totalPool,
                   ...(lmsr ? { lmsr: { q, index, liquidity: market.liquidity } } : {}),
@@ -93,7 +93,9 @@ export async function MarketOutcomes({
         </ul>
         {riding.size > 0 && (
           <p className="border-t border-line pt-3 text-sm text-ink2">
-            Parlays are paid by DwellDuel, not from this pool, so parlay money never moves these odds.{' '}
+            {lmsr
+              ? 'Each parlay’s share of its stake bought shares here, so it moved these odds like a bet; DwellDuel pays the parlay.'
+              : 'Parlays are paid by DwellDuel, not from this pool, so parlay money never moves these odds.'}{' '}
             <Link href="/how-it-works#how-the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']}>
               How parlays pay
             </Link>

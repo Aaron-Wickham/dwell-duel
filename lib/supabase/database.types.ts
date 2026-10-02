@@ -1791,6 +1791,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      place_lmsr_parlay: {
+        Args: { p_outcome_ids: string[]; p_payout: number; p_stake: number }
+        Returns: string
+      }
       place_parlay: {
         Args: { p_outcome_ids: string[]; p_stake: number }
         Returns: string
@@ -1817,6 +1821,16 @@ export type Database = {
         Args: {
           p_idempotency_key?: string
           p_parlay_outcome_ids: string[]
+          p_parlay_stake: number
+          p_singles: Json
+        }
+        Returns: Json
+      }
+      place_slip_v4: {
+        Args: {
+          p_idempotency_key?: string
+          p_parlay_outcome_ids: string[]
+          p_parlay_payout?: number
           p_parlay_stake: number
           p_singles: Json
         }

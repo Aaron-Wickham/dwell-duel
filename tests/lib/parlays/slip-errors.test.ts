@@ -23,6 +23,13 @@ describe('parseSlipError', () => {
     })
   })
 
+  it('says what the parlay pays now when its price moved (0104)', () => {
+    expect(parseSlipError('parlay: price_moved:47')).toEqual({
+      parlayError: 'The price moved, so this parlay now pays 47 DC if every pick wins. Tap Place again to bet at the new price.',
+      priceMoved: true,
+    })
+  })
+
   it('shows anything else for the whole slip', () => {
     expect(parseSlipError('not invited')).toEqual({ formError: 'Not invited.' })
   })

@@ -8,6 +8,7 @@ function leg(over: Record<string, unknown> = {}, market: Record<string, unknown>
   return {
     outcome_id: 'o-yes',
     locked_odds: 2.1,
+    factor: null,
     market_outcomes: { label: 'Yes' },
     markets: {
       id: 'm-1',
@@ -26,7 +27,7 @@ function leg(over: Record<string, unknown> = {}, market: Record<string, unknown>
 }
 
 const row = (legs: unknown[], over: Record<string, unknown> = {}) =>
-  ({ id: ID, profile_id: 'u-1', stake: 5, status: 'pending', credited: 0, max_multiplier: 20, created_at: '2026-09-27T16:10:00Z', parlay_legs: legs, ...over }) as Parameters<
+  ({ id: ID, profile_id: 'u-1', stake: 5, status: 'pending', credited: 0, max_multiplier: 20, multiplier: null, payout: null, created_at: '2026-09-27T16:10:00Z', parlay_legs: legs, ...over }) as Parameters<
     typeof toParlayDetail
   >[0]
 
@@ -95,6 +96,38 @@ describe('toParlayDetail', () => {
   it('marks an unresolved leg past its market’s close time as awaiting', () => {
     const detail = toParlayDetail(row([leg()]), 'Grace', Date.parse('2026-10-01T12:00:01Z'), new Map())
     expect(detail.legs[0].status).toBe('awaiting')
+  })
+})
+
+describe('a fixed parlay (0104)', () => {
+  it('shows its factors as known odds and its stored payout, uncapped', () => {
+    const detail = toParlayDetail(
+      row(
+        [leg({ locked_odds: null, factor: '3.1' }), leg({ locked_odds: null, factor: 2.5 }, { id: 'm-2' })],
+        { stake: 10, multiplier: '7.75', payout: 77, max_multiplier: 8 },
+      ),
+      'Grace',
+      BEFORE_CLOSE,
+      new Map(),
+    )
+    expect(detail).toMatchObject({ fixed: true, multiplierBp: 77_500, capped: false, estimated: false, potentialPayout: 77 })
+    expect(detail.legs.map((l) => [l.oddsBp, l.oddsKnown])).toEqual([
+      [31_000, true],
+      [25_000, true],
+    ])
+  })
+
+  it('drops a voided leg and pays the stake times the factors left', () => {
+    const detail = toParlayDetail(
+      row(
+        [leg({ locked_odds: null, factor: '3.1' }, { status: 'voided' }), leg({ locked_odds: null, factor: '2.5' }, { id: 'm-2' })],
+        { stake: 10, multiplier: '7.75', payout: 77 },
+      ),
+      'Grace',
+      BEFORE_CLOSE,
+      new Map(),
+    )
+    expect(detail).toMatchObject({ multiplierBp: 25_000, potentialPayout: 25 })
   })
 })
 

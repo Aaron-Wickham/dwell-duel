@@ -12,6 +12,8 @@ import {
   type Member,
   type TestMarket, giveRole, backLeg } from './fixtures'
 import { pgQuery } from './pg-query'
+import { lmsrBuy } from '@/lib/markets/lmsr'
+import { lmsrParlayQuote } from '@/lib/parlays/odds'
 
 let alice: Member
 let bob: Member
@@ -60,6 +62,37 @@ async function placeParlay(client: TestClient, outcomeIds: string[], stake: numb
   const { data, error } = await client.rpc('place_parlay', { p_outcome_ids: outcomeIds, p_stake: stake })
   if (error) throw error
   return data as string
+}
+
+// An lmsr market's q, in outcomeIds order, so a test can show the payout the slip would.
+async function qOf(market: TestMarket): Promise<number[]> {
+  const { data, error } = await serviceClient().from('market_outcomes').select('id, shares, q_offset').eq('market_id', market.marketId)
+  if (error) throw error
+  return market.outcomeIds.map((id) => {
+    const row = data.find((o) => o.id === id)!
+    return Number(row.shares) + Number(row.q_offset)
+  })
+}
+
+async function lmsrBet(client: TestClient, market: TestMarket, outcomeIndex: number, amount: number): Promise<void> {
+  const payout = Math.floor(lmsrBuy(await qOf(market), 50, outcomeIndex, amount))
+  const { error } = await client.rpc('place_slip_v4', {
+    p_singles: [{ outcome_id: market.outcomeIds[outcomeIndex], amount, payout }],
+    p_parlay_outcome_ids: [],
+    p_parlay_stake: 0,
+  })
+  if (error) throw error
+}
+
+async function lmsrParlay(client: TestClient, picks: [TestMarket, number][], stake: number): Promise<void> {
+  const legs = await Promise.all(picks.map(async ([m, i]) => ({ q: await qOf(m), liquidity: 50, index: i })))
+  const { error } = await client.rpc('place_slip_v4', {
+    p_singles: [],
+    p_parlay_outcome_ids: picks.map(([m, i]) => m.outcomeIds[i]),
+    p_parlay_stake: stake,
+    p_parlay_payout: lmsrParlayQuote(legs, stake).payout,
+  })
+  if (error) throw error
 }
 
 async function betIds(marketId: string): Promise<Record<string, number>> {
@@ -234,6 +267,43 @@ describe('activity_events', () => {
       { kind: 'task_completed', visible: 2, hidden: 0 },
     ])
     expect(await feedCount()).toBe(21)
+  })
+
+  it('holds exactly the rows activity_feed shows after every step of an lmsr scenario (0102, 0104)', async () => {
+    const a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'LMSR A', lmsr: true })
+    const b = await createTestMarket(aliceClient, ['Red', 'Blue', 'Green'], { title: 'LMSR B', lmsr: true })
+    expect(await mismatches()).toEqual([])
+
+    await lmsrBet(bobClient, a, 0, 11)
+    await lmsrBet(carolClient, a, 1, 30)
+    await lmsrBet(bobClient, b, 0, 4)
+    expect(await mismatches()).toEqual([])
+
+    await lmsrParlay(bobClient, [[a, 0], [b, 0]], 10)
+    await lmsrParlay(carolClient, [[a, 1], [b, 1]], 5)
+    expect(await mismatches()).toEqual([])
+
+    // A wins on its shares: Bob's bet pays floor(shares), and his parlay waits on B.
+    await resolve(a, 0)
+    expect(await mismatches()).toEqual([])
+
+    // Voiding B settles both parlays on A alone: Bob's wins at A's factor, Carol's loses.
+    const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: b.marketId, p_reason: 'Voided in a test' })
+    if (voidErr) throw voidErr
+    expect(await mismatches()).toEqual([])
+
+    // The override takes Bob's win and parlay back, and pays Carol's bet and parlay.
+    await resolve(a, 1)
+    expect(await mismatches()).toEqual([])
+
+    const kinds = await pgQuery<{ kind: string; visible: number; hidden: number }>(`
+      select kind, count(*) filter (where hidden_at is null)::integer as visible, count(*) filter (where hidden_at is not null)::integer as hidden
+      from public.activity_events where kind in ('bet_won', 'parlay_won') group by kind order by kind
+    `)
+    expect(kinds).toEqual([
+      { kind: 'bet_won', visible: 1, hidden: 1 },
+      { kind: 'parlay_won', visible: 1, hidden: 1 },
+    ])
   })
 
   it("backfills, from activity_feed, the same rows the triggers wrote", async () => {

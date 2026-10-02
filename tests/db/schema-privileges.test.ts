@@ -57,6 +57,7 @@ const AUTHENTICATED_DEFINER = [
   'place_slip',
   'place_slip_v2',
   'place_slip_v3',
+  'place_slip_v4',
   // Storage RLS helper (0089): whether a path is attached to proof; a boolean, no rows or paths leak.
   'proof_is_attached',
   // Storage RLS helper (0089): counts only the caller's own proof uploads today; returns a boolean.

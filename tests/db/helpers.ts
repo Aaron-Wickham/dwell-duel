@@ -119,8 +119,9 @@ export interface LedgerViolation {
 /**
  * The money invariants that no single scenario asserts, as one query that returns every
  * violating row: a balance equals the sum of its ledger rows, an outcome's pool equals its live
- * bets, an lmsr outcome's shares equal its live bets' shares (0102; the parlay book joins them in
- * #334), and a parlay's `credited` equals what the ledger paid and took back for it. (Balances
+ * bets, an lmsr outcome's shares equal its bets' shares plus its parlay legs' (the house parlay
+ * book's, 0104), a pool outcome holds no shares, an lmsr bet has shares and cost = amount, a fixed
+ * parlay's legs (and only its legs) carry a factor and shares, and a parlay's `credited` equals what the ledger paid and took back for it. (Balances
  * and pools can't go negative: the schema's CHECKs already guarantee that.)
  */
 export async function ledgerViolations(): Promise<LedgerViolation[]> {
@@ -138,12 +139,27 @@ export async function ledgerViolations(): Promise<LedgerViolation[]> {
     group by o.id, o.pool_total
     having o.pool_total <> coalesce(sum(b.amount), 0)
     union all
-    select 'lmsr shares <> live bets', o.id::text, o.shares::int, coalesce(sum(b.shares), 0)::int
+    select 'lmsr shares <> bets + parlay book', o.id::text, o.shares::float, (coalesce(b.held, 0) + coalesce(l.held, 0))::float
     from public.market_outcomes o
     join public.markets m on m.id = o.market_id and m.pricing = 'lmsr'
-    left join public.bets b on b.outcome_id = o.id
-    group by o.id, o.shares
-    having o.shares <> coalesce(sum(b.shares), 0)
+    left join (select outcome_id, sum(shares) as held from public.bets group by outcome_id) b on b.outcome_id = o.id
+    left join (select outcome_id, sum(shares) as held from public.parlay_legs group by outcome_id) l on l.outcome_id = o.id
+    where o.shares <> coalesce(b.held, 0) + coalesce(l.held, 0)
+    union all
+    select 'pool outcome holds shares', o.id::text, o.shares::float, 0
+    from public.market_outcomes o
+    join public.markets m on m.id = o.market_id and m.pricing = 'pool'
+    where o.shares <> 0
+    union all
+    select 'lmsr bet without shares, or cost <> amount', b.id::text, coalesce(b.cost, 0), b.amount
+    from public.bets b
+    join public.markets m on m.id = b.market_id and m.pricing = 'lmsr'
+    where b.shares is null or b.cost is distinct from b.amount
+    union all
+    select 'fixed parlay leg without factor and shares', l.id::text, 0, 1
+    from public.parlay_legs l
+    join public.parlays pa on pa.id = l.parlay_id
+    where (pa.multiplier is not null) <> (l.factor is not null and l.shares is not null)
     union all
     select 'parlay credited <> ledger', pa.id::text, pa.credited::int, coalesce(sum(t.amount), 0)::int
     from public.parlays pa

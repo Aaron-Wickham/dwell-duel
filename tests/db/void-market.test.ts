@@ -39,7 +39,8 @@ describe('void_market', () => {
     const { marketId, outcomeIds } = await createTestMarket(aliceClient, ['Yes', 'No'])
 
     const bobClient = await clientFor(bob)
-    await aliceClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[0], p_amount: 20 })
+    // The creator has no stake of her own: since 0104 one who does asks an admin to void.
+    await bobClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[0], p_amount: 20 })
     await bobClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[1], p_amount: 30 })
 
     const { error } = await aliceClient.rpc('void_market', { p_market_id: marketId, p_reason: REASON })
@@ -138,12 +139,16 @@ describe('who can void (0073)', () => {
     await ensureInvited(bobClient)
   })
 
-  it('lets the creator void before close, with or without a stake', async () => {
-    const { marketId, outcomeIds } = await createTestMarket(creatorClient, ['Yes', 'No'])
-    expect((await creatorClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[0], p_amount: 10 })).error).toBeNull()
+  it('lets the creator void before close only without a stake of their own (0104)', async () => {
+    const unstaked = await createTestMarket(creatorClient, ['Yes', 'No'], { title: 'Unstaked' })
+    expect((await creatorClient.rpc('void_market', { p_market_id: unstaked.marketId, p_reason: REASON })).error).toBeNull()
+    expect((await marketRow(unstaked.marketId)).status).toBe('voided')
 
-    expect((await creatorClient.rpc('void_market', { p_market_id: marketId, p_reason: REASON })).error).toBeNull()
-    expect((await marketRow(marketId)).status).toBe('voided')
+    const { marketId, outcomeIds } = await createTestMarket(creatorClient, ['Yes', 'No'], { title: 'Staked' })
+    expect((await creatorClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[0], p_amount: 10 })).error).toBeNull()
+    const { error } = await creatorClient.rpc('void_market', { p_market_id: marketId, p_reason: REASON })
+    expectError(error, 'you have a stake in this market, so ask an admin to void it')
+    expect((await marketRow(marketId)).status).toBe('open')
   })
 
   it('refuses the creator once the market has closed, stake or no stake, and leaves every bet in place', async () => {

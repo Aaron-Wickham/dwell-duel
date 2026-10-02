@@ -249,7 +249,7 @@ describe('place_slip_v3 on an lmsr market', () => {
     expectError((await bet(bobClient, market, 0, 10, 18)).error, 'market is not open for betting')
   })
 
-  it('refuses a parlay leg on an lmsr market', async () => {
+  it('leaves place_slip_v3, which the #333 build calls, refusing a parlay leg on an lmsr market', async () => {
     const other = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true })
     const { error } = await bobClient.rpc('place_slip_v3', {
       p_singles: [],
@@ -258,17 +258,6 @@ describe('place_slip_v3 on an lmsr market', () => {
     })
     expectError(error, "parlay: a pick on a market with fixed payouts can't be in a parlay yet")
     expect(await balanceOf(bob)).toBe(100)
-  })
-
-  it('refuses a parlay leg on an lmsr market however it is written', async () => {
-    // One statement, so the refused leg takes its parlay with it.
-    await expect(
-      pgQuery(`
-        with p as (insert into public.parlays (profile_id, stake, max_multiplier) values ('${bob.id}', 5, 20) returning id)
-        insert into public.parlay_legs (parlay_id, market_id, outcome_id)
-        select p.id, '${market.marketId}', '${market.outcomeIds[0]}' from p
-      `),
-    ).rejects.toThrow(/fixed payouts/)
   })
 })
 
@@ -283,7 +272,7 @@ describe('the app’s reads of an lmsr market', () => {
 
     const view = await getSlipView(carolClient, [{ outcomeId: market.outcomeIds[1], parlay: false }])
     const [pick] = view.picks
-    expect(pick.legBlock).toBe('lmsr')
+    expect(pick.legBlock).toBeNull()
     expect(pick.lmsr!.liquidity).toBe(50)
     expect(pick.lmsr!.q[pick.lmsr!.index]).toBe(0)
     expect([...pick.lmsr!.q].sort()).toEqual([...(await outcomeShares(market))].sort())
@@ -350,6 +339,21 @@ describe('resolving an lmsr market', () => {
     expect(await balanceOf(carol)).toBe(90 + carolQuote.payout)
   })
 
+  it('refuses an override that would claw back more than a winner still has', async () => {
+    expect((await bet(bobClient, market, 0, 5)).error).toBeNull()
+    expect((await bet(carolClient, market, 1, 10)).error).toBeNull()
+    await close(market)
+    expect((await resolve(aliceClient, market, 0)).error).toBeNull()
+    expect(await balanceOf(bob)).toBe(104)
+    // Bob spends his 9 DC win on another market, so the override can't take it back.
+    const other = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true })
+    expect((await bet(bobClient, other, 0, 100)).error).toBeNull()
+    const { error } = await resolve(oliveClient, market, 1)
+    expectError(error, 'clawback_short:[{"owed": 9, "balance": 4, "display_name": "Bob"}]')
+    expect(await balanceOf(bob)).toBe(4)
+    expect(await balanceOf(carol)).toBe(90)
+  })
+
   it('refunds nobody when nobody backed the winner', async () => {
     const three = await createTestMarket(aliceClient, ['A', 'B', 'C'], { lmsr: true })
     expect((await bet(bobClient, three, 0, 10)).error).toBeNull()
@@ -402,6 +406,22 @@ describe('the economy summary', () => {
     expect(s.payout_rounding_removed).toBe(1)
     expect(s.seed_payouts_added + s.seed_payouts_removed).toBe(0)
     // Everything ever added less removed is what's in circulation.
+    expect(s.all_time_added - s.all_time_removed).toBe(s.balances + s.bets_at_stake + s.parlays_at_stake)
+  })
+
+  it('moves the rounded-away fractions with an override, and keeps the market maker line whole', async () => {
+    expect((await bet(bobClient, market, 0, 5)).error).toBeNull()
+    const carolQuote = await quote(market, 1, 10)
+    expect((await bet(carolClient, market, 1, 10)).error).toBeNull()
+    await close(market)
+    expect((await resolve(aliceClient, market, 0)).error).toBeNull()
+    expect((await resolve(oliveClient, market, 1)).error).toBeNull()
+
+    const s = await summary()
+    const carolRemainder = Math.round(carolQuote.shares - carolQuote.payout)
+    // Bob's win and its 1 DC of rounding are taken back; Carol's payout and its rounding stand.
+    expect(s.payout_rounding_added - s.payout_rounding_removed).toBe(-carolRemainder)
+    expect(s.market_maker_added - s.market_maker_removed).toBe(carolQuote.payout - 15 + carolRemainder)
     expect(s.all_time_added - s.all_time_removed).toBe(s.balances + s.bets_at_stake + s.parlays_at_stake)
   })
 

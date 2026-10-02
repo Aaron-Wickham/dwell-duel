@@ -91,9 +91,9 @@ describe('legs on markets the bettor created, or nobody has bet on', () => {
 
 describe('legs on copies of one market', () => {
   it('multiply up to the caps and no further', async () => {
-    // Seven copies of one coin flip, each with the floor: 2^7 = 128x uncapped.
+    // Six copies of one coin flip (the most a parlay takes since 0104), each with the floor: 2^6 = 64x uncapped.
     const copies: TestMarket[] = []
-    for (let i = 1; i <= 7; i++) copies.push(await coinFlip(`Coin flip ${i}`))
+    for (let i = 1; i <= 6; i++) copies.push(await coinFlip(`Coin flip ${i}`))
     const id = await placeParlay(copies.map((m) => m.outcomeIds[0]), 100)
     for (const m of copies) await resolve(m, 0)
     // 20x of 100 is 2,000, and a parlay pays at most 1,000.

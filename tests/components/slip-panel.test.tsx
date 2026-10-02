@@ -4,6 +4,7 @@ import { startTransition, useState } from 'react'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { SlipPick, SlipView } from '@/lib/parlays/get-slip'
+import { formatOdds, lmsrParlayQuote } from '@/lib/parlays/odds'
 
 const { placeSlipAction, setPickModeAction, removeFromSlipAction, success } = vi.hoisted(() => ({
   placeSlipAction: vi.fn(),
@@ -159,7 +160,7 @@ describe('SlipPanel', () => {
 
   describe('a pick on an lmsr market (0102)', () => {
     const lmsr = (n: number, overrides: Partial<SlipPick> = {}) =>
-      pick(n, { legBlock: 'lmsr', lmsr: { q: [0, 0], index: 0, liquidity: 50 }, ...overrides })
+      pick(n, { lmsr: { q: [0, 0], index: 0, liquidity: 50 }, ...overrides })
 
     it('shows the exact payout, sends it with the stake, and says bets are final', async () => {
       placeSlipAction.mockResolvedValue({ placed: { solos: 1, parlay: null } })
@@ -180,9 +181,35 @@ describe('SlipPanel', () => {
       await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet. Bets are final.'))
     })
 
-    it('says it can’t be a parlay leg yet', () => {
+    it('makes a parlay of lmsr picks with its exact payout, sends it, and toasts the fixed figures (0104)', async () => {
+      placeSlipAction.mockResolvedValue({ placed: { solos: 0, parlay: { legs: 2, multiplierBp: 33_611, potentialPayout: 33, fixed: true } } })
+      renderPanel(viewOf(lmsr(1, { parlay: true }), lmsr(2, { parlay: true })))
+      expect(screen.getByText(/Your stake is split evenly across these picks/)).toBeInTheDocument()
+      await userEvent.type(screen.getByLabelText('Stake (DC)'), '10')
+      const quote = lmsrParlayQuote([{ q: [0, 0], index: 0, liquidity: 50 }, { q: [0, 0], index: 0, liquidity: 50 }], 10)
+      const multiplier = `${formatOdds(quote.multiplierBp)}×`
+      expect(screen.getByText(`Pays ${quote.payout} DC (${multiplier}) if every pick wins`)).toBeInTheDocument()
+      expect(screen.getByText(multiplier)).toBeInTheDocument()
+      expect(screen.queryByText(/~/)).not.toBeInTheDocument()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 10 DC' }))
+      await waitFor(() => expect(placeSlipAction).toHaveBeenCalled())
+      const data = placeSlipAction.mock.calls[0][1] as FormData
+      expect(data.get('parlay_payout')).toBe(String(quote.payout))
+      await waitFor(() => expect(success).toHaveBeenCalledWith('Placed a 2-leg parlay paying 33 DC (3.36×). Bets are final.'))
+    })
+
+    it('takes a parlay stake over 1,000 DC, since nothing caps a fixed parlay', async () => {
+      renderPanel(viewOf(lmsr(1, { parlay: true }), lmsr(2, { parlay: true })), 5000)
+      await userEvent.type(screen.getByLabelText('Stake (DC)'), '1200')
+      expect(screen.getByText(/^Pays \d+ DC \(.+×\) if every pick wins$/)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Place 1 bet · 1200 DC' })).toBeEnabled()
+    })
+
+    it('won’t mix lmsr and pool picks in one parlay', () => {
       renderPanel(viewOf(lmsr(1, { parlay: true }), pick(2, { parlay: true })))
-      expect(screen.getByText(/parlays can’t include it yet. Switch it to Solo/)).toBeInTheDocument()
+      expect(screen.getAllByText(/A parlay can’t mix markets with fixed payouts and older markets/).length).toBeGreaterThan(0)
+      expect(screen.getByRole('button', { name: /^Place/ })).toBeDisabled()
     })
 
     it('shows a moved price on the pick and keeps the slip to place again', async () => {
@@ -197,6 +224,21 @@ describe('SlipPanel', () => {
       await waitFor(() => expect(stake).toHaveAccessibleDescription(/now pays 17 DC/))
       expect(stake).toHaveValue(10)
       expect(success).not.toHaveBeenCalled()
+    })
+
+    it('drops a moved-price message once the stake it named changes', async () => {
+      placeSlipAction.mockResolvedValue({
+        pickErrors: { [lmsr(1).outcomeId]: 'The price moved, so this bet now pays 17 DC if it wins. Tap Place again to bet at the new price.' },
+        priceMoved: true,
+        movedStakes: { [lmsr(1).outcomeId]: '10' },
+      })
+      renderPanel(viewOf(lmsr(1)))
+      await userEvent.type(screen.getByLabelText('Stake (DC)'), '10')
+      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 10 DC' }))
+      expect(await screen.findByText(/now pays 17 DC/)).toBeInTheDocument()
+      await userEvent.type(screen.getByLabelText('Stake (DC)'), '0')
+      expect(screen.queryByText(/now pays 17 DC/)).not.toBeInTheDocument()
+      expect(screen.getByText(/^Pays \d+ DC if it wins$/)).toBeInTheDocument()
     })
   })
 

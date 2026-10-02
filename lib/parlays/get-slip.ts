@@ -1,20 +1,15 @@
 import type { DbClient } from '@/lib/supabase/database'
 import { lmsrState } from '@/lib/markets/pricing'
-import { combineOdds, lockedOddsToBp } from './odds'
+import { combineOdds, lockedOddsToBp, type LmsrLeg } from './odds'
 import type { SlipEntry } from './parse-slip'
 
-// Why a pick can't be a parlay leg: the member created its market, its market doesn't yet have
-// the floor of other members' money (MIN_LEG_POOL from MIN_LEG_BETTORS, 0074), or its market sells
-// shares, which parlays don't buy until #334 (0102).
-export type LegBlock = 'own_market' | 'floor' | 'lmsr'
+// Why a pick on a pool market can't be a parlay leg: the member created its market, or its market
+// doesn't yet have the floor of other members' money (MIN_LEG_POOL from MIN_LEG_BETTORS, 0074). A
+// pick on an lmsr market can always be one (0104).
+export type LegBlock = 'own_market' | 'floor'
 
-// An lmsr market's state, so the slip can quote a stake's exact payout (lmsrQuote).
-export interface LmsrPick {
-  q: number[]
-  // This pick's place in q.
-  index: number
-  liquidity: number
-}
+// An lmsr market's state, so the slip can quote a stake's exact payout (lmsrQuote, lmsrParlayQuote).
+export type LmsrPick = LmsrLeg
 
 export interface SlipPick {
   outcomeId: string
@@ -24,9 +19,9 @@ export interface SlipPick {
   parlay: boolean
   // The market still takes bets: open, and before close_at.
   open: boolean
-  // What a parlay leg on this pick would be priced at if its market closed now: other members' DC
-  // on the market over their DC on the pick, no seed, 1.00x under the floor (pick_quote, 0074). The
-  // real odds are set at close, so the slip shows this as an estimate.
+  // On a pool market, what a parlay leg on this pick would be priced at if its market closed now:
+  // other members' DC on the market over their DC on the pick, no seed, 1.00x under the floor
+  // (pick_quote, 0074). The real odds are set at close, so the slip shows this as an estimate.
   oddsBp: number
   legBlock: LegBlock | null
   // The real pools, no seed: what a solo payout is worked out from (soloPayout, 0074).
@@ -89,7 +84,7 @@ export async function getSlipView(supabase: DbClient, entries: SlipEntry[]): Pro
         parlay: entry.parlay,
         open: row.markets.status === 'open' && new Date(row.markets.close_at).getTime() > now,
         oddsBp: lockedOddsToBp(quote.odds),
-        legBlock: lmsr ? 'lmsr' : quote.own_market ? 'own_market' : quote.meets_floor ? null : 'floor',
+        legBlock: lmsr ? null : quote.own_market ? 'own_market' : quote.meets_floor ? null : 'floor',
         outcomePool: row.pool_total,
         totalPool: market.market_outcomes.reduce((sum, o) => sum + o.pool_total, 0),
         ...(lmsr ? { lmsr } : {}),

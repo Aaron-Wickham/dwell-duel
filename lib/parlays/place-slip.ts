@@ -6,11 +6,11 @@ import { GENERIC_ERROR } from '@/lib/errors/friendly-error'
 import { isDeliberateRaise } from '@/lib/errors/deliberate-raise'
 import { reportError } from '@/lib/observability/report'
 import { insufficientBalanceMessage, isBalanceCheckViolation } from '@/lib/errors/balance-error'
-import { combineOdds, lockedOddsToBp, potentialPayout } from './odds'
+import { combineOdds, factorBp, lockedOddsToBp, potentialPayout } from './odds'
 import { parseSlipError } from './slip-errors'
 import { readSlip, writeSlip } from './slip'
 
-// What place_slip_v3 (0102, as place_slip_v2 in 0072) returns: what was placed, and whether this
+// What place_slip_v4 (0104, as place_slip_v2 in 0072) returns: what was placed, and whether this
 // call replayed an earlier attempt's key. A key claimed by the build before 0072 stored only the
 // parlay id, so `solos` and `picks` can be missing on a replay.
 type SlipSummary = { parlay_id: string | null; solos?: number; picks?: string[]; replayed: boolean }
@@ -20,11 +20,16 @@ export type PlaceSlipState =
       formError?: string
       pickErrors?: Record<string, string>
       parlayError?: string
-      // A pick's price moved by more than 2% since the slip showed it (0102); the slip now shows the new one.
+      // A pick's or the parlay's price moved by more than 2% since the slip showed it (0102, 0104);
+      // the slip now shows the new one.
       priceMoved?: boolean
+      // The stake each refused pick (by outcome id) or the parlay ('parlay') was sent with: the
+      // slip drops the price-moved message once that stake changes, since the figure it names is stale.
+      movedStakes?: Record<string, string>
       placed?: {
         solos: number
-        parlay: { legs: number; multiplierBp: number; potentialPayout: number } | null
+        // `fixed`: on lmsr markets, so the multiplier and payout are exact (0104), not estimates.
+        parlay: { legs: number; multiplierBp: number; potentialPayout: number; fixed: boolean } | null
         // True when this was a retry of a slip that had already gone through (#226): the counts are
         // what that earlier attempt placed, not what the slip holds now.
         replayed?: boolean
@@ -42,7 +47,7 @@ function stakeOf(value: FormDataEntryValue | null): number | null {
 
 // The form posts each pick it shows as `pick=<outcome id>:solo|parlay`, with `stake:<outcome id>`
 // for each Solo pick, `payout:<outcome id>` for one on an lmsr market (what the slip showed it
-// paying), and one `parlay_stake`. Sending the modes, rather than re-reading them from
+// paying), one `parlay_stake`, and `parlay_payout` for a parlay on lmsr markets. Sending the modes, rather than re-reading them from
 // the cookie, means a place right after a Solo / Parlay switch uses what the member saw.
 export async function placeSlipAction(_prevState: PlaceSlipState, formData: FormData): Promise<PlaceSlipState> {
   const { supabase, user } = await requireUser()
@@ -67,20 +72,24 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
 
   const legs = picks.filter(([, mode]) => mode === 'parlay').map(([id]) => id)
   let parlayStake = 0
+  let parlayPayout: number | undefined
   let parlayError: string | undefined
   if (legs.length === 1) parlayError = 'A parlay needs at least 2 picks. Add another, or switch this one to Solo.'
   else if (legs.length > 1) {
     const stake = stakeOf(formData.get('parlay_stake'))
     if (stake === null) parlayError = WHOLE_DC
     else parlayStake = stake
+    const shown = Number(formData.get('parlay_payout'))
+    if (formData.has('parlay_payout') && Number.isInteger(shown)) parlayPayout = shown
   }
   if (Object.keys(pickErrors).length > 0 || parlayError) return { pickErrors, parlayError }
 
   const attemptKey = String(formData.get('idempotency_key') ?? '')
-  const { data, error } = await supabase.rpc('place_slip_v3', {
+  const { data, error } = await supabase.rpc('place_slip_v4', {
     p_singles: singles,
     p_parlay_outcome_ids: legs,
     p_parlay_stake: parlayStake,
+    ...(parlayPayout !== undefined ? { p_parlay_payout: parlayPayout } : {}),
     p_idempotency_key: UUID.test(attemptKey) ? attemptKey : undefined,
   })
   if (error) {
@@ -93,9 +102,13 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
       return { formError: GENERIC_ERROR }
     }
     const refused = parseSlipError(error.message)
+    if (!refused.priceMoved) return refused
     // The slip re-reads its picks, so it shows (and next sends) the payout the price gives now.
-    if (refused.priceMoved) revalidatePath('/', 'layout')
-    return refused
+    revalidatePath('/', 'layout')
+    const movedStakes: Record<string, string> = {}
+    for (const id of Object.keys(refused.pickErrors ?? {})) movedStakes[id] = String(formData.get(`stake:${id}`) ?? '')
+    if (refused.parlayError) movedStakes.parlay = String(formData.get('parlay_stake') ?? '')
+    return { ...refused, movedStakes }
   }
 
   const summary = (data ?? { parlay_id: null, replayed: false }) as SlipSummary
@@ -114,14 +127,25 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
 
   let parlay: NonNullable<NonNullable<PlaceSlipState>['placed']>['parlay'] = null
   if (parlayId) {
-    // A leg's odds are set when its market closes; for now, what the pools would give it (0074).
-    const { data: legOdds } = await supabase.rpc('parlay_leg_odds', { p_parlay_ids: [parlayId] })
-    const legBps = (legOdds ?? []).map((l) => lockedOddsToBp(l.odds))
-    const { data: stakeRow } = summary.replayed
-      ? await supabase.from('parlays').select('stake').eq('id', parlayId).maybeSingle()
-      : { data: null }
-    const stake = stakeRow?.stake ?? parlayStake
-    parlay = { legs: legBps.length, multiplierBp: combineOdds(legBps).multiplierBp, potentialPayout: potentialPayout(stake, legBps) }
+    const { data: row } = await supabase
+      .from('parlays')
+      .select('stake, multiplier, payout, parlay_legs(outcome_id)')
+      .eq('id', parlayId)
+      .maybeSingle()
+    if (row && row.multiplier !== null && row.payout !== null) {
+      parlay = { legs: row.parlay_legs.length, multiplierBp: factorBp(row.multiplier), potentialPayout: row.payout, fixed: true }
+    } else {
+      // A pool leg's odds are set when its market closes; for now, what the pools would give it (0074).
+      const { data: legOdds } = await supabase.rpc('parlay_leg_odds', { p_parlay_ids: [parlayId] })
+      const legBps = (legOdds ?? []).map((l) => lockedOddsToBp(l.odds))
+      const stake = row?.stake ?? parlayStake
+      parlay = {
+        legs: legBps.length,
+        multiplierBp: combineOdds(legBps).multiplierBp,
+        potentialPayout: potentialPayout(stake, legBps),
+        fixed: false,
+      }
+    }
   }
   const solos = summary.replayed ? (summary.solos ?? 0) : singles.length
   return { placed: { solos, parlay, ...(summary.replayed ? { replayed: true } : {}) } }

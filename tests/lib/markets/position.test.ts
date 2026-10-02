@@ -74,6 +74,7 @@ function position(overrides: Partial<ParlayView>, here: ParlayLegView, others: P
     credited: 0,
     maxMultiplier: 20,
     lockedAtPlacement: false,
+    fixed: false,
     multiplierBp: 160_000,
     capped: false,
     estimated: true,

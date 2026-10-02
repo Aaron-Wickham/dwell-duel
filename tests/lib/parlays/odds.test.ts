@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { legOddsBp, lockedOddsToBp, combineOdds, potentialPayout, formatOdds, soloPayout } from '@/lib/parlays/odds'
+import { legOddsBp, lockedOddsToBp, combineOdds, potentialPayout, formatOdds, soloPayout, factorBp, fixedParlay, lmsrParlayQuote } from '@/lib/parlays/odds'
+import { lmsrBuy } from '@/lib/markets/lmsr'
 
 describe('legOddsBp', () => {
   it('is total / outcome pool in 1/10,000ths, truncated like place_parlay', () => {
@@ -83,5 +84,34 @@ describe('soloPayout', () => {
 
   it('rounds down', () => {
     expect(soloPayout(3, 5, 20)).toBe(Math.floor((3 * 23) / 8))
+  })
+})
+
+describe('fixed parlays (0104)', () => {
+  it('reads a stored factor or multiplier in 1/10,000ths, truncated, from a number or a string', () => {
+    expect(factorBp(5.24)).toBe(52_400)
+    expect(factorBp('1.999999')).toBe(19_999)
+    expect(factorBp('2')).toBe(20_000)
+    expect(factorBp('5.2400000000001')).toBe(52_400)
+  })
+
+  it('multiplies six-place factors exactly and pays floor(stake x product)', () => {
+    // 1.832161 x 2.5 = 4.5804025: 10 DC pays 45, not 46.
+    expect(fixedParlay(10, ['1.832161', 2.5])).toEqual({ multiplierBp: 45_804, payout: 45 })
+    expect(fixedParlay(7, [2, 2])).toEqual({ multiplierBp: 40_000, payout: 28 })
+    expect(fixedParlay(7, [])).toEqual({ multiplierBp: 10_000, payout: 7 })
+  })
+
+  it('quotes what place_lmsr_parlay stores: S/n a leg, six-place shares and factors, never under 1x', () => {
+    const even = { q: [0, 0], liquidity: 50, index: 0 }
+    const stake = 10
+    const shares = Math.floor(lmsrBuy([0, 0], 50, 0, 5) * 1e6)
+    const factor = Math.floor((shares * 2) / stake)
+    const quote = lmsrParlayQuote([even, even], stake)
+    expect(quote.factors).toEqual([factor / 1e6, factor / 1e6])
+    expect(quote).toMatchObject(fixedParlay(stake, [factor / 1e6, factor / 1e6]))
+    // A sure thing buys back about its spend: the factor floors at 1.
+    const sure = { q: [5000, 0], liquidity: 50, index: 0 }
+    expect(lmsrParlayQuote([sure, sure, sure], 10).factors).toEqual([1, 1, 1])
   })
 })

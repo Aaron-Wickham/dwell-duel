@@ -18,7 +18,8 @@
 -- branch, which refuses because no pool market is open). pick_quotes stays until the previous
 -- build, whose slip reads it, is gone.
 
-set lock_timeout = '5s';
+begin;
+set local lock_timeout = '5s';
 
 drop function public.cancel_bet(bigint);
 drop function public.remove_bet(bigint);
@@ -51,3 +52,5 @@ as $$
 $$;
 
 delete from public.write_rate_counters where action = 'bet_cancel';
+
+commit;

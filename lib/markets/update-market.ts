@@ -3,14 +3,15 @@
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
-import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
+import { RATE_LIMIT_ERRORS, TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { normalizeCategoryName } from './categories'
 
 type Field = 'title' | 'description' | 'category'
 
 export type ActionState = { formError?: string; field?: Field; saved?: boolean } | undefined
 
-// update_market's raises (0043, 0046, 0103) and the constraints its update can trip.
+// update_market's raises (0043, 0046, 0103), the new-category write limit and the constraints its
+// update can trip.
 const UPDATE_MARKET_ERRORS: readonly KnownError<Field>[] = [
   { match: 'enter a title', formError: 'Enter a title.', field: 'title' },
   { match: 'choose a category', formError: 'Choose a category.', field: 'category' },
@@ -21,6 +22,7 @@ const UPDATE_MARKET_ERRORS: readonly KnownError<Field>[] = [
   { match: 'markets_title_length', formError: tooLong('Title', TEXT_LIMITS.marketTitle), field: 'title' },
   { match: 'markets_description_length', formError: tooLong('Description', TEXT_LIMITS.marketDescription), field: 'description' },
   { match: 'market_categories_name_length', formError: tooLong('Category', TEXT_LIMITS.category), field: 'category' },
+  { ...RATE_LIMIT_ERRORS.category, field: 'category' },
 ]
 
 // update_market (0043, 0103) decides who may edit what and until when, and keeps the history. A

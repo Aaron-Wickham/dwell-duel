@@ -14,6 +14,7 @@ export const CREATE_MARKET_ERRORS: readonly KnownError<'title' | 'description' |
   { match: 'choose a category', formError: 'Choose a category.', field: 'category' },
   { match: 'market_categories_name_length', formError: tooLong('Category', TEXT_LIMITS.category), field: 'category' },
   RATE_LIMIT_ERRORS.market,
+  { ...RATE_LIMIT_ERRORS.category, field: 'category' },
   { match: 'markets_title_length', formError: tooLong('Title', TEXT_LIMITS.marketTitle), field: 'title' },
   { match: 'markets_description_length', formError: tooLong('Description', TEXT_LIMITS.marketDescription), field: 'description' },
   { match: 'market_outcomes_label_length', formError: tooLong('Each outcome', TEXT_LIMITS.outcomeLabel), field: 'outcomes' },

@@ -13,8 +13,11 @@
 --    Unlike the title, other members' bets don't fix it. The three-argument version stays for the
 --    old build.
 -- 5. Admins rename, merge and hide categories; category_counts() ranks them for the markets list.
+--    Making a market in a hidden or merged category's name shows it again. A member can make 20 new
+--    categories a day (0090's write limits), since editing a market can make one too.
 --
--- Additive: a new table, new columns with defaults, new functions and a new overload.
+-- Additive: a new table, new columns with defaults, new functions, a new overload, and 0090's
+-- write_limits() and enforce_write_limit() replaced with the same signatures.
 --
 -- One explicit transaction, like 0034-0102.
 begin;
@@ -73,30 +76,108 @@ set search_path = ''
 as $$
 declare
   v_name text := regexp_replace(btrim(coalesce(p_name, '')), '\s+', ' ', 'g');
+  v_slug text;
   v_id uuid;
 begin
   if v_name = '' then
     raise exception 'choose a category';
   end if;
+  v_slug := lower(replace(v_name, ' ', '-'));
 
-  insert into public.market_categories (name, created_by)
-  values (v_name, auth.uid())
-  on conflict (slug) do nothing
-  returning id into v_id;
-
+  -- Looked up first, so only a name nobody has used reaches the insert and its write limit.
+  select id into v_id from public.market_categories where slug = v_slug;
   if v_id is null then
-    update public.market_categories
-    set hidden_at = null
-    where slug = lower(replace(v_name, ' ', '-')) and hidden_at is not null;
+    insert into public.market_categories (name, created_by)
+    values (v_name, auth.uid())
+    on conflict (slug) do nothing
+    returning id into v_id;
 
-    select id into v_id from public.market_categories where slug = lower(replace(v_name, ' ', '-'));
+    if v_id is null then
+      select id into v_id from public.market_categories where slug = v_slug;
+    end if;
   end if;
+
+  update public.market_categories set hidden_at = null where id = v_id and hidden_at is not null;
 
   return v_id;
 end;
 $$;
 
 revoke execute on function public.category_for_name(text) from public, anon, authenticated;
+
+-- New categories count against a daily write limit (0090), like markets: editing a market can make
+-- one too, so the market limit alone wouldn't bound them. write_limits() and enforce_write_limit()
+-- are 0090's, plus the category row and its message.
+create or replace function public.write_limits()
+returns table (action text, max_writes integer, window_seconds integer)
+language sql
+immutable
+set search_path = ''
+as $$
+  select * from (values
+    ('market', 20, 86400),
+    ('category', 20, 86400),
+    ('comment', 10, 60),
+    ('comment', 200, 86400),
+    ('reaction', 60, 60),
+    ('reaction', 1000, 86400),
+    ('task_submission', 30, 86400),
+    ('bet_cancel', 20, 3600)
+  ) as l (action, max_writes, window_seconds)
+$$;
+
+create or replace function public.enforce_write_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_action text := tg_argv[0];
+  v_owner uuid := (to_jsonb(new) ->> tg_argv[1])::uuid;
+  v_limit record;
+  v_writes integer;
+begin
+  if auth.uid() is null or v_owner is distinct from auth.uid() or public.has_role('admin') then
+    return new;
+  end if;
+
+  -- A comment replayed with its attempt key (0083) is about to hit the key's unique index and post
+  -- nothing, so it doesn't count: a member at the limit whose response was lost still sees it posted.
+  if v_action = 'comment' and (to_jsonb(new) ->> 'attempt_key') is not null and exists (
+    select 1 from public.market_comments c where c.attempt_key = (to_jsonb(new) ->> 'attempt_key')::uuid
+  ) then
+    return new;
+  end if;
+
+  for v_limit in select l.max_writes, l.window_seconds from public.write_limits() l where l.action = v_action loop
+    insert into public.write_rate_counters as c (profile_id, action, window_seconds, window_start, writes)
+    values (v_owner, v_action, v_limit.window_seconds, now(), 1)
+    on conflict (profile_id, action, window_seconds) do update
+      set window_start = case when c.window_start <= now() - make_interval(secs => v_limit.window_seconds) then now() else c.window_start end,
+          writes = case when c.window_start <= now() - make_interval(secs => v_limit.window_seconds) then 1 else c.writes + 1 end
+    returning c.writes into v_writes;
+
+    if v_writes > v_limit.max_writes then
+      raise exception '%', case v_action
+        when 'market' then 'you have created too many markets recently; try again later'
+        when 'category' then 'you have created too many categories recently; try again later'
+        when 'comment' then 'you have posted too many comments recently; try again later'
+        when 'reaction' then 'you have added too many reactions recently; try again later'
+        when 'task_submission' then 'you have submitted too many tasks recently; try again later'
+        when 'bet_cancel' then 'you have cancelled too many bets recently; try again later'
+        else 'too many writes; try again later'
+      end
+      using errcode = 'DD429';
+    end if;
+  end loop;
+
+  return new;
+end;
+$$;
+
+create trigger market_categories_write_limit before insert on public.market_categories
+  for each row execute function public.enforce_write_limit('category', 'created_by');
 
 -- ─── Creating ───────────────────────────────────────────────────────────────
 
@@ -237,7 +318,17 @@ begin
     raise exception 'enter a title';
   end if;
 
-  v_category_id := case when p_category is null then v_market.category_id else public.category_for_name(p_category) end;
+  -- The current category, however it's typed, stays as it is: category_for_name would show it
+  -- again if an admin had hidden it.
+  if p_category is null or exists (
+    select 1 from public.market_categories
+    where id = v_market.category_id
+      and slug = lower(replace(regexp_replace(btrim(p_category), '\s+', ' ', 'g'), ' ', '-'))
+  ) then
+    v_category_id := v_market.category_id;
+  else
+    v_category_id := public.category_for_name(p_category);
+  end if;
 
   v_wording_changed := v_title <> v_market.title or v_description is distinct from v_market.description;
   v_category_changed := v_category_id <> v_market.category_id;
@@ -341,7 +432,10 @@ begin
   if not exists (select 1 from public.market_categories where id = p_from) then
     raise exception 'category not found';
   end if;
-  if not exists (select 1 from public.market_categories where id = p_into and hidden_at is null) then
+  if not exists (select 1 from public.market_categories where id = p_into) then
+    raise exception 'category not found';
+  end if;
+  if exists (select 1 from public.market_categories where id = p_into and hidden_at is not null) then
     raise exception 'merge into a category that isn''t hidden';
   end if;
 

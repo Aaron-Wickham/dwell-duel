@@ -28,6 +28,8 @@ export function tooLong(label: string, max: number): string {
 // window. tests/db/write-limits.test.ts keeps the two equal.
 export const WRITE_LIMITS = {
   market: [{ max: 20, windowSeconds: 86400 }],
+  // New categories (0103), which editing a market can make as well as creating one.
+  category: [{ max: 20, windowSeconds: 86400 }],
   comment: [
     { max: 10, windowSeconds: 60 },
     { max: 200, windowSeconds: 86400 },
@@ -43,12 +45,16 @@ export const WRITE_LIMITS = {
 export type WriteAction = keyof typeof WRITE_LIMITS
 
 // enforce_write_limit's raise for each action (SQLSTATE DD429), and what the member sees.
-const { market, comment, reaction, task_submission, bet_cancel } = WRITE_LIMITS
+const { market, category, comment, reaction, task_submission, bet_cancel } = WRITE_LIMITS
 
 export const RATE_LIMIT_ERRORS = {
   market: {
     match: 'you have created too many markets recently; try again later',
     formError: `You can create up to ${market[0].max} markets a day. Try again later.`,
+  },
+  category: {
+    match: 'you have created too many categories recently; try again later',
+    formError: `You can make up to ${category[0].max} new categories a day. Pick an existing one, or try again later.`,
   },
   comment: {
     match: 'you have posted too many comments recently; try again later',

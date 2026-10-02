@@ -56,8 +56,8 @@ most used, or type a new one (up to 24 characters): a name that differs
 only in capitals or spacing from an existing category is that category.
 Markets made before categories, and any made from an older version of the
 app, are in **Other**. An admin can rename, merge or hide categories; a
-hidden one drops out of the suggestions and chips until someone makes a
-market in it again.
+hidden or merged-away one drops out of the suggestions and chips, and
+typing its name for a market brings it back.
 
 While a market is open, its creator (or an admin) can edit the
 description and the category, and can reword the title until someone else
@@ -520,6 +520,7 @@ member can make at most:
 | What | How many |
 |---|---|
 | New markets | 20 a day |
+| New categories | 20 a day |
 | Comments | 10 a minute, 200 a day |
 | Reactions | 60 a minute, 1,000 a day |
 | Task submissions | 30 a day |

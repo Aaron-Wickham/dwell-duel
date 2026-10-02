@@ -4,6 +4,7 @@ import { serviceClient, type TestClient } from './helpers'
 import { expectError } from './assertions'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, giveRole, backLeg, type Member } from './fixtures'
 import { pgQuery } from './pg-query'
+import { RATE_LIMIT_ERRORS } from '@/lib/forms/limits'
 
 const OTHER_ID = '00000000-0000-4000-8000-000000000327'
 
@@ -187,6 +188,29 @@ describe('update_market with a category', () => {
     expect(data).toEqual({ category_id: await categoryId('Weather'), title: 'Test market' })
   })
 
+  it('leaves a hidden category hidden when a market in it is reworded, however its name is typed', async () => {
+    const market = await marketOf((await create(aliceClient, 'Potluck')).data)
+    expect((await adminClient.rpc('set_market_category_hidden', { p_category_id: market.category_id, p_hidden: true })).error).toBeNull()
+    expect((await edit(aliceClient, market.id, '  potluck ', 'Will it rain at the potluck?')).error).toBeNull()
+    const { data } = await serviceClient().from('market_categories').select('hidden_at').eq('id', market.category_id).single()
+    expect(data?.hidden_at).not.toBeNull()
+    const { data: edits } = await serviceClient().from('market_edits').select('old_category_id').eq('market_id', market.id)
+    expect(edits).toEqual([{ old_category_id: null }])
+  })
+
+  it('counts a new category made by an edit against the daily limit, but not choosing an existing one', async () => {
+    const m = await createTestMarket(aliceClient, ['Yes', 'No'])
+    await create(bobClient, 'Weather')
+    await pgQuery(`
+      insert into public.write_rate_counters (profile_id, action, window_seconds, window_start, writes)
+      values ('${alice.id}', 'category', 86400, now(), 20)
+    `)
+    expectError((await edit(aliceClient, m.marketId, 'Brand new')).error, { code: 'DD429', message: RATE_LIMIT_ERRORS.category.match })
+    expectError((await create(aliceClient, 'Another new')).error, { code: 'DD429', message: RATE_LIMIT_ERRORS.category.match })
+    expect((await edit(aliceClient, m.marketId, 'weather')).error).toBeNull()
+    expect((await create(aliceClient, 'Weather', { title: 'Sunny?' })).error).toBeNull()
+  })
+
   it('refuses another member', async () => {
     const m = await createTestMarket(aliceClient, ['Yes', 'No'])
     expectError((await edit(bobClient, m.marketId, 'Sports')).error, "only the market's creator or an admin can edit it")
@@ -232,6 +256,7 @@ describe('admin category functions', () => {
     expect(source?.hidden_at).not.toBeNull()
 
     expectError((await adminClient.rpc('merge_market_categories', { p_from: sports, p_into: footy })).error, "merge into a category that isn't hidden")
+    expectError((await adminClient.rpc('merge_market_categories', { p_from: sports, p_into: randomUUID() })).error, 'category not found')
   })
 
   it('hides and unhides, but never hides Other', async () => {

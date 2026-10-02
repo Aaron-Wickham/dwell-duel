@@ -1,7 +1,7 @@
 import type { LiveSubscription } from '@/components/live/live-refresh'
 
 export const pageSubscriptions = {
-  // The bets, cancelled_bets and parlay_legs channels also carry the viewer's Your position card
+  // The bets and parlay_legs channels also carry the viewer's Your position card
   // (#262) and the outcomes' "riding in parlays" figure (#279); parlays filtered to the viewer
   // carries their own parlays settling on another market. Another member's parlay settling
   // elsewhere writes nothing here, so the figure catches up on the next refresh: following every
@@ -9,9 +9,6 @@ export const pageSubscriptions = {
   marketDetail(marketId: string, viewerId: string): LiveSubscription[] {
     return [
       { table: 'bets', filter: `market_id=eq.${marketId}` },
-      // A cancel deletes from bets, and a filtered channel never receives deletes; the
-      // cancelled_bets insert it makes in the same transaction is what reaches this page.
-      { table: 'cancelled_bets', filter: `market_id=eq.${marketId}` },
       { table: 'markets', filter: `id=eq.${marketId}` },
       { table: 'market_resolutions', filter: `market_id=eq.${marketId}` },
       // The creator's parlay legs show in the creator-stake line (#84).
@@ -21,9 +18,8 @@ export const pageSubscriptions = {
       { table: 'market_comments', filter: `market_id=eq.${marketId}` },
     ]
   },
-  // Every card's odds move with every bet, and every bet (or cancellation) moves its outcome's
-  // pool_total, so the list follows the pools topic (market_outcomes) rather than every bets and
-  // cancelled_bets row (#204). The database pings it at most once every few seconds (#250).
+  // Every card's odds move with every bet, and every bet moves its outcome's pool_total and
+  // shares, so the list follows the pools topic (market_outcomes) rather than every bets row (#204). The database pings it at most once every few seconds (#250).
   markets(): LiveSubscription[] {
     return [{ topic: 'markets' }, { topic: 'pools' }]
   },
@@ -33,14 +29,13 @@ export const pageSubscriptions = {
   // profiles isn't watched here: every bet moves some balance, so watching all of them refreshed
   // every open Home on every bet (#68). The layout's base channel already follows this member's
   // own profile; the rank catches up on the next visit.
-  // The hero's At stake moves when the member bets, cancels or places a parlay, and when a market
+  // The hero's At stake moves when the member bets or places a parlay, and when a market
   // or parlay settles (markets, and parlays' own status).
   home({ me, reviewer }: { me: string; reviewer: boolean }): LiveSubscription[] {
     return [
       { topic: 'markets' },
       { topic: 'tasks' },
       { table: 'bets', filter: `profile_id=eq.${me}` },
-      { table: 'cancelled_bets', filter: `profile_id=eq.${me}` },
       { table: 'parlays', filter: `profile_id=eq.${me}` },
       reviewer ? { topic: 'reviews' } : { table: 'task_completions', filter: `profile_id=eq.${me}` },
     ]
@@ -59,8 +54,6 @@ export const pageSubscriptions = {
   member(memberId: string): LiveSubscription[] {
     return [
       { table: 'activity_events', filter: `actor_id=eq.${memberId}` },
-      // A cancelled bet's event is deleted by cascade, which the filtered channel above can't see.
-      { table: 'cancelled_bets', filter: `profile_id=eq.${memberId}` },
       { table: 'profiles', filter: `id=eq.${memberId}` },
       // Every reaction: a reaction row names its event, not the event's actor, and a filtered
       // channel would never hear a reaction being taken back (a DELETE).
@@ -83,7 +76,6 @@ export const pageSubscriptions = {
   myBets(userId: string): LiveSubscription[] {
     return [
       { table: 'bets', filter: `profile_id=eq.${userId}` },
-      { table: 'cancelled_bets', filter: `profile_id=eq.${userId}` },
       { table: 'parlays', filter: `profile_id=eq.${userId}` },
       { topic: 'markets' },
     ]

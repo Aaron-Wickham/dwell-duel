@@ -9,7 +9,7 @@ import type { Database } from '@/lib/supabase/database'
 
 type Fns = Database['public']['Functions']
 
-// The raises of set_member_role, delete_market, delete_task, remove_bet (0040), remove_member (0068)
+// The raises of set_member_role, delete_market, delete_task (0040), remove_member (0068)
 // and reinvite_member (0093).
 const OWNER_ERRORS: readonly KnownError<never>[] = [
   { match: 'only the owner can change roles', formError: 'Only the owner can change roles.' },
@@ -22,9 +22,6 @@ const OWNER_ERRORS: readonly KnownError<never>[] = [
   { match: 'only the owner can delete a task', formError: 'Only the owner can delete a task.' },
   { match: 'task not found', formError: 'This task no longer exists.' },
   { match: 'members have submitted this task, so deactivate it instead', formError: 'Members have submitted this task, so deactivate it instead.' },
-  { match: 'only the owner can remove a bet', formError: 'Only the owner can remove a bet.' },
-  { match: 'bet not found', formError: 'This bet no longer exists.' },
-  { match: "this market is no longer open, so the bet can't be removed", formError: 'This market is no longer open, so the bet can’t be removed.' },
   { match: 'only the owner can remove a member', formError: 'Only the owner can remove a member.' },
   { match: "the owner can't be removed", formError: 'The owner can’t be removed.' },
   { match: 'only the owner can invite a member back', formError: 'Only the owner can invite a member back.' },
@@ -48,10 +45,6 @@ export async function deleteMarketAction(marketId: string, _prev: ConfirmActionS
 
 export async function deleteTaskAction(taskId: string, _prev: ConfirmActionState, _formData: FormData) {
   return run('delete_task', { p_task_id: taskId })
-}
-
-export async function removeBetAction(betId: number, _prev: ConfirmActionState, _formData: FormData) {
-  return run('remove_bet', { p_bet_id: betId })
 }
 
 // remove_member (0068): back to member, invite gone, devices unsubscribed; coins and bets untouched.

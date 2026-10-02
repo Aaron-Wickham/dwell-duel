@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { rpcLoose, serviceClient, type RpcName, type TestClient } from './helpers'
 import { pgQuery } from './pg-query'
-import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, createTestTask, ensureInvited, type Member, giveRole, backLeg } from './fixtures'
+import { seedMembers, makeMember, clientFor, anonClient, createTestMarket, createTestTask, ensureInvited, type Member, giveRole, backLeg, cancelBetForHistory } from './fixtures'
 import { isPushEndpoint, PUSH_HOSTS } from '@/lib/push/subscription'
 
 let alice: Member
@@ -243,7 +243,7 @@ describe('recipients', () => {
     await rpcOk(carolClient, 'place_parlay', { p_outcome_ids: [market.outcomeIds[0], other.outcomeIds[0]], p_stake: 5 })
     await rpcOk(daveClient, 'place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[1], p_amount: 10 })
     const { data: daveBet } = await serviceClient().from('bets').select('id').eq('profile_id', dave.id).single()
-    await rpcOk(daveClient, 'cancel_bet', { p_bet_id: daveBet!.id })
+    await cancelBetForHistory(daveBet!.id)
     await rpcOk(adminClient, 'place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[1], p_amount: 10 })
     for (const m of [bob, carol, dave, admin, alice]) await subscribe(m)
 

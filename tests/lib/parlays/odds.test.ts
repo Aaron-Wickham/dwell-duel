@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { legOddsBp, lockedOddsToBp, combineOdds, potentialPayout, formatOdds, soloPayout, factorBp, fixedParlay, lmsrParlayQuote } from '@/lib/parlays/odds'
+import { legOddsBp, lockedOddsToBp, combineOdds, potentialPayout, formatOdds, factorBp, fixedParlay, lmsrParlayQuote } from '@/lib/parlays/odds'
 import { lmsrBuy } from '@/lib/markets/lmsr'
 
 describe('legOddsBp', () => {
@@ -69,21 +69,6 @@ describe('formatOdds', () => {
     expect(formatOdds(160_000)).toBe('16.00')
     expect(formatOdds(33_300)).toBe('3.33')
     expect(formatOdds(99_999)).toBe('9.99')
-  })
-})
-
-describe('soloPayout', () => {
-  it('counts the stake in both real pools, as resolve_market_core will', () => {
-    // 10 on an outcome holding 5 of a 20 pool: floor(10 × 30 / 15) = 20.
-    expect(soloPayout(10, 5, 20)).toBe(20)
-  })
-
-  it('returns the stake on an outcome nobody else has bet on in an empty market', () => {
-    expect(soloPayout(10, 0, 0)).toBe(10)
-  })
-
-  it('rounds down', () => {
-    expect(soloPayout(3, 5, 20)).toBe(Math.floor((3 * 23) / 8))
   })
 })
 

@@ -175,42 +175,6 @@ describe('task submissions', () => {
   })
 })
 
-describe('bet cancels', () => {
-  async function placeBet(client: SupabaseClient, profileId: string): Promise<number> {
-    const { error } = await client.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0], p_amount: 5 })
-    if (error) throw error
-    const { data, error: readErr } = await serviceClient()
-      .from('bets')
-      .select('id')
-      .eq('profile_id', profileId)
-      .order('id', { ascending: false })
-      .limit(1)
-      .single()
-    if (readErr) throw readErr
-    return data.id
-  }
-
-  it('refuses a cancel past the hour’s 20, leaving the bet and the balance alone', async () => {
-    const betId = await placeBet(bobClient, bob.id)
-    await fill(bob, 'bet_cancel', 20)
-    const before = (await serviceClient().from('profiles').select('balance').eq('id', bob.id).single()).data!.balance
-    const { error } = await bobClient.rpc('cancel_bet', { p_bet_id: betId })
-    expect(error?.message).toBe(RATE_LIMIT_ERRORS.bet_cancel.match)
-    expect((await serviceClient().from('bets').select('id').eq('id', betId)).data).toHaveLength(1)
-    expect((await serviceClient().from('profiles').select('balance').eq('id', bob.id).single()).data!.balance).toBe(before)
-  })
-
-  it('doesn’t count the owner removing someone else’s bet against its bettor', async () => {
-    const olive = await makeMember('Olive')
-    await giveRole(olive, 'owner')
-    const oliveClient = await clientFor(olive)
-    const betId = await placeBet(bobClient, bob.id)
-    await fill(bob, 'bet_cancel', 20)
-    const { error } = await oliveClient.rpc('remove_bet', { p_bet_id: betId })
-    expect(error).toBeNull()
-  })
-})
-
 describe('write_rate_counters', () => {
   it('is out of members’ reach', async () => {
     await fill(alice, 'comment', 3)

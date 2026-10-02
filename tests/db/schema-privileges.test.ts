@@ -22,10 +22,7 @@ const AUTHENTICATED_DEFINER = [
   'can_resolve_market',
   // void_market's rules as a boolean for the caller's own auth.uid() (0105); reads only.
   'can_void_market',
-  'cancel_bet',
-  'create_market',
-  // create_market plus an attempt key (0083): checks is_invited() first, keys are claimed per caller.
-  'create_market_v2',
+  // Checks is_invited() first; attempt keys are claimed per caller (0083).
   'create_market_v3',
   // create_market_v3 plus the category (0103).
   'create_market_v4',
@@ -54,13 +51,11 @@ const AUTHENTICATED_DEFINER = [
   'my_task_streaks',
   // Parlay pages' leg odds (0074): raises unless invited or admin; reads only, at most 50 ids.
   'parlay_leg_odds',
-  // The slip's quotes (0074): raises unless invited; quotes for the caller's own auth.uid() only.
+  // The slip's quotes (0074): raises unless invited; quotes for the caller's own auth.uid() only. Only
+  // the build before #332 reads it.
   'pick_quotes',
   'place_bet',
   'place_parlay',
-  'place_slip',
-  'place_slip_v2',
-  'place_slip_v3',
   'place_slip_v4',
   // Storage RLS helper (0089): whether a path is attached to proof; a boolean, no rows or paths leak.
   'proof_is_attached',
@@ -69,7 +64,6 @@ const AUTHENTICATED_DEFINER = [
   'reject_task_completion',
   // Owner only (0093): raises unless has_role('owner'); restores a removed member's invite.
   'reinvite_member',
-  'remove_bet',
   'rename_market_category',
   'remove_member',
   'resolve_market',

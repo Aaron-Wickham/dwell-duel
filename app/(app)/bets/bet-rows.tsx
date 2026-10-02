@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { IntentLink } from '@/components/ui/intent-link'
 import { ResultChip } from '@/components/bets/result-chip'
-import { CancelBetButton } from '@/components/markets/cancel-bet-button'
 import { LocalTime } from '@/components/ui/local-time'
 import { StatusChip } from '@/components/ui/status-chip'
 import { PlacedParlay } from '@/components/parlays/placed-parlay'
@@ -71,16 +70,7 @@ export function WagerRows({ wagers, rowIdPrefix }: { wagers: Wager[]; rowIdPrefi
                 <LocalTime iso={b.result.kind === 'open' ? b.closeAt : b.placedAt} format="dateTime" />
               </>
             }
-            aside={
-              <>
-                <ResultChip result={b.result} />
-                {b.result.kind === 'open' && !b.final && (
-                  <div className="relative z-[1]">
-                    <CancelBetButton betId={b.id} amount={b.amount} outcomeLabel={b.outcomeLabel} />
-                  </div>
-                )}
-              </>
-            }
+            aside={<ResultChip result={b.result} />}
           />
         )
       })}

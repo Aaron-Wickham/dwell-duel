@@ -9,7 +9,7 @@ import {
   createTestTask,
   ensureInvited,
   type Member,
-  type TestMarket, giveRole, backers, backLeg } from './fixtures'
+  type TestMarket, giveRole, backers, backLeg, cancelBetForHistory } from './fixtures'
 import { pgQuery } from './pg-query'
 import { readMemberStats, type MemberStats } from '@/lib/members/stats'
 
@@ -123,8 +123,7 @@ describe('member_stats', () => {
     // cancelled bet is in neither.
     await bet(bobClient, stillOpen, 0, 5)
     const cancelled = await bet(bobClient, stillOpen, 1, 7)
-    const { error: cancelErr } = await bobClient.rpc('cancel_bet', { p_bet_id: cancelled })
-    if (cancelErr) throw cancelErr
+    await cancelBetForHistory(cancelled)
 
     // Markets Bob created: two, whatever becomes of them.
     await createTestMarket(bobClient, ['Yes', 'No'])

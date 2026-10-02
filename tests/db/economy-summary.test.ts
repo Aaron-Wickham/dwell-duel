@@ -11,7 +11,7 @@ import {
   createTestMarket,
   createTestTask,
   type Member,
-  type TestMarket, giveRole } from './fixtures'
+  type TestMarket, giveRole, cancelBetForHistory } from './fixtures'
 
 // 0052 (#86): the owner's economy panel.
 let alice: Member
@@ -158,8 +158,7 @@ async function playScenario(): Promise<void> {
   const m4 = await createTestMarket(oliveClient, ['Yes', 'No'], { title: 'Voided', seed: 20 })
   await bet(aliceClient, m4, 0, 7)
   const cancelled = await bet(bobClient, m4, 1, 3)
-  const { error: cancelErr } = await bobClient.rpc('cancel_bet', { p_bet_id: cancelled })
-  if (cancelErr) throw cancelErr
+  await cancelBetForHistory(cancelled)
   const { error: voidErr } = await oliveClient.rpc('void_market', { p_market_id: m4.marketId, p_reason: 'Voided in a test' })
   if (voidErr) throw voidErr
 

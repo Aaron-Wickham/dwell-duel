@@ -18,12 +18,9 @@ const pick: SlipPick = {
   marketTitle: 'Will it rain?',
   parlay: false,
   open: true,
-  oddsBp: 20_000,
-  legBlock: null,
-  outcomePool: 10,
-  totalPool: 20,
+  lmsr: { q: [0, 0], index: 0, liquidity: 50 },
 }
-const viewOf = (...picks: SlipPick[]): SlipView => ({ picks, legBps: [], multiplierBp: 10_000, capped: false })
+const viewOf = (...picks: SlipPick[]): SlipView => ({ picks })
 
 beforeAll(() => {
   vi.stubGlobal('matchMedia', (query: string) => ({

@@ -1,9 +1,9 @@
 import type { Page } from '@playwright/test'
 import { clientForEmail, createPoolMarket } from '../tests/db/fixtures'
 
-// Create market makes an LMSR market since 0102, whose bets are final. A spec about cancelling,
-// removing or pool payouts needs a pool market, which only the previous build's create_market
-// still makes: the signed-in member makes one through it, and the page opens it.
+// Create market makes an LMSR market since 0102. A spec about pool payouts, which a pool market made
+// before 0105 is still resolved again under, needs a pool market: the signed-in member makes one
+// (tests/db/fixtures' createPoolMarket), and the page opens it.
 export async function openPoolMarket(page: Page, title: string, labels = ['Yes', 'No']): Promise<string> {
   const alice = await clientForEmail('alice@example.com')
   const { data, error } = await createPoolMarket(alice, {

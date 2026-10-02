@@ -15,20 +15,7 @@ import { StatusChip } from '@/components/ui/status-chip'
 import type { SlipPick } from '@/lib/parlays/get-slip'
 import { lmsrPrices } from '@/lib/markets/lmsr'
 import { lmsrOddsBp, lmsrQuote } from '@/lib/markets/pricing'
-import {
-  combineOdds,
-  formatOdds,
-  legOddsBp,
-  lmsrParlayQuote,
-  MAX_LEG_ODDS,
-  MAX_MULTIPLIER,
-  MAX_PAYOUT,
-  MAX_PICKS,
-  MIN_LEG_BETTORS,
-  MIN_LEG_POOL,
-  potentialPayout,
-  soloPayout,
-} from '@/lib/parlays/odds'
+import { formatOdds, lmsrParlayQuote, MAX_PICKS } from '@/lib/parlays/odds'
 import { placeSlipAction, type PlaceSlipState } from '@/lib/parlays/place-slip'
 import { removeFromSlipAction } from '@/lib/parlays/slip-actions'
 import { haptics } from '@/lib/haptics'
@@ -39,22 +26,18 @@ function wholeDc(value: string | undefined): number | null {
   return value && Number.isInteger(n) && n > 0 ? n : null
 }
 
-function placedMessage(placed: NonNullable<NonNullable<PlaceSlipState>['placed']>, final: boolean): string {
+function placedMessage(placed: NonNullable<NonNullable<PlaceSlipState>['placed']>): string {
   const parts: string[] = []
   if (placed.solos > 0) parts.push(`${placed.solos} solo bet${placed.solos === 1 ? '' : 's'}`)
   if (placed.parlay) {
-    parts.push(
-      placed.parlay.fixed
-        ? `a ${placed.parlay.legs}-leg parlay paying ${placed.parlay.potentialPayout} DC (${formatOdds(placed.parlay.multiplierBp)}×)`
-        : `a ${placed.parlay.legs}-leg parlay at ~${formatOdds(placed.parlay.multiplierBp)}×`,
-    )
+    parts.push(`a ${placed.parlay.legs}-leg parlay paying ${placed.parlay.potentialPayout} DC (${formatOdds(placed.parlay.multiplierBp)}×)`)
   }
   if (placed.replayed) {
     return parts.length > 0
       ? `Your earlier attempt already went through: ${parts.join(' and ')}.`
       : 'Your earlier attempt already went through.'
   }
-  return `Placed ${parts.join(' and ')}.${final ? ' Bets are final.' : ''}`
+  return `Placed ${parts.join(' and ')}. Bets are final.`
 }
 
 const QUICK_STAKES = [5, 10, 25]
@@ -116,29 +99,15 @@ const segmentClass = (on: boolean) =>
     on ? 'bg-surface text-ink shadow-tab' : 'text-ink2',
   )
 
-const LEG_BLOCK_NOTE: Record<NonNullable<SlipPick['legBlock']>, string> = {
-  own_market: 'You created this market, so it can’t be in a parlay. Switch it to Solo.',
-  floor: `A parlay pick needs at least ${MIN_LEG_POOL} DC from ${MIN_LEG_BETTORS} other members on its market. Switch it to Solo, or add it once more members have bet.`,
-}
-
-// A parlay is priced one way or the other (0104): fixed at placement on lmsr markets, at close on pool ones.
-const MIXED_NOTE = 'A parlay can’t mix markets with fixed payouts and older markets. Switch the older market’s pick to Solo.'
-
-// What a Solo stake on an lmsr pick pays if it wins, exactly as place_lmsr_bet will (0102).
+// What a Solo stake pays if it wins, exactly as place_lmsr_bet will (0102).
 function lmsrPays(pick: SlipPick, stake: number): number | null {
   return pick.lmsr ? lmsrQuote(pick.lmsr.q, pick.lmsr.liquidity, pick.lmsr.index, stake).payout : null
 }
 
-// A Solo pick shows what each DC on it would pay now: at its price on an lmsr market, from the real
-// pool on a pool one. A Parlay pick shows what its leg would be priced at if the market closed now.
-// Only an lmsr bet's payout is fixed when it's placed.
+// What each DC on the pick would pay now, at its price.
 function pickOdds(pick: SlipPick): string | null {
-  if (pick.lmsr) {
-    const bp = lmsrOddsBp(lmsrPrices(pick.lmsr.q, pick.lmsr.liquidity)[pick.lmsr.index] ?? null)
-    return bp === null ? null : `${formatOdds(bp)}×`
-  }
-  if (pick.parlay) return `~${formatOdds(pick.oddsBp)}×`
-  const bp = legOddsBp(pick.totalPool, pick.outcomePool)
+  if (!pick.lmsr) return null
+  const bp = lmsrOddsBp(lmsrPrices(pick.lmsr.q, pick.lmsr.liquidity)[pick.lmsr.index] ?? null)
   return bp === null ? null : `${formatOdds(bp)}×`
 }
 
@@ -152,7 +121,6 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
   const pays = stake !== null ? lmsrPays(pick, stake) : null
   const name = `${pick.outcomeLabel}, ${pick.marketTitle}`
   const odds = pickOdds(pick)
-  const blockId = `slip-pick-block-${pick.outcomeId}`
   // Every stake counts toward the shortfall, so each filled one is marked and points to the why.
   const overBudget = stake !== null && slipTotal(slip) > slip.balance
 
@@ -225,18 +193,12 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
                   aria-invalid={Boolean(error) || overBudget}
                   aria-describedby={error ? errorId : overBudget ? WHY_ID : undefined}
                 />
-                {pays !== null ? (
+                {pays !== null && (
                   <>
                     {/* The payout shown, so place_lmsr_bet can refuse one that has since moved by more than 2%. */}
                     <input type="hidden" name={`payout:${pick.outcomeId}`} value={pays} />
                     <span className="text-sm text-ink2">Pays {pays} DC if it wins</span>
                   </>
-                ) : (
-                  stake !== null && (
-                    <span className="text-sm text-ink2">
-                      Pays ~{soloPayout(stake, pick.outcomePool, pick.totalPool)} DC if it wins
-                    </span>
-                  )
                 )}
               </div>
               <StakeChips
@@ -245,11 +207,6 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
                 onPick={(value) => setStake(pick.outcomeId, value)}
               />
             </>
-          )}
-          {pick.parlay && pick.legBlock && (
-            <Message tone="gold" id={blockId}>
-              {LEG_BLOCK_NOTE[pick.legBlock]}
-            </Message>
           )}
         </>
       )}
@@ -267,8 +224,6 @@ const LOST_RESPONSE = 'We couldn’t confirm your bets. Check your connection an
 export function SlipPanel() {
   const slip = useSlip()
   const { picks, parlayStake, setParlayStake, stakes, balance, attemptKeyRef, lostResponse, setLostResponse, clearStakes, setOpen } = slip
-  // Bets on an lmsr market can't be cancelled (0102), so the slip says so before and after placing.
-  const final = picks.some((p) => p.lmsr)
   const [state, formAction] = useActionState<PlaceSlipState, FormData>(async (prev, formData) => {
     attemptKeyRef.current ??= crypto.randomUUID()
     formData.set('idempotency_key', attemptKeyRef.current)
@@ -283,7 +238,7 @@ export function SlipPanel() {
     }
     setLostResponse(false)
     if (next?.placed) {
-      toast.success(placedMessage(next.placed, final))
+      toast.success(placedMessage(next.placed))
       haptics.success()
       clearStakes()
       setOpen(false)
@@ -318,24 +273,15 @@ export function SlipPanel() {
 
   const solos = picks.filter((p) => !p.parlay)
   const legs = picks.filter((p) => p.parlay)
-  const legBps = legs.map((p) => p.oddsBp)
-  const { multiplierBp, capped } = combineOdds(legBps)
   const parlayStakeDc = wholeDc(parlayStake)
-  // On lmsr markets the stake is split across the legs and the payout fixed when placed (0104).
-  const fixed = legs.length > 0 && legs.every((p) => p.lmsr)
-  const mixed = !fixed && legs.some((p) => p.lmsr)
-  const legsBlocked = mixed || legs.some((p) => p.legBlock !== null)
-  const overCap = !fixed && parlayStakeDc !== null && parlayStakeDc > MAX_PAYOUT
-  const parlayReady =
-    legs.length === 0 || (legs.length >= 2 && legs.length <= MAX_PICKS && !legsBlocked && parlayStakeDc !== null && !overCap)
-  const parlayPays = !fixed && parlayStakeDc !== null ? potentialPayout(parlayStakeDc, legBps) : null
+  // The stake is split across the legs and the payout fixed when placed (0104). A leg on a pool
+  // market is no longer available, which holds the whole slip back on its own.
+  const lmsrLegs = legs.flatMap((p) => (p.lmsr ? [p.lmsr] : []))
+  const parlayReady = legs.length === 0 || (legs.length >= 2 && legs.length <= MAX_PICKS && parlayStakeDc !== null)
   // Exactly what place_lmsr_parlay will store, which the form sends back so a moved price is caught.
   const fixedQuote =
-    fixed && legs.length >= 2 && legs.length <= MAX_PICKS && parlayStakeDc !== null
-      ? lmsrParlayQuote(
-          legs.flatMap((p) => (p.lmsr ? [p.lmsr] : [])),
-          parlayStakeDc,
-        )
+    lmsrLegs.length === legs.length && legs.length >= 2 && legs.length <= MAX_PICKS && parlayStakeDc !== null
+      ? lmsrParlayQuote(lmsrLegs, parlayStakeDc)
       : null
   const solosReady = solos.every((p) => wholeDc(stakes[p.outcomeId]) !== null)
   const allOpen = picks.every((p) => p.open)
@@ -359,17 +305,11 @@ export function SlipPanel() {
         ? 'Enter a stake for each Solo pick.'
         : legNote
           ? legNote
-          : legsBlocked
-            ? mixed
-              ? MIXED_NOTE
-              : 'Switch the picks that can’t be in a parlay to Solo.'
-            : legs.length > 0 && parlayStakeDc === null
-              ? 'Enter a stake for the parlay.'
-              : overCap
-                ? `Stake at most ${MAX_PAYOUT} DC on the parlay.`
-                : short
-                  ? `This slip needs ${total} DC; you have ${balance} DC.`
-                  : null
+          : legs.length > 0 && parlayStakeDc === null
+            ? 'Enter a stake for the parlay.'
+            : short
+              ? `This slip needs ${total} DC; you have ${balance} DC.`
+              : null
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -411,30 +351,12 @@ export function SlipPanel() {
             <h3 id="slip-parlay-title" className="font-extrabold">
               Parlay · {legs.length} {legs.length === 1 ? 'pick' : 'picks'}
             </h3>
-            {fixed
-              ? fixedQuote && <span className="font-extrabold tabular-nums">{formatOdds(fixedQuote.multiplierBp)}×</span>
-              : legs.length >= 2 &&
-                !legsBlocked && (
-                  <span className="font-extrabold tabular-nums">
-                    ~{formatOdds(multiplierBp)}×{capped && ` (capped at ${MAX_MULTIPLIER}×)`}
-                  </span>
-                )}
+            {fixedQuote && <span className="font-extrabold tabular-nums">{formatOdds(fixedQuote.multiplierBp)}×</span>}
           </div>
-          {mixed ? (
-            <Message tone="gold" id="slip-parlay-mixed">
-              {MIXED_NOTE}
-            </Message>
-          ) : fixed ? (
-            <p className="text-sm text-ink2">
-              Your stake is split evenly across these picks, and each part buys at its market’s price now, so what the parlay
-              pays is fixed when you place it.
-            </p>
-          ) : (
-            <p className="text-sm text-ink2">
-              Each pick’s odds are set when its market closes, from other members’ money on it (at most{' '}
-              {MAX_LEG_ODDS}× a pick), so these are estimates until then.
-            </p>
-          )}
+          <p className="text-sm text-ink2">
+            Your stake is split evenly across these picks, and each part buys at its market’s price now, so what the parlay
+            pays is fixed when you place it.
+          </p>
           {legNote ? (
             <p className="text-sm text-ink2">{legNote}</p>
           ) : (
@@ -448,7 +370,6 @@ export function SlipPanel() {
                 type="number"
                 inputMode="numeric"
                 min="1"
-                max={fixed ? undefined : MAX_PAYOUT}
                 step="1"
                 value={parlayStake}
                 onChange={(e) => setParlayStake(e.target.value)}
@@ -456,7 +377,7 @@ export function SlipPanel() {
                 aria-invalid={Boolean(parlayError) || parlayOverBudget}
                 aria-describedby={parlayError ? 'slip-parlay-error' : parlayOverBudget ? WHY_ID : undefined}
               />
-              {fixedQuote ? (
+              {fixedQuote && (
                 <>
                   {/* The payout shown, so place_lmsr_parlay can refuse one that has since moved by more than 2%. */}
                   <input type="hidden" name="parlay_payout" value={fixedQuote.payout} />
@@ -464,22 +385,13 @@ export function SlipPanel() {
                     Pays {fixedQuote.payout} DC ({formatOdds(fixedQuote.multiplierBp)}×) if every pick wins
                   </span>
                 </>
-              ) : overCap ? (
-                <span className="text-sm text-ink2">A parlay pays at most {MAX_PAYOUT} DC, so stake at most {MAX_PAYOUT} DC.</span>
-              ) : (
-                parlayPays !== null &&
-                !legsBlocked && (
-                  <span className="text-sm text-ink2">
-                    Pays ~{parlayPays} DC if every pick wins{parlayPays === MAX_PAYOUT && ', the most a parlay pays'}
-                  </span>
-                )
               )}
             </div>
           )}
           {!legNote && (
             <StakeChips
               label="Quick stakes for the parlay"
-              available={fixed ? availableFor('parlay', slip) : Math.min(availableFor('parlay', slip), MAX_PAYOUT)}
+              available={availableFor('parlay', slip)}
               onPick={setParlayStake}
             />
           )}
@@ -501,7 +413,7 @@ export function SlipPanel() {
           {formError}
         </Message>
       )}
-      {final && <p className="text-sm text-ink2">Bets are final: once placed, they can’t be cancelled.</p>}
+      <p className="text-sm text-ink2">Bets are final: once placed, they can’t be cancelled.</p>
       <FormSubmitButton
         block
         disabled={!allOpen || !solosReady || !parlayReady || short}

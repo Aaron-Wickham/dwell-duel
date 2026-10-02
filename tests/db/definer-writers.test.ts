@@ -18,7 +18,6 @@ const ROLE_GATED = [
   'reject_task_completion',
   // Owner only (0093): gives a removed member their invite back.
   'reinvite_member',
-  'remove_bet',
   'rename_market_category',
   'review_task_completions',
   'set_market_category_hidden',

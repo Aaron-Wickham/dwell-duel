@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient, type TestClient } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, giveRole, backLeg } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, giveRole, backLeg, cancelBetForHistory } from './fixtures'
 import { getAtStake } from '@/lib/home/at-stake'
 
 let alice: Member
@@ -46,8 +46,7 @@ describe('my_at_stake', () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     await bobClient.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0], p_amount: 6 })
     const { data: bet } = await serviceClient().from('bets').select('id').eq('market_id', market.marketId).single()
-    const { error } = await bobClient.rpc('cancel_bet', { p_bet_id: bet!.id })
-    if (error) throw error
+    await cancelBetForHistory(bet!.id)
     expect(await getAtStake(bobClient)).toEqual({ wagers: 0, dc: 0 })
   })
 })

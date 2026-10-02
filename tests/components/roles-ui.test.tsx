@@ -3,31 +3,25 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
-import type { MarketBet } from '@/lib/markets/get-market'
 import type { MemberSummary } from '@/lib/members/list-members'
 
 const actions = vi.hoisted(() => ({
   setMemberRoleAction: vi.fn(),
   deleteTaskAction: vi.fn(),
   deleteMarketAction: vi.fn(),
-  removeBetAction: vi.fn(),
   updateTaskAction: vi.fn(),
-  cancelBetAction: vi.fn(),
 }))
 vi.mock('@/lib/admin/owner-actions', () => ({
   setMemberRoleAction: actions.setMemberRoleAction,
   deleteTaskAction: actions.deleteTaskAction,
   deleteMarketAction: actions.deleteMarketAction,
-  removeBetAction: actions.removeBetAction,
 }))
 vi.mock('@/lib/tasks/update-task', () => ({ updateTaskAction: actions.updateTaskAction }))
-vi.mock('@/lib/markets/cancel-bet', () => ({ cancelBetAction: actions.cancelBetAction }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 
 import { RoleForm } from '@/app/(app)/admin/members/role-form'
 import { MemberChip } from '@/app/(app)/admin/members/member-chip'
 import { TaskCatalogItem } from '@/app/(app)/admin/(sections)/tasks/task-catalog-item'
-import { BetList } from '@/components/markets/bet-list'
 
 const BEN: MemberSummary = { id: 'p-ben', displayName: 'Ben', avatarSrc: null, email: 'ben@example.com', balance: 60, role: 'reviewer', joinedAt: null, lastSignInAt: null, removed: false }
 const TASK: TaskSummary = {
@@ -115,28 +109,5 @@ describe('TaskCatalogItem', () => {
     expect(screen.queryByRole('button', { name: 'Delete Read Genesis 1-3' })).not.toBeInTheDocument()
     rerender(<TaskCatalogItem task={TASK} canDelete />)
     expect(screen.getByRole('button', { name: 'Delete Read Genesis 1-3' })).toBeInTheDocument()
-  })
-})
-
-describe('BetList for the owner', () => {
-  const bets: MarketBet[] = [
-    { id: 2, outcomeId: 'o-no', amount: 15, createdAt: '2026-09-25T10:00:00Z', profileId: 'p-bob', bettorName: 'Bob', bettorAvatarSrc: null },
-    { id: 1, outcomeId: 'o-yes', amount: 5, createdAt: '2026-09-25T09:00:00Z', profileId: 'p-me', bettorName: 'Me', bettorAvatarSrc: null },
-  ]
-  const outcomes = [
-    { id: 'o-yes', label: 'Yes' },
-    { id: 'o-no', label: 'No' },
-  ]
-
-  it("offers Remove on other members' bets, and Cancel on the owner's own", () => {
-    render(<BetList bets={bets} outcomes={outcomes} viewerId="p-me" canBet canRemove />)
-    expect(screen.getByRole('button', { name: 'Remove Bob’s 15 DC bet on No' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Cancel your 5 DC bet on Yes' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Remove Me/ })).not.toBeInTheDocument()
-  })
-
-  it('offers no Remove to anyone else', () => {
-    render(<BetList bets={bets} outcomes={outcomes} viewerId="p-me" canBet />)
-    expect(screen.queryByRole('button', { name: /^Remove/ })).not.toBeInTheDocument()
   })
 })

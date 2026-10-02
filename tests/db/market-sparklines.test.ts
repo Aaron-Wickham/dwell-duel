@@ -512,7 +512,7 @@ describe('market_sparks (0095)', () => {
     })
   })
 
-  it('moves the market’s pool version with every bet and every cancellation, and with nothing else', async () => {
+  it('moves the market’s pool version with every bet, and with nothing else', async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     expect(await poolVersions(market)).toBe(0)
 
@@ -520,18 +520,11 @@ describe('market_sparks (0095)', () => {
     await placeBet(bobClient, market, 1, 5)
     expect(await poolVersions(market)).toBe(2)
 
-    const { data: bet } = await serviceClient().from('bets').select('id').eq('profile_id', bob.id).eq('market_id', market.marketId).single()
-    const { error } = await bobClient.rpc('cancel_bet', { p_bet_id: bet!.id })
-    if (error) throw error
-    expect(await poolVersions(market)).toBe(3)
-
-    // A bet of the same size after the cancel leaves the pools where they were before it, with a
-    // different series; the version still moves.
     await placeBet(bobClient, market, 1, 5)
-    expect(await poolVersions(market)).toBe(4)
+    expect(await poolVersions(market)).toBe(3)
 
     const { error: labelErr } = await serviceClient().from('market_outcomes').update({ label: 'Yep' }).eq('id', market.outcomeIds[0])
     if (labelErr) throw labelErr
-    expect(await poolVersions(market)).toBe(4)
+    expect(await poolVersions(market)).toBe(3)
   })
 })

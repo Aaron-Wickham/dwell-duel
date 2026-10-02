@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient, type TestClient } from './helpers'
 import { decodeCursor } from '@/lib/pagination/cursor'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backLeg } from './fixtures'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backLeg, cancelBetForHistory } from './fixtures'
 import { listMyCancelledBets } from '@/lib/bets/list-my-bets'
 import { listMyWagers, type Wager, type WagerBucket } from '@/lib/bets/list-my-wagers'
 
@@ -140,14 +140,7 @@ describe('listMyCancelledBets', () => {
     const first = await bet(bobClient, market, 0, 5)
     const second = await bet(bobClient, market, 1, 6)
     const alices = await bet(aliceClient, market, 0, 7)
-    for (const [client, id] of [
-      [bobClient, first],
-      [bobClient, second],
-      [aliceClient, alices],
-    ] as const) {
-      const { error } = await client.rpc('cancel_bet', { p_bet_id: id })
-      if (error) throw error
-    }
+    for (const id of [first, second, alices]) await cancelBetForHistory(id)
 
     const page = await listMyCancelledBets(bobClient, bob.id, FIRST_PAGE)
     expect(page.rows.map((b) => [b.id, b.marketTitle, b.outcomeLabel, b.amount])).toEqual([

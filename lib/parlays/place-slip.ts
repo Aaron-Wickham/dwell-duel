@@ -6,7 +6,7 @@ import { GENERIC_ERROR } from '@/lib/errors/friendly-error'
 import { isDeliberateRaise } from '@/lib/errors/deliberate-raise'
 import { reportError } from '@/lib/observability/report'
 import { insufficientBalanceMessage, isBalanceCheckViolation } from '@/lib/errors/balance-error'
-import { combineOdds, factorBp, lockedOddsToBp, potentialPayout } from './odds'
+import { factorBp } from './odds'
 import { parseSlipError } from './slip-errors'
 import { readSlip, writeSlip } from './slip'
 
@@ -28,8 +28,8 @@ export type PlaceSlipState =
       movedStakes?: Record<string, string>
       placed?: {
         solos: number
-        // `fixed`: on lmsr markets, so the multiplier and payout are exact (0104), not estimates.
-        parlay: { legs: number; multiplierBp: number; potentialPayout: number; fixed: boolean } | null
+        // Its multiplier and payout, fixed when it was placed (0104).
+        parlay: { legs: number; multiplierBp: number; potentialPayout: number } | null
         // True when this was a retry of a slip that had already gone through (#226): the counts are
         // what that earlier attempt placed, not what the slip holds now.
         replayed?: boolean
@@ -129,22 +129,13 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
   if (parlayId) {
     const { data: row } = await supabase
       .from('parlays')
-      .select('stake, multiplier, payout, parlay_legs(outcome_id)')
+      .select('multiplier, payout, parlay_legs(outcome_id)')
       .eq('id', parlayId)
       .maybeSingle()
+    // Only a replay of an attempt from before 0104 finds a parlay with no fixed payout, and then
+    // the message names no parlay rather than guess at one.
     if (row && row.multiplier !== null && row.payout !== null) {
-      parlay = { legs: row.parlay_legs.length, multiplierBp: factorBp(row.multiplier), potentialPayout: row.payout, fixed: true }
-    } else {
-      // A pool leg's odds are set when its market closes; for now, what the pools would give it (0074).
-      const { data: legOdds } = await supabase.rpc('parlay_leg_odds', { p_parlay_ids: [parlayId] })
-      const legBps = (legOdds ?? []).map((l) => lockedOddsToBp(l.odds))
-      const stake = row?.stake ?? parlayStake
-      parlay = {
-        legs: legBps.length,
-        multiplierBp: combineOdds(legBps).multiplierBp,
-        potentialPayout: potentialPayout(stake, legBps),
-        fixed: false,
-      }
+      parlay = { legs: row.parlay_legs.length, multiplierBp: factorBp(row.multiplier), potentialPayout: row.payout }
     }
   }
   const solos = summary.replayed ? (summary.solos ?? 0) : singles.length

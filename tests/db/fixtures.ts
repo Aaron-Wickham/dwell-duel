@@ -208,10 +208,10 @@ export async function giveRole(member: Member, role: 'owner' | 'admin' | 'review
 export type CreateMarketArgs = Database['public']['Functions']['create_market_v3']['Args']
 
 /**
- * A pool market, as create_market made one before 0105 refused the old build (with its 20 DC seed):
- * the pool rules still settle markets made before release and stay until clean-up (#332), so their
- * tests need one. Nothing in the app makes one any more, so this makes an lmsr market and turns it
- * into a pool market while it has no bets. Answers like `rpc('create_market')` did.
+ * A pool market, as create_market made one before 0105 (with its 20 DC seed). Pool markets made
+ * before then are still shown, resolved again by an admin and charted under the pool rules, so
+ * their tests need one. Nothing in the app makes one any more, so this makes an lmsr market and
+ * turns it into a pool market while it has no bets. Answers with the new market's id.
  */
 export async function createPoolMarket(client: TestClient, args: CreateMarketArgs): Promise<{ data: string; error: null } | { data: null; error: PostgrestError }> {
   const { data, error } = await client.rpc('create_market_v3', args)
@@ -364,4 +364,30 @@ export async function insertLockedParlay(
     select p.id, public.apply_coin_transaction('${profileId}', -${stake}, 'parlay_placed', jsonb_build_object('parlay_id', p.id)) from p
   `)
   return row.id
+}
+
+/**
+ * Writes what cancel_bet did before #332 dropped it (0037, 0046): the stake back on the ledger, and
+ * the bet moved into cancelled_bets and out of its pool. Nothing cancels a bet any more, but the
+ * cancellations made before then are history that My bets, the feed and the stats still read.
+ * Only for a bet on a pool market, the only kind that could be cancelled.
+ */
+export async function cancelBetForHistory(betId: number): Promise<void> {
+  await pgQuery(`
+    do $$
+    declare
+      v public.bets%rowtype;
+    begin
+      select * into strict v from public.bets where id = ${Math.trunc(betId)} for update;
+      perform public.apply_coin_transaction(
+        v.profile_id, v.amount, 'bet_cancelled',
+        jsonb_build_object('market_id', v.market_id, 'outcome_id', v.outcome_id, 'bet_id', v.id)
+      );
+      insert into public.cancelled_bets (id, market_id, outcome_id, profile_id, amount, placed_at)
+      values (v.id, v.market_id, v.outcome_id, v.profile_id, v.amount, v.created_at);
+      delete from public.bets where id = v.id;
+      update public.market_outcomes set pool_total = pool_total - v.amount where id = v.outcome_id;
+    end
+    $$
+  `)
 }

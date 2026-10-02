@@ -213,17 +213,24 @@ a line to `CHANGELOG.md` under the next release.
   odds and no book `shares`, with 0074's capped `multiplier`/`payout`;
   `settle_parlay` and `parlayTerms` keep those caps when a leg is voided.
   `market_sparklines` charts a converted bet at the pool chance it showed.
-  The pool code (`effectivePools`, `poolPayout`/`pool_payout()`,
-  `pick_quote`, `parlay_limits()`' other columns, the seed, cancel and
-  remove) only reads history and old builds until clean-up (#332); don't
-  build on it.
+- **Pool history stays readable** (0107, #332 dropped what nothing could
+  reach). Resolved and voided `pool` markets keep their chance, charts and
+  results, and an admin can still override one, so the pool code that
+  reads or pays them stays: `effectivePools`/`computeOdds` and
+  `seed_per_outcome`, `poolPayout`/`pool_payout()` and `payout_seed`,
+  `locked_odds`, `pick_quote`/`parlay_leg_odds` (an old parlay's unpriced
+  legs), `parlay_limits()`' pool columns, and `place_bet`/`place_parlay`,
+  which refuse every market now but build pool history in tests
+  (`createPoolMarket`, `cancelBetForHistory`). Don't build on any of it,
+  and don't drop it without checking an override and the history pages
+  still work. `pick_quotes` is left only for the build before 0107.
 - **Proof files** (0042) live in the private `proof` bucket and upload from
   the browser (`lib/proof/upload.ts`), never through a server action. Show
   them with `toProofViews` (signed URLs made with the viewer's own client)
   and `ProofList`. `resolve_market` needs a note; its logic is
   `resolve_market_core`, which members can't call.
 - **Market kinds** are `MarketKind` in `lib/markets/kind.ts`. An
-  over/under's outcomes are made by `create_market` from its line, and it
+  over/under's outcomes are made by `create_market_v4` from its line, and it
   resolves through `resolve_over_under` with the actual number. Title,
   description, category and close time change only through `update_market`
   (0043, 0103, 0106), which logs every change to `market_edits`; outcomes
@@ -237,14 +244,9 @@ a line to `CHANGELOG.md` under the next release.
   add, remove and mode switches; the floating `SlipSheet` places them all
   at once through `place_slip_v4` (0104; 0072's `place_slip_v2` with each
   single's and the parlay's shown payout), which is all or nothing and
-  returns what it placed and whether the call replayed an earlier attempt
-  (`place_slip_v3` serves the #333 build and refuses `lmsr` parlay legs;
-  since 0105 `place_slip_v2` and `place_slip` only replay a finished
-  attempt key and otherwise refuse "DwellDuel just updated. Refresh to
-  bet.", and `create_market_v2` and `create_market` the same, so no `pool`
-  market is made after release; a test needing one calls
-  `createPoolMarket`). Stakes live
-  only in the provider's state, never in the cookie.
+  returns what it placed and whether the call replayed an earlier attempt.
+  A pick on a `pool` market is never open, since none has been since 0105.
+  Stakes live only in the provider's state, never in the cookie.
 - **The service worker never caches** per-member HTML, RSC payloads,
   server actions or Supabase responses.
 - **Live updates come in two kinds** (0092, #250). A row subscription is
@@ -350,11 +352,11 @@ a line to `CHANGELOG.md` under the next release.
 - **Members can't select `activity_feed`** since 0036. It stays only as
   the DB tests' equivalence oracle, and tests read it through the service
   client or `pgQuery`, never a member client.
-- **`bets` holds only live stakes.** `cancel_bet` (0037) moves a
-  cancelled bet into `cancelled_bets`, so resolve, void, odds and the feed
-  never need a cancelled filter. A page that shows a market's bets live
-  also subscribes to `cancelled_bets`: a filtered channel never receives
-  the `bets` delete.
+- **`bets` holds only live stakes.** Bets cancelled before 0107 sit in
+  `cancelled_bets` (0037), so resolve, void, odds and the feed never need a
+  cancelled filter. Nothing cancels or removes a bet now, so nothing
+  writes there and no page follows it; My bets' Cancelled tab reads it as
+  history.
 - **Members can't read `profiles.email`** (0046). Select profile columns
   by name, never `*`; admins read emails through `member_emails()`.
 - **Nobody but an admin resolves a market they have a stake in**, and

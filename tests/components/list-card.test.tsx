@@ -13,7 +13,6 @@ vi.mock('@/lib/tasks/review-task-completion', () => ({
 }))
 vi.mock('@/lib/tasks/update-task', () => ({ updateTaskAction: vi.fn() }))
 vi.mock('@/lib/admin/owner-actions', () => ({ deleteTaskAction: vi.fn() }))
-vi.mock('@/lib/markets/cancel-bet', () => ({ cancelBetAction: vi.fn() }))
 
 import { ListCard } from '@/components/ui/list-card'
 import { TaskRow } from '@/components/tasks/task-row'

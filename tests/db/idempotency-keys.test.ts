@@ -64,25 +64,6 @@ describe('place_slip_v4', () => {
     expect(second.data).toEqual({ ...placed, replayed: true })
     expect(await countFor(bob)).toEqual({ bets: 1, parlays: 1 })
   })
-
-  it('shares keys with place_slip and place_slip_v2, which since 0105 only replay a finished attempt', async () => {
-    const key = randomUUID()
-    const placed = await bobClient.rpc('place_slip_v4', slip(key))
-    expect(placed.error).toBeNull()
-    const v2 = await bobClient.rpc('place_slip_v2', slip(key))
-    expect(v2.error).toBeNull()
-    expect(v2.data).toEqual({ ...(placed.data as SlipSummary), replayed: true })
-    const v1 = await bobClient.rpc('place_slip', slip(key))
-    expect(v1.error).toBeNull()
-    expect(v1.data).toBe((placed.data as SlipSummary).parlay_id)
-
-    const fresh = randomUUID()
-    expectError((await bobClient.rpc('place_slip_v2', slip(fresh))).error, 'DwellDuel just updated. Refresh to bet.')
-    expectError((await bobClient.rpc('place_slip', slip(fresh))).error, 'DwellDuel just updated. Refresh to bet.')
-    // The refusal rolled its claim back, so the key is still free for the new build.
-    expect((await bobClient.rpc('place_slip_v4', slip(fresh))).error).toBeNull()
-    expect(await countFor(bob)).toEqual({ bets: 2, parlays: 2 })
-  })
 })
 
 describe('place_slip_v4 with an attempt key', () => {

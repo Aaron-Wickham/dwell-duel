@@ -3,7 +3,6 @@ import { chunk, IN_CHUNK } from '@/lib/pagination/chunk'
 import { betResult, type MyBetResult } from '@/lib/bets/list-my-bets'
 import { fetchLegOdds, PARLAY_COLUMNS, toParlayView, type ParlayLegView, type ParlayRow, type ParlayView } from '@/lib/parlays/list-parlays'
 import type { MarketDetail } from './get-market'
-import { poolPayout } from './odds'
 
 export interface PositionKeys {
   betIds: number[]
@@ -16,12 +15,10 @@ export interface PositionBet {
   amount: number
   placedAt: string
   result: MyBetResult
-  // What it pays if its outcome wins, while the market is open or awaiting its result: fixed when it
-  // was placed on an lmsr market (0102), from the real pool as it stands on a pool one. Null once
-  // settled; the result says what it did.
+  // What it pays if its outcome wins, fixed when it was placed (0102), while the market is open or
+  // awaiting its result. Every such market is lmsr since 0105. Null once settled; the result says
+  // what it did.
   paysIfWins: number | null
-  // An lmsr bet: its payout is exact, and it can't be cancelled.
-  final: boolean
 }
 
 export interface PositionLeg {
@@ -79,8 +76,6 @@ export async function getMarketPosition(
   ])
   const legOdds = await fetchLegOdds(supabase, [...parlayRows.values()])
 
-  const totalPool = market.outcomes.reduce((sum, o) => sum + o.poolTotal, 0)
-  const final = market.pricing === 'lmsr'
   const embed = {
     pricing: market.pricing,
     status: market.status,
@@ -104,14 +99,7 @@ export async function getMarketPosition(
       amount: b.amount,
       placedAt: b.created_at,
       result,
-      paysIfWins: !live
-        ? null
-        : final
-          ? Math.floor(Number(b.shares ?? 0))
-          : outcome
-            ? poolPayout(b.amount, outcome.poolTotal, totalPool)
-            : null,
-      final,
+      paysIfWins: live && b.shares !== null ? Math.floor(Number(b.shares)) : null,
     })
   }
 
@@ -133,8 +121,7 @@ export function positionSummary(bets: PositionBet[]): { tone: 'plain' | 'win' | 
   if (bets.length === 0) return null
   const staked = bets.reduce((sum, b) => sum + b.amount, 0)
   if (bets.some((b) => b.result.kind === 'open')) {
-    const note = bets.every((b) => b.final) ? 'Bets are final.' : 'Pays ~ updates as others bet.'
-    return { tone: 'plain', text: `${staked} DC on this market · ${note}` }
+    return { tone: 'plain', text: `${staked} DC on this market · Bets are final.` }
   }
   if (bets.some((b) => b.result.kind === 'awaiting')) {
     return { tone: 'plain', text: `${staked} DC on this market · Waiting on the result.` }

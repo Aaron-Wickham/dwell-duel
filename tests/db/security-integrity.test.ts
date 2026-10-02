@@ -2,9 +2,8 @@ import { randomUUID } from 'node:crypto'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient, type TestClient, type SlipSummary, setBalanceViaLedger } from './helpers'
 import { expectError } from './assertions'
-import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backLeg, insertLockedParlay } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, backLeg, insertLockedParlay, cancelBetForHistory } from './fixtures'
 import { pgQuery } from './pg-query'
-import { getSlipView } from '@/lib/parlays/get-slip'
 import { describeCreatorStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
 import { getAdminMember } from '@/lib/members/list-members'
 
@@ -60,7 +59,7 @@ describe('#57 parlay legs are priced without your own stakes', () => {
 
     const { data: parlayId, error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [a.outcomeIds[1], b.outcomeIds[1]], p_stake: 10 })
     expect(error).toBeNull()
-    await bobClient.rpc('cancel_bet', { p_bet_id: pumpA })
+    await cancelBetForHistory(pumpA)
     for (const m of [a, b]) expect((await resolve(aliceClient, m, 1)).error).toBeNull()
 
     // Without Bob's 1000s, each market is the backers' 50 DC, all on No: 50 / 50 = 1.00, not 21.
@@ -77,22 +76,6 @@ describe('#57 parlay legs are priced without your own stakes', () => {
     for (const m of [a, b]) expect((await resolve(aliceClient, m, 1)).error).toBeNull()
     // A's No at close: (60 + 50) / 50 = 2.20.
     expect((await pricedLegs(parlayId as string))[a.marketId]).toBe(2.2)
-  })
-
-  it('shows the same odds in the slip before you place it', async () => {
-    const a = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
-    const b = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
-    for (const m of [a, b]) await backLeg(m, 1)
-    await bet(bobClient, a, 0, 1000)
-    const view = await getSlipView(bobClient, [
-      { outcomeId: a.outcomeIds[1], parlay: true },
-      { outcomeId: b.outcomeIds[1], parlay: true },
-    ])
-    expect(view.picks.map((p) => p.oddsBp)).toEqual([10_000, 10_000])
-    // Alice's view of the same leg still counts Bob's money: (1000 + 50) / 50 = 21, held to 5.00.
-    await ensureInvited(aliceClient)
-    const aliceView = await getSlipView(aliceClient, [{ outcomeId: a.outcomeIds[1], parlay: true }])
-    expect(aliceView.picks[0]).toMatchObject({ oddsBp: 50_000, legBlock: 'own_market' })
   })
 
   it('leaves out your singles placed in the same slip', async () => {
@@ -196,13 +179,11 @@ describe('#60 members can no longer read each other’s emails', () => {
 })
 
 describe('#62 hardening', () => {
-  it('checks the invite gate on place_bet and cancel_bet', async () => {
+  it('checks the invite gate on place_bet', async () => {
     const m = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
-    const betId = await bet(bobClient, m, 0, 10)
     await serviceClient().from('allowed_emails').delete().eq('email', bob.email)
     const placed = await bobClient.rpc('place_bet', { p_market_id: m.marketId, p_outcome_id: m.outcomeIds[0], p_amount: 5 })
     expect(placed.error?.message).toBe('not invited')
-    expect((await bobClient.rpc('cancel_bet', { p_bet_id: betId })).error?.message).toBe('not invited')
   })
 
   it("fixes a market's title once someone else has bet, but not its description", async () => {

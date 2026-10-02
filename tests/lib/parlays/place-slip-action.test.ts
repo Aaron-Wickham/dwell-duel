@@ -14,7 +14,7 @@ vi.mock('@/lib/parlays/slip', () => ({ readSlip, writeSlip }))
 
 import { placeSlipAction } from '@/lib/parlays/place-slip'
 
-// What the action reads back for a placed parlay: its stake, and a fixed one's figures (0104).
+// What the action reads back for a placed parlay: its fixed figures (0104).
 function parlayRow(row: Record<string, unknown>) {
   from.mockReturnValue({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: row, error: null }) }) }) })
 }
@@ -50,14 +50,8 @@ describe('placeSlipAction', () => {
   })
 
   it('sends solo stakes and the parlay legs to place_slip_v4, then empties the slip', async () => {
-    // A pool parlay's leg odds are set at close, so the toast's multiplier is the estimate
-    // parlay_leg_odds gives now.
-    parlayRow({ stake: 5, multiplier: null, payout: null, parlay_legs: [{ outcome_id: B }, { outcome_id: C }] })
-    rpc.mockImplementation(async (fn: string) =>
-      fn === 'parlay_leg_odds'
-        ? { data: [{ odds: 2 }, { odds: 3 }], error: null }
-        : { data: { parlay_id: 'parlay-1', solos: 1, picks: [A, B, C], replayed: false }, error: null },
-    )
+    parlayRow({ multiplier: 6, payout: 30, parlay_legs: [{ outcome_id: B }, { outcome_id: C }] })
+    rpc.mockResolvedValue({ data: { parlay_id: 'parlay-1', solos: 1, picks: [A, B, C], replayed: false }, error: null })
 
     const result = await placeSlipAction(
       undefined,
@@ -75,14 +69,22 @@ describe('placeSlipAction', () => {
       p_parlay_outcome_ids: [B, C],
       p_parlay_stake: 5,
     })
-    expect(rpc).toHaveBeenCalledWith('parlay_leg_odds', { p_parlay_ids: ['parlay-1'] })
     expect(writeSlip).toHaveBeenCalledWith([])
     expect(revalidatePath).toHaveBeenCalledWith('/', 'layout')
-    expect(result).toEqual({ placed: { solos: 1, parlay: { legs: 2, multiplierBp: 60_000, potentialPayout: 30, fixed: false } } })
+    expect(result).toEqual({ placed: { solos: 1, parlay: { legs: 2, multiplierBp: 60_000, potentialPayout: 30 } } })
+  })
+
+  // Only a replay of an attempt from before 0104 can find a parlay without fixed figures.
+  it('names no parlay when the one placed has no fixed payout', async () => {
+    parlayRow({ multiplier: null, payout: null, parlay_legs: [{ outcome_id: B }, { outcome_id: C }] })
+    rpc.mockResolvedValue({ data: { parlay_id: 'parlay-1', solos: 0, picks: [B, C], replayed: true }, error: null })
+    const result = await placeSlipAction(undefined, form([['pick', `${B}:parlay`], ['pick', `${C}:parlay`], ['parlay_stake', '5']]))
+    expect(rpc).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({ placed: { solos: 0, parlay: null, replayed: true } })
   })
 
   it('sends the payout the slip showed for a parlay on lmsr markets, and reports its fixed figures (0104)', async () => {
-    parlayRow({ stake: 10, multiplier: 5.2401, payout: 52, parlay_legs: [{ outcome_id: B }, { outcome_id: C }] })
+    parlayRow({ multiplier: 5.2401, payout: 52, parlay_legs: [{ outcome_id: B }, { outcome_id: C }] })
     rpc.mockResolvedValue({ data: { parlay_id: 'parlay-1', solos: 0, picks: [B, C], replayed: false }, error: null })
     const result = await placeSlipAction(
       undefined,
@@ -94,8 +96,7 @@ describe('placeSlipAction', () => {
       p_parlay_stake: 10,
       p_parlay_payout: 52,
     })
-    expect(rpc).not.toHaveBeenCalledWith('parlay_leg_odds', expect.anything())
-    expect(result).toEqual({ placed: { solos: 0, parlay: { legs: 2, multiplierBp: 52_401, potentialPayout: 52, fixed: true } } })
+    expect(result).toEqual({ placed: { solos: 0, parlay: { legs: 2, multiplierBp: 52_401, potentialPayout: 52 } } })
   })
 
   it('on a moved parlay price, says what it pays now, and remembers the stake it was refused at', async () => {

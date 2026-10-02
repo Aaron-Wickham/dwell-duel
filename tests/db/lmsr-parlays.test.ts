@@ -263,13 +263,7 @@ describe('placing an lmsr parlay', () => {
 })
 
 describe('the older paths', () => {
-  it('leave place_slip_v3 and place_parlay refusing an lmsr leg, and place_lmsr_parlay internal', async () => {
-    const v3 = await bobClient.rpc('place_slip_v3', {
-      p_singles: [],
-      p_parlay_outcome_ids: [m1.outcomeIds[0], m2.outcomeIds[0]],
-      p_parlay_stake: 5,
-    })
-    expectError(v3.error, "parlay: a pick on a market with fixed payouts can't be in a parlay yet")
+  it('leave place_parlay refusing an lmsr leg, and place_lmsr_parlay internal', async () => {
     const direct = await bobClient.rpc('place_parlay', { p_outcome_ids: [m1.outcomeIds[0], m2.outcomeIds[0]], p_stake: 5 })
     expectError(direct.error, 'DwellDuel just updated. Refresh to bet.')
     const internal = await bobClient.rpc('place_lmsr_parlay', {
@@ -367,12 +361,12 @@ describe('settling an lmsr parlay', () => {
 })
 
 describe('reads of an lmsr parlay', () => {
-  it('give the slip an lmsr pick as a parlay leg, unblocked', async () => {
+  it('give the slip an lmsr pick as an open parlay leg', async () => {
     const view = await getSlipView(bobClient, [
       { outcomeId: m1.outcomeIds[0], parlay: true },
       { outcomeId: m2.outcomeIds[0], parlay: true },
     ])
-    expect(view.picks.map((p) => p.legBlock)).toEqual([null, null])
+    expect(view.picks.map((p) => p.open)).toEqual([true, true])
     expect(view.picks.every((p) => p.lmsr !== undefined)).toBe(true)
   })
 

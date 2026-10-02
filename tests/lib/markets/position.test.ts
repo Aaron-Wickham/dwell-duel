@@ -9,7 +9,6 @@ const bet = (amount: number, result: PositionBet['result']): PositionBet => ({
   placedAt: '2026-10-03T09:14:00Z',
   result,
   paysIfWins: null,
-  final: false,
 })
 
 describe('positionSummary', () => {
@@ -17,17 +16,11 @@ describe('positionSummary', () => {
     expect(positionSummary([])).toBeNull()
   })
 
-  it('totals the solo stakes while the market is open', () => {
+  it('totals the solo stakes while the market is open, and says bets are final', () => {
     expect(positionSummary([bet(20, { kind: 'open' }), bet(10, { kind: 'open' })])).toEqual({
       tone: 'plain',
-      text: '30 DC on this market · Pays ~ updates as others bet.',
+      text: '30 DC on this market · Bets are final.',
     })
-  })
-
-  it('says bets on an lmsr market are final, since their payout is fixed', () => {
-    expect(positionSummary([{ ...bet(10, { kind: 'open' }), paysIfWins: 18, final: true }])?.text).toBe(
-      '10 DC on this market · Bets are final.',
-    )
   })
 
   it('waits on the result once the market has closed', () => {

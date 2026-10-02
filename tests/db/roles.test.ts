@@ -151,35 +151,4 @@ describe('owner-only deletes', () => {
       'members have submitted this task, so deactivate it instead',
     )
   })
-
-  it("removes any member's open bet with a full refund", async () => {
-    const market = await createTestMarket(clients.admin, ['Yes', 'No'])
-    await clients.member.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0], p_amount: 30 })
-    const { data: bet } = await serviceClient().from('bets').select('id').eq('market_id', market.marketId).single()
-
-    expect((await clients.admin.rpc('remove_bet', { p_bet_id: bet!.id })).error?.message).toBe('only the owner can remove a bet')
-    expect((await clients.owner.rpc('remove_bet', { p_bet_id: bet!.id })).error).toBeNull()
-
-    const db = serviceClient()
-    const { data: profile } = await db.from('profiles').select('balance').eq('id', member.id).single()
-    expect(profile?.balance).toBe(100)
-    const { data: pool } = await db.from('market_outcomes').select('pool_total').eq('id', market.outcomeIds[0]).single()
-    expect(pool?.pool_total).toBe(0)
-    const { data: cancelled } = await db.from('cancelled_bets').select('id').eq('id', bet!.id)
-    expect(cancelled).toHaveLength(1)
-  })
-
-  it('refuses to remove a bet once its market has closed, before anyone resolves it (#272)', async () => {
-    const market = await createTestMarket(clients.admin, ['Yes', 'No'])
-    await clients.member.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0], p_amount: 30 })
-    const db = serviceClient()
-    const { data: bet } = await db.from('bets').select('id').eq('market_id', market.marketId).single()
-    await db.from('markets').update({ close_at: new Date(Date.now() - 1000).toISOString() }).eq('id', market.marketId)
-
-    expectError((await clients.owner.rpc('remove_bet', { p_bet_id: bet!.id })).error, "this market has closed, so the bet can't be removed")
-    const { data: still } = await db.from('bets').select('id').eq('id', bet!.id)
-    expect(still).toHaveLength(1)
-    const { data: profile } = await db.from('profiles').select('balance').eq('id', member.id).single()
-    expect(profile?.balance).toBe(70)
-  })
 })

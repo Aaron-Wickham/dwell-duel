@@ -13,10 +13,7 @@ const pickFor = (outcomeId: string, outcomeLabel: string): SlipPick => ({
   marketTitle: 'Will it rain?',
   parlay: false,
   open: true,
-  oddsBp: 13333,
-  legBlock: null,
-  outcomePool: 60,
-  totalPool: 80,
+  lmsr: { q: [0, 0], index: 0, liquidity: 50 },
 })
 
 type NumberFlowProps = { value: number; suffix?: string; locales?: unknown; format?: { useGrouping?: boolean } }

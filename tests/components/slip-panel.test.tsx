@@ -26,13 +26,10 @@ const pick = (n: number, overrides: Partial<SlipPick> = {}): SlipPick => ({
   marketTitle: `Market ${n}`,
   parlay: false,
   open: true,
-  oddsBp: 20_000,
-  legBlock: null,
-  outcomePool: 10,
-  totalPool: 20,
+  lmsr: { q: [0, 0], index: 0, liquidity: 50 },
   ...overrides,
 })
-const viewOf = (...picks: SlipPick[]): SlipView => ({ picks, legBps: [], multiplierBp: 10_000, capped: false })
+const viewOf = (...picks: SlipPick[]): SlipView => ({ picks })
 
 function OpenState() {
   return <output aria-label="Open">{String(useSlip().open)}</output>
@@ -82,7 +79,7 @@ describe('SlipPanel', () => {
     expect(screen.getByRole('link', { name: 'How parlays pay' })).toHaveAttribute('href', '/how-it-works#how-the-slip-solo-bets-and-parlays')
   })
 
-  it('starts each pick as Solo, with its own stake and an estimated payout', async () => {
+  it('starts each pick as Solo, with its own stake and payout', async () => {
     renderPanel(viewOf(pick(1)))
     const group = screen.getByRole('group', { name: 'Bet type for Outcome 1, Market 1' })
     expect(within(group).getByRole('button', { name: 'Solo' })).toHaveAttribute('aria-pressed', 'true')
@@ -90,8 +87,7 @@ describe('SlipPanel', () => {
     expect(place).toHaveAttribute('aria-disabled', 'true')
 
     await userEvent.type(screen.getByLabelText('Stake (DC)'), '10')
-    // floor(10 × (20 + 10) / (10 + 10)) = 15
-    expect(screen.getByText('Pays ~15 DC if it wins')).toBeInTheDocument()
+    expect(screen.getByText('Pays 18 DC if it wins')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Place 1 bet · 10 DC' })).not.toHaveAttribute('aria-disabled')
   })
 
@@ -105,33 +101,10 @@ describe('SlipPanel', () => {
 
     await userEvent.click(within(screen.getByRole('group', { name: /Bet type for Outcome 2/ })).getByRole('button', { name: 'Parlay' }))
     const two = screen.getByRole('region', { name: 'Parlay · 2 picks' })
-    // Each leg's odds are set when its market closes, so the slip shows an estimate.
-    expect(within(two).getByText('~4.00×')).toBeInTheDocument()
     await userEvent.type(within(two).getByLabelText('Stake (DC)'), '5')
-    expect(within(two).getByText('Pays ~20 DC if every pick wins')).toBeInTheDocument()
+    const quote = lmsrParlayQuote([pick(1).lmsr!, pick(2).lmsr!], 5)
+    expect(within(two).getByText(`Pays ${quote.payout} DC (${formatOdds(quote.multiplierBp)}×) if every pick wins`)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Place 1 bet · 5 DC' })).not.toHaveAttribute('aria-disabled')
-  })
-
-  it('says why a pick can’t be a parlay leg, and holds the place until it’s Solo', async () => {
-    renderPanel(viewOf(pick(1, { parlay: true, legBlock: 'floor' }), pick(2, { parlay: true, legBlock: 'own_market' })))
-    expect(screen.getByText(/needs at least 50 DC from 2 other members on its market/)).toBeInTheDocument()
-    expect(screen.getByText(/You created this market, so it can’t be in a parlay/)).toBeInTheDocument()
-    const parlay = screen.getByRole('region', { name: 'Parlay · 2 picks' })
-    await userEvent.type(within(parlay).getByLabelText('Stake (DC)'), '5')
-    expect(screen.getByRole('button', { name: 'Place 1 bet · 5 DC' })).toHaveAttribute('aria-disabled', 'true')
-  })
-
-  it('caps the parlay payout, and the stake, at 1,000 DC', async () => {
-    renderPanel(viewOf(pick(1, { parlay: true, oddsBp: 50_000 }), pick(2, { parlay: true, oddsBp: 50_000 })), 2000)
-    const parlay = screen.getByRole('region', { name: 'Parlay · 2 picks' })
-    expect(within(parlay).getByText('~20.00× (capped at 20×)')).toBeInTheDocument()
-    const stake = within(parlay).getByLabelText('Stake (DC)')
-    await userEvent.type(stake, '60')
-    expect(within(parlay).getByText('Pays ~1000 DC if every pick wins, the most a parlay pays')).toBeInTheDocument()
-    await userEvent.clear(stake)
-    await userEvent.type(stake, '1001')
-    expect(within(parlay).getByText('A parlay pays at most 1000 DC, so stake at most 1000 DC.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Place 1 bet · 1001 DC' })).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('blocks placing while a pick is no longer available', () => {
@@ -155,7 +128,7 @@ describe('SlipPanel', () => {
     expect(data.getAll('pick')).toEqual([`${pick(1).outcomeId}:solo`, `${pick(2).outcomeId}:parlay`, `${pick(3).outcomeId}:parlay`])
     expect(data.get(`stake:${pick(1).outcomeId}`)).toBe('10')
     expect(data.get('parlay_stake')).toBe('5')
-    await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet and a 2-leg parlay at ~4.00×.'))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet and a 2-leg parlay paying 20 DC (4.00×). Bets are final.'))
   })
 
   describe('a pick on an lmsr market (0102)', () => {
@@ -182,7 +155,7 @@ describe('SlipPanel', () => {
     })
 
     it('makes a parlay of lmsr picks with its exact payout, sends it, and toasts the fixed figures (0104)', async () => {
-      placeSlipAction.mockResolvedValue({ placed: { solos: 0, parlay: { legs: 2, multiplierBp: 33_611, potentialPayout: 33, fixed: true } } })
+      placeSlipAction.mockResolvedValue({ placed: { solos: 0, parlay: { legs: 2, multiplierBp: 33_611, potentialPayout: 33 } } })
       renderPanel(viewOf(lmsr(1, { parlay: true }), lmsr(2, { parlay: true })))
       expect(screen.getByText(/Your stake is split evenly across these picks/)).toBeInTheDocument()
       await userEvent.type(screen.getByLabelText('Stake (DC)'), '10')
@@ -204,12 +177,6 @@ describe('SlipPanel', () => {
       await userEvent.type(screen.getByLabelText('Stake (DC)'), '1200')
       expect(screen.getByText(/^Pays \d+ DC \(.+×\) if every pick wins$/)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Place 1 bet · 1200 DC' })).toBeEnabled()
-    })
-
-    it('won’t mix lmsr and pool picks in one parlay', () => {
-      renderPanel(viewOf(lmsr(1, { parlay: true }), pick(2, { parlay: true })))
-      expect(screen.getAllByText(/A parlay can’t mix markets with fixed payouts and older markets/).length).toBeGreaterThan(0)
-      expect(screen.getByRole('button', { name: /^Place/ })).toBeDisabled()
     })
 
     it('shows a moved price on the pick and keeps the slip to place again', async () => {
@@ -289,7 +256,7 @@ describe('SlipPanel', () => {
       expect(screen.getByLabelText('Stake (DC)')).toHaveValue(7)
 
       await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 7 DC' }))
-      await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet.'))
+      await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet. Bets are final.'))
       expect(placeSlipAction).toHaveBeenCalledTimes(2)
       const keys = placeSlipAction.mock.calls.map((c) => (c[1] as FormData).get('idempotency_key'))
       expect(keys[0]).toMatch(/^[0-9a-f-]{36}$/)
@@ -312,7 +279,7 @@ describe('SlipPanel', () => {
       expect(screen.getByRole('alert')).toHaveTextContent(/couldn’t confirm your bets/)
       expect(screen.getByLabelText('Stake (DC)')).toHaveValue(7)
       await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 7 DC' }))
-      await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet.'))
+      await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet. Bets are final.'))
       const keys = placeSlipAction.mock.calls.map((c) => (c[1] as FormData).get('idempotency_key'))
       expect(keys).toHaveLength(2)
       expect(keys[1]).toBe(keys[0])

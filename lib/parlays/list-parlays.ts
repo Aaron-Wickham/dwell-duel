@@ -29,6 +29,8 @@ export interface ParlayView {
   // were fixed when it was placed. No cap applies, except to a pool parlay converted at release
   // (0105), which keeps its pool caps.
   fixed: boolean
+  // A pool parlay converted at release (0105): its odds came from the pools and were fixed then.
+  converted: boolean
   multiplierBp: number
   capped: boolean
   // Some leg that still counts has no set odds yet, so the multiplier and payout are estimates.
@@ -151,6 +153,7 @@ export function toParlayView(p: ParlayRow, now: number, legOdds: LegOdds): Parla
     credited: p.credited,
     maxMultiplier: p.max_multiplier,
     lockedAtPlacement: !p.odds_at_close,
+    converted: p.converted,
     ...parlayTerms(p, counted.map((r) => ({ oddsBp: r.view.oddsBp, factor: r.factor })), counted.length < rows.length),
     estimated: counted.some((r) => !r.view.oddsKnown),
     createdAt: p.created_at,

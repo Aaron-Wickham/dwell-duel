@@ -13,7 +13,8 @@ import { SectionCard } from '@/components/ui/section-card'
 import { requireUser } from '@/lib/auth/require-user'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { getParlayDetail, getParlayHead, type ParlayLegDetail } from '@/lib/parlays/get-parlay'
-import { formatOdds, MAX_LEG_ODDS, MAX_PAYOUT } from '@/lib/parlays/odds'
+import { formatOdds } from '@/lib/parlays/odds'
+import { ParlayOddsNote } from '@/components/parlays/parlay-odds-note'
 import { cardClass } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
@@ -152,23 +153,7 @@ export async function ParlayBody({ id }: { id: string }) {
             <dd className="font-bold">{parlay.status === 'lost' ? 'Nothing' : figure.value}</dd>
           </div>
         </dl>
-        <p className="text-sm text-ink2">
-          {parlay.fixed ? (
-            <>
-              The stake was split evenly across the picks, and each pick’s odds were fixed when the parlay was placed,
-              from what its share bought at its market’s price. They multiply together.
-            </>
-          ) : (
-            <>
-              {parlay.lockedAtPlacement
-                ? 'Each pick’s odds were locked when the parlay was placed'
-                : `Each pick’s odds are set when its market closes, from the other members’ money on it, at most ${MAX_LEG_ODDS}× a pick (a ~ marks one still open)`}
-              , and they multiply together{parlay.capped ? `, up to a ${parlay.maxMultiplier}× cap` : ''}. A win pays at most{' '}
-              {MAX_PAYOUT} DC{parlay.stake > MAX_PAYOUT ? ', or its stake back, since that was more' : ''}.
-            </>
-          )}
-          {dropped > 0 ? ` ${dropped} voided ${dropped === 1 ? 'pick was' : 'picks were'} left out and the rest carried on.` : ''}
-        </p>
+        <ParlayOddsNote parlay={parlay} dropped={dropped} />
       </SectionCard>
     </ContentReveal>
   )

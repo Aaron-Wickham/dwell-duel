@@ -75,6 +75,7 @@ export function toParlayDetail(row: DetailRow, ownerName: string, now: number, l
     credited: row.credited,
     maxMultiplier: row.max_multiplier,
     lockedAtPlacement: !row.odds_at_close,
+    converted: row.converted,
     ...parlayTerms(row, counted, counted.length < legs.length),
     estimated: counted.some((l) => !l.known),
     createdAt: row.created_at,

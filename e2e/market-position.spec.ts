@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { placeSolo } from './slip'
-import { backers, clientForEmail } from '../tests/db/fixtures'
+import { backers, clientForEmail, createPoolMarket } from '../tests/db/fixtures'
 import { serviceClient, type TestClient } from '../tests/db/helpers'
 
 // The review's screenshots, when run beside the remediation workspace; nowhere otherwise.
@@ -28,7 +28,7 @@ async function topUp(email: string, to: number): Promise<void> {
 // Bob makes the market, so Alice (the session on screen) can put it in a parlay, and the backers
 // put 25 DC each on both outcomes: the 50 DC from 2 other members a parlay leg needs (0074).
 async function backedMarket(bob: TestClient, title: string): Promise<Market> {
-  const { data: id, error } = await bob.rpc('create_market', {
+  const { data: id, error } = await createPoolMarket(bob, {
     p_title: title,
     p_description: null,
     p_kind: 'binary',

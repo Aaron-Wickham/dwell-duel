@@ -236,7 +236,9 @@ a line to `CHANGELOG.md` under the next release.
   (`place_slip_v3` serves the #333 build and refuses `lmsr` parlay legs;
   since 0105 `place_slip_v2` and `place_slip` only replay a finished
   attempt key and otherwise refuse "DwellDuel just updated. Refresh to
-  bet."). Stakes live
+  bet.", and `create_market_v2` and `create_market` the same, so no `pool`
+  market is made after release; a test needing one calls
+  `createPoolMarket`). Stakes live
   only in the provider's state, never in the cookie.
 - **The service worker never caches** per-member HTML, RSC payloads,
   server actions or Supabase responses.

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
 import { pgQuery } from './pg-query'
-import { seedMembers, makeMember, clientFor, createTestMarket, createTestTask, ensureInvited, giveRole, type Member, type TestMarket } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, createPoolMarket, createTestTask, ensureInvited, giveRole, type Member, type TestMarket } from './fixtures'
 import { RATE_LIMIT_ERRORS, WRITE_LIMITS, type WriteAction } from '@/lib/forms/limits'
 
 // Per-member write limits and the push device cap (#273, 0090).
@@ -47,7 +47,7 @@ const comment = (client: SupabaseClient, profileId: string, body = 'Hi') =>
   client.from('market_comments').insert({ market_id: market.marketId, profile_id: profileId, body })
 
 const createMarket = (client: SupabaseClient) =>
-  client.rpc('create_market', {
+  createPoolMarket(client, {
     p_title: 'One more',
     p_description: null,
     p_kind: 'binary',

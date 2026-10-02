@@ -31,7 +31,10 @@
 -- 5. place_slip_v2 (and place_slip, which wraps it) refuses with "DwellDuel just updated. Refresh to
 --    bet.", after replaying an attempt it already finished. This applies before the new app
 --    deploys; the build before #333 is the only caller.
--- 6. can_void_market mirrors void_market's rules (0104: a creator with a stake can't void), so the
+-- 6. create_market_v2 (and create_market, which wraps it) refuses the same build with "DwellDuel just
+--    updated. Refresh to create a market.", after replaying a finished attempt, so no pool market
+--    can appear after release.
+-- 7. can_void_market mirrors void_market's rules (0104: a creator with a stake can't void), so the
 --    market page offers Void as it offers Resolve through can_resolve_market.
 --
 -- The pool code paths stay until clean-up (#332). Additive: new columns and functions, and
@@ -907,6 +910,40 @@ begin
   end if;
 
   raise exception 'DwellDuel just updated. Refresh to bet.';
+end;
+$$;
+
+-- The same build creates markets here (create_market wraps it), and would make pool markets no build
+-- can bet on any more. Refused like place_slip_v2, so no pool market appears after release.
+create or replace function public.create_market_v2(
+  p_title text,
+  p_description text,
+  p_kind text,
+  p_outcome_labels text[],
+  p_close_at timestamptz,
+  p_line numeric default null,
+  p_idempotency_key uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_previous jsonb;
+begin
+  if not public.is_invited() then
+    raise exception 'not invited';
+  end if;
+
+  if p_idempotency_key is not null then
+    v_previous := public.claim_idempotency_key(p_idempotency_key, 'create_market');
+    if v_previous is not null then
+      return jsonb_build_object('market_id', v_previous ->> 'market_id', 'replayed', true);
+    end if;
+  end if;
+
+  raise exception 'DwellDuel just updated. Refresh to create a market.';
 end;
 $$;
 

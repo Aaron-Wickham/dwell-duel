@@ -5,6 +5,7 @@ import {
   makeMember,
   clientFor,
   createTestMarket,
+  createPoolMarket,
   ensureInvited,
   giveRole,
   backLeg,
@@ -118,7 +119,7 @@ export async function buildSnapshot(): Promise<Snapshot> {
   }
   for (const backer of await backers()) await setBalanceViaLedger(backer.id, 2000)
 
-  const { data: ouId, error: ouErr } = await client(alice).rpc('create_market', {
+  const { data: ouId, error: ouErr } = await createPoolMarket(client(alice), {
     p_title: 'Goals',
     p_description: null as unknown as string,
     p_kind: 'over_under',

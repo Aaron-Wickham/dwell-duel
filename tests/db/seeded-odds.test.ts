@@ -38,19 +38,6 @@ async function balanceOf(member: Member): Promise<number> {
 }
 
 describe('seeded markets (0041)', () => {
-  it('seeds every new market with 20 DC per outcome by default', async () => {
-    const { data: id, error } = await aliceClient.rpc('create_market', {
-      p_title: 'Fresh',
-      p_description: null,
-      p_kind: 'binary',
-      p_outcome_labels: ['Yes', 'No'],
-      p_close_at: new Date(Date.now() + 3_600_000).toISOString(),
-    })
-    if (error) throw error
-    const { data } = await serviceClient().from('markets').select('seed_per_outcome').eq('id', id as string).single()
-    expect(data?.seed_per_outcome).toBe(SEED)
-  })
-
   it('pays a winner their share of the real pool: the seed is never paid', async () => {
     const m = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: SEED })
     await bet(bobClient, m, 0, 10)

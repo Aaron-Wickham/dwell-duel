@@ -86,6 +86,7 @@ const parlay = (overrides: Partial<ParlayView> = {}): ParlayView => ({
   credited: 0,
   maxMultiplier: 20,
   lockedAtPlacement: false,
+  converted: false,
   fixed: false,
   multiplierBp: 160_000,
   capped: false,

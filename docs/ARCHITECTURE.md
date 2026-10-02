@@ -206,11 +206,15 @@ spending coins should get a trigger and a `write_limits()` row.
   older voids), `settled_at` (0066: when it
   left `open`; the Resolved list's order and a voided chart's shaded zone).
   The `sparkline` column and its trigger (0070) are gone (0098):
-  `market_sparks` serves every card, cached by version.
+  `market_sparks` serves every card, cached by version. Since 0101,
+  `liquidity` (default 50) and `pricing` (`pool` or `lmsr`, default `pool`)
+  sit unused until LMSR part 2/3.
 - `market_outcomes`: labels and `pool_total`, the real DC bet on each, and
   `pool_version` (0095), bumped by a trigger on every change to
   `pool_total` (each bet and cancellation): the list's sparkline cache key.
-- `bets`: live stakes only. A cancelled bet moves to `cancelled_bets`.
+  `shares` and `q_offset` (0101, unused until LMSR part 2/3).
+- `bets`: live stakes only. A cancelled bet moves to `cancelled_bets`. `shares`
+  and `cost` (0101, unused until LMSR part 2/3).
 - `market_resolutions`: each resolution or override, with its required
   note, `actual_value` for an Over/Under, and a link to the one it
   replaced.
@@ -230,7 +234,8 @@ spending coins should get a trigger and a `write_limits()` row.
   (`odds_at_close`), and each leg's outcome with its odds (`locked_odds`):
   null until the leg's market closes or settles, then set once by
   `settle_parlay`. Parlays placed before 0074 locked every leg at placement
-  and keep those odds.
+  and keep those odds. `parlay_legs.factor` and `shares`, `parlays.multiplier`
+  and `payout` (0101, unused until LMSR part 2/3).
 - `market_resolutions.payout_seed` (0074): the seed per outcome the
   resolution's payouts counted, the market's seed before 0074 and 0 since,
   so history (My bets, the feed oracle) reads what was paid.
@@ -544,6 +549,7 @@ after it ships. They roughly follow the project's history:
 | 0098 | Destructive cleanup of what the app stopped using: `market_outcomes`, `tasks` and `feed_reactions` leave the realtime publication, `markets.sparkline` with its trigger and `cache_market_sparkline`, and the claiming `push_resolve_reminders` and `push_market_alerts` |
 | 0099 | `rls_auto_enable()`, Supabase's platform function behind automatic RLS, loses EXECUTE for `PUBLIC` too (0015 revoked only `anon` and `authenticated`), so the Security Advisor no longer lists it as callable signed out; guarded, since only hosted projects have it |
 | 0100 | Private Postgres Changes channels: the `realtime.messages` policy `member_topics_receive` lets an invited member join only their own `live-member:<id>:base:<n>` and `live-member:<id>:page:<n>` topics, so the project can refuse public channels |
+| 0101 | LMSR core, part 1 of #325 (#331): pure `lmsr_cost`, `lmsr_price` and `lmsr_buy` (mirrored by `lib/markets/lmsr.ts`, kept equal by `tests/db/lmsr.test.ts`); `markets.liquidity` (default 50) and `markets.pricing` (`pool` for every market until part 2); `market_outcomes.shares` and `q_offset`; `bets.shares` and `cost`; `parlay_legs.factor` and `shares`; `parlays.multiplier` and `payout`. Nothing reads them yet |
 
 Numbers 0075, 0077–0082 and 0084–0088 were reserved by branches that merged later under higher numbers, so they are unused.
 

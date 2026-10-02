@@ -1,5 +1,6 @@
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
+import { ListCard } from '@/components/ui/list-card'
 import { LocalTime } from '@/components/ui/local-time'
 import { formatOdds } from '@/lib/parlays/odds'
 import type { ParlayView } from '@/lib/parlays/list-parlays'
@@ -29,53 +30,51 @@ export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: st
   const multiplier = `${parlay.estimated ? '~' : ''}${formatOdds(parlay.multiplierBp)}×`
 
   return (
-    <li {...focusTarget(domId, titleId)} className="py-3 lg:py-0">
-      <div className="pressable hover-tint relative flex flex-col gap-3 rounded-[14px] border border-line p-3.5 [--tint-inset:0] before:rounded-[inherit] md:p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <Link
-              id={titleId}
-              href={`/parlays/${parlay.id}`}
-              transitionTypes={['nav-forward']}
-              className="stretched-link font-bold no-underline"
-            >
-              Parlay · {parlay.legs.length} picks
-            </Link>
-            <p className="text-sm text-ink2">
-              Placed <LocalTime iso={parlay.createdAt} format="dateTime" />
-            </p>
-          </div>
-          <div className="shrink-0">
-            <ParlayStatusChip parlay={parlay} />
-          </div>
+    <ListCard {...focusTarget(domId, titleId)} className="flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <Link
+            id={titleId}
+            href={`/parlays/${parlay.id}`}
+            transitionTypes={['nav-forward']}
+            className="stretched-link font-bold no-underline"
+          >
+            Parlay · {parlay.legs.length} picks
+          </Link>
+          <p className="text-sm text-ink2">
+            Placed <LocalTime iso={parlay.createdAt} format="dateTime" />
+          </p>
         </div>
-
-        <div className="grid grid-cols-3 items-end gap-2">
-          <Figure label="Stake" value={`${parlay.stake} DC`} />
-          <Figure label={parlay.capped ? `Multiplier (max ${parlay.maxMultiplier}×)` : 'Multiplier'} value={multiplier} />
-          <Figure label={figure.label} value={figure.value} className={FIGURE_TONE[figure.tone]} />
+        <div className="shrink-0">
+          <ParlayStatusChip parlay={parlay} />
         </div>
-
-        <ParlayProgress legs={parlay.legs} />
-
-        <ul className="flex flex-col divide-y divide-line border-t border-line">
-          {shown.map((leg) => (
-            <li key={leg.marketId} className="flex items-center justify-between gap-3 py-2 text-[15px]">
-              <span className="min-w-0 grow break-words">
-                {leg.marketTitle}
-                {' — '}
-                <strong>{leg.outcomeLabel}</strong>
-              </span>
-              <LegPill status={leg.status} />
-            </li>
-          ))}
-        </ul>
-
-        <p aria-hidden="true" className="flex items-center justify-between text-sm font-bold text-ink2">
-          <span>{hidden > 0 ? `+${hidden} more ${hidden === 1 ? 'pick' : 'picks'} · View breakdown` : 'View breakdown'}</span>
-          <ChevronRight className="size-4" />
-        </p>
       </div>
-    </li>
+
+      <div className="grid grid-cols-3 items-end gap-2">
+        <Figure label="Stake" value={`${parlay.stake} DC`} />
+        <Figure label={parlay.capped ? `Multiplier (max ${parlay.maxMultiplier}×)` : 'Multiplier'} value={multiplier} />
+        <Figure label={figure.label} value={figure.value} className={FIGURE_TONE[figure.tone]} />
+      </div>
+
+      <ParlayProgress legs={parlay.legs} />
+
+      <ul className="flex flex-col divide-y divide-line border-t border-line">
+        {shown.map((leg) => (
+          <li key={leg.marketId} className="flex items-center justify-between gap-3 py-2 text-[15px]">
+            <span className="min-w-0 grow break-words">
+              {leg.marketTitle}
+              {' — '}
+              <strong>{leg.outcomeLabel}</strong>
+            </span>
+            <LegPill status={leg.status} />
+          </li>
+        ))}
+      </ul>
+
+      <p aria-hidden="true" className="flex items-center justify-between text-sm font-bold text-ink2">
+        <span>{hidden > 0 ? `+${hidden} more ${hidden === 1 ? 'pick' : 'picks'} · View breakdown` : 'View breakdown'}</span>
+        <ChevronRight className="size-4" />
+      </p>
+    </ListCard>
   )
 }

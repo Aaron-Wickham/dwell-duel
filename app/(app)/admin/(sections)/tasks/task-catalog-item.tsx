@@ -6,6 +6,7 @@ import type { TaskSummary } from '@/lib/tasks/list-tasks'
 import { PERIOD_LABEL } from '@/lib/tasks/period-label'
 import { Button } from '@/components/ui/button'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
+import { ListCard } from '@/components/ui/list-card'
 import { Message } from '@/components/ui/message'
 import { StatusChip } from '@/components/ui/status-chip'
 import { cn } from '@/lib/utils'
@@ -27,7 +28,7 @@ export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary
   const toggleErrorId = `toggle-${task.id}-error`
 
   return (
-    <li className="flex flex-col gap-2 py-3.5">
+    <ListCard tappable={false} className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
         <p className={cn('min-w-0 break-words font-extrabold', !task.isActive && 'text-ink2')}>
           {task.title} — {task.rewardAmount} DC
@@ -38,7 +39,7 @@ export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary
           {!task.isActive && <StatusChip tone="wait">Inactive</StatusChip>}
         </span>
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button
           ref={editButton}
           variant="secondary"
@@ -97,6 +98,6 @@ export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary
           }}
         />
       )}
-    </li>
+    </ListCard>
   )
 }

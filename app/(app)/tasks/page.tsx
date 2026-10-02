@@ -9,6 +9,8 @@ import { getMyTaskStreaks } from '@/lib/tasks/streaks'
 import { Page, PageHeader } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { EmptyState } from '@/components/ui/empty-state'
+import { listCardsClass } from '@/components/ui/list-card'
+import { cn } from '@/lib/utils'
 import { TaskRow, type TaskRowState } from '@/components/tasks/task-row'
 import { AGAIN_LABEL, PERIOD_LABEL } from '@/lib/tasks/period-label'
 import { SubmitTaskDialog } from './submit-task-dialog'
@@ -33,8 +35,8 @@ export default async function TasksPage() {
           Admins add Bible-study tasks here.
         </EmptyState>
       ) : (
-        <SectionCard title={<span className="sr-only">Task catalog</span>} titleId="task-catalog" className="gap-0 p-0 md:p-0">
-          <ul className="flex flex-col divide-y divide-line px-[18px] md:px-6">
+        <SectionCard title={<span className="sr-only">Task catalog</span>} titleId="task-catalog" className="gap-0">
+          <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:gap-4')}>
             {activeTasks.map((task) => {
               const current = myCompletions.find((c) => c.taskId === task.id)
               const state: TaskRowState =

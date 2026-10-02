@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { DwellDuelSymbol, WordmarkName } from '@/components/brand/wordmark'
+import { DwellDuelSymbol, WORDMARK_SYMBOL_LIFT, WORDMARK_SYMBOL_SIZE, WordmarkName } from '@/components/brand/wordmark'
 import { cn } from '@/lib/utils'
 import { SampleMarket } from './sample-market'
 import { SignInIntro } from './sign-in-intro'
-import { WORDMARK_SYMBOL_ID } from './intro-director'
+import { WORDMARK_SYMBOL_ID } from './intro-clock'
 
 // The public pages a new invitee meets: the wordmark, a sample market and the page's own copy. One
 // column on a phone, card first; at lg the copy sits left of a larger card. `intro` plays the
@@ -17,9 +17,7 @@ export function SignInFrame({ intro = false, dimmed = false, children }: { intro
     >
       {intro && <SignInIntro />}
       <div className="sign-in-intro-wordmark flex min-h-11 items-center gap-2">
-        <span id={WORDMARK_SYMBOL_ID} className="-translate-y-[3.15px]">
-          <DwellDuelSymbol size={32} />
-        </span>
+        <DwellDuelSymbol id={WORDMARK_SYMBOL_ID} size={WORDMARK_SYMBOL_SIZE.md} className={WORDMARK_SYMBOL_LIFT.md} />
         <WordmarkName className="text-[21px]" />
       </div>
       <div className="grid flex-1 content-start gap-5 short:gap-3.5 lg:grid-cols-2 lg:content-center lg:items-center lg:gap-16">

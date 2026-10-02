@@ -77,7 +77,7 @@ Every text pairing passes WCAG AA in both themes; check a new one before using i
 
 - **Targets:** every control is at least 44px tall. Primary buttons are 48px and compact ones 44px.
 - **Focus:** every control gets a visible ring: `:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }`.
-- **Corner radii:** cards 18px, buttons and inputs 12px, chips fully rounded (999px).
+- **Corner radii:** cards 18px, list cards and sunken panels 14px (`--radius-tile`), buttons and inputs 12px, chips fully rounded (999px).
 - **Page padding:** 16px on phone, 80px on desktop with a 1120px max content width.
 - **Page widths:** `<Page width>` picks one of two centred columns, and the page's header, tabs and content always share its edges, so nothing is left-pinned with empty space on the right. See *Desktop layouts* below.
 - **Type sizes (px):**
@@ -92,8 +92,9 @@ Every text pairing passes WCAG AA in both themes; check a new one before using i
 
 - **Real elements only:** `<button>`, `<a>`, and `<label>` paired with its input. No clickable divs.
 - **Icon-only buttons** get an `aria-label`.
-- **Press and hover (#153):** every control shrinks to 97% on press. Under a mouse (not on touch), buttons, chips, tabs and nav items grow to 103% and change colour; tappable cards lift 2px onto a shadow instead (`hover-lift`). A row or tile inside a card, such as a leaderboard row, a podium place, a member on Admin › Members or a home tile below `lg:`, never lifts: it sits on a flat `--sunk` tint (`hover-tint`), since a card floating inside a card reads as a button inside a button (#244). Reduced motion keeps the colour changes (and the lift's shadow) and drops the movement. Curves and durations come from the motion tokens in `globals.css`.
+- **Press and hover (#153):** every control shrinks to 97% on press. Under a mouse (not on touch), buttons, chips, tabs and nav items grow to 103% and change colour; tappable cards lift 2px onto a shadow instead (`hover-lift`). A row or tile inside a card, such as a list card, a podium place, or a member on Admin › Members or a home tile below `lg:`, never lifts: it sits on a flat `--sunk` tint (`hover-tint`), since a card floating inside a card reads as a button inside a button (#244). Reduced motion keeps the colour changes (and the lift's shadow) and drops the movement. Curves and durations come from the motion tokens in `globals.css`.
 - **Section cards:** a `SectionCard`'s `description` slot puts a caption line right under its heading (the weekly recap's date range); the card's body follows at the usual gap.
+- **List cards (#328):** a list item that opens one thing is a `ListCard` (`components/ui/list-card.tsx`); a sentence row (the feed) or a data row (the ledger) stays a divided row. A list card is the My bets parlay card: a `--line` hairline, 14px corners (`--radius-tile`), 14px padding on phones and 16px from `md:`, no shadow, tinting flush to its border under a mouse. Its title link stretches over it; other controls (Cancel, Resolve, Submit, Approve) sit above the cover. Inside a section card the cards are 8px apart with no dividers. Solo, settled and cancelled bets, parlays, tasks, markets waiting to be resolved, the admin task catalog, pending approvals, the leaderboard, admin members and the home tiles are list cards; the feed, ledger, coin history, invites and a market's bet list are divided rows. Your own leaderboard card keeps the `--acc-soft` tint.
 - **Sliding pills:** the desktop nav's, the phone tab bar's and the sub-tabs' active pill all slide to the new tab the same way: 280ms on the iOS curve. On the tab bar the new tab's icon pops (to 118% and back) over the same 280ms, and its label's weight eases from bold to extrabold.
 
 ## Desktop layouts (#158)
@@ -104,9 +105,9 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 |---|---|---|
 | Markets | wide | Three columns of market cards. |
 | Market | wide | Chart and outcomes (7fr) beside betting, resolution and the rest (5fr). |
-| Leaderboard | wide | Podium across the top. This month: rankings (7fr) beside the race chart, the awards as a 2×2 grid and past champions (5fr). Net worth: rankings (7fr) beside a "Your standing" card (5fr); on a phone that card is hidden, and a compact standing card with Jump to me sits above the list instead. |
+| Leaderboard | wide | Podium across the top; the rankings stay one column of list cards, since rank reads top to bottom. This month: rankings (7fr) beside the race chart, the awards as a 2×2 grid and past champions (5fr). Net worth: rankings (7fr) beside a "Your standing" card (5fr); on a phone that card is hidden, and a compact standing card with Jump to me sits above the list instead. |
 | Feed | reading | One centred stream. |
-| My bets | wide | Open, Settled and Cancelled show bets as cards in three columns (a solo bet's status sits at the bottom of its card); Coins stays a list. |
+| My bets | wide | Open, Settled and Cancelled show bets as list cards in three columns (a solo bet's status sits at the bottom of its card); Coins stays a divided list. |
 | Member | wide | Photo, name, bio and a two-column Stats card (5fr) beside Recent activity (7fr). |
 | Edit profile | wide | Photo and a live preview of the profile (5fr) beside name, bio and Save (7fr). |
 | Settings | wide | Two columns of section cards: Appearance, Profile, Haptics & motion; then Notifications, Help, Account. |
@@ -114,6 +115,10 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 | Create market | wide | The form (7fr) beside a live preview of its market card (5fr). |
 | Parlay | wide | Picks (7fr) beside the summary and How it adds up (5fr). |
 | Admin › Members | wide | A card per member in three columns. |
+| Tasks | wide | Task cards in two columns, each with its action on the right. |
+| Admin › Tasks | wide | Pending approvals as cards in two columns; Create task (5fr) beside the task catalog (7fr), its cards in two columns. |
+| Admin › Markets | wide | Markets waiting to be resolved as cards in three columns. |
+| Home | wide | The tiles as cards of their own in three columns (list cards inside one card on a phone). |
 
 - **wide** is `max-w-[1280px]`: a 1120px content column inside the 80px padding.
 - **reading** is `max-w-[980px]`: about 820px of content, centred, for a single stream or long text.

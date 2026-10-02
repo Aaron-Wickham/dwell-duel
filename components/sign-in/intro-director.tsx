@@ -3,9 +3,7 @@
 import { useEffect } from 'react'
 import { DURATION, cssEase } from '@/lib/ui/motion'
 import { INTRO } from './intro-timeline'
-import { INTRO_SYMBOL_ID, introClock } from './intro-clock'
-
-export const WORDMARK_SYMBOL_ID = 'sign-in-wordmark-symbol'
+import { INTRO_SYMBOL_ID, WORDMARK_SYMBOL_ID, introClock } from './intro-clock'
 
 // Module-level, so Strict Mode's second effect run (or a remount) can't schedule it twice, and so
 // it still happens when the page is left mid-intro: a later visit to sign-in in the same document

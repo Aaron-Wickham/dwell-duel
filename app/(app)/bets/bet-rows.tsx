@@ -5,15 +5,15 @@ import { CancelBetButton } from '@/components/markets/cancel-bet-button'
 import { LocalTime } from '@/components/ui/local-time'
 import { StatusChip } from '@/components/ui/status-chip'
 import { PlacedParlay } from '@/components/parlays/placed-parlay'
+import { ListCard, listCardsClass } from '@/components/ui/list-card'
 import type { MyCancelledBet } from '@/lib/bets/list-my-bets'
 import type { Wager } from '@/lib/bets/list-my-wagers'
 import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
+import { cn } from '@/lib/utils'
 
-// A list with dividers on a phone; at lg, a grid of bordered tiles inside the section's card. The
-// tiles keep their own height (items-start), so a tall parlay doesn't leave blank space in its
-// neighbours, and they tint on hover rather than lift: a tile floating in a card reads as a
-// button in a button (#244).
-const betListClass = 'flex flex-col divide-y divide-line lg:grid lg:grid-cols-3 lg:items-start lg:gap-4 lg:divide-y-0 lg:py-3'
+// List cards, three across at lg. Each keeps its own height (items-start), so a tall parlay
+// doesn't leave blank space in its neighbours.
+const betListClass = cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-4')
 
 function Row({
   domId,
@@ -30,9 +30,9 @@ function Row({
 }) {
   const titleId = `${domId}-title`
   return (
-    <li
+    <ListCard
       {...focusTarget(domId, titleId)}
-      className="pressable hover-tint relative flex items-start justify-between gap-3 py-3 lg:flex-col lg:justify-start lg:rounded-[14px] lg:border lg:border-line lg:p-4 lg:[--tint-inset:0] lg:before:rounded-[inherit]"
+      className="flex items-start justify-between gap-3 lg:flex-col lg:justify-start"
     >
       <div className="flex min-w-0 flex-col gap-1">
         <IntentLink
@@ -48,7 +48,7 @@ function Row({
       <div className="flex min-w-0 max-w-full shrink-0 flex-col items-end gap-2 lg:mt-auto lg:w-full lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
         {aside}
       </div>
-    </li>
+    </ListCard>
   )
 }
 

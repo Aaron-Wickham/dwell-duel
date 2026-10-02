@@ -168,27 +168,33 @@ export type Database = {
       bets: {
         Row: {
           amount: number
+          cost: number | null
           created_at: string
           id: number
           market_id: string
           outcome_id: string
           profile_id: string
+          shares: number | null
         }
         Insert: {
           amount: number
+          cost?: number | null
           created_at?: string
           id?: never
           market_id: string
           outcome_id: string
           profile_id: string
+          shares?: number | null
         }
         Update: {
           amount?: number
+          cost?: number | null
           created_at?: string
           id?: never
           market_id?: string
           outcome_id?: string
           profile_id?: string
+          shares?: number | null
         }
         Relationships: [
           {
@@ -540,6 +546,8 @@ export type Database = {
           market_id: string
           pool_total: number
           pool_version: number
+          q_offset: number
+          shares: number
         }
         Insert: {
           created_at?: string
@@ -548,6 +556,8 @@ export type Database = {
           market_id: string
           pool_total?: number
           pool_version?: number
+          q_offset?: number
+          shares?: number
         }
         Update: {
           created_at?: string
@@ -556,6 +566,8 @@ export type Database = {
           market_id?: string
           pool_total?: number
           pool_version?: number
+          q_offset?: number
+          shares?: number
         }
         Relationships: [
           {
@@ -646,6 +658,8 @@ export type Database = {
           id: string
           kind: string
           line: number | null
+          liquidity: number
+          pricing: string
           seed_per_outcome: number
           settled_at: string | null
           status: string
@@ -662,6 +676,8 @@ export type Database = {
           id?: string
           kind: string
           line?: number | null
+          liquidity?: number
+          pricing?: string
           seed_per_outcome?: number
           settled_at?: string | null
           status?: string
@@ -678,6 +694,8 @@ export type Database = {
           id?: string
           kind?: string
           line?: number | null
+          liquidity?: number
+          pricing?: string
           seed_per_outcome?: number
           settled_at?: string | null
           status?: string
@@ -741,25 +759,31 @@ export type Database = {
       }
       parlay_legs: {
         Row: {
+          factor: number | null
           id: string
           locked_odds: number | null
           market_id: string
           outcome_id: string
           parlay_id: string
+          shares: number | null
         }
         Insert: {
+          factor?: number | null
           id?: string
           locked_odds?: number | null
           market_id: string
           outcome_id: string
           parlay_id: string
+          shares?: number | null
         }
         Update: {
+          factor?: number | null
           id?: string
           locked_odds?: number | null
           market_id?: string
           outcome_id?: string
           parlay_id?: string
+          shares?: number | null
         }
         Relationships: [
           {
@@ -791,7 +815,9 @@ export type Database = {
           credited: number
           id: string
           max_multiplier: number
+          multiplier: number | null
           odds_at_close: boolean
+          payout: number | null
           profile_id: string
           settled_at: string | null
           stake: number
@@ -802,7 +828,9 @@ export type Database = {
           credited?: number
           id?: string
           max_multiplier: number
+          multiplier?: number | null
           odds_at_close?: boolean
+          payout?: number | null
           profile_id: string
           settled_at?: string | null
           stake: number
@@ -813,7 +841,9 @@ export type Database = {
           credited?: number
           id?: string
           max_multiplier?: number
+          multiplier?: number | null
           odds_at_close?: boolean
+          payout?: number | null
           profile_id?: string
           settled_at?: string | null
           stake?: number
@@ -1423,6 +1453,15 @@ export type Database = {
         }[]
       }
       live_ping_interval_ms: { Args: never; Returns: number }
+      lmsr_buy: {
+        Args: { p_b: number; p_outcome: number; p_q: number[]; p_spend: number }
+        Returns: number
+      }
+      lmsr_cost: { Args: { p_b: number; p_q: number[] }; Returns: number }
+      lmsr_price: {
+        Args: { p_b: number; p_outcome: number; p_q: number[] }
+        Returns: number
+      }
       mark_proof_expired: { Args: { p_ids: string[] }; Returns: number }
       market_parlay_riding: {
         Args: { p_market_id: string }

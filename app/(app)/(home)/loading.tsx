@@ -1,5 +1,7 @@
 import { pageClass } from '@/components/ui/page'
 import { Skeleton, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
+import { listCardClass, listCardsClass } from '@/components/ui/list-card'
+import { cn } from '@/lib/utils'
 
 // Mirrors Home: greeting, balance hero with its one usual stat tile (a second appears only with a
 // task waiting on review), and the six tiles every member sees (a grid from lg).
@@ -19,11 +21,11 @@ export default function Loading() {
           <Skeleton className="h-[62px] rounded-[14px] bg-hero-inset md:h-[72px]" />
         </div>
       </div>
-      <div className="flex flex-col divide-y divide-line rounded-card border border-line bg-surface px-1 lg:grid lg:grid-cols-3 lg:gap-5 lg:divide-y-0 lg:border-0 lg:bg-transparent lg:px-0">
+      <div className={cn(listCardsClass, 'rounded-card border border-line bg-surface p-[18px] md:p-6 lg:grid lg:grid-cols-3 lg:gap-5 lg:border-0 lg:bg-transparent lg:p-0')}>
         {Array.from({ length: 6 }, (_, i) => (
           <div
             key={i}
-            className="flex min-h-[72px] items-center gap-3.5 px-4 py-3 lg:min-h-24 lg:rounded-card lg:border lg:border-line lg:bg-surface lg:p-5 lg:shadow-card"
+            className={cn(listCardClass, 'flex min-h-[72px] items-center gap-3.5 lg:min-h-24 lg:rounded-card lg:bg-surface lg:p-5 lg:shadow-card')}
           >
             <Skeleton className="size-11 shrink-0" />
             <div className="flex min-w-0 flex-1 flex-col gap-2">

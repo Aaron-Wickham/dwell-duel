@@ -3,6 +3,7 @@ import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import type { ReactElement } from 'react'
+import Link from 'next/link'
 import { render } from '@testing-library/react'
 import { ChartColumn } from 'lucide-react'
 
@@ -13,7 +14,7 @@ vi.mock('@/lib/theme/set-theme', () => ({ setThemeAction: vi.fn() }))
 vi.mock('@/lib/preferences/set-preference', () => ({ setHapticsAction: vi.fn(), setReduceMotionAction: vi.fn() }))
 
 import { BackLink } from '@/components/ui/back-link'
-import { buttonVariants } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { FilterChips } from '@/components/ui/filter-chips'
 import { MarketSearch } from '@/components/markets/market-search'
 import { JumpToMe } from '@/components/leaderboard/jump-to-me'
@@ -30,6 +31,7 @@ import { MemberRow } from '@/app/(app)/admin/members/member-row'
 import { MotionSettings, ThemeSetting } from '@/app/(app)/settings/settings-controls'
 import { CreateMarketForm } from '@/app/(app)/markets/new/create-market-form'
 import { PositionCard } from '@/components/markets/position-card'
+import { ListCard } from '@/components/ui/list-card'
 
 const MEMBER = { id: 'm1', name: 'Grace', avatarSrc: null }
 
@@ -38,6 +40,21 @@ const MEMBER = { id: 'm1', name: 'Grace', avatarSrc: null }
 // fails here.
 const CASES: [string, () => ReactElement][] = [
   ['BackLink', () => <BackLink href="/markets">Markets</BackLink>],
+  [
+    'ListCard',
+    () => (
+      <ul>
+        <ListCard>
+          <Link href="/markets/k1" className="stretched-link">
+            Will it rain?
+          </Link>
+          <div className="relative z-[1]">
+            <Button size="sm">Cancel</Button>
+          </div>
+        </ListCard>
+      </ul>
+    ),
+  ],
   ['Wordmark', () => <Wordmark />],
   [
     'MarketCard',
@@ -253,6 +270,21 @@ describe('press feedback', () => {
     expect(container.querySelector('a')).not.toHaveClass('hover-lift')
   })
 
+  it('tints a ListCard flush to its border instead of lifting it inside the section card', () => {
+    const { container } = render(
+      <ul>
+        <ListCard>
+          <Link href="/markets/k1" className="stretched-link">
+            Will it rain?
+          </Link>
+        </ListCard>
+      </ul>,
+    )
+    const card = container.querySelector('li')!
+    expect(card).toHaveClass('pressable', 'relative', 'hover-tint', '[--tint-inset:0]')
+    expect(card).not.toHaveClass('hover-lift')
+  })
+
   it('tints My bets’ parlay and bet tiles instead of lifting them inside the section card', () => {
     const { container } = render(
       <ul>
@@ -274,7 +306,8 @@ describe('press feedback', () => {
         />
       </ul>,
     )
-    const tile = container.querySelector('li > div')!
+    // The parlay is a ListCard: the list item is the card (#328).
+    const tile = container.querySelector('li')!
     expect(tile).toHaveClass('pressable', 'relative', 'hover-tint')
     expect(tile).not.toHaveClass('hover-lift')
     const rows = readFileSync(path.resolve(import.meta.dirname, '../../app/(app)/bets/bet-rows.tsx'), 'utf8')

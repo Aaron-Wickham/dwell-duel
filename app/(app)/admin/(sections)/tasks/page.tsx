@@ -16,6 +16,8 @@ import { ageLabel } from '@/lib/social/relative-time'
 import { SectionCard } from '@/components/ui/section-card'
 import { StatusChip } from '@/components/ui/status-chip'
 import { EmptyState } from '@/components/ui/empty-state'
+import { listCardsClass } from '@/components/ui/list-card'
+import { cn } from '@/lib/utils'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { CreateTaskForm } from './create-task-form'
 import { PENDING_ROW_ID_PREFIX, PendingApprovals } from './pending-approvals'
@@ -72,11 +74,11 @@ export default async function AdminTasksPage(props: PageProps<'/admin/tasks'>) {
             <SectionCard title="Create task" titleId="create-task" className="gap-4">
               <CreateTaskForm />
             </SectionCard>
-            <SectionCard title="Task catalog" titleId="task-catalog" className="gap-1">
+            <SectionCard title="Task catalog" titleId="task-catalog">
               {tasks.length === 0 ? (
                 <EmptyState icon={BookOpen} title="No tasks yet." />
               ) : (
-                <ul className="flex flex-col divide-y divide-line">
+                <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-4')}>
                   {tasks.map((task) => (
                     <TaskCatalogItem key={task.id} task={task} canDelete={role === 'owner'} />
                   ))}

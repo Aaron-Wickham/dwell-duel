@@ -46,6 +46,19 @@ a line to `CHANGELOG.md` under the next release.
   nothing in them render an `EmptyState`. The title of a row or tile in a
   list is `rowTitleClass`, beside `h1Class`, `h2Class` and `eyebrowClass`;
   don't add a `text-[Npx]` of your own.
+- **A list item that opens one thing is a `ListCard`; a sentence row
+  (feed) or data row (ledger) stays a divided row** (#328).
+  `components/ui/list-card.tsx`'s `ListCard` is the My bets parlay card: a
+  `border-line` hairline, `rounded-tile` (`--radius-tile`, 14px), `p-3.5`
+  / `md:p-4`, no shadow, tinting flush (`hover-tint [--tint-inset:0]`)
+  rather than lifting. Its title link is a `stretched-link` and any other
+  control sits in a `relative z-[1]` wrapper; a card whose only controls
+  are its own buttons (a task, a submission to review) passes
+  `tappable={false}`. Inside a `SectionCard` the list is `listCardsClass`
+  (`flex flex-col gap-2`, no dividers), with its `lg:` grid added at the
+  call site. Something that isn't an `<li>` (a home tile's link) uses
+  `tappableListCardClass`. The feed, ledger, coin history, invites and a
+  market's bet list stay divided rows.
 - **Page widths come from `<Page width>`:** `wide` (default, 1120px of
   content) or `reading` (about 820px, centred), and a skeleton uses
   `pageClassFor(width)`. Don't cap a card's width inside a page; fill the

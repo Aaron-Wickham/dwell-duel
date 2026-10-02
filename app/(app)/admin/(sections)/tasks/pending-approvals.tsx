@@ -14,11 +14,13 @@ import { Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { EmptyState } from '@/components/ui/empty-state'
+import { ListCard, listCardsClass } from '@/components/ui/list-card'
 import { ConfirmSubmitDialog, useConfirmSubmit } from '@/components/ui/confirm-submit-dialog'
 import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
 import { keepCheckedOnReset } from '@/lib/forms/keep-on-reset'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { ProofList } from '@/components/proof/proof-list'
+import { cn } from '@/lib/utils'
 import { ReviewButtons } from './review-buttons'
 
 export const PENDING_ROW_ID_PREFIX = 'pending'
@@ -104,11 +106,11 @@ export function PendingApprovals({
         emptyState ?? <EmptyState icon={Check} title="Nothing pending." />
       ) : (
         <>
-          <ul className="flex flex-col divide-y divide-line">
+          <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-4')}>
             {pending.map((c) => {
               const own = c.submitterId === viewerId
               return (
-              <li key={c.id} {...focusTarget(rowDomId(PENDING_ROW_ID_PREFIX, c.id))} className="flex flex-col gap-3 py-4">
+              <ListCard key={c.id} tappable={false} {...focusTarget(rowDomId(PENDING_ROW_ID_PREFIX, c.id))} className="flex flex-col gap-3">
                 <div className="flex items-start gap-2">
                   {own ? (
                     <span aria-hidden="true" className="min-w-11 shrink-0" />
@@ -147,13 +149,13 @@ export function PendingApprovals({
                 ) : (
                   <ReviewButtons completionId={c.id} submitterName={c.submitterName} taskTitle={c.taskTitle} />
                 )}
-              </li>
+              </ListCard>
               )
             })}
           </ul>
 
           {/* After the rows, not above them as drawn: the e2e suite clicks the first button named "Approve", which must be a row's. */}
-          <div className="flex flex-col gap-3 rounded-[14px] bg-sunk p-3.5">
+          <div className="flex flex-col gap-3 rounded-tile bg-sunk p-3.5">
             <label className="pressable inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
               <input
                 type="checkbox"

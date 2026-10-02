@@ -11,6 +11,7 @@ import { listMyTransactions } from '@/lib/ledger/my-transactions'
 import { newestHref, readPageParams, showMoreHref, type SearchParams } from '@/lib/pagination/cursor'
 import type { KeysetPage } from '@/lib/pagination/keyset'
 import { rowDomId } from '@/lib/pagination/row-id'
+import { cn } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
 import { NothingOlder } from '@/components/ui/nothing-older'
 import { Page, PageHeader } from '@/components/ui/page'
@@ -69,11 +70,14 @@ function TabSection<Row>({
 }) {
   const { label, empty } = TABS[tab]
   const backToNewestHref = newestHref(PATH, searchParams, tab)
+  // Coins is a divided list, so it sits closer to the heading and Show more takes a hairline;
+  // the bet tabs are list cards, spaced on their own.
+  const divided = tab === 'coins'
   return (
     <SectionCard
       title={label}
       titleId={`${tab}-bets-title`}
-      className={page.rows.length > 0 ? 'gap-1' : undefined}
+      className={divided && page.rows.length > 0 ? 'gap-1' : undefined}
     >
       {page.windowed && page.rows.length > 0 && (
         <div className="flex flex-col py-2">
@@ -90,7 +94,7 @@ function TabSection<Row>({
         </EmptyState>
       )}
       {page.next && (
-        <div className="flex flex-col border-t border-line pt-3">
+        <div className={cn('flex flex-col', divided && 'border-t border-line pt-3')}>
           <ShowMore
             href={showMoreHref(PATH, searchParams, tab, page.next)}
             fresh={page.next.kind === 'window'}

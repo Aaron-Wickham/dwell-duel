@@ -12,6 +12,9 @@ before v0.4.0 used other headings.)
 
 ## Unreleased
 
+### Polish
+- **List items are cards across the app.** Bets, tasks, the leaderboard, markets waiting to be resolved, the admin task catalog, pending approvals, admin members and the home tiles now share My bets' parlay card: a hairline border and 14px corners, spaced apart instead of divided, in two or three columns on a wide screen. The feed, ledger, coin history, invites and a market's bet list stay divided rows (#328).
+
 ## v0.8.0-beta — 2026-10-01
 
 Signing in now feels like DwellDuel's own: Google's account chooser says "continue to dwellduel.com" instead of a long Supabase address, the sign-in page explains what DwellDuel is, and a public privacy page says what's stored and who to ask. Behind the scenes, every live-update channel is now private, and error reports to Sentry are clearer and quieter.

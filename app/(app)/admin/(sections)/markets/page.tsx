@@ -7,6 +7,8 @@ import { newestHref, readPageParams, showMoreHref } from '@/lib/pagination/curso
 import { rowDomId } from '@/lib/pagination/row-id'
 import { SectionCard } from '@/components/ui/section-card'
 import { EmptyState } from '@/components/ui/empty-state'
+import { listCardsClass } from '@/components/ui/list-card'
+import { cn } from '@/lib/utils'
 import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
@@ -48,7 +50,7 @@ export default async function AdminMarketsPage(props: PageProps<'/admin/markets'
             </EmptyState>
           )
         ) : (
-          <ul className="flex flex-col divide-y divide-line">
+          <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-4')}>
             {markets.rows.map((m) => (
               <AwaitingMarketRow key={m.id} market={m} now={now} domId={rowDomId(ROW_ID_PREFIX, m.id)} />
             ))}

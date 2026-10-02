@@ -17,8 +17,10 @@ afterEach(() => vi.unstubAllEnvs())
 describe('the sign-in page', () => {
   it('says what DwellDuel is, and links to the privacy page', () => {
     render(<SignInPage />)
-    expect(screen.getByText(/prediction game for our church friend group/)).toHaveTextContent(/play money that can’t be\s+bought or cashed out/)
-    expect(screen.getByText(/Bible-study tasks/)).toBeInTheDocument()
+    expect(screen.getByText(/^Bet play-money Dwell Coin on questions from your church friends/)).toHaveTextContent(
+      'Bet play-money Dwell Coin on questions from your church friends, and earn more by studying the Bible.',
+    )
+    expect(screen.getByText('Play money, invite-only')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy')
   })
 

@@ -25,7 +25,10 @@ afterEach(() => vi.unstubAllGlobals())
 describe('NotInvitedPage', () => {
   it('explains the invite-only rule and offers a way back to sign-in', async () => {
     await renderPage()
-    expect(screen.getByRole('heading', { name: 'Not invited' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'You’re not on the list yet' })).toBeInTheDocument()
+    expect(screen.getByText('This Google account isn’t on the invite list.')).toBeInTheDocument()
+    expect(screen.getByText(/Ask the friend who invited you to check which email they used/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy')
     expect(screen.getByRole('link', { name: 'Try another account' })).toHaveAttribute('href', '/sign-in')
     expect(screen.queryByText(/You signed in as/)).toBeNull()
     expect(fetchMock).not.toHaveBeenCalled()
@@ -46,6 +49,11 @@ describe('NotInvitedPage', () => {
   it('drops a destination that would leave the site', async () => {
     await renderPage({ next: '//evil.example' })
     expect(screen.getByRole('link', { name: 'Try another account' })).toHaveAttribute('href', '/sign-in')
+  })
+
+  it('shows the sample market dimmed, behind the notice', async () => {
+    await renderPage()
+    expect(screen.getByRole('img', { name: /^Sample market:/ }).closest('[data-dimmed]')).not.toBeNull()
   })
 
   it('puts its content in the main landmark', async () => {

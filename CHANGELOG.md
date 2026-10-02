@@ -12,6 +12,9 @@ before v0.4.0 used other headings.)
 
 ## Unreleased
 
+### Features
+- **A sign-in page for new invitees.** Sign in opens on the DwellDuel symbol growing its leaves and settling into the wordmark, then a sample market draws its chart as two bets land, above "Friendly bets. Faithful study.", what DwellDuel is in three lines, and the Google button with a reminder to use the invited account. It plays once a visit (never under reduced motion), keeps the button on screen on an iPhone SE, and splits into two columns on a desktop; Not invited gets the same look (#329).
+
 ### Polish
 - **List items are cards across the app.** Bets, tasks, the leaderboard, markets waiting to be resolved, the admin task catalog, pending approvals, admin members and the home tiles now share My bets' parlay card: a hairline border and 14px corners, spaced apart instead of divided, in two or three columns on a wide screen. The feed, ledger, coin history, invites and a market's bet list stay divided rows (#328).
 

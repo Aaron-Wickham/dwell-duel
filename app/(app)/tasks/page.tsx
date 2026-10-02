@@ -35,7 +35,7 @@ export default async function TasksPage() {
           Admins add Bible-study tasks here.
         </EmptyState>
       ) : (
-        <SectionCard title={<span className="sr-only">Task catalog</span>} titleId="task-catalog">
+        <SectionCard title={<span className="sr-only">Task catalog</span>} titleId="task-catalog" className="gap-0">
           <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:gap-4')}>
             {activeTasks.map((task) => {
               const current = myCompletions.find((c) => c.taskId === task.id)

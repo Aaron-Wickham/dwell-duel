@@ -110,10 +110,10 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
       <SectionCard
         title={<span className="sr-only">{board === 'all' ? 'Net worth rankings' : 'This month’s rankings'}</span>}
         titleId="leaderboard-rankings"
-        className={cn(split && 'lg:col-start-1 lg:row-span-2 lg:row-start-1')}
+        className={cn('gap-0', split && 'lg:col-start-1 lg:row-span-2 lg:row-start-1')}
       >
         {page.windowed && (
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="mb-3 flex flex-wrap items-center gap-3">
             <p className="text-sm text-ink2">
               {firstRank === lastRank ? `Showing rank ${firstRank}` : `Showing ranks ${firstRank}–${lastRank}`}
             </p>
@@ -137,7 +137,7 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
           ))}
         </ol>
         {page.next && (
-          <div className="flex flex-col">
+          <div className="mt-3 flex flex-col">
             <ShowMore
               href={showMoreHref(PATH, searchParams, 'before', page.next)}
               fresh={page.next.kind === 'window'}

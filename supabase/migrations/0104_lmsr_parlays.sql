@@ -27,6 +27,10 @@
 -- 7. The best-parlay award and member stats read the stored multiplier; parlay_leg_odds returns a
 --    fixed leg's factor; market_sparklines charts parlay legs too, and does its exp in double
 --    precision; activity_feed, the tests' oracle, pays floor(shares) on lmsr markets.
+-- 8. has_stake_in_market counts a parlay leg on the market whatever the parlay's status: a parlay
+--    lost elsewhere still has a leg here that an override could revive, so its owner mustn't
+--    resolve this market. void_market refuses a creator who has a stake in their own market; an
+--    admin still can.
 --
 -- Additive: new functions, a replaced trigger, and replacements with the same signatures.
 --
@@ -1129,5 +1133,107 @@ from public.task_completions c
 join public.tasks t on t.id = c.task_id
 join public.profiles p on p.id = c.profile_id
 where c.status = 'approved';
+
+-- ─── Who may resolve or void with a stake ───────────────────────────────────
+
+-- As 0091's, but any parlay leg on the market counts, not only a pending parlay's: an override of
+-- another leg's market can bring a settled parlay back, so its owner keeps a stake here. Solo bets
+-- count as before (only live ones are in bets).
+create or replace function public.has_stake_in_market(p_market_id uuid, p_profile_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select (auth.uid() is null or public.is_invited())
+     and (
+       exists (select 1 from public.bets where market_id = p_market_id and profile_id = p_profile_id)
+       or exists (
+         select 1 from public.parlay_legs l join public.parlays p on p.id = l.parlay_id
+         where l.market_id = p_market_id and p.profile_id = p_profile_id
+       )
+     )
+$$;
+
+-- As 0073's, plus: a creator with a stake in their own market (a bet, or a parlay leg) asks an
+-- admin to void it, as they would to resolve it.
+create or replace function public.void_market(p_market_id uuid, p_reason text DEFAULT NULL::text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_reason text := nullif(btrim(coalesce(p_reason, ''), E' \t\r\n'), '');
+  v_created_by uuid;
+  v_status text;
+  v_close_at timestamptz;
+  v_bet record;
+  v_parlay_id uuid;
+begin
+  select created_by, status, close_at into v_created_by, v_status, v_close_at
+  from public.markets
+  where id = p_market_id
+  for update;
+
+  if not found then
+    raise exception 'market not found';
+  end if;
+
+  if v_status <> 'open' then
+    raise exception 'only an unresolved, unvoided market can be voided';
+  end if;
+
+  if not public.is_admin() then
+    if not (auth.uid() = v_created_by and public.is_invited()) then
+      raise exception 'only the market creator or an admin can void this market';
+    end if;
+    if now() >= v_close_at then
+      raise exception 'this market has closed, so only an admin can void it';
+    end if;
+    if public.has_stake_in_market(p_market_id, auth.uid()) then
+      raise exception 'you have a stake in this market, so ask an admin to void it';
+    end if;
+  end if;
+
+  if v_reason is null then
+    raise exception 'say why this market is voided';
+  end if;
+
+  -- Every profile this call could touch, locked once up front in id order,
+  -- before any write: this market's bettors and the owners of parlays with a
+  -- leg here. A voided market only ever had status 'open' (checked above),
+  -- so it never has a current resolution to reverse -- see the note above
+  -- resolve_market and void_market (0033) for why this, not the per-loop
+  -- ordering below, is what rules out a cross-phase deadlock. NO KEY UPDATE,
+  -- not UPDATE: FOR UPDATE here would block other transactions' foreign-key
+  -- checks (FOR KEY SHARE) on these profiles.
+  perform 1 from public.profiles where id in (
+    select profile_id from public.bets where market_id = p_market_id
+    union select pa.profile_id from public.parlays pa join public.parlay_legs l on l.parlay_id = pa.id where l.market_id = p_market_id
+  ) order by id for no key update;
+
+  update public.markets set status = 'voided', settled_at = now(), void_reason = v_reason where id = p_market_id;
+
+  for v_bet in select profile_id, amount, id from public.bets where market_id = p_market_id order by profile_id, id loop
+    perform public.apply_coin_transaction(
+      v_bet.profile_id, v_bet.amount, 'bet_voided_refund',
+      jsonb_build_object('market_id', p_market_id, 'bet_id', v_bet.id)
+    );
+  end loop;
+
+  for v_parlay_id in
+    select distinct parlay_id from public.parlay_legs
+    where market_id = p_market_id
+    order by parlay_id
+  loop
+    perform public.settle_parlay(v_parlay_id);
+  end loop;
+
+  insert into public.activity_events (id, kind, occurred_at, actor_id, market_id)
+  values ('void:' || p_market_id, 'market_voided', now(), auth.uid(), p_market_id);
+end;
+$function$;
 
 commit;

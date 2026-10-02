@@ -388,7 +388,7 @@ a line to `CHANGELOG.md` under the next release.
   equal its bets' plus its parlay legs', pool outcomes hold none, `lmsr` bets carry
   shares and `cost = amount`, a fixed parlay's legs carry factor and shares, a
   parlay's `credited` equals its payout rows). Shape balances with `setBalanceViaLedger`; a test that seeds
-  raw rows on purpose calls `skipLedgerCheck('why')`. Slip tests call `place_slip_v2`.
+  raw rows on purpose calls `skipLedgerCheck('why')`. Slip tests call `place_slip_v4`.
 - **CI runs on pull requests only,** as three parallel jobs (`static`,
   `db`, `web`) summed up by the one required check, `ci-ok`. A PR must be
   up to date with `main` to merge: after another PR lands, run

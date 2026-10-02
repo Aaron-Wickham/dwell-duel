@@ -254,8 +254,8 @@ solo bet's:
 - **A voided leg** drops out: the payout becomes the stake × the other
   legs' odds, rounded down. With one leg left, it pays at that leg's odds.
 - **Bets are final:** a parlay can't be cancelled.
-- Example: market A is new, at 50% Yes; market B has moved to 65% Yes,
-  35% No. A 10 DC parlay on Yes in A and No in B spends 5 DC on each.
+- Example: market A is new, at 50% Yes; on market B, 30 shares of Yes
+  have been bought (about 65% Yes, 35% No). A 10 DC parlay on Yes in A and No in B spends 5 DC on each.
   5 DC buys 9.545141 shares of A's Yes, so that leg is 9.545141 ÷ 5 =
   **1.909028×** (and A's Yes moves to about 55%). 5 DC buys 12.995170
   shares of B's No, so that leg is **2.599034×**. The multiplier is
@@ -330,7 +330,9 @@ full ledger) can see it.
 - **Who resolves:** once a market has closed, its creator or any
   reviewer, or an admin at any time. **Nobody but an admin resolves a
   market they have money on** (a bet or a parlay leg), so a creator who bet
-  leaves it to a reviewer. A market whose creator has money on it shows
+  leaves it to a reviewer. A parlay leg counts even after its parlay has
+  been settled on another market, since an override there could bring it
+  back. A market whose creator has money on it shows
   what, bets and parlay picks alike ("Creator has 40 DC on Yes"), and so does
   its result in the feed. The resolver picks the winner (or, for an Over/Under,
   types the actual number) and **must say why**. They can attach photos,
@@ -350,7 +352,8 @@ full ledger) can see it.
   sort out balances first.
 - **Voids:** until a market closes, its creator or an admin can void it;
   once it has closed, only an admin can, the same way nobody with money on a
-  market settles it. Every void **must say why**, and the reason shows on
+  market settles it. A creator with money on their own market (a bet or a
+  parlay leg) can't void it at all: they ask an admin. Every void **must say why**, and the reason shows on
   the market page and in the feed. Every bet on it is refunded what it
   cost, and a parlay leg on it drops out.
 - **Paying out:** on a new market, each winning bet is paid its shares,

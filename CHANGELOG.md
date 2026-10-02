@@ -19,6 +19,7 @@ before v0.4.0 used other headings.)
 - **A sign-in page for new invitees.** Sign in opens on the DwellDuel symbol growing its leaves and settling into the wordmark, then a sample market draws its chart as two bets land, above "Friendly bets. Faithful study.", what DwellDuel is in three lines, and the Google button with a reminder to use the invited account. It plays once a visit (never under reduced motion), keeps the button on screen on an iPhone SE, and splits into two columns on a desktop; Not invited gets the same look (#329).
 
 ### Fixes
+- **A settled parlay still counts as a stake.** Its owner can't resolve a market their parlay has a leg on even after the parlay was settled elsewhere, since an override there could bring it back, and a creator with a bet or parlay leg on their own market now asks an admin to void it (#334).
 - **A moved-price message clears when you change the stake.** The slip's "The price moved, so this bet now pays N DC" note no longer lingers beside a stake it no longer describes (#334).
 
 ### Polish

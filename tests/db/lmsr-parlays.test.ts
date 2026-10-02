@@ -464,3 +464,47 @@ describe('stats, awards and the economy', () => {
     expect(s.all_time_added - s.all_time_removed).toBe(s.balances + s.bets_at_stake + s.parlays_at_stake)
   })
 })
+
+describe('a stake in your own market (0104)', () => {
+  async function canResolve(client: TestClient, m: TestMarket): Promise<boolean> {
+    const { data, error } = await client.rpc('can_resolve_market', { p_market_id: m.marketId })
+    if (error) throw error
+    return data as boolean
+  }
+
+  it('stops the creator resolving a market their pending parlay has a leg on', async () => {
+    await placed(aliceClient, [[m1, 0], [m2, 0]], 10)
+    await close(m1)
+    expect(await canResolve(aliceClient, m1)).toBe(false)
+    expectError((await resolve(aliceClient, m1, 0)).error, 'you have a stake in this market, so someone else resolves it')
+  })
+
+  it('still counts the leg once the parlay has lost elsewhere, since an override could revive it', async () => {
+    const id = await placed(aliceClient, [[m1, 0], [m2, 0]], 10)
+    await settle(m2, 1)
+    expect((await parlayRow(id)).status).toBe('lost')
+    await close(m1)
+    expect(await canResolve(aliceClient, m1)).toBe(false)
+    expectError((await resolve(aliceClient, m1, 0)).error, 'you have a stake in this market, so someone else resolves it')
+    // Someone without a stake still can.
+    expect(await canResolve(oliveClient, m1)).toBe(true)
+  })
+
+  it('stops the creator voiding a market they have a bet or a parlay leg on, on lmsr and pool markets alike; an admin still can', async () => {
+    await solo(aliceClient, m1, 0, 5)
+    await placed(aliceClient, [[m2, 0], [m3, 0]], 10)
+    const pool = await createTestMarket(aliceClient, ['Yes', 'No'])
+    const { error: poolBet } = await aliceClient.rpc('place_bet', { p_market_id: pool.marketId, p_outcome_id: pool.outcomeIds[0], p_amount: 5 })
+    if (poolBet) throw poolBet
+    for (const m of [m1, m2, pool]) {
+      const { error } = await aliceClient.rpc('void_market', { p_market_id: m.marketId, p_reason: 'Called off' })
+      expectError(error, 'you have a stake in this market, so ask an admin to void it')
+    }
+    // With no stake of her own, the creator still voids her market.
+    const clean = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true })
+    await solo(bobClient, clean, 0, 5)
+    expect((await aliceClient.rpc('void_market', { p_market_id: clean.marketId, p_reason: 'Called off' })).error).toBeNull()
+    await voidMarket(m1)
+    expect(await balanceOf(alice)).toBe(100 - 10 - 5)
+  })
+})

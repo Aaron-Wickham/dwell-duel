@@ -51,6 +51,8 @@ import { EditMarketDialog } from './edit-market-dialog'
 import { ShareButton } from './share-button'
 import { listMarketEdits } from '@/lib/markets/market-edits'
 import { formatLine } from '@/lib/markets/kind'
+import { listCategoryCounts, mostUsedCategories } from '@/lib/markets/categories'
+import { CategoryChip } from '@/components/markets/category-chip'
 import { VoidForm } from './void-form'
 
 // No loading.tsx for this route (and the markets list's own loading.tsx sits in the (list)
@@ -92,8 +94,12 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const isPastClose = new Date(market.closeAt).getTime() <= now
   const canBet = market.status === 'open' && !isPastClose
   const slip = slipEntries.map((e) => e.outcomeId)
-  // update_market (0043): the creator or an admin, while the market still takes bets.
-  const canEdit = canBet && (isCreator || atLeast(role, 'admin'))
+  // update_market (0043, 0103): the creator or an admin rewords a market while it still takes bets;
+  // an admin can change its category at any time.
+  const admin = atLeast(role, 'admin')
+  const canEditWording = canBet && (isCreator || admin)
+  const canEditCategory = canEditWording || admin
+  const categoryCounts = canEditCategory ? await listCategoryCounts(supabase) : []
 
   const cardStatus = marketCardStatus(market.status, market.closeAt, new Date(now))
 
@@ -123,6 +129,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           {market.kind === 'over_under' && market.line !== null && (
             <StatusChip tone="void">Over/Under {formatLine(market.line)}</StatusChip>
           )}
+          {market.category && <CategoryChip name={market.category.name} />}
           <span className="text-sm text-ink2">
             {when}Created by {isCreator ? 'you' : market.creatorName}
           </span>
@@ -157,6 +164,11 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
                       Title was: <span className="text-ink">“{e.oldTitle}”</span>
                     </span>
                   )}
+                  {e.oldCategory !== null && (
+                    <span className="break-words">
+                      Category was: <span className="text-ink">{e.oldCategory}</span>
+                    </span>
+                  )}
                   {e.oldDescription !== e.newDescription && (
                     <span className="whitespace-pre-line break-words">
                       Description was: <span className="text-ink">{e.oldDescription ? `“${e.oldDescription}”` : '(none)'}</span>
@@ -168,7 +180,17 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           </details>
         )}
         <div className="flex flex-wrap gap-2">
-          {canEdit && <EditMarketDialog marketId={market.id} title={market.title} description={market.description} />}
+          {canEditCategory && (
+            <EditMarketDialog
+              marketId={market.id}
+              title={market.title}
+              description={market.description}
+              category={market.category?.name ?? ''}
+              wording={canEditWording}
+              suggestions={categoryCounts.map((c) => c.name)}
+              popular={mostUsedCategories(categoryCounts).map((c) => c.name)}
+            />
+          )}
           <ShareButton marketId={market.id} title={market.title} />
           {/* Every member can create markets, so anyone can start a copy; nothing exists until it's submitted. */}
           <Link

@@ -5,6 +5,7 @@ import { placeSolo } from './slip'
 test('a bet shows up in the feed and on the bettor\'s profile', async ({ page }) => {
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill('Social layer market')
+  await page.getByLabel('Category', { exact: true }).fill('Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)

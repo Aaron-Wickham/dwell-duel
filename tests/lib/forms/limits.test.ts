@@ -19,6 +19,7 @@ describe('TEXT_LIMITS', () => {
       commentBody: 280,
       voidReason: 500,
       proofLink: 2000,
+      category: 24,
     })
   })
 })

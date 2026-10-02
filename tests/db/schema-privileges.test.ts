@@ -23,6 +23,8 @@ const AUTHENTICATED_DEFINER = [
   // create_market plus an attempt key (0083): checks is_invited() first, keys are claimed per caller.
   'create_market_v2',
   'create_market_v3',
+  // create_market_v3 plus the category (0103).
+  'create_market_v4',
   'delete_market',
   'delete_market_comment',
   'delete_task',
@@ -39,6 +41,8 @@ const AUTHENTICATED_DEFINER = [
   // The markets list's sparklines (0095): raises unless invited; reads only, at most 24 points a market.
   'market_sparks',
   'member_activity',
+  // Admin › Markets › Categories (0103): each raises unless is_admin().
+  'merge_market_categories',
   'member_emails',
   'member_records',
   'member_stats',
@@ -61,11 +65,13 @@ const AUTHENTICATED_DEFINER = [
   // Owner only (0093): raises unless has_role('owner'); restores a removed member's invite.
   'reinvite_member',
   'remove_bet',
+  'rename_market_category',
   'remove_member',
   'resolve_market',
   'resolve_over_under',
   'review_task_completions',
   'save_push_subscription',
+  'set_market_category_hidden',
   'set_member_role',
   'submit_task_completion',
   'update_market',

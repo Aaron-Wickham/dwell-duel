@@ -37,6 +37,7 @@ vi.mock('@/lib/tasks/review-task-completion', () => ({
 
 import { SubmitTaskDialog } from '@/app/(app)/tasks/submit-task-dialog'
 import { EditMarketDialog } from '@/app/(app)/markets/[id]/edit-market-dialog'
+
 import { CreateTaskForm } from '@/app/(app)/admin/(sections)/tasks/create-task-form'
 import { EditTaskForm } from '@/app/(app)/admin/(sections)/tasks/edit-task-form'
 import { TaskCatalogItem } from '@/app/(app)/admin/(sections)/tasks/task-catalog-item'
@@ -44,6 +45,8 @@ import { ProfileForm } from '@/app/(app)/profile/profile-form'
 import { PendingApprovals } from '@/app/(app)/admin/(sections)/tasks/pending-approvals'
 import { ReviewButtons } from '@/app/(app)/admin/(sections)/tasks/review-buttons'
 import { AddInviteForm } from '@/app/(app)/admin/(sections)/invites/add-invite-form'
+
+const EDIT_PROPS = { marketId: 'm1', title: 'Will it snow?', category: 'Weather', wording: true, suggestions: ['Weather'], popular: ['Weather'] }
 
 const GENESIS: TaskSummary = {
   id: 't1',
@@ -91,7 +94,7 @@ describe('SubmitTaskDialog', () => {
 describe('EditMarketDialog', () => {
   it('keeps the edited title and description after the server refuses them', async () => {
     actions.updateMarketAction.mockResolvedValue({ formError: 'Market is closed.' })
-    render(<EditMarketDialog marketId="m1" title="Will it snow?" description="Before noon" />)
+    render(<EditMarketDialog {...EDIT_PROPS} description="Before noon" />)
     await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
     const title = await screen.findByLabelText('Title')
     await userEvent.clear(title)
@@ -105,7 +108,7 @@ describe('EditMarketDialog', () => {
   })
 
   it('starts from the market as it stands each time it opens, not from a cancelled edit', async () => {
-    render(<EditMarketDialog marketId="m1" title="Will it snow?" description={null} />)
+    render(<EditMarketDialog {...EDIT_PROPS} description={null} />)
     await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
     await userEvent.type(await screen.findByLabelText('Title'), ' Maybe')
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))

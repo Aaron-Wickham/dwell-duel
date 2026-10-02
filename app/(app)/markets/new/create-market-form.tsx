@@ -15,6 +15,8 @@ import { formatLine, type MarketKind } from '@/lib/markets/kind'
 import { DEFAULT_LIQUIDITY } from '@/lib/markets/lmsr'
 import { marketOdds } from '@/lib/markets/pricing'
 import { MarketCard } from '@/components/markets/market-card'
+import { CategoryField } from '@/components/markets/category-field'
+import { normalizeCategoryName } from '@/lib/markets/categories'
 import { h2Class, labelClass } from '@/components/ui/page'
 import { nextWeeklyClose } from '@/lib/markets/weekly-close'
 import { useTimeZone } from '@/components/ui/local-time'
@@ -40,16 +42,35 @@ export interface MarketPrefill {
   title: string
   description: string
   kind: MarketKind
+  // Its category's name.
+  category: string
   outcomes: string[]
   line: string
   closeAt: string
   now: number
 }
 
+// What the category field offers: every visible category's name, and the most used as chips.
+export interface CategoryOptions {
+  suggestions: string[]
+  popular: string[]
+}
+
+const NO_CATEGORIES: CategoryOptions = { suggestions: [], popular: [] }
+
 // admin: an admin may resolve a market they have money on, so the reviewer note isn't theirs.
-export function CreateMarketForm({ initial, admin = false }: { initial?: MarketPrefill; admin?: boolean }) {
+export function CreateMarketForm({
+  initial,
+  admin = false,
+  categories = NO_CATEGORIES,
+}: {
+  initial?: MarketPrefill
+  admin?: boolean
+  categories?: CategoryOptions
+}) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
+  const [category, setCategory] = useState(initial?.category ?? '')
   const [kind, setKind] = useState<MarketKind>(initial?.kind ?? 'binary')
   const [outcomes, setOutcomes] = useState(initial?.kind === 'multiple_choice' ? initial.outcomes : ['', ''])
   const [line, setLine] = useState(initial?.line ?? '')
@@ -125,6 +146,16 @@ export function CreateMarketForm({ initial, admin = false }: { initial?: MarketP
             aria-describedby={state?.field === 'description' ? 'create-market-error' : undefined}
           />
         </Field>
+
+        <CategoryField
+          id="cm-category"
+          value={category}
+          onChange={setCategory}
+          suggestions={categories.suggestions}
+          popular={categories.popular}
+          errorId="create-market-error"
+          invalid={state?.field === 'category'}
+        />
 
         <fieldset className="flex flex-col gap-1.5">
           <legend className={labelClass}>Type</legend>
@@ -262,7 +293,7 @@ export function CreateMarketForm({ initial, admin = false }: { initial?: MarketP
           Create market
         </FormSubmitButton>
       </form>
-      <MarketPreview kind={kind} title={title} outcomes={outcomes} line={line} closeAt={closeAt} admin={admin} />
+      <MarketPreview kind={kind} title={title} category={category} outcomes={outcomes} line={line} closeAt={closeAt} admin={admin} />
     </div>
   )
 }
@@ -272,6 +303,7 @@ export function CreateMarketForm({ initial, admin = false }: { initial?: MarketP
 function MarketPreview({
   kind,
   title,
+  category,
   outcomes,
   line,
   closeAt,
@@ -280,6 +312,7 @@ function MarketPreview({
   admin: boolean
   kind: MarketKind
   title: string
+  category: string
   outcomes: string[]
   line: string
   closeAt: string
@@ -314,6 +347,7 @@ function MarketPreview({
         preview
         id="preview"
         title={title.trim() || 'Your market’s title'}
+        category={normalizeCategoryName(category) || null}
         status="open"
         kind={kind}
         line={shownLine}

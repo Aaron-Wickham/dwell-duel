@@ -4,18 +4,20 @@ import { placeSolo } from './slip'
 import { makeMember } from '../tests/db/fixtures'
 import { deleteAuthUser, serviceClient } from '../tests/db/helpers'
 
-async function createMarket(page: Page, title: string) {
+async function createMarket(page: Page, title: string, category = 'Testing') {
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill(title)
+  await page.getByLabel('Category', { exact: true }).fill(category)
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 2 * 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+$/)
 }
 
-test('markets search by title, narrow to the ones you made or bet on, and clear', async ({ page }) => {
+test('markets search by title, narrow to a category, and clear', async ({ page }) => {
   const word = `Zanzibar${Date.now()}`
   const title = `${word} potluck headcount`
-  await createMarket(page, title)
+  const category = `Find ${Date.now() % 1_000_000}`
+  await createMarket(page, title, category)
 
   await page.goto('/markets')
   const box = page.getByRole('searchbox', { name: 'Search markets by title' })
@@ -38,22 +40,21 @@ test('markets search by title, narrow to the ones you made or bet on, and clear'
   await box.fill(word)
   await box.press('Enter')
   await expect(page).toHaveURL(new RegExp(`/markets\\?q=${word}$`))
-  const chips = page.getByRole('navigation', { name: 'Whose markets' })
-  await chips.getByRole('link', { name: 'I made' }).click()
-  await expect(page).toHaveURL(new RegExp(`q=${word}&mine=made$`))
-  await expect(chips.getByRole('link', { name: 'I made' })).toHaveAttribute('aria-current', 'page')
-  await expect(page.getByRole('link', { name: title })).toBeVisible()
+  // A category chip narrows the search, and the choice lives in the URL (#327).
+  const chips = page.getByRole('navigation', { name: 'Categories' })
+  await chips.getByRole('link', { name: category }).click()
+  await expect(page).toHaveURL(new RegExp(`q=${word}&category=${category.toLowerCase().replace(' ', '-')}$`))
+  await expect(chips.getByRole('link', { name: category })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByText(`Showing markets in ${category}`)).toBeVisible()
+  await expect(page.getByRole('article').filter({ hasText: title })).toContainText(category)
+  await chips.getByRole('link', { name: 'All', exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/markets\\?q=${word}$`))
 
-  await chips.getByRole('link', { name: 'I bet on' }).click()
-  await expect(page).toHaveURL(new RegExp(`q=${word}&mine=bet$`))
-  await expect(page.getByText(`No markets you bet on match “${word}”.`)).toBeVisible()
-
-  await page.goto(`/markets?q=${word}`)
+  // Links to the removed whose-markets chips fall through to every market.
+  await page.goto(`/markets?q=${word}&mine=made`)
+  await expect(page.getByRole('navigation', { name: 'Whose markets' })).toHaveCount(0)
   await page.getByRole('link', { name: title }).click()
   await placeSolo(page, 'Yes', 5)
-
-  await page.goto(`/markets?q=${word}&mine=bet`)
-  await expect(page.getByRole('link', { name: title })).toBeVisible()
 
   // The feed: the bet is Alice's own event, so Mine has it, and Results (settlements only) doesn't.
   const sentence = `Alice bet 5 DC on Yes in ${title}`

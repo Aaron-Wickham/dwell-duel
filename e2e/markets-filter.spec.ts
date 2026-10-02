@@ -7,6 +7,7 @@ test('the filters split markets into open, awaiting and resolved, and the choice
   close.setSeconds(0, 0)
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill(title)
+  await page.getByLabel('Category', { exact: true }).fill('Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(close))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+$/)

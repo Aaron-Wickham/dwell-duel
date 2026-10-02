@@ -16,6 +16,8 @@ vi.mock('@/lib/preferences/set-preference', () => ({ setHapticsAction: vi.fn(), 
 import { BackLink } from '@/components/ui/back-link'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { FilterChips } from '@/components/ui/filter-chips'
+import { MoreCategories } from '@/components/markets/more-categories'
+import { CategoryField } from '@/components/markets/category-field'
 import { MarketSearch } from '@/components/markets/market-search'
 import { JumpToMe } from '@/components/leaderboard/jump-to-me'
 import { Wordmark } from '@/components/brand/wordmark'
@@ -171,15 +173,22 @@ const CASES: [string, () => ReactElement][] = [
     'FilterChips',
     () => (
       <FilterChips
-        label="Whose markets"
+        scroll
+        label="Categories"
         items={[
-          { href: '/markets', label: 'Everyone’s', current: true },
-          { href: '/markets?mine=bet', label: 'I bet on', current: false },
+          { href: '/markets', label: 'All', current: true },
+          { href: '/markets?category=weather', label: 'Weather', current: false },
         ]}
-      />
+      >
+        <MoreCategories items={[{ href: '/markets?category=arts', label: 'Arts', current: false }]} />
+      </FilterChips>
     ),
   ],
-  ['MarketSearch', () => <MarketSearch q="" status="all" mine={null} />],
+  [
+    'CategoryField',
+    () => <CategoryField id="c" value="" onChange={() => {}} suggestions={['Weather']} popular={['Weather', 'Arts']} errorId="e" />,
+  ],
+  ['MarketSearch', () => <MarketSearch q="" status="all" category={null} />],
   ['JumpToMe', () => <JumpToMe href="/leaderboard?at=me" focusId="member-1" />],
   ['MotionSettings', () => <MotionSettings haptics reduceMotion={false} />],
   ['CreateMarketForm', () => <CreateMarketForm />],

@@ -5,6 +5,7 @@ import { placeSolo } from './slip'
 test('a market with a bet shows its chart, on the market page and its list card', async ({ page }) => {
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill('Will the charts render?')
+  await page.getByLabel('Category', { exact: true }).fill('Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)

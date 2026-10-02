@@ -435,6 +435,41 @@ export type Database = {
         }
         Relationships: []
       }
+      market_categories: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          hidden_at: string | null
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          hidden_at?: string | null
+          id?: string
+          name: string
+          slug?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          hidden_at?: string | null
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       market_comments: {
         Row: {
           attempt_key: string | null
@@ -496,8 +531,10 @@ export type Database = {
           edited_by: string
           id: number
           market_id: string
+          new_category_id: string | null
           new_description: string | null
           new_title: string
+          old_category_id: string | null
           old_description: string | null
           old_title: string
         }
@@ -506,8 +543,10 @@ export type Database = {
           edited_by: string
           id?: never
           market_id: string
+          new_category_id?: string | null
           new_description?: string | null
           new_title: string
+          old_category_id?: string | null
           old_description?: string | null
           old_title: string
         }
@@ -516,8 +555,10 @@ export type Database = {
           edited_by?: string
           id?: never
           market_id?: string
+          new_category_id?: string | null
           new_description?: string | null
           new_title?: string
+          old_category_id?: string | null
           old_description?: string | null
           old_title?: string
         }
@@ -534,6 +575,20 @@ export type Database = {
             columns: ["market_id"]
             isOneToOne: false
             referencedRelation: "markets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "market_edits_new_category_id_fkey"
+            columns: ["new_category_id"]
+            isOneToOne: false
+            referencedRelation: "market_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "market_edits_old_category_id_fkey"
+            columns: ["old_category_id"]
+            isOneToOne: false
+            referencedRelation: "market_categories"
             referencedColumns: ["id"]
           },
         ]
@@ -652,6 +707,7 @@ export type Database = {
       }
       markets: {
         Row: {
+          category_id: string
           close_at: string
           created_at: string
           created_by: string
@@ -670,6 +726,7 @@ export type Database = {
           void_reason: string | null
         }
         Insert: {
+          category_id?: string
           close_at: string
           created_at?: string
           created_by: string
@@ -688,6 +745,7 @@ export type Database = {
           void_reason?: string | null
         }
         Update: {
+          category_id?: string
           close_at?: string
           created_at?: string
           created_by?: string
@@ -706,6 +764,13 @@ export type Database = {
           void_reason?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "markets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "market_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "markets_created_by_fkey"
             columns: ["created_by"]
@@ -1277,6 +1342,18 @@ export type Database = {
       betting_ledger_types: { Args: never; Returns: string[] }
       can_resolve_market: { Args: { p_market_id: string }; Returns: boolean }
       cancel_bet: { Args: { p_bet_id: number }; Returns: undefined }
+      category_counts: {
+        Args: { p_include_hidden?: boolean }
+        Returns: {
+          hidden_at: string
+          id: string
+          markets: number
+          name: string
+          open_markets: number
+          slug: string
+        }[]
+      }
+      category_for_name: { Args: { p_name: string }; Returns: string }
       claim_cron_lease: {
         Args: { p_name: string; p_seconds: number }
         Returns: boolean
@@ -1318,6 +1395,19 @@ export type Database = {
       }
       create_market_v3: {
         Args: {
+          p_close_at: string
+          p_description: string
+          p_idempotency_key?: string
+          p_kind: string
+          p_line?: number
+          p_outcome_labels: string[]
+          p_title: string
+        }
+        Returns: Json
+      }
+      create_market_v4: {
+        Args: {
+          p_category: string
           p_close_at: string
           p_description: string
           p_idempotency_key?: string
@@ -1560,6 +1650,10 @@ export type Database = {
           parlays_won: number
           tasks_completed: number
         }[]
+      }
+      merge_market_categories: {
+        Args: { p_from: string; p_into: string }
+        Returns: number
       }
       my_activity_events: {
         Args: never
@@ -1815,6 +1909,10 @@ export type Database = {
       release_cron_lease: { Args: { p_name: string }; Returns: undefined }
       remove_bet: { Args: { p_bet_id: number }; Returns: undefined }
       remove_member: { Args: { p_profile_id: string }; Returns: undefined }
+      rename_market_category: {
+        Args: { p_category_id: string; p_name: string }
+        Returns: undefined
+      }
       resolve_market: {
         Args: {
           p_attachments?: Json
@@ -1864,6 +1962,10 @@ export type Database = {
         }[]
       }
       send_live_ping: { Args: { p_topic: string }; Returns: undefined }
+      set_market_category_hidden: {
+        Args: { p_category_id: string; p_hidden: boolean }
+        Returns: undefined
+      }
       set_member_role: {
         Args: { p_profile_id: string; p_role: string }
         Returns: undefined
@@ -1900,10 +2002,24 @@ export type Database = {
           id: string
         }[]
       }
-      update_market: {
-        Args: { p_description: string; p_market_id: string; p_title: string }
-        Returns: undefined
-      }
+      update_market:
+        | {
+            Args: {
+              p_description: string
+              p_market_id: string
+              p_title: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_category: string
+              p_description: string
+              p_market_id: string
+              p_title: string
+            }
+            Returns: undefined
+          }
       update_my_profile: {
         Args: { p_avatar_path: string; p_bio: string; p_display_name: string }
         Returns: undefined

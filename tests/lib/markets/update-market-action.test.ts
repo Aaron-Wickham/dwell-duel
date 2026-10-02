@@ -6,10 +6,11 @@ vi.mock('next/cache', () => ({ revalidatePath }))
 
 import { updateMarketAction } from '@/lib/markets/update-market'
 
-function form(title: string, description = '') {
+function form(title: string, description = '', category = 'Weather') {
   const data = new FormData()
   data.set('title', title)
   data.set('description', description)
+  data.set('category', category)
   return data
 }
 
@@ -22,7 +23,7 @@ beforeEach(() => {
 describe('updateMarketAction', () => {
   it('sends the trimmed title and description, and refreshes every page', async () => {
     expect(await updateMarketAction('m1', undefined, form('  Will it snow Sunday?  ', ' Before noon \r\n'))).toEqual({ saved: true })
-    expect(supabase.rpc).toHaveBeenCalledWith('update_market', { p_market_id: 'm1', p_title: 'Will it snow Sunday?', p_description: 'Before noon' })
+    expect(supabase.rpc).toHaveBeenCalledWith('update_market', { p_market_id: 'm1', p_title: 'Will it snow Sunday?', p_description: 'Before noon', p_category: 'Weather' })
     expect(revalidatePath).toHaveBeenCalledWith('/', 'layout')
   })
 
@@ -35,6 +36,22 @@ describe('updateMarketAction', () => {
     expect(await updateMarketAction('m1', undefined, form('Fine', 'a'.repeat(1001)))).toEqual({
       formError: 'Description can be at most 1000 characters.',
       field: 'description',
+    })
+    expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+
+  it('changes only the category when the form has no title field (#327)', async () => {
+    const data = new FormData()
+    data.set('category', '  Bible   study ')
+    expect(await updateMarketAction('m1', undefined, data)).toEqual({ saved: true })
+    expect(supabase.rpc).toHaveBeenCalledWith('update_market', { p_market_id: 'm1', p_title: null, p_description: null, p_category: 'Bible study' })
+  })
+
+  it('refuses a blank or too-long category without calling the database', async () => {
+    expect(await updateMarketAction('m1', undefined, form('Fine', '', ' '))).toEqual({ formError: 'Choose a category.', field: 'category' })
+    expect(await updateMarketAction('m1', undefined, form('Fine', '', 'c'.repeat(25)))).toEqual({
+      formError: 'Category can be at most 24 characters.',
+      field: 'category',
     })
     expect(supabase.rpc).not.toHaveBeenCalled()
   })

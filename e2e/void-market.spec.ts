@@ -4,6 +4,7 @@ import { localDateTimeString } from './local-date-time'
 test('void a market through the confirmation dialog', async ({ page }) => {
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill('Will the potluck run out of rolls?')
+  await page.getByLabel('Category', { exact: true }).fill('Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)

@@ -3,6 +3,7 @@ import type { Pricing, PricedOutcome } from '@/lib/markets/pricing'
 import type { DbClient } from '@/lib/supabase/database'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { avatarUrl } from '@/lib/profile/avatar'
+import type { MarketCategory } from '@/lib/markets/categories'
 import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 
 export interface MarketDetail {
@@ -21,6 +22,7 @@ export interface MarketDetail {
   line: number | null
   actualValue: number | null
   editedAt: string | null
+  category: MarketCategory | null
   createdBy: string
   creatorName: string
   currentResolutionId: string | null
@@ -50,7 +52,7 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
   const { data, error } = await supabase
     .from('markets')
     .select(
-      'id, title, description, kind, status, close_at, created_at, settled_at, void_reason, created_by, current_resolution_id, seed_per_outcome, pricing, liquidity, line, edited_at, creator:profiles(display_name), market_outcomes(id, label, pool_total, shares, q_offset), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at, actual_value, payout_seed)',
+      'id, title, description, kind, status, close_at, created_at, settled_at, void_reason, created_by, current_resolution_id, seed_per_outcome, pricing, liquidity, line, edited_at, category:market_categories(name, slug), creator:profiles(display_name), market_outcomes(id, label, pool_total, shares, q_offset), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at, actual_value, payout_seed)',
     )
     .eq('id', marketId)
     // Rows come back with no default order, and colours are assigned by position for
@@ -96,6 +98,7 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
     line: data.line,
     actualValue: resolution?.actual_value ?? null,
     editedAt: data.edited_at,
+    category: data.category,
     createdBy: data.created_by,
     creatorName: creator?.display_name ?? 'Unknown member',
     currentResolutionId: data.current_resolution_id,

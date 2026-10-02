@@ -64,6 +64,7 @@ const market: MarketDetail = {
   line: null,
   actualValue: null,
   editedAt: null,
+  category: null,
   createdBy: 'p-owner',
   creatorName: 'Owner',
   currentResolutionId: null,

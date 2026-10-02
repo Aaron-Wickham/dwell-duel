@@ -12,6 +12,7 @@ test('Duplicate opens Create market filled in from the market, a week on, and cr
   await page.getByRole('textbox', { name: 'Outcome 2' }).fill('Sam')
   await page.getByRole('button', { name: 'Add outcome' }).click()
   await page.getByRole('textbox', { name: 'Outcome 3' }).fill('Lee')
+  await page.getByLabel('Category', { exact: true }).fill('Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(close))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+$/)

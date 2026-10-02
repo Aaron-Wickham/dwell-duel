@@ -7,6 +7,7 @@ import type { DbClient } from '@/lib/supabase/database'
 import type { MarketKind } from '@/lib/markets/kind'
 import { formatLine } from '@/lib/markets/kind'
 import { isUuid } from '@/lib/uuid'
+import { listCategoryCounts, mostUsedCategories } from '@/lib/markets/categories'
 import { CreateMarketForm, type MarketPrefill } from './create-market-form'
 
 // Read with the member's own client, so RLS decides what can be copied; a market they can't see
@@ -15,7 +16,7 @@ async function readPrefill(supabase: DbClient, from: string | string[] | undefin
   if (typeof from !== 'string' || !isUuid(from)) return undefined
   const { data, error } = await supabase
     .from('markets')
-    .select('title, description, kind, close_at, line, market_outcomes(label)')
+    .select('title, description, kind, close_at, line, category:market_categories(name), market_outcomes(label)')
     .eq('id', from)
     // The same outcome order as the market page.
     .order('created_at', { referencedTable: 'market_outcomes' })
@@ -27,6 +28,7 @@ async function readPrefill(supabase: DbClient, from: string | string[] | undefin
     title: data.title,
     description: data.description ?? '',
     kind: data.kind as MarketKind,
+    category: data.category?.name ?? '',
     outcomes: (data.market_outcomes ?? []).map((o: { label: string }) => o.label),
     line: data.line === null ? '' : formatLine(data.line),
     closeAt: data.close_at,
@@ -39,8 +41,13 @@ export default async function NewMarketPage(props: PageProps<'/markets/new'>) {
   if (!user) redirect('/sign-in')
   const { from } = await props.searchParams
   // A server render's clock; the form moves a duplicate's close time past it.
-  // eslint-disable-next-line react-hooks/purity
-  const [initial, role] = await Promise.all([readPrefill(supabase, from, Date.now()), getRole(supabase)])
+  const [initial, role, counts] = await Promise.all([
+    // eslint-disable-next-line react-hooks/purity
+    readPrefill(supabase, from, Date.now()),
+    getRole(supabase),
+    listCategoryCounts(supabase),
+  ])
+  const categories = { suggestions: counts.map((c) => c.name), popular: mostUsedCategories(counts).map((c) => c.name) }
 
   return (
     <Page transition="drill-down">
@@ -53,7 +60,12 @@ export default async function NewMarketPage(props: PageProps<'/markets/new'>) {
         </p>
       )}
       {/* Keyed by the source, so moving between duplicates starts each form afresh. */}
-      <CreateMarketForm key={typeof from === 'string' ? from : 'blank'} initial={initial} admin={atLeast(role, 'admin')} />
+      <CreateMarketForm
+        key={typeof from === 'string' ? from : 'blank'}
+        initial={initial}
+        admin={atLeast(role, 'admin')}
+        categories={categories}
+      />
     </Page>
   )
 }

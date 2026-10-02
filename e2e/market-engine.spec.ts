@@ -7,6 +7,7 @@ test('create a market, place a bet, and resolve it as admin', async ({ page }) =
 
   await page.getByLabel('Title').fill('Will it rain tomorrow?')
   const closeAt = localDateTimeString(new Date(Date.now() + 60 * 60 * 1000))
+  await page.getByLabel('Category', { exact: true }).fill('Testing')
   await page.getByLabel('Close time').fill(closeAt)
   await page.getByRole('button', { name: 'Create market' }).click()
 
@@ -36,6 +37,7 @@ test('create a market, place a bet, and resolve it as admin', async ({ page }) =
 test('a create-market error keeps what was typed', async ({ page }) => {
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill('Will the typing survive?')
+  await page.getByLabel('Category', { exact: true }).fill('Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() - 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
 

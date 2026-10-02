@@ -103,6 +103,7 @@ describe('CreateMarketForm', () => {
     render(<CreateMarketForm />)
 
     await user.type(screen.getByLabelText('Title'), 'Will it rain?')
+    await user.type(screen.getByLabelText('Category'), 'Weather')
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await user.click(screen.getByRole('button', { name: 'Create market' }))
 
@@ -125,6 +126,7 @@ describe('CreateMarketForm', () => {
     render(<CreateMarketForm />)
 
     await user.type(screen.getByLabelText('Title'), 'x')
+    await user.type(screen.getByLabelText('Category'), 'Weather')
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await user.click(screen.getByRole('button', { name: 'Create market' }))
 
@@ -146,6 +148,7 @@ describe('CreateMarketForm', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Multiple choice' }))
     await user.type(screen.getByLabelText('Title'), 'Who wins the trivia night?')
+    await user.type(screen.getByLabelText('Category'), 'Weather')
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await user.click(screen.getByRole('button', { name: 'Create market' }))
 
@@ -182,6 +185,7 @@ describe('CreateMarketForm over/under', () => {
     const user = userEvent.setup()
     render(<CreateMarketForm />)
     await user.type(screen.getByLabelText('Title'), 'Times Sean says bet')
+    await user.type(screen.getByLabelText('Category'), 'Weather')
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await user.click(screen.getByRole('radio', { name: 'Over/Under' }))
     await user.type(screen.getByLabelText('Line'), '3.5')
@@ -202,6 +206,7 @@ describe('CreateMarketForm keeps what was filled in (#63)', () => {
 
     await user.type(screen.getByLabelText('Title'), 'Will it rain?')
     await user.type(screen.getByLabelText('Description'), 'At the picnic')
+    await user.type(screen.getByLabelText('Category'), 'Weather')
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await user.click(screen.getByRole('button', { name: 'Create market' }))
     await screen.findByRole('alert')
@@ -221,6 +226,7 @@ describe('CreateMarketForm keeps what was filled in (#63)', () => {
     await user.type(screen.getByLabelText('Title'), 'Minutes the sermon runs')
     await user.click(screen.getByRole('radio', { name: 'Over/Under' }))
     await user.type(screen.getByLabelText('Line'), '42.5')
+    await user.type(screen.getByLabelText('Category'), 'Weather')
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await user.click(screen.getByRole('button', { name: 'Create market' }))
     await screen.findByRole('alert')
@@ -231,11 +237,57 @@ describe('CreateMarketForm keeps what was filled in (#63)', () => {
   })
 })
 
+describe('CreateMarketForm category (#327)', () => {
+  const categories = { suggestions: ['Weather', 'Sports', 'Bible Study'], popular: ['Weather', 'Bible Study'] }
+
+  it('suggests every category as you type and offers the most used as chips that fill the field', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<CreateMarketForm categories={categories} />)
+    const field = screen.getByLabelText('Category')
+    expect(field).toHaveAttribute('maxLength', '24')
+    expect(field).toBeRequired()
+    expect(field).toHaveAccessibleDescription('Pick one, or type a new one of up to 24 characters.')
+    const options = container.querySelectorAll(`datalist#${field.getAttribute('list')} option`)
+    expect([...options].map((o) => o.getAttribute('value'))).toEqual(['Weather', 'Sports', 'Bible Study'])
+
+    const chips = within(screen.getByRole('group', { name: 'Most used categories' })).getAllByRole('button')
+    expect(chips.map((c) => c.textContent)).toEqual(['Weather', 'Bible Study'])
+    await user.click(chips[1])
+    expect(field).toHaveValue('Bible Study')
+    expect(chips[1]).toHaveAttribute('aria-pressed', 'true')
+    expect(within(screen.getByRole('region', { name: 'Preview' })).getByText('Bible Study')).toBeInTheDocument()
+
+    // The same category whatever the case and spacing, so its chip still shows as chosen.
+    await user.clear(field)
+    await user.type(field, 'bible  study')
+    expect(chips[1]).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('sends the category and points a refusal at it, keeping what was typed', async () => {
+    createMarketAction.mockResolvedValue({ formError: 'Category can be at most 24 characters.', field: 'category' })
+    const user = userEvent.setup()
+    render(<CreateMarketForm categories={categories} />)
+    await user.type(screen.getByLabelText('Title'), 'Will it snow?')
+    await user.type(screen.getByLabelText('Category'), 'Winter')
+    await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
+    await user.click(screen.getByRole('button', { name: 'Create market' }))
+    await screen.findByRole('alert')
+
+    expect((createMarketAction.mock.calls[0][1] as FormData).get('category')).toBe('Winter')
+    expect(screen.getByLabelText('Category')).toHaveValue('Winter')
+    expect(screen.getByLabelText('Category')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Category')).toHaveAccessibleDescription(
+      'Pick one, or type a new one of up to 24 characters. Category can be at most 24 characters.',
+    )
+  })
+})
+
 describe('CreateMarketForm duplicating a market (#88)', () => {
   const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const base = {
     title: 'Minutes the sermon runs',
     description: 'This Sunday',
+    category: 'Sermons',
     closeAt: '2026-09-06T23:00:00.000Z',
     now: Date.parse('2026-09-28T12:00:00Z'),
   }
@@ -277,6 +329,7 @@ describe('CreateMarketForm duplicating a market (#88)', () => {
 
     const sent = createMarketAction.mock.calls[0][1] as FormData
     expect(sent.get('title')).toBe('Minutes the sermon runs')
+    expect(sent.get('category')).toBe('Sermons')
     expect(sent.getAll('outcome_labels')).toEqual(['Yes', 'No'])
     expect(screen.getByLabelText('Close time')).toHaveValue('2030-01-01T10:00')
     expect(screen.getByLabelText('Title')).toHaveValue('Minutes the sermon runs')

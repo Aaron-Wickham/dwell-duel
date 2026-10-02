@@ -8,6 +8,7 @@ test('the All tab lists open markets first however many are awaiting resolution'
   const title = `Open first ${Date.now()}`
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill(title)
+  await page.getByLabel('Category', { exact: true }).fill('Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 2 * 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+$/)

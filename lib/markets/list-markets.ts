@@ -4,7 +4,8 @@ import type { DbClient } from '@/lib/supabase/database'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 import { isUuid } from '@/lib/uuid'
-import { likePattern, type MineFilter } from '@/lib/markets/search'
+import { likePattern } from '@/lib/markets/search'
+import type { MarketCategory } from '@/lib/markets/categories'
 import type { MarketFilter } from '@/lib/markets/status-filter'
 
 export interface MarketSummary {
@@ -19,6 +20,7 @@ export interface MarketSummary {
   liquidity: number
   line: number | null
   edited: boolean
+  category: MarketCategory | null
   resolvedOutcomeLabel: string | null
   resolvedAt: string | null
   // When it stopped being open (0066): the first resolution or the void; null while open.
@@ -33,7 +35,7 @@ export interface MarketSummary {
 // second `.in()` whose URL would grow with the list. The hint names the foreign key because
 // market_resolutions also points back at markets through market_id.
 const SUMMARY_SELECT =
-  'id, title, kind, status, close_at, created_at, settled_at, seed_per_outcome, pricing, liquidity, line, edited_at, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at), market_outcomes(id, label, pool_total, pool_version, shares, q_offset)'
+  'id, title, kind, status, close_at, created_at, settled_at, seed_per_outcome, pricing, liquidity, line, edited_at, category:market_categories(name, slug), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at), market_outcomes(id, label, pool_total, pool_version, shares, q_offset)'
 
 type SummaryRow = {
   id: string
@@ -48,6 +50,7 @@ type SummaryRow = {
   liquidity: number
   line: number | null
   edited_at: string | null
+  category: MarketCategory | null
   current_resolution: { outcome_id: string; resolved_at: string } | null
   market_outcomes: { id: string; label: string; pool_total: number; pool_version: number; shares: number; q_offset: number }[] | null
 }
@@ -78,6 +81,7 @@ function toSummary(m: SummaryRow): MarketSummary {
     liquidity: Number(m.liquidity),
     line: m.line,
     edited: m.edited_at !== null,
+    category: m.category,
     resolvedOutcomeLabel: resolution ? (outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null) : null,
     resolvedAt: resolution?.resolved_at ?? null,
     settledAt: m.settled_at,
@@ -100,9 +104,9 @@ type KeyRow = { id: string } & Partial<Record<MarketKeys['ts'], string | null>>
 // Open markets split at their close time: still taking bets, or past it and waiting on a resolver.
 export type CloseBound = { upcoming: boolean; at: string }
 
-// A title search and a whose-markets filter, ANDed onto the list. `made` needs the member's id;
-// `bet` is the i_bet_on computed column (0094), which reads the caller's own bets and parlay legs.
-export type MarketNarrow = { q: string; mine: MineFilter | null; userId: string }
+// A title search and a category, ANDed onto the list. A category alone keeps the grouped lists;
+// only a search makes the flat list.
+export type MarketNarrow = { q?: string; categoryId?: string | null }
 
 // The range read and its key probe share one builder, so the two can't drift apart on filters. Its column list is a runtime string, so
 // the generated types can't follow it, and each reader casts its rows.
@@ -118,8 +122,7 @@ function marketsQuery(
 ) {
   let query = supabase.from('markets').select(columns).in('status', statuses)
   if (narrow?.q) query = query.ilike('title', likePattern(narrow.q))
-  if (narrow?.mine === 'made') query = query.eq('created_by', narrow.userId)
-  if (narrow?.mine === 'bet') query = query.filter('i_bet_on', 'is', true)
+  if (narrow?.categoryId) query = query.eq('category_id', narrow.categoryId)
   // A plain bound ANDed onto the cursor's OR, as the keyset filters do, keeps the Index Cond.
   if (bound) query = bound.upcoming ? query.gt('close_at', bound.at) : query.lte('close_at', bound.at)
   if (filter) query = query.or(filter)
@@ -164,16 +167,21 @@ export async function listOpenMarkets(
   supabase: DbClient,
   page: PageParams,
   bound?: CloseBound,
+  narrow?: MarketNarrow,
 ): Promise<KeysetPage<MarketSummary>> {
-  return listMarkets(supabase, ['open'], OPEN_KEYS, page, bound)
+  return listMarkets(supabase, ['open'], OPEN_KEYS, page, bound, narrow)
 }
 
 // Resolved and voided markets are one list, one "Show more", shown in their two groups.
-export async function listResolvedMarkets(supabase: DbClient, page: PageParams): Promise<KeysetPage<MarketSummary>> {
-  return listMarkets(supabase, ['resolved', 'voided'], RESOLVED_KEYS, page)
+export async function listResolvedMarkets(
+  supabase: DbClient,
+  page: PageParams,
+  narrow?: MarketNarrow,
+): Promise<KeysetPage<MarketSummary>> {
+  return listMarkets(supabase, ['resolved', 'voided'], RESOLVED_KEYS, page, undefined, narrow)
 }
 
-// A search or a "mine" filter lists matches as one flat list, newest first, whatever their status:
+// A search lists matches as one flat list, newest first, whatever their status:
 // the open and resolved lists order by different columns, and a person looking for one market
 // doesn't want it split into sections. The status tab still narrows it, split at the close time.
 const MATCH_KEYS: MarketKeys = { ts: 'created_at', id: 'id', isId: isUuid }

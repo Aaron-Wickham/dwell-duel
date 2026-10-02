@@ -13,11 +13,15 @@ const ROLE_GATED = [
   'approve_task_completion',
   'delete_market',
   'delete_task',
+  // Admin › Markets › Categories (0103).
+  'merge_market_categories',
   'reject_task_completion',
   // Owner only (0093): gives a removed member their invite back.
   'reinvite_member',
   'remove_bet',
+  'rename_market_category',
   'review_task_completions',
+  'set_market_category_hidden',
   'set_member_role',
 ]
 // Delegating: the write happens in resolve_market_core, which checks the invite on the creator's
@@ -103,6 +107,8 @@ describe('security definer writers', () => {
       'can_resolve_market',
       'delete_market_comment',
       'resolve_market_core',
+      // Both overloads: the three-argument one (0073) and the one with a category (0103).
+      'update_market',
       'update_market',
       'void_market',
     ])

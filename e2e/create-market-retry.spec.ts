@@ -9,6 +9,7 @@ test('a create-market whose response is lost does not make a second market', asy
   const title = `Lost create ${Date.now()}`
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill(title)
+  await page.getByLabel('Category', { exact: true }).fill('Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
 
   // Sent from a separate request context so the dropped answer never delivers its cookies, as in

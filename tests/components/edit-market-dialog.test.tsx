@@ -87,6 +87,13 @@ describe('EditMarketDialog', () => {
     expect((updateMarketAction.mock.calls[0][2] as FormData).get('close_at')).toBe(iso)
   })
 
+  it('leaves the close time out for a creator with a stake (#326)', async () => {
+    render(<EditMarketDialog {...EDIT_PROPS} description={null} canMoveClose={false} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(await screen.findByLabelText('Title')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Close time')).toBeNull()
+  })
+
   it('reopens a closed market with only a new close time, after confirming (#326)', async () => {
     updateMarketAction.mockResolvedValue({ saved: true })
     render(<EditMarketDialog {...EDIT_PROPS} description="Before noon" mode="reopen" />)
@@ -95,6 +102,7 @@ describe('EditMarketDialog', () => {
     expect(close).toHaveValue('')
     expect(screen.queryByLabelText('Title')).toBeNull()
     expect(screen.queryByLabelText('Category')).toBeNull()
+    expect(screen.getByRole('dialog')).toHaveTextContent('Only reopen if the result isn’t known yet.')
 
     await userEvent.type(close, '2099-12-20T19:00')
     await userEvent.click(screen.getByRole('button', { name: 'Reopen market' }))

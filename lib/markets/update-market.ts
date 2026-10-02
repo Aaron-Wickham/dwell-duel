@@ -20,6 +20,11 @@ const UPDATE_MARKET_ERRORS: readonly KnownError<Field>[] = [
   { match: "others have bet on this market, so its title can't change", formError: 'Others have bet on this market, so its title can’t change.', field: 'title' },
   { match: "this market has closed, so it can't be edited", formError: 'This market has closed, so it can’t be edited.' },
   { match: 'close time must be in the future', formError: 'Choose a close time in the future.', field: 'close_at' },
+  {
+    match: 'you have a stake in this market, so ask an admin to move its close time',
+    formError: 'You have a stake in this market, so ask an admin to move its close time.',
+    field: 'close_at',
+  },
   { match: "this market has been settled, so its close time can't change", formError: 'This market has been settled, so its close time can’t change.' },
   { match: 'markets_title_length', formError: tooLong('Title', TEXT_LIMITS.marketTitle), field: 'title' },
   { match: 'markets_description_length', formError: tooLong('Description', TEXT_LIMITS.marketDescription), field: 'description' },

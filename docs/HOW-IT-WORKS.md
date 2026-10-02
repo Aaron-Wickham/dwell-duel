@@ -70,7 +70,9 @@ The creator (or an admin) can also move the closing time, later or
 earlier, as long as the new time is still to come. Once a market has
 closed, and until it's resolved or voided, the same people can
 **reopen** it by giving it a new closing time: it takes bets again until
-then. Bets already placed stay exactly as they are, since every payout
+then. Only reopen a market whose result isn't known yet. A creator who
+has money on their own market, a bet or a parlay pick, can't move its
+closing time; an admin can. Bets already placed stay exactly as they are, since every payout
 and parlay multiplier is fixed when it's placed. Only an admin can
 resolve a reopened market before it closes again, and its creator and
 admins are reminded about it again when it does. Every move shows under

@@ -1,3 +1,4 @@
+import type { DbClient } from '@/lib/supabase/database'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
@@ -99,7 +100,9 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // change its category at any time.
   const admin = atLeast(role, 'admin')
   const canEditWording = canBet && (isCreator || admin)
-  const canReopen = market.status === 'open' && isPastClose && (isCreator || admin)
+  // can_move_market_close (0106) is update_market's close-time rule: a creator with a stake asks an admin.
+  const canMoveClose = market.status === 'open' && (isCreator || admin) && (await canMoveMarketClose(supabase, market.id))
+  const canReopen = isPastClose && canMoveClose
   const canEditCategory = canEditWording || admin
   const categoryCounts = canEditCategory ? await listCategoryCounts(supabase) : []
 
@@ -196,6 +199,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
               category={market.category?.name ?? ''}
               closeAt={market.closeAt}
               mode={canEditWording ? 'edit' : 'category'}
+              canMoveClose={canMoveClose}
               suggestions={categoryCounts.map((c) => c.name)}
               popular={mostUsedCategories(categoryCounts).map((c) => c.name)}
             />
@@ -466,4 +470,10 @@ async function MarketActions({
       </div>
     </ContentReveal>
   )
+}
+
+async function canMoveMarketClose(supabase: DbClient, marketId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('can_move_market_close', { p_market_id: marketId })
+  if (error) throw error
+  return data === true
 }

@@ -133,6 +133,50 @@ describe('moving the close time', () => {
   })
 })
 
+describe('a creator with a stake', () => {
+  const canMove = async (client: TestClient, m: TestMarket) => (await client.rpc('can_move_market_close', { p_market_id: m.marketId })).data
+
+  it('can move the close only with no stake, while an admin always can (can_move_market_close agrees)', async () => {
+    const m = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true })
+    expect(await canMove(aliceClient, m)).toBe(true)
+    expect(await canMove(adminClient, m)).toBe(true)
+    expect(await canMove(bobClient, m)).toBe(false)
+
+    expect((await solo(aliceClient, m, 0, 10)).error).toBeNull()
+    expect(await canMove(aliceClient, m)).toBe(false)
+    expectError((await moveClose(aliceClient, m.marketId, inHours(3))).error, 'you have a stake in this market, so ask an admin to move its close time')
+    await closeNow(m)
+    expectError((await moveClose(aliceClient, m.marketId, inHours(3))).error, 'you have a stake in this market, so ask an admin to move its close time')
+    // Rewording is a different rule: the creator's own bet doesn't fix the title.
+    expect(await canMove(adminClient, m)).toBe(true)
+    expect((await moveClose(adminClient, m.marketId, inHours(3))).error).toBeNull()
+    expect((await moveClose(aliceClient, m.marketId, null as unknown as string, { title: 'Reworded' })).error).toBeNull()
+  })
+
+  it('counts a parlay leg on the market as a stake', async () => {
+    const m1 = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true, title: 'Own' })
+    const m2 = await createTestMarket(bobClient, ['Yes', 'No'], { lmsr: true, title: 'Other' })
+    const legs = await Promise.all([m1, m2].map(async (m) => ({ q: await qOf(m), liquidity: B, index: 0 })))
+    const { error } = await aliceClient.rpc('place_slip_v4', {
+      p_singles: [],
+      p_parlay_outcome_ids: [m1.outcomeIds[0], m2.outcomeIds[0]],
+      p_parlay_stake: 10,
+      p_parlay_payout: lmsrParlayQuote(legs, 10).payout,
+    })
+    expect(error).toBeNull()
+    expect(await canMove(aliceClient, m1)).toBe(false)
+    expectError((await moveClose(aliceClient, m1.marketId, inHours(3))).error, 'you have a stake in this market, so ask an admin to move its close time')
+    // Bob's market isn't Alice's to move, and Bob has no stake in it.
+    expect((await moveClose(bobClient, m2.marketId, inHours(3))).error).toBeNull()
+  })
+
+  it('says no for a settled market, even to an admin', async () => {
+    const m = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true })
+    expect((await adminClient.rpc('void_market', { p_market_id: m.marketId, p_reason: 'Called off' })).error).toBeNull()
+    expect(await canMove(adminClient, m)).toBe(false)
+  })
+})
+
 describe('reopening a closed market', () => {
   it('lets the creator or an admin reopen it, and it takes bets again', async () => {
     const m = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true })
@@ -204,6 +248,23 @@ describe('reopening a closed market', () => {
     await closeNow(m)
     expect(await dueFor('due_resolve_reminders')).toBe(1)
     expect(await dueFor('due_market_alerts')).toBe(1)
+  })
+
+  it('keeps a closing-alerts run that read the market as due before it reopened from claiming it after', async () => {
+    await subscribe(alice)
+    const m = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true })
+    await closeNow(m)
+    const db = serviceClient()
+    const due = ((await db.rpc('due_resolve_reminders')).data ?? []).map((r) => r.market_id)
+    expect(due).toContain(m.marketId)
+
+    // The run sends, then the market is reopened before it claims.
+    expect((await moveClose(aliceClient, m.marketId, inHours(2))).error).toBeNull()
+    expect((await db.rpc('claim_push_log', { p_kind: 'resolve_reminder', p_refs: [m.marketId] })).data).toBe(0)
+    expect((await db.from('push_log').select('kind').eq('ref', m.marketId)).data).toEqual([])
+
+    await closeNow(m)
+    expect((await db.rpc('claim_push_log', { p_kind: 'resolve_reminder', p_refs: [m.marketId] })).data).toBe(1)
   })
 
   it('leaves a pending parlay’s fixed multiplier alone, and settles its leg at the later resolution', async () => {

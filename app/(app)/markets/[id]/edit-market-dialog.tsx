@@ -42,7 +42,8 @@ const COPY: Record<EditMarketMode, { trigger: string; title: string; description
   reopen: {
     trigger: 'Reopen',
     title: 'Reopen market',
-    description: 'Choose when betting closes again. Bets already placed stay as they are, and everyone can see the change.',
+    description:
+      'Choose when betting closes again. Only reopen if the result isn’t known yet. Bets already placed stay as they are, and everyone can see the change.',
     submit: 'Reopen market',
     toast: 'Market reopened.',
   },
@@ -65,6 +66,7 @@ export function EditMarketDialog({
   category,
   closeAt,
   mode,
+  canMoveClose = true,
   suggestions,
   popular,
 }: {
@@ -74,13 +76,15 @@ export function EditMarketDialog({
   category: string
   closeAt: string
   mode: EditMarketMode
+  // In `edit`, whether the close time is offered: a creator with a stake can't move it (0106).
+  canMoveClose?: boolean
   suggestions: string[]
   popular: string[]
 }) {
   const copy = COPY[mode]
   const wording = mode === 'edit'
   const hasCategory = mode !== 'reopen'
-  const hasClose = mode !== 'category'
+  const hasClose = mode === 'reopen' || (mode === 'edit' && canMoveClose)
   const [open, setOpen] = useState(false)
   const [draftTitle, setDraftTitle] = useState(title)
   const [draftDescription, setDraftDescription] = useState(description ?? '')

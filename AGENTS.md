@@ -228,7 +228,8 @@ a line to `CHANGELOG.md` under the next release.
   description, category and close time change only through `update_market`
   (0043, 0103, 0106), which logs every change to `market_edits`; outcomes
   and line never change. The close time moves (later, or earlier but still
-  in the future) only while the market is open, which reopens a closed one
+  in the future) only while the market is open, never by a creator with a
+  stake in it (`can_move_market_close`), which reopens a closed one
   and re-arms its closing alerts; nothing is fixed at close, since payouts
   and parlay multipliers are fixed when placed.
 - **Every bet goes through the slip.** `SlipProvider` (in the signed-in

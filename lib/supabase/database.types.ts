@@ -1355,6 +1355,7 @@ export type Database = {
       }
       avatar_upload_quota_ok: { Args: never; Returns: boolean }
       betting_ledger_types: { Args: never; Returns: string[] }
+      can_move_market_close: { Args: { p_market_id: string }; Returns: boolean }
       can_resolve_market: { Args: { p_market_id: string }; Returns: boolean }
       can_void_market: { Args: { p_market_id: string }; Returns: boolean }
       cancel_bet: { Args: { p_bet_id: number }; Returns: undefined }

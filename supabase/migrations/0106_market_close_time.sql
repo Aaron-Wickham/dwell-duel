@@ -10,11 +10,18 @@
 --    never once it's resolved or voided, and only to a time still in the future. Moving a closed
 --    market's close into the future reopens it. A creator can't reword or recategorise a closed
 --    market, as before; the close time is the one thing they can still change.
+--    A creator with a stake in the market (a bet or any parlay leg on it) can't move it: they
+--    would choose when betting on their own question stops. An admin can.
 -- 3. Moving the close clears the market's closing-alert claims (push_log and push_attempts, 0057,
 --    0058, 0076), so the creator's reminder and the admins' alert go out again at the new close.
+--    claim_push_log now claims only a market whose close has passed, so a closing-alerts run that
+--    read a market as due before it was reopened can't claim it afterwards and swallow the alert
+--    for the new close.
+-- 4. can_move_market_close mirrors the rule, so the market page offers the close-time field and
+--    Reopen only to those who may use them, as it offers Void through can_void_market.
 --
--- Additive: two columns and a new overload. The four-argument update_market stays for the build
--- before this one.
+-- Additive: two columns, two new functions, a new overload, and claim_push_log replaced with the
+-- same signature. The four-argument update_market stays for the build before this one.
 --
 -- One explicit transaction, like 0034-0105.
 begin;
@@ -116,6 +123,9 @@ begin
     if v_close_at <= now() then
       raise exception 'close time must be in the future';
     end if;
+    if not v_admin and public.has_stake_in_market(p_market_id, auth.uid()) then
+      raise exception 'you have a stake in this market, so ask an admin to move its close time';
+    end if;
   end if;
 
   if not v_wording_changed and not v_category_changed and not v_close_changed then
@@ -151,5 +161,54 @@ $$;
 
 revoke execute on function public.update_market(uuid, text, text, text, timestamptz) from public, anon;
 grant execute on function public.update_market(uuid, text, text, text, timestamptz) to authenticated, service_role;
+
+-- Whether the caller may move this market's close time: update_market's rule above.
+create function public.can_move_market_close(p_market_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.markets m
+    where m.id = p_market_id
+      and m.status = 'open'
+      and (
+        public.is_admin()
+        or (
+          m.created_by = auth.uid()
+          and public.is_invited()
+          and not public.has_stake_in_market(m.id, auth.uid())
+        )
+      )
+  )
+$$;
+
+revoke execute on function public.can_move_market_close(uuid) from public, anon;
+grant execute on function public.can_move_market_close(uuid) to authenticated, service_role;
+
+-- As 0071, but a ref is claimed only once its market's close has passed. The route reads what's
+-- due, sends, then claims; a market reopened in between has had its claims cleared by
+-- update_market, and claiming it now would stop the alert for its new close. Both kinds' refs are
+-- market ids; a ref that names no market is claimed as before.
+create or replace function public.claim_push_log(p_kind text, p_refs text[])
+returns integer
+language sql
+volatile
+security definer
+set search_path = ''
+as $$
+  with claimed as (
+    insert into public.push_log (kind, ref)
+    select p_kind, r.ref
+    from unnest(p_refs) as r(ref)
+    left join public.markets m on m.id::text = r.ref
+    where m.id is null or m.close_at <= now()
+    on conflict do nothing
+    returning ref
+  )
+  select count(*)::integer from claimed
+$$;
 
 commit;

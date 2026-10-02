@@ -178,7 +178,7 @@ export async function ledgerViolations(): Promise<LedgerViolation[]> {
   `)
 }
 
-/** What place_slip_v2 to v4 answer with: what the call placed, and whether it replayed an earlier attempt. */
+/** What place_slip_v4 answers with: what the call placed, and whether it replayed an earlier attempt. */
 export type SlipSummary = { parlay_id: string | null; solos: number; picks: string[]; replayed: boolean }
 
 /**

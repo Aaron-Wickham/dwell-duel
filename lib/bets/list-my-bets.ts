@@ -22,8 +22,6 @@ export interface MyBet {
   placedAt: string
   closeAt: string
   result: MyBetResult
-  // A bet on an lmsr market (0102) can't be cancelled.
-  final: boolean
 }
 
 export interface MyCancelledBet {
@@ -94,7 +92,6 @@ export function toMyBet(b: BetRow, now: number): MyBet {
     placedAt: b.created_at,
     closeAt: b.markets.close_at,
     result: betResult({ outcomeId: b.outcome_id, amount: b.amount, shares: b.shares, refundOutcomes: b.refund_outcomes }, b.markets, now),
-    final: b.markets.pricing === 'lmsr',
   }
 }
 

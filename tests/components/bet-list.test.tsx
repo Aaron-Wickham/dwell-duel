@@ -1,8 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-vi.mock('@/lib/markets/cancel-bet', () => ({ cancelBetAction: vi.fn() }))
-
 import { BetList } from '@/components/markets/bet-list'
 import type { MarketBet } from '@/lib/markets/get-market'
 
@@ -47,22 +45,12 @@ describe('BetList', () => {
     const row = screen.getByRole('listitem', { name: 'Bob — 15 DC on No' })
     expect(row).toHaveAttribute('id', 'bet-2')
     expect(row).toHaveAttribute('tabindex', '-1')
-    // The whole name, so the Cancel button's label is proven to stay out of it.
     expect(screen.getByRole('listitem', { name: /^Alice — 5 DC on Yes ?\(you\)$/ })).toHaveAttribute('id', 'bet-1')
   })
 
-  it("offers Cancel on the viewer's own bets only, and only while betting is open", () => {
-    const { rerender } = render(<BetList bets={bets} outcomes={outcomes} viewerId="p-alice" canBet />)
-    expect(screen.getAllByRole('button', { name: /^Cancel your/ }).map((b) => b.textContent)).toEqual(['Cancel'])
-    expect(screen.getByRole('button', { name: 'Cancel your 5 DC bet on Yes' })).toBeInTheDocument()
-
-    rerender(<BetList bets={bets} outcomes={outcomes} viewerId="p-alice" canBet={false} />)
-    expect(screen.queryByRole('button', { name: /^Cancel your/ })).not.toBeInTheDocument()
-  })
-
-  it('offers no Cancel or Remove on a market whose bets are final (0102)', () => {
-    render(<BetList bets={bets} outcomes={outcomes} viewerId="p-alice" canBet canRemove final />)
-    expect(screen.queryByRole('button', { name: /^Cancel your/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^Remove/ })).not.toBeInTheDocument()
+  // Bets are final (0102), and nothing cancels or removes one since #332.
+  it('offers no controls on any bet', () => {
+    render(<BetList bets={bets} outcomes={outcomes} viewerId="p-alice" canBet />)
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 })

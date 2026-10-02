@@ -21,7 +21,6 @@ vi.mock('@/lib/markets/position', async (importOriginal) => ({
 }))
 vi.mock('@/lib/markets/parlay-riding', () => ({ getParlayRiding }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase: {}, user: { id: 'p-me' } }) }))
-vi.mock('@/lib/markets/cancel-bet', () => ({ cancelBetAction: vi.fn() }))
 vi.mock('@/lib/parlays/slip-actions', () => ({
   addToSlipAction: vi.fn(),
   removeFromSlipAction: vi.fn(),
@@ -76,7 +75,6 @@ const solo = (id: number, amount: number, outcomeLabel: string, result: Position
   placedAt: '2026-10-03T09:14:00Z',
   result,
   paysIfWins,
-  final: false,
 })
 
 const parlay = (overrides: Partial<ParlayView> = {}): ParlayView => ({
@@ -114,19 +112,18 @@ describe('PositionCard, while the market is open', () => {
     legs: [withLeg(parlay())],
   }
 
-  it('lists each bet separately with what it pays and its own Cancel', () => {
+  it('lists each bet separately with what it pays, and no Cancel', () => {
     render(<PositionCard position={open} resolvedAt={null} />)
     const card = screen.getByRole('region', { name: 'Your position' })
     expect(card).toHaveClass('border-2', 'border-primary')
-    expect(within(card).getByText('30 DC on this market · Pays ~ updates as others bet.')).toBeInTheDocument()
+    expect(within(card).getByText('30 DC on this market · Bets are final.')).toBeInTheDocument()
 
     const rows = within(card).getAllByRole('listitem')
     expect(rows).toHaveLength(3)
     expect(within(rows[0]).getByText('20 DC on Yes')).toBeInTheDocument()
-    expect(within(rows[0]).getByText('Pays ~26 DC')).toBeInTheDocument()
-    expect(within(rows[0]).getByRole('button', { name: 'Cancel your 20 DC bet on Yes' })).toBeInTheDocument()
-    expect(within(rows[1]).getByText('Pays ~31 DC')).toBeInTheDocument()
-    expect(within(rows[1]).getByRole('button', { name: 'Cancel your 10 DC bet on No' })).toBeInTheDocument()
+    expect(within(rows[0]).getByText('Pays 26 DC')).toBeInTheDocument()
+    expect(within(rows[1]).getByText('Pays 31 DC')).toBeInTheDocument()
+    expect(within(card).queryByRole('button')).toBeNull()
   })
 
   it('shows a parlay leg with its pill and a link to the parlay', () => {

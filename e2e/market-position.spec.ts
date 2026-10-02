@@ -58,17 +58,42 @@ async function setup() {
   return { alice: await clientForEmail('alice@example.com'), bob: await clientForEmail('bob@example.com') }
 }
 
-test('Your position lists each bet with Pays ~ and Cancel, and a parlay leg; parlay money rides on each outcome', async ({ page }) => {
+// A new market, priced by LMSR, which Bob makes so Alice (the session on screen) can bet on it.
+async function lmsrMarket(bob: TestClient, title: string): Promise<Market> {
+  const { data, error } = await bob.rpc('create_market_v3', {
+    p_title: title,
+    p_description: null,
+    p_kind: 'binary',
+    p_outcome_labels: ['Yes', 'No'],
+    p_close_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+  })
+  if (error) throw error
+  const id = (data as { market_id: string }).market_id
+  const { data: outcomes, error: outcomesErr } = await serviceClient().from('market_outcomes').select('id, label').eq('market_id', id)
+  if (outcomesErr) throw outcomesErr
+  return { id, url: `/markets/${id}`, outcome: (label: string) => outcomes!.find((o) => o.label === label)!.id }
+}
+
+// A parlay through the slip's own action. place_lmsr_parlay refuses a payout more than 2% under
+// the one shown, so showing 1 DC accepts whatever these legs pay now.
+async function lmsrParlay(client: TestClient, outcomeIds: string[], stake: number): Promise<string> {
+  const { data, error } = await client.rpc('place_slip_v4', {
+    p_singles: [],
+    p_parlay_outcome_ids: outcomeIds,
+    p_parlay_stake: stake,
+    p_parlay_payout: 1,
+  })
+  if (error) throw error
+  return (data as { parlay_id: string }).parlay_id
+}
+
+test('Your position lists each bet with its fixed payout, and a parlay leg; parlay money rides on each outcome', async ({ page }) => {
   const { alice, bob } = await setup()
   const stamp = Date.now()
-  const here = await backedMarket(bob, `Position open ${stamp}?`)
-  const there = await backedMarket(bob, `Position elsewhere ${stamp}?`)
+  const here = await lmsrMarket(bob, `Position open ${stamp}?`)
+  const there = await lmsrMarket(bob, `Position elsewhere ${stamp}?`)
 
-  const { data: parlayId, error: parlayErr } = await alice.rpc('place_parlay', {
-    p_outcome_ids: [here.outcome('Yes'), there.outcome('Yes')],
-    p_stake: 5,
-  })
-  if (parlayErr) throw parlayErr
+  const parlayId = await lmsrParlay(alice, [here.outcome('Yes'), there.outcome('Yes')], 5)
 
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto(here.url)
@@ -76,22 +101,21 @@ test('Your position lists each bet with Pays ~ and Cancel, and a parlay leg; par
   const outcomes = page.getByRole('region', { name: 'Outcomes' })
 
   const leg = position.getByRole('listitem').filter({ hasText: 'Parlay leg: Yes' })
-  await expect(leg.getByText(/^5 DC · 2 picks · pays ~\d+ DC if every pick wins\. Leg odds are set when this market closes\.$/)).toBeVisible()
+  await expect(leg.getByText(/^5 DC · 2 picks · pays \d+ DC if every pick wins\./)).toBeVisible()
   await expect(leg.getByRole('link', { name: /^View parlay/ })).toHaveAttribute('href', `/parlays/${parlayId}`)
 
-  // Parlay money shows beside each outcome, and the pool and chance don't count it.
+  // Parlay money shows beside each outcome; its share of the stake bought shares, so it moved the odds.
   const yes = outcomes.getByRole('listitem').filter({ hasText: /^Yes/ })
   await expect(yes.getByText('+5 DC riding in parlays')).toBeVisible()
-  await expect(outcomes.getByText('100 DC in the pool')).toBeVisible()
-  await expect(outcomes.getByText('Parlays are paid by DwellDuel, not from this pool, so parlay money never moves these odds.', { exact: false })).toBeVisible()
+  await expect(outcomes.getByText('so it moved these odds like a bet', { exact: false })).toBeVisible()
   await expect(outcomes.getByRole('listitem').filter({ hasText: /^No/ }).getByText(/riding in parlays/)).toHaveCount(0)
 
-  // A solo bet joins the card with what it pays from the real pool: 5 × 105 / 55, rounded down.
+  // A solo bet joins the card with the payout fixed when it was placed, and no Cancel.
   await placeSolo(page, 'No', 5)
   const solo = position.getByRole('listitem').filter({ hasText: '5 DC on No' })
-  await expect(solo.getByText('Pays ~9 DC')).toBeVisible()
-  await expect(solo.getByRole('button', { name: 'Cancel your 5 DC bet on No' })).toBeVisible()
-  await expect(position.getByText('5 DC on this market · Pays ~ updates as others bet.')).toBeVisible()
+  await expect(solo.getByText(/^Pays \d+ DC$/)).toBeVisible()
+  await expect(solo.getByRole('button')).toHaveCount(0)
+  await expect(position.getByText('5 DC on this market · Bets are final.')).toBeVisible()
 
   // On a phone the card comes before the chart.
   const chart = page.getByRole('region', { name: 'Chance over time' })
@@ -100,13 +124,7 @@ test('Your position lists each bet with Pays ~ and Cancel, and a parlay leg; par
   // Backer1's parlay rides on Yes too. The page follows parlay_legs for this market
   // (pageSubscriptions.marketDetail); this checks the figure itself after a refresh.
   const [backer1] = await backers()
-  const { error: aliceBetErr } = await alice.rpc('place_bet', { p_market_id: there.id, p_outcome_id: there.outcome('No'), p_amount: 5 })
-  if (aliceBetErr) throw aliceBetErr
-  const { error: backerErr } = await backer1.client.rpc('place_parlay', {
-    p_outcome_ids: [here.outcome('Yes'), there.outcome('No')],
-    p_stake: 10,
-  })
-  if (backerErr) throw backerErr
+  await lmsrParlay(backer1.client, [here.outcome('Yes'), there.outcome('No')], 10)
   await page.reload()
   await expect(yes.getByText('+15 DC riding in parlays')).toBeVisible()
 

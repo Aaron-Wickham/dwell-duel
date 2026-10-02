@@ -7,7 +7,6 @@ import Link from 'next/link'
 import { render } from '@testing-library/react'
 import { ChartColumn } from 'lucide-react'
 
-vi.mock('@/lib/markets/cancel-bet', () => ({ cancelBetAction: vi.fn() }))
 vi.mock('@/lib/markets/create-market', () => ({ createMarketAction: vi.fn() }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/lib/theme/set-theme', () => ({ setThemeAction: vi.fn() }))
@@ -142,7 +141,6 @@ const CASES: [string, () => ReactElement][] = [
               amount: 5,
               placedAt: '2026-09-25T12:00:00Z',
               closeAt: '2026-10-01T12:00:00Z',
-              final: false,
               result: { kind: 'open' },
             },
           },
@@ -200,7 +198,7 @@ const CASES: [string, () => ReactElement][] = [
       <PositionCard
         resolvedAt={null}
         position={{
-          bets: [{ id: 1, outcomeLabel: 'Yes', amount: 20, placedAt: '2026-10-03T09:14:00Z', result: { kind: 'open' }, paysIfWins: 26, final: false }],
+          bets: [{ id: 1, outcomeLabel: 'Yes', amount: 20, placedAt: '2026-10-03T09:14:00Z', result: { kind: 'open' }, paysIfWins: 26 }],
           legs: [
             {
               leg: { marketId: 'k1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', oddsBp: 20_000, oddsKnown: false, status: 'open' },

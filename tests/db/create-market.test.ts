@@ -83,47 +83,6 @@ describe('create_market_v3', () => {
   })
 })
 
-// #258: Next replays an action whose response was lost, so a repeat of the key must not make a
-// second market. Since 0105 create_market_v2 and create_market belong to a build that would make pool
-// markets, so they refuse, apart from replaying an attempt that already finished.
-describe('create_market_v2 and create_market since 0105', () => {
-  const args = (key: string | null) => ({
-    p_title: 'Replayed market',
-    p_description: null as unknown as string,
-    p_kind: 'binary',
-    p_outcome_labels: ['Yes', 'No'],
-    p_close_at: new Date(Date.now() + 60_000).toISOString(),
-    p_idempotency_key: key ?? undefined,
-  })
-  const REFUSED = 'DwellDuel just updated. Refresh to create a market.'
-
-  it('refuses to make a market, and makes none', async () => {
-    const client = await clientFor(alice)
-    await ensureInvited(client)
-    expectError((await client.rpc('create_market_v2', args(randomUUID()))).error, REFUSED)
-    const { p_idempotency_key: _key, ...old } = args(null)
-    expectError((await client.rpc('create_market', old)).error, REFUSED)
-    const { count } = await serviceClient().from('markets').select('id', { count: 'exact', head: true }).eq('created_by', alice.id)
-    expect(count).toBe(0)
-  })
-
-  it('replays an attempt that already finished, and leaves a refused key free', async () => {
-    const client = await clientFor(alice)
-    await ensureInvited(client)
-    const key = randomUUID()
-    const first = await client.rpc('create_market_v3', args(key))
-    expect(first.error).toBeNull()
-    const replay = await client.rpc('create_market_v2', args(key))
-    expect(replay.error).toBeNull()
-    expect(replay.data).toEqual({ market_id: (first.data as { market_id: string }).market_id, replayed: true })
-
-    const fresh = randomUUID()
-    expectError((await client.rpc('create_market_v2', args(fresh))).error, REFUSED)
-    // The refusal rolled its claim back, so the new build can still use the key.
-    expect((await client.rpc('create_market_v3', args(fresh))).data).toEqual({ market_id: expect.any(String), replayed: false })
-  })
-})
-
 describe('attempt_key columns', () => {
   it('refuses a second comment or task with the same key', async () => {
     const client = await clientFor(alice)

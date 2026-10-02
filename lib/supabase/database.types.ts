@@ -1358,7 +1358,6 @@ export type Database = {
       can_move_market_close: { Args: { p_market_id: string }; Returns: boolean }
       can_resolve_market: { Args: { p_market_id: string }; Returns: boolean }
       can_void_market: { Args: { p_market_id: string }; Returns: boolean }
-      cancel_bet: { Args: { p_bet_id: number }; Returns: undefined }
       category_counts: {
         Args: { p_include_hidden?: boolean }
         Returns: {
@@ -1388,29 +1387,6 @@ export type Database = {
         Returns: string
       }
       convert_pool_markets_to_lmsr: { Args: never; Returns: Json }
-      create_market: {
-        Args: {
-          p_close_at: string
-          p_description: string
-          p_kind: string
-          p_line?: number
-          p_outcome_labels: string[]
-          p_title: string
-        }
-        Returns: string
-      }
-      create_market_v2: {
-        Args: {
-          p_close_at: string
-          p_description: string
-          p_idempotency_key?: string
-          p_kind: string
-          p_line?: number
-          p_outcome_labels: string[]
-          p_title: string
-        }
-        Returns: Json
-      }
       create_market_v3: {
         Args: {
           p_close_at: string
@@ -1817,33 +1793,6 @@ export type Database = {
         Args: { p_outcome_ids: string[]; p_stake: number }
         Returns: string
       }
-      place_slip: {
-        Args: {
-          p_idempotency_key?: string
-          p_parlay_outcome_ids: string[]
-          p_parlay_stake: number
-          p_singles: Json
-        }
-        Returns: string
-      }
-      place_slip_v2: {
-        Args: {
-          p_idempotency_key?: string
-          p_parlay_outcome_ids: string[]
-          p_parlay_stake: number
-          p_singles: Json
-        }
-        Returns: Json
-      }
-      place_slip_v3: {
-        Args: {
-          p_idempotency_key?: string
-          p_parlay_outcome_ids: string[]
-          p_parlay_stake: number
-          p_singles: Json
-        }
-        Returns: Json
-      }
       place_slip_v4: {
         Args: {
           p_idempotency_key?: string
@@ -1929,17 +1878,12 @@ export type Database = {
         Args: { p_delivered: string[]; p_failed: string[] }
         Returns: number
       }
-      refund_room: {
-        Args: { p_amount: number; p_profile_id: string }
-        Returns: number
-      }
       reinvite_member: { Args: { p_profile_id: string }; Returns: undefined }
       reject_task_completion: {
         Args: { p_completion_id: string; p_reason?: string }
         Returns: undefined
       }
       release_cron_lease: { Args: { p_name: string }; Returns: undefined }
-      remove_bet: { Args: { p_bet_id: number }; Returns: undefined }
       remove_member: { Args: { p_profile_id: string }; Returns: undefined }
       rename_market_category: {
         Args: { p_category_id: string; p_name: string }

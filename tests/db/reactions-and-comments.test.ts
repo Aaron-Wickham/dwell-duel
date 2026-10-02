@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient, type TestClient } from './helpers'
 import { expectError } from './assertions'
 import { pgQuery } from './pg-query'
-import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole } from './fixtures'
+import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket, giveRole, cancelBetForHistory } from './fixtures'
 
 // Reactions on feed items and comments on markets (#79, 0053).
 
@@ -113,7 +113,7 @@ describe('feed_reactions', () => {
     const betId = bet!.id
     const betEvent = `bet:${betId}`
     expect((await aliceClient.from('feed_reactions').insert({ event_id: betEvent, profile_id: alice.id, kind: 'fire' })).error).toBeNull()
-    expect((await bobClient.rpc('cancel_bet', { p_bet_id: betId })).error).toBeNull()
+    await cancelBetForHistory(betId)
     expect((await reactionRows()).filter((r) => r.event_id === betEvent)).toEqual([])
 
     await aliceClient.from('feed_reactions').insert({ event_id: eventId, profile_id: alice.id, kind: 'pray' })

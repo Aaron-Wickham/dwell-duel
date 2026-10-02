@@ -45,7 +45,6 @@ describe('pageSubscriptions', () => {
   it('marketDetail carries the market id, plus the viewer id for their own parlays', () => {
     expect(pageSubscriptions.marketDetail(MARKET_ID, MEMBER_ID)).toEqual([
       { table: 'bets', filter: `market_id=eq.${MARKET_ID}` },
-      { table: 'cancelled_bets', filter: `market_id=eq.${MARKET_ID}` },
       { table: 'markets', filter: `id=eq.${MARKET_ID}` },
       { table: 'market_resolutions', filter: `market_id=eq.${MARKET_ID}` },
       { table: 'parlay_legs', filter: `market_id=eq.${MARKET_ID}` },
@@ -64,7 +63,6 @@ describe('pageSubscriptions', () => {
       { topic: 'markets' },
       { topic: 'tasks' },
       { table: 'bets', filter: `profile_id=eq.${MEMBER_ID}` },
-      { table: 'cancelled_bets', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'parlays', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'task_completions', filter: `profile_id=eq.${MEMBER_ID}` },
     ])
@@ -75,7 +73,6 @@ describe('pageSubscriptions', () => {
       { topic: 'markets' },
       { topic: 'tasks' },
       { table: 'bets', filter: `profile_id=eq.${MEMBER_ID}` },
-      { table: 'cancelled_bets', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'parlays', filter: `profile_id=eq.${MEMBER_ID}` },
       { topic: 'reviews' },
     ])
@@ -91,7 +88,6 @@ describe('pageSubscriptions', () => {
   it('member watches only that member, carrying their id through activity_events', () => {
     expect(pageSubscriptions.member(MEMBER_ID)).toEqual([
       { table: 'activity_events', filter: `actor_id=eq.${MEMBER_ID}` },
-      { table: 'cancelled_bets', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'profiles', filter: `id=eq.${MEMBER_ID}` },
       { topic: 'reactions' },
     ])
@@ -117,7 +113,6 @@ describe('pageSubscriptions', () => {
   it("myBets watches the member's own bets, cancellations and parlays, and every market for results", () => {
     expect(pageSubscriptions.myBets(MEMBER_ID)).toEqual([
       { table: 'bets', filter: `profile_id=eq.${MEMBER_ID}` },
-      { table: 'cancelled_bets', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'parlays', filter: `profile_id=eq.${MEMBER_ID}` },
       { topic: 'markets' },
     ])

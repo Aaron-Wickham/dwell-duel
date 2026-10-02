@@ -16,7 +16,6 @@ vi.mock('@/lib/auth/require-user', () => ({
   requireUser: async () => ({ supabase: {}, user: { id: 'me' } }),
 }))
 
-vi.mock('@/lib/markets/cancel-bet', () => ({ cancelBetAction: vi.fn() }))
 
 const { listMyTransactions, listMyWagers, listMyCancelledBets } = vi.hoisted(() => ({
   listMyTransactions: vi.fn(),

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { anonClient, clientFor, createTestMarket, ensureInvited, giveRole, insertLockedParlay, makeMember, seedMembers, backers, type Member, type TestMarket } from './fixtures'
+import { anonClient, clientFor, createTestMarket, ensureInvited, giveRole, insertLockedParlay, makeMember, seedMembers, backers, type Member, type TestMarket, cancelBetForHistory } from './fixtures'
 import { rpcLoose, serviceClient, setBalanceViaLedger, type TestClient } from './helpers'
 import { expectError } from './assertions'
 import { lockedOddsToBp } from '@/lib/parlays/odds'
@@ -114,8 +114,7 @@ describe('pricing at close', () => {
     // Backer2 takes the 500 back and leaves 25, so each Yes is 50 / 25 = 2x at close.
     for (const m of [a, b]) {
       const { data: big } = await serviceClient().from('bets').select('id').eq('market_id', m.marketId).eq('amount', 500).single()
-      const { error } = await backer2.rpc('cancel_bet', { p_bet_id: big!.id })
-      if (error) throw error
+      await cancelBetForHistory(big!.id)
       await bet(backer2, m, 1, 25)
     }
     await resolve(a, 0)
@@ -161,8 +160,7 @@ describe('pricing at close', () => {
     // Backer2 cancels on A and C, leaving 25 DC from one member on each.
     for (const m of [a, c]) {
       const { data: theirs } = await serviceClient().from('bets').select('id').eq('market_id', m.marketId).eq('outcome_id', m.outcomeIds[1]).single()
-      const { error } = await backer2.rpc('cancel_bet', { p_bet_id: theirs!.id })
-      if (error) throw error
+      await cancelBetForHistory(theirs!.id)
     }
     for (const m of [a, b]) await resolve(m, 0)
     await resolve(c, 0)

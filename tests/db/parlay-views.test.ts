@@ -44,51 +44,37 @@ describe('getSlipView', () => {
   const leg = (outcomeId: string) => ({ outcomeId, parlay: true })
 
   it('is empty for an empty slip', async () => {
-    expect(await getSlipView(bobClient, [])).toEqual({ picks: [], legBps: [], multiplierBp: 10_000, capped: false })
+    expect(await getSlipView(bobClient, [])).toEqual({ picks: [] })
   })
 
-  it('shows each pick with its mode, pools and estimated leg odds, and multiplies only the Parlay picks', async () => {
-    const a = await seededMarket('Market A')
-    const b = await seededMarket('Market B')
-    const c = await seededMarket('Market C')
+  it('shows each pick with its mode and its market maker’s state', async () => {
+    const a = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Market A', lmsr: true })
+    const b = await createTestMarket(aliceClient, ['Yes', 'No', 'Maybe'], { title: 'Market B', lmsr: true })
 
-    const view = await getSlipView(bobClient, [solo(a.outcomeIds[1]), leg(b.outcomeIds[0]), leg(c.outcomeIds[0])])
-    const pools = { outcomePool: 13, totalPool: 52 }
+    const view = await getSlipView(bobClient, [solo(a.outcomeIds[1]), leg(b.outcomeIds[2])])
     expect(view.picks).toEqual([
-      {
-        outcomeId: a.outcomeIds[1], outcomeLabel: 'No', marketId: a.marketId, marketTitle: 'Market A', parlay: false, open: true,
-        oddsBp: 13_333, legBlock: null, outcomePool: 39, totalPool: 52,
-      },
-      { outcomeId: b.outcomeIds[0], outcomeLabel: 'Yes', marketId: b.marketId, marketTitle: 'Market B', parlay: true, open: true, oddsBp: 40_000, legBlock: null, ...pools },
-      { outcomeId: c.outcomeIds[0], outcomeLabel: 'Yes', marketId: c.marketId, marketTitle: 'Market C', parlay: true, open: true, oddsBp: 40_000, legBlock: null, ...pools },
+      { outcomeId: a.outcomeIds[1], outcomeLabel: 'No', marketId: a.marketId, marketTitle: 'Market A', parlay: false, open: true, lmsr: expect.any(Object) },
+      { outcomeId: b.outcomeIds[2], outcomeLabel: 'Maybe', marketId: b.marketId, marketTitle: 'Market B', parlay: true, open: true, lmsr: expect.any(Object) },
     ])
-    expect(view.legBps).toEqual([40_000, 40_000])
-    expect(view.multiplierBp).toBe(160_000)
-    expect(view.capped).toBe(false)
+    expect(view.picks[1].lmsr).toEqual({ q: [0, 0, 0], index: expect.any(Number), liquidity: 50 })
   })
 
-  it('marks a market under the floor, a market of your own, and a voided market', async () => {
-    const fresh = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Fresh' })
-    const own = await createTestMarket(bobClient, ['Yes', 'No'], { title: 'Own' })
-    const b = await seededMarket('Market B')
-    const { error } = await aliceClient.rpc('void_market', { p_market_id: b.marketId, p_reason: 'Voided in a test' })
+  // No pool market has been open since 0105, so a pick left on one can't be placed.
+  it('marks a pick on a pool market, a closed market and a voided market as no longer available', async () => {
+    const pool = await seededMarket('Pool')
+    const closed = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Closed', lmsr: true })
+    await serviceClient().from('markets').update({ close_at: new Date(Date.now() - 1000).toISOString() }).eq('id', closed.marketId)
+    const voided = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Voided', lmsr: true })
+    const { error } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId, p_reason: 'Voided in a test' })
     expect(error).toBeNull()
 
-    const view = await getSlipView(bobClient, [leg(fresh.outcomeIds[0]), leg(own.outcomeIds[0]), solo(b.outcomeIds[0])])
-    expect(view.picks.map((p) => [p.open, p.legBlock])).toEqual([
-      [true, 'floor'],
-      [true, 'own_market'],
-      [false, null],
+    const view = await getSlipView(bobClient, [leg(pool.outcomeIds[0]), solo(closed.outcomeIds[0]), solo(voided.outcomeIds[0])])
+    expect(view.picks.map((p) => [p.marketTitle, p.open])).toEqual([
+      ['Pool', false],
+      ['Closed', false],
+      ['Voided', false],
     ])
-  })
-
-  it('reports the cap', async () => {
-    const markets = await Promise.all(['A', 'B', 'C'].map((n) => seededMarket(`Market ${n}`)))
-
-    // 4 × 4 × 4 = 64, capped at 20.
-    const view = await getSlipView(bobClient, markets.map((m) => leg(m.outcomeIds[0])))
-    expect(view.multiplierBp).toBe(200_000)
-    expect(view.capped).toBe(true)
+    expect(view.picks[0].lmsr).toBeUndefined()
   })
 
   it('drops an outcome id that matches nothing', async () => {

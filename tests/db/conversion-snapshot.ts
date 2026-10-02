@@ -11,6 +11,7 @@ import {
   backLeg,
   backers,
   insertLockedParlay,
+  cancelBetForHistory,
   type Member,
   type TestMarket,
 } from './fixtures'
@@ -169,8 +170,7 @@ export async function buildSnapshot(): Promise<Snapshot> {
   await backLeg(m.resolved, 0)
   await backLeg(m.voided, 0)
   await backLeg(m.gap, 0)
-  const { error: cancelErr } = await client(erin).rpc('cancel_bet', { p_bet_id: cancelled })
-  if (cancelErr) throw cancelErr
+  await cancelBetForHistory(cancelled)
 
   const p: Record<ParlayName, string> = {
     p1: await poolParlay(dave, [[m.bin, 0], [m.multi, 1]], 10),

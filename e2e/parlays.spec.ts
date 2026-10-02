@@ -1,74 +1,58 @@
 import { test, expect } from '@playwright/test'
 import { addToSlip, openSlip } from './slip'
-import { backers, clientForEmail, createPoolMarket } from '../tests/db/fixtures'
+import { clientForEmail } from '../tests/db/fixtures'
 import { serviceClient } from '../tests/db/helpers'
+import { formatOdds, lmsrParlayQuote } from '../lib/parlays/odds'
 
 test('build a two-leg parlay in the slip, place it, and win it', async ({ page }) => {
-  const bob = await clientForEmail('bob@example.com')
-  // Other specs spend Bob's balance (clawback leaves him at 20 DC); these two markets take 40.
-  const { data: bobProfile, error: bobErr } = await serviceClient().from('profiles').select('id, balance').eq('email', 'bob@example.com').single()
-  if (bobErr) throw bobErr
-  if (bobProfile.balance < 40) {
-    const { error } = await serviceClient().rpc('apply_coin_transaction', { p_profile_id: bobProfile.id, p_amount: 40 - bobProfile.balance, p_type: 'test_top_up' })
+  // Other specs spend Alice's balance; this parlay takes 5.
+  const { data: alice, error: aliceErr } = await serviceClient().from('profiles').select('id, balance').eq('email', 'alice@example.com').single()
+  if (aliceErr) throw aliceErr
+  if (alice.balance < 5) {
+    const { error } = await serviceClient().rpc('apply_coin_transaction', { p_profile_id: alice.id, p_amount: 5 - alice.balance, p_type: 'test_top_up' })
     if (error) throw error
   }
+  const bob = await clientForEmail('bob@example.com')
+  const stamp = Date.now()
+  const titles = [`Parlay leg one ${stamp}?`, `Parlay leg two ${stamp}?`]
   const marketUrls: string[] = []
 
-  for (const title of ['Parlay leg one?', 'Parlay leg two?']) {
-    // Bob makes the markets: nobody can put a market they created in a parlay (0074).
-    const { data: marketId, error: createErr } = await createPoolMarket(bob, {
+  for (const title of titles) {
+    const { data, error } = await bob.rpc('create_market_v3', {
       p_title: title,
       p_description: null,
       p_kind: 'binary',
       p_outcome_labels: ['Yes', 'No'],
       p_close_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     })
-    if (createErr) throw createErr
-    marketUrls.push(`/markets/${marketId}`)
-    await page.goto(`/markets/${marketId}`)
-
-    // Bob bets 5 on Yes and 15 on No, Backer1 20 on Yes and Backer2 20 on No: 60 DC from three
-    // other members, over the parlay floor. A leg's odds are set at close from that real money,
-    // seed left out: Yes is 60 / 25 = 2.40×. It's their money, not the parlay-builder's, because a
-    // leg's odds leave out the bettor's own stakes.
-    const { data: outcomes } = await serviceClient().from('market_outcomes').select('id, label').eq('market_id', marketId)
-    const [backer1, backer2] = (await backers()).map((b) => b.client)
-    for (const [client, label, amount] of [
-      [bob, 'Yes', 5],
-      [bob, 'No', 15],
-      [backer1, 'Yes', 20],
-      [backer2, 'No', 20],
-    ] as const) {
-      const { error } = await client.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomes!.find((o) => o.label === label)!.id, p_amount: amount })
-      if (error) throw error
-    }
-    await page.reload()
-    await expect(page.getByRole('region', { name: 'Bets' }).getByText('15 DC on No')).toBeVisible()
-  }
-
-  for (const url of marketUrls) {
+    if (error) throw error
+    const url = `/markets/${(data as { market_id: string }).market_id}`
+    marketUrls.push(url)
     await page.goto(url)
     await addToSlip(page, 'Yes')
   }
 
   const sheet = await openSlip(page)
-  for (const title of ['Parlay leg one?', 'Parlay leg two?']) {
+  for (const title of titles) {
     await sheet.getByRole('group', { name: `Bet type for Yes, ${title}` }).getByRole('button', { name: 'Parlay' }).click()
   }
   const parlay = sheet.getByRole('region', { name: 'Parlay · 2 picks' })
-  // Estimates until each market closes.
-  await expect(parlay.getByText('~5.76×')).toBeVisible()
   await parlay.getByLabel('Stake (DC)').fill('5')
-  await expect(parlay.getByText('Pays ~28 DC if every pick wins')).toBeVisible()
+
+  // Both markets open at 50%: each leg buys 2.5 DC of shares, and the payout is fixed when placed.
+  const even = { q: [0, 0], liquidity: 50, index: 0 }
+  const quote = lmsrParlayQuote([even, even], 5)
+  const multiplier = `${formatOdds(quote.multiplierBp)}×`
+  await expect(parlay.getByText(`Pays ${quote.payout} DC (${multiplier}) if every pick wins`)).toBeVisible()
   await sheet.getByRole('button', { name: 'Place 1 bet · 5 DC' }).click()
-  await expect(page.getByText('Placed a 2-leg parlay at ~5.76×.').first()).toBeVisible()
+  await expect(page.getByText(`Placed a 2-leg parlay paying ${quote.payout} DC (${multiplier}). Bets are final.`).first()).toBeVisible()
 
   // The old Parlays page lands on My bets, where the parlay sits beside solo bets.
   await page.goto('/parlays')
   await expect(page).toHaveURL(/\/bets$/)
-  const placed = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: 'Parlay leg one?' }).first()
-  await expect(placed.getByText('~5.76×')).toBeVisible()
-  await expect(placed.getByText('~28 DC')).toBeVisible()
+  const placed = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: titles[0] }).first()
+  await expect(placed.getByText(multiplier, { exact: true })).toBeVisible()
+  await expect(placed.getByText(`${quote.payout} DC`, { exact: true })).toBeVisible()
   // The parlay's chip and both of its legs.
   await expect(placed.getByText('Open', { exact: true })).toHaveCount(3)
 
@@ -76,13 +60,13 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   await placed.getByRole('link', { name: 'Parlay · 2 picks' }).click()
   await expect(page).toHaveURL(/\/parlays\/[0-9a-f-]+$/)
   await expect(page.getByRole('heading', { level: 1, name: 'Parlay · 2 picks' })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Picks' }).getByRole('link', { name: 'Parlay leg one?' })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'How it adds up' }).getByText('= ~5.76×')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Picks' }).getByRole('link', { name: titles[0] })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'How it adds up' }).getByText(`= ${multiplier}`)).toBeVisible()
   await page.getByRole('link', { name: 'My bets' }).first().click()
   await expect(page).toHaveURL(/\/bets$/)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1280)
 
-  // The seeded session is an admin, so it can resolve before close_at.
+  // The seeded session is an admin, so it can resolve before close_at, though it holds a stake.
   for (const url of marketUrls) {
     await page.goto(url)
     await page.getByRole('combobox').last().selectOption({ label: 'Yes' })
@@ -95,11 +79,10 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   await page.goto('/bets')
   await page.getByRole('navigation', { name: 'My bets sections' }).getByRole('link', { name: 'Settled' }).click()
   await expect(page).toHaveURL(/\/bets\?tab=settled$/)
-  const won = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: 'Parlay leg one?' }).first()
-  await expect(won.getByText('Won 28 DC')).toBeVisible()
+  const won = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: titles[0] }).first()
+  await expect(won.getByText(`Won ${quote.payout} DC`)).toBeVisible()
   await won.getByRole('link', { name: 'Parlay · 2 picks' }).click()
-  await expect(page.getByRole('region', { name: 'Summary' })).toContainText('Won 28 DC')
+  await expect(page.getByRole('region', { name: 'Summary' })).toContainText(`Won ${quote.payout} DC`)
   await expect(page.getByRole('region', { name: 'Picks' }).getByText('Resolved: Yes')).toHaveCount(2)
-  // Each leg's odds are set now, so the sum has no estimates left.
-  await expect(page.getByRole('region', { name: 'How it adds up' }).getByText('= 5.76×')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'How it adds up' }).getByText(`= ${multiplier}`)).toBeVisible()
 })

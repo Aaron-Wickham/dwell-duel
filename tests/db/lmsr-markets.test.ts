@@ -61,7 +61,7 @@ async function quote(m: TestMarket, outcome: number, stake: number): Promise<{ s
 
 async function bet(client: TestClient, m: TestMarket, outcome: number, amount: number, payout?: number) {
   const shown = payout ?? (await quote(m, outcome, amount)).payout
-  return client.rpc('place_slip_v3', {
+  return client.rpc('place_slip_v4', {
     p_singles: [{ outcome_id: m.outcomeIds[outcome], amount, payout: shown }],
     p_parlay_outcome_ids: [],
     p_parlay_stake: 0,
@@ -133,14 +133,9 @@ describe('create_market_v3', () => {
     expect(data).toEqual({ pricing: 'lmsr', line: 3.5 })
   })
 
-  it('leaves create_market_v2, which the build before it calls, making pool markets', async () => {
-    const pool = await createTestMarket(aliceClient, ['Yes', 'No'])
-    const { data } = await serviceClient().from('markets').select('pricing').eq('id', pool.marketId).single()
-    expect(data?.pricing).toBe('pool')
-  })
 })
 
-describe('place_slip_v3 on an lmsr market', () => {
+describe('place_slip_v4 on an lmsr market', () => {
   it('buys the shares lmsr_buy gives, at the cost of the stake', async () => {
     // The spec's worked example: 10 DC on a fresh b = 50 market buys about 18.33 shares.
     const expected = await quote(market, 0, 10)
@@ -200,7 +195,7 @@ describe('place_slip_v3 on an lmsr market', () => {
   })
 
   it('treats a single with no shown payout as a moved price', async () => {
-    const { error } = await bobClient.rpc('place_slip_v3', {
+    const { error } = await bobClient.rpc('place_slip_v4', {
       p_singles: [{ outcome_id: market.outcomeIds[0], amount: 10 }],
       p_parlay_outcome_ids: [],
       p_parlay_stake: 0,
@@ -216,8 +211,8 @@ describe('place_slip_v3 on an lmsr market', () => {
       p_parlay_stake: 0,
       p_idempotency_key: key,
     }
-    expect((await bobClient.rpc('place_slip_v3', args)).error).toBeNull()
-    const again = await bobClient.rpc('place_slip_v3', args)
+    expect((await bobClient.rpc('place_slip_v4', args)).error).toBeNull()
+    const again = await bobClient.rpc('place_slip_v4', args)
     expect(again.error).toBeNull()
     expect((again.data as SlipSummary).replayed).toBe(true)
     expect(await balanceOf(bob)).toBe(90)
@@ -231,8 +226,8 @@ describe('place_slip_v3 on an lmsr market', () => {
       p_parlay_stake: 0,
       p_idempotency_key: key,
     })
-    expectError((await bobClient.rpc('place_slip_v3', args(25))).error, 'price_moved:18')
-    const { data, error } = await bobClient.rpc('place_slip_v3', args(18))
+    expectError((await bobClient.rpc('place_slip_v4', args(25))).error, 'price_moved:18')
+    const { data, error } = await bobClient.rpc('place_slip_v4', args(18))
     expect(error).toBeNull()
     expect((data as SlipSummary).replayed).toBe(false)
   })
@@ -248,17 +243,6 @@ describe('place_slip_v3 on an lmsr market', () => {
     await close(market)
     expectError((await bet(bobClient, market, 0, 10, 18)).error, 'market is not open for betting')
   })
-
-  it('leaves place_slip_v3, which the #333 build calls, refusing a parlay leg on an lmsr market', async () => {
-    const other = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true })
-    const { error } = await bobClient.rpc('place_slip_v3', {
-      p_singles: [],
-      p_parlay_outcome_ids: [market.outcomeIds[0], other.outcomeIds[0]],
-      p_parlay_stake: 5,
-    })
-    expectError(error, "parlay: a pick on a market with fixed payouts can't be in a parlay yet")
-    expect(await balanceOf(bob)).toBe(100)
-  })
 })
 
 describe('the app’s reads of an lmsr market', () => {
@@ -272,7 +256,7 @@ describe('the app’s reads of an lmsr market', () => {
 
     const view = await getSlipView(carolClient, [{ outcomeId: market.outcomeIds[1], parlay: false }])
     const [pick] = view.picks
-    expect(pick.legBlock).toBeNull()
+    expect(pick.open).toBe(true)
     expect(pick.lmsr!.liquidity).toBe(50)
     expect(pick.lmsr!.q[pick.lmsr!.index]).toBe(0)
     expect([...pick.lmsr!.q].sort()).toEqual([...(await outcomeShares(market))].sort())
@@ -280,13 +264,7 @@ describe('the app’s reads of an lmsr market', () => {
 })
 
 describe('the build before 0102', () => {
-  it('can’t bet on an lmsr market through place_slip_v2 or place_bet', async () => {
-    const { error } = await bobClient.rpc('place_slip_v2', {
-      p_singles: [{ outcome_id: market.outcomeIds[0], amount: 10 }],
-      p_parlay_outcome_ids: [],
-      p_parlay_stake: 0,
-    })
-    expectError(error, 'DwellDuel just updated. Refresh to bet.')
+  it('can’t bet on an lmsr market through place_bet', async () => {
     const direct = await bobClient.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[0], p_amount: 10 })
     expectError(direct.error, 'DwellDuel just updated. Refresh to bet.')
     expect(await balanceOf(bob)).toBe(100)
@@ -300,16 +278,6 @@ describe('the build before 0102', () => {
       p_payout: 18,
     })
     expectError(error, { code: '42501', message: 'permission denied' })
-  })
-})
-
-describe('bets on an lmsr market are final', () => {
-  it('refuses cancel_bet and the owner’s remove_bet', async () => {
-    expect((await bet(bobClient, market, 0, 10)).error).toBeNull()
-    const { data } = await serviceClient().from('bets').select('id').eq('profile_id', bob.id).single()
-    expectError((await bobClient.rpc('cancel_bet', { p_bet_id: data!.id })).error, 'bets on this market are final')
-    expectError((await oliveClient.rpc('remove_bet', { p_bet_id: data!.id })).error, 'bets on this market are final')
-    expect(await balanceOf(bob)).toBe(90)
   })
 })
 
@@ -478,17 +446,18 @@ describe('the weekly recap on an lmsr market', () => {
 })
 
 describe('pool markets', () => {
-  it('still take pool bets through place_slip_v3, ignoring the payout, and can still be cancelled', async () => {
+  // No pool market has been open since 0105; place_slip_v4 keeps the branch, as the fixtures that
+  // build pool history use it.
+  it('still take pool bets through place_slip_v4, ignoring the payout', async () => {
     const pool = await createTestMarket(aliceClient, ['Yes', 'No'])
-    const { error } = await bobClient.rpc('place_slip_v3', {
+    const { error } = await bobClient.rpc('place_slip_v4', {
       p_singles: [{ outcome_id: pool.outcomeIds[0], amount: 10, payout: 999 }],
       p_parlay_outcome_ids: [],
       p_parlay_stake: 0,
     })
     expect(error).toBeNull()
-    const { data } = await serviceClient().from('bets').select('id, shares, cost').eq('profile_id', bob.id).single()
+    const { data } = await serviceClient().from('bets').select('shares, cost').eq('profile_id', bob.id).single()
     expect(data).toMatchObject({ shares: null, cost: null })
-    expect((await bobClient.rpc('cancel_bet', { p_bet_id: data!.id })).error).toBeNull()
-    expect(await balanceOf(bob)).toBe(100)
+    expect(await balanceOf(bob)).toBe(90)
   })
 })

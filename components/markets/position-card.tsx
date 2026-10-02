@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { ResultChip } from '@/components/bets/result-chip'
-import { CancelBetButton } from '@/components/markets/cancel-bet-button'
 import { LegPill } from '@/components/parlays/parlay-parts'
 import { LocalTime } from '@/components/ui/local-time'
 import { rowTitleClass } from '@/components/ui/page'
@@ -63,13 +62,9 @@ export function PositionCard({
               aside={
                 <>
                   {b.paysIfWins !== null && (
-                    <span className="font-extrabold tabular-nums">{`Pays ${b.final ? '' : '~'}${b.paysIfWins} DC`}</span>
+                    <span className="font-extrabold tabular-nums">{`Pays ${b.paysIfWins} DC`}</span>
                   )}
-                  {b.result.kind === 'open' && !b.final ? (
-                    <CancelBetButton betId={b.id} amount={b.amount} outcomeLabel={b.outcomeLabel} />
-                  ) : (
-                    <ResultChip result={b.result} />
-                  )}
+                  <ResultChip result={b.result} />
                 </>
               }
             />

@@ -123,26 +123,6 @@ describe('money races (#72)', () => {
     expect(count).toBe(2)
   })
 
-  it('a cancel racing a resolve: Bob is either refunded or paid, never both', async () => {
-    const paid = await soloReference([[0, 10]], 0)
-    const market = await createTestMarket(admin, ['Yes', 'No'], { seed: 20 })
-    expect((await bet(bobClient, market, 0, 10)).error).toBeNull()
-    const { data: placed } = await serviceClient().from('bets').select('id').eq('market_id', market.marketId).single()
-
-    const [cancelled, resolved] = await Promise.all([
-      bobClient.rpc('cancel_bet', { p_bet_id: placed!.id }),
-      resolve(market, 0),
-    ])
-    expect(resolved.error).toBeNull()
-
-    if (cancelled.error === null) {
-      expect(await balanceOf(bob)).toBe(100)
-    } else {
-      expectError(cancelled.error, /bet not found|can no longer be cancelled/)
-      expect(await balanceOf(bob)).toBe(paid)
-    }
-  })
-
   it('two approvals of one completion at once reward it once', async () => {
     const { taskId } = await createTestTask(alice, { rewardAmount: 30 })
     const { data: completionId, error } = await bobClient.rpc('submit_task_completion', { p_task_id: taskId })

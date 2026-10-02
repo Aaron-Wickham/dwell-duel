@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { randomUUID } from 'node:crypto'
 import { serviceClient, type TestClient } from './helpers'
-import { expectError } from './assertions'
 import { pgQuery } from './pg-query'
 import type { Member, TestMarket } from './fixtures'
 import {
@@ -116,7 +114,7 @@ describe('converting at release', () => {
     // The pages read the same figures: Bob's Pays on the binary market, Erin's capped parlay.
     const market = (await getMarket(client(bob), m.bin.marketId))!
     const position = await getMarketPosition(client(bob), market, await getPositionKeys(client(bob), m.bin.marketId), Date.now())
-    expect(position.bets.map((b) => [b.paysIfWins, b.final])).toEqual([[poolPayout(30, 100, 110), true]])
+    expect(position.bets.map((b) => b.paysIfWins)).toEqual([poolPayout(30, 100, 110)])
     const detail = (await getParlayDetail(client(erin), p.p6))!
     expect(detail).toMatchObject({ fixed: true, estimated: false, capped: true, potentialPayout: 1000, multiplierBp: 200_000 })
 
@@ -204,19 +202,8 @@ describe('converting at release', () => {
 })
 
 describe('the cutover', () => {
-  it('refuses the build before #333, and bets on a converted market are final and priced by the market maker', async () => {
+  it('prices bets on a converted market by the market maker', async () => {
     await convert()
-    const v2 = await client(bob).rpc('place_slip_v2', {
-      p_singles: [{ outcome_id: m.bin.outcomeIds[0], amount: 5 }],
-      p_parlay_outcome_ids: [],
-      p_parlay_stake: 0,
-      p_idempotency_key: randomUUID(),
-    })
-    expectError(v2.error, 'DwellDuel just updated. Refresh to bet.')
-
-    const { data: bet } = await serviceClient().from('bets').select('id').eq('profile_id', bob.id).eq('market_id', m.bin.marketId).single()
-    expectError((await client(bob).rpc('cancel_bet', { p_bet_id: bet!.id })).error, 'bets on this market are final')
-
     const shares = await lmsrSolo(carol, m.bin, 1, 10)
     expect(shares).toBeGreaterThan(10)
     const market = (await getMarket(client(bob), m.bin.marketId))!

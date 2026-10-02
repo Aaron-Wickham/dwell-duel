@@ -1,16 +1,13 @@
 import { lmsrBuy } from '@/lib/markets/lmsr'
-import { poolPayout } from '@/lib/markets/odds'
 
 // parlay_limits() (0074, 0104); tests/db/seeded-odds.test.ts keeps them equal. MAX_PICKS bounds
-// every parlay. The rest are the pool rules, which only parlays on pool markets keep (until #335).
+// every parlay. The rest are the pool rules: no pool parlay can be placed since 0105, but the
+// parlays placed under them, and those converted at release, are still shown and paid by them.
 export const MAX_PICKS = 6
 export const MAX_MULTIPLIER = 20
-// The most a parlay pays, and so the most it can stake.
+// The most a pool parlay pays.
 export const MAX_PAYOUT = 1000
-// A leg needs this much of other members' DC on its market, from this many other members.
-export const MIN_LEG_POOL = 50
-export const MIN_LEG_BETTORS = 2
-// The most one leg counts for.
+// The most one pool leg counts for.
 export const MAX_LEG_ODDS = 5
 
 // A leg's odds are trunc(others' total / others' DC on the pick, 4), set when its market closes
@@ -60,12 +57,6 @@ export function potentialPayout(stake: number, legBps: number[], maxMultiplier =
 // Truncates rather than rounds, so a display never promises more than will be paid.
 export function formatOdds(bp: number): string {
   return (Math.trunc(bp / 100) / 100).toFixed(2)
-}
-
-// What a solo stake would pay if its outcome won right now, counting the stake itself in both real
-// pools, as resolve_market_core will (poolPayout). Later bets move it.
-export function soloPayout(stake: number, outcomePool: number, totalPool: number): number {
-  return poolPayout(stake, outcomePool + stake, totalPool + stake)
 }
 
 // A fixed parlay (0104), on lmsr markets: each leg's factor is stored to six places, and the

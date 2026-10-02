@@ -10,7 +10,7 @@ import {
   createTestTask,
   ensureInvited,
   type Member,
-  type TestMarket, giveRole, backLeg } from './fixtures'
+  type TestMarket, giveRole, backLeg, cancelBetForHistory } from './fixtures'
 import { pgQuery } from './pg-query'
 import { lmsrBuy } from '@/lib/markets/lmsr'
 import { lmsrParlayQuote } from '@/lib/parlays/odds'
@@ -199,8 +199,7 @@ async function fullScenario(): Promise<void> {
     .eq('amount', 7)
     .single()
   if (readErr) throw readErr
-  const { error: cancelErr } = await carolClient.rpc('cancel_bet', { p_bet_id: carolBet.id })
-  if (cancelErr) throw cancelErr
+  await cancelBetForHistory(carolBet.id)
   expect(await mismatches()).toEqual([])
 
   await placeParlay(bobClient, [a.outcomeIds[0], b.outcomeIds[0]], 10)

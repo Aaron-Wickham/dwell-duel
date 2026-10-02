@@ -101,7 +101,9 @@ describe('my_market_position', () => {
 })
 
 describe('getMarketPosition', () => {
-  it('prices each open bet from the real pool, and shows a parlay leg here', async () => {
+  // A pool market, so Bob's parlay can have a leg here. Its bets have no fixed payout to show; no
+  // pool market has been open since 0105.
+  it('lists each open bet, and shows a parlay leg here', async () => {
     const m = await backedMarket('Here')
     const other = await backedMarket('Elsewhere')
     await bet(bobClient, m, 0, 20)
@@ -111,10 +113,9 @@ describe('getMarketPosition', () => {
     const market = (await getMarket(bobClient, m.marketId))!
     const position = await getMarketPosition(bobClient, market, await getPositionKeys(bobClient, m.marketId), Date.now())
 
-    // Each outcome has 50 DC from the backers, plus Bob's 20 on Yes and 10 on No: 130 in all.
     expect(position.bets.map((b) => [b.amount, b.outcomeLabel, b.result.kind, b.paysIfWins])).toEqual([
-      [20, 'Yes', 'open', poolPayout(20, 70, 130)],
-      [10, 'No', 'open', poolPayout(10, 60, 130)],
+      [20, 'Yes', 'open', null],
+      [10, 'No', 'open', null],
     ])
     expect(position.legs).toHaveLength(1)
     expect(position.legs[0].parlay.id).toBe(p)
@@ -135,17 +136,6 @@ describe('getMarketPosition', () => {
     expect(position.bets.every((b) => b.paysIfWins === null)).toBe(true)
     expect(position.legs[0].leg.status).toBe('won')
     expect(position.legs[0].parlay.status).toBe('pending')
-  })
-
-  it('leaves out a bet cancelled after its key was read', async () => {
-    const m = await backedMarket('Here')
-    const id = await bet(bobClient, m, 0, 20)
-    const keys = await getPositionKeys(bobClient, m.marketId)
-    const { error } = await bobClient.rpc('cancel_bet', { p_bet_id: id })
-    expect(error).toBeNull()
-
-    const market = (await getMarket(bobClient, m.marketId))!
-    expect((await getMarketPosition(bobClient, market, keys, Date.now())).bets).toEqual([])
   })
 })
 

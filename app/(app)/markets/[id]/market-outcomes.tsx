@@ -74,13 +74,7 @@ export async function MarketOutcomes({
                   marketId: market.id,
                   marketTitle: market.title,
                   parlay: false,
-                  open: canBet,
-                  // A new pick starts Solo and shows only until the slip's own read (getSlipView)
-                  // replaces it, so its parlay figures are the plain pool's, not a quote.
-                  oddsBp: oddsBp ?? 10_000,
-                  legBlock: null,
-                  outcomePool: o.poolTotal,
-                  totalPool,
+                  open: canBet && lmsr,
                   ...(lmsr ? { lmsr: { q, index, liquidity: market.liquidity } } : {}),
                 }}
                 addAction={addToSlipAction.bind(null, o.outcomeId)}

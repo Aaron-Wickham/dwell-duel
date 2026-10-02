@@ -4,8 +4,7 @@ import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, t
 import { pgQuery } from './pg-query'
 import { buildProbabilitySeries } from '@/lib/markets/probability-series'
 import { computeOdds, poolPayout } from '@/lib/markets/odds'
-import { MAX_LEG_ODDS, MAX_MULTIPLIER, MAX_PAYOUT, MAX_PICKS, MIN_LEG_BETTORS, MIN_LEG_POOL, soloPayout } from '@/lib/parlays/odds'
-import { getSlipView } from '@/lib/parlays/get-slip'
+import { MAX_LEG_ODDS, MAX_MULTIPLIER, MAX_PAYOUT, MAX_PICKS } from '@/lib/parlays/odds'
 
 const SEED = 20
 
@@ -51,10 +50,6 @@ describe('seeded markets (0041)', () => {
     expect(data?.meta).toMatchObject({ seed_per_outcome: 0 })
     const [resolution] = await pgQuery<{ payout_seed: number }>(`select payout_seed from public.market_resolutions where market_id = '${m.marketId}'`)
     expect(resolution.payout_seed).toBe(0)
-
-    // The slip's estimate predicts exactly what was paid, for a bet placed into the real pools as
-    // they stood before it.
-    expect(soloPayout(10, 0, 30)).toBe(40)
   })
 
   it('pays a lone winner their stake back', async () => {
@@ -149,18 +144,9 @@ describe('seeded markets (0041)', () => {
   })
 
   // A brand-new market has seeded odds for solo bets, but no real money to price a parlay leg on.
-  it('keeps a brand-new market nobody has bet on out of a parlay, in the slip and in the database', async () => {
+  it('keeps a brand-new market nobody has bet on out of a parlay', async () => {
     const a = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: SEED, title: 'Fresh A' })
     const b = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: SEED, title: 'Fresh B' })
-    const view = await getSlipView(bobClient, [
-      { outcomeId: a.outcomeIds[0], parlay: true },
-      { outcomeId: b.outcomeIds[1], parlay: true },
-    ])
-    expect(view.picks.map((p) => [p.legBlock, p.oddsBp])).toEqual([
-      ['floor', 10_000],
-      ['floor', 10_000],
-    ])
-
     const { error } = await bobClient.rpc('place_slip_v4', {
       p_singles: [],
       p_parlay_outcome_ids: [a.outcomeIds[0], b.outcomeIds[1]],
@@ -194,14 +180,16 @@ describe('seeded markets (0041)', () => {
 })
 
 describe('parlay_limits', () => {
-  it('matches the app’s MAX_PICKS, MAX_MULTIPLIER, MAX_PAYOUT, leg floor and leg cap', async () => {
+  // The leg floor (min_leg_pool, min_leg_bettors) is pick_quote's alone: the app stopped showing it
+  // when the slip lost its pool parlays (#332).
+  it('matches the app’s MAX_PICKS, MAX_MULTIPLIER, MAX_PAYOUT and leg cap', async () => {
     const [limits] = await pgQuery('select * from public.parlay_limits()')
     expect(limits).toEqual({
       max_legs: MAX_PICKS,
       max_multiplier: MAX_MULTIPLIER,
       max_payout: MAX_PAYOUT,
-      min_leg_pool: MIN_LEG_POOL,
-      min_leg_bettors: MIN_LEG_BETTORS,
+      min_leg_pool: 50,
+      min_leg_bettors: 2,
       max_leg_odds: MAX_LEG_ODDS,
     })
   })
@@ -257,19 +245,5 @@ describe('parlay_limits', () => {
     expect(after).toEqual(before)
     const { data } = await serviceClient().from('parlays').select('status, credited').eq('id', parlayId as string).single()
     expect(data).toEqual({ status: 'won', credited: 147 })
-  })
-
-  it('records the refund a cancelled bet really got when the balance is near the ceiling, and refuses one that can’t fit', async () => {
-    const m = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Near the ceiling' })
-    await bet(bobClient, m, 0, 10)
-    await bet(bobClient, m, 1, 10)
-    const { data: bets } = await serviceClient().from('bets').select('id').eq('market_id', m.marketId).eq('profile_id', bob.id).order('id')
-    await setBalanceViaLedger(bob.id, 2_147_483_644)
-    expect((await bobClient.rpc('cancel_bet', { p_bet_id: bets![0].id })).error).toBeNull()
-    const { data: cancelled } = await serviceClient().from('cancelled_bets').select('amount').eq('id', bets![0].id).single()
-    expect(cancelled).toEqual({ amount: 3 })
-    expect(await balanceOf(bob)).toBe(2_147_483_647)
-    const { error } = await bobClient.rpc('cancel_bet', { p_bet_id: bets![1].id })
-    expect(error?.message).toBe("this balance is at its limit, so the bet can't be refunded")
   })
 })

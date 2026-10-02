@@ -215,6 +215,13 @@ Each item gets its own issue under #325 and its own PR, in this order:
    - `docs/ARCHITECTURE.md` and the CHANGELOG
 5. **Clean-up** (after release): drop `cancel_bet`, `remove_bet`,
    `pick_quote`, the seed columns and functions, and the pool payout code.
+   Decided when building it (#332, 0107): resolved and voided pool markets
+   stay as history, and an admin can still override one, so only what
+   nothing can reach was dropped: `cancel_bet`, `remove_bet`, the old slip
+   and create functions, and the app's pool slip and Cancel / Remove. The
+   seed column, `locked_odds`, `pool_payout`, `pick_quote` and the pool
+   display code stay, since charts, history pages, old parlays and overrides
+   read them. The audit is in `docs/superpowers/plans/2026-10-02-lmsr-5-cleanup.md`.
 
 ### Testing
 

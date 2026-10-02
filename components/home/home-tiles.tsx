@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
+import { listCardsClass, tappableListCardClass } from '@/components/ui/list-card'
 import { rowTitleClass } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
 
@@ -15,10 +16,12 @@ export interface HomeTile {
 // Tiles into a drill-down page slide forward; the rest are tabs.
 const DRILL_DOWN_TILES = new Set(['admin'])
 
-// Below lg the tiles are rows of one divided card, so they sit on hover-tint's flat panel; from
+// Below lg the tiles are list cards inside one card, so they sit on hover-tint's flat panel; from
 // lg each is a card of its own and lifts as one.
-const TILE_CLASS =
-  'pressable hover-tint group relative flex min-h-[72px] items-center gap-3.5 px-4 py-3 text-ink no-underline lg:hover-lift lg:before:hidden lg:min-h-24 lg:rounded-card lg:border lg:border-line lg:bg-surface lg:p-5 lg:shadow-card'
+const TILE_CLASS = cn(
+  tappableListCardClass,
+  'group flex min-h-[72px] items-center gap-3.5 text-ink no-underline lg:hover-lift lg:before:hidden lg:min-h-24 lg:rounded-card lg:bg-surface lg:p-5 lg:shadow-card',
+)
 
 function TileBody({ icon: Icon, title, subtitle }: Pick<HomeTile, 'icon' | 'title' | 'subtitle'>) {
   return (
@@ -39,7 +42,7 @@ export function HomeTiles({ tiles }: { tiles: HomeTile[] }) {
   return (
     <nav aria-label="Everything in DwellDuel">
       <h2 className="sr-only">Go to</h2>
-      <div className="flex flex-col divide-y divide-line rounded-card border border-line bg-surface px-1 lg:grid lg:grid-cols-3 lg:gap-5 lg:divide-y-0 lg:border-0 lg:bg-transparent lg:px-0">
+      <div className={cn(listCardsClass, 'rounded-card border border-line bg-surface p-[18px] md:p-6 lg:grid lg:grid-cols-3 lg:gap-5 lg:border-0 lg:bg-transparent lg:p-0')}>
         {tiles.map((tile) =>
           // The mail app opens outside DwellDuel, so this is a real <a>, not a routed <Link> --
           // no transitionTypes, and no client-side navigation to cancel or wait on.

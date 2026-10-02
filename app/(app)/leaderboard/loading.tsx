@@ -1,4 +1,6 @@
 import { pageClass } from "@/components/ui/page";
+import { listCardClass, listCardsClass } from "@/components/ui/list-card";
+import { cn } from "@/lib/utils";
 import {
   Skeleton,
   SkeletonCard,
@@ -47,12 +49,9 @@ export default function Loading() {
         </div>
       </SkeletonCard>
       <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
-        <SkeletonCard className="gap-0 px-2 py-1.5 md:px-3 md:py-1.5">
+        <SkeletonCard className={listCardsClass}>
           {Array.from({ length: 6 }, (_, i) => (
-            <div
-              key={i}
-              className="flex min-h-[60px] items-center gap-3 px-2.5 py-2.5 md:px-3.5"
-            >
+            <div key={i} className={cn(listCardClass, "flex items-center gap-3")}>
               <Skeleton className="size-10 shrink-0" />
               <Skeleton className="size-10 shrink-0 rounded-full" />
               <div className="grow">

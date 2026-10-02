@@ -12,6 +12,9 @@ before v0.4.0 used other headings.)
 
 ## Unreleased
 
+### Polish
+- **List items are cards across the app.** Bets, tasks, the leaderboard, markets waiting to be resolved, the admin task catalog, pending approvals, admin members and the home tiles now share My bets' parlay card: a hairline border and 14px corners, spaced apart instead of divided, in two or three columns on a wide screen. The feed, ledger, coin history, invites and a market's bet list stay divided rows (#328).
+
 ### Under the hood
 - **The maths for fixed-payout markets is in.** The LMSR market maker that will price markets and parlays at the moment you bet (#325) exists in the database and in the app, kept equal by a test, with nothing using it yet (#331).
 

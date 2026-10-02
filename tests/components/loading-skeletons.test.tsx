@@ -99,7 +99,7 @@ describe('skeletons match their pages', () => {
       expect.stringContaining('order-3'),
     ])
     expect(withClass(container, 'h-[72px]')).toHaveLength(1)
-    expect(container.querySelectorAll('.min-h-\\[60px\\]')).toHaveLength(6)
+    expect(container.querySelectorAll('.rounded-tile.border-line')).toHaveLength(6)
   })
 
   it('the leaderboard skeleton puts a side card beside the rankings at lg', () => {

@@ -3,20 +3,21 @@ import { ChevronRight } from 'lucide-react'
 import type { MemberSummary } from '@/lib/members/list-members'
 import { focusTarget } from '@/lib/pagination/row-id'
 import { Avatar } from '@/components/ui/avatar'
+import { ListCard } from '@/components/ui/list-card'
 import { rowTitleClass } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
 import { MemberActivity } from './member-activity'
 import { MemberChip } from './member-chip'
 
 // One member on Admin › Members, read-only: the row opens their Admin page, where the forms are
-// (#254). A row in the list's card on a phone, so it tints under a mouse; a card of its own in
-// the lg grid, so it lifts there. Named by its title, so "Show more" focus announces the name.
+// (#254). A list card in the section's card below lg, so it tints under a mouse; a card of its own
+// in the lg grid, so it lifts there. Named by its title, so "Show more" focus announces the name.
 export function MemberRow({ member, domId, now }: { member: MemberSummary; domId: string; now: number }) {
   const titleId = `${domId}-name`
   return (
-    <li
+    <ListCard
       {...focusTarget(domId, titleId)}
-      className="pressable hover-tint relative flex items-start gap-3 py-3.5 lg:hover-lift lg:before:hidden lg:rounded-card lg:border lg:border-line lg:bg-surface lg:p-5 lg:shadow-card"
+      className="flex items-start gap-3 lg:hover-lift lg:before:hidden lg:rounded-card lg:bg-surface lg:p-5 lg:shadow-card"
     >
       <Avatar name={member.displayName} src={member.avatarSrc} />
       <div className="flex min-w-0 grow flex-col">
@@ -40,6 +41,6 @@ export function MemberRow({ member, domId, now }: { member: MemberSummary; domId
         </span>
       </div>
       <ChevronRight aria-hidden="true" className="size-5 shrink-0 self-center text-ink2" />
-    </li>
+    </ListCard>
   )
 }

@@ -1,5 +1,6 @@
 import { IntentLink } from '@/components/ui/intent-link'
 import { Avatar } from '@/components/ui/avatar'
+import { ListCard } from '@/components/ui/list-card'
 import { rowTitleClass } from '@/components/ui/page'
 import { focusTarget } from '@/lib/pagination/row-id'
 import { signedDc } from '@/lib/social/season'
@@ -29,10 +30,7 @@ export function LeaderboardRow({
   domId?: string
 }) {
   return (
-    <li
-      {...focusTarget(domId)}
-      className={cn('pressable hover-tint relative flex min-h-[60px] items-center gap-3 rounded-[12px] px-2.5 py-2.5 [--tint-inset:0] md:px-3.5', isMe && 'bg-acc-soft')}
-    >
+    <ListCard {...focusTarget(domId)} className={cn('flex items-center gap-3', isMe && 'bg-acc-soft')}>
       <span
         className={cn(
           'flex size-10 shrink-0 items-center justify-center rounded-control text-lg font-extrabold tabular-nums',
@@ -56,6 +54,6 @@ export function LeaderboardRow({
         </span>
       )}
       <span className={cn(rowTitleClass, 'shrink-0 whitespace-nowrap tabular-nums')}>{signed ? signedDc(score) : `${score} DC`}</span>
-    </li>
+    </ListCard>
   )
 }

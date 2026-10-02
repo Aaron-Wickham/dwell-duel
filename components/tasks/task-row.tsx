@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Check, Clock } from 'lucide-react'
+import { ListCard } from '@/components/ui/list-card'
 import { rowTitleClass } from '@/components/ui/page'
 import { StatusChip } from '@/components/ui/status-chip'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
@@ -43,7 +44,8 @@ export function TaskRow({
   action?: ReactNode
 }) {
   return (
-    <li className="flex flex-col gap-3 py-[18px] md:flex-row md:items-center md:gap-5 md:py-[22px]">
+    // A card that opens nothing: its only control is the action, which sits on its right from md.
+    <ListCard tappable={false} className="flex flex-col gap-3 md:flex-row md:items-center md:gap-5">
       <div className="flex min-w-0 grow flex-col gap-1">
         <p className={cn(rowTitleClass, 'break-words')}>
           {title} — <span className="text-gold">{rewardAmount} DC</span>
@@ -96,6 +98,6 @@ export function TaskRow({
           </>
         )}
       </div>
-    </li>
+    </ListCard>
   )
 }

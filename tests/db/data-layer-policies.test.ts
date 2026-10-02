@@ -18,7 +18,7 @@ type Expression = Pick<Policy, 'tablename' | 'policyname' | 'cmd' | 'qual' | 'wi
 // 0040's role changes (new profiles start as members; reviewers read every completion), and
 // 0042's proof_attachments, 0043's market_edits, 0053's feed_reactions and market_comments, and
 // 0057's push_subscriptions and notification_prefs, and 0061's cron_heartbeats, and 0073's
-// unclaimed-only invite delete and caller-named invite insert.
+// unclaimed-only invite delete and caller-named invite insert, and 0103's market_categories.
 const POLICIES_NOW: Expression[] = [
   { tablename: 'activity_events', policyname: 'select_activity_events', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   {
@@ -61,6 +61,7 @@ const POLICIES_NOW: Expression[] = [
     with_check: '((profile_id = ( SELECT auth.uid() AS uid)) AND is_invited())',
   },
   { tablename: 'feed_reactions', policyname: 'select_feed_reactions', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
+  { tablename: 'market_categories', policyname: 'select_market_categories', cmd: 'SELECT', qual: 'is_invited()', with_check: null },
   {
     tablename: 'market_comments',
     policyname: 'insert_own_market_comments',

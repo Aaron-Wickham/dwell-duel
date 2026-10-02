@@ -8,6 +8,9 @@ export interface MarketEdit {
   newTitle: string
   oldDescription: string | null
   newDescription: string | null
+  // Set only on an edit that changed the category (0103).
+  oldCategory: string | null
+  newCategory: string | null
 }
 
 // Newest first. Every member can read a market's edits (0043), so a question reworded after
@@ -15,7 +18,9 @@ export interface MarketEdit {
 export async function listMarketEdits(supabase: DbClient, marketId: string): Promise<MarketEdit[]> {
   const { data, error } = await supabase
     .from('market_edits')
-    .select('id, edited_at, old_title, new_title, old_description, new_description, editor:profiles(display_name)')
+    .select(
+      'id, edited_at, old_title, new_title, old_description, new_description, editor:profiles(display_name), old_category:market_categories!market_edits_old_category_id_fkey(name), new_category:market_categories!market_edits_new_category_id_fkey(name)',
+    )
     .eq('market_id', marketId)
     .order('edited_at', { ascending: false })
     .limit(20)
@@ -28,5 +33,7 @@ export async function listMarketEdits(supabase: DbClient, marketId: string): Pro
     newTitle: e.new_title,
     oldDescription: e.old_description,
     newDescription: e.new_description,
+    oldCategory: e.old_category?.name ?? null,
+    newCategory: e.new_category?.name ?? null,
   }))
 }

@@ -55,7 +55,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | Route | What it is |
 |---|---|
 | `/` | Home: greeting, balance hero (balance, rank, At stake, Pending), a new member's Getting started card, Markets to resolve, the weekly recap (Sundays and Mondays), tiles |
-| `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then those awaiting resolution (oldest close first), then resolved and voided newest first. The All tab reads these as three keyset lists, each with its own Show more (`?open=`, `?awaiting=`, `?resolved=`), so open markets lead page one however many wait on a result (#261); the open and awaiting lists are `listOpenMarkets` split at one `now` (its `bound`). `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) reads just one list. `?q=` (a title search, `lib/markets/search.ts`: trimmed, `*` and control characters dropped, 80 characters, then `ilike` with `\`, `%` and `_` escaped, sent as its own filter parameter, backed by a trigram index) and `?mine=bet|made` (the `i_bet_on` computed column, 0094, or `created_by`) switch it to one flat list of matches, newest first and paged under `?match=` (`listMatchingMarkets`), whatever their status, which the status tab still narrows; the search box (`MarketSearch`) and the "Whose markets" `FilterChips` keep each other and the status tab in the URL. Card sparklines come from `market_sparks` (0095) through Next's data cache, one entry per list, keyed by a hash of its markets' `sparkVersion`s (the summed `pool_version` while open, `settled` after): a render costs one cache read per list, and a live refresh reads from Supabase only a list whose markets moved (`lib/markets/sparklines.ts`, #252; the budget is below) |
+| `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then those awaiting resolution (oldest close first), then resolved and voided newest first. The All tab reads these as three keyset lists, each with its own Show more (`?open=`, `?awaiting=`, `?resolved=`), so open markets lead page one however many wait on a result (#261); the open and awaiting lists are `listOpenMarkets` split at one `now` (its `bound`). `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) reads just one list. `?q=` (a title search, `lib/markets/search.ts`: trimmed, `*` and control characters dropped, 80 characters, then `ilike` with `\`, `%` and `_` escaped, sent as its own filter parameter, backed by a trigram index) switches it to one flat list of matches, newest first and paged under `?match=` (`listMatchingMarkets`), whatever their status, which the status tab still narrows. `?category=<slug>` (0103, #327) narrows every list, search included, to one category: the "Categories" `FilterChips` row (All, the 8 busiest by `category_counts()`, the chosen one if it isn't among them, then a More… dialog, `MoreCategories`, listing the rest) scrolls sideways on a phone and wraps from `md`, with a "Showing … in X · Show all categories" line under it; an unknown or hidden slug, and the old `?mine=` links (whose chips #327 removed; the `i_bet_on` column stays), fall through to All. The search box (`MarketSearch`), the tabs and the chips keep each other in the URL. Card sparklines come from `market_sparks` (0095) through Next's data cache, one entry per list, keyed by a hash of its markets' `sparkVersion`s (the summed `pool_version` while open, `settled` after): a render costs one cache read per list, and a live refresh reads from Supabase only a list whose markets moved (`lib/markets/sparklines.ts`, #252; the budget is below) |
 | `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under. `?from=<id>` pre-fills it from a market (Duplicate) |
 | `/markets/[id]` | A market: the viewer's own position (#262: each solo bet with "Pays ~" and Cancel, each parlay leg linking to its parlay, then results and the net once settled; read from `my_market_position`'s keys before anything streams, so a viewer with nothing on the market gets no card and no skeleton), chart, outcomes (with each outcome's "riding in parlays" figure from `market_parlay_riding`, #279, display only), the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
@@ -68,7 +68,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/profile` | Edit your name, photo and bio |
 | `/settings` | Theme, your profile, haptics, reduced motion, notifications, How it works and Your data (How it works' privacy section, `/how-it-works#how-your-data`), sign out |
 | `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`). A link to a section from another page (`#how-<slug>`) lands on it through `ScrollToHash`, since a client navigation looks for the id while the skeleton shows |
-| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role, in `app/(app)/admin/(sections)/` under its layout's Admin header (whose description links `docs/ADMIN-GUIDE.md` on GitHub) and tabs; `/admin` alone redirects to the first one the role can see (`adminHref`); Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243); Tasks pages its review queue oldest first with "Show more", signs proof only for the rows shown (an extended range caps at 150 rows, then starts a fresh window), and reads its "waiting" chip from `my_review_counts` (`lib/tasks/list-task-completions.ts`, #255); the ledger opens with the owner's Economy card, and `?member=<id>` narrows it to one member's movements (#254). Members and Invites (#254) each have a search box (`SearchField`, `?q=`) and two tabs (`SubNav`, `?show=`): Members' Active · Removed, paged A–Z by `admin_members` with `NAME_ORDER` (`lib/pagination/name-cursor.ts`), as compact read-only rows; Invites' Waiting · Claimed, paged newest first with `INVITE_ORDER` (`lib/invites/list-invites.ts`) |
+| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role, in `app/(app)/admin/(sections)/` under its layout's Admin header (whose description links `docs/ADMIN-GUIDE.md` on GitHub) and tabs; `/admin` alone redirects to the first one the role can see (`adminHref`); Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243), then a Categories section of `ListCard`s (`CategoryCard`) with Rename, Merge (a panel with a confirm) and Hide or Unhide (`lib/admin/category-actions.ts`, #327); Tasks pages its review queue oldest first with "Show more", signs proof only for the rows shown (an extended range caps at 150 rows, then starts a fresh window), and reads its "waiting" chip from `my_review_counts` (`lib/tasks/list-task-completions.ts`, #255); the ledger opens with the owner's Economy card, and `?member=<id>` narrows it to one member's movements (#254). Members and Invites (#254) each have a search box (`SearchField`, `?q=`) and two tabs (`SubNav`, `?show=`): Members' Active · Removed, paged A–Z by `admin_members` with `NAME_ORDER` (`lib/pagination/name-cursor.ts`), as compact read-only rows; Invites' Waiting · Claimed, paged newest first with `INVITE_ORDER` (`lib/invites/list-invites.ts`) |
 | `/admin/members/[id]` | One member's Admin page (#254), outside the sections' layout so their name is the `<h1>`: email, join and last sign-in, balance, Coin history (their last five movements and "Open in Ledger"), and for the owner Adjust balance, Role and Access (Remove from DwellDuel, or Invite again for a removed member). No `loading.tsx`: the member is found first (an unknown id is a real 404) and the coin history streams behind `<Suspense>` |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
@@ -209,7 +209,17 @@ spending coins should get a trigger and a `write_limits()` row.
   `market_sparks` serves every card, cached by version. Since 0101,
   `liquidity` (b, default 50) and `pricing` (`pool` or `lmsr`, column default
   `pool`): `create_market_v3` (0102) makes every new market `lmsr`, with no
-  seed, and every money function branches on it.
+  seed, and every money function branches on it. `category_id` (0103) is
+  NOT NULL and defaults to Other's fixed id
+  (`00000000-0000-4000-8000-000000000327`, `OTHER_CATEGORY_ID`), so the
+  previous build's creates land in Other; `markets_category_status_close_idx`
+  `(category_id, status, close_at, id)` serves a category's lists and counts.
+- `market_categories` (0103, #327): `name` (1–24 characters, trimmed with
+  single spaces, `TEXT_LIMITS.category`), a generated unique `slug` (lower
+  case, spaces as hyphens, the `?category=` value), `created_by`,
+  `created_at` and `hidden_at`. Members read it; every write goes through a
+  definer function. `category_for_name` (internal) finds or creates by slug
+  (`on conflict do nothing`, then select) and re-shows a hidden one.
 - `market_outcomes`: labels and `pool_total`, the real DC bet on each, and
   `pool_version` (0095), bumped by a trigger on every change to
   `pool_total` or `shares` (each bet and cancellation): the list's sparkline
@@ -224,8 +234,9 @@ spending coins should get a trigger and a `write_limits()` row.
 - `market_resolutions`: each resolution or override, with its required
   note, `actual_value` for an Over/Under, and a link to the one it
   replaced.
-- `market_edits`: every title or description change, readable by all
-  members.
+- `market_edits`: every title, description or category change, readable by
+  all members; `old_category_id` / `new_category_id` (0103) are set only on an
+  edit that changed the category, including each market a merge moved.
 - `market_comments` (0053): a market's thread. `body` is at most 280
   characters (`TEXT_LIMITS.commentBody`). Members insert their own; the
   author, or an admin or the owner, deletes one through
@@ -362,9 +373,18 @@ role branches already do through `has_role`; `tests/db/definer-writers.test.ts`
 fails on any member-callable security definer writer that neither checks the
 invite nor is listed there as role-gated or delegating.
 
-Also: `create_market_v3` (what the app calls since 0102; `create_market` and
-`create_market_v2` still make `pool` markets for the previous build), `update_market` (creator or admin, before close; the
-title is fixed once anyone else has bet, solo or as a parlay leg, 0065), `member_emails` (admin only:
+Also: `create_market_v4` (what the app calls since 0103: `create_market_v3`
+plus `p_category`, retry-safe on the attempt key; `create_market_v3` serves the
+build before it, and `create_market` and
+`create_market_v2` still make `pool` markets for older builds), `update_market` (creator or admin, before close; the
+title is fixed once anyone else has bet, solo or as a parlay leg, 0065; the
+four-argument version, 0103, also takes `p_category`, which the creator can
+change until close and an admin at any time, never fixed by bets, and a null
+`p_title` keeps the wording, which is how an admin recategorises a closed
+market), `rename_market_category`, `merge_market_categories` (moves and logs
+every market, then hides the source; never Other) and
+`set_market_category_hidden` (never Other) (admin, 0103), `category_counts(p_include_hidden)`
+(invoker: open and total markets per category, busiest first, ties by name), `member_emails` (admin only:
 members can't select `profiles.email`), `member_activity` (admin only, 0050:
 each member's join date, `profiles.created_at`, and last sign-in from
 `auth.users`, for Admin → Members), `admin_members(query, id)` and
@@ -565,6 +585,7 @@ after it ships. They roughly follow the project's history:
 | 0099 | `rls_auto_enable()`, Supabase's platform function behind automatic RLS, loses EXECUTE for `PUBLIC` too (0015 revoked only `anon` and `authenticated`), so the Security Advisor no longer lists it as callable signed out; guarded, since only hosted projects have it |
 | 0100 | Private Postgres Changes channels: the `realtime.messages` policy `member_topics_receive` lets an invited member join only their own `live-member:<id>:base:<n>` and `live-member:<id>:page:<n>` topics, so the project can refuse public channels |
 | 0102 | LMSR part 2 of #325 (#333): `create_market_v3` makes `lmsr` markets (no seed, even prices); `place_slip_v3` and the internal `place_lmsr_bet` buy shares with the 2% re-price refusal (`price_moved:<payout>`); `place_bet`, `cancel_bet` and `remove_bet` refuse `lmsr` markets, and a `parlay_legs` trigger refuses a leg on one until #334; `resolve_market_core` pays `floor(shares)` and keeps `market_resolutions.payout_remainder`; `pool_version` also follows `shares`; `market_sparklines` and `weekly_recap`'s upset read the LMSR price; `economy_flows` and `economy_summary` gain the market maker line (two columns at the end of the row); `member_stats`, `member_records` and `leaderboard_awards` stop counting an `lmsr` bet nobody else backed as refunded |
+| 0103 | Market categories (#327): `market_categories` (Other seeded with a fixed id), `markets.category_id` (NOT NULL, default Other) and its `(category_id, status, close_at, id)` index, `market_edits.old_category_id` / `new_category_id`; `create_market_v4` (v3 plus `p_category`), a four-argument `update_market` with `p_category`, the admin `rename_market_category`, `merge_market_categories` and `set_market_category_hidden`, and `category_counts()` |
 | 0101 | LMSR core, part 1 of #325 (#331): pure `lmsr_cost`, `lmsr_price` and `lmsr_buy` (mirrored by `lib/markets/lmsr.ts`, kept equal by `tests/db/lmsr.test.ts`); `markets.liquidity` (default 50) and `markets.pricing` (`pool` for every market until part 2); `market_outcomes.shares` and `q_offset`; `bets.shares` and `cost`; `parlay_legs.factor` and `shares`; `parlays.multiplier` and `payout`. Nothing reads them yet |
 
 Numbers 0075, 0077–0082 and 0084–0088 were reserved by branches that merged later under higher numbers, so they are unused.

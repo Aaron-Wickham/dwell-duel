@@ -15,6 +15,7 @@ function binaryForm(title: string, description = '') {
   form.set('title', title)
   form.set('description', description)
   form.set('kind', 'binary')
+  form.set('category', 'Weather')
   form.set('close_at', CLOSE_AT)
   form.append('outcome_labels', 'Yes')
   form.append('outcome_labels', 'No')
@@ -25,6 +26,7 @@ function multipleChoiceForm(outcomes: string[]) {
   const form = new FormData()
   form.set('title', 'Who wins the trivia night?')
   form.set('kind', 'multiple_choice')
+  form.set('category', 'Trivia')
   form.set('close_at', CLOSE_AT)
   form.set('outcome_labels_text', outcomes.join('\n'))
   return form
@@ -50,7 +52,7 @@ describe('createMarketAction length limits', () => {
 
     await createMarketAction(undefined, binaryForm(`  ${title}  `))
 
-    expect(supabase.rpc).toHaveBeenCalledWith('create_market_v3', expect.objectContaining({ p_title: title }))
+    expect(supabase.rpc).toHaveBeenCalledWith('create_market_v4', expect.objectContaining({ p_title: title }))
     expect(redirect).toHaveBeenCalledWith('/markets/market-1')
   })
 
@@ -64,7 +66,7 @@ describe('createMarketAction length limits', () => {
   it('allows a description of exactly 1000 characters', async () => {
     await createMarketAction(undefined, binaryForm('Will it rain?', 'd'.repeat(1000)))
 
-    expect(supabase.rpc).toHaveBeenCalledWith('create_market_v3', expect.objectContaining({ p_description: 'd'.repeat(1000) }))
+    expect(supabase.rpc).toHaveBeenCalledWith('create_market_v4', expect.objectContaining({ p_description: 'd'.repeat(1000) }))
   })
 
   it('accepts a description of exactly 1000 characters once its CRLF line breaks are normalised', async () => {
@@ -75,7 +77,7 @@ describe('createMarketAction length limits', () => {
     await createMarketAction(undefined, binaryForm('Will it rain?', description))
 
     expect(supabase.rpc).toHaveBeenCalledWith(
-      'create_market_v3',
+      'create_market_v4',
       expect.objectContaining({ p_description: `${'d'.repeat(998)}\n${'d'}` }),
     )
   })
@@ -92,7 +94,7 @@ describe('createMarketAction length limits', () => {
 
     await createMarketAction(undefined, multipleChoiceForm(['Red', long]))
 
-    expect(supabase.rpc).toHaveBeenCalledWith('create_market_v3', expect.objectContaining({ p_outcome_labels: ['Red', long] }))
+    expect(supabase.rpc).toHaveBeenCalledWith('create_market_v4', expect.objectContaining({ p_outcome_labels: ['Red', long] }))
   })
 })
 
@@ -101,6 +103,7 @@ describe('createMarketAction over/under', () => {
     const form = new FormData()
     form.set('title', 'Times Sean says bet')
     form.set('kind', 'over_under')
+    form.set('category', '  Bible   study ')
     form.set('close_at', CLOSE_AT)
     form.set('line', line)
     return form
@@ -108,12 +111,13 @@ describe('createMarketAction over/under', () => {
 
   it('sends the line and lets create_market make the outcomes', async () => {
     await createMarketAction(undefined, overUnderForm('3.5'))
-    expect(supabase.rpc).toHaveBeenCalledWith('create_market_v3', {
+    expect(supabase.rpc).toHaveBeenCalledWith('create_market_v4', {
       p_title: 'Times Sean says bet',
       p_description: null,
       p_kind: 'over_under',
       p_outcome_labels: [],
       p_close_at: CLOSE_AT,
+      p_category: 'Bible study',
       p_line: 3.5,
     })
     expect(redirect).toHaveBeenCalledWith('/markets/market-1')
@@ -127,6 +131,32 @@ describe('createMarketAction over/under', () => {
       })
     }
     expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+})
+
+describe('createMarketAction category (#327)', () => {
+  it('refuses a missing category without creating anything', async () => {
+    const form = binaryForm('Will it rain?')
+    form.set('category', '   ')
+    expect(await createMarketAction(undefined, form)).toEqual({ formError: 'Choose a category.', field: 'category' })
+    expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+
+  it('refuses a category over 24 characters, measured after tidying the spaces', async () => {
+    const form = binaryForm('Will it rain?')
+    form.set('category', 'a'.repeat(25))
+    expect(await createMarketAction(undefined, form)).toEqual({ formError: 'Category can be at most 24 characters.', field: 'category' })
+    form.set('category', `  ${'a'.repeat(12)}    ${'b'.repeat(11)}  `)
+    await createMarketAction(undefined, form)
+    expect(supabase.rpc).toHaveBeenCalledWith('create_market_v4', expect.objectContaining({ p_category: `${'a'.repeat(12)} ${'b'.repeat(11)}` }))
+  })
+
+  it('names the category field when the database refuses it', async () => {
+    supabase.rpc.mockResolvedValue({ data: null, error: { code: '23514', message: 'new row violates check constraint "market_categories_name_length"' } })
+    expect(await createMarketAction(undefined, binaryForm('Will it rain?'))).toEqual({
+      formError: 'Category can be at most 24 characters.',
+      field: 'category',
+    })
   })
 })
 
@@ -166,16 +196,16 @@ describe('createMarketAction database errors', () => {
 describe('createMarketAction attempt key (#258)', () => {
   const KEY = '3f0c1d52-6a52-4a0e-9a0b-0c5f3a9a4b11'
 
-  it('passes a valid key to create_market_v3 and ignores a malformed one', async () => {
+  it('passes a valid key to create_market_v4 and ignores a malformed one', async () => {
     const keyed = binaryForm('Will it rain?')
     keyed.set('idempotency_key', KEY)
     await createMarketAction(undefined, keyed)
-    expect(supabase.rpc).toHaveBeenLastCalledWith('create_market_v3', expect.objectContaining({ p_idempotency_key: KEY }))
+    expect(supabase.rpc).toHaveBeenLastCalledWith('create_market_v4', expect.objectContaining({ p_idempotency_key: KEY }))
 
     const bad = binaryForm('Will it rain?')
     bad.set('idempotency_key', 'nope')
     await createMarketAction(undefined, bad)
-    expect(supabase.rpc).toHaveBeenLastCalledWith('create_market_v3', expect.objectContaining({ p_idempotency_key: undefined }))
+    expect(supabase.rpc).toHaveBeenLastCalledWith('create_market_v4', expect.objectContaining({ p_idempotency_key: undefined }))
   })
 })
 

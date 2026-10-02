@@ -5,26 +5,26 @@ import { useRouter } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/field'
 import { Button } from '@/components/ui/button'
-import { MARKET_SEARCH_MAX, marketsHref, type MineFilter } from '@/lib/markets/search'
+import { MARKET_SEARCH_MAX, marketsHref } from '@/lib/markets/search'
 import type { MarketFilter } from '@/lib/markets/status-filter'
 
-// A title search that keeps the status tab and the whose-markets chip. It is a plain GET form, so it
+// A title search that keeps the status tab and the category chip. It is a plain GET form, so it
 // works before the script loads, and a submit navigates client-side so the page doesn't reload. The
 // parent keys it by the query in the URL, so Clear search and Back reset what's typed.
-export function MarketSearch({ q, status, mine }: { q: string; status: MarketFilter; mine: MineFilter | null }) {
+export function MarketSearch({ q, status, category }: { q: string; status: MarketFilter; category: string | null }) {
   const router = useRouter()
   const [value, setValue] = useState(q)
   const id = useId()
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    router.push(marketsHref({ status, mine, q: value.replace(/\s+/g, ' ').trim() }))
+    router.push(marketsHref({ status, category, q: value.replace(/\s+/g, ' ').trim() }))
   }
 
   return (
     <form role="search" action="/markets" method="get" onSubmit={onSubmit} className="order-1 flex w-full items-start gap-2 md:max-w-[520px] md:flex-1">
       {status !== 'all' && <input type="hidden" name="status" value={status} />}
-      {mine && <input type="hidden" name="mine" value={mine} />}
+      {category && <input type="hidden" name="category" value={category} />}
       <label htmlFor={id} className="sr-only">
         Search markets by title
       </label>

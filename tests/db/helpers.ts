@@ -57,6 +57,7 @@ export async function wipeDatabase(): Promise<void> {
     delete from public.task_completions;
     delete from public.tasks;
     delete from public.markets;
+    delete from public.market_categories where id <> '00000000-0000-4000-8000-000000000327';
     delete from public.coin_transactions;
     delete from public.allowed_emails;
     delete from public.profiles;

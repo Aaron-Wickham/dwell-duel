@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { MARKET_SEARCH_MAX, likePattern, marketsHref, readMarketSearch, readMineFilter } from '@/lib/markets/search'
+import { MARKET_SEARCH_MAX, likePattern, marketsHref, readMarketSearch } from '@/lib/markets/search'
 
 describe('readMarketSearch', () => {
   it('trims, collapses whitespace and reads the first of a repeated param', () => {
@@ -42,29 +42,13 @@ describe('likePattern', () => {
   })
 })
 
-describe('readMineFilter', () => {
-  it.each([
-    ['bet', 'bet'],
-    ['made', 'made'],
-    ['everyone', null],
-    ['', null],
-    [undefined, null],
-  ])('%j is %j', (raw, expected) => {
-    expect(readMineFilter(raw)).toBe(expected)
-  })
-
-  it('reads the first of a repeated param', () => {
-    expect(readMineFilter(['made', 'bet'])).toBe('made')
-  })
-})
-
 describe('marketsHref', () => {
   it('is /markets for the default view', () => {
     expect(marketsHref({})).toBe('/markets')
-    expect(marketsHref({ status: 'all', q: '', mine: null })).toBe('/markets')
+    expect(marketsHref({ status: 'all', q: '', category: null })).toBe('/markets')
   })
 
-  it('combines the search, the status and the chip, encoding the search', () => {
-    expect(marketsHref({ q: 'a&b c', status: 'open', mine: 'bet' })).toBe('/markets?q=a%26b+c&status=open&mine=bet')
+  it('combines the search, the status and the category, encoding the search', () => {
+    expect(marketsHref({ q: 'a&b c', status: 'open', category: 'bible-study' })).toBe('/markets?q=a%26b+c&status=open&category=bible-study')
   })
 })

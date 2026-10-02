@@ -1,8 +1,8 @@
 import { pageClass } from '@/components/ui/page'
 import { Skeleton, SkeletonCard, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
 
-// Mirrors the markets list: header with Create market, the search, the filter tabs and the whose-markets chips, then one status group of
-// market cards, three across from lg.
+// Mirrors the markets list: header with Create market, the search, the filter tabs and the category chips, then one status group
+// of market cards, three across from lg.
 // It sits in the (list) group because a loading.tsx also wraps every segment below it, and market
 // detail's real 404 needs nothing above it that streams.
 export default function Loading() {
@@ -10,9 +10,15 @@ export default function Loading() {
     <SkeletonScreen name="markets" className={pageClass}>
       <SkeletonPageHeader action />
       <div className="flex flex-col gap-5 md:flex-row md:flex-wrap md:items-center">
-        <Skeleton className="h-12 w-full rounded-control md:order-1 md:max-w-[520px] md:flex-1" />
-        <Skeleton className="h-[52px] w-full rounded-[14px] md:order-3 md:w-80" />
-        <Skeleton className="h-11 w-full rounded-full md:order-2 md:w-72" />
+        <Skeleton className="h-12 w-full rounded-control md:max-w-[520px] md:flex-1" />
+        <div className="md:basis-full">
+          <Skeleton className="h-[52px] w-full rounded-[14px] md:w-80" />
+        </div>
+        <div className="flex gap-2 overflow-hidden md:basis-full">
+          {Array.from({ length: 5 }, (_, i) => (
+            <Skeleton key={i} className="h-11 w-24 shrink-0 rounded-full" />
+          ))}
+        </div>
       </div>
       <div className="flex flex-col gap-3">
         <Skeleton className="h-6 w-20" />

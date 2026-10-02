@@ -6,7 +6,8 @@ import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { listResolvedMarkets, listOpenMarkets, listMatchingMarkets, type MarketSummary } from '@/lib/markets/list-markets'
-import { MINE_LABELS, marketsHref, readMarketSearch, readMineFilter, type MineFilter } from '@/lib/markets/search'
+import { marketsHref, readMarketSearch } from '@/lib/markets/search'
+import { busiestCategories, listCategoryCounts, readCategoryParam } from '@/lib/markets/categories'
 import type { KeysetPage } from '@/lib/pagination/keyset'
 import { marketOdds } from '@/lib/markets/pricing'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
@@ -24,6 +25,7 @@ import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { SubNav } from '@/components/ui/sub-nav'
 import { FilterChips } from '@/components/ui/filter-chips'
 import { MarketSearch } from '@/components/markets/market-search'
+import { MoreCategories } from '@/components/markets/more-categories'
 import { cn } from '@/lib/utils'
 import { MarketCard, type MarketCardChart } from '@/components/markets/market-card'
 
@@ -48,12 +50,6 @@ const EMPTY_BODIES: Record<MarketFilter, string> = {
   resolved: 'Resolved and voided markets show up here.',
 }
 
-// What a narrowed list is a list of, in the caption and the empty state.
-const MINE_SUBJECTS: Record<MineFilter | 'all', string> = {
-  all: 'markets',
-  bet: 'markets you bet on',
-  made: 'markets you made',
-}
 const STATUS_WORDS: Record<MarketFilter, string> = { all: '', open: 'open ', awaiting: 'awaiting ', resolved: 'resolved ' }
 
 const NO_ROWS: KeysetPage<MarketSummary> = { rows: [], next: null, windowed: false }
@@ -69,7 +65,7 @@ const LISTS: List[] = [
   { id: 'resolved', groups: ['resolved', 'voided'], filters: ['all', 'resolved'], description: 'Resolved markets' },
 ]
 
-// A search or a whose-markets chip lists its matches as one flat list instead (#264).
+// A search lists its matches as one flat list instead (#264).
 type CardList = ListId | 'match'
 const rowIdPrefix = (list: CardList) => `market-${list}`
 
@@ -80,8 +76,13 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
 
   const filter = readMarketFilter(searchParams.status)
   const q = readMarketSearch(searchParams.q)
-  const mine = readMineFilter(searchParams.mine)
-  const narrowed = q !== '' || mine !== null
+  const narrowed = q !== ''
+  // A category (0103) is named by its slug, so the lists wait on the counts only when there's one
+  // to look up. An unknown or hidden slug, and the old ?mine= chips, fall through to All.
+  const countsRead = listCategoryCounts(supabase)
+  const category = searchParams.category ? readCategoryParam(searchParams.category, await countsRead) : null
+  const scope = { categoryId: category?.id ?? null }
+  const slug = category?.slug ?? null
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now()
   const now = new Date(nowMs)
@@ -89,14 +90,13 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
   const read = async ({ id, filters }: List): Promise<KeysetPage<MarketSummary>> => {
     if (narrowed || !filters.includes(filter)) return NO_ROWS
     const params = readPageParams(searchParams, id)
-    if (id === 'resolved') return listResolvedMarkets(supabase, params)
-    return listOpenMarkets(supabase, params, { upcoming: id === 'open', at })
+    if (id === 'resolved') return listResolvedMarkets(supabase, params, scope)
+    return listOpenMarkets(supabase, params, { upcoming: id === 'open', at }, scope)
   }
-  const [open, awaiting, resolved, matches] = await Promise.all([
-    ...LISTS.map(read),
-    narrowed
-      ? listMatchingMarkets(supabase, readPageParams(searchParams, 'match'), filter, { q, mine, userId: user.id }, at)
-      : NO_ROWS,
+  const [[open, awaiting, resolved], matches, counts] = await Promise.all([
+    Promise.all(LISTS.map(read)),
+    narrowed ? listMatchingMarkets(supabase, readPageParams(searchParams, 'match'), filter, { q, ...scope }, at) : NO_ROWS,
+    countsRead,
   ])
   const pages: Record<ListId, KeysetPage<MarketSummary>> = { open, awaiting, resolved }
   // A market can resolve or void between the concurrent reads above, and then come back from
@@ -151,6 +151,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       kind: market.kind,
       line: market.line,
       edited: market.edited,
+      category: market.category?.name ?? null,
       closeAt: market.closeAt,
       resolvedAt: market.resolvedAt,
       settledAt: market.settledAt,
@@ -200,9 +201,11 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     </section>
   )
 
-  const subject = MINE_SUBJECTS[mine ?? 'all']
-  const clearHref = q ? marketsHref({ status: filter, mine }) : marketsHref({ status: filter })
-  const clearLabel = q ? 'Clear search' : 'Show everyone’s markets'
+  const subject = 'markets'
+  const inCategory = category ? ` in ${category.name}` : ''
+  const clearHref = marketsHref({ status: filter, category: slug })
+  const clearLabel = 'Clear search'
+  const allCategoriesHref = marketsHref({ status: filter, q })
   const matchCards = cards.filter((c) => c.list === 'match').map((c) => c.card)
 
   function renderMatches() {
@@ -210,11 +213,11 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       return (
         <EmptyState
           icon={q ? SearchX : ChartColumn}
-          title={q ? `No ${STATUS_WORDS[filter]}${subject} match “${q}”.` : `No ${STATUS_WORDS[filter]}${subject} yet.`}
+          title={`No ${STATUS_WORDS[filter]}${subject}${inCategory} match “${q}”.`}
           action={
             <div className="flex flex-wrap gap-2">
-              {q && filter !== 'all' && (
-                <Link href={marketsHref({ q, mine })} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+              {filter !== 'all' && (
+                <Link href={marketsHref({ q, category: slug })} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
                   Search all markets
                 </Link>
               )}
@@ -224,7 +227,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
             </div>
           }
         >
-          {q ? (filter === 'all' ? 'Check the spelling, or try fewer words.' : 'Check the spelling, or search all markets.') : 'Bet on a market, or make one, and it shows up here.'}
+          {filter === 'all' ? 'Check the spelling, or try fewer words.' : 'Check the spelling, or search all markets.'}
         </EmptyState>
       )
     }
@@ -237,7 +240,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
           Matching markets
         </h2>
         <p id="markets-matches-caption" className="text-sm text-ink2">
-          {q ? `${lead} ${complete && matchCards.length === 1 ? 'matches' : 'match'} “${q}”. ` : `${lead}. `}
+          {`${lead} ${complete && matchCards.length === 1 ? 'matches' : 'match'} “${q}”. `}
           <Link href={clearHref}>{clearLabel}</Link>
         </p>
         {windowTop(matches, 'match')}
@@ -257,6 +260,18 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     )
   }
 
+  // All, the busiest categories, and the chosen one when it isn't among them; More… lists the rest.
+  const busiest = busiestCategories(counts)
+  const categoryChip = (c: (typeof counts)[number]) => ({
+    href: marketsHref({ status: filter, q, category: c.slug }),
+    label: c.name,
+    current: c.id === category?.id,
+  })
+  const categoryChips = [
+    { href: allCategoriesHref, label: 'All', current: category === null },
+    ...(category && !busiest.some((c) => c.id === category.id) ? [...busiest, category] : busiest).map(categoryChip),
+  ]
+
   return (
     <Page transition="tab">
       <PageHeader
@@ -273,27 +288,27 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
         }
       />
       <div className="flex flex-col gap-5 md:flex-row md:flex-wrap md:items-center">
-        <MarketSearch key={q} q={q} status={filter} mine={mine} />
-        <FilterChips
-          className="order-3 md:order-2"
-          label="Whose markets"
-          items={([null, 'bet', 'made'] as const).map((m) => ({
-            href: marketsHref({ status: filter, q, mine: m }),
-            label: MINE_LABELS[m ?? 'all'],
-            current: m === mine,
-          }))}
-        />
-        <div className="order-2 flex flex-col md:order-3 md:basis-full">
+        <MarketSearch key={q} q={q} status={filter} category={slug} />
+        <div className="order-2 flex flex-col md:basis-full">
           <SubNav
             label="Filter markets"
             items={MARKET_FILTERS.map((f) => ({
-              href: marketsHref({ status: f, q, mine }),
+              href: marketsHref({ status: f, q, category: slug }),
               label: MARKET_FILTER_LABELS[f],
               current: f === filter,
             }))}
           />
         </div>
+        <FilterChips scroll className="order-3 md:basis-full" label="Categories" items={categoryChips}>
+          {counts.length > busiest.length && <MoreCategories items={counts.map(categoryChip)} />}
+        </FilterChips>
       </div>
+      {category && (
+        <p id="markets-category-caption" className="text-sm text-ink2">
+          Showing {STATUS_WORDS[filter]}markets in <strong className="text-ink">{category.name}</strong> ·{' '}
+          <Link href={allCategoriesHref}>Show all categories</Link>
+        </p>
+      )}
       <LiveTables subscriptions={pageSubscriptions.markets()} />
       <ShowMoreFocus />
       {narrowed ? (
@@ -301,18 +316,25 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       ) : nothing ? (
         <EmptyState
           icon={ChartColumn}
-          title={EMPTY_TITLES[filter]}
+          title={category ? `No ${STATUS_WORDS[filter]}markets in ${category.name}.` : EMPTY_TITLES[filter]}
           action={
-            <Link
-              href="/markets/new"
-              transitionTypes={['nav-forward']}
-              className={buttonVariants({ variant: 'secondary', size: 'sm' })}
-            >
-              Create market
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/markets/new"
+                transitionTypes={['nav-forward']}
+                className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+              >
+                Create market
+              </Link>
+              {category && (
+                <Link href={allCategoriesHref} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+                  Show all categories
+                </Link>
+              )}
+            </div>
           }
         >
-          {EMPTY_BODIES[filter]}
+          {category ? 'Make one in this category, or look at the others.' : EMPTY_BODIES[filter]}
         </EmptyState>
       ) : (
         <>

@@ -7,6 +7,7 @@ import { LocalTime } from '@/components/ui/local-time'
 import { SERIES_BG } from '@/components/markets/series-classes'
 import { MarketSparkline } from '@/components/markets/market-sparkline'
 import { ClosesSoonChip } from '@/components/markets/closes-soon-chip'
+import { CategoryChip } from '@/components/markets/category-chip'
 import type { ChartOutcome } from '@/components/markets/probability-chart'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import type { SeriesPoint } from '@/lib/markets/probability-series'
@@ -50,6 +51,8 @@ export interface MarketCardProps {
   // An over/under's line, shown as an Over/Under chip.
   line?: number | null
   edited?: boolean
+  // Its category's name (0103).
+  category?: string | null
   closeAt: string
   resolvedAt: string | null
   // The first resolution or the void (0066); dates a void and ends the chart's live zone.
@@ -72,6 +75,7 @@ export function MarketCard({
   kind,
   line = null,
   edited = false,
+  category = null,
   closeAt,
   resolvedAt,
   settledAt = null,
@@ -96,6 +100,7 @@ export function MarketCard({
         <StatusChip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</StatusChip>
         {status === 'open' && now !== undefined && <ClosesSoonChip closeAt={closeAt} now={now} />}
         {kind === 'over_under' && line !== null && <StatusChip tone="void">Over/Under {formatLine(line)}</StatusChip>}
+        {category && <CategoryChip name={category} />}
         <span className="text-sm text-ink2">
           {status === 'open' &&
             (closeAt ? (

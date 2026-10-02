@@ -41,7 +41,8 @@ This page explains the rules.
 ## Markets
 
 Any member can create a market. It has a question, an optional
-description and a closing time, and it comes in one of three kinds:
+description, a category and a closing time, and it comes in one of three
+kinds:
 
 | Kind | Outcomes |
 |---|---|
@@ -49,10 +50,20 @@ description and a closing time, and it comes in one of three kinds:
 | **Multiple choice** | 2 to 6 outcomes you name |
 | **Over/Under** | A number with a line ending in .5 (for example "Minutes the sermon runs, 42.5"). The outcomes are Over 42.5 and Under 42.5, and it can never tie. |
 
+**Categories.** Every market has exactly one category, such as Sports or
+Bible Study. Pick one of the suggestions as you type, tap one of the six
+most used, or type a new one (up to 24 characters): a name that differs
+only in capitals or spacing from an existing category is that category.
+Markets made before categories, and any made from an older version of the
+app, are in **Other**. An admin can rename, merge or hide categories; a
+hidden one drops out of the suggestions and chips until someone makes a
+market in it again.
+
 While a market is open, its creator (or an admin) can edit the
-description, and can reword the title until someone else has bet on it,
-solo or as a parlay pick. Everyone can see every past version under
-"Edited". The
+description and the category, and can reword the title until someone else
+has bet on it, solo or as a parlay pick. An admin can change a market's
+category at any time, even after it closes. Everyone can see every past
+version under "Edited". The
 outcomes, the closing time and the line can never change, because
 changing them would change the bet. Betting stops at the closing time, so
 set it before the answer is known, and if you bet on your own market, a
@@ -70,9 +81,11 @@ day it was voided.
 The tabs above the list narrow it: **All** (the default), **Open** (still
 taking bets), **Awaiting** (past the close time, waiting to be resolved)
 and **Resolved** (has a result; voided markets are here too, marked
-Voided). The choice is in the page's address, so a reload or a shared
-link keeps it. Home's open-market count is the Open tab's: markets still
-taking bets.
+Voided). Below them, the category chips narrow it to one category:
+**All**, then the eight busiest categories (the most markets still taking
+bets), then **More…** for the rest. The choices are in the page's address,
+so a reload or a shared link keeps them. Home's open-market count is the
+Open tab's: markets still taking bets.
 
 For a question that comes round every week, **Duplicate** on any market
 opens Create market already filled in with its question, description,
@@ -477,7 +490,7 @@ sign back in. Your other devices keep theirs.
 |---|---|
 | **Member** | Bet, create and resolve their own markets (and void them before they close), submit tasks |
 | **Reviewer** | Approve and reject task submissions (not their own), and resolve closed markets they have no stake in |
-| **Admin** | Invite people, manage tasks, resolve, override or void any market, delete any comment, view members and the full ledger |
+| **Admin** | Invite people, manage tasks, resolve, override or void any market, change any market's category, rename, merge and hide categories, delete any comment, view members and the full ledger |
 | **Owner** (exactly one) | Adjust balances, grant and remove roles, remove a member, remove anyone's bet until its market closes (with a refund), and delete a market or task that hasn't been used |
 
 Reviewers and above get a red count on the **Admin** button for what is
@@ -623,12 +636,10 @@ or reach them through
   markets and wins, plus the result or void of any market you have a bet or
   a parlay leg on, and the void of any market you made).
 - **Finding a market:** on Markets, type in the search box to find a market
-  by any words in its title (not case-sensitive, up to 80 characters), and
-  use **I bet on** or **I made** to see only your own. They combine with the
-  Open, Awaiting and Resolved tabs; a search or one of those chips lists
-  every match in one list, newest first, rather than in sections. "I bet on"
-  includes markets you only have a parlay leg on, and markets that have
-  since settled.
+  by any words in its title (not case-sensitive, up to 80 characters). It
+  combines with the Open, Awaiting and Resolved tabs and the category chips,
+  and lists every match in one list, newest first, rather than in sections.
+  Your own bets are under My bets.
 - **Leaderboard and profiles:** see [The leaderboard](#the-leaderboard)
   and [Profile stats](#profile-stats).
   Tap your avatar (top right) for your profile, where Edit profile and

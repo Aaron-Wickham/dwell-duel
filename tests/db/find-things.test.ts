@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, giveRole, backLeg, type Member, type TestMarket } from './fixtures'
-import { listMatchingMarkets, type MarketNarrow } from '@/lib/markets/list-markets'
+import { listMatchingMarkets, listOpenMarkets, listResolvedMarkets } from '@/lib/markets/list-markets'
 import { listFeed } from '@/lib/social/list-feed'
 import type { PageParams } from '@/lib/pagination/cursor'
 import { pgQuery } from './pg-query'
@@ -24,9 +24,8 @@ beforeEach(async () => {
   await giveRole(alice, 'admin')
 })
 
-const narrow = (member: Member, q: string, mine: MarketNarrow['mine'] = null): MarketNarrow => ({ q, mine, userId: member.id })
-const titles = async (client: SupabaseClient, member: Member, q: string, mine: MarketNarrow['mine'] = null, filter: 'all' | 'open' | 'awaiting' | 'resolved' = 'all') =>
-  (await listMatchingMarkets(client, FIRST, filter, narrow(member, q, mine), NOW())).rows.map((m) => m.title)
+const titles = async (client: SupabaseClient, q: string, categoryId: string | null = null, filter: 'all' | 'open' | 'awaiting' | 'resolved' = 'all') =>
+  (await listMatchingMarkets(client, FIRST, filter, { q, categoryId }, NOW())).rows.map((m) => m.title)
 
 async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex = 0): Promise<void> {
   const { error } = await client.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[outcomeIndex], p_amount: 5 })
@@ -39,9 +38,9 @@ describe('listMatchingMarkets: search', () => {
     await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Potluck headcount' })
     await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Brain teaser winner' })
 
-    expect(await titles(bobClient, bob, 'rain')).toEqual(['Brain teaser winner', 'Will it RAIN tomorrow?'])
-    expect(await titles(bobClient, bob, 'POTLUCK')).toEqual(['Potluck headcount'])
-    expect(await titles(bobClient, bob, 'zzz')).toEqual([])
+    expect(await titles(bobClient, 'rain')).toEqual(['Brain teaser winner', 'Will it RAIN tomorrow?'])
+    expect(await titles(bobClient, 'POTLUCK')).toEqual(['Potluck headcount'])
+    expect(await titles(bobClient, 'zzz')).toEqual([])
   })
 
   it('treats LIKE wildcards, backslashes and filter syntax in the search as plain text', async () => {
@@ -50,13 +49,13 @@ describe('listMatchingMarkets: search', () => {
     await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'snake_case wins' })
     await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Back\\slash' })
 
-    expect(await titles(bobClient, bob, '%')).toEqual(['100% sure'])
-    expect(await titles(bobClient, bob, '_')).toEqual(['snake_case wins'])
-    expect(await titles(bobClient, bob, 'e_c')).toEqual(['snake_case wins'])
-    expect(await titles(bobClient, bob, '\\')).toEqual(['Back\\slash'])
+    expect(await titles(bobClient, '%')).toEqual(['100% sure'])
+    expect(await titles(bobClient, '_')).toEqual(['snake_case wins'])
+    expect(await titles(bobClient, 'e_c')).toEqual(['snake_case wins'])
+    expect(await titles(bobClient, '\\')).toEqual(['Back\\slash'])
     // Not a pattern, so it matches nothing rather than everything, and nothing throws.
     for (const q of ['a),status.eq.open,(b', '"', '.', ',', 'x%_\\']) {
-      await expect(titles(bobClient, bob, q)).resolves.toEqual([])
+      await expect(titles(bobClient, q)).resolves.toEqual([])
     }
   })
 
@@ -73,10 +72,10 @@ describe('listMatchingMarkets: search', () => {
     const { error: voidErr } = await aliceClient.rpc('void_market', { p_market_id: voided.marketId, p_reason: 'Asked twice' })
     if (voidErr) throw voidErr
 
-    expect((await titles(bobClient, bob, 'Match')).sort()).toEqual(['Match awaiting', 'Match done', 'Match open', 'Match voided'])
-    expect(await titles(bobClient, bob, 'Match', null, 'open')).toEqual(['Match open'])
-    expect(await titles(bobClient, bob, 'Match', null, 'awaiting')).toEqual(['Match awaiting'])
-    expect((await titles(bobClient, bob, 'Match', null, 'resolved')).sort()).toEqual(['Match done', 'Match voided'])
+    expect((await titles(bobClient, 'Match')).sort()).toEqual(['Match awaiting', 'Match done', 'Match open', 'Match voided'])
+    expect(await titles(bobClient, 'Match', null, 'open')).toEqual(['Match open'])
+    expect(await titles(bobClient, 'Match', null, 'awaiting')).toEqual(['Match awaiting'])
+    expect((await titles(bobClient, 'Match', null, 'resolved')).sort()).toEqual(['Match done', 'Match voided'])
   })
 
   it('pages with Show more over a flat list', async () => {
@@ -92,43 +91,44 @@ describe('listMatchingMarkets: search', () => {
       })
       if (error) throw error
     }
-    const first = await listMatchingMarkets(bobClient, FIRST, 'all', narrow(bob, 'Paged'), NOW())
+    const first = await listMatchingMarkets(bobClient, FIRST, 'all', { q: 'Paged' }, NOW())
     expect(first.rows).toHaveLength(50)
     expect(first.next?.kind).toBe('extend')
     expect(first.rows[0].title).toBe('Paged 00')
   })
 })
 
-describe('listMatchingMarkets: whose markets', () => {
-  it('"made" lists the member’s own markets only', async () => {
-    await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Alice made this' })
-    await createTestMarket(bobClient, ['Yes', 'No'], { title: 'Bob made this' })
-
-    expect(await titles(bobClient, bob, '', 'made')).toEqual(['Bob made this'])
-    expect(await titles(aliceClient, alice, 'made', 'made')).toEqual(['Alice made this'])
-  })
-
-  it('"bet" lists markets the member bet on or has a parlay leg on, settled or not, and never someone else’s', async () => {
-    const solo = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Bob solo' })
-    const legA = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Bob leg A', seed: 10 })
-    const legB = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Bob leg B', seed: 10 })
-    const other = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Only Alice bets' })
-    await bet(bobClient, solo)
-    // A parlay leg needs other members' money on its market (0074).
-    for (const leg of [legA, legB]) await backLeg(leg, 1)
-    const { error } = await bobClient.rpc('place_parlay', { p_outcome_ids: [legA.outcomeIds[0], legB.outcomeIds[0]], p_stake: 3 })
+describe('market lists: category (#327)', () => {
+  async function inCategory(title: string, category: string, closeInMs = 3_600_000): Promise<string> {
+    const { data, error } = await aliceClient.rpc('create_market_v4', {
+      p_title: title,
+      p_description: null,
+      p_kind: 'binary',
+      p_outcome_labels: ['Yes', 'No'],
+      p_close_at: new Date(Date.now() + closeInMs).toISOString(),
+      p_category: category,
+    })
     if (error) throw error
-    await bet(aliceClient, other)
+    return (data as { market_id: string }).market_id
+  }
 
-    expect((await titles(bobClient, bob, '', 'bet')).sort()).toEqual(['Bob leg A', 'Bob leg B', 'Bob solo'])
-    expect(await titles(bobClient, bob, 'leg b', 'bet')).toEqual(['Bob leg B'])
-    expect(await titles(aliceClient, alice, '', 'bet')).toEqual(['Only Alice bets'])
+  it('narrows the open, resolved and matching lists to one category, and names each market’s category', async () => {
+    await inCategory('Sunny Sunday', 'Weather')
+    await inCategory('Rainy Monday', 'Weather')
+    await inCategory('Cup final', 'Sports')
+    const done = await inCategory('Snow last week', 'Weather')
+    const { error } = await aliceClient.rpc('void_market', { p_market_id: done, p_reason: 'Asked twice' })
+    if (error) throw error
+    const { data: weather } = await serviceClient().from('market_categories').select('id').eq('slug', 'weather').single()
 
-    // Resolving settles the bet but doesn't take the market out of "I bet on".
-    await serviceClient().from('markets').update({ close_at: new Date(Date.now() - 1000).toISOString() }).eq('id', solo.marketId)
-    const { error: resolveErr } = await aliceClient.rpc('resolve_market', { p_note: 'Done', p_market_id: solo.marketId, p_outcome_id: solo.outcomeIds[0] })
-    if (resolveErr) throw resolveErr
-    expect(await titles(bobClient, bob, 'solo', 'bet', 'resolved')).toEqual(['Bob solo'])
+    const open = await listOpenMarkets(bobClient, FIRST, { upcoming: true, at: NOW() }, { categoryId: weather!.id })
+    expect(open.rows.map((m) => m.title).sort()).toEqual(['Rainy Monday', 'Sunny Sunday'])
+    expect(open.rows[0].category).toEqual({ name: 'Weather', slug: 'weather' })
+    const resolved = await listResolvedMarkets(bobClient, FIRST, { categoryId: weather!.id })
+    expect(resolved.rows.map((m) => m.title)).toEqual(['Snow last week'])
+    expect(await titles(bobClient, 'day', weather!.id)).toEqual(['Rainy Monday', 'Sunny Sunday'])
+    expect(await titles(bobClient, 'day')).toEqual(['Rainy Monday', 'Sunny Sunday'])
+    expect(await titles(bobClient, 'final', weather!.id)).toEqual([])
   })
 })
 

@@ -68,10 +68,11 @@ beforeEach(() => {
 })
 
 describe('text limits on form inputs', () => {
-  it('caps the market title, description and every outcome label', async () => {
+  it('caps the market title, description, category and every outcome label', async () => {
     render(<CreateMarketForm />)
     expect(screen.getByLabelText('Title')).toHaveAttribute('maxlength', '120')
     expect(screen.getByLabelText('Description')).toHaveAttribute('maxlength', '1000')
+    expect(screen.getByLabelText('Category')).toHaveAttribute('maxlength', '24')
 
     await userEvent.click(screen.getByRole('radio', { name: 'Multiple choice' }))
     await userEvent.click(screen.getByRole('button', { name: 'Add outcome' }))
@@ -138,6 +139,7 @@ describe('too-long errors point at their field', () => {
     render(<CreateMarketForm />)
 
     await userEvent.type(screen.getByLabelText('Title'), 'Will it rain?')
+    await userEvent.type(screen.getByLabelText('Category'), 'Weather')
     await userEvent.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await userEvent.click(screen.getByRole('button', { name: 'Create market' }))
 
@@ -154,6 +156,7 @@ describe('too-long errors point at their field', () => {
     await userEvent.click(screen.getByRole('radio', { name: 'Multiple choice' }))
     await userEvent.click(screen.getByRole('button', { name: 'Add outcome' }))
     await userEvent.type(screen.getByLabelText('Title'), 'Who wins the trivia night?')
+    await userEvent.type(screen.getByLabelText('Category'), 'Weather')
     await userEvent.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await userEvent.click(screen.getByRole('button', { name: 'Create market' }))
 

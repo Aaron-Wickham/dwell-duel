@@ -259,9 +259,12 @@ describe('0048 indexes (#67)', () => {
       `select id, settled_at from public.markets where status in ('resolved', 'voided') order by settled_at desc, id desc limit 51`,
     )
     // Two statuses can't be walked in settled_at order from one index range, so at this fixture's
-    // few rows the planner may as well take another status index and sort; either is index-based.
+    // few rows the planner may as well take another status index and sort, 0103's category one
+    // included (skipping over the few categories); each is index-based.
     expect(
-      indexesUsed(nodes).some((name) => ['markets_status_settled_idx', 'markets_status_created_idx', 'markets_status_close_idx'].includes(name)),
+      indexesUsed(nodes).some((name) =>
+        ['markets_status_settled_idx', 'markets_status_created_idx', 'markets_status_close_idx', 'markets_category_status_close_idx'].includes(name),
+      ),
     ).toBe(true)
     expect(seqScanned(nodes)).toEqual([])
   })
@@ -269,8 +272,11 @@ describe('0048 indexes (#67)', () => {
   it('counts open markets from the status index', async () => {
     const nodes = await planNodes(`select count(*) from public.markets where status = 'open'`)
     // 0049's (status, close_at, id) and 0066's (status, settled_at, id) lead with status too, and serve the count as well.
+    // So does 0103's (category_id, status, close_at, id), skipping over the few categories.
     expect(
-      indexesUsed(nodes).some((name) => ['markets_status_created_idx', 'markets_status_close_idx', 'markets_status_settled_idx'].includes(name)),
+      indexesUsed(nodes).some((name) =>
+        ['markets_status_created_idx', 'markets_status_close_idx', 'markets_status_settled_idx', 'markets_category_status_close_idx'].includes(name),
+      ),
     ).toBe(true)
     expect(seqScanned(nodes)).toEqual([])
   })

@@ -1,5 +1,6 @@
 // supabase/migrations/0034_text_length_limits.sql (0038 for bio, 0042 for the proof notes, 0053
-// for market comments, 0042 for proof links, 0073 for the void reason) enforces these same numbers.
+// for market comments, 0042 for proof links, 0073 for the void reason, 0103 for categories) enforces
+// these same numbers.
 export const TEXT_LIMITS = {
   marketTitle: 120,
   marketDescription: 1000,
@@ -16,6 +17,7 @@ export const TEXT_LIMITS = {
   commentBody: 280,
   voidReason: 500,
   proofLink: 2000,
+  category: 24,
 } as const
 
 export function tooLong(label: string, max: number): string {

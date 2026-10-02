@@ -6,10 +6,11 @@ import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { friendlyError } from '@/lib/errors/friendly-error'
 import { afterAction, notifyNewMarket } from '@/lib/push/notify'
 import { isUuid } from '@/lib/uuid'
+import { normalizeCategoryName } from './categories'
 import { CREATE_MARKET_ERRORS } from './create-market-errors'
 
 export type ActionState =
-  | { formError?: string; field?: 'title' | 'description' | 'close_at' | 'outcomes' | 'line' | `outcome_${number}` }
+  | { formError?: string; field?: 'title' | 'description' | 'category' | 'close_at' | 'outcomes' | 'line' | `outcome_${number}` }
   | undefined
 
 const MIN_OUTCOMES = 2
@@ -24,6 +25,7 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
   const description = String(formData.get('description') ?? '')
     .replace(/\r\n/g, '\n')
     .trim()
+  const category = normalizeCategoryName(String(formData.get('category') ?? ''))
   const kind = String(formData.get('kind') ?? '')
   const closeAt = String(formData.get('close_at') ?? '')
   // useOffline replays an action whose response was lost; the key makes that return the first market (#258).
@@ -35,6 +37,8 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
   if (description.length > TEXT_LIMITS.marketDescription) {
     return { formError: tooLong('Description', TEXT_LIMITS.marketDescription), field: 'description' }
   }
+  if (!category) return { formError: 'Choose a category.', field: 'category' }
+  if (category.length > TEXT_LIMITS.category) return { formError: tooLong('Category', TEXT_LIMITS.category), field: 'category' }
   if (kind !== 'binary' && kind !== 'multiple_choice' && kind !== 'over_under') return { formError: 'Choose a market kind.' }
 
   const closeAtDate = closeAt ? new Date(closeAt) : null
@@ -48,12 +52,13 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
     if (!Number.isFinite(line) || line < 0.5 || line % 1 !== 0.5) {
       return { formError: 'Set the line to a half number, like 3.5.', field: 'line' }
     }
-    const { data, error } = await supabase.rpc('create_market_v3', {
+    const { data, error } = await supabase.rpc('create_market_v4', {
       p_title: title,
       p_description: description || null,
       p_kind: kind,
       p_outcome_labels: [],
       p_close_at: closeAt,
+      p_category: category,
       p_line: line,
       p_idempotency_key,
     })
@@ -78,12 +83,13 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
     return { formError: tooLong(`Outcome ${n}`, TEXT_LIMITS.outcomeLabel), field: `outcome_${n}` }
   }
 
-  const { data, error } = await supabase.rpc('create_market_v3', {
+  const { data, error } = await supabase.rpc('create_market_v4', {
     p_title: title,
     p_description: description || null,
     p_kind: kind,
     p_outcome_labels: outcomeLabels,
     p_close_at: closeAt,
+    p_category: category,
     p_idempotency_key,
   })
 

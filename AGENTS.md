@@ -224,9 +224,13 @@ a line to `CHANGELOG.md` under the next release.
   `resolve_market_core`, which members can't call.
 - **Market kinds** are `MarketKind` in `lib/markets/kind.ts`. An
   over/under's outcomes are made by `create_market` from its line, and it
-  resolves through `resolve_over_under` with the actual number. Title and
-  description change only through `update_market` (0043), which logs every
-  change to `market_edits`; outcomes, close time and line never change.
+  resolves through `resolve_over_under` with the actual number. Title,
+  description, category and close time change only through `update_market`
+  (0043, 0103, 0106), which logs every change to `market_edits`; outcomes
+  and line never change. The close time moves (later, or earlier but still
+  in the future) only while the market is open, which reopens a closed one
+  and re-arms its closing alerts; nothing is fixed at close, since payouts
+  and parlay multipliers are fixed when placed.
 - **Every bet goes through the slip.** `SlipProvider` (in the signed-in
   layout) holds the cookie's picks, each Solo or Parlay, with optimistic
   add, remove and mode switches; the floating `SlipSheet` places them all

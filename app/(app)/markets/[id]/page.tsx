@@ -94,10 +94,12 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const isPastClose = new Date(market.closeAt).getTime() <= now
   const canBet = market.status === 'open' && !isPastClose
   const slip = slipEntries.map((e) => e.outcomeId)
-  // update_market (0043, 0103): the creator or an admin rewords a market while it still takes bets;
-  // an admin can change its category at any time.
+  // update_market (0043, 0103, 0106): the creator or an admin rewords a market, or moves its close,
+  // while it still takes bets, and can reopen it once it has closed until it's settled; an admin can
+  // change its category at any time.
   const admin = atLeast(role, 'admin')
   const canEditWording = canBet && (isCreator || admin)
+  const canReopen = market.status === 'open' && isPastClose && (isCreator || admin)
   const canEditCategory = canEditWording || admin
   const categoryCounts = canEditCategory ? await listCategoryCounts(supabase) : []
 
@@ -169,6 +171,12 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
                       Category was: <span className="text-ink">{e.oldCategory}</span>
                     </span>
                   )}
+                  {e.oldCloseAt !== null && e.newCloseAt !== null && (
+                    <span>
+                      Close time moved from <span className="text-ink"><LocalTime iso={e.oldCloseAt} format="dateTime" /></span> to{' '}
+                      <span className="text-ink"><LocalTime iso={e.newCloseAt} format="dateTime" /></span>
+                    </span>
+                  )}
                   {e.oldDescription !== e.newDescription && (
                     <span className="whitespace-pre-line break-words">
                       Description was: <span className="text-ink">{e.oldDescription ? `“${e.oldDescription}”` : '(none)'}</span>
@@ -186,9 +194,22 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
               title={market.title}
               description={market.description}
               category={market.category?.name ?? ''}
-              wording={canEditWording}
+              closeAt={market.closeAt}
+              mode={canEditWording ? 'edit' : 'category'}
               suggestions={categoryCounts.map((c) => c.name)}
               popular={mostUsedCategories(categoryCounts).map((c) => c.name)}
+            />
+          )}
+          {canReopen && (
+            <EditMarketDialog
+              marketId={market.id}
+              title={market.title}
+              description={market.description}
+              category={market.category?.name ?? ''}
+              closeAt={market.closeAt}
+              mode="reopen"
+              suggestions={[]}
+              popular={[]}
             />
           )}
           <ShareButton marketId={market.id} title={market.title} />

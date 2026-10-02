@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { nextWeeklyClose } from '@/lib/markets/weekly-close'
+import { localInputValue, nextWeeklyClose } from '@/lib/markets/weekly-close'
 
 const NY = 'America/New_York'
 const at = (iso: string) => Date.parse(iso)
@@ -38,5 +38,13 @@ describe('nextWeeklyClose', () => {
 
   it('works in UTC too', () => {
     expect(nextWeeklyClose('2026-09-06T23:00:00Z', at('2026-09-28T12:00:00Z'), 'UTC')).toBe('2026-10-04T23:00')
+  })
+})
+
+describe('localInputValue', () => {
+  it('reads an instant as a datetime-local value in the zone, dropping the seconds', () => {
+    expect(localInputValue('2026-10-04T23:00:42Z', NY)).toBe('2026-10-04T19:00')
+    expect(localInputValue('2026-12-04T23:00:00Z', NY)).toBe('2026-12-04T18:00')
+    expect(localInputValue('2026-10-04T23:00:00Z', 'UTC')).toBe('2026-10-04T23:00')
   })
 })

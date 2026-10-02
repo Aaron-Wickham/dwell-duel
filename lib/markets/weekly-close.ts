@@ -36,3 +36,8 @@ export function nextWeeklyClose(closeAtIso: string, now: number, timeZone: strin
   while (instantOf(wall + weeks * WEEK_MS, timeZone) <= now) weeks++
   return toLocalInput(wall + weeks * WEEK_MS)
 }
+
+// An instant as the close-time input shows it in `timeZone`, to the minute.
+export function localInputValue(iso: string, timeZone: string): string {
+  return toLocalInput(wallClockMs(Date.parse(iso), timeZone))
+}

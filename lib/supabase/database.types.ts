@@ -538,9 +538,11 @@ export type Database = {
           id: number
           market_id: string
           new_category_id: string | null
+          new_close_at: string | null
           new_description: string | null
           new_title: string
           old_category_id: string | null
+          old_close_at: string | null
           old_description: string | null
           old_title: string
         }
@@ -550,9 +552,11 @@ export type Database = {
           id?: never
           market_id: string
           new_category_id?: string | null
+          new_close_at?: string | null
           new_description?: string | null
           new_title: string
           old_category_id?: string | null
+          old_close_at?: string | null
           old_description?: string | null
           old_title: string
         }
@@ -562,9 +566,11 @@ export type Database = {
           id?: never
           market_id?: string
           new_category_id?: string | null
+          new_close_at?: string | null
           new_description?: string | null
           new_title?: string
           old_category_id?: string | null
+          old_close_at?: string | null
           old_description?: string | null
           old_title?: string
         }
@@ -2039,6 +2045,16 @@ export type Database = {
         | {
             Args: {
               p_category: string
+              p_description: string
+              p_market_id: string
+              p_title: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_category: string
+              p_close_at: string
               p_description: string
               p_market_id: string
               p_title: string

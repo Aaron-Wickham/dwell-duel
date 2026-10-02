@@ -240,9 +240,11 @@ spending coins should get a trigger and a `write_limits()` row.
 - `market_resolutions`: each resolution or override, with its required
   note, `actual_value` for an Over/Under, and a link to the one it
   replaced.
-- `market_edits`: every title, description or category change, readable by
-  all members; `old_category_id` / `new_category_id` (0103) are set only on an
-  edit that changed the category, including each market a merge moved.
+- `market_edits`: every title, description, category or close-time change,
+  readable by all members; `old_category_id` / `new_category_id` (0103) are
+  set only on an edit that changed the category, including each market a
+  merge moved, and `old_close_at` / `new_close_at` (0106) only on one that
+  moved the close time.
 - `market_comments` (0053): a market's thread. `body` is at most 280
   characters (`TEXT_LIMITS.commentBody`). Members insert their own; the
   author, or an admin or the owner, deletes one through
@@ -355,6 +357,8 @@ spending coins should get a trigger and a `write_limits()` row.
   row means the defaults. Own row only, select, insert and update.
 - `push_log`: what must go out only once, keyed `(kind, ref)`; today only
   `resolve_reminder` and `market_alert` per market. Service role only.
+  Moving a market's close time (0106) deletes its rows, so a reopened market
+  is alerted about again when it closes.
 - `cron_heartbeats` (0061): when each scheduled job last ran without an
   error, one row per `name` (today only `closing-alerts`). Written only by
   the service role through `record_cron_heartbeat(p_name)`, which uses the
@@ -404,7 +408,13 @@ title is fixed once anyone else has bet, solo or as a parlay leg, 0065; the
 four-argument version, 0103, also takes `p_category`, which the creator can
 change until close and an admin at any time, never fixed by bets, and a null
 `p_title` keeps the wording, which is how an admin recategorises a closed
-market), `rename_market_category`, `merge_market_categories` (moves and logs
+market; the five-argument version, 0106, also takes `p_close_at`, null keeping
+it, which the creator or an admin can move while the market's status is
+`open`, before or after close, to any time still in the future: moving a
+closed market's close reopens it, and clears its `resolve_reminder` and
+`market_alert` rows in `push_log` and `push_attempts` so both alerts go out
+again at the new close; a creator still can't reword or recategorise a closed
+market, and the market page offers it as Reopen), `rename_market_category`, `merge_market_categories` (moves and logs
 every market, then hides the source; never Other) and
 `set_market_category_hidden` (never Other) (admin, 0103), `category_counts(p_include_hidden)`
 (invoker: open and total markets per category, busiest first, ties by name), `member_emails` (admin only:
@@ -618,6 +628,7 @@ after it ships. They roughly follow the project's history:
 | 0103 | Market categories (#327): `market_categories` (Other seeded with a fixed id), `markets.category_id` (NOT NULL, default Other) and its `(category_id, status, close_at, id)` index, `market_edits.old_category_id` / `new_category_id`; `create_market_v4` (v3 plus `p_category`), a four-argument `update_market` with `p_category`, the admin `rename_market_category`, `merge_market_categories` and `set_market_category_hidden`, and `category_counts()` |
 | 0104 | LMSR part 3 of #325 (#334): `place_slip_v4` and the internal `place_lmsr_parlay` place a parlay on `lmsr` markets, its stake split across 2–6 legs into the house parlay book, its factors, `multiplier` and `payout` fixed at placement with the 2% re-price refusal, refusing a parlay that mixes in a `pool` market; `parlay_limits()` caps every parlay at 6 legs; 0102's leg trigger becomes `check_parlay_leg_pricing` (an `lmsr` leg carries factor and shares, a `pool` leg neither) and `place_parlay` refuses an `lmsr` leg; `settle_parlay` pays a fixed parlay (a voided leg drops its factor); `parlay_leg_odds`, `member_stats` and `leaderboard_awards` read a fixed parlay's factors and multiplier; `economy_flows` books fixed parlays on the market maker line; `market_sparklines` charts parlay legs (exp in double precision); `activity_feed` pays `floor(shares)` on `lmsr` markets; `has_stake_in_market` counts any parlay leg on the market, whatever its parlay's status, and `void_market` refuses a creator with a stake |
 | 0105 | LMSR part 4 of #325 (#335): `bets.converted` / `refund_outcomes` and `parlays.converted`; `convert_pool_markets_to_lmsr()`, called at the end, converts every open pool market (each bet's shares its "Pays ~", prices starting at the chance shown) and pending pool parlay (legs locked at `pick_quote`, 0074's capped multiplier and payout stored, no book shares); `resolve_market_core` refunds a converted bet when an outcome nobody had backed at conversion wins; `settle_parlay` keeps a converted parlay's caps when a leg is voided; `market_sparklines` charts a converted bet at its pool chance; `member_stats`, `member_records` and `leaderboard_awards` count a converted refund as refunded and cap a converted best parlay; `place_slip_v2` refuses ("DwellDuel just updated. Refresh to bet.") and `create_market_v2` ("… Refresh to create a market.") after replaying a finished key, so `create_market`, which wraps it, refuses too; `can_void_market` |
+| 0106 | Close time (#326): `market_edits.old_close_at` / `new_close_at`; a five-argument `update_market` with `p_close_at` (creator or admin, status `open`, before or after close, future only), which reopens a closed market and clears its `push_log` and `push_attempts` closing-alert rows |
 | 0101 | LMSR core, part 1 of #325 (#331): pure `lmsr_cost`, `lmsr_price` and `lmsr_buy` (mirrored by `lib/markets/lmsr.ts`, kept equal by `tests/db/lmsr.test.ts`); `markets.liquidity` (default 50) and `markets.pricing` (`pool` for every market until part 2); `market_outcomes.shares` and `q_offset`; `bets.shares` and `cost`; `parlay_legs.factor` and `shares`; `parlays.multiplier` and `payout`. Nothing reads them yet |
 
 Numbers 0075, 0077–0082 and 0084–0088 were reserved by branches that merged later under higher numbers, so they are unused.

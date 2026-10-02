@@ -174,7 +174,7 @@ describe('seeded markets (0041)', () => {
       ['floor', 10_000],
     ])
 
-    const { error } = await bobClient.rpc('place_slip_v2', {
+    const { error } = await bobClient.rpc('place_slip_v4', {
       p_singles: [],
       p_parlay_outcome_ids: [a.outcomeIds[0], b.outcomeIds[1]],
       p_parlay_stake: 5,

@@ -45,12 +45,12 @@ const slip = (key: string | undefined, stake = 6) => ({
   p_idempotency_key: key,
 })
 
-// #226: v2 says what was placed and whether the call was a replay, so a retry after a lost response
-// reports the earlier attempt instead of whatever the slip holds now.
-describe('place_slip_v2', () => {
+// #226: the slip (v2 then, v4 since 0105 stopped v2) says what was placed and whether the call was a
+// replay, so a retry after a lost response reports the earlier attempt instead of what the slip holds now.
+describe('place_slip_v4', () => {
   it('returns what it placed, and the same summary marked as a replay on a repeat of the key', async () => {
     const key = randomUUID()
-    const first = await bobClient.rpc('place_slip_v2', slip(key))
+    const first = await bobClient.rpc('place_slip_v4', slip(key))
     expect(first.error).toBeNull()
     const placed = first.data as SlipSummary
     expect(placed.replayed).toBe(false)
@@ -59,30 +59,38 @@ describe('place_slip_v2', () => {
     expect(placed.parlay_id).toEqual(expect.any(String))
 
     // A different slip under the same key still replays the first one, and places nothing.
-    const second = await bobClient.rpc('place_slip_v2', { ...slip(key), p_singles: [{ outcome_id: b.outcomeIds[1], amount: 3 }] })
+    const second = await bobClient.rpc('place_slip_v4', { ...slip(key), p_singles: [{ outcome_id: b.outcomeIds[1], amount: 3 }] })
     expect(second.error).toBeNull()
     expect(second.data).toEqual({ ...placed, replayed: true })
     expect(await countFor(bob)).toEqual({ bets: 1, parlays: 1 })
   })
 
-  it('shares keys with place_slip, which still returns the parlay id for the build before 0072', async () => {
+  it('shares keys with place_slip and place_slip_v2, which since 0105 only replay a finished attempt', async () => {
     const key = randomUUID()
-    const old = await bobClient.rpc('place_slip', slip(key))
-    expect(old.error).toBeNull()
-    const replay = await bobClient.rpc('place_slip_v2', slip(key))
-    expect(replay.error).toBeNull()
-    expect((replay.data as SlipSummary).replayed).toBe(true)
-    expect((replay.data as SlipSummary).parlay_id).toBe(old.data)
-    expect(await countFor(bob)).toEqual({ bets: 1, parlays: 1 })
+    const placed = await bobClient.rpc('place_slip_v4', slip(key))
+    expect(placed.error).toBeNull()
+    const v2 = await bobClient.rpc('place_slip_v2', slip(key))
+    expect(v2.error).toBeNull()
+    expect(v2.data).toEqual({ ...(placed.data as SlipSummary), replayed: true })
+    const v1 = await bobClient.rpc('place_slip', slip(key))
+    expect(v1.error).toBeNull()
+    expect(v1.data).toBe((placed.data as SlipSummary).parlay_id)
+
+    const fresh = randomUUID()
+    expectError((await bobClient.rpc('place_slip_v2', slip(fresh))).error, 'DwellDuel just updated. Refresh to bet.')
+    expectError((await bobClient.rpc('place_slip', slip(fresh))).error, 'DwellDuel just updated. Refresh to bet.')
+    // The refusal rolled its claim back, so the key is still free for the new build.
+    expect((await bobClient.rpc('place_slip_v4', slip(fresh))).error).toBeNull()
+    expect(await countFor(bob)).toEqual({ bets: 2, parlays: 2 })
   })
 })
 
-describe('place_slip_v2 with an attempt key', () => {
+describe('place_slip_v4 with an attempt key', () => {
   it('places once when the same key is sent twice, and returns the same parlay id', async () => {
     const key = randomUUID()
-    const first = await bobClient.rpc('place_slip_v2', slip(key))
+    const first = await bobClient.rpc('place_slip_v4', slip(key))
     expect(first.error).toBeNull()
-    const second = await bobClient.rpc('place_slip_v2', slip(key))
+    const second = await bobClient.rpc('place_slip_v4', slip(key))
     expect(second.error).toBeNull()
     expect(first.data).toMatchObject({ replayed: false, solos: 1 })
     expect(second.data).toEqual({ ...(first.data as SlipSummary), replayed: true })
@@ -92,7 +100,7 @@ describe('place_slip_v2 with an attempt key', () => {
 
   it('places once when two calls with the same key race', async () => {
     const key = randomUUID()
-    const [one, two] = await Promise.all([bobClient.rpc('place_slip_v2', slip(key)), bobClient.rpc('place_slip_v2', slip(key))])
+    const [one, two] = await Promise.all([bobClient.rpc('place_slip_v4', slip(key)), bobClient.rpc('place_slip_v4', slip(key))])
     expect(one.error).toBeNull()
     expect(two.error).toBeNull()
     const [x, y] = [one.data as SlipSummary, two.data as SlipSummary]
@@ -103,7 +111,7 @@ describe('place_slip_v2 with an attempt key', () => {
 
   it('places again with a new key, or with no key', async () => {
     for (const key of [randomUUID(), randomUUID(), undefined]) {
-      const { error } = await bobClient.rpc('place_slip_v2', slip(key, 1))
+      const { error } = await bobClient.rpc('place_slip_v4', slip(key, 1))
       expect(error).toBeNull()
     }
     expect(await countFor(bob)).toEqual({ bets: 3, parlays: 3 })
@@ -111,11 +119,11 @@ describe('place_slip_v2 with an attempt key', () => {
 
   it('does not use up the key when the place fails, so the retry goes through', async () => {
     const key = randomUUID()
-    const tooMuch = await bobClient.rpc('place_slip_v2', slip(key, 1000))
+    const tooMuch = await bobClient.rpc('place_slip_v4', slip(key, 1000))
     expectError(tooMuch.error, { code: '23514', message: 'profiles_balance_check' })
     expect(await countFor(bob)).toEqual({ bets: 0, parlays: 0 })
 
-    const retry = await bobClient.rpc('place_slip_v2', slip(key))
+    const retry = await bobClient.rpc('place_slip_v4', slip(key))
     expect(retry.error).toBeNull()
     expect((retry.data as SlipSummary).replayed).toBe(false)
     expect((retry.data as SlipSummary).parlay_id).toMatch(/^[0-9a-f-]{36}$/)
@@ -124,14 +132,14 @@ describe('place_slip_v2 with an attempt key', () => {
 
   it("refuses another member's key", async () => {
     const key = randomUUID()
-    expect((await bobClient.rpc('place_slip_v2', slip(key))).error).toBeNull()
-    const { error } = await aliceClient.rpc('place_slip_v2', slip(key))
+    expect((await bobClient.rpc('place_slip_v4', slip(key))).error).toBeNull()
+    const { error } = await aliceClient.rpc('place_slip_v4', slip(key))
     expect(error?.message).toBe('that request key was already used')
     expect(await countFor(alice)).toEqual({ bets: 0, parlays: 0 })
   })
 
   it('keeps the keys out of members’ reach', async () => {
-    await bobClient.rpc('place_slip_v2', slip(randomUUID()))
+    await bobClient.rpc('place_slip_v4', slip(randomUUID()))
     const read = await bobClient.from('idempotency_keys' as never).select('key')
     expectError(read.error, { code: '42501', message: 'permission denied for table idempotency_keys' })
     const claim = await bobClient.rpc('claim_idempotency_key', { p_key: randomUUID(), p_action: 'place_slip' })

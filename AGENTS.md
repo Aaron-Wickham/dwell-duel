@@ -184,9 +184,9 @@ a line to `CHANGELOG.md` under the next release.
   script checks `reducedMotion()` from `lib/ui/reduced-motion.ts`.
 - **Segmented tabs are `SubNav`** (`components/ui/sub-nav.tsx`, a client
   component whose pill slides between tabs), with tab state in the URL, as My bets' `?tab=` and the admin sections do.
-- **New markets are LMSR** (0101, 0102). `create_market_v3` makes every new
-  market `pricing = 'lmsr'`, and every money function branches on
-  `markets.pricing`. On an `lmsr` market the price is the chance
+- **Markets are LMSR** (0101, 0102, 0105). `create_market_v3`/`v4` make every
+  new market `pricing = 'lmsr'`, 0105 converted every open pool market, and
+  every money function branches on `markets.pricing`. The price is the chance
   (`marketOdds` in `lib/markets/pricing.ts`, mirrored by `market_sparklines`),
   a solo bet buys shares through `place_slip_v4` at a payout fixed when it's
   placed (`lmsrQuote`, the same rounding as `place_lmsr_bet`; refused with
@@ -200,22 +200,23 @@ a line to `CHANGELOG.md` under the next release.
   (`floor(stake × multiplier)`) are stored. `lmsrParlayQuote` and
   `fixedParlay` (`lib/parlays/odds.ts`) mirror `place_lmsr_parlay` and
   `settle_parlay`; the 2% re-price rule applies to the parlay's payout; a
-  voided leg drops its factor; no caps but the leg count. A parlay can't
-  mix `lmsr` and `pool` legs. The ledger check holds each `lmsr` outcome's
-  `shares` equal to its bets' shares plus its legs'.
-- **On `pool` markets, the seed is for display; payouts are the real pool**
-  (0041, 0074). This bullet covers markets made before 0102 only. Every
-  outcome's *chance* counts `markets.seed_per_outcome` virtual DC: chance,
-  charts and sparklines go through `effectivePools` (`lib/markets/odds.ts`),
-  mirrored by `market_sparklines`. Payouts never count it: payout figures
-  ("× payout per DC", "Pays ~", My bets) go through `poolPayout` /
-  `soloPayout`, mirrored by SQL `pool_payout()`, which `resolve_market_core`
-  pays with; a DB test keeps the two equal. Parlay limits live in SQL
-  `parlay_limits()`, mirrored by `MAX_PICKS` (6, every parlay) and, for pool
-  parlays only, `MAX_MULTIPLIER` / `MAX_PAYOUT` / `MIN_LEG_*` /
-  `MAX_LEG_ODDS`; a DB test keeps them equal. A pool parlay leg's odds are
-  set at close from real money (`pick_quote`), so the slip and parlay views
-  show `~` estimates until then.
+  voided leg drops its factor; no caps but the leg count
+  (`parlay_limits().max_legs`, mirrored by `MAX_PICKS`). The ledger check
+  holds each `lmsr` outcome's `shares` equal to its bets' shares plus its
+  legs'.
+- **Converted at release** (0105, `convert_pool_markets_to_lmsr`). A pool
+  bet still live became `converted`, with `shares` = its "Pays ~" and
+  `refund_outcomes` = the outcomes nobody had backed then:
+  `resolve_market_core` refunds its `cost` when one of those wins (the pool
+  rule), and `betResult`, member stats and records count that as refunded.
+  A pending pool parlay became `converted`, every leg's `factor` its locked
+  odds and no book `shares`, with 0074's capped `multiplier`/`payout`;
+  `settle_parlay` and `parlayTerms` keep those caps when a leg is voided.
+  `market_sparklines` charts a converted bet at the pool chance it showed.
+  The pool code (`effectivePools`, `poolPayout`/`pool_payout()`,
+  `pick_quote`, `parlay_limits()`' other columns, the seed, cancel and
+  remove) only reads history and old builds until clean-up (#332); don't
+  build on it.
 - **Proof files** (0042) live in the private `proof` bucket and upload from
   the browser (`lib/proof/upload.ts`), never through a server action. Show
   them with `toProofViews` (signed URLs made with the viewer's own client)
@@ -233,8 +234,9 @@ a line to `CHANGELOG.md` under the next release.
   single's and the parlay's shown payout), which is all or nothing and
   returns what it placed and whether the call replayed an earlier attempt
   (`place_slip_v3` serves the #333 build and refuses `lmsr` parlay legs;
-  `place_slip_v2` and `place_slip` serve older builds and refuse `lmsr`
-  markets). Stakes live
+  since 0105 `place_slip_v2` and `place_slip` only replay a finished
+  attempt key and otherwise refuse "DwellDuel just updated. Refresh to
+  bet."). Stakes live
   only in the provider's state, never in the cookie.
 - **The service worker never caches** per-member HTML, RSC payloads,
   server actions or Supabase responses.
@@ -386,8 +388,8 @@ a line to `CHANGELOG.md` under the next release.
   `tests/db/setup.ts` runs `assertLedgerConsistent()` after every DB test
   (balances equal their ledger, pools equal live bets, each `lmsr` outcome's shares
   equal its bets' plus its parlay legs', pool outcomes hold none, `lmsr` bets carry
-  shares and `cost = amount`, a fixed parlay's legs carry factor and shares, a
-  parlay's `credited` equals its payout rows). Shape balances with `setBalanceViaLedger`; a test that seeds
+  shares and `cost = amount`, a fixed parlay's legs carry factor and shares (a
+  converted one's a factor and no shares), a parlay's `credited` equals its payout rows). Shape balances with `setBalanceViaLedger`; a test that seeds
   raw rows on purpose calls `skipLedgerCheck('why')`. Slip tests call `place_slip_v4`.
 - **CI runs on pull requests only,** as three parallel jobs (`static`,
   `db`, `web`) summed up by the one required check, `ci-ok`. A PR must be

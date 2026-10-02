@@ -71,5 +71,12 @@ describe('betResult', () => {
     it('is lost, not refunded, when nobody backed the winner', () => {
       expect(betResult({ outcomeId: 'o-yes', amount: 10, shares: 18.3 }, lmsr(), NOW)).toEqual({ kind: 'lost' })
     })
+
+    it('refunds a bet converted from a pool when an outcome nobody had backed then wins (0105)', () => {
+      const converted = { outcomeId: 'o-yes', amount: 10, shares: 10, refundOutcomes: ['o-no'] }
+      expect(betResult(converted, lmsr(), NOW)).toEqual({ kind: 'refunded', reason: 'no_winners' })
+      const yesWins = lmsr({ current_resolution: { outcome_id: 'o-yes', payout_seed: 0 } })
+      expect(betResult(converted, yesWins, NOW)).toEqual({ kind: 'won', payout: 10 })
+    })
   })
 })

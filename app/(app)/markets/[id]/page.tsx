@@ -328,12 +328,14 @@ async function MarketActions({
   hasPosition: boolean
 }) {
   const { supabase, user } = await requireUser()
-  const [role, resolvable, stake] = await Promise.all([
+  const [role, resolvable, voidable, stake] = await Promise.all([
     getRole(supabase),
     supabase.rpc('can_resolve_market', { p_market_id: market.id }),
+    supabase.rpc('can_void_market', { p_market_id: market.id }),
     supabase.rpc('has_stake_in_market', { p_market_id: market.id, p_profile_id: user!.id }),
   ])
   if (resolvable.error) throw resolvable.error
+  if (voidable.error) throw voidable.error
   if (stake.error) throw stake.error
   const admin = atLeast(role, 'admin')
   const hasStake = stake.data === true
@@ -343,12 +345,16 @@ async function MarketActions({
   // a reviewer with no stake in the market; an admin at any time.
   const canResolve = market.status === 'open' && resolvable.data === true
   const canOverride = market.status === 'resolved' && admin
-  // void_market (0073): an admin at any time; the creator only until the market closes.
-  const canVoid = market.status === 'open' && (admin || (isCreator && canBet))
+  // can_void_market (0105) is the same rule void_market enforces: an admin at any time; the creator
+  // until the market closes, and only with no stake in it (0104).
+  const canVoid = market.status === 'open' && voidable.data === true
   // delete_market (0040) refuses a market with bets, cancelled bets or parlay legs. An empty pool is
   // the cheap first check; only the owner of an empty market pays for the other two (#221).
   const canDelete = role === 'owner' && totalPool === 0 && !(await hasBetHistory(supabase, market.id))
   const showResolve = canResolve || canOverride
+  const hasControls = showResolve || canVoid || canDelete
+  // A creator with a stake can neither resolve nor void, so the card stays only to say who will.
+  const explainStake = market.status === 'open' && isCreator && hasStake && !admin
 
   const closedCopy =
     market.status === 'resolved' ? (
@@ -385,7 +391,7 @@ async function MarketActions({
               ? 'You created this market, and it has closed. Reviewers and admins can resolve it too.'
               : `${youAre} This market has closed and is awaiting resolution.`
         : isCreator && hasStake
-          ? 'You bet on this market, so a reviewer or an admin resolves it.'
+          ? 'You have a stake in this market, so a reviewer or an admin resolves it, and only an admin can void it.'
           : isCreator
             ? 'You created this market. You can resolve it once it closes.'
             : `${youAre} You can resolve it once it closes.`
@@ -406,32 +412,34 @@ async function MarketActions({
           </SectionCard>
         )}
 
-        {(showResolve || canVoid || canDelete) && (
+        {(hasControls || explainStake) && (
           <SectionCard
             title={canOverride ? 'Override resolution' : showResolve ? 'Resolve market' : 'Manage market'}
             titleId="manage-title"
             className="gap-1"
           >
             <p className="text-sm text-ink2">{manageHint}</p>
-            <div className="mt-3 flex flex-col gap-4">
-              {showResolve && (
-                <ResolveForm
-                  marketId={market.id}
-                  outcomes={market.outcomes}
-                  line={market.kind === 'over_under' ? market.line : null}
-                  override={canOverride}
-                  currentOutcomeId={market.resolvedOutcomeId}
-                />
-              )}
-              {canVoid && (
-                <VoidForm marketId={market.id} className={showResolve ? 'border-t border-line pt-4' : undefined} />
-              )}
-              {canDelete && (
-                <div className={showResolve || canVoid ? 'border-t border-line pt-4' : undefined}>
-                  <DeleteMarketButton marketId={market.id} />
-                </div>
-              )}
-            </div>
+            {hasControls && (
+              <div className="mt-3 flex flex-col gap-4">
+                {showResolve && (
+                  <ResolveForm
+                    marketId={market.id}
+                    outcomes={market.outcomes}
+                    line={market.kind === 'over_under' ? market.line : null}
+                    override={canOverride}
+                    currentOutcomeId={market.resolvedOutcomeId}
+                  />
+                )}
+                {canVoid && (
+                  <VoidForm marketId={market.id} className={showResolve ? 'border-t border-line pt-4' : undefined} />
+                )}
+                {canDelete && (
+                  <div className={showResolve || canVoid ? 'border-t border-line pt-4' : undefined}>
+                    <DeleteMarketButton marketId={market.id} />
+                  </div>
+                )}
+              </div>
+            )}
           </SectionCard>
         )}
       </div>

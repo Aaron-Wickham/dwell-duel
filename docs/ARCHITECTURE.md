@@ -209,7 +209,9 @@ spending coins should get a trigger and a `write_limits()` row.
   `market_sparks` serves every card, cached by version. Since 0101,
   `liquidity` (b, default 50) and `pricing` (`pool` or `lmsr`, column default
   `pool`): `create_market_v3` (0102) makes every new market `lmsr`, with no
-  seed, and every money function branches on it. `category_id` (0103) is
+  seed, and every money function branches on it; 0105 converted every market
+  still `open` (closed-but-unresolved included), so only markets settled
+  before it are `pool`. `category_id` (0103) is
   NOT NULL and defaults to Other's fixed id
   (`00000000-0000-4000-8000-000000000327`, `OTHER_CATEGORY_ID`), so the
   previous build's creates land in Other; `markets_category_status_close_idx`
@@ -230,7 +232,11 @@ spending coins should get a trigger and a `write_limits()` row.
   check read.
 - `bets`: live stakes only. A cancelled bet moves to `cancelled_bets`. On an
   `lmsr` market a bet also records `cost` (equal to `amount`) and `shares`
-  (to six places, rounded down), and it is final.
+  (to six places, rounded down), and it is final. A bet converted from a
+  pool at release (0105) is `converted`, its `shares` the whole-DC "Pays ~"
+  it showed then, and `refund_outcomes` the outcomes nobody had backed then:
+  if one of those wins, it's refunded its `cost`, as the pool rules would
+  have. Every other bet's `refund_outcomes` is empty.
 - `market_resolutions`: each resolution or override, with its required
   note, `actual_value` for an Over/Under, and a link to the one it
   replaced.
@@ -257,7 +263,12 @@ spending coins should get a trigger and a `write_limits()` row.
   false, and each leg stores `factor` (shares ÷ (stake/n), six places,
   rounded down, at least 1) and `shares`, the shares its stake/n bought into
   the house *parlay book*. A trigger keeps a leg's figures matching its
-  market: an `lmsr` leg has both, a `pool` leg neither. The book's shares
+  market: an `lmsr` leg has both, a `pool` leg neither. A pool parlay still
+  pending at release was converted (0105, `parlays.converted`): every leg
+  locked at its odds (`pick_quote` for one not yet set), `factor` equal to
+  `locked_odds` (1 for a voided leg without odds) and no `shares`, since a
+  pool parlay never moved a pool, and `multiplier` / `payout` 0074's capped
+  figures. The book's shares
   count in `market_outcomes.shares` for good, like bets' shares, so an
   `lmsr` outcome's `shares` = its bets' shares + its legs' shares (the DB
   tests' ledger check); nothing is ever paid to the book.
@@ -361,16 +372,17 @@ spending coins should get a trigger and a `write_limits()` row.
 
 | Function | Who | What it does |
 |---|---|---|
-| `place_slip_v3` | member | Places every solo bet and the parlay in the slip, all or nothing, and returns what it placed and whether the call was a replay. Each single carries the payout the slip showed: a pick on an `lmsr` market buys shares through `place_lmsr_bet` (0102), which members can't call, and is refused with `price_moved:<payout>` when it would pay more than 2% less; a pick on a `pool` market is a pool bet. `place_slip_v4` (0104, what the app calls) adds the payout the slip showed for the parlay: a parlay with any `lmsr` leg goes to `place_lmsr_parlay`, which refuses one that mixes in a `pool` market, and a `pool` parlay to `place_parlay`. `place_slip_v3` (the #333 build) refuses an `lmsr` parlay leg; `place_slip_v2` (and `place_slip`, which wraps it) serve the build before 0102; its `place_bet` and `place_parlay` refuse an `lmsr` market |
+| `place_slip_v3` | member | Places every solo bet and the parlay in the slip, all or nothing, and returns what it placed and whether the call was a replay. Each single carries the payout the slip showed: a pick on an `lmsr` market buys shares through `place_lmsr_bet` (0102), which members can't call, and is refused with `price_moved:<payout>` when it would pay more than 2% less; a pick on a `pool` market is a pool bet. `place_slip_v4` (0104, what the app calls) adds the payout the slip showed for the parlay: a parlay with any `lmsr` leg goes to `place_lmsr_parlay`, which refuses one that mixes in a `pool` market, and a `pool` parlay to `place_parlay`. `place_slip_v3` (the #333 build) refuses an `lmsr` parlay leg; since 0105 `place_slip_v2` (and `place_slip`, which wraps it), the build before 0102's, only replays an attempt key that already finished and otherwise refuses "DwellDuel just updated. Refresh to bet."; `place_bet` and `place_parlay` refuse an `lmsr` market |
 | `place_lmsr_parlay` | none (`place_slip_v4` only) | 2–6 legs (`parlay_limits().max_legs`), one per market, all `lmsr` and open; no other limit (own markets allowed, no floor, no caps). Each leg buys `lmsr_buy(q, liquidity, i, stake/n)` shares (six places, rounded down) into the parlay book, added to the outcome's `shares` (not `pool_total`); stores each factor, the multiplier and the payout; refuses `price_moved:<payout>` when the payout is more than 2% under the shown one; stake at most 1,000,000 DC, payout under 1e9 |
 | `place_lmsr_bet` | none (`place_slip_v3` and `place_slip_v4` only) | Locks the market, buys `lmsr_buy(shares + q_offset, liquidity, i, stake)` shares, checks the shown payout, debits the stake (at most 1,000,000 DC) and adds to the outcome's `shares` and `pool_total` |
 | `place_bet` / `place_parlay` | member | The single-bet and single-parlay versions `place_slip` builds on, for `pool` markets only. `place_parlay` refuses a leg on the bettor's own market or one without the floor of other members' money (`parlay_limits()`), a stake over the payout cap, and a parlay that would take the member's pending parlays on any of its markets past `max_payout` of possible payout (`parlay_max_payout`); its legs have no odds yet (0074) |
 | `cancel_bet` | bettor | Refuses a bet on an `lmsr` market, which is final (0102). Otherwise refunds a bet before its market closes; near the integer ceiling, `cancelled_bets` records the refund the balance could take (`refund_room`, 0074) |
-| `resolve_market` | after close, the creator or a reviewer with no stake; an admin any time | Needs a note; may take proof; on an `lmsr` market pays each winning bet `floor(shares)` DC, with no refund when nobody backed the winner, and stores the fractions in `payout_remainder` (0102); on a `pool` market pays winners their share of the real pool (`pool_payout`, 0074: the seed is never paid; everyone is refunded when the winning pool is empty); an admin override must name a different outcome (0066), reverses the old payouts first and is blocked if a past winner has already spent them. Stamps `settled_at` on the first resolution only. Nobody but an admin resolves a market they have a stake in (`has_stake_in_market`, 0046: a live bet, or since 0104 any parlay leg on it, whatever its parlay's status); `can_resolve_market` answers the same question for the page |
+| `resolve_market` | after close, the creator or a reviewer with no stake; an admin any time | Needs a note; may take proof; on an `lmsr` market pays each winning bet `floor(shares)` DC, with no refund when nobody backed the winner, apart from a converted bet whose `refund_outcomes` has the winner, which is refunded its `cost` (0105), and stores the fractions in `payout_remainder` (0102); on a `pool` market pays winners their share of the real pool (`pool_payout`, 0074: the seed is never paid; everyone is refunded when the winning pool is empty); an admin override must name a different outcome (0066), reverses the old payouts first and is blocked if a past winner has already spent them. Stamps `settled_at` on the first resolution only. Nobody but an admin resolves a market they have a stake in (`has_stake_in_market`, 0046: a live bet, or since 0104 any parlay leg on it, whatever its parlay's status); `can_resolve_market` answers the same question for the page |
 | `resolve_over_under` | same | Picks Over or Under from the actual number, then resolves |
-| `void_market` | before close, the creator if they have no stake in it (a bet or any parlay leg, 0104); an admin any time | Needs a reason (0073), stored in `void_reason` and posted to the feed as `market_voided`; refunds every bet its `amount`, which is an `lmsr` bet's cost; parlays drop the voided leg; stamps `settled_at`. `p_reason` defaults to null only so the previous build's call is refused cleanly |
-| `settle_parlay` | trigger | Runs when a leg's market resolves or voids. A fixed parlay (0104) pays its stored `payout` when every leg wins, `floor(stake × the factors left)` when a leg was voided, its stake back when all were, and never locks odds or caps. A pool parlay sets the odds of each leg whose market has closed or resolved (`pick_quote` for the owner, once), then pays at most `max_multiplier` and `parlay_limits().max_payout` (or the stake, if larger) |
+| `void_market` | before close, the creator if they have no stake in it (a bet or any parlay leg, 0104); an admin any time | Needs a reason (0073), stored in `void_reason` and posted to the feed as `market_voided`; refunds every bet its `amount`, which is an `lmsr` bet's cost; parlays drop the voided leg; stamps `settled_at`. `can_void_market` (0105) answers who may for the page, as `can_resolve_market` does for resolving. `p_reason` defaults to null only so the previous build's call is refused cleanly |
+| `settle_parlay` | trigger | Runs when a leg's market resolves or voids. A fixed parlay (0104) pays its stored `payout` when every leg wins, `floor(stake × the factors left)` when a leg was voided, its stake back when all were, and never locks odds or caps, apart from a converted parlay (0105), whose voided-leg payout keeps its `max_multiplier` and stays within its stored `payout`, which is 0074's capped rule. A pool parlay sets the odds of each leg whose market has closed or resolved (`pick_quote` for the owner, once), then pays at most `max_multiplier` and `parlay_limits().max_payout` (or the stake, if larger) |
 | `remove_bet` | owner | Refunds any member's bet before its market closes (0074; it used to allow it until resolution); refuses a bet on an `lmsr` market (0102) |
+| `convert_pool_markets_to_lmsr` | none (postgres only; 0105 calls it once) | Converts every `open` `pool` market and pending pool parlay (see *Conversion at release* under Key flows), moving no DC; refuses if a pool doesn't equal its live bets. Run again, it finds nothing to convert |
 | `apply_coin_transaction` | none (definer functions only) | Writes a ledger row and moves the balance; a credit is cut to what the balance can hold under the integer ceiling, and one cut to nothing writes no row (0074) |
 | `submit_task_completion` | member | Submits a task with an optional note and proof |
 | `approve_task_completion`, `reject_task_completion`, `review_task_completions` | reviewer+, never on their own submission | Pays or rejects submissions, one at a time or in bulk |
@@ -530,9 +542,11 @@ net betting profit; the biggest win (a current resolution's `bet_won` less
 its stake, with the market); the best won parlay (its resolved legs' odds
 multiplied, capped by its own `max_multiplier`, 0074, or a fixed parlay's
 stored `multiplier`, uncapped, the product of its factors left if a leg was
-voided, 0104; and its payout); markets
+voided, 0104, capped by `max_multiplier` for a converted one, 0105; and its
+payout); markets
 created; and approved task completions. A solo bet counts as refunded when
-its market was voided or resolved to an outcome nobody backed; cancelled
+its market was voided or resolved to an outcome nobody backed (on a `pool`
+market, or one in a converted bet's `refund_outcomes`, 0105); cancelled
 bets and open ones count nowhere. Net profit is `betting_ledger_types()`
 summed over all time, the This month board's classification, so a stake
 still riding counts as spent. It is security definer, because the ledger is
@@ -601,6 +615,7 @@ after it ships. They roughly follow the project's history:
 | 0102 | LMSR part 2 of #325 (#333): `create_market_v3` makes `lmsr` markets (no seed, even prices); `place_slip_v3` and the internal `place_lmsr_bet` buy shares with the 2% re-price refusal (`price_moved:<payout>`); `place_bet`, `cancel_bet` and `remove_bet` refuse `lmsr` markets, and a `parlay_legs` trigger refuses a leg on one until #334; `resolve_market_core` pays `floor(shares)` and keeps `market_resolutions.payout_remainder`; `pool_version` also follows `shares`; `market_sparklines` and `weekly_recap`'s upset read the LMSR price; `economy_flows` and `economy_summary` gain the market maker line (two columns at the end of the row); `member_stats`, `member_records` and `leaderboard_awards` stop counting an `lmsr` bet nobody else backed as refunded |
 | 0103 | Market categories (#327): `market_categories` (Other seeded with a fixed id), `markets.category_id` (NOT NULL, default Other) and its `(category_id, status, close_at, id)` index, `market_edits.old_category_id` / `new_category_id`; `create_market_v4` (v3 plus `p_category`), a four-argument `update_market` with `p_category`, the admin `rename_market_category`, `merge_market_categories` and `set_market_category_hidden`, and `category_counts()` |
 | 0104 | LMSR part 3 of #325 (#334): `place_slip_v4` and the internal `place_lmsr_parlay` place a parlay on `lmsr` markets, its stake split across 2–6 legs into the house parlay book, its factors, `multiplier` and `payout` fixed at placement with the 2% re-price refusal, refusing a parlay that mixes in a `pool` market; `parlay_limits()` caps every parlay at 6 legs; 0102's leg trigger becomes `check_parlay_leg_pricing` (an `lmsr` leg carries factor and shares, a `pool` leg neither) and `place_parlay` refuses an `lmsr` leg; `settle_parlay` pays a fixed parlay (a voided leg drops its factor); `parlay_leg_odds`, `member_stats` and `leaderboard_awards` read a fixed parlay's factors and multiplier; `economy_flows` books fixed parlays on the market maker line; `market_sparklines` charts parlay legs (exp in double precision); `activity_feed` pays `floor(shares)` on `lmsr` markets; `has_stake_in_market` counts any parlay leg on the market, whatever its parlay's status, and `void_market` refuses a creator with a stake |
+| 0105 | LMSR part 4 of #325 (#335): `bets.converted` / `refund_outcomes` and `parlays.converted`; `convert_pool_markets_to_lmsr()`, called at the end, converts every open pool market (each bet's shares its "Pays ~", prices starting at the chance shown) and pending pool parlay (legs locked at `pick_quote`, 0074's capped multiplier and payout stored, no book shares); `resolve_market_core` refunds a converted bet when an outcome nobody had backed at conversion wins; `settle_parlay` keeps a converted parlay's caps when a leg is voided; `market_sparklines` charts a converted bet at its pool chance; `member_stats`, `member_records` and `leaderboard_awards` count a converted refund as refunded and cap a converted best parlay; `place_slip_v2` refuses ("DwellDuel just updated. Refresh to bet.") after replaying a finished key; `can_void_market` |
 | 0101 | LMSR core, part 1 of #325 (#331): pure `lmsr_cost`, `lmsr_price` and `lmsr_buy` (mirrored by `lib/markets/lmsr.ts`, kept equal by `tests/db/lmsr.test.ts`); `markets.liquidity` (default 50) and `markets.pricing` (`pool` for every market until part 2); `market_outcomes.shares` and `q_offset`; `bets.shares` and `cost`; `parlay_legs.factor` and `shares`; `parlays.multiplier` and `payout`. Nothing reads them yet |
 
 Numbers 0075, 0077–0082 and 0084–0088 were reserved by branches that merged later under higher numbers, so they are unused.
@@ -727,7 +742,27 @@ it's placed; the "× payout per DC" beside an outcome is 1 ÷ its price
 `fixedParlay` (`lib/parlays/odds.ts`), BigInt maths in millionths that
 matches `place_lmsr_parlay` and `settle_parlay` to the DC.
 
-**Odds on `pool` markets.** Pari-mutuel. Winners split exactly the real pool (0074):
+**Conversion at release** (0105, #335). The migration calls
+`convert_pool_markets_to_lmsr()` once, in its own transaction, before the
+new app deploys. For each `open` `pool` market, locked in id order: every
+live bet gets `shares = pool_payout(amount, its outcome's pool, the
+market's pool)`, its "Pays ~", `cost = amount`, `converted` and
+`refund_outcomes`; the market maker starts at the chance the market showed
+(`effectivePools`, seed included): `q_i = 50 ln p_i`, an outcome at 0
+floored at 0.1% and an empty market even, shifted so the smallest is 0 and
+rounded to ten places; `market_outcomes.shares` is the bets' shares and
+`q_offset = q_i − shares`; then `pricing = 'lmsr'` and `liquidity = 50`.
+Each pending pool parlay is fixed as above. The worst-case loss bound
+`b ln n` doesn't hold on these markets, since their shares weren't bought
+from the market maker (spec, accepted). `market_sparklines` draws a
+converted bet's point at the pool chance it showed, so history is
+unchanged, and LMSR prices from the next bet on. The pool code below stays
+for markets settled before 0105 and old builds until clean-up (#332).
+`tests/db/lmsr-conversion.test.ts` converts a production-shaped snapshot
+(`tests/db/conversion-snapshot.ts`) and resolves every market to every
+outcome, and every parlay through wins and voids, against the pool rules.
+
+**Odds on `pool` markets** (settled before 0105). Pari-mutuel. Winners split exactly the real pool (0074):
 `pool_payout()` in SQL, which `resolve_market_core` pays with, and
 `poolPayout` / `soloPayout` in `lib/markets/odds.ts` and
 `lib/parlays/odds.ts`, which the market page's "× payout per DC", the slip's
@@ -1096,7 +1131,7 @@ value never stops production booting.
 - **Raw database errors.** An RPC's own refusals are `raise exception`
   (SQLSTATE `P0001`, `isDeliberateRaise`) and reach the member as written;
   any other error from `resolve_market` / `resolve_over_under` /
-  `place_slip_v2` (a timeout, a constraint, an aborted fetch) is reported
+  `place_slip_v4` (a timeout, a constraint, an aborted fetch) is reported
   and shown as "Something went wrong. Try again."
 - **Admin health read.** `readClosingAlertsHealth` returns `{ unknown: true }`
   on a failed read; the banner then says it couldn't check, and every

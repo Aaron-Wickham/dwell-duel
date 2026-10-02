@@ -18,6 +18,8 @@ const AUTHENTICATED_DEFINER = [
   // Storage RLS helper (0089): counts only the caller's own avatar uploads today; returns a boolean.
   'avatar_upload_quota_ok',
   'can_resolve_market',
+  // void_market's rules as a boolean for the caller's own auth.uid() (0105); reads only.
+  'can_void_market',
   'cancel_bet',
   'create_market',
   // create_market plus an attempt key (0083): checks is_invited() first, keys are claimed per caller.

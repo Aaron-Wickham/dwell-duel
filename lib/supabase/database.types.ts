@@ -168,32 +168,38 @@ export type Database = {
       bets: {
         Row: {
           amount: number
+          converted: boolean
           cost: number | null
           created_at: string
           id: number
           market_id: string
           outcome_id: string
           profile_id: string
+          refund_outcomes: string[]
           shares: number | null
         }
         Insert: {
           amount: number
+          converted?: boolean
           cost?: number | null
           created_at?: string
           id?: never
           market_id: string
           outcome_id: string
           profile_id: string
+          refund_outcomes?: string[]
           shares?: number | null
         }
         Update: {
           amount?: number
+          converted?: boolean
           cost?: number | null
           created_at?: string
           id?: never
           market_id?: string
           outcome_id?: string
           profile_id?: string
+          refund_outcomes?: string[]
           shares?: number | null
         }
         Relationships: [
@@ -879,6 +885,7 @@ export type Database = {
       }
       parlays: {
         Row: {
+          converted: boolean
           created_at: string
           credited: number
           id: string
@@ -892,6 +899,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          converted?: boolean
           created_at?: string
           credited?: number
           id?: string
@@ -905,6 +913,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          converted?: boolean
           created_at?: string
           credited?: number
           id?: string
@@ -1341,6 +1350,7 @@ export type Database = {
       avatar_upload_quota_ok: { Args: never; Returns: boolean }
       betting_ledger_types: { Args: never; Returns: string[] }
       can_resolve_market: { Args: { p_market_id: string }; Returns: boolean }
+      can_void_market: { Args: { p_market_id: string }; Returns: boolean }
       cancel_bet: { Args: { p_bet_id: number }; Returns: undefined }
       category_counts: {
         Args: { p_include_hidden?: boolean }
@@ -1370,6 +1380,7 @@ export type Database = {
         Args: { p_at?: string; p_period: string }
         Returns: string
       }
+      convert_pool_markets_to_lmsr: { Args: never; Returns: Json }
       create_market: {
         Args: {
           p_close_at: string

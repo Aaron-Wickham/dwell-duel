@@ -48,7 +48,7 @@ export async function getPositionKeys(supabase: DbClient, marketId: string): Pro
   return { betIds, parlayIds }
 }
 
-type BetRow = { id: number; outcome_id: string; amount: number; shares: number | null; created_at: string }
+type BetRow = { id: number; outcome_id: string; amount: number; shares: number | null; refund_outcomes: string[]; created_at: string }
 
 // The rows the keys name. A bet cancelled between the two reads is simply left out.
 export async function getMarketPosition(
@@ -61,7 +61,7 @@ export async function getMarketPosition(
     (async () => {
       const rows = new Map<number, BetRow>()
       for (const part of chunk(keys.betIds, IN_CHUNK)) {
-        const { data, error } = await supabase.from('bets').select('id, outcome_id, amount, shares, created_at').in('id', part)
+        const { data, error } = await supabase.from('bets').select('id, outcome_id, amount, shares, refund_outcomes, created_at').in('id', part)
         if (error) throw error
         for (const row of data ?? []) rows.set(row.id, row)
       }
@@ -96,7 +96,7 @@ export async function getMarketPosition(
     const b = betRows.get(id)
     if (!b) continue
     const outcome = market.outcomes.find((o) => o.id === b.outcome_id)
-    const result = betResult({ outcomeId: b.outcome_id, amount: b.amount, shares: b.shares }, embed, now)
+    const result = betResult({ outcomeId: b.outcome_id, amount: b.amount, shares: b.shares, refundOutcomes: b.refund_outcomes }, embed, now)
     const live = result.kind === 'open' || result.kind === 'awaiting'
     bets.push({
       id: b.id,

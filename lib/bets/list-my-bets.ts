@@ -9,7 +9,8 @@ export type MyBetResult =
   | { kind: 'awaiting' }
   | { kind: 'won'; payout: number }
   | { kind: 'lost' }
-  // A void refunds everyone; so does a resolution nobody backed on a pool market (resolve_market_core, 0046).
+  // A void refunds everyone; so does a resolution nobody backed on a pool market (resolve_market_core,
+  // 0046), or nobody had backed when the bet's market was converted (0105).
   | { kind: 'refunded'; reason: 'voided' | 'no_winners' }
 
 export interface MyBet {
@@ -49,16 +50,19 @@ export interface BetRow {
   outcome_id: string
   amount: number
   shares: number | null
+  refund_outcomes: string[]
   created_at: string
   market_outcomes: { label: string } | null
   markets: MarketEmbed
 }
 
 // The same arithmetic as resolve_market_core: one DC a share, rounded down, on an lmsr market
-// (0102); otherwise from pools that can't move once a market resolves, the real pool (0074), or with
-// the seed a resolution from before then counted (payout_seed). A market without `pricing` is a pool.
+// (0102), or the stake back for a bet converted from a pool when an outcome nobody had backed then
+// wins (refund_outcomes, 0105); otherwise from pools that can't move once a market resolves, the
+// real pool (0074), or with the seed a resolution from before then counted (payout_seed). A market
+// without `pricing` is a pool.
 export function betResult(
-  bet: { outcomeId: string; amount: number; shares?: number | null },
+  bet: { outcomeId: string; amount: number; shares?: number | null; refundOutcomes?: string[] },
   market: Pick<MarketEmbed, 'status' | 'close_at' | 'current_resolution' | 'market_outcomes'> & { pricing?: Pricing },
   now: number,
 ): MyBetResult {
@@ -66,6 +70,7 @@ export function betResult(
   if (market.status === 'open') return Date.parse(market.close_at) > now ? { kind: 'open' } : { kind: 'awaiting' }
   const winner = market.current_resolution?.outcome_id
   if (market.pricing === 'lmsr') {
+    if (winner && bet.refundOutcomes?.includes(winner)) return { kind: 'refunded', reason: 'no_winners' }
     return winner === bet.outcomeId ? { kind: 'won', payout: Math.floor(Number(bet.shares ?? 0)) } : { kind: 'lost' }
   }
   const winningPool = market.market_outcomes.find((o) => o.id === winner)?.pool_total ?? bet.amount
@@ -77,7 +82,7 @@ export function betResult(
 }
 
 export const BET_COLUMNS =
-  'id, outcome_id, amount, shares, created_at, market_outcomes(label), markets!inner(id, title, status, close_at, pricing, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, payout_seed), market_outcomes(id, pool_total))'
+  'id, outcome_id, amount, shares, refund_outcomes, created_at, market_outcomes(label), markets!inner(id, title, status, close_at, pricing, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, payout_seed), market_outcomes(id, pool_total))'
 
 export function toMyBet(b: BetRow, now: number): MyBet {
   return {
@@ -88,7 +93,7 @@ export function toMyBet(b: BetRow, now: number): MyBet {
     amount: b.amount,
     placedAt: b.created_at,
     closeAt: b.markets.close_at,
-    result: betResult({ outcomeId: b.outcome_id, amount: b.amount, shares: b.shares }, b.markets, now),
+    result: betResult({ outcomeId: b.outcome_id, amount: b.amount, shares: b.shares, refundOutcomes: b.refund_outcomes }, b.markets, now),
     final: b.markets.pricing === 'lmsr',
   }
 }

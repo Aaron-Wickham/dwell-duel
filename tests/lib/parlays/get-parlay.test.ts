@@ -131,6 +131,35 @@ describe('a fixed parlay (0104)', () => {
   })
 })
 
+describe('a pool parlay converted at release (0105)', () => {
+  it('shows its stored payout as exact, capped as the pool rules capped it', () => {
+    const detail = toParlayDetail(
+      row(
+        [leg({ locked_odds: 5, factor: 5 }), leg({ locked_odds: 5, factor: 5 }, { id: 'm-2' }), leg({ locked_odds: 3.3333, factor: 3.3333 }, { id: 'm-3' })],
+        { stake: 40, multiplier: 20, payout: 800, converted: true },
+      ),
+      'Grace',
+      BEFORE_CLOSE,
+      new Map(),
+    )
+    expect(detail).toMatchObject({ fixed: true, multiplierBp: 200_000, capped: true, estimated: false, potentialPayout: 800 })
+  })
+
+  it('keeps the caps when a leg is voided', () => {
+    const detail = toParlayDetail(
+      row(
+        [leg({ locked_odds: 5, factor: 5 }), leg({ locked_odds: 5, factor: 5 }, { id: 'm-2' }), leg({ locked_odds: 3.3333, factor: 3.3333 }, { id: 'm-3', status: 'voided' })],
+        { stake: 40, multiplier: 20, payout: 800, converted: true },
+      ),
+      'Grace',
+      BEFORE_CLOSE,
+      new Map(),
+    )
+    // 25x, capped at 20x: 800, where an uncapped fixed parlay would show 1,000.
+    expect(detail).toMatchObject({ multiplierBp: 200_000, capped: true, potentialPayout: 800 })
+  })
+})
+
 describe('getParlayDetail', () => {
   it('returns null without a query for an id that isn’t a uuid', async () => {
     const { client, queries } = fakeSupabase(() => ({ data: null }))

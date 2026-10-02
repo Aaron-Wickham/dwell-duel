@@ -183,6 +183,20 @@ markets:
    The migration applies before the new app deploys, so this stops the old
    app writing pool-style bets into converted markets.
 
+Decided when building it (#335, 0105):
+
+- **Nobody backed the winner.** Pool rules refunded every bet then. A
+  converted bet stores the outcomes nobody had backed at conversion
+  (`bets.refund_outcomes`) and is refunded its cost if one of them wins;
+  bets placed after conversion are ordinary LMSR bets.
+- **A 0% outcome** (no stake and no seed) starts at a 0.1% price so its
+  `ln` is finite; it still shows 0%.
+- **Converted parlays hold no parlay-book shares.** They were house-paid
+  and never moved a pool, so book shares would move today's chance, and
+  the book is never paid. Each leg's `factor` is its locked odds; the
+  stored multiplier and payout are 0074's capped figures, and a voided
+  leg keeps those caps.
+
 ### Delivery
 
 Each item gets its own issue under #325 and its own PR, in this order:

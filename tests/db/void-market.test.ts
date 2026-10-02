@@ -27,6 +27,12 @@ async function balanceOf(m: Member) {
   return data.balance
 }
 
+async function canVoid(client: TestClient, marketId: string): Promise<boolean> {
+  const { data, error } = await client.rpc('can_void_market', { p_market_id: marketId })
+  if (error) throw error
+  return data
+}
+
 async function marketRow(marketId: string) {
   const { data, error } = await serviceClient().from('markets').select('status, settled_at, void_reason').eq('id', marketId).single()
   if (error) throw error
@@ -141,11 +147,16 @@ describe('who can void (0073)', () => {
 
   it('lets the creator void before close only without a stake of their own (0104)', async () => {
     const unstaked = await createTestMarket(creatorClient, ['Yes', 'No'], { title: 'Unstaked' })
+    expect(await canVoid(creatorClient, unstaked.marketId)).toBe(true)
+    expect(await canVoid(bobClient, unstaked.marketId)).toBe(false)
     expect((await creatorClient.rpc('void_market', { p_market_id: unstaked.marketId, p_reason: REASON })).error).toBeNull()
     expect((await marketRow(unstaked.marketId)).status).toBe('voided')
 
     const { marketId, outcomeIds } = await createTestMarket(creatorClient, ['Yes', 'No'], { title: 'Staked' })
     expect((await creatorClient.rpc('place_bet', { p_market_id: marketId, p_outcome_id: outcomeIds[0], p_amount: 10 })).error).toBeNull()
+    // can_void_market (0105) says so first, so the market page doesn't offer Void.
+    expect(await canVoid(creatorClient, marketId)).toBe(false)
+    expect(await canVoid(adminClient, marketId)).toBe(true)
     const { error } = await creatorClient.rpc('void_market', { p_market_id: marketId, p_reason: REASON })
     expectError(error, 'you have a stake in this market, so ask an admin to void it')
     expect((await marketRow(marketId)).status).toBe('open')
@@ -160,6 +171,8 @@ describe('who can void (0073)', () => {
     await closeNow(unstaked.marketId)
 
     for (const m of [staked, unstaked]) {
+      expect(await canVoid(creatorClient, m.marketId)).toBe(false)
+      expect(await canVoid(adminClient, m.marketId)).toBe(true)
       const { error } = await creatorClient.rpc('void_market', { p_market_id: m.marketId, p_reason: REASON })
       expect(error?.message).toBe('this market has closed, so only an admin can void it')
       expect((await marketRow(m.marketId)).status).toBe('open')
@@ -184,6 +197,7 @@ describe('who can void (0073)', () => {
     const { error: uninviteErr } = await serviceClient().from('allowed_emails').delete().eq('email', alice.email)
     if (uninviteErr) throw uninviteErr
 
+    expect(await canVoid(creatorClient, marketId)).toBe(false)
     expect((await creatorClient.rpc('void_market', { p_market_id: marketId, p_reason: REASON })).error?.message).toBe(
       'only the market creator or an admin can void this market',
     )

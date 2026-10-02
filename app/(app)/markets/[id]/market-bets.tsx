@@ -50,6 +50,7 @@ export async function MarketBets({
             viewerId={viewerId}
             canBet={canBet}
             canRemove={role === 'owner' && canBet}
+            final={market.pricing === 'lmsr'}
             rowIdPrefix={BET_ROW_ID_PREFIX}
           />
         )}

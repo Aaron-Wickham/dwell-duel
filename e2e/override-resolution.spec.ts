@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { localDateTimeString } from './local-date-time'
+import { openPoolMarket } from './pool-market'
 import { clientForEmail } from '../tests/db/fixtures'
 import { serviceClient } from '../tests/db/helpers'
 
@@ -21,12 +21,8 @@ test('an admin overrides a resolved market through the confirmation dialog', asy
   }
   const start = await bobBalance()
 
-  await page.goto('/markets/new')
-  await page.getByLabel('Title').fill('Will the youth group win the quiz?')
-  await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
-  await page.getByRole('button', { name: 'Create market' }).click()
-  await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)
-  const marketId = new URL(page.url()).pathname.split('/').at(-1)!
+  // A pool market, so the bets below go through place_bet (0102).
+  const marketId = (await openPoolMarket(page, 'Will the youth group win the quiz?')).split('/').at(-1)!
 
   const { data: outcomes, error: outcomesErr } = await db.from('market_outcomes').select('id, label').eq('market_id', marketId)
   if (outcomesErr) throw outcomesErr

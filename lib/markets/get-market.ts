@@ -1,4 +1,5 @@
 import type { MarketKind } from '@/lib/markets/kind'
+import type { Pricing, PricedOutcome } from '@/lib/markets/pricing'
 import type { DbClient } from '@/lib/supabase/database'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { avatarUrl } from '@/lib/profile/avatar'
@@ -13,6 +14,9 @@ export interface MarketDetail {
   closeAt: string
   createdAt: string
   seedPerOutcome: number
+  // How it prices bets (0101): a pool, or the LMSR market maker with this liquidity (b).
+  pricing: Pricing
+  liquidity: number
   // An over/under's line, and the actual result it resolved on.
   line: number | null
   actualValue: number | null
@@ -29,7 +33,7 @@ export interface MarketDetail {
   settledAt: string | null
   // Why it was voided (0073); null otherwise, and for voids made before reasons were required.
   voidReason: string | null
-  outcomes: { id: string; label: string; poolTotal: number }[]
+  outcomes: PricedOutcome[]
 }
 
 export interface MarketBet {
@@ -46,7 +50,7 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
   const { data, error } = await supabase
     .from('markets')
     .select(
-      'id, title, description, kind, status, close_at, created_at, settled_at, void_reason, created_by, current_resolution_id, seed_per_outcome, line, edited_at, creator:profiles(display_name), market_outcomes(id, label, pool_total), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at, actual_value, payout_seed)',
+      'id, title, description, kind, status, close_at, created_at, settled_at, void_reason, created_by, current_resolution_id, seed_per_outcome, pricing, liquidity, line, edited_at, creator:profiles(display_name), market_outcomes(id, label, pool_total, shares, q_offset), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at, actual_value, payout_seed)',
     )
     .eq('id', marketId)
     // Rows come back with no default order, and colours are assigned by position for
@@ -59,10 +63,12 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
   if (error) throw error
   if (!data) return null
 
-  const outcomes = (data.market_outcomes ?? []).map((o: { id: string; label: string; pool_total: number }) => ({
+  const outcomes = (data.market_outcomes ?? []).map((o) => ({
     id: o.id,
     label: o.label,
     poolTotal: o.pool_total,
+    shares: Number(o.shares),
+    qOffset: Number(o.q_offset),
   }))
 
   // The embed above replaces a second round trip to market_resolutions: current_resolution_id
@@ -84,6 +90,9 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
     closeAt: data.close_at,
     createdAt: data.created_at,
     seedPerOutcome: data.seed_per_outcome,
+    // A text column with a CHECK constraint (0101), so the generated type says only string.
+    pricing: data.pricing as Pricing,
+    liquidity: Number(data.liquidity),
     line: data.line,
     actualValue: resolution?.actual_value ?? null,
     editedAt: data.edited_at,

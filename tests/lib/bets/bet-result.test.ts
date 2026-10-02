@@ -60,4 +60,16 @@ describe('betResult', () => {
     expect(betResult({ outcomeId: 'o-yes', amount: 10 }, { ...m, close_at: '2026-09-30T12:00:00.000Z' }, NOW)).toEqual({ kind: 'open' })
     expect(betResult({ outcomeId: 'o-yes', amount: 10 }, m, NOW)).toEqual({ kind: 'awaiting' })
   })
+
+  describe('on an lmsr market (0102)', () => {
+    const lmsr = (overrides: Partial<Parameters<typeof betResult>[1]> = {}) => market({ pricing: 'lmsr', ...overrides })
+
+    it('pays a winner one DC a share, rounded down', () => {
+      expect(betResult({ outcomeId: 'o-no', amount: 10, shares: 18.329474 }, lmsr(), NOW)).toEqual({ kind: 'won', payout: 18 })
+    })
+
+    it('is lost, not refunded, when nobody backed the winner', () => {
+      expect(betResult({ outcomeId: 'o-yes', amount: 10, shares: 18.3 }, lmsr(), NOW)).toEqual({ kind: 'lost' })
+    })
+  })
 })

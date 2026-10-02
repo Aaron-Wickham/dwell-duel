@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { localDateTimeString } from './local-date-time'
+import { openPoolMarket } from './pool-market'
 import { clientForEmail } from '../tests/db/fixtures'
 import { serviceClient } from '../tests/db/helpers'
 
@@ -21,12 +21,8 @@ test('an override is blocked, naming the member who has spent their winnings', a
   }
   const bobClient = await clientForEmail('bob@example.com')
 
-  await page.goto('/markets/new')
-  await page.getByLabel('Title').fill('Will the override be blocked?')
-  await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
-  await page.getByRole('button', { name: 'Create market' }).click()
-  await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)
-  const marketPath = new URL(page.url()).pathname
+  // A pool market, so Bob's place_bet calls and the pool payout below still apply (0102).
+  const marketPath = await openPoolMarket(page, 'Will the override be blocked?')
   const marketId = marketPath.split('/').at(-1)!
 
   const { data: outcomes, error: outcomesErr } = await db.from('market_outcomes').select('id, label').eq('market_id', marketId)

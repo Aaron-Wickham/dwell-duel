@@ -56,6 +56,8 @@ const ROW: EconomySummaryRow = {
   all_time_added: 351,
   all_time_removed: 10,
   unclassified: 0,
+  market_maker_added: 0,
+  market_maker_removed: 0,
 }
 
 function rowFor(label: string) {
@@ -78,6 +80,7 @@ describe('EconomyCard', () => {
 
     expect(within(rowFor('Starting grants')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+300 DC', '—'])
     expect(within(rowFor('Task rewards')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+10 DC', '—'])
+    expect(within(rowFor('Market maker')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0 DC', '0 DC'])
     expect(within(rowFor('Seed payouts (older results)')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+8 DC', '−22 DC'])
     expect(within(rowFor('Payout rounding')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0 DC', '−3 DC'])
     expect(within(rowFor('House-paid parlays')).getAllByRole('cell').map((c) => c.textContent)).toEqual([

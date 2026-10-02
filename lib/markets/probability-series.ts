@@ -1,3 +1,5 @@
+import type { Pricing } from '@/lib/markets/pricing'
+
 export type ChartBet = { outcomeId: string; amount: number; createdAt: string }
 export type SeriesPoint = { t: number; shares: Record<string, number> }
 export type RangeKey = '1D' | '1W' | 'All'
@@ -38,12 +40,13 @@ export function buildProbabilitySeries(
   return points
 }
 
-export type SeededMarket = { seedPerOutcome: number; createdAt: string; outcomeIds: string[] }
+export type SeededMarket = { seedPerOutcome: number; createdAt: string; outcomeIds: string[]; pricing?: Pricing }
 
 // market_sparklines returns points only at bets, so the market page's chart and the cards'
-// sparklines both prepend the seeded even split at the market's opening (0041) here, and agree.
+// sparklines both prepend the even split at the market's opening here, and agree: a seeded pool
+// market's (0041), or an lmsr market's, which opens with no shares sold (0102).
 export function withSeededStart(points: SeriesPoint[], market: SeededMarket): SeriesPoint[] {
-  if (market.seedPerOutcome <= 0 || market.outcomeIds.length === 0) return points
+  if ((market.pricing !== 'lmsr' && market.seedPerOutcome <= 0) || market.outcomeIds.length === 0) return points
   const even = 1 / market.outcomeIds.length
   const start = { t: Date.parse(market.createdAt), shares: Object.fromEntries(market.outcomeIds.map((id) => [id, even])) }
   return [start, ...points]

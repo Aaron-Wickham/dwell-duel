@@ -22,6 +22,7 @@ const AUTHENTICATED_DEFINER = [
   'create_market',
   // create_market plus an attempt key (0083): checks is_invited() first, keys are claimed per caller.
   'create_market_v2',
+  'create_market_v3',
   'delete_market',
   'delete_market_comment',
   'delete_task',
@@ -51,6 +52,7 @@ const AUTHENTICATED_DEFINER = [
   'place_parlay',
   'place_slip',
   'place_slip_v2',
+  'place_slip_v3',
   // Storage RLS helper (0089): whether a path is attached to proof; a boolean, no rows or paths leak.
   'proof_is_attached',
   // Storage RLS helper (0089): counts only the caller's own proof uploads today; returns a boolean.

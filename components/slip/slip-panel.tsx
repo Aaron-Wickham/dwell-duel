@@ -13,6 +13,8 @@ import { Message } from '@/components/ui/message'
 import { h2Class, labelClass, rowTitleClass } from '@/components/ui/page'
 import { StatusChip } from '@/components/ui/status-chip'
 import type { SlipPick } from '@/lib/parlays/get-slip'
+import { lmsrPrices } from '@/lib/markets/lmsr'
+import { lmsrOddsBp, lmsrQuote } from '@/lib/markets/pricing'
 import {
   combineOdds,
   formatOdds,
@@ -36,7 +38,7 @@ function wholeDc(value: string | undefined): number | null {
   return value && Number.isInteger(n) && n > 0 ? n : null
 }
 
-function placedMessage(placed: NonNullable<NonNullable<PlaceSlipState>['placed']>): string {
+function placedMessage(placed: NonNullable<NonNullable<PlaceSlipState>['placed']>, final: boolean): string {
   const parts: string[] = []
   if (placed.solos > 0) parts.push(`${placed.solos} solo bet${placed.solos === 1 ? '' : 's'}`)
   if (placed.parlay) parts.push(`a ${placed.parlay.legs}-leg parlay at ~${formatOdds(placed.parlay.multiplierBp)}×`)
@@ -45,7 +47,7 @@ function placedMessage(placed: NonNullable<NonNullable<PlaceSlipState>['placed']
       ? `Your earlier attempt already went through: ${parts.join(' and ')}.`
       : 'Your earlier attempt already went through.'
   }
-  return `Placed ${parts.join(' and ')}.`
+  return `Placed ${parts.join(' and ')}.${final ? ' Bets are final.' : ''}`
 }
 
 const QUICK_STAKES = [5, 10, 25]
@@ -110,11 +112,22 @@ const segmentClass = (on: boolean) =>
 const LEG_BLOCK_NOTE: Record<NonNullable<SlipPick['legBlock']>, string> = {
   own_market: 'You created this market, so it can’t be in a parlay. Switch it to Solo.',
   floor: `A parlay pick needs at least ${MIN_LEG_POOL} DC from ${MIN_LEG_BETTORS} other members on its market. Switch it to Solo, or add it once more members have bet.`,
+  lmsr: 'This market pays a fixed amount for each bet, and parlays can’t include it yet. Switch it to Solo.',
 }
 
-// A Solo pick shows what each DC on it would pay from the real pool now; a Parlay pick shows what
-// its leg would be priced at if the market closed now. Both are estimates until close.
+// What a Solo stake on an lmsr pick pays if it wins, exactly as place_lmsr_bet will (0102).
+function lmsrPays(pick: SlipPick, stake: number): number | null {
+  return pick.lmsr ? lmsrQuote(pick.lmsr.q, pick.lmsr.liquidity, pick.lmsr.index, stake).payout : null
+}
+
+// A Solo pick shows what each DC on it would pay now: at its price on an lmsr market, from the real
+// pool on a pool one. A Parlay pick shows what its leg would be priced at if the market closed now.
+// Only an lmsr bet's payout is fixed when it's placed.
 function pickOdds(pick: SlipPick): string | null {
+  if (pick.lmsr) {
+    const bp = lmsrOddsBp(lmsrPrices(pick.lmsr.q, pick.lmsr.liquidity)[pick.lmsr.index] ?? null)
+    return bp === null ? null : `${formatOdds(bp)}×`
+  }
   if (pick.parlay) return `~${formatOdds(pick.oddsBp)}×`
   const bp = legOddsBp(pick.totalPool, pick.outcomePool)
   return bp === null ? null : `${formatOdds(bp)}×`
@@ -127,6 +140,7 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
   const stakeId = `slip-stake-${pick.outcomeId}`
   const errorId = `slip-pick-error-${pick.outcomeId}`
   const stake = wholeDc(stakes[pick.outcomeId])
+  const pays = stake !== null ? lmsrPays(pick, stake) : null
   const name = `${pick.outcomeLabel}, ${pick.marketTitle}`
   const odds = pickOdds(pick)
   const blockId = `slip-pick-block-${pick.outcomeId}`
@@ -202,10 +216,18 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
                   aria-invalid={Boolean(error) || overBudget}
                   aria-describedby={error ? errorId : overBudget ? WHY_ID : undefined}
                 />
-                {stake !== null && (
-                  <span className="text-sm text-ink2">
-                    Pays ~{soloPayout(stake, pick.outcomePool, pick.totalPool)} DC if it wins
-                  </span>
+                {pays !== null ? (
+                  <>
+                    {/* The payout shown, so place_lmsr_bet can refuse one that has since moved by more than 2%. */}
+                    <input type="hidden" name={`payout:${pick.outcomeId}`} value={pays} />
+                    <span className="text-sm text-ink2">Pays {pays} DC if it wins</span>
+                  </>
+                ) : (
+                  stake !== null && (
+                    <span className="text-sm text-ink2">
+                      Pays ~{soloPayout(stake, pick.outcomePool, pick.totalPool)} DC if it wins
+                    </span>
+                  )
                 )}
               </div>
               <StakeChips
@@ -236,6 +258,8 @@ const LOST_RESPONSE = 'We couldn’t confirm your bets. Check your connection an
 export function SlipPanel() {
   const slip = useSlip()
   const { picks, parlayStake, setParlayStake, stakes, balance, attemptKeyRef, lostResponse, setLostResponse, clearStakes, setOpen } = slip
+  // Bets on an lmsr market can't be cancelled (0102), so the slip says so before and after placing.
+  const final = picks.some((p) => p.lmsr && !p.parlay)
   const [state, formAction] = useActionState<PlaceSlipState, FormData>(async (prev, formData) => {
     attemptKeyRef.current ??= crypto.randomUUID()
     formData.set('idempotency_key', attemptKeyRef.current)
@@ -250,7 +274,7 @@ export function SlipPanel() {
     }
     setLostResponse(false)
     if (next?.placed) {
-      toast.success(placedMessage(next.placed))
+      toast.success(placedMessage(next.placed, final))
       haptics.success()
       clearStakes()
       setOpen(false)
@@ -426,6 +450,7 @@ export function SlipPanel() {
           {formError}
         </Message>
       )}
+      {final && <p className="text-sm text-ink2">Bets are final: once placed, they can’t be cancelled.</p>}
       <FormSubmitButton
         block
         disabled={!allOpen || !solosReady || !parlayReady || short}

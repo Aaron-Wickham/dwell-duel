@@ -48,6 +48,8 @@ const market: MarketDetail = {
   closeAt: '2026-10-04T09:00:00Z',
   createdAt: '2026-09-20T09:00:00Z',
   seedPerOutcome: 20,
+  pricing: 'pool',
+  liquidity: 50,
   line: null,
   actualValue: null,
   editedAt: null,
@@ -61,8 +63,8 @@ const market: MarketDetail = {
   settledAt: null,
   voidReason: null,
   outcomes: [
-    { id: 'o-yes', label: 'Yes', poolTotal: 60 },
-    { id: 'o-no', label: 'No', poolTotal: 20 },
+    { id: 'o-yes', label: 'Yes', poolTotal: 60, shares: 0, qOffset: 0 },
+    { id: 'o-no', label: 'No', poolTotal: 20, shares: 0, qOffset: 0 },
   ],
 }
 
@@ -73,6 +75,7 @@ const solo = (id: number, amount: number, outcomeLabel: string, result: Position
   placedAt: '2026-10-03T09:14:00Z',
   result,
   paysIfWins,
+  final: false,
 })
 
 const parlay = (overrides: Partial<ParlayView> = {}): ParlayView => ({

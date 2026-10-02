@@ -208,26 +208,36 @@ export async function giveRole(member: Member, role: 'owner' | 'admin' | 'review
 export async function createTestMarket(
   creatorClient: TestClient,
   labels: string[],
-  opts?: { kind?: 'binary' | 'multiple_choice'; closeInMs?: number; title?: string; seed?: number },
+  opts?: { kind?: 'binary' | 'multiple_choice'; closeInMs?: number; title?: string; seed?: number; lmsr?: boolean },
 ): Promise<TestMarket> {
   await ensureInvited(creatorClient)
 
   const kind = opts?.kind ?? (labels.length === 2 ? 'binary' : 'multiple_choice')
   const closeAt = new Date(Date.now() + (opts?.closeInMs ?? 1000 * 60 * 60)).toISOString()
-
-  const { data: marketId, error } = await creatorClient.rpc('create_market', {
+  const args = {
     p_title: opts?.title ?? 'Test market',
     p_description: null,
     p_kind: kind,
     p_outcome_labels: labels,
     p_close_at: closeAt,
-  })
-  if (error) throw error
+  }
+
+  let marketId: string
+  if (opts?.lmsr) {
+    // create_market_v3 (0102): what the app calls since #333, priced by LMSR with no seed.
+    const { data, error } = await creatorClient.rpc('create_market_v3', args)
+    if (error) throw error
+    marketId = (data as { market_id: string }).market_id
+  } else {
+    const { data, error } = await creatorClient.rpc('create_market', args)
+    if (error) throw error
+    marketId = data as string
+  }
 
   const { data: created, error: seedErr } = await serviceClient()
     .from('markets')
-    .update({ seed_per_outcome: opts?.seed ?? 0 })
-    .eq('id', marketId as string)
+    .update({ seed_per_outcome: opts?.lmsr ? 0 : (opts?.seed ?? 0) })
+    .eq('id', marketId)
     .select('created_by')
     .single()
   if (seedErr) throw seedErr
@@ -243,7 +253,7 @@ export async function createTestMarket(
   const { data: outcomes, error: outcomesErr } = await serviceClient()
     .from('market_outcomes')
     .select('id, label')
-    .eq('market_id', marketId as string)
+    .eq('market_id', marketId)
   if (outcomesErr) throw outcomesErr
 
   const outcomeIds = labels.map((label) => {
@@ -252,7 +262,7 @@ export async function createTestMarket(
     return row.id
   })
 
-  return { marketId: marketId as string, outcomeIds }
+  return { marketId, outcomeIds }
 }
 
 const BACKERS = ['Backer1', 'Backer2'] as const

@@ -12,9 +12,10 @@ test('a market with a bet shows its chart, on the market page and its list card'
   await placeSolo(page, 'Yes', 10)
   await expect(page.getByRole('region', { name: 'Bets' }).getByText('10 DC on Yes')).toBeVisible()
 
-  await expect(page.getByRole('img', { name: /^Chance over time\. Now: No 40%, Yes 60%\.$/ })).toBeVisible()
+  // A new market's price (0102): 10 DC on Yes moves it from 50% to 59%.
+  await expect(page.getByRole('img', { name: /^Chance over time\. Now: No 41%, Yes 59%\.$/ })).toBeVisible()
 
   await page.goto('/markets')
   const card = page.getByRole('article').filter({ hasText: 'Will the charts render?' })
-  await expect(card.getByRole('img', { name: /^Chance over time\. Now: No 40%, Yes 60%\.$/ })).toBeVisible()
+  await expect(card.getByRole('img', { name: /^Chance over time\. Now: No 41%, Yes 59%\.$/ })).toBeVisible()
 })

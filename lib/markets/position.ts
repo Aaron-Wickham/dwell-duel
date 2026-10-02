@@ -16,9 +16,12 @@ export interface PositionBet {
   amount: number
   placedAt: string
   result: MyBetResult
-  // What it pays if its outcome wins, from the real pool as it stands: while the market is open or
-  // awaiting its result. Null once settled; the result says what it did.
+  // What it pays if its outcome wins, while the market is open or awaiting its result: fixed when it
+  // was placed on an lmsr market (0102), from the real pool as it stands on a pool one. Null once
+  // settled; the result says what it did.
   paysIfWins: number | null
+  // An lmsr bet: its payout is exact, and it can't be cancelled.
+  final: boolean
 }
 
 export interface PositionLeg {
@@ -45,7 +48,7 @@ export async function getPositionKeys(supabase: DbClient, marketId: string): Pro
   return { betIds, parlayIds }
 }
 
-type BetRow = { id: number; outcome_id: string; amount: number; created_at: string }
+type BetRow = { id: number; outcome_id: string; amount: number; shares: number | null; created_at: string }
 
 // The rows the keys name. A bet cancelled between the two reads is simply left out.
 export async function getMarketPosition(
@@ -58,7 +61,7 @@ export async function getMarketPosition(
     (async () => {
       const rows = new Map<number, BetRow>()
       for (const part of chunk(keys.betIds, IN_CHUNK)) {
-        const { data, error } = await supabase.from('bets').select('id, outcome_id, amount, created_at').in('id', part)
+        const { data, error } = await supabase.from('bets').select('id, outcome_id, amount, shares, created_at').in('id', part)
         if (error) throw error
         for (const row of data ?? []) rows.set(row.id, row)
       }
@@ -77,7 +80,9 @@ export async function getMarketPosition(
   const legOdds = await fetchLegOdds(supabase, [...parlayRows.values()])
 
   const totalPool = market.outcomes.reduce((sum, o) => sum + o.poolTotal, 0)
+  const final = market.pricing === 'lmsr'
   const embed = {
+    pricing: market.pricing,
     status: market.status,
     close_at: market.closeAt,
     current_resolution: market.resolvedOutcomeId
@@ -91,17 +96,22 @@ export async function getMarketPosition(
     const b = betRows.get(id)
     if (!b) continue
     const outcome = market.outcomes.find((o) => o.id === b.outcome_id)
-    const result = betResult({ outcomeId: b.outcome_id, amount: b.amount }, embed, now)
+    const result = betResult({ outcomeId: b.outcome_id, amount: b.amount, shares: b.shares }, embed, now)
+    const live = result.kind === 'open' || result.kind === 'awaiting'
     bets.push({
       id: b.id,
       outcomeLabel: outcome?.label ?? 'Unknown outcome',
       amount: b.amount,
       placedAt: b.created_at,
       result,
-      paysIfWins:
-        (result.kind === 'open' || result.kind === 'awaiting') && outcome
-          ? poolPayout(b.amount, outcome.poolTotal, totalPool)
-          : null,
+      paysIfWins: !live
+        ? null
+        : final
+          ? Math.floor(Number(b.shares ?? 0))
+          : outcome
+            ? poolPayout(b.amount, outcome.poolTotal, totalPool)
+            : null,
+      final,
     })
   }
 
@@ -123,7 +133,8 @@ export function positionSummary(bets: PositionBet[]): { tone: 'plain' | 'win' | 
   if (bets.length === 0) return null
   const staked = bets.reduce((sum, b) => sum + b.amount, 0)
   if (bets.some((b) => b.result.kind === 'open')) {
-    return { tone: 'plain', text: `${staked} DC on this market · Pays ~ updates as others bet.` }
+    const note = bets.every((b) => b.final) ? 'Bets are final.' : 'Pays ~ updates as others bet.'
+    return { tone: 'plain', text: `${staked} DC on this market · ${note}` }
   }
   if (bets.some((b) => b.result.kind === 'awaiting')) {
     return { tone: 'plain', text: `${staked} DC on this market · Waiting on the result.` }

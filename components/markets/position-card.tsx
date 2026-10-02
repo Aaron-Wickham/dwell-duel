@@ -63,9 +63,9 @@ export function PositionCard({
               aside={
                 <>
                   {b.paysIfWins !== null && (
-                    <span className="font-extrabold tabular-nums">Pays ~{b.paysIfWins} DC</span>
+                    <span className="font-extrabold tabular-nums">{`Pays ${b.final ? '' : '~'}${b.paysIfWins} DC`}</span>
                   )}
-                  {b.result.kind === 'open' ? (
+                  {b.result.kind === 'open' && !b.final ? (
                     <CancelBetButton betId={b.id} amount={b.amount} outcomeLabel={b.outcomeLabel} />
                   ) : (
                     <ResultChip result={b.result} />

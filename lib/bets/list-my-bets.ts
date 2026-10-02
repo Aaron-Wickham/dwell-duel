@@ -1,5 +1,6 @@
 import type { DbClient } from '@/lib/supabase/database'
 import { poolPayout } from '@/lib/markets/odds'
+import type { Pricing } from '@/lib/markets/pricing'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 
@@ -8,7 +9,7 @@ export type MyBetResult =
   | { kind: 'awaiting' }
   | { kind: 'won'; payout: number }
   | { kind: 'lost' }
-  // A void refunds everyone; so does a resolution nobody backed (resolve_market_core, 0046).
+  // A void refunds everyone; so does a resolution nobody backed on a pool market (resolve_market_core, 0046).
   | { kind: 'refunded'; reason: 'voided' | 'no_winners' }
 
 export interface MyBet {
@@ -20,6 +21,8 @@ export interface MyBet {
   placedAt: string
   closeAt: string
   result: MyBetResult
+  // A bet on an lmsr market (0102) can't be cancelled.
+  final: boolean
 }
 
 export interface MyCancelledBet {
@@ -36,6 +39,7 @@ interface MarketEmbed {
   title: string
   status: 'open' | 'resolved' | 'voided'
   close_at: string
+  pricing: Pricing
   current_resolution: { outcome_id: string; payout_seed: number } | null
   market_outcomes: { id: string; pool_total: number }[]
 }
@@ -44,21 +48,26 @@ export interface BetRow {
   id: number
   outcome_id: string
   amount: number
+  shares: number | null
   created_at: string
   market_outcomes: { label: string } | null
   markets: MarketEmbed
 }
 
-// The same arithmetic as resolve_market_core, from pools that can't move once a market resolves:
-// the real pool (0074), or with the seed a resolution from before then counted (payout_seed).
+// The same arithmetic as resolve_market_core: one DC a share, rounded down, on an lmsr market
+// (0102); otherwise from pools that can't move once a market resolves, the real pool (0074), or with
+// the seed a resolution from before then counted (payout_seed). A market without `pricing` is a pool.
 export function betResult(
-  bet: { outcomeId: string; amount: number },
-  market: Pick<MarketEmbed, 'status' | 'close_at' | 'current_resolution' | 'market_outcomes'>,
+  bet: { outcomeId: string; amount: number; shares?: number | null },
+  market: Pick<MarketEmbed, 'status' | 'close_at' | 'current_resolution' | 'market_outcomes'> & { pricing?: Pricing },
   now: number,
 ): MyBetResult {
   if (market.status === 'voided') return { kind: 'refunded', reason: 'voided' }
   if (market.status === 'open') return Date.parse(market.close_at) > now ? { kind: 'open' } : { kind: 'awaiting' }
   const winner = market.current_resolution?.outcome_id
+  if (market.pricing === 'lmsr') {
+    return winner === bet.outcomeId ? { kind: 'won', payout: Math.floor(Number(bet.shares ?? 0)) } : { kind: 'lost' }
+  }
   const winningPool = market.market_outcomes.find((o) => o.id === winner)?.pool_total ?? bet.amount
   if (winningPool === 0) return { kind: 'refunded', reason: 'no_winners' }
   if (winner !== bet.outcomeId) return { kind: 'lost' }
@@ -68,7 +77,7 @@ export function betResult(
 }
 
 export const BET_COLUMNS =
-  'id, outcome_id, amount, created_at, market_outcomes(label), markets!inner(id, title, status, close_at, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, payout_seed), market_outcomes(id, pool_total))'
+  'id, outcome_id, amount, shares, created_at, market_outcomes(label), markets!inner(id, title, status, close_at, pricing, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, payout_seed), market_outcomes(id, pool_total))'
 
 export function toMyBet(b: BetRow, now: number): MyBet {
   return {
@@ -79,7 +88,8 @@ export function toMyBet(b: BetRow, now: number): MyBet {
     amount: b.amount,
     placedAt: b.created_at,
     closeAt: b.markets.close_at,
-    result: betResult({ outcomeId: b.outcome_id, amount: b.amount }, b.markets, now),
+    result: betResult({ outcomeId: b.outcome_id, amount: b.amount, shares: b.shares }, b.markets, now),
+    final: b.markets.pricing === 'lmsr',
   }
 }
 

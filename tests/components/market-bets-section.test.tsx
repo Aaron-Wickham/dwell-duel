@@ -59,6 +59,8 @@ const market: MarketDetail = {
   closeAt: '2026-10-01T00:00:00Z',
   createdAt: '2026-09-20T09:00:00Z',
   seedPerOutcome: 20,
+  pricing: 'pool',
+  liquidity: 50,
   line: null,
   actualValue: null,
   editedAt: null,
@@ -72,8 +74,8 @@ const market: MarketDetail = {
   settledAt: null,
   voidReason: null,
   outcomes: [
-    { id: 'o-yes', label: 'Yes', poolTotal: 10 },
-    { id: 'o-no', label: 'No', poolTotal: 5 },
+    { id: 'o-yes', label: 'Yes', poolTotal: 10, shares: 0, qOffset: 0 },
+    { id: 'o-no', label: 'No', poolTotal: 5, shares: 0, qOffset: 0 },
   ],
 }
 

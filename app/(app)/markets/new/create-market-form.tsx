@@ -12,7 +12,8 @@ import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { cn } from '@/lib/utils'
 import { createMarketAction, type ActionState } from '@/lib/markets/create-market'
 import { formatLine, type MarketKind } from '@/lib/markets/kind'
-import { computeOdds } from '@/lib/markets/odds'
+import { DEFAULT_LIQUIDITY } from '@/lib/markets/lmsr'
+import { marketOdds } from '@/lib/markets/pricing'
 import { MarketCard } from '@/components/markets/market-card'
 import { h2Class, labelClass } from '@/components/ui/page'
 import { nextWeeklyClose } from '@/lib/markets/weekly-close'
@@ -266,8 +267,8 @@ export function CreateMarketForm({ initial, admin = false }: { initial?: MarketP
   )
 }
 
-// The card the market will get on Markets, from what's typed so far. A new market's odds are its
-// seed pools alone, which are equal, so they go through the same computeOdds as a real card.
+// The card the market will get on Markets, from what's typed so far. A new market opens with no
+// shares sold, at even prices (0102), so it goes through the same marketOdds as a real card.
 function MarketPreview({
   kind,
   title,
@@ -291,10 +292,12 @@ function MarketPreview({
       : kind === 'over_under'
         ? [`Over ${shownLine === null ? '…' : formatLine(shownLine)}`, `Under ${shownLine === null ? '…' : formatLine(shownLine)}`]
         : outcomes.map((o, i) => o.trim() || `Outcome ${i + 1}`)
-  const odds = computeOdds(
-    labels.map((label, i) => ({ id: `preview-${i}`, label, pool_total: 0 })),
-    1,
-  )
+  const odds = marketOdds({
+    pricing: 'lmsr',
+    liquidity: DEFAULT_LIQUIDITY,
+    seedPerOutcome: 0,
+    outcomes: labels.map((label, i) => ({ id: `preview-${i}`, label, poolTotal: 0, shares: 0, qOffset: 0 })),
+  })
   const closeDate = closeAt ? new Date(closeAt) : null
   return (
     <section

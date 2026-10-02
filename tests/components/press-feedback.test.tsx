@@ -138,6 +138,7 @@ const CASES: [string, () => ReactElement][] = [
               amount: 5,
               placedAt: '2026-09-25T12:00:00Z',
               closeAt: '2026-10-01T12:00:00Z',
+              final: false,
               result: { kind: 'open' },
             },
           },
@@ -188,7 +189,7 @@ const CASES: [string, () => ReactElement][] = [
       <PositionCard
         resolvedAt={null}
         position={{
-          bets: [{ id: 1, outcomeLabel: 'Yes', amount: 20, placedAt: '2026-10-03T09:14:00Z', result: { kind: 'open' }, paysIfWins: 26 }],
+          bets: [{ id: 1, outcomeLabel: 'Yes', amount: 20, placedAt: '2026-10-03T09:14:00Z', result: { kind: 'open' }, paysIfWins: 26, final: false }],
           legs: [
             {
               leg: { marketId: 'k1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', oddsBp: 20_000, oddsKnown: false, status: 'open' },

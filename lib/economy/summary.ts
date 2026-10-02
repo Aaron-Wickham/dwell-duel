@@ -22,10 +22,13 @@ export interface EconomySummaryRow {
   all_time_added: number | string
   all_time_removed: number | string
   unclassified: number | string
+  // 0102: an lmsr market's result.
+  market_maker_added: number | string
+  market_maker_removed: number | string
 }
 
 export interface EconomySource {
-  key: 'starting_grants' | 'task_rewards' | 'seed_payouts' | 'payout_rounding' | 'house_parlays' | 'owner_adjustments'
+  key: 'starting_grants' | 'task_rewards' | 'market_maker' | 'seed_payouts' | 'payout_rounding' | 'house_parlays' | 'owner_adjustments'
   label: string
   added: number
   // null where the source can only ever add.
@@ -53,6 +56,14 @@ export function toEconomySummary(row: EconomySummaryRow): EconomySummary {
   const sources: EconomySource[] = [
     { key: 'starting_grants', label: 'Starting grants', added: n(row.starting_grants_added), removed: null },
     { key: 'task_rewards', label: 'Task rewards', added: n(row.task_rewards_added), removed: null },
+    // What markets priced by LMSR (0102) paid winners, less every stake on them: added when the house
+    // paid out more than it took in. The fractions of a share it rounds away count as payout rounding.
+    {
+      key: 'market_maker',
+      label: 'Market maker',
+      added: n(row.market_maker_added),
+      removed: n(row.market_maker_removed),
+    },
     // Only results from before 0074 counted the seed, so this row shows only in a month one of
     // them was paid or overridden.
     {

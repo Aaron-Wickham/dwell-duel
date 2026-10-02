@@ -118,7 +118,8 @@ export interface LedgerViolation {
 /**
  * The money invariants that no single scenario asserts, as one query that returns every
  * violating row: a balance equals the sum of its ledger rows, an outcome's pool equals its live
- * bets, and a parlay's `credited` equals what the ledger paid and took back for it. (Balances
+ * bets, an lmsr outcome's shares equal its live bets' shares (0102; the parlay book joins them in
+ * #334), and a parlay's `credited` equals what the ledger paid and took back for it. (Balances
  * and pools can't go negative: the schema's CHECKs already guarantee that.)
  */
 export async function ledgerViolations(): Promise<LedgerViolation[]> {
@@ -135,6 +136,13 @@ export async function ledgerViolations(): Promise<LedgerViolation[]> {
     left join public.bets b on b.outcome_id = o.id
     group by o.id, o.pool_total
     having o.pool_total <> coalesce(sum(b.amount), 0)
+    union all
+    select 'lmsr shares <> live bets', o.id::text, o.shares::int, coalesce(sum(b.shares), 0)::int
+    from public.market_outcomes o
+    join public.markets m on m.id = o.market_id and m.pricing = 'lmsr'
+    left join public.bets b on b.outcome_id = o.id
+    group by o.id, o.shares
+    having o.shares <> coalesce(sum(b.shares), 0)
     union all
     select 'parlay credited <> ledger', pa.id::text, pa.credited::int, coalesce(sum(t.amount), 0)::int
     from public.parlays pa

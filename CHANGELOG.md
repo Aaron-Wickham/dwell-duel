@@ -13,12 +13,14 @@ before v0.4.0 used other headings.)
 ## Unreleased
 
 ### Features
+- **New markets pay a fixed amount, and their bets are final.** Every market made from now on is run by a market maker (LMSR): it opens at even odds, a bet buys shares that pay 1 DC each if the outcome wins, and the slip says exactly what a bet pays ("Pays 18 DC if it wins", no "~"). If the price moves by more than 2% before the bet is placed, the slip shows the new payout and asks you to place it again. Bets on new markets can't be cancelled, the chance, chart and sparklines show the market maker's price, a void refunds what each bet cost, and the owner's economy panel gains a Market maker line. Older markets keep their pools until they settle, and parlays can't include a new market until parlays move over too (#333).
 - **A sign-in page for new invitees.** Sign in opens on the DwellDuel symbol growing its leaves and settling into the wordmark, then a sample market draws its chart as two bets land, above "Friendly bets. Faithful study.", what DwellDuel is in three lines, and the Google button with a reminder to use the invited account. It plays once a visit (never under reduced motion), keeps the button on screen on an iPhone SE, and splits into two columns on a desktop; Not invited gets the same look (#329).
 
 ### Polish
 - **List items are cards across the app.** Bets, tasks, the leaderboard, markets waiting to be resolved, the admin task catalog, pending approvals, admin members and the home tiles now share My bets' parlay card: a hairline border and 14px corners, spaced apart instead of divided, in two or three columns on a wide screen. The feed, ledger, coin history, invites and a market's bet list stay divided rows (#328).
 
 ### Under the hood
+- **Fixed-payout markets in the database (0102).** `create_market_v3`, `place_slip_v3` and `place_lmsr_bet` price new markets by LMSR; `place_bet`, `cancel_bet` and `remove_bet` refuse them, so a cached older app can't bet on one; resolving pays `floor(shares)` and keeps the fractions for payout rounding; charts, the weekly recap's upset and member stats read the new rules, and the DB tests' ledger check holds each outcome's shares equal to its bets' (#333).
 - **The maths for fixed-payout markets is in.** The LMSR market maker that will price markets and parlays at the moment you bet (#325) exists in the database and in the app, kept equal by a test, with nothing using it yet (#331).
 
 ## v0.8.0-beta — 2026-10-01

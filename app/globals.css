@@ -12,6 +12,14 @@
   }
 }
 
+/* A phone too short to show the whole sign-in page (an iPhone SE is 667pt tall): it drops what can
+   go so the Google button stays above the fold. Not at lg, where the page is two columns. */
+@custom-variant short {
+  @media (max-height: 667px) and (width < 64rem) {
+    @slot;
+  }
+}
+
 @custom-variant dark {
   &:where([data-theme="dark"], [data-theme="dark"] *) {
     @slot;
@@ -698,6 +706,95 @@
 }
 :root[data-motion="reduce"][data-launch] .launch-screen {
   animation: launch-out 150ms ease-in 150ms forwards;
+}
+
+/* Sign-in intro (components/sign-in/sign-in-intro.tsx). Plays only while the pre-paint script's
+   data-sign-in-intro is on <html>: once a session, never under reduced motion. Without it every
+   piece rests on its final frame, which is also where each animation ends. The delays are INTRO in
+   components/sign-in/intro-timeline.ts; IntroDirector flies the symbol into the wordmark. */
+.sign-in-intro {
+  display: none;
+}
+:root[data-sign-in-intro] .sign-in-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: sign-in-hide var(--duration-fast) 1350ms forwards;
+}
+:root[data-sign-in-intro] .sign-in-intro-backdrop {
+  animation: sign-in-fade-out var(--duration-slide) var(--ease-ios) 900ms forwards;
+}
+:root[data-sign-in-intro] .sign-in-intro-symbol {
+  animation: sign-in-fade-out var(--duration-fast) var(--ease-ios) 1250ms forwards;
+}
+:root[data-sign-in-intro] .sign-in-intro-wordmark {
+  animation: sign-in-fade-in var(--duration-fast) var(--ease-ios) 1250ms both;
+}
+:root[data-sign-in-intro] .sign-in-intro-card {
+  animation: sign-in-rise var(--duration-page) var(--ease-ios) 1100ms both;
+}
+:root[data-sign-in-intro] .sign-in-intro-text {
+  animation: sign-in-rise var(--duration-page) var(--ease-ios) 1300ms both;
+}
+:root[data-sign-in-intro] .sign-in-intro-draw {
+  animation: sign-in-draw calc(var(--duration-sheet) * 2) var(--ease-ios) 1300ms both;
+}
+:root[data-sign-in-intro] .sign-in-intro-bet {
+  animation: sign-in-fade-in var(--duration-enter) var(--ease-ios) 1900ms both;
+}
+@keyframes sign-in-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes sign-in-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes sign-in-rise {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+  }
+}
+@keyframes sign-in-hide {
+  to {
+    visibility: hidden;
+  }
+}
+/* The history up to the first bet, then each bet's step as it lands (INTRO.bets). */
+@keyframes sign-in-draw {
+  0% {
+    clip-path: inset(-4px 100% -4px 0);
+  }
+  66.667% {
+    clip-path: inset(-4px 20% -4px 0);
+  }
+  83.333% {
+    clip-path: inset(-4px 10% -4px 0);
+  }
+  100% {
+    clip-path: inset(-4px 0 -4px 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-sign-in-intro] .sign-in-intro {
+    display: none;
+  }
+  :root[data-sign-in-intro] :is(.sign-in-intro-wordmark, .sign-in-intro-card, .sign-in-intro-text, .sign-in-intro-draw, .sign-in-intro-bet) {
+    animation: none;
+  }
+}
+:root[data-motion="reduce"][data-sign-in-intro] .sign-in-intro {
+  display: none;
+}
+:root[data-motion="reduce"][data-sign-in-intro] :is(.sign-in-intro-wordmark, .sign-in-intro-card, .sign-in-intro-text, .sign-in-intro-draw, .sign-in-intro-bet) {
+  animation: none;
 }
 
 /* LeafLoader (components/brand/leaf-loader.tsx): the leaves pulse in turn. */

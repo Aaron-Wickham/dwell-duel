@@ -69,12 +69,35 @@ test('not-invited names the refused account once, and Try another account keeps 
   await expect(page.getByText(/You signed in as/)).toHaveCount(0)
 })
 
+// #329: an iPhone SE's viewport. The lede and facts drop out so Google's button is on screen
+// without scrolling, once the intro (if any) has settled.
+test('on a short phone the sign-in button stays above the fold', async ({ page }) => {
+  test.skip(!!googleClientId, 'Google’s own button can’t render here without its script')
+  await page.setViewportSize({ width: 375, height: 667 })
+  await page.goto('/sign-in')
+  await expect(page.getByText(/Bet play-money Dwell Coin/)).toBeHidden()
+  await expect(page.getByRole('list', { name: 'What DwellDuel is' })).toBeHidden()
+  const button = page.getByRole('button', { name: 'Sign in with Google' })
+  await expect(button).toBeInViewport({ ratio: 1 })
+})
+
+// #329: once a session, and reduced motion skips it, so the page opens on its final frame.
+test('the sign-in intro plays once a session', async ({ page }) => {
+  await page.goto('/sign-in')
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('dd-sign-in-intro'))).toBe('1')
+  // Over: the attribute goes, and the sample rests at 61%.
+  await expect.poll(() => page.evaluate(() => 'signInIntro' in document.documentElement.dataset), { timeout: 5_000 }).toBe(false)
+  await page.reload()
+  expect(await page.evaluate(() => 'signInIntro' in document.documentElement.dataset)).toBe(false)
+})
+
 test('the sign-in page says what DwellDuel is, and the privacy page is public', async ({ page, request }) => {
   const privacy = await request.get('/privacy', { maxRedirects: 0 })
   expect(privacy.status()).toBe(200)
 
   await page.goto('/sign-in')
-  await expect(page.getByText(/prediction game for our church friend group/)).toBeVisible()
+  await expect(page.getByText(/Bet play-money Dwell Coin on questions from your church friends/)).toBeVisible()
+  await expect(page.getByRole('img', { name: /^Sample market: Will the sermon run past noon\?/ })).toBeVisible()
   await page.getByRole('link', { name: 'Privacy' }).click()
   await expect(page).toHaveURL(/\/privacy$/)
   await expect(page.getByRole('heading', { level: 1, name: 'Privacy' })).toBeVisible()

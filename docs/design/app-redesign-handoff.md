@@ -18,7 +18,7 @@ The mockup is a Design canvas:
 
 | Artboards | Route |
 |---|---|
-| SignIn, NotInvited | `app/(auth)/sign-in`, `app/(auth)/not-invited` |
+| P1002-SignIn*, P1002-NotInvited* (Proposals · Oct 2, #329) | `app/(auth)/sign-in`, `app/(auth)/not-invited` |
 | Home | `app/(app)/(home)/page.tsx` |
 | Markets | `app/(app)/markets/(list)` |
 | CreateMarket | `app/(app)/markets/new` |
@@ -119,6 +119,20 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 - **reading** is `max-w-[980px]`: about 820px of content, centred, for a single stream or long text.
 - Side-by-side columns are `minmax(0,7fr)` / `minmax(0,5fr)` (or the reverse), `items-start`, so each card is as tall as its content. Where the phone order differs from the columns, the grid places items (`lg:col-start-*`, `lg:row-start-*`) rather than reordering the markup.
 - A route's `loading.tsx` skeleton follows the same width and columns.
+
+## Sign in and Not invited (#329)
+
+Written for someone who has just been invited: get them oriented, then signed in. Both pages are `SignInFrame` (`components/sign-in/sign-in-frame.tsx`), not a `<Page>`, since they're outside the signed-in shell.
+
+- **Contents, in order:** the wordmark (static, not a link), a sample market card, the `h1` "Friendly bets. Faithful study.", the lede, three facts with icons (Bet on friendly questions · Earn DC with Bible-study tasks · Play money, invite-only), the Google button with "Use the Google account your invite was sent to." under it, and Privacy.
+- **The sample market** (`SampleMarket`) is hard-coded: signed-out visitors can't read markets and real questions mustn't leak. It looks like a `MarketCard`: Open and Church chips and "Sample", "Will the sermon run past noon?", a plain-SVG step-line chart in `MarketSparkline`'s style (Yes in `--s2`, No in `--line-s`, a baseline and a dashed 50% line) with end labels, and "Sam bet 10 DC on Yes · just now" beside Yes's %. Screen readers get it as one image named "Sample market: …".
+- **Layouts:** one column on a phone, card first. A short phone (667pt tall or less, below `lg:`, the `short:` variant) drops the chart's axes, the lede and the facts so the button is on screen without scrolling. At `lg:` the copy (up to 480px, the button 380px) sits left of the card, 64px apart, and the `h1` is 52px.
+- **The intro** plays once a session (`sessionStorage`), from a script that runs before the first paint (`components/sign-in/sign-in-intro.tsx`), so the page opens on the first frame or the last, never both:
+  1. 0–0.9s: the D sits centred at the launch screen's size (`32vmin`) on the page background and its leaves grow in (`launch-leaf`, the launch screen's own frames).
+  2. 0.9–1.35s: the symbol flies into the wordmark (`IntroDirector`, measured, `DURATION.sheet` on the iOS curve) as the backdrop fades.
+  3. 1.1s on: the card rises in, then the copy; from 1.3s the chart draws; at 1.9s and 2.05s two bets land as steps on the line, and Yes counts 54% → 61% through `AnimatedNumber`.
+  The times are `INTRO` in `components/sign-in/intro-timeline.ts`, and the CSS ("Sign-in intro" in `globals.css`) uses only the motion tokens. In the installed app the launch screen plays over the first 0.9s and fades as the symbol starts to move. Reduced motion (the device or Settings) starts on the final frame.
+- **Not invited:** the same frame with the sample card at 35% opacity, a gold notice "This Google account isn't on the invite list.", the `h1` "You're not on the list yet", the refused account's email when the callback passed it, a line about checking with the friend who invited them, and "Try another account" as a primary button with the G mark, back through sign-in with `next` kept.
 
 ## Navigation (one `<AppNav>` in the signed-in layout)
 

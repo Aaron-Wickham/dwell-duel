@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Message } from '@/components/ui/message'
 import { LeafLoader } from '@/components/brand/leaf-loader'
+import { GoogleMark } from '@/components/sign-in/google-mark'
 import { NEXT_COOKIE, NEXT_COOKIE_MAX_AGE, safeNextPath } from '@/lib/auth/next-path'
 import { SignInError } from './sign-in-error'
 
@@ -64,9 +65,7 @@ export function SignInButton({ alternative = false }: { alternative?: boolean })
           'Try another way'
         ) : (
           <>
-            <span aria-hidden="true" className="flex size-[26px] items-center justify-center rounded-full bg-on-primary text-[15px] font-extrabold text-primary">
-              G
-            </span>
+            <GoogleMark />
             Sign in with Google
           </>
         )}

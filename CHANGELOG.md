@@ -12,6 +12,9 @@ before v0.4.0 used other headings.)
 
 ## Unreleased
 
+### Features
+- **A sign-in page for new invitees.** Sign in opens on the DwellDuel symbol growing its leaves and settling into the wordmark, then a sample market draws its chart as two bets land, above "Friendly bets. Faithful study.", what DwellDuel is in three lines, and the Google button with a reminder to use the invited account. It plays once a visit (never under reduced motion), keeps the button on screen on an iPhone SE, and splits into two columns on a desktop; Not invited gets the same look (#329).
+
 ### Under the hood
 - **The maths for fixed-payout markets is in.** The LMSR market maker that will price markets and parlays at the moment you bet (#325) exists in the database and in the app, kept equal by a test, with nothing using it yet (#331).
 

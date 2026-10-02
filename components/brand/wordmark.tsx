@@ -48,17 +48,19 @@ export function Wordmark({
           little low; these lift it until it meets the wordmark's baseline (measured in
           e2e/brand.spec.ts, which keeps them honest). */}
       <DwellDuelSymbol size={size === 'sm' ? 28 : 32} className={size === 'sm' ? '-translate-y-[2.6px]' : '-translate-y-[3.15px]'} />
-      <span
-        className={cn(
-          'whitespace-nowrap font-extrabold uppercase leading-none tracking-[-0.03em]',
-          size === 'sm' ? 'text-[18px]' : 'text-[21px]',
-          symbolBelowLg && 'max-lg:hidden',
-          symbolOnNarrow && 'max-[359px]:hidden',
-        )}
-      >
-        <span className="text-wm-a">Dwell</span>
-        <span className="text-wm-b">Duel</span>
-      </span>
+      <WordmarkName
+        className={cn(size === 'sm' ? 'text-[18px]' : 'text-[21px]', symbolBelowLg && 'max-lg:hidden', symbolOnNarrow && 'max-[359px]:hidden')}
+      />
     </Link>
+  )
+}
+
+// The name beside the symbol, sized by its caller.
+export function WordmarkName({ className }: { className?: string }) {
+  return (
+    <span className={cn('whitespace-nowrap font-extrabold uppercase leading-none tracking-[-0.03em]', className)}>
+      <span className="text-wm-a">Dwell</span>
+      <span className="text-wm-b">Duel</span>
+    </span>
   )
 }

@@ -47,6 +47,54 @@ describe('updateMarketAction', () => {
     expect(supabase.rpc).toHaveBeenCalledWith('update_market', { p_market_id: 'm1', p_title: null, p_description: null, p_category: 'Bible study' })
   })
 
+  it('sends a new close time when the form has one, and only the close time from a reopen form (#326)', async () => {
+    const later = new Date(Date.now() + 3_600_000).toISOString()
+    const data = form('Same', '', 'Weather')
+    data.set('close_at', later)
+    expect(await updateMarketAction('m1', undefined, data)).toEqual({ saved: true })
+    expect(supabase.rpc).toHaveBeenCalledWith('update_market', {
+      p_market_id: 'm1',
+      p_title: 'Same',
+      p_description: null,
+      p_category: 'Weather',
+      p_close_at: later,
+    })
+
+    const reopen = new FormData()
+    reopen.set('close_at', later)
+    expect(await updateMarketAction('m1', undefined, reopen)).toEqual({ saved: true })
+    expect(supabase.rpc).toHaveBeenLastCalledWith('update_market', {
+      p_market_id: 'm1',
+      p_title: null,
+      p_description: null,
+      p_category: null,
+      p_close_at: later,
+    })
+  })
+
+  it('refuses a missing or past close time without calling the database', async () => {
+    for (const value of ['', 'not a date', new Date(Date.now() - 60_000).toISOString()]) {
+      const data = new FormData()
+      data.set('close_at', value)
+      expect(await updateMarketAction('m1', undefined, data)).toEqual({ formError: 'Choose a close time in the future.', field: 'close_at' })
+    }
+    expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+
+  it('words the close-time refusals', async () => {
+    const data = new FormData()
+    data.set('close_at', new Date(Date.now() + 3_600_000).toISOString())
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'close time must be in the future' } })
+    expect(await updateMarketAction('m1', undefined, data)).toEqual({ formError: 'Choose a close time in the future.', field: 'close_at' })
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: "this market has been settled, so its close time can't change" } })
+    expect(await updateMarketAction('m1', undefined, data)).toEqual({ formError: 'This market has been settled, so its close time can’t change.' })
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'you have a stake in this market, so ask an admin to move its close time' } })
+    expect(await updateMarketAction('m1', undefined, data)).toEqual({
+      formError: 'You have a stake in this market, so ask an admin to move its close time.',
+      field: 'close_at',
+    })
+  })
+
   it('refuses a blank or too-long category without calling the database', async () => {
     expect(await updateMarketAction('m1', undefined, form('Fine', '', ' '))).toEqual({ formError: 'Choose a category.', field: 'category' })
     expect(await updateMarketAction('m1', undefined, form('Fine', '', 'c'.repeat(25)))).toEqual({

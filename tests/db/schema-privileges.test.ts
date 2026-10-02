@@ -17,6 +17,8 @@ const AUTHENTICATED_DEFINER = [
   'approve_task_completion',
   // Storage RLS helper (0089): counts only the caller's own avatar uploads today; returns a boolean.
   'avatar_upload_quota_ok',
+  // update_market's close-time rule as a boolean for the caller's own auth.uid() (0106); reads only.
+  'can_move_market_close',
   'can_resolve_market',
   // void_market's rules as a boolean for the caller's own auth.uid() (0105); reads only.
   'can_void_market',

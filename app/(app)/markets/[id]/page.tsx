@@ -1,3 +1,4 @@
+import type { DbClient } from '@/lib/supabase/database'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
@@ -94,10 +95,14 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const isPastClose = new Date(market.closeAt).getTime() <= now
   const canBet = market.status === 'open' && !isPastClose
   const slip = slipEntries.map((e) => e.outcomeId)
-  // update_market (0043, 0103): the creator or an admin rewords a market while it still takes bets;
-  // an admin can change its category at any time.
+  // update_market (0043, 0103, 0106): the creator or an admin rewords a market, or moves its close,
+  // while it still takes bets, and can reopen it once it has closed until it's settled; an admin can
+  // change its category at any time.
   const admin = atLeast(role, 'admin')
   const canEditWording = canBet && (isCreator || admin)
+  // can_move_market_close (0106) is update_market's close-time rule: a creator with a stake asks an admin.
+  const canMoveClose = market.status === 'open' && (isCreator || admin) && (await canMoveMarketClose(supabase, market.id))
+  const canReopen = isPastClose && canMoveClose
   const canEditCategory = canEditWording || admin
   const categoryCounts = canEditCategory ? await listCategoryCounts(supabase) : []
 
@@ -169,6 +174,12 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
                       Category was: <span className="text-ink">{e.oldCategory}</span>
                     </span>
                   )}
+                  {e.oldCloseAt !== null && e.newCloseAt !== null && (
+                    <span>
+                      Close time moved from <span className="text-ink"><LocalTime iso={e.oldCloseAt} format="dateTime" /></span> to{' '}
+                      <span className="text-ink"><LocalTime iso={e.newCloseAt} format="dateTime" /></span>
+                    </span>
+                  )}
                   {e.oldDescription !== e.newDescription && (
                     <span className="whitespace-pre-line break-words">
                       Description was: <span className="text-ink">{e.oldDescription ? `“${e.oldDescription}”` : '(none)'}</span>
@@ -186,9 +197,23 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
               title={market.title}
               description={market.description}
               category={market.category?.name ?? ''}
-              wording={canEditWording}
+              closeAt={market.closeAt}
+              mode={canEditWording ? 'edit' : 'category'}
+              canMoveClose={canMoveClose}
               suggestions={categoryCounts.map((c) => c.name)}
               popular={mostUsedCategories(categoryCounts).map((c) => c.name)}
+            />
+          )}
+          {canReopen && (
+            <EditMarketDialog
+              marketId={market.id}
+              title={market.title}
+              description={market.description}
+              category={market.category?.name ?? ''}
+              closeAt={market.closeAt}
+              mode="reopen"
+              suggestions={[]}
+              popular={[]}
             />
           )}
           <ShareButton marketId={market.id} title={market.title} />
@@ -445,4 +470,10 @@ async function MarketActions({
       </div>
     </ContentReveal>
   )
+}
+
+async function canMoveMarketClose(supabase: DbClient, marketId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('can_move_market_close', { p_market_id: marketId })
+  if (error) throw error
+  return data === true
 }

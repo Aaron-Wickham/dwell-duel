@@ -46,7 +46,15 @@ import { PendingApprovals } from '@/app/(app)/admin/(sections)/tasks/pending-app
 import { ReviewButtons } from '@/app/(app)/admin/(sections)/tasks/review-buttons'
 import { AddInviteForm } from '@/app/(app)/admin/(sections)/invites/add-invite-form'
 
-const EDIT_PROPS = { marketId: 'm1', title: 'Will it snow?', category: 'Weather', wording: true, suggestions: ['Weather'], popular: ['Weather'] }
+const EDIT_PROPS = {
+  marketId: 'm1',
+  title: 'Will it snow?',
+  category: 'Weather',
+  closeAt: '2099-12-06T18:30:00.000Z',
+  mode: 'edit' as const,
+  suggestions: ['Weather'],
+  popular: ['Weather'],
+}
 
 const GENESIS: TaskSummary = {
   id: 't1',

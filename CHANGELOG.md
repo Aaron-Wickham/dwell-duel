@@ -12,6 +12,9 @@ before v0.4.0 used other headings.)
 
 ## Unreleased
 
+### Under the hood
+- **The maths for fixed-payout markets is in.** The LMSR market maker that will price markets and parlays at the moment you bet (#325) exists in the database and in the app, kept equal by a test, with nothing using it yet (#331).
+
 ## v0.8.0-beta — 2026-10-01
 
 Signing in now feels like DwellDuel's own: Google's account chooser says "continue to dwellduel.com" instead of a long Supabase address, the sign-in page explains what DwellDuel is, and a public privacy page says what's stored and who to ask. Behind the scenes, every live-update channel is now private, and error reports to Sentry are clearer and quieter.

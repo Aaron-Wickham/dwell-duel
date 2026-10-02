@@ -16,6 +16,13 @@ describe('parseSlipError', () => {
     })
   })
 
+  it('says what a pick pays now when its price moved, and asks to place again', () => {
+    expect(parseSlipError(`pick ${A}: price_moved:17`)).toEqual({
+      pickErrors: { [A]: 'The price moved, so this bet now pays 17 DC if it wins. Tap Place again to bet at the new price.' },
+      priceMoved: true,
+    })
+  })
+
   it('shows anything else for the whole slip', () => {
     expect(parseSlipError('not invited')).toEqual({ formError: 'Not invited.' })
   })

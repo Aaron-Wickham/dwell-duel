@@ -157,6 +157,49 @@ describe('SlipPanel', () => {
     await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet and a 2-leg parlay at ~4.00×.'))
   })
 
+  describe('a pick on an lmsr market (0102)', () => {
+    const lmsr = (n: number, overrides: Partial<SlipPick> = {}) =>
+      pick(n, { legBlock: 'lmsr', lmsr: { q: [0, 0], index: 0, liquidity: 50 }, ...overrides })
+
+    it('shows the exact payout, sends it with the stake, and says bets are final', async () => {
+      placeSlipAction.mockResolvedValue({ placed: { solos: 1, parlay: null } })
+      renderPanel(viewOf(lmsr(1)))
+      // A share at 50% pays 2× a DC at the margin.
+      expect(screen.getByText('2.00×')).toBeInTheDocument()
+      expect(screen.getByText('Bets are final: once placed, they can’t be cancelled.')).toBeInTheDocument()
+
+      await userEvent.type(screen.getByLabelText('Stake (DC)'), '10')
+      // The spec's worked example: 10 DC buys 18.33 shares.
+      expect(screen.getByText('Pays 18 DC if it wins')).toBeInTheDocument()
+      expect(screen.queryByText(/Pays ~/)).not.toBeInTheDocument()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 10 DC' }))
+      await waitFor(() => expect(placeSlipAction).toHaveBeenCalled())
+      const data = placeSlipAction.mock.calls[0][1] as FormData
+      expect(data.get(`payout:${lmsr(1).outcomeId}`)).toBe('18')
+      await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet. Bets are final.'))
+    })
+
+    it('says it can’t be a parlay leg yet', () => {
+      renderPanel(viewOf(lmsr(1, { parlay: true }), pick(2, { parlay: true })))
+      expect(screen.getByText(/parlays can’t include it yet. Switch it to Solo/)).toBeInTheDocument()
+    })
+
+    it('shows a moved price on the pick and keeps the slip to place again', async () => {
+      placeSlipAction.mockResolvedValue({
+        pickErrors: { [lmsr(1).outcomeId]: 'The price moved, so this bet now pays 17 DC if it wins. Tap Place again to bet at the new price.' },
+        priceMoved: true,
+      })
+      renderPanel(viewOf(lmsr(1)))
+      await userEvent.type(screen.getByLabelText('Stake (DC)'), '10')
+      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 10 DC' }))
+      const stake = await screen.findByLabelText('Stake (DC)')
+      await waitFor(() => expect(stake).toHaveAccessibleDescription(/now pays 17 DC/))
+      expect(stake).toHaveValue(10)
+      expect(success).not.toHaveBeenCalled()
+    })
+  })
+
   it('says the earlier attempt went through when the place was a replay (#226)', async () => {
     placeSlipAction.mockResolvedValue({ placed: { solos: 1, parlay: null, replayed: true } })
     renderPanel(viewOf(pick(1)))

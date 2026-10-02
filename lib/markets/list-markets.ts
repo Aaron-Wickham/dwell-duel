@@ -1,4 +1,5 @@
 import type { MarketKind } from '@/lib/markets/kind'
+import type { Pricing, PricedOutcome } from '@/lib/markets/pricing'
 import type { DbClient } from '@/lib/supabase/database'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
@@ -14,13 +15,15 @@ export interface MarketSummary {
   closeAt: string
   createdAt: string
   seedPerOutcome: number
+  pricing: Pricing
+  liquidity: number
   line: number | null
   edited: boolean
   resolvedOutcomeLabel: string | null
   resolvedAt: string | null
   // When it stopped being open (0066): the first resolution or the void; null while open.
   settledAt: string | null
-  outcomes: { id: string; label: string; poolTotal: number }[]
+  outcomes: PricedOutcome[]
   // Moves whenever the card's sparkline can (#252): with every bet or cancellation while the
   // market is open (0095's pool_version), and never once it has settled.
   sparkVersion: string
@@ -30,7 +33,7 @@ export interface MarketSummary {
 // second `.in()` whose URL would grow with the list. The hint names the foreign key because
 // market_resolutions also points back at markets through market_id.
 const SUMMARY_SELECT =
-  'id, title, kind, status, close_at, created_at, settled_at, seed_per_outcome, line, edited_at, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at), market_outcomes(id, label, pool_total, pool_version)'
+  'id, title, kind, status, close_at, created_at, settled_at, seed_per_outcome, pricing, liquidity, line, edited_at, current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at), market_outcomes(id, label, pool_total, pool_version, shares, q_offset)'
 
 type SummaryRow = {
   id: string
@@ -41,10 +44,12 @@ type SummaryRow = {
   created_at: string
   settled_at: string | null
   seed_per_outcome: number
+  pricing: Pricing
+  liquidity: number
   line: number | null
   edited_at: string | null
   current_resolution: { outcome_id: string; resolved_at: string } | null
-  market_outcomes: { id: string; label: string; pool_total: number; pool_version: number }[] | null
+  market_outcomes: { id: string; label: string; pool_total: number; pool_version: number; shares: number; q_offset: number }[] | null
 }
 
 function sparkVersion(m: SummaryRow): string {
@@ -53,7 +58,13 @@ function sparkVersion(m: SummaryRow): string {
 }
 
 function toSummary(m: SummaryRow): MarketSummary {
-  const outcomes = (m.market_outcomes ?? []).map((o) => ({ id: o.id, label: o.label, poolTotal: o.pool_total }))
+  const outcomes = (m.market_outcomes ?? []).map((o) => ({
+    id: o.id,
+    label: o.label,
+    poolTotal: o.pool_total,
+    shares: Number(o.shares),
+    qOffset: Number(o.q_offset),
+  }))
   const resolution = m.current_resolution
   return {
     id: m.id,
@@ -63,6 +74,8 @@ function toSummary(m: SummaryRow): MarketSummary {
     closeAt: m.close_at,
     createdAt: m.created_at,
     seedPerOutcome: m.seed_per_outcome,
+    pricing: m.pricing,
+    liquidity: Number(m.liquidity),
     line: m.line,
     edited: m.edited_at !== null,
     resolvedOutcomeLabel: resolution ? (outcomes.find((o) => o.id === resolution.outcome_id)?.label ?? null) : null,

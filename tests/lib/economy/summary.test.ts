@@ -21,6 +21,8 @@ const ROW: EconomySummaryRow = {
   all_time_added: 377,
   all_time_removed: 36,
   unclassified: 0,
+  market_maker_added: 6,
+  market_maker_removed: 3,
 }
 
 describe('toEconomySummary', () => {
@@ -35,13 +37,14 @@ describe('toEconomySummary', () => {
     expect(s.sources.map((x) => [x.label, x.added, x.removed])).toEqual([
       ['Starting grants', 300, null],
       ['Task rewards', 10, null],
+      ['Market maker', 6, 3],
       ['Seed payouts (older results)', 8, 22],
       ['Payout rounding', 1, 4],
       ['House-paid parlays', 30, 5],
       ['Owner adjustments', 25, 5],
     ])
-    expect(s.monthAdded).toBe(374)
-    expect(s.monthRemoved).toBe(36)
+    expect(s.monthAdded).toBe(380)
+    expect(s.monthRemoved).toBe(39)
   })
 
   it('leaves out the seed row in a month no older result was paid or overridden', () => {

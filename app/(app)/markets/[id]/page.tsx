@@ -10,7 +10,8 @@ import { getMarket, type MarketDetail } from '@/lib/markets/get-market'
 import { getResolutionProof } from '@/lib/markets/resolution-proof'
 import { ProofList } from '@/components/proof/proof-list'
 import { getChartSeries } from '@/lib/markets/chart-series'
-import { computeOdds, type OutcomeOdds } from '@/lib/markets/odds'
+import type { OutcomeOdds } from '@/lib/markets/odds'
+import { marketOdds } from '@/lib/markets/pricing'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt, marketCardStatus } from '@/lib/markets/market-status'
 import { readPageParams } from '@/lib/pagination/cursor'
@@ -78,10 +79,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const positionRows = positionKeys.betIds.length + positionKeys.parlayIds.length
   const creatorStake = describeCreatorStake(creatorStakes.get(market.id), market.status === 'open' ? 'has' : 'had')
 
-  const odds = computeOdds(
-    market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })),
-    market.seedPerOutcome,
-  )
+  const odds = marketOdds(market)
 
   const isCreator = market.createdBy === user.id
   // Server Components render once per request with no re-render/
@@ -273,6 +271,7 @@ async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: 
   const chart = await getChartSeries(supabase, {
     id: market.id,
     seedPerOutcome: market.seedPerOutcome,
+    pricing: market.pricing,
     createdAt: market.createdAt,
     outcomeIds: chartOutcomes.map((o) => o.id),
   })

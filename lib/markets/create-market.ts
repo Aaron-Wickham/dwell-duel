@@ -48,7 +48,7 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
     if (!Number.isFinite(line) || line < 0.5 || line % 1 !== 0.5) {
       return { formError: 'Set the line to a half number, like 3.5.', field: 'line' }
     }
-    const { data, error } = await supabase.rpc('create_market_v2', {
+    const { data, error } = await supabase.rpc('create_market_v3', {
       p_title: title,
       p_description: description || null,
       p_kind: kind,
@@ -78,7 +78,7 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
     return { formError: tooLong(`Outcome ${n}`, TEXT_LIMITS.outcomeLabel), field: `outcome_${n}` }
   }
 
-  const { data, error } = await supabase.rpc('create_market_v2', {
+  const { data, error } = await supabase.rpc('create_market_v3', {
     p_title: title,
     p_description: description || null,
     p_kind: kind,

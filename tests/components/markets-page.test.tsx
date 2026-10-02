@@ -60,6 +60,8 @@ function market(n: number, status: MarketSummary['status'], closeInMs = DAY): Ma
     closeAt: new Date(Date.now() + closeInMs).toISOString(),
     createdAt: '2026-09-01T10:00:00Z',
     seedPerOutcome: 20,
+    pricing: 'pool',
+    liquidity: 50,
     line: null,
     edited: false,
     resolvedOutcomeLabel: status === 'resolved' ? 'Yes' : null,
@@ -119,6 +121,7 @@ describe('MarketsPage', () => {
     const facts = (m: MarketSummary) => ({
       id: m.id,
       seedPerOutcome: 20,
+      pricing: 'pool',
       createdAt: '2026-09-01T10:00:00Z',
       outcomeIds: [],
       version: m.sparkVersion,

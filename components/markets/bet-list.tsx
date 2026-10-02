@@ -13,6 +13,7 @@ export function BetList({
   viewerId,
   canBet,
   canRemove = false,
+  final = false,
   rowIdPrefix,
 }: {
   bets: MarketBet[]
@@ -21,6 +22,8 @@ export function BetList({
   canBet: boolean
   // The owner can remove anyone else's open bet with a refund (remove_bet, 0040).
   canRemove?: boolean
+  // An lmsr market's bets can't be cancelled or removed (0102).
+  final?: boolean
   rowIdPrefix?: string
 }) {
   if (bets.length === 0) {
@@ -49,8 +52,8 @@ export function BetList({
               {outcomeLabel}
               {mine && <span className="text-ink2"> (you)</span>}
             </p>
-            {mine && canBet && <CancelBetButton betId={b.id} amount={b.amount} outcomeLabel={outcomeLabel} />}
-            {!mine && canRemove && (
+            {mine && canBet && !final && <CancelBetButton betId={b.id} amount={b.amount} outcomeLabel={outcomeLabel} />}
+            {!mine && canRemove && !final && (
               <RemoveBetButton betId={b.id} amount={b.amount} outcomeLabel={outcomeLabel} bettorName={b.bettorName} />
             )}
           </li>

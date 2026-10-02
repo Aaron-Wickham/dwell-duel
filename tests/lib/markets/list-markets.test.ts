@@ -14,12 +14,14 @@ function marketRow(overrides: Record<string, unknown> = {}) {
     close_at: '2026-09-20T09:00:00+00:00',
     created_at: '2026-09-19T09:00:00.123456+00:00',
     settled_at: '2026-09-21T09:00:00+00:00',
+    pricing: 'pool',
+    liquidity: 50,
     line: null,
     edited_at: null,
     current_resolution: { outcome_id: 'o-yes', resolved_at: '2026-09-21T09:00:00+00:00' },
     market_outcomes: [
-      { id: 'o-no', label: 'No', pool_total: 5, pool_version: 2 },
-      { id: 'o-yes', label: 'Yes', pool_total: 15, pool_version: 3 },
+      { id: 'o-no', label: 'No', pool_total: 5, pool_version: 2, shares: 0, q_offset: 0 },
+      { id: 'o-yes', label: 'Yes', pool_total: 15, pool_version: 3, shares: 0, q_offset: 0 },
     ],
     ...overrides,
   }
@@ -51,11 +53,13 @@ describe('listOpenMarkets', () => {
         resolvedOutcomeLabel: null,
         resolvedAt: null,
         settledAt: null,
+        pricing: 'pool',
+        liquidity: 50,
         line: null,
         edited: false,
         outcomes: [
-          { id: 'o-no', label: 'No', poolTotal: 5 },
-          { id: 'o-yes', label: 'Yes', poolTotal: 15 },
+          { id: 'o-no', label: 'No', poolTotal: 5, shares: 0, qOffset: 0 },
+          { id: 'o-yes', label: 'Yes', poolTotal: 15, shares: 0, qOffset: 0 },
         ],
         sparkVersion: '5',
       },
@@ -66,7 +70,7 @@ describe('listOpenMarkets', () => {
     const { client, queries } = fakeSupabase(() => ({ data: [marketRow()] }))
     const page = await listResolvedMarkets(client, { top: null, bottom: null })
     expect(queries[0].select).not.toContain('sparkline')
-    expect(queries[0].select).toContain('market_outcomes(id, label, pool_total, pool_version)')
+    expect(queries[0].select).toContain('market_outcomes(id, label, pool_total, pool_version, shares, q_offset)')
     expect(page.rows[0].sparkVersion).toBe('settled')
   })
 

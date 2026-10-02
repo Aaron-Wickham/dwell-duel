@@ -13,9 +13,11 @@ This page explains the rules.
 ## The short version
 
 - Dwell Coin (DC) is play money. You start with 100 DC.
-- Bet DC on friendly questions. Everyone's bets on an outcome make its pool.
-- When a market resolves, the winners split the whole pot in proportion to
-  what they bet.
+- Bet DC on friendly questions. On a market made since October 2026, the
+  slip tells you exactly what a bet pays if it wins, and that never changes.
+  Bets are final.
+- On an older market, everyone's bets on an outcome make its pool, and the
+  winners split the whole pot in proportion to what they bet.
 - A parlay joins 2–10 picks. It pays big, but only if every pick wins.
 - Run low? Earn more DC with Bible-study tasks.
 
@@ -81,9 +83,58 @@ you tap Create market, so you can change anything first.
 **Share** sends a market's link through your phone's share sheet, or
 copies it where there isn't one. Only signed-in members can open it.
 
-## Betting: shared pools with a seed
+## Betting on new markets: fixed payouts
 
-Every DC bet on a market goes into one **shared pot**, and the people who
+Every market made since October 2026 is run by a **market maker**: the
+house sells **shares** in each outcome, and each share of the winning
+outcome pays **1 DC**. When you bet, you buy shares at the current price,
+so you know exactly what your bet pays before you place it, and nothing
+anyone does afterwards changes it.
+
+- **A new market opens at even odds:** 50% / 50% for Yes/No, 25% each for
+  four outcomes. Nobody has to bet first.
+- **The price is the chance.** Buying an outcome's shares raises its price
+  (and lowers the others'), so the chance, the chart and the sparkline all
+  show the same number. A bigger bet moves the price more, so each extra
+  DC buys a little less.
+- **The slip shows the exact payout** ("Pays 18 DC if it wins"), with no
+  "~". If the price moves between showing it and placing it, so that your bet
+  would pay more than 2% less, nothing is placed: the slip says what it
+  pays now, and you tap Place again to accept.
+- **Bets are final.** A bet on a new market can't be cancelled, and the
+  owner can't remove it. (That's what makes the payout fixed.)
+- **Parlays can't include a new market yet.** Bet its picks Solo; parlays
+  on new markets are coming.
+
+### The maths
+
+- Each outcome has some number of shares sold, *q*. The house's
+  liquidity, *b*, is **50** for every market.
+- **Chance (price)** of an outcome = e^(*q* ÷ *b*) for that outcome ÷ the
+  sum of e^(*q* ÷ *b*) over every outcome.
+- **Buying:** spending *x* DC on an outcome buys the shares that raise
+  the market's total cost, *b* × ln(the sum of e^(*q* ÷ *b*)), by exactly
+  *x*. You always get at least one share per DC.
+- **Payout if it wins** = your shares, rounded down to whole DC. The
+  fractions rounded away count as payout rounding in the owner's economy
+  panel.
+
+**A worked example.** On a new Yes/No market, both sides show 50%. Alice
+bets 10 DC on Yes. That buys **18.33 shares**, so the slip says "Pays 18 DC
+if it wins", and Yes moves to about **59%**. If Yes wins, Alice gets
+**18 DC** (an 8 DC profit), whatever anyone bets after her. If No wins, she
+gets nothing: the house took the other side of her bet. Nobody is refunded
+when nobody backed the winner.
+
+**The house** pays winners out of what it sold shares for. On a new
+two-outcome market it can lose at most about 35 DC (*b* × ln 2), however
+people bet; the owner's economy panel shows its result as the **market
+maker** line.
+
+## Betting on older markets: shared pools with a seed
+
+Markets made before October 2026 keep these rules until they settle.
+Every DC bet on such a market goes into one **shared pot**, and the people who
 picked the winner split it in proportion to their stakes. The winners
 split exactly what was bet: nothing is added, so if nobody bet against
 you, you get your stake back.
@@ -120,14 +171,17 @@ payouts, and My bets still shows what they paid.)
 **Your position.** A market you have money on shows a **Your position**
 card at the top (above the chart on a phone, at the top of the right-hand
 column on a computer). Only you see it. While the market is open it lists
-each of your bets with what it pays if it wins and its own Cancel, and
+each of your bets with what it pays if it wins (exact on a new market, a
+"~" estimate on an older one) and, on an older market, its own Cancel, and
 each parlay that has a leg on the market, linking to the parlay. Once the
 market settles, each bet shows Won, Lost or Refunded, the card says what
 you won or lost on the market overall (left out when it comes to 0), and
 each parlay leg says where it and its parlay stand.
 
-- **Cancelling:** you can cancel a bet for a full refund until the market
-  closes. Cancelled bets appear under My bets → Cancelled.
+- **Cancelling:** on an older market, you can cancel a bet for a full
+  refund until the market closes. Cancelled bets appear under My bets →
+  Cancelled. Bets on new markets are final (see above), so they have no
+  Cancel.
 - **No winners:** if nobody bet on the winning outcome, there is no one
   to split the pool, so everyone is refunded. My bets marks such a bet
   "Refunded · no winners". (A parlay pick on that outcome still counts as
@@ -145,7 +199,8 @@ the slip (or how many DC short it is), and when Place can't be tapped, a
 line under it says why. At 0 DC it points you to Tasks; your picks stay
 in the slip. Each pick is either:
 
-- **Solo:** a normal pool bet on that outcome.
+- **Solo:** a normal bet on that outcome: shares at a fixed payout on a
+  new market, a pool bet on an older one.
 - **Parlay:** combined with your other Parlay picks into one bet that
   wins only if every pick wins.
 
@@ -163,7 +218,8 @@ on it or cancel, so the odds it sets are money really at risk.
 Multiplying the legs gives the parlay's multiplier, and the payout is the
 stake × the multiplier, rounded down.
 
-- Between 2 and **10** legs, one per market.
+- Between 2 and **10** legs, one per market, and only on older markets
+  for now: a pick on a new market can't be a leg yet.
 - **Real money first:** a pick can be a leg only if its market already
   has at least **50 DC from at least 2 other members**. A brand-new market
   has seeded odds for solo bets, but nothing real to price a leg on.
@@ -242,8 +298,11 @@ full ledger) can see it.
 - **Voids:** until a market closes, its creator or an admin can void it;
   once it has closed, only an admin can, the same way nobody with money on a
   market settles it. Every void **must say why**, and the reason shows on
-  the market page and in the feed. Every bet on it is refunded, and a
-  parlay leg on it drops out.
+  the market page and in the feed. Every bet on it is refunded what it
+  cost, and a parlay leg on it drops out.
+- **Paying out:** on a new market, each winning bet is paid its shares,
+  rounded down to whole DC. On an older one, the winners split the pool
+  (see above).
 
 ## Tasks
 

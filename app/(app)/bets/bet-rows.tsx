@@ -74,7 +74,7 @@ export function WagerRows({ wagers, rowIdPrefix }: { wagers: Wager[]; rowIdPrefi
             aside={
               <>
                 <ResultChip result={b.result} />
-                {b.result.kind === 'open' && (
+                {b.result.kind === 'open' && !b.final && (
                   <div className="relative z-[1]">
                     <CancelBetButton betId={b.id} amount={b.amount} outcomeLabel={b.outcomeLabel} />
                   </div>

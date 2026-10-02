@@ -224,7 +224,8 @@ describe('resolve_market and void_market lock order', () => {
     const resolveLoops = memberLoops(await definition('resolve_market_core(uuid,uuid)'))
     const voidLoops = memberLoops(await definition('void_market(uuid, text)'))
 
-    expect(resolveLoops).toHaveLength(3)
+    // The reversal, the pool payout and its no-winners refund, and the lmsr payout (0102).
+    expect(resolveLoops).toHaveLength(4)
     expect(voidLoops).toHaveLength(1)
     for (const loop of [...resolveLoops, ...voidLoops]) expect(loop).toContain('order by profile_id, id')
   })

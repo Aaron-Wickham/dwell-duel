@@ -8,7 +8,7 @@ import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { listResolvedMarkets, listOpenMarkets, listMatchingMarkets, type MarketSummary } from '@/lib/markets/list-markets'
 import { MINE_LABELS, marketsHref, readMarketSearch, readMineFilter, type MineFilter } from '@/lib/markets/search'
 import type { KeysetPage } from '@/lib/pagination/keyset'
-import { computeOdds } from '@/lib/markets/odds'
+import { marketOdds } from '@/lib/markets/pricing'
 import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { marketCardStatus, type MarketCardStatus } from '@/lib/markets/market-status'
 import { readSparklines } from '@/lib/markets/sparklines'
@@ -121,6 +121,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
         .map(([m]) => ({
           id: m.id,
           seedPerOutcome: m.seedPerOutcome,
+          pricing: m.pricing,
           createdAt: m.createdAt,
           outcomeIds: m.outcomes.map((o) => o.id),
           version: m.sparkVersion,
@@ -129,10 +130,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
   )
 
   const cards = markets.map(([market, list]) => {
-    const odds = computeOdds(
-      market.outcomes.map((o) => ({ id: o.id, label: o.label, pool_total: o.poolTotal })),
-      market.seedPerOutcome,
-    )
+    const odds = marketOdds(market)
     const points = sparklinesByMarket.get(market.id) ?? []
     const chart: MarketCardChart | undefined =
       points.length > 0

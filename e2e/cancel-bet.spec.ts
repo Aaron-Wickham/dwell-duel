@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { localDateTimeString } from './local-date-time'
+import { openPoolMarket } from './pool-market'
 import { placeSolo } from './slip'
 import { serverActionSettled } from './server-action'
 
@@ -14,12 +14,8 @@ async function readBalance(page: Page): Promise<number> {
 
 test('cancel an open bet from My bets: it is refunded and leaves the market', async ({ page }) => {
   const title = 'Will the sermon run past noon?'
-  await page.goto('/markets/new')
-  await page.getByLabel('Title').fill(title)
-  await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
-  await page.getByRole('button', { name: 'Create market' }).click()
-  await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)
-  const marketPath = new URL(page.url()).pathname
+  // Only a pool market's bets can be cancelled (0102).
+  const marketPath = await openPoolMarket(page, title)
 
   const before = await readBalance(page)
   await placeSolo(page, 'Yes', 5)

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { localDateTimeString } from './local-date-time'
+import { openPoolMarket } from './pool-market'
 import { MEMBER_STORAGE_STATE_PATH } from './global-setup'
 import { clientForEmail } from '../tests/db/fixtures'
 import { serviceClient } from '../tests/db/helpers'
@@ -43,12 +43,8 @@ test('a reviewer is sent from the admin-only pages to the approval queue', async
 })
 
 test('a plain member sees no admin controls on someone else’s market, and no Admin link', async ({ page, browser }) => {
-  await page.goto('/markets/new')
-  await page.getByLabel('Title').fill('Will the choir start on time?')
-  await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
-  await page.getByRole('button', { name: 'Create market' }).click()
-  await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)
-  const marketPath = new URL(page.url()).pathname
+  // A pool market, whose bets the owner could remove (an LMSR market's are final, 0102).
+  const marketPath = await openPoolMarket(page, 'Will the choir start on time?')
   const marketId = marketPath.split('/').at(-1)!
 
   // Alice's own bet, so the owner's Remove control would have a row to show on.

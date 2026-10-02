@@ -59,4 +59,10 @@ describe('BetList', () => {
     rerender(<BetList bets={bets} outcomes={outcomes} viewerId="p-alice" canBet={false} />)
     expect(screen.queryByRole('button', { name: /^Cancel your/ })).not.toBeInTheDocument()
   })
+
+  it('offers no Cancel or Remove on a market whose bets are final (0102)', () => {
+    render(<BetList bets={bets} outcomes={outcomes} viewerId="p-alice" canBet canRemove final />)
+    expect(screen.queryByRole('button', { name: /^Cancel your/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Remove/ })).not.toBeInTheDocument()
+  })
 })

@@ -184,7 +184,18 @@ a line to `CHANGELOG.md` under the next release.
   script checks `reducedMotion()` from `lib/ui/reduced-motion.ts`.
 - **Segmented tabs are `SubNav`** (`components/ui/sub-nav.tsx`, a client
   component whose pill slides between tabs), with tab state in the URL, as My bets' `?tab=` and the admin sections do.
-- **The seed is for display; payouts are the real pool** (0041, 0074). Every
+- **New markets are LMSR** (0101, 0102). `create_market_v3` makes every new
+  market `pricing = 'lmsr'`, and every money function branches on
+  `markets.pricing`. On an `lmsr` market the price is the chance
+  (`marketOdds` in `lib/markets/pricing.ts`, mirrored by `market_sparklines`),
+  a solo bet buys shares through `place_slip_v3` at a payout fixed when it's
+  placed (`lmsrQuote`, the same rounding as `place_lmsr_bet`; refused with
+  `price_moved` when it would pay more than 2% less than the slip showed),
+  it is final (no cancel or remove), resolving pays `floor(shares)`, and the
+  ledger check holds each outcome's `shares` equal to its bets'. Parlay legs
+  on `lmsr` markets are refused until #334.
+- **On `pool` markets, the seed is for display; payouts are the real pool**
+  (0041, 0074). This bullet covers markets made before 0102 only. Every
   outcome's *chance* counts `markets.seed_per_outcome` virtual DC: chance,
   charts and sparklines go through `effectivePools` (`lib/markets/odds.ts`),
   mirrored by `market_sparklines`. Payouts never count it: payout figures
@@ -208,9 +219,10 @@ a line to `CHANGELOG.md` under the next release.
 - **Every bet goes through the slip.** `SlipProvider` (in the signed-in
   layout) holds the cookie's picks, each Solo or Parlay, with optimistic
   add, remove and mode switches; the floating `SlipSheet` places them all
-  at once through `place_slip_v2` (0072), which is all or nothing and
-  returns what it placed and whether the call replayed an earlier attempt
-  (`place_slip` only wraps it for the previous build). Stakes live
+  at once through `place_slip_v3` (0102; 0072's `place_slip_v2` with each
+  single's shown payout), which is all or nothing and returns what it
+  placed and whether the call replayed an earlier attempt (`place_slip_v2`
+  and `place_slip` serve the previous build, and refuse `lmsr` markets). Stakes live
   only in the provider's state, never in the cookie.
 - **The service worker never caches** per-member HTML, RSC payloads,
   server actions or Supabase responses.

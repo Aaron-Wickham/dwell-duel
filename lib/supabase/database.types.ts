@@ -586,6 +586,7 @@ export type Database = {
           market_id: string
           note: string | null
           outcome_id: string
+          payout_remainder: number
           payout_seed: number
           resolved_at: string
           resolved_by: string
@@ -598,6 +599,7 @@ export type Database = {
           market_id: string
           note?: string | null
           outcome_id: string
+          payout_remainder?: number
           payout_seed?: number
           resolved_at?: string
           resolved_by: string
@@ -610,6 +612,7 @@ export type Database = {
           market_id?: string
           note?: string | null
           outcome_id?: string
+          payout_remainder?: number
           payout_seed?: number
           resolved_at?: string
           resolved_by?: string
@@ -1313,6 +1316,18 @@ export type Database = {
         }
         Returns: Json
       }
+      create_market_v3: {
+        Args: {
+          p_close_at: string
+          p_description: string
+          p_idempotency_key?: string
+          p_kind: string
+          p_line?: number
+          p_outcome_labels: string[]
+          p_title: string
+        }
+        Returns: Json
+      }
       delete_market: { Args: { p_market_id: string }; Returns: undefined }
       delete_market_comment: {
         Args: { p_comment_id: number }
@@ -1352,6 +1367,8 @@ export type Database = {
           bets_at_stake: number
           house_parlays_added: number
           house_parlays_removed: number
+          market_maker_added: number
+          market_maker_removed: number
           month_end: string
           month_start: string
           owner_adjustments_added: number
@@ -1671,6 +1688,15 @@ export type Database = {
         Args: { p_amount: number; p_market_id: string; p_outcome_id: string }
         Returns: undefined
       }
+      place_lmsr_bet: {
+        Args: {
+          p_amount: number
+          p_market_id: string
+          p_outcome_id: string
+          p_payout: number
+        }
+        Returns: undefined
+      }
       place_parlay: {
         Args: { p_outcome_ids: string[]; p_stake: number }
         Returns: string
@@ -1685,6 +1711,15 @@ export type Database = {
         Returns: string
       }
       place_slip_v2: {
+        Args: {
+          p_idempotency_key?: string
+          p_parlay_outcome_ids: string[]
+          p_parlay_stake: number
+          p_singles: Json
+        }
+        Returns: Json
+      }
+      place_slip_v3: {
         Args: {
           p_idempotency_key?: string
           p_parlay_outcome_ids: string[]

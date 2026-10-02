@@ -10,9 +10,9 @@ import { combineOdds, lockedOddsToBp, potentialPayout } from './odds'
 import { parseSlipError } from './slip-errors'
 import { readSlip, writeSlip } from './slip'
 
-// What place_slip_v2 (0072) returns: what was placed, and whether this call replayed an earlier
-// attempt's key. A key claimed by the build before 0072 stored only the parlay id, so `solos` and
-// `picks` can be missing on a replay.
+// What place_slip_v3 (0102, as place_slip_v2 in 0072) returns: what was placed, and whether this
+// call replayed an earlier attempt's key. A key claimed by the build before 0072 stored only the
+// parlay id, so `solos` and `picks` can be missing on a replay.
 type SlipSummary = { parlay_id: string | null; solos?: number; picks?: string[]; replayed: boolean }
 
 export type PlaceSlipState =
@@ -20,6 +20,8 @@ export type PlaceSlipState =
       formError?: string
       pickErrors?: Record<string, string>
       parlayError?: string
+      // A pick's price moved by more than 2% since the slip showed it (0102); the slip now shows the new one.
+      priceMoved?: boolean
       placed?: {
         solos: number
         parlay: { legs: number; multiplierBp: number; potentialPayout: number } | null
@@ -39,7 +41,8 @@ function stakeOf(value: FormDataEntryValue | null): number | null {
 }
 
 // The form posts each pick it shows as `pick=<outcome id>:solo|parlay`, with `stake:<outcome id>`
-// for each Solo pick and one `parlay_stake`. Sending the modes, rather than re-reading them from
+// for each Solo pick, `payout:<outcome id>` for one on an lmsr market (what the slip showed it
+// paying), and one `parlay_stake`. Sending the modes, rather than re-reading them from
 // the cookie, means a place right after a Solo / Parlay switch uses what the member saw.
 export async function placeSlipAction(_prevState: PlaceSlipState, formData: FormData): Promise<PlaceSlipState> {
   const { supabase, user } = await requireUser()
@@ -53,12 +56,13 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
   if (picks.length === 0) return { formError: 'Your slip is empty.' }
 
   const pickErrors: Record<string, string> = {}
-  const singles: { outcome_id: string; amount: number }[] = []
+  const singles: { outcome_id: string; amount: number; payout?: number }[] = []
   for (const [id, mode] of picks) {
     if (mode !== 'solo') continue
     const amount = stakeOf(formData.get(`stake:${id}`))
+    const payout = formData.has(`payout:${id}`) ? Number(formData.get(`payout:${id}`)) : null
     if (amount === null) pickErrors[id] = WHOLE_DC
-    else singles.push({ outcome_id: id, amount })
+    else singles.push({ outcome_id: id, amount, ...(payout !== null && Number.isInteger(payout) ? { payout } : {}) })
   }
 
   const legs = picks.filter(([, mode]) => mode === 'parlay').map(([id]) => id)
@@ -73,7 +77,7 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
   if (Object.keys(pickErrors).length > 0 || parlayError) return { pickErrors, parlayError }
 
   const attemptKey = String(formData.get('idempotency_key') ?? '')
-  const { data, error } = await supabase.rpc('place_slip_v2', {
+  const { data, error } = await supabase.rpc('place_slip_v3', {
     p_singles: singles,
     p_parlay_outcome_ids: legs,
     p_parlay_stake: parlayStake,
@@ -88,7 +92,10 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
       reportError('place_slip failed', error)
       return { formError: GENERIC_ERROR }
     }
-    return parseSlipError(error.message)
+    const refused = parseSlipError(error.message)
+    // The slip re-reads its picks, so it shows (and next sends) the payout the price gives now.
+    if (refused.priceMoved) revalidatePath('/', 'layout')
+    return refused
   }
 
   const summary = (data ?? { parlay_id: null, replayed: false }) as SlipSummary

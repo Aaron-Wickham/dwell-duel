@@ -206,9 +206,9 @@ spending coins should get a trigger and a `write_limits()` row.
   older voids), `settled_at` (0066: when it
   left `open`; the Resolved list's order and a voided chart's shaded zone).
   The `sparkline` column and its trigger (0070) are gone (0098):
-  `market_sparks` serves every card, cached by version. `liquidity` (0101,
-  default 50, unused until LMSR part 2/3) and `pricing` (0101, unused until
-  LMSR part 2/3).
+  `market_sparks` serves every card, cached by version. Since 0101,
+  `liquidity` (default 50) and `pricing` (`pool` or `lmsr`, default `pool`)
+  sit unused until LMSR part 2/3.
 - `market_outcomes`: labels and `pool_total`, the real DC bet on each, and
   `pool_version` (0095), bumped by a trigger on every change to
   `pool_total` (each bet and cancellation): the list's sparkline cache key.

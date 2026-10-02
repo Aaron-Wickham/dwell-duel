@@ -31,7 +31,18 @@ describe('lmsr', () => {
     const q = [100_000, 0]
     expect(Number.isFinite(lmsrCost(q, 50))).toBe(true)
     expect(lmsrPrices(q, 50)[0]).toBeCloseTo(1, 12)
-    expect(Number.isFinite(lmsrBuy(q, 50, 1, 10))).toBe(true)
+    expect(lmsrBuy(q, 50, 1, 10)).toBeGreaterThanOrEqual(10)
+  })
+
+  it('never returns fewer shares than DC spent, even buying the heavy favourite', () => {
+    expect(lmsrBuy([3000, 0], 50, 0, 3)).toBeGreaterThanOrEqual(3)
+    for (let lead = 500; lead <= 5000; lead += 500) {
+      for (let spend = 1; spend <= 50; spend += 7) {
+        for (const outcome of [0, 1]) {
+          expect(lmsrBuy([lead, 0], 50, outcome, spend), `lead ${lead} spend ${spend} outcome ${outcome}`).toBeGreaterThanOrEqual(spend)
+        }
+      }
+    }
   })
 
   it('buys nothing for nothing', () => {

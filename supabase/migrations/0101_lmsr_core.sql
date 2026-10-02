@@ -76,8 +76,9 @@ immutable
 set search_path = ''
 as $$
 declare
-  m numeric;
-  total numeric;
+  top numeric;
+  log_r numeric;
+  z numeric;
 begin
   if coalesce(cardinality(p_q), 0) = 0 then
     raise exception 'a market needs at least one outcome' using errcode = '22023';
@@ -91,9 +92,18 @@ begin
   if p_spend is null or p_spend < 0 then
     raise exception 'spend must not be negative' using errcode = '22023';
   end if;
-  select max(x) / p_b into m from unnest(p_q) x;
-  select sum(exp(x / p_b - m)) into total from unnest(p_q) x;
-  return p_b * (m + ln(total * (exp(p_spend / p_b) - 1) + exp(p_q[p_outcome] / p_b - m))) - p_q[p_outcome];
+  if p_spend = 0 or cardinality(p_q) = 1 then
+    return p_spend;
+  end if;
+  -- x + b*ln(1 + R*c) with R = sum of exp((q_j - q_i)/b) over the other outcomes and
+  -- c = 1 - exp(-x/b). It equals b*(m + ln(...)) - q_i, but that form cancels when buying the
+  -- heavy favourite and can land a hair under the spend; this one is >= x by construction.
+  select max((x - p_q[p_outcome]) / p_b) into top
+    from unnest(p_q) with ordinality t(x, k) where k <> p_outcome;
+  select top + ln(sum(exp((x - p_q[p_outcome]) / p_b - top))) into log_r
+    from unnest(p_q) with ordinality t(x, k) where k <> p_outcome;
+  z := log_r + ln(1 - exp(-p_spend / p_b));
+  return p_spend + p_b * (greatest(z, 0) + ln(1 + exp(-abs(z))));
 end;
 $$;
 

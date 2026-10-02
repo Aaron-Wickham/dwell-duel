@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { anonClient, clientFor, createTestMarket, ensureInvited, giveRole, insertLockedParlay, makeMember, seedMembers, backers, type Member, type TestMarket, cancelBetForHistory } from './fixtures'
 import { rpcLoose, serviceClient, setBalanceViaLedger, type TestClient } from './helpers'
 import { expectError } from './assertions'
+import { pgQuery } from './pg-query'
 import { lockedOddsToBp } from '@/lib/parlays/odds'
 
 // 0074: parlays stay house-paid, and each leg is priced from real money when its market closes or
@@ -216,7 +217,7 @@ describe('a leg on a thin pick', () => {
     const a = await coinFlip('A', 1, 49)
     const b = await coinFlip('B')
     const id = await placeParlay([a.outcomeIds[0], b.outcomeIds[0]], 10)
-    const { data: quotes } = await bobClient.rpc('pick_quotes', { p_outcome_ids: [a.outcomeIds[0]] })
+    const { data: quotes } = await serviceClient().rpc('pick_quote', { p_profile_id: bob.id, p_outcome_id: a.outcomeIds[0] })
     expect(quotes![0].odds).toBe(5)
     await resolve(a, 0)
     await resolve(b, 0)
@@ -251,24 +252,32 @@ describe('one member’s exposure on a market', () => {
 })
 
 describe('the quote readers', () => {
-  it('are for invited members only, and the pricing function behind them for nobody', async () => {
+  it('give parlay leg odds to invited members only, and the pricing function to nobody', async () => {
     const a = await coinFlip('A')
     const uninvited = await clientFor(await makeMember('Dave'))
     for (const client of [uninvited, anonClient()]) {
-      expect((await client.rpc('pick_quotes', { p_outcome_ids: a.outcomeIds })).error?.code).toBe('42501')
       expect((await client.rpc('parlay_leg_odds', { p_parlay_ids: [] })).error?.code).toBe('42501')
     }
     const { error } = await rpcLoose(bobClient, 'pick_quote', { p_profile_id: bob.id, p_outcome_id: a.outcomeIds[0] })
     expectError(error, { code: '42501', message: 'permission denied for function pick_quote' })
   })
 
-  it('give a member each pick’s leg odds and the floor from their own side', async () => {
+  it('price each pick’s leg odds and the floor from the member’s own side', async () => {
     const a = await coinFlip('A', 20, 30)
     await bet(bobClient, a, 1, 40)
-    const { data, error } = await bobClient.rpc('pick_quotes', { p_outcome_ids: [a.outcomeIds[0], a.outcomeIds[1]] })
-    expect(error).toBeNull()
-    const byOutcome = Object.fromEntries(data!.map((q) => [q.outcome_id, q]))
-    expect(byOutcome[a.outcomeIds[0]]).toMatchObject({ others_total: 50, others_on_pick: 20, other_bettors: 2, meets_floor: true, own_market: false, odds: 2.5 })
-    expect(byOutcome[a.outcomeIds[1]]).toMatchObject({ others_total: 50, others_on_pick: 30, other_bettors: 2, meets_floor: true, odds: 1.6666 })
+    const quote = async (outcomeId: string) => {
+      const { data, error } = await serviceClient().rpc('pick_quote', { p_profile_id: bob.id, p_outcome_id: outcomeId })
+      expect(error).toBeNull()
+      return data![0]
+    }
+    expect(await quote(a.outcomeIds[0])).toMatchObject({ others_total: 50, others_on_pick: 20, other_bettors: 2, meets_floor: true, own_market: false, odds: 2.5 })
+    expect(await quote(a.outcomeIds[1])).toMatchObject({ others_total: 50, others_on_pick: 30, other_bettors: 2, meets_floor: true, odds: 1.6666 })
+  })
+
+  it('no longer include pick_quotes (0108), and no function calls it', async () => {
+    const found = await pgQuery<{ proname: string }>(
+      "select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and (p.proname = 'pick_quotes' or p.prosrc ilike '%pick_quotes%')",
+    )
+    expect(found).toEqual([])
   })
 })

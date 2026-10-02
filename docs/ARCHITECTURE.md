@@ -455,9 +455,8 @@ creator's own at once, and for reviewers and admins any left 48 hours or
 whose creator has a stake, always filtered through `can_resolve_market`;
 a close fires no database change, so Home's `RefreshAt` refreshes it at
 the next moment the list could grow, from `nextResolveCheckAt`),
-`my_at_stake`, `parlay_limits`, `pick_quotes(outcome_ids)` and
-`parlay_leg_odds(parlay_ids)` (0074: a pick's leg odds and floor for the
-caller, which only the build before #332's slip reads, and each parlay leg's set or estimated odds for its owner, which an old parlay with an unpriced leg still needs; both built on the service-only `pick_quote(profile, outcome)` that
+`my_at_stake`, `parlay_limits`,
+`parlay_leg_odds(parlay_ids)` (0074: each parlay leg's set or estimated odds for its owner, which an old parlay with an unpriced leg still needs; built on the service-only `pick_quote(profile, outcome)` that
 `settle_parlay` prices an old pool parlay's legs with; a fixed leg's is its `factor`, known, 0104; `parlay_limits()` caps every parlay at 6 legs since 0104, and its other columns are pool parlays' rules), `my_market_position(market)` and
 `market_parlay_riding(market)` (0096, security invoker: the keys of the
 caller's own bets and parlays on one market, settled ones included, for
@@ -634,6 +633,7 @@ after it ships. They roughly follow the project's history:
 | 0105 | LMSR part 4 of #325 (#335): `bets.converted` / `refund_outcomes` and `parlays.converted`; `convert_pool_markets_to_lmsr()`, called at the end, converts every open pool market (each bet's shares its "Pays ~", prices starting at the chance shown) and pending pool parlay (legs locked at `pick_quote`, 0074's capped multiplier and payout stored, no book shares); `resolve_market_core` refunds a converted bet when an outcome nobody had backed at conversion wins; `settle_parlay` keeps a converted parlay's caps when a leg is voided; `market_sparklines` charts a converted bet at its pool chance; `member_stats`, `member_records` and `leaderboard_awards` count a converted refund as refunded and cap a converted best parlay; `place_slip_v2` refuses ("DwellDuel just updated. Refresh to bet.") and `create_market_v2` ("… Refresh to create a market.") after replaying a finished key, so `create_market`, which wraps it, refuses too; `can_void_market` |
 | 0106 | Close time (#326): `market_edits.old_close_at` / `new_close_at`; a five-argument `update_market` with `p_close_at` (creator or admin, status `open`, before or after close, future only), refused to a creator with a stake, which reopens a closed market and clears its `push_log` and `push_attempts` closing-alert rows; `can_move_market_close`; `claim_push_log` claims only a market past its close |
 | 0107 | LMSR part 5 of #325 (#332), destructive: drops `cancel_bet`, `remove_bet` and `refund_room`, `place_slip`, `place_slip_v2`, `place_slip_v3`, `create_market` and `create_market_v2`, and `cancelled_bets`' write-limit trigger with the `bet_cancel` limit. Keeps everything history, overrides and charts read: `cancelled_bets`, `seed_per_outcome`, `payout_seed`, `locked_odds`, `pool_payout`, `pick_quote`, `parlay_leg_odds`, `place_bet` / `place_parlay`, and `pick_quotes` until the build before this one is gone |
+| 0108 | LMSR leftovers (#345), destructive: drops `pick_quotes` (no build or function body calls it) and `enforce_write_limit`'s `bet_cancel` message, and takes `cancelled_bets` out of the realtime publication (the table stays). Category changes go live: a row trigger on `market_categories` pings the `markets` topic, and `market_categories` joins the publication so the market page follows its own category's row |
 | 0101 | LMSR core, part 1 of #325 (#331): pure `lmsr_cost`, `lmsr_price` and `lmsr_buy` (mirrored by `lib/markets/lmsr.ts`, kept equal by `tests/db/lmsr.test.ts`); `markets.liquidity` (default 50) and `markets.pricing` (`pool` for every market until part 2); `market_outcomes.shares` and `q_offset`; `bets.shares` and `cost`; `parlay_legs.factor` and `shares`; `parlays.multiplier` and `payout`. Nothing reads them yet |
 
 Numbers 0075, 0077–0082 and 0084–0088 were reserved by branches that merged later under higher numbers, so they are unused.
@@ -863,7 +863,9 @@ the cron response, and the step fails, so the heartbeat pings `/fail`, past
   change back: when another transaction holds the topic's row, the ping
   is sent anyway rather than waited for (so a bet never blocks or
   deadlocks), since that transaction could still roll back.
-  The topics are `LIVE_TOPICS`: `markets` (market rows), `pools`
+  The topics are `LIVE_TOPICS`: `markets` (market rows, and
+  `market_categories` since 0108, so a category renamed, merged or hidden
+  reaches every page listing markets), `pools`
   (`market_outcomes`, which every bet moves), `activity`, `reactions`,
   `tasks` and `reviews` (`task_completions`). The `realtime.messages`
   policy lets only invited members join them, and only reviewers and above
@@ -917,7 +919,10 @@ another market. Another member's parlay settling elsewhere writes nothing
 to this market's rows, so the "riding in parlays" figure catches up on the
 next refresh: following every parlay would refresh every open market page.
 `market_outcomes`, `tasks` and `feed_reactions` left the publication in
-0098, since nothing follows them row by row any more.
+0098, and `cancelled_bets` in 0108, since nothing follows them row by row
+any more. The market page also follows its own category's
+`market_categories` row (0108), for a rename or hide; a merge moves
+`markets.category_id`, which its `markets` row already hears.
 
 **Proxy and prefetch.** `proxy.ts` runs on page loads, RSC navigations,
 `router.refresh()` and server actions, where it refreshes the session

@@ -1758,19 +1758,6 @@ export type Database = {
           own_market: boolean
         }[]
       }
-      pick_quotes: {
-        Args: { p_outcome_ids: string[] }
-        Returns: {
-          market_id: string
-          meets_floor: boolean
-          odds: number
-          other_bettors: number
-          others_on_pick: number
-          others_total: number
-          outcome_id: string
-          own_market: boolean
-        }[]
-      }
       ping_closing_alerts: { Args: never; Returns: number }
       place_bet: {
         Args: { p_amount: number; p_market_id: string; p_outcome_id: string }

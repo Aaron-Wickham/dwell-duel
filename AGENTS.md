@@ -223,7 +223,7 @@ a line to `CHANGELOG.md` under the next release.
   which refuse every market now but build pool history in tests
   (`createPoolMarket`, `cancelBetForHistory`). Don't build on any of it,
   and don't drop it without checking an override and the history pages
-  still work. `pick_quotes` is left only for the build before 0107.
+  still work.
 - **Proof files** (0042) live in the private `proof` bucket and upload from
   the browser (`lib/proof/upload.ts`), never through a server action. Show
   them with `toProofViews` (signed URLs made with the viewer's own client)

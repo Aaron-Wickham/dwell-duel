@@ -125,7 +125,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
 
   return (
     <Page transition="drill-down">
-      <LiveTables subscriptions={pageSubscriptions.marketDetail(market.id, user.id)} />
+      <LiveTables subscriptions={pageSubscriptions.marketDetail(market.id, user.id, market.category?.id ?? null)} />
       <BackLink href="/markets">Markets</BackLink>
 
       <div className="flex flex-col gap-3">

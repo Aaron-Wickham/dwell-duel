@@ -69,6 +69,8 @@ describe('write_limits', () => {
   it('raises exactly the messages the app words', async () => {
     const [{ src }] = await pgQuery<{ src: string }>("select prosrc as src from pg_proc where proname = 'enforce_write_limit'")
     for (const { match } of Object.values(RATE_LIMIT_ERRORS)) expect(src).toContain(match)
+    // 0107 dropped the bet_cancel limit with cancel_bet; 0108 drops its message too.
+    expect(src).not.toContain('bet_cancel')
   })
 })
 

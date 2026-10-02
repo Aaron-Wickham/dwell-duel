@@ -51,9 +51,6 @@ const AUTHENTICATED_DEFINER = [
   'my_task_streaks',
   // Parlay pages' leg odds (0074): raises unless invited or admin; reads only, at most 50 ids.
   'parlay_leg_odds',
-  // The slip's quotes (0074): raises unless invited; quotes for the caller's own auth.uid() only. Only
-  // the build before #332 reads it.
-  'pick_quotes',
   'place_bet',
   'place_parlay',
   'place_slip_v4',

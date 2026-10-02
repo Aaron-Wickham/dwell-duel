@@ -15,7 +15,6 @@ describe('supabase_realtime publication', () => {
       expect.arrayContaining([
         'activity_events',
         'bets',
-        'cancelled_bets',
         'markets',
         'market_resolutions',
         'parlays',
@@ -23,6 +22,7 @@ describe('supabase_realtime publication', () => {
         'task_completions',
         'profiles',
         'market_comments',
+        'market_categories',
       ]),
     )
   })
@@ -34,6 +34,10 @@ describe('supabase_realtime publication', () => {
   it('no longer publishes the tables the Broadcast pings replaced (0098)', async () => {
     const tables = await publishedTables()
     for (const table of ['market_outcomes', 'tasks', 'feed_reactions']) expect(tables).not.toContain(table)
+  })
+
+  it('no longer publishes cancelled_bets, which no page follows (0108)', async () => {
+    expect(await publishedTables()).not.toContain('cancelled_bets')
   })
 
   it('publishes inserts, updates and deletes', async () => {

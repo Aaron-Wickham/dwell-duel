@@ -6,7 +6,9 @@ export const pageSubscriptions = {
   // carries their own parlays settling on another market. Another member's parlay settling
   // elsewhere writes nothing here, so the figure catches up on the next refresh: following every
   // parlay would refresh every open market page group-wide.
-  marketDetail(marketId: string, viewerId: string): LiveSubscription[] {
+  // Its category's row carries a rename or hide (0108); a merge moves markets.category_id, which
+  // the markets row hears.
+  marketDetail(marketId: string, viewerId: string, categoryId: string | null): LiveSubscription[] {
     return [
       { table: 'bets', filter: `market_id=eq.${marketId}` },
       { table: 'markets', filter: `id=eq.${marketId}` },
@@ -16,6 +18,7 @@ export const pageSubscriptions = {
       { table: 'parlays', filter: `profile_id=eq.${viewerId}` },
       // A deleted comment is a soft delete, an UPDATE (0053), so this filtered channel hears it.
       { table: 'market_comments', filter: `market_id=eq.${marketId}` },
+      ...(categoryId ? [{ table: 'market_categories', filter: `id=eq.${categoryId}` } as const] : []),
     ]
   },
   // Every card's odds move with every bet, and every bet moves its outcome's pool_total and

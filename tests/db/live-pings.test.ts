@@ -141,6 +141,33 @@ describe('live pings (0092)', () => {
     expect(queue.n).toBe(0)
   })
 
+  // 0108: a rename or hide writes only market_categories, which every page showing markets hears
+  // through the markets topic; a merge moves markets rows as well. One ping per call.
+  it('pings markets when an admin renames, hides or merges a category', async () => {
+    const admin = await makeMember('Ada')
+    await giveRole(admin, 'admin')
+    const adminClient = await clientFor(admin)
+    await ensureInvited(adminClient)
+    const [from, into] = await pgQuery<{ id: string }>(
+      "insert into public.market_categories (name) values ('Footy'), ('Sports') returning id",
+    )
+    const { marketId } = await createTestMarket(await clientFor(alice), ['Yes', 'No'])
+    await pgQuery(`update public.markets set category_id = '${from.id}' where id = '${marketId}'`)
+
+    const calls = [
+      () => adminClient.rpc('rename_market_category', { p_category_id: from.id, p_name: 'Football' }),
+      () => adminClient.rpc('set_market_category_hidden', { p_category_id: into.id, p_hidden: true }),
+      () => adminClient.rpc('set_market_category_hidden', { p_category_id: into.id, p_hidden: false }),
+      () => adminClient.rpc('merge_market_categories', { p_from: from.id, p_into: into.id }),
+    ]
+    for (const call of calls) {
+      await resetThrottle()
+      const since = await dbNow()
+      expect((await call()).error).toBeNull()
+      expect(await messagesSince('markets', since)).toBe(1)
+    }
+  })
+
   it("won't let members call the ping function themselves", async () => {
     const client = await clientFor(alice)
     const { error } = await client.rpc('send_live_ping', { p_topic: 'markets' })

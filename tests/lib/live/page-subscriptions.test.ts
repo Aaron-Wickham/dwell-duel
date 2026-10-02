@@ -6,9 +6,10 @@ const FILTER_RE = /^[a-z_]+=eq\..+$/
 
 const MARKET_ID = '11111111-1111-4111-8111-111111111111'
 const MEMBER_ID = '22222222-2222-4222-8222-222222222222'
+const CATEGORY_ID = '33333333-3333-4333-8333-333333333333'
 
 const declarations: Record<string, () => LiveSubscription[]> = {
-  marketDetail: () => pageSubscriptions.marketDetail(MARKET_ID, MEMBER_ID),
+  marketDetail: () => pageSubscriptions.marketDetail(MARKET_ID, MEMBER_ID, CATEGORY_ID),
   markets: () => pageSubscriptions.markets(),
   'home (member)': () => pageSubscriptions.home({ me: MEMBER_ID, reviewer: false }),
   'home (reviewer)': () => pageSubscriptions.home({ me: MEMBER_ID, reviewer: true }),
@@ -42,15 +43,20 @@ describe('pageSubscriptions', () => {
   // Presence in LIVE_TABLES alone doesn't prove a page gets every update it needs today, so each
   // declaration is pinned exactly against the agreed table.
   // The viewer's id narrows only their own parlays (#262), so no channel follows every parlay.
-  it('marketDetail carries the market id, plus the viewer id for their own parlays', () => {
-    expect(pageSubscriptions.marketDetail(MARKET_ID, MEMBER_ID)).toEqual([
+  it('marketDetail carries the market id, the viewer id for their own parlays, and its category row', () => {
+    const marketRows = [
       { table: 'bets', filter: `market_id=eq.${MARKET_ID}` },
       { table: 'markets', filter: `id=eq.${MARKET_ID}` },
       { table: 'market_resolutions', filter: `market_id=eq.${MARKET_ID}` },
       { table: 'parlay_legs', filter: `market_id=eq.${MARKET_ID}` },
       { table: 'parlays', filter: `profile_id=eq.${MEMBER_ID}` },
       { table: 'market_comments', filter: `market_id=eq.${MARKET_ID}` },
+    ]
+    expect(pageSubscriptions.marketDetail(MARKET_ID, MEMBER_ID, CATEGORY_ID)).toEqual([
+      ...marketRows,
+      { table: 'market_categories', filter: `id=eq.${CATEGORY_ID}` },
     ])
+    expect(pageSubscriptions.marketDetail(MARKET_ID, MEMBER_ID, null)).toEqual(marketRows)
   })
 
   // A bet writes bets and market_outcomes.pool_total; the list hears the pools topic, never a bet row.

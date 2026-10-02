@@ -73,6 +73,15 @@ limited.
   description, and the title only until someone else has bet on it, solo
   or as a parlay pick. Every version is kept under "Edited", which every
   member can read.
+- **Category:** the creator can change it until the market closes, and an
+  admin at any time. It's logged under "Edited" too.
+- **Close time and Reopen:** the creator or an admin can move the close
+  time, later or earlier as long as it's still to come. A market that has
+  closed without a result shows **Reopen**, which takes bets again until
+  the new close time. Only reopen while the result isn't known yet:
+  anyone could otherwise buy the known winner cheaply. A creator with a
+  bet or parlay pick on their own market can't move its close time; an
+  admin does it for them.
 - **Delete** (the owner only) removes a market nobody has ever bet on,
   cancelled a bet on, or picked in a parlay. Anything with money on it
   can't be deleted: void it instead, which refunds everyone and keeps the
@@ -139,7 +148,8 @@ Void a market that can't be settled fairly: the question was ambiguous,
 the event was cancelled, or it was made in error.
 
 - **Who:** until it closes, its creator or an admin; once it has closed,
-  only an admin.
+  only an admin. A creator with a bet or parlay pick on their own market
+  can't void it; an admin does.
 - **Steps:** Void market on the market page, give the reason (required, up
   to 500 characters; everyone sees it on the market page and in the feed),
   and confirm.
@@ -147,11 +157,25 @@ the event was cancelled, or it was made in error.
   that leg and carries on with the rest; a parlay with no legs left is
   refunded. This can't be undone.
 
-### Removing a bet (owner)
+### Categories (admins)
 
-The owner can remove anyone's bet, with a full refund, until its market
-closes, from the market's list of bets. After that, a wrong bet stands or
-the market is voided.
+Members make categories when they create a market, so near-duplicates
+creep in. Admin › Markets › Categories lists each one with how many
+markets it has:
+
+- **Rename** fixes a name. It can't clash with another category's name
+  (capitals and spacing don't count as different).
+- **Merge** moves every market in one category into another, logs each
+  move under the market's "Edited", and hides the old category.
+- **Hide** takes a category out of the filter chips and suggestions
+  without touching its markets. Typing a hidden category's name for a
+  market brings it back.
+- **Other** is the default and can only be renamed.
+
+### Bets are final
+
+Bets can't be cancelled or removed, by members or the owner. A wrong bet
+stands, or the market is voided.
 
 ## Tasks
 
@@ -259,15 +283,16 @@ paper over it.
 
 ## Parlays, for the people who settle markets
 
-- Parlays are paid by DwellDuel, not from any market's pool, so they never
-  change a market's pool, chance or payouts. "+N DC riding in parlays" on
-  an outcome is for information only.
-- A leg's odds are set when its market closes, or when it's resolved if
-  an admin resolves it earlier. **Resolving early fixes the odds** at that
-  moment, so don't resolve before the close time without a reason.
-- An override settles every affected parlay again; a void drops the leg.
-- A parlay pays at most 20× and 1,000 DC, and a leg counts at most 5×, so
-  one result can't pay out an unbounded amount.
+- A parlay's odds and payout are fixed when it's placed. Resolving a
+  market early, or moving its close time, doesn't change what a parlay
+  pays.
+- A parlay's stake buys shares on each of its picks, so parlays move a
+  market's chance like solo bets do. "+N DC riding in parlays" on an
+  outcome shows how much parlay money is on it.
+- An override settles every affected parlay again; a void drops the leg,
+  and the rest pay at their own odds.
+- Parlays placed before the October 2026 switch keep their old caps: 20×
+  and 1,000 DC.
 
 ## Good practice
 

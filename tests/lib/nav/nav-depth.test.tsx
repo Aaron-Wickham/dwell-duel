@@ -7,6 +7,7 @@ vi.mock('next/navigation', () => ({ usePathname: () => pathname }))
 
 type NavDepthModule = typeof import('@/lib/nav/nav-depth')
 let mod: NavDepthModule
+let scrollTo: ReturnType<typeof vi.fn>
 
 // The count lives in module scope, so each test loads a fresh copy of the module.
 beforeEach(async () => {
@@ -14,6 +15,8 @@ beforeEach(async () => {
   mod = await import('@/lib/nav/nav-depth')
   pathname = '/'
   window.history.replaceState(null, '', '/')
+  scrollTo = vi.fn()
+  window.scrollTo = scrollTo as unknown as typeof window.scrollTo
 })
 
 function Harness() {
@@ -145,5 +148,39 @@ describe('nav depth', () => {
       </>,
     )
     expect(screen.getByTestId('reader')).toHaveTextContent('1')
+  })
+})
+
+describe('scroll on navigation (#349)', () => {
+  const TOP = { top: 0, left: 0, behavior: 'instant' }
+
+  it('opens a pushed page at its top', () => {
+    const { rerender } = render(<Harness />)
+    expect(scrollTo).not.toHaveBeenCalled()
+    navigate(rerender, '/markets')
+    expect(scrollTo).toHaveBeenCalledExactlyOnceWith(TOP)
+  })
+
+  it('leaves back and forward to the position the browser restores', () => {
+    const { rerender } = render(<Harness />)
+    navigate(rerender, '/markets')
+    scrollTo.mockClear()
+    goBack(rerender, '/', { ddDepth: 0 })
+    goForward(rerender, '/markets', { ddDepth: 1 })
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('leaves a #hash link to scroll to its target', () => {
+    const { rerender } = render(<Harness />)
+    pathname = '/how-it-works'
+    window.history.pushState(null, '', '/how-it-works#parlays')
+    rerender(<Harness />)
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('stays put on a re-render of the same page', () => {
+    const { rerender } = render(<Harness />)
+    rerender(<Harness />)
+    expect(scrollTo).not.toHaveBeenCalled()
   })
 })

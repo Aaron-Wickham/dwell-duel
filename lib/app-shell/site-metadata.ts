@@ -46,9 +46,12 @@ export const siteMetadata: Metadata = {
 // viewport-fit=cover lets the page run under the notch and home indicator; the --safe-* tokens
 // in globals.css put the chrome back inside the safe area. resizes-content makes the keyboard
 // shrink the layout viewport instead of covering a focused field. Zoom is locked: a pinch-zoomed
-// installed app leaves the fixed top and tab bars displaced from the screen edges.
+// installed app leaves the fixed top and tab bars displaced from the screen edges. The
+// color-scheme meta applies while the HTML is still being parsed, before globals.css, so a full
+// page load in dark mode (a reload after a deploy) paints the browser's dark canvas, not white (#353).
 export const siteViewport: Viewport = {
   themeColor: BRAND_TEAL,
+  colorScheme: 'light dark',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

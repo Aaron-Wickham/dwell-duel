@@ -8,6 +8,12 @@ Each release's notes use these headings, in this order, leaving out any
 that are empty: **Security**, **Features**, **Fixes**, **Polish**, **Under
 the hood**, **Tests**. Add a line under `## Unreleased
 
+## Unreleased
+
+### Polish
+- **Admin tabs show a badge, not a number in brackets.** Tasks and Markets carry the same red badge as the top bar's Admin button, so the tabs stay on one line on a phone (#351).
+- **Choosing a market's type explains each one.** Create market's type picker is three cards, Yes/No, Multiple choice and Over/Under, each saying in a line what it asks; stacked on a phone and side by side on a wide screen (#352).
+
 ## v0.9.0-beta — 2026-10-02
 
 Every bet now pays a fixed amount you see before you place it. Markets are run by a market maker, so the slip shows exactly what a bet or parlay pays, odds move as people bet, and bets are final once placed; open markets switched over without changing anyone's payout. Markets have categories to filter by, a closed market can be reopened for more bets, lists across the app are cards, and new invitees get a sign-in page that shows what DwellDuel is.

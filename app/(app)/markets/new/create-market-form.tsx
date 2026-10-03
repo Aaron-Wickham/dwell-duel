@@ -9,7 +9,6 @@ import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { keepCheckedOnReset } from '@/lib/forms/keep-on-reset'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
-import { cn } from '@/lib/utils'
 import { createMarketAction, type ActionState } from '@/lib/markets/create-market'
 import { formatLine, type MarketKind } from '@/lib/markets/kind'
 import { DEFAULT_LIQUIDITY } from '@/lib/markets/lmsr'
@@ -24,11 +23,14 @@ import { useTimeZone } from '@/components/ui/local-time'
 const MAX_OUTCOMES = 6
 const MIN_OUTCOMES = 2
 
-const toggleClass = (on: boolean) =>
-  cn(
-    'pressable flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] font-bold text-ink2',
-    on && 'bg-surface text-ink shadow-tab',
-  )
+// Each type says what it asks, since a member making their first market can't be expected to know
+// "binary" or "over/under" (#352). The native radio stays, transparent and covering its card, so
+// it's the control a tap, a screen reader and the keyboard all use; the drawn dot only mirrors it.
+const KIND_OPTIONS: { kind: MarketKind; label: string; hint: string }[] = [
+  { kind: 'binary', label: 'Yes/No', hint: 'Will it happen or not?' },
+  { kind: 'multiple_choice', label: 'Multiple choice', hint: 'Members pick one of 2 to 6 answers.' },
+  { kind: 'over_under', label: 'Over/Under', hint: 'Will a number land above or below a line?' },
+]
 
 // update_market (0043) only ever changes the title and description, so the hint says so before
 // it's too late (#266).
@@ -159,43 +161,39 @@ export function CreateMarketForm({
 
         <fieldset className="flex flex-col gap-1.5">
           <legend className={labelClass}>Type</legend>
-          <div className="grid grid-cols-1 gap-1.5 rounded-[14px] bg-sunk p-1 md:grid-cols-3">
-            <label className={toggleClass(kind === 'binary')}>
-              <input
-                type="radio"
-                name="kind"
-                value="binary"
-                checked={kind === 'binary'}
-                ref={keepCheckedOnReset(kind === 'binary')}
-                onChange={() => setKind('binary')}
-                className="size-[18px] accent-primary"
-              />
-              Binary (Yes/No)
-            </label>
-            <label className={toggleClass(kind === 'multiple_choice')}>
-              <input
-                type="radio"
-                name="kind"
-                value="multiple_choice"
-                checked={kind === 'multiple_choice'}
-                ref={keepCheckedOnReset(kind === 'multiple_choice')}
-                onChange={() => setKind('multiple_choice')}
-                className="size-[18px] accent-primary"
-              />
-              Multiple choice
-            </label>
-            <label className={toggleClass(kind === 'over_under')}>
-              <input
-                type="radio"
-                name="kind"
-                value="over_under"
-                checked={kind === 'over_under'}
-                ref={keepCheckedOnReset(kind === 'over_under')}
-                onChange={() => setKind('over_under')}
-                className="size-[18px] accent-primary"
-              />
-              Over/Under
-            </label>
+          <div className="grid gap-2 lg:grid-cols-3">
+            {KIND_OPTIONS.map((option) => (
+              <label
+                key={option.kind}
+                className="pressable relative flex min-h-11 cursor-pointer items-start gap-3 rounded-tile border border-line bg-surface p-3.5 has-checked:border-acc-text has-checked:bg-acc-soft has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus md:p-4"
+              >
+                <input
+                  type="radio"
+                  name="kind"
+                  value={option.kind}
+                  checked={kind === option.kind}
+                  ref={keepCheckedOnReset(kind === option.kind)}
+                  onChange={() => setKind(option.kind)}
+                  aria-labelledby={`cm-kind-${option.kind}`}
+                  aria-describedby={`cm-kind-${option.kind}-hint`}
+                  className="peer absolute inset-0 m-0 cursor-pointer appearance-none rounded-tile opacity-0"
+                />
+                <span
+                  aria-hidden="true"
+                  className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-line-s peer-checked:border-acc-text peer-checked:[&>span]:bg-acc-text"
+                >
+                  <span className="size-2.5 rounded-full" />
+                </span>
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span id={`cm-kind-${option.kind}`} className={labelClass}>
+                    {option.label}
+                  </span>
+                  <span id={`cm-kind-${option.kind}-hint`} className="text-sm text-ink2">
+                    {option.hint}
+                  </span>
+                </span>
+              </label>
+            ))}
           </div>
         </fieldset>
 

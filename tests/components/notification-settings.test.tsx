@@ -186,7 +186,9 @@ describe('NotificationSettings', () => {
 
     saving.resolve({})
     const turnOff = await screen.findByRole('button', { name: 'Turn off on this device' })
-    expect(turnOff).toHaveFocus()
+    // Focus moves in an effect after the commit that renders the new button, so it can land a
+    // tick after findByRole resolves (#360).
+    await waitFor(() => expect(turnOff).toHaveFocus())
     expect(turnOff).not.toHaveAttribute('aria-disabled')
   })
 

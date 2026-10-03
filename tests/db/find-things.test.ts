@@ -233,7 +233,11 @@ describe('the title search index', () => {
          select 'seed:b:' || g, 'task_completed', now() - g * interval '1 minute', '${bob.id}' from generate_series(1, 30000) g;
        insert into public.activity_events (id, kind, occurred_at, actor_id)
          select 'seed:a:' || g, 'task_completed', now() - g * interval '2 days', '${alice.id}' from generate_series(1, 10) g;
-       analyze public.activity_events;`,
+       -- A target of 1000 samples 300,000 rows, more than the table holds, so analyze reads it all
+       -- and Alice's estimate is exact every run; a sampled one sometimes made a Seq Scan cheaper (#358).
+       alter table public.activity_events alter column actor_id set statistics 1000;
+       analyze public.activity_events;
+       alter table public.activity_events alter column actor_id set statistics -1;`,
     )
     const rows = await pgQuery<{ 'QUERY PLAN': string }>(
       `set local request.jwt.claims = '{"sub":"${alice.id}","role":"authenticated"}';

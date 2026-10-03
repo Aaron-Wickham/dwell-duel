@@ -15,9 +15,9 @@ the hood**, **Tests**. Add a line under `## Unreleased
 - **The tab bar stays at the bottom after typing.** In the installed iPhone app, the tab bar and top bar could stay a keyboard's height up the screen after the keyboard closed, most often after tapping a tab while a field had focus; the app now puts them back once the keyboard has gone (#350).
 - **Less white between pages in dark mode.** A full page load, such as the reload after an update, now starts on a dark background in dark mode instead of white (#353).
 
-## Unreleased
-
 ### Polish
+- **Admin tabs show a badge, not a number in brackets.** Tasks and Markets carry the same red badge as the top bar's Admin button, so the tabs stay on one line on a phone (#351).
+- **Choosing a market's type explains each one.** Create market's type picker is three cards, Yes/No, Multiple choice and Over/Under, each saying in a line what it asks; stacked on a phone and side by side on a wide screen (#352).
 - **A tidier sign-in page.** The white box around Google's button in dark mode is gone, the page says it's a beta beside the wordmark, and on a wide screen the page starts under the wordmark instead of floating mid-window (#354).
 
 ## v0.9.0-beta — 2026-10-02

@@ -1,12 +1,14 @@
 'use client'
 
-import { useLayoutEffect, useRef } from 'react'
+import { Fragment, useId, useLayoutEffect, useRef } from 'react'
+import { AttentionBadge, AttentionNote } from '@/components/ui/attention-badge'
 import { IntentLink } from '@/components/ui/intent-link'
 import { PILL_SLIDE } from '@/lib/ui/motion'
 import { reducedMotion } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
 
-export type SubNavItem = { href: string; label: string; current: boolean }
+// badge: how many things wait on the viewer behind this tab, drawn as the top bar's badge.
+export type SubNavItem = { href: string; label: string; current: boolean; badge?: number }
 
 type Rect = { left: number; width: number }
 
@@ -21,6 +23,7 @@ export function SubNav({ label, items }: { label: string; items: SubNavItem[] })
   const navRef = useRef<HTMLElement>(null)
   const pillRef = useRef<HTMLSpanElement>(null)
   const currentHref = items.find((item) => item.current)?.href
+  const noteId = useId()
 
   useLayoutEffect(() => {
     const nav = navRef.current
@@ -76,21 +79,34 @@ export function SubNav({ label, items }: { label: string; items: SubNavItem[] })
         aria-hidden="true"
         className="pointer-events-none absolute top-1 bottom-1 rounded-[10px] border border-ink2 bg-surface opacity-0 shadow-tab group-data-[ready]/subnav:opacity-100"
       />
-      {items.map(({ href, label: itemLabel, current }) => (
-        <IntentLink
-          prefetchOnTouch
-          key={href}
-          href={href}
-          aria-current={current ? 'page' : undefined}
-          className={cn(
-            'pressable relative inline-flex min-h-11 grow items-center justify-center rounded-[10px] px-1.5 text-[15px] font-bold no-underline sm:px-2 md:grow-0 md:px-4',
-            current
-              ? 'border border-ink2 bg-surface text-ink shadow-tab group-data-[ready]/subnav:border-transparent group-data-[ready]/subnav:bg-transparent group-data-[ready]/subnav:shadow-none'
-              : 'text-ink2 hover:text-ink',
-          )}
-        >
-          {itemLabel}
-        </IntentLink>
+      {items.map(({ href, label: itemLabel, current, badge = 0 }, index) => (
+        <Fragment key={href}>
+          <IntentLink
+            prefetchOnTouch
+            href={href}
+            aria-current={current ? 'page' : undefined}
+            aria-describedby={badge > 0 ? `${noteId}-${index}` : undefined}
+            className={cn(
+              'pressable relative inline-flex min-h-11 grow items-center justify-center rounded-[10px] px-1.5 text-[15px] font-bold no-underline sm:px-2 md:grow-0 md:px-4',
+              current
+                ? 'border border-ink2 bg-surface text-ink shadow-tab group-data-[ready]/subnav:border-transparent group-data-[ready]/subnav:bg-transparent group-data-[ready]/subnav:shadow-none'
+                : 'text-ink2 hover:text-ink',
+            )}
+          >
+            {badge > 0 ? (
+              // The badge hangs off the label's corner rather than taking width, so five tabs
+              // still fit a phone on one line.
+              <span className="relative">
+                {itemLabel}
+                <AttentionBadge count={badge} className={cn('-top-2.5 -right-4', current ? 'ring-surface' : 'ring-sunk')} />
+              </span>
+            ) : (
+              itemLabel
+            )}
+          </IntentLink>
+          {/* Outside the link, so the tab's name stays its label and the count is its description. */}
+          <AttentionNote id={`${noteId}-${index}`} count={badge} />
+        </Fragment>
       ))}
     </nav>
   )

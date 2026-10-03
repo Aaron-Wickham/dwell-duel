@@ -45,6 +45,7 @@ describe('siteViewport', () => {
   it('runs edge to edge, locks zoom, lets the keyboard resize the page, and keeps the teal theme colour', () => {
     expect(siteViewport).toEqual({
       themeColor: '#03272d',
+      colorScheme: 'light dark',
       width: 'device-width',
       initialScale: 1,
       maximumScale: 1,

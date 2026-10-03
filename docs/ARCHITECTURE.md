@@ -987,7 +987,16 @@ script. `public/sw.js` is hand-written. It caches only the content-hashed
 when a navigation can't reach the network. Each deploy gets its own cache. It never caches per-member HTML, RSC
 payloads, server actions or Supabase responses. Pages slide in with
 React's `<ViewTransition>`, drill-down pages support a back swipe, and
-each signed-in route has a skeleton.
+each signed-in route has a skeleton. `NavDepthTracker` (`lib/nav/nav-depth.ts`)
+scrolls a pushed page to its top before it paints (#349), since Next scrolls
+only when the new segment starts off screen; back and forward keep the
+browser's restored position, and a `#hash` keeps its target. The viewport's
+`interactive-widget=resizes-content` makes the keyboard shrink the layout
+viewport, carrying the fixed bars up with it, and iOS sometimes leaves them
+there after the keyboard goes; `KeyboardViewportReset`
+(`components/app-shell/keyboard-viewport-reset.tsx`) nudges the scroll a
+pixel and back once it has (#350). The `color-scheme` meta lets a full page
+load in dark mode paint a dark canvas before `globals.css` arrives (#353).
 
 **Push notifications** (#80). Settings' Notifications card
 (`app/(app)/settings/notification-settings.tsx`) asks for permission,

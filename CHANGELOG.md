@@ -8,6 +8,13 @@ Each release's notes use these headings, in this order, leaving out any
 that are empty: **Security**, **Features**, **Fixes**, **Polish**, **Under
 the hood**, **Tests**. Add a line under `## Unreleased
 
+## Unreleased
+
+### Fixes
+- **A new page opens at its top.** Switching pages from one scrolled only a little, or between Admin sections, used to keep the old scroll position; going back still returns to where you were (#349).
+- **The tab bar stays at the bottom after typing.** In the installed iPhone app, the tab bar and top bar could stay a keyboard's height up the screen after the keyboard closed, most often after tapping a tab while a field had focus; the app now puts them back once the keyboard has gone (#350).
+- **Less white between pages in dark mode.** A full page load, such as the reload after an update, now starts on a dark background in dark mode instead of white (#353).
+
 ## v0.9.0-beta — 2026-10-02
 
 Every bet now pays a fixed amount you see before you place it. Markets are run by a market maker, so the slip shows exactly what a bet or parlay pays, odds move as people bet, and bets are final once placed; open markets switched over without changing anyone's payout. Markets have categories to filter by, a closed market can be reopened for more bets, lists across the app are cards, and new invitees get a sign-in page that shows what DwellDuel is.

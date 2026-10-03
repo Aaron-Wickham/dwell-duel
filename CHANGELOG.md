@@ -8,7 +8,9 @@ Each release's notes use these headings, in this order, leaving out any
 that are empty: **Security**, **Features**, **Fixes**, **Polish**, **Under
 the hood**, **Tests**. Add a line under `## Unreleased
 
-## Unreleased
+## v0.10.0-beta — 2026-10-03
+
+A polish release from a round of phone testing. Pages open at their top, the tab bar stays at the bottom of the installed iPhone app after typing, and dark mode shows less white during a reload. The admin tabs show their count as a badge, Create market explains each market type, and the sign-in page loses the white box around Google's button and gains a beta badge.
 
 ### Fixes
 - **A new page opens at its top.** Switching pages from one scrolled only a little, or between Admin sections, used to keep the old scroll position; going back still returns to where you were (#349).

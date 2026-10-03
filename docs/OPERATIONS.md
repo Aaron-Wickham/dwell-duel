@@ -351,6 +351,7 @@ after changing one: Deploy Production → Run workflow, from `main`.
 | `CRON_SECRET` | The server refuses to boot | **Three places must match** (below) |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | The app boots, logs "Push notifications are off until they are set", and sends nothing; Settings says notifications aren't available | Below |
 | `NEXT_PUBLIC_SENTRY_DSN` | Errors aren't captured | Public by design; replace it only if it's being spammed: Sentry → the project → Client Keys → new key, set it, redeploy, disable the old key |
+| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | Builds don't upload source maps, so Sentry's stack traces stay minified; nothing else changes | Production and Preview. The org and project came from the Sentry–Vercel integration. The token is a Sentry organization token (Settings → Auth Tokens), a Secret: create a new one, set it, redeploy, then revoke the old one |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Sign-in uses Supabase's Google redirect, whose account chooser names the Supabase project instead of dwellduel.com | Public by design (it's in the page). Changes only with a new Google OAuth client: see [Google sign-in and brand verification](#google-sign-in-and-brand-verification) |
 | `HEALTHCHECKS_KEEP_ALIVE_URL`, `HEALTHCHECKS_CLOSING_ALERTS_URL` | No heartbeat pings, so each check goes late and emails | healthchecks.io → the check → its ping URL; set it, redeploy, then confirm the next ping arrives |
 

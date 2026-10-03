@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { withSentryConfig } from '@sentry/nextjs/config'
 
 // Scripts and connections only to DwellDuel itself and its Supabase project; nothing frames the app
 // (clickjacking on admin actions). Next's own inline scripts and the launch screen's cold-start
@@ -30,6 +31,15 @@ function contentSecurityPolicy(): string {
   ].join('; ')
 }
 
+// Next has no built-in way to read a deployment id from client code (deploymentId itself only
+// affects asset URLs and headers Next sets internally), so the per-deploy id is threaded
+// through as its own build-time env var. ServiceWorkerRegistration appends it to /sw.js's
+// registration URL, which is what makes each deploy install its own worker and cache.
+// VERCEL_DEPLOYMENT_ID comes first: a redeploy of the same commit (a rollback, a retry) gets a
+// new id, where the commit SHA would stay put and leave the old worker in place.
+// It's also the Sentry release (sentryOptions), so the source maps below upload under it.
+const deployVersion = process.env.VERCEL_DEPLOYMENT_ID ?? process.env.VERCEL_GIT_COMMIT_SHA ?? 'local'
+
 const nextConfig: NextConfig = {
   // No reason to tell a scanner which framework answers.
   poweredByHeader: false,
@@ -41,14 +51,8 @@ const nextConfig: NextConfig = {
     '/how-it-works': ['./docs/HOW-IT-WORKS.md'],
     '/privacy': ['./docs/HOW-IT-WORKS.md'],
   },
-  // Next has no built-in way to read a deployment id from client code (deploymentId itself only
-  // affects asset URLs and headers Next sets internally), so the per-deploy id is threaded
-  // through as its own build-time env var. ServiceWorkerRegistration appends it to /sw.js's
-  // registration URL, which is what makes each deploy install its own worker and cache.
-  // VERCEL_DEPLOYMENT_ID comes first: a redeploy of the same commit (a rollback, a retry) gets a
-  // new id, where the commit SHA would stay put and leave the old worker in place.
   env: {
-    NEXT_PUBLIC_SW_VERSION: process.env.VERCEL_DEPLOYMENT_ID ?? process.env.VERCEL_GIT_COMMIT_SHA ?? 'local',
+    NEXT_PUBLIC_SW_VERSION: deployVersion,
   },
   // A service worker only updates when the browser sees new bytes at /sw.js, so neither the
   // browser nor Vercel's CDN may keep a copy.
@@ -72,4 +76,25 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+// Only a build that holds SENTRY_AUTH_TOKEN (Vercel's) is wrapped, so CI, e2e and local builds stay
+// exactly what they were. The plugin uploads hidden source maps and deletes them from the output, so
+// production never serves them. It stays errors-only: no build-time instrumentation or navigation
+// spans. A Sentry outage mustn't block a deploy, so an upload failure only warns. Vercel builds
+// without .git, so commits are named by SHA rather than read from git.
+const commit = process.env.VERCEL_GIT_COMMIT_SHA
+
+export default process.env.SENTRY_AUTH_TOKEN
+  ? withSentryConfig(nextConfig, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      release: {
+        name: deployVersion,
+        setCommits: commit ? { repo: 'Aaron-Wickham/dwell-duel', commit, ignoreMissing: true } : false,
+      },
+      buildTimeInstrumentation: false,
+      suppressOnRouterTransitionStartWarning: true,
+      telemetry: false,
+      errorHandler: (err) => console.warn('Sentry source map upload failed:', err),
+    })
+  : nextConfig

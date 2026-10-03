@@ -1150,8 +1150,14 @@ value never stops production booting.
   details. `scrubEvent` removes the user, cookies, request body,
   headers and query string from every event, and `beforeSend` drops a view
   transition the browser skipped (`isSkippedViewTransition`: a resize or a
-  hidden tab mid-transition, which react-dom leaves unhandled). There are no source maps
-  (no build plugin, no auth token). The CSP's `connect-src` allows
+  hidden tab mid-transition, which react-dom leaves unhandled). Source maps: a build that
+  holds `SENTRY_AUTH_TOKEN` (Vercel's, with `SENTRY_ORG` and `SENTRY_PROJECT`,
+  which the Sentry–Vercel integration set) is wrapped in `withSentryConfig`
+  (`next.config.ts`), which uploads hidden source maps under the deploy's
+  release (`NEXT_PUBLIC_SW_VERSION`, the same value `sentryOptions` reports),
+  names the release's commit, and deletes the maps from the output. It adds no
+  instrumentation, and an upload failure only warns; CI, e2e and local builds
+  have no token and aren't wrapped. The CSP's `connect-src` allows
   `https://*.sentry.io`.
 - **Raw database errors.** An RPC's own refusals are `raise exception`
   (SQLSTATE `P0001`, `isDeliberateRaise`) and reach the member as written;

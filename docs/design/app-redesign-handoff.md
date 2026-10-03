@@ -112,7 +112,7 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 | Edit profile | wide | Photo and a live preview of the profile (5fr) beside name, bio and Save (7fr). |
 | Settings | wide | Two columns of section cards: Appearance, Profile, Haptics & motion; then Notifications, Help, Account. |
 | How it works | reading | A sticky contents list (200px) beside the rules (about 68 characters a line). |
-| Create market | wide | The form (7fr) beside a live preview of its market card (5fr). |
+| Create market | wide | The form (7fr) beside a live preview of its market card (5fr). The type is three option cards, Yes/No, Multiple choice and Over/Under, each with a line saying what it asks: stacked on a phone, in a row from `lg:`. The chosen card is `acc-soft` with an `acc-text` border and dot; the native radio covers each card, transparent (#352). |
 | Parlay | wide | Picks (7fr) beside the summary and How it adds up (5fr). |
 | Admin › Members | wide | A card per member in three columns. |
 | Tasks | wide | Task cards in two columns, each with its action on the right. |
@@ -129,9 +129,10 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 
 Written for someone who has just been invited: get them oriented, then signed in. Both pages are `SignInFrame` (`components/sign-in/sign-in-frame.tsx`), not a `<Page>`, since they're outside the signed-in shell.
 
-- **Contents, in order:** the wordmark (static, not a link), a sample market card, the `h1` "Friendly bets. Faithful study.", the lede, three facts with icons (Bet on friendly questions · Earn DC with Bible-study tasks · Play money, invite-only), the Google button with "Use the Google account your invite was sent to." under it, and Privacy.
+- **Contents, in order:** the wordmark (static, not a link) with the `BetaBadge` beside it (#354), a sample market card, the `h1` "Friendly bets. Faithful study.", the lede, three facts with icons (Bet on friendly questions · Earn DC with Bible-study tasks · Play money, invite-only), the Google button with "Use the Google account your invite was sent to." under it, and Privacy.
 - **The sample market** (`SampleMarket`) is hard-coded: signed-out visitors can't read markets and real questions mustn't leak. It looks like a `MarketCard`: Open and Church chips and "Sample", "Will the sermon run past noon?", a plain-SVG step-line chart in `MarketSparkline`'s style (Yes in `--s2`, No in `--line-s`, a baseline and a dashed 50% line) with end labels, and "Sam bet 10 DC on Yes · just now" beside Yes's %. Screen readers get it as one image named "Sample market: …".
-- **Layouts:** one column on a phone, card first. A short phone (667pt tall or less, below `lg:`, the `short:` variant) drops the chart's axes, the lede and the facts so the button is on screen without scrolling. At `lg:` the copy (up to 480px, the button 380px) sits left of the card, 64px apart, and the `h1` is 52px.
+- **Layouts:** one column on a phone, card first. A short phone (667pt tall or less, below `lg:`, the `short:` variant) drops the chart's axes, the lede and the facts so the button is on screen without scrolling. At `lg:` the copy (up to 480px, the button 380px) sits left of the card, 64px apart, both starting 32px under the wordmark rather than centred in the window (#354), and the `h1` is 52px.
+- **Google's button** is an iframe holding a light document; its slot keeps `color-scheme: normal`, since under a dark page the browser otherwise paints a white backdrop behind it (#354).
 - **The intro** plays once a session (`sessionStorage`), from a script that runs before the first paint (`components/sign-in/sign-in-intro.tsx`), so the page opens on the first frame or the last, never both:
   1. 0–0.9s: the D sits centred at the launch screen's size (`32vmin`) on the page background and its leaves grow in (`launch-leaf`, the launch screen's own frames).
   2. 0.9–1.35s: the symbol flies into the wordmark (`IntroDirector`, measured, `DURATION.sheet` on the iOS curve) as the backdrop fades.
@@ -145,7 +146,7 @@ Written for someone who has just been invited: get them oriented, then signed in
 - **Desktop:** a 72px top bar with the wordmark, then Markets, My bets, Tasks, Feed and Leaderboard, a divider, then Admin (reviewers and above). On the right: the balance chip (a link to My bets) and your avatar (a link to your profile). The active item is a filled pill.
 - **Phone:**
   - Top bar (64px): wordmark, balance chip, an Admin shield icon (reviewers and above), avatar.
-- **Admin** opens the first section the role can see: Tasks (the approval queue) for a reviewer, Invites for an admin or the owner. It carries a red count of what waits on the viewer: other members' task submissions (reviewers and above) and closed markets with no result (admins and above), and the Tasks and Markets tabs show their share of it. Inside Admin, the sections are a `SubNav` (Invites, Tasks, Markets, Members, Ledger, each shown by role); a reviewer, with only Tasks, gets no tabs.
+- **Admin** opens the first section the role can see: Tasks (the approval queue) for a reviewer, Invites for an admin or the owner. It carries a red count of what waits on the viewer: other members' task submissions (reviewers and above) and closed markets with no result (admins and above), and the Tasks and Markets tabs show their share of it as the same red badge on the label's corner (`AttentionBadge`, `components/ui/attention-badge.tsx`; a `SubNav` item's `badge`), read as the tab's description, "2 waiting" (#351). Inside Admin, the sections are a `SubNav` (Invites, Tasks, Markets, Members, Ledger, each shown by role); a reviewer, with only Tasks, gets no tabs.
   - Bottom tab bar with 5 tabs: Markets, Bets, Tasks, Feed, Leaders. Bets has `aria-label="My bets"`; Leaders has `aria-label="Leaderboard"`.
 - **The slip** is its own floating button (`SlipSheet`), not a tab badge.
 

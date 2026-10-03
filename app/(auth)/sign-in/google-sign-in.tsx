@@ -130,7 +130,14 @@ export function GoogleSignIn({ clientId }: { clientId: string }) {
             <span role="status">Loading Google sign-in…</span>
           </span>
         )}
-        <div ref={slot} data-testid="google-sign-in" className={state === 'loading' ? 'hidden' : 'flex w-full justify-center'} />
+        {/* Google's iframe is a light document. Under a dark page the browser paints an opaque
+            white backdrop behind an iframe whose color scheme differs from its own, which showed as
+            a white box around the button; a normal scheme here keeps the backdrop transparent (#354). */}
+        <div
+          ref={slot}
+          data-testid="google-sign-in"
+          className={state === 'loading' ? 'hidden' : 'flex w-full justify-center [color-scheme:normal]'}
+        />
       </div>
       {failedBefore && <SignInButton alternative />}
     </div>

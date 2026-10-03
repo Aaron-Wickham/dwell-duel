@@ -65,6 +65,14 @@ describe('GoogleSignIn', () => {
     delete document.documentElement.dataset.theme
   })
 
+  it('keeps the button’s iframe in a normal colour scheme, so a dark page shows no white box behind it (#354)', async () => {
+    document.documentElement.dataset.theme = 'dark'
+    render(<GoogleSignIn clientId="c" />)
+    await screen.findByRole('button', { name: 'Google’s button' })
+    expect(screen.getByTestId('google-sign-in')).toHaveClass('[color-scheme:normal]')
+    delete document.documentElement.dataset.theme
+  })
+
   it('never sends an unsafe next to the nonce route', async () => {
     params = new URLSearchParams('next=//evil.example')
     render(<GoogleSignIn clientId="c" />)

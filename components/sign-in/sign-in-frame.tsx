@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { BetaBadge } from '@/components/brand/beta-badge'
 import { DwellDuelSymbol, WORDMARK_SYMBOL_LIFT, WORDMARK_SYMBOL_SIZE, WordmarkName } from '@/components/brand/wordmark'
 import { cn } from '@/lib/utils'
 import { SampleMarket } from './sample-market'
@@ -19,8 +20,9 @@ export function SignInFrame({ intro = false, dimmed = false, children }: { intro
       <div className="sign-in-intro-wordmark flex min-h-11 items-center gap-2">
         <DwellDuelSymbol id={WORDMARK_SYMBOL_ID} size={WORDMARK_SYMBOL_SIZE.md} className={WORDMARK_SYMBOL_LIFT.md} />
         <WordmarkName className="text-[21px]" />
+        <BetaBadge />
       </div>
-      <div className="grid flex-1 content-start gap-5 short:gap-3.5 lg:grid-cols-2 lg:content-center lg:items-center lg:gap-16">
+      <div className="grid flex-1 content-start gap-5 short:gap-3.5 lg:grid-cols-2 lg:items-center lg:gap-16 lg:pt-8">
         <div data-dimmed={dimmed || undefined} className={cn('sign-in-intro-card lg:col-start-2 lg:row-start-1', dimmed && 'opacity-35')}>
           <SampleMarket />
         </div>

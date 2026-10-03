@@ -13,6 +13,20 @@ the hood**, **Tests**. Add a line under `## Unreleased
 ### Under the hood
 - **Readable production stack traces in Sentry.** A Vercel build holding `SENTRY_AUTH_TOKEN` uploads its source maps to Sentry under the deploy's release and links the release to its commit, then deletes them from the output, so nothing public changes. Builds without the token (CI, e2e, local) are unchanged, and an upload that fails only warns.
 
+## v0.10.0-beta — 2026-10-03
+
+A polish release from a round of phone testing. Pages open at their top, the tab bar stays at the bottom of the installed iPhone app after typing, and dark mode shows less white during a reload. The admin tabs show their count as a badge, Create market explains each market type, and the sign-in page loses the white box around Google's button and gains a beta badge.
+
+### Fixes
+- **A new page opens at its top.** Switching pages from one scrolled only a little, or between Admin sections, used to keep the old scroll position; going back still returns to where you were (#349).
+- **The tab bar stays at the bottom after typing.** In the installed iPhone app, the tab bar and top bar could stay a keyboard's height up the screen after the keyboard closed, most often after tapping a tab while a field had focus; the app now puts them back once the keyboard has gone (#350).
+- **Less white between pages in dark mode.** A full page load, such as the reload after an update, now starts on a dark background in dark mode instead of white (#353).
+
+### Polish
+- **Admin tabs show a badge, not a number in brackets.** Tasks and Markets carry the same red badge as the top bar's Admin button, so the tabs stay on one line on a phone (#351).
+- **Choosing a market's type explains each one.** Create market's type picker is three cards, Yes/No, Multiple choice and Over/Under, each saying in a line what it asks; stacked on a phone and side by side on a wide screen (#352).
+- **A tidier sign-in page.** The white box around Google's button in dark mode is gone, the page says it's a beta beside the wordmark, and on a wide screen the page starts under the wordmark instead of floating mid-window (#354).
+
 ## v0.9.0-beta — 2026-10-02
 
 Every bet now pays a fixed amount you see before you place it. Markets are run by a market maker, so the slip shows exactly what a bet or parlay pays, odds move as people bet, and bets are final once placed; open markets switched over without changing anyone's payout. Markets have categories to filter by, a closed market can be reopened for more bets, lists across the app are cards, and new invitees get a sign-in page that shows what DwellDuel is.

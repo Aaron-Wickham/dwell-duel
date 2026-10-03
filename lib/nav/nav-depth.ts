@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from 'react'
 import { usePathname } from 'next/navigation'
 
 // The count is stored on each history entry itself (window.history.state.ddDepth), not derived
@@ -50,6 +50,17 @@ export function NavDepthTracker(): null {
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
+
+  // A new page opens at its top (#349). Next scrolls only when the changed segment starts off
+  // screen, so a page scrolled a little, or an admin section under the shared header, kept the old
+  // offset. Back and forward keep the position the browser restores; a #hash keeps its target.
+  // A layout effect, so the new page never paints at the old offset; it runs before the effect
+  // below consumes popPending.
+  useLayoutEffect(() => {
+    if (previous.current === null || previous.current === pathname) return
+    if (popPending || window.location.hash) return
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [pathname])
 
   useEffect(() => {
     if (previous.current === null) {

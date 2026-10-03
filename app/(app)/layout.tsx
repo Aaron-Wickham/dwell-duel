@@ -18,6 +18,7 @@ import { vapidKeys } from '@/lib/push/config'
 import { Toaster } from '@/components/ui/toaster'
 import { OfflineBanner } from '@/components/offline/offline-banner'
 import { FALLBACK_NAME } from '@/lib/profile/fallback-name'
+import { KeyboardViewportReset } from '@/components/app-shell/keyboard-viewport-reset'
 
 export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   const { supabase, user } = await requireUser()
@@ -50,6 +51,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
     <LiveTablesProvider userId={user.id}>
       <SlipProvider view={slipView} balance={profile?.balance ?? 0}>
         <NavDepthTracker />
+        <KeyboardViewportReset />
         <CardLinkClick />
         {alertTables.length > 0 && <LiveTables subscriptions={alertTables} />}
         {/* A market closing changes nothing in the database, so an admin's badge refreshes at the next close. */}

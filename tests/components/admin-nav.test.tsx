@@ -46,16 +46,27 @@ describe('AdminNav', () => {
     }
   })
 
-  it('counts what waits on each tab, matching the Admin badge (#243)', () => {
+  it('badges what waits on each tab, matching the Admin badge, and keeps the labels plain (#243, #351)', () => {
     pathname = '/admin/invites'
-    render(<AdminNav role="admin" counts={{ tasks: 1, markets: 2 }} />)
+    render(<AdminNav role="admin" counts={{ tasks: 1, markets: 12 }} />)
     const nav = screen.getByRole('navigation', { name: 'Admin sections' })
+    const tab = (name: string) => within(nav).getByRole('link', { name })
     expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual([
       'Invites',
-      'Tasks (1)',
-      'Markets (2)',
+      'Tasks1',
+      'Markets9+',
       'Members',
       'Ledger',
     ])
+    expect(tab('Tasks')).toHaveAccessibleDescription('1 waiting')
+    expect(tab('Markets')).toHaveAccessibleDescription('12 waiting')
+    expect(tab('Invites')).not.toHaveAttribute('aria-describedby')
+  })
+
+  it('shows no badge on a tab with nothing waiting', () => {
+    render(<AdminNav role="admin" counts={NONE} />)
+    const nav = screen.getByRole('navigation', { name: 'Admin sections' })
+    expect(within(nav).getByRole('link', { name: 'Tasks' })).not.toHaveAttribute('aria-describedby')
+    expect(nav.querySelector('[aria-hidden="true"].bg-loss')).toBeNull()
   })
 })

@@ -5,7 +5,8 @@ import { SubNav } from '@/components/ui/sub-nav'
 import { atLeast, type Role } from '@/lib/auth/roles'
 import type { ReviewCounts } from '@/lib/admin/review-counts'
 
-// Tasks and Markets carry their share of the Admin badge, so the badge's number can be found (#243).
+// Tasks and Markets carry their share of the Admin badge, as a badge of their own, so the
+// badge's number can be found (#243, #351).
 const SECTIONS: { href: string; label: string; min: Role; count?: keyof ReviewCounts }[] = [
   { href: '/admin/invites', label: 'Invites', min: 'admin' },
   { href: '/admin/tasks', label: 'Tasks', min: 'reviewer', count: 'tasks' },
@@ -25,7 +26,8 @@ export function AdminNav({ role, counts }: { role: Role; counts: ReviewCounts })
       label="Admin sections"
       items={sections.map(({ href, label, count }) => ({
         href,
-        label: count && counts[count] > 0 ? `${label} (${counts[count]})` : label,
+        label,
+        badge: count ? counts[count] : 0,
         current: pathname === href,
       }))}
     />

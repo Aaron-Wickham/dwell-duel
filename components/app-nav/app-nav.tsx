@@ -8,6 +8,7 @@ import { BookOpen, ChartColumn, CircleDot, MessageSquareText, ShieldCheck, Ticke
 import { BetaBadge } from '@/components/brand/beta-badge'
 import { Wordmark } from '@/components/brand/wordmark'
 import { AnimatedText } from '@/components/ui/animated-text'
+import { AttentionBadge, AttentionNote } from '@/components/ui/attention-badge'
 import { Avatar } from '@/components/ui/avatar'
 import { NavPendingHint } from '@/components/nav/nav-pending-hint'
 import { haptics } from '@/lib/haptics'
@@ -123,33 +124,6 @@ function DesktopLink({
 }
 
 // adminHref is null for members; reviewers land on the approval queue, admins on invites.
-// A count on the Admin button for what waits on the viewer (tasks to review, markets to resolve).
-// Decorative to assistive tech: the button's own name carries the number.
-function AttentionBadge({ count, className }: { count: number; className?: string }) {
-  if (count <= 0) return null
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        'pointer-events-none absolute flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-loss px-1 text-[11px] leading-none font-extrabold text-on-primary tabular-nums ring-2 ring-surface',
-        className,
-      )}
-    >
-      {count > 9 ? '9+' : count}
-    </span>
-  )
-}
-
-// Read after the button's name, which stays plain "Admin" so it's found the same way with or without work waiting.
-function AttentionNote({ id, count }: { id: string; count: number }) {
-  if (count <= 0) return null
-  return (
-    <span id={id} className="sr-only">
-      {`${count} waiting`}
-    </span>
-  )
-}
-
 export function AppNav({
   balance,
   adminHref,

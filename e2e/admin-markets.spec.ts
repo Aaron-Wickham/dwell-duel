@@ -21,7 +21,10 @@ test('Admin › Markets lists a closed market with no result and opens its resol
 
   await page.goto('/admin/markets')
   const tabs = page.getByRole('navigation', { name: 'Admin sections' })
-  await expect(tabs.getByRole('link', { name: /^Markets \(\d+\)$/ })).toHaveAttribute('aria-current', 'page')
+  const marketsTab = tabs.getByRole('link', { name: 'Markets', exact: true })
+  await expect(marketsTab).toHaveAttribute('aria-current', 'page')
+  // The count is a badge, read as the tab's description (#351).
+  await expect(marketsTab).toHaveAccessibleDescription(/^\d+ waiting$/)
   const list = page.getByRole('region', { name: 'Waiting to be resolved' })
   await expect(list.getByRole('link', { name: title, exact: true })).toBeVisible()
 

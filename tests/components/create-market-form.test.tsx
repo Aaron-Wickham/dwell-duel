@@ -64,9 +64,16 @@ describe('CreateMarketForm', () => {
     render(<CreateMarketForm />)
     expect(screen.getByLabelText('Title')).toBeInTheDocument()
     expect(screen.getByLabelText('Close time')).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'Binary (Yes/No)' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Yes/No' })).toBeChecked()
     expect(screen.getByRole('button', { name: 'Create market' })).toBeInTheDocument()
     expect(screen.queryByText('Outcomes')).not.toBeInTheDocument()
+  })
+
+  it('says what each market type asks, read with its radio (#352)', () => {
+    render(<CreateMarketForm />)
+    expect(screen.getByRole('radio', { name: 'Yes/No' })).toHaveAccessibleDescription('Will it happen or not?')
+    expect(screen.getByRole('radio', { name: 'Multiple choice' })).toHaveAccessibleDescription('Members pick one of 2 to 6 answers.')
+    expect(screen.getByRole('radio', { name: 'Over/Under' })).toHaveAccessibleDescription('Will a number land above or below a line?')
   })
 
   it('reveals the outcome inputs when Multiple choice is picked, capped at 6', async () => {
@@ -84,7 +91,7 @@ describe('CreateMarketForm', () => {
     }
     expect(addOutcome).toBeDisabled()
 
-    await user.click(screen.getByRole('radio', { name: 'Binary (Yes/No)' }))
+    await user.click(screen.getByRole('radio', { name: 'Yes/No' }))
     expect(screen.queryByLabelText('Outcome 1')).not.toBeInTheDocument()
   })
 
@@ -320,7 +327,7 @@ describe('CreateMarketForm duplicating a market (#88)', () => {
     const user = userEvent.setup()
     render(<CreateMarketForm initial={{ ...base, kind: 'binary', outcomes: ['Yes', 'No'], line: '' }} />)
     expect(createMarketAction).not.toHaveBeenCalled()
-    expect(screen.getByRole('radio', { name: 'Binary (Yes/No)' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Yes/No' })).toBeChecked()
 
     await user.clear(screen.getByLabelText('Close time'))
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')

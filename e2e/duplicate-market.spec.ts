@@ -50,6 +50,6 @@ test('Duplicate opens Create market filled in from the market, a week on, and cr
 test('an unknown id opens a blank form', async ({ page }) => {
   await page.goto('/markets/new?from=00000000-0000-4000-8000-000000000000')
   await expect(page.getByLabel('Title')).toHaveValue('')
-  await expect(page.getByLabel('Binary (Yes/No)')).toBeChecked()
+  await expect(page.getByLabel('Yes/No')).toBeChecked()
   await expect(page.getByLabel('Close time')).toHaveValue('')
 })

@@ -112,7 +112,7 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 | Edit profile | wide | Photo and a live preview of the profile (5fr) beside name, bio and Save (7fr). |
 | Settings | wide | Two columns of section cards: Appearance, Profile, Haptics & motion; then Notifications, Help, Account. |
 | How it works | reading | A sticky contents list (200px) beside the rules (about 68 characters a line). |
-| Create market | wide | The form (7fr) beside a live preview of its market card (5fr). |
+| Create market | wide | The form (7fr) beside a live preview of its market card (5fr). The type is three option cards, Yes/No, Multiple choice and Over/Under, each with a line saying what it asks: stacked on a phone, in a row from `lg:`. The chosen card is `acc-soft` with an `acc-text` border and dot; the native radio covers each card, transparent (#352). |
 | Parlay | wide | Picks (7fr) beside the summary and How it adds up (5fr). |
 | Admin › Members | wide | A card per member in three columns. |
 | Tasks | wide | Task cards in two columns, each with its action on the right. |
@@ -145,7 +145,7 @@ Written for someone who has just been invited: get them oriented, then signed in
 - **Desktop:** a 72px top bar with the wordmark, then Markets, My bets, Tasks, Feed and Leaderboard, a divider, then Admin (reviewers and above). On the right: the balance chip (a link to My bets) and your avatar (a link to your profile). The active item is a filled pill.
 - **Phone:**
   - Top bar (64px): wordmark, balance chip, an Admin shield icon (reviewers and above), avatar.
-- **Admin** opens the first section the role can see: Tasks (the approval queue) for a reviewer, Invites for an admin or the owner. It carries a red count of what waits on the viewer: other members' task submissions (reviewers and above) and closed markets with no result (admins and above), and the Tasks and Markets tabs show their share of it. Inside Admin, the sections are a `SubNav` (Invites, Tasks, Markets, Members, Ledger, each shown by role); a reviewer, with only Tasks, gets no tabs.
+- **Admin** opens the first section the role can see: Tasks (the approval queue) for a reviewer, Invites for an admin or the owner. It carries a red count of what waits on the viewer: other members' task submissions (reviewers and above) and closed markets with no result (admins and above), and the Tasks and Markets tabs show their share of it as the same red badge on the label's corner (`AttentionBadge`, `components/ui/attention-badge.tsx`; a `SubNav` item's `badge`), read as the tab's description, "2 waiting" (#351). Inside Admin, the sections are a `SubNav` (Invites, Tasks, Markets, Members, Ledger, each shown by role); a reviewer, with only Tasks, gets no tabs.
   - Bottom tab bar with 5 tabs: Markets, Bets, Tasks, Feed, Leaders. Bets has `aria-label="My bets"`; Leaders has `aria-label="Leaderboard"`.
 - **The slip** is its own floating button (`SlipSheet`), not a tab badge.
 

@@ -11,6 +11,7 @@ import type { SlipPick } from '@/lib/parlays/get-slip'
 import { formatOdds } from '@/lib/parlays/odds'
 import { rowTitleClass } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
+import { formatDcAmount } from '@/lib/format/dc'
 
 // Re-exported for existing importers (e.g. this file's own test) -- the type lives in
 // lib/markets/row-state.ts now, next to the pure function that produces its values.
@@ -61,10 +62,10 @@ export function OutcomeRow({
             </StatusChip>
           )}
         </span>
-        <span className="shrink-0 font-extrabold tabular-nums">
-          <AnimatedText plainText={`${Math.round(percent)}% (${poolTotal} DC)`}>
-            <AnimatedNumber value={Math.round(percent)} locales="en-US" format={{ useGrouping: false }} suffix="% (" />
-            <AnimatedNumber value={poolTotal} locales="en-US" format={{ useGrouping: false }} suffix=" DC)" />
+        <span className="shrink-0 font-extrabold whitespace-nowrap">
+          <AnimatedText plainText={`${Math.round(percent)}% (${formatDcAmount(poolTotal)})`}>
+            <AnimatedNumber value={Math.round(percent)} locales="en-US" suffix="% (" />
+            <AnimatedNumber value={poolTotal} locales="en-US" suffix=" DC)" />
           </AnimatedText>
         </span>
       </div>
@@ -74,7 +75,7 @@ export function OutcomeRow({
       {riding > 0 && (
         <p className="flex items-center gap-1.5 text-sm text-ink2">
           <Layers aria-hidden="true" className="size-4 shrink-0" />
-          <span className="tabular-nums">+{riding} DC riding in parlays</span>
+          <span>+{formatDcAmount(riding)} riding in parlays</span>
         </p>
       )}
       {state !== 'none' && (
@@ -85,7 +86,7 @@ export function OutcomeRow({
                 <AnimatedNumber
                   value={Number(formatOdds(oddsBp))}
                   locales="en-US"
-                  format={{ minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }}
+                  format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
                   suffix="× payout per DC"
                 />
               </AnimatedText>

@@ -6,6 +6,7 @@ import type { WeeklyRecap } from '@/lib/home/recap'
 import { weekRangeLabel } from '@/lib/home/recap-week'
 import { signedDc } from '@/lib/social/season'
 import { cn } from '@/lib/utils'
+import { formatDcAmount } from '@/lib/format/dc'
 
 function Row({ term, children }: { term: string; children: ReactNode }) {
   return (
@@ -55,7 +56,7 @@ export function WeeklyRecapCard({ recap }: { recap: WeeklyRecap | null }) {
         )}
         {bestCall && (
           <Row term="Best call">
-            {bestCall.memberName} turned {bestCall.stake} DC into {bestCall.payout} DC on{' '}
+            {bestCall.memberName} turned {formatDcAmount(bestCall.stake)} into {formatDcAmount(bestCall.payout)} on{' '}
             <MarketLink id={bestCall.marketId} title={bestCall.marketTitle} />
           </Row>
         )}

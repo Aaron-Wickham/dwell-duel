@@ -2,12 +2,12 @@ import type { MyCoinEntry } from '@/lib/ledger/my-transactions'
 import { LocalTime } from '@/components/ui/local-time'
 import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
+import { formatSignedDcAmount } from '@/lib/format/dc'
 
 export function CoinRows({ entries, rowIdPrefix }: { entries: MyCoinEntry[]; rowIdPrefix: string }) {
   return (
     <ul className="flex flex-col divide-y divide-line">
       {entries.map((e) => {
-        const sign = e.amount > 0 ? '+' : e.amount < 0 ? '−' : ''
         const amountClass = e.amount > 0 ? 'text-win' : e.amount < 0 ? 'text-loss' : 'text-ink2'
         return (
           <li
@@ -22,8 +22,7 @@ export function CoinRows({ entries, rowIdPrefix }: { entries: MyCoinEntry[]; row
               </p>
             </div>
             <span className={cn('shrink-0 font-extrabold whitespace-nowrap tabular-nums', amountClass)}>
-              {sign}
-              {Math.abs(e.amount)} DC
+              {formatSignedDcAmount(e.amount)}
             </span>
           </li>
         )

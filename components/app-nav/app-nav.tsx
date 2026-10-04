@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import { BalanceNumber } from './balance-number'
 import { NAV_ITEMS, activeNavId, tabAriaLabel, type NavId } from './nav-items'
 import { uiTextClass } from '@/components/ui/page'
+import { formatDcAmount } from '@/lib/format/dc'
 
 const loadMotionFeatures = () => import('@/lib/ui/motion-features').then((mod) => mod.default)
 
@@ -41,7 +42,7 @@ function BalanceChip({ balance, active }: { balance: number; active: boolean }) 
     >
       <span className={`inline-flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-gold-soft pr-2.5 pl-1.5 ${uiTextClass} font-extrabold tabular-nums text-gold md:gap-1.5 md:pr-3 md:pl-2`}>
         <CircleDot aria-hidden="true" className="size-4 md:size-[18px]" />
-        <AnimatedText plainText={`Balance ${balance} DC, view my bets`}>
+        <AnimatedText plainText={`Balance ${formatDcAmount(balance)}, view my bets`}>
           <BalanceNumber value={balance} />
         </AnimatedText>
       </span>

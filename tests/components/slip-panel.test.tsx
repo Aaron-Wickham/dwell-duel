@@ -175,8 +175,8 @@ describe('SlipPanel', () => {
     it('takes a parlay stake over 1,000 DC, since nothing caps a fixed parlay', async () => {
       renderPanel(viewOf(lmsr(1, { parlay: true }), lmsr(2, { parlay: true })), 5000)
       await userEvent.type(screen.getByLabelText('Stake (DC)'), '1200')
-      expect(screen.getByText(/^Pays \d+ DC \(.+×\) if every pick wins$/)).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Place 1 bet · 1200 DC' })).toBeEnabled()
+      expect(screen.getByText(/^Pays [\d,]+ DC \(.+×\) if every pick wins$/)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Place 1 bet · 1,200 DC' })).toBeEnabled()
     })
 
     it('shows a moved price on the pick and keeps the slip to place again', async () => {

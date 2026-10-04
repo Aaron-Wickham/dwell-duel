@@ -11,6 +11,7 @@ import { Message } from '@/components/ui/message'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { toast } from 'sonner'
 import { haptics } from '@/lib/haptics'
+import { formatDcAmount } from '@/lib/format/dc'
 
 // Owner only: the page leaves it out for anyone else, and adjust_balance refuses anyway.
 export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
@@ -36,7 +37,7 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
       const applied = Number(formData.get('amount'))
       setAmount('')
       setReason('')
-      toast.success(`Balance adjusted by ${applied > 0 ? '+' : '−'}${Math.abs(applied)} DC.`)
+      toast.success(`Balance adjusted by ${applied > 0 ? '+' : '−'}${formatDcAmount(Math.abs(applied))}.`)
       haptics.success()
     }
     return next
@@ -97,7 +98,7 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
         onOpenChange={confirm.setOpen}
         pending={isPending}
         title={`Adjust ${member.displayName}’s balance?`}
-        description={`${change > 0 ? `Adds ${change} DC to` : `Takes ${Math.abs(change)} DC from`} ${member.displayName}’s balance of ${member.balance} DC, straight away.`}
+        description={`${change > 0 ? `Adds ${formatDcAmount(change)} to` : `Takes ${formatDcAmount(Math.abs(change))} from`} ${member.displayName}’s balance of ${formatDcAmount(member.balance)}, straight away.`}
         confirmLabel="Adjust balance"
       />
       {state?.formError && (

@@ -2,13 +2,14 @@ import { SectionCard } from '@/components/ui/section-card'
 import { monthLabel, type EconomySummary } from '@/lib/economy/summary'
 import { cn } from '@/lib/utils'
 import { figureClass } from '@/components/ui/page'
+import { formatDcAmount } from '@/lib/format/dc'
 
 function Dc({ value, sign }: { value: number; sign: '+' | '−' }) {
   if (value === 0) return <span className="text-ink2">0 DC</span>
   return (
     <span className={cn('font-extrabold', sign === '+' ? 'text-win' : 'text-loss')}>
       {sign}
-      {value} DC
+      {formatDcAmount(value)}
     </span>
   )
 }
@@ -27,9 +28,9 @@ export function EconomyCard({ summary }: { summary: EconomySummary }) {
     <SectionCard title="Economy" titleId="economy-title">
       <dl className="flex flex-col gap-1">
         <dt className="text-sm text-ink2">In circulation</dt>
-        <dd className={cn(figureClass, 'whitespace-nowrap')}>{summary.inCirculation} DC</dd>
+        <dd className={cn(figureClass, 'whitespace-nowrap')}>{formatDcAmount(summary.inCirculation)}</dd>
         <dd className="text-sm text-ink2 tabular-nums">
-          {summary.balances} DC in balances · {summary.betsAtStake} DC in open bets · {summary.parlaysAtStake} DC in
+          {formatDcAmount(summary.balances)} in balances · {formatDcAmount(summary.betsAtStake)} in open bets · {formatDcAmount(summary.parlaysAtStake)} in
           open parlays
         </dd>
       </dl>
@@ -89,7 +90,7 @@ export function EconomyCard({ summary }: { summary: EconomySummary }) {
         </p>
       ) : (
         <p className="text-sm font-extrabold text-loss">
-          {summary.discrepancy !== 0 && `Doesn’t reconcile with the ledger: off by ${summary.discrepancy} DC.`}
+          {summary.discrepancy !== 0 && `Doesn’t reconcile with the ledger: off by ${formatDcAmount(summary.discrepancy)}.`}
           {summary.discrepancy !== 0 && summary.unclassified > 0 && ' '}
           {summary.unclassified > 0 &&
             `${summary.unclassified} ledger ${summary.unclassified === 1 ? 'row has' : 'rows have'} a type the panel doesn’t count.`}

@@ -7,6 +7,7 @@ import type { TaskSummary } from '@/lib/tasks/list-tasks'
 import { MIN_STREAK_SHOWN } from '@/lib/tasks/streak-label'
 import { cn } from '@/lib/utils'
 import { StreakBadge } from './streak-badge'
+import { formatDcAmount } from '@/lib/format/dc'
 
 export function PendingReviewChip() {
   return (
@@ -48,7 +49,7 @@ export function TaskRow({
     <ListCard tappable={false} className="flex flex-col gap-3 md:flex-row md:items-center md:gap-5">
       <div className="flex min-w-0 grow flex-col gap-1">
         <p className={cn(rowTitleClass, 'break-words')}>
-          {title} — <span className="text-gold">{rewardAmount} DC</span>
+          {title} — <span className="text-gold">{formatDcAmount(rewardAmount)}</span>
         </p>
         {(description || cadence || proofRequired || (streak && streak.count >= MIN_STREAK_SHOWN)) && (
           <p className="flex flex-wrap items-center gap-1 text-sm text-ink2">

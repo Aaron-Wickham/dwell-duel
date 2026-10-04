@@ -17,6 +17,7 @@ import { formatOdds } from '@/lib/parlays/odds'
 import { ParlayOddsNote } from '@/components/parlays/parlay-odds-note'
 import { cardClass, cardPaddingClass } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { formatDcAmount } from '@/lib/format/dc'
 
 // No loading.tsx for this route: the parlay must be found before anything streams, so an unknown
 // or unreadable id still gets a real 404 status. The header comes from a cheap read of the parlay's
@@ -99,7 +100,7 @@ export async function ParlayBody({ id }: { id: string }) {
             {figure.value}
           </span>
           <span className="text-sm text-hero-2">
-            {parlay.stake} DC stake · {multiplier} multiplier
+            {formatDcAmount(parlay.stake)} stake · {multiplier} multiplier
             {parlay.capped ? ` (capped at ${parlay.maxMultiplier}×)` : ''}
           </span>
         </div>
@@ -142,7 +143,7 @@ export async function ParlayBody({ id }: { id: string }) {
         <dl className="flex flex-col gap-2 tabular-nums">
           <div className="flex justify-between gap-3">
             <dt>Stake</dt>
-            <dd className="font-bold">{parlay.stake} DC</dd>
+            <dd className="font-bold">{formatDcAmount(parlay.stake)}</dd>
           </div>
           <div className="flex justify-between gap-3">
             <dt className="min-w-0 break-words">{counted.map(legOdds).join(' · ')}</dt>

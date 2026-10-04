@@ -8,6 +8,7 @@ import { rowTitleClass } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
 import { MemberActivity } from './member-activity'
 import { MemberChip } from './member-chip'
+import { formatDcAmount } from '@/lib/format/dc'
 
 // One member on Admin › Members, read-only: the row opens their Admin page, where the forms are
 // (#254). A list card in the section's card below lg, so it tints under a mouse; a card of its own
@@ -35,7 +36,7 @@ export function MemberRow({ member, domId, now }: { member: MemberSummary; domId
         {/* The only way an admin can match a Google account to a member (#195). */}
         {member.email && <span className="text-sm text-ink2 wrap-anywhere">{member.email}</span>}
         <span className="text-sm text-ink2">
-          <strong className="font-extrabold text-ink tabular-nums">{member.balance} DC</strong>
+          <strong className="font-extrabold whitespace-nowrap text-ink">{formatDcAmount(member.balance)}</strong>
           {' · '}
           <MemberActivity joinedAt={null} lastSignInAt={member.lastSignInAt} now={now} />
         </span>

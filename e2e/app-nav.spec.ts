@@ -60,7 +60,7 @@ test.describe('phone top bar', () => {
     try {
       await db.from('profiles').update({ balance: 99999 }).eq('id', admin!.id)
       await page.goto('/')
-      await expect(page.getByRole('banner').getByText('Balance 99999 DC, view my bets')).toBeAttached()
+      await expect(page.getByRole('banner').getByText('Balance 99,999 DC, view my bets')).toBeAttached()
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
       expect(overflow).toBe(0)
     } finally {

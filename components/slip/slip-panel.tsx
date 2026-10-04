@@ -21,6 +21,7 @@ import { placeSlipAction, type PlaceSlipState } from '@/lib/parlays/place-slip'
 import { removeFromSlipAction } from '@/lib/parlays/slip-actions'
 import { haptics } from '@/lib/haptics'
 import { cn } from '@/lib/utils'
+import { formatDcAmount } from '@/lib/format/dc'
 
 function wholeDc(value: string | undefined): number | null {
   const n = Number(value)
@@ -31,7 +32,7 @@ function placedMessage(placed: NonNullable<NonNullable<PlaceSlipState>['placed']
   const parts: string[] = []
   if (placed.solos > 0) parts.push(`${placed.solos} solo bet${placed.solos === 1 ? '' : 's'}`)
   if (placed.parlay) {
-    parts.push(`a ${placed.parlay.legs}-leg parlay paying ${placed.parlay.potentialPayout} DC (${formatOdds(placed.parlay.multiplierBp)}×)`)
+    parts.push(`a ${placed.parlay.legs}-leg parlay paying ${formatDcAmount(placed.parlay.potentialPayout)} (${formatOdds(placed.parlay.multiplierBp)}×)`)
   }
   if (placed.replayed) {
     return parts.length > 0
@@ -84,7 +85,7 @@ function StakeChips({ label, available, onPick }: { label: string; available: nu
       <button
         type="button"
         disabled={available < 1}
-        aria-label={`Max, ${available} DC`}
+        aria-label={`Max, ${formatDcAmount(available)}`}
         className={chipClass}
         onClick={() => onPick(String(available))}
       >
@@ -201,7 +202,7 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
                   <>
                     {/* The payout shown, so place_lmsr_bet can refuse one that has since moved by more than 2%. */}
                     <input type="hidden" name={`payout:${pick.outcomeId}`} value={pays} />
-                    <span className="text-sm text-ink2">Pays {pays} DC if it wins</span>
+                    <span className="text-sm text-ink2">Pays {formatDcAmount(pays)} if it wins</span>
                   </>
                 )}
               </div>
@@ -312,7 +313,7 @@ export function SlipPanel() {
           : legs.length > 0 && parlayStakeDc === null
             ? 'Enter a stake for the parlay.'
             : short
-              ? `This slip needs ${total} DC; you have ${balance} DC.`
+              ? `This slip needs ${formatDcAmount(total)}; you have ${formatDcAmount(balance)}.`
               : null
 
   return (
@@ -327,10 +328,10 @@ export function SlipPanel() {
       </div>
       <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-control bg-sunk px-3 py-2.5 text-sm">
         <span>
-          Balance <strong className="tabular-nums">{balance} DC</strong>
+          Balance <strong className="whitespace-nowrap">{formatDcAmount(balance)}</strong>
         </span>
         <span className={cn('tabular-nums', short ? 'font-extrabold text-loss' : 'text-ink2')}>
-          {short ? `${total - balance} DC short` : `${balance - total} DC left after this slip`}
+          {short ? `${formatDcAmount(total - balance)} short` : `${formatDcAmount(balance - total)} left after this slip`}
         </span>
       </p>
       <p className="text-sm text-ink2">
@@ -386,7 +387,7 @@ export function SlipPanel() {
                   {/* The payout shown, so place_lmsr_parlay can refuse one that has since moved by more than 2%. */}
                   <input type="hidden" name="parlay_payout" value={fixedQuote.payout} />
                   <span className="text-sm text-ink2">
-                    Pays {fixedQuote.payout} DC ({formatOdds(fixedQuote.multiplierBp)}×) if every pick wins
+                    Pays {formatDcAmount(fixedQuote.payout)} ({formatOdds(fixedQuote.multiplierBp)}×) if every pick wins
                   </span>
                 </>
               )}
@@ -423,7 +424,7 @@ export function SlipPanel() {
         disabled={!allOpen || !solosReady || !parlayReady || short}
         aria-describedby={!allOpen ? 'slip-blocked' : formError ? 'slip-error' : broke || why ? WHY_ID : undefined}
       >
-        {`Place ${betCount} ${betCount === 1 ? 'bet' : 'bets'}${total > 0 ? ` · ${total} DC` : ''}`}
+        {`Place ${betCount} ${betCount === 1 ? 'bet' : 'bets'}${total > 0 ? ` · ${formatDcAmount(total)}` : ''}`}
       </FormSubmitButton>
       {broke ? (
         <Message tone="gold" id={WHY_ID}>

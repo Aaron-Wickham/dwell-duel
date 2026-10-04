@@ -22,6 +22,7 @@ import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { ProofList } from '@/components/proof/proof-list'
 import { cn } from '@/lib/utils'
 import { ReviewButtons } from './review-buttons'
+import { formatDcAmount } from '@/lib/format/dc'
 
 export const PENDING_ROW_ID_PREFIX = 'pending'
 const BULK_FORM_ID = 'bulk-review-form'
@@ -133,7 +134,7 @@ export function PendingApprovals({
                   <div className="flex min-w-0 grow flex-col pt-[9px]">
                     <p>
                       <Link href={`/members/${c.submitterId}`} transitionTypes={['nav-forward']}>{c.submitterName}</Link> — <strong>{c.taskTitle}</strong>{' '}
-                      <span className="font-extrabold text-gold">({c.rewardAmount} DC)</span>
+                      <span className="font-extrabold text-gold">({formatDcAmount(c.rewardAmount)})</span>
                     </p>
                     <p className="text-sm text-ink2">Submitted {c.submittedAge}</p>
                     {c.note && <p className="mt-2 whitespace-pre-line break-words">“{c.note}”</p>}
@@ -218,7 +219,7 @@ export function PendingApprovals({
               onOpenChange={confirm.setOpen}
               pending={isApprovePending}
               title={`Approve ${selectedCount} ${selectedCount === 1 ? 'submission' : 'submissions'}?`}
-              description={`Pays ${selectedDc} DC in rewards straight away.`}
+              description={`Pays ${formatDcAmount(selectedDc)} in rewards straight away.`}
               confirmLabel="Approve and pay"
             />
           </div>

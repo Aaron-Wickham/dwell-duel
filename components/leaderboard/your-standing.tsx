@@ -3,6 +3,7 @@ import { SectionCard } from '@/components/ui/section-card'
 import { eyebrowClass, rowTitleClass } from '@/components/ui/page'
 import type { YourStanding } from '@/lib/social/leaderboard'
 import type { MemberRecord } from '@/lib/social/leaderboard-extras'
+import { formatDcAmount } from '@/lib/format/dc'
 
 function ordinal(n: number): string {
   const teen = n % 100 >= 11 && n % 100 <= 13
@@ -12,7 +13,7 @@ function ordinal(n: number): string {
 
 export function gapLine({ rank, tiedWith, above }: YourStanding): string {
   if (rank === 1) return tiedWith > 0 ? 'Tied for the top.' : 'You’re top of the board.'
-  const behind = above ? `${above.gap} DC behind ${above.name}.` : ''
+  const behind = above ? `${formatDcAmount(above.gap)} behind ${above.name}.` : ''
   return tiedWith > 0 ? `Tied ${ordinal(rank)}. ${behind}`.trim() : behind
 }
 
@@ -37,7 +38,7 @@ export function YourStandingCard({ standing, record, className }: { standing: Yo
             <Stat label="Rank">
               {ordinal(standing.rank)} <span className="font-bold text-ink2">of {standing.memberCount}</span>
             </Stat>
-            <Stat label="Net worth">{standing.score} DC</Stat>
+            <Stat label="Net worth">{formatDcAmount(standing.score)}</Stat>
             <Stat label="Record">{settled ? `${record.won}-${record.lost}` : '–'}</Stat>
           </dl>
           <p className="text-sm text-ink2">

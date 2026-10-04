@@ -8,6 +8,7 @@ import { focusTarget } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
 import { FIGURE_TONE, LegPill, ParlayProgress, ParlayStatusChip, outcomeFigure } from './parlay-parts'
 import { uiTextClass, figureInlineClass, rowTitleClass } from '@/components/ui/page'
+import { formatDcAmount } from '@/lib/format/dc'
 
 // A card shows this many picks; the rest are one tap away on the parlay's page.
 const PREVIEW_LEGS = 3
@@ -52,7 +53,7 @@ export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: st
       </div>
 
       <div className="grid grid-cols-3 items-end gap-2">
-        <Figure label="Stake" value={`${parlay.stake} DC`} />
+        <Figure label="Stake" value={formatDcAmount(parlay.stake)} />
         <Figure label={parlay.capped ? `Multiplier (max ${parlay.maxMultiplier}×)` : 'Multiplier'} value={multiplier} />
         <Figure label={figure.label} value={figure.value} className={FIGURE_TONE[figure.tone]} />
       </div>

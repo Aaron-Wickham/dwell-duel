@@ -6,6 +6,7 @@ import { focusTarget } from '@/lib/pagination/row-id'
 import { signedDc } from '@/lib/social/season'
 import { cn } from '@/lib/utils'
 import { StatusChip } from '@/components/ui/status-chip'
+import { formatDcAmount } from '@/lib/format/dc'
 
 export function LeaderboardRow({
   rank,
@@ -54,7 +55,7 @@ export function LeaderboardRow({
           <span className="sr-only">{record.won} won, {record.lost} lost</span>
         </StatusChip>
       )}
-      <span className={cn(rowTitleClass, 'shrink-0 whitespace-nowrap tabular-nums')}>{signed ? signedDc(score) : `${score} DC`}</span>
+      <span className={cn(rowTitleClass, 'shrink-0 whitespace-nowrap tabular-nums')}>{signed ? signedDc(score) : formatDcAmount(score)}</span>
     </ListCard>
   )
 }

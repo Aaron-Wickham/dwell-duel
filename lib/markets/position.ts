@@ -3,6 +3,7 @@ import { chunk, IN_CHUNK } from '@/lib/pagination/chunk'
 import { betResult, type MyBetResult } from '@/lib/bets/list-my-bets'
 import { fetchLegOdds, PARLAY_COLUMNS, toParlayView, type ParlayLegView, type ParlayRow, type ParlayView } from '@/lib/parlays/list-parlays'
 import type { MarketDetail } from './get-market'
+import { formatDcAmount } from '@/lib/format/dc'
 
 export interface PositionKeys {
   betIds: number[]
@@ -121,10 +122,10 @@ export function positionSummary(bets: PositionBet[]): { tone: 'plain' | 'win' | 
   if (bets.length === 0) return null
   const staked = bets.reduce((sum, b) => sum + b.amount, 0)
   if (bets.some((b) => b.result.kind === 'open')) {
-    return { tone: 'plain', text: `${staked} DC on this market · Bets are final.` }
+    return { tone: 'plain', text: `${formatDcAmount(staked)} on this market · Bets are final.` }
   }
   if (bets.some((b) => b.result.kind === 'awaiting')) {
-    return { tone: 'plain', text: `${staked} DC on this market · Waiting on the result.` }
+    return { tone: 'plain', text: `${formatDcAmount(staked)} on this market · Waiting on the result.` }
   }
   if (bets.every((b) => b.result.kind === 'refunded')) {
     return { tone: 'plain', text: bets.length === 1 ? 'Your bet was refunded.' : 'Your bets were refunded.' }
@@ -134,8 +135,8 @@ export function positionSummary(bets: PositionBet[]): { tone: 'plain' | 'win' | 
     if (b.result.kind === 'lost') return sum - b.amount
     return sum
   }, 0)
-  if (net > 0) return { tone: 'win', text: `You won ${net} DC on this market.` }
-  if (net < 0) return { tone: 'loss', text: `You lost ${-net} DC on this market.` }
+  if (net > 0) return { tone: 'win', text: `You won ${formatDcAmount(net)} on this market.` }
+  if (net < 0) return { tone: 'loss', text: `You lost ${formatDcAmount(-net)} on this market.` }
   return null
 }
 
@@ -145,7 +146,7 @@ const picks = (n: number) => `${n} ${n === 1 ? 'pick' : 'picks'}`
 export function legSummary({ parlay, leg }: PositionLeg): string {
   switch (parlay.status) {
     case 'won':
-      return `Parlay won ${parlay.credited} DC`
+      return `Parlay won ${formatDcAmount(parlay.credited)}`
     case 'lost':
       return 'Parlay lost'
     case 'refunded':
@@ -156,6 +157,6 @@ export function legSummary({ parlay, leg }: PositionLeg): string {
     return `Your leg won. The parlay waits on ${waiting} more ${waiting === 1 ? 'pick' : 'picks'}.`
   }
   if (leg.status === 'voided') return 'Leg voided; the parlay continues without it.'
-  const pays = `${parlay.stake} DC · ${picks(parlay.legs.length)} · pays ${parlay.estimated ? '~' : ''}${parlay.potentialPayout} DC if every pick wins.`
+  const pays = `${formatDcAmount(parlay.stake)} · ${picks(parlay.legs.length)} · pays ${parlay.estimated ? '~' : ''}${formatDcAmount(parlay.potentialPayout)} if every pick wins.`
   return leg.oddsKnown ? pays : `${pays} Leg odds are set when this market closes.`
 }

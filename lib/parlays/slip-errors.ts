@@ -1,3 +1,5 @@
+import { formatDcAmount } from '@/lib/format/dc'
+
 // place_slip (0039) prefixes a failure with the pick or the parlay it came from.
 const PICK_ERROR = /^pick ([0-9a-f-]{36}): (.+)$/i
 const PARLAY_ERROR = /^parlay: (.+)$/i
@@ -22,7 +24,7 @@ export function parseSlipError(message: string): {
     if (moved) {
       return {
         pickErrors: {
-          [pick[1]]: `The price moved, so this bet now pays ${moved[1]} DC if it wins. Tap Place again to bet at the new price.`,
+          [pick[1]]: `The price moved, so this bet now pays ${formatDcAmount(Number(moved[1]))} if it wins. Tap Place again to bet at the new price.`,
         },
         priceMoved: true,
       }
@@ -34,7 +36,7 @@ export function parseSlipError(message: string): {
     const moved = PRICE_MOVED.exec(parlay[1])
     if (moved) {
       return {
-        parlayError: `The price moved, so this parlay now pays ${moved[1]} DC if every pick wins. Tap Place again to bet at the new price.`,
+        parlayError: `The price moved, so this parlay now pays ${formatDcAmount(Number(moved[1]))} if every pick wins. Tap Place again to bet at the new price.`,
         priceMoved: true,
       }
     }

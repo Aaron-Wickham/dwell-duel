@@ -18,6 +18,7 @@ import { ReinviteMemberButton } from '../reinvite-member-button'
 import { RemoveMemberButton } from '../remove-member-button'
 import { RoleForm } from '../role-form'
 import { CoinHistory, CoinHistorySkeleton } from './coin-history'
+import { formatDcAmount } from '@/lib/format/dc'
 
 // One member's Admin page, where the owner's forms for them live (#254). Outside the Admin
 // sections' layout, so the member's name is the page's heading. No loading.tsx: the member must be
@@ -55,7 +56,7 @@ export default async function AdminMemberPage(props: PageProps<'/admin/members/[
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className={`inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-gold-soft pr-3 pl-2 ${uiTextClass} font-extrabold tabular-nums text-gold`}>
                 <CircleDot aria-hidden="true" className="size-[18px]" />
-                {member.balance} DC
+                {formatDcAmount(member.balance)}
               </span>
               <MemberChip member={member} />
               <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="hit-area text-sm font-bold">

@@ -1,3 +1,5 @@
+import { formatDcAmount, formatDc } from '@/lib/format/dc'
+
 export function atStakeDetail(wagers: number): string {
   if (wagers === 0) return 'Nothing riding'
   return wagers === 1 ? 'on 1 bet' : `on ${wagers} bets`
@@ -35,8 +37,8 @@ export type RewardRange = { min: number; max: number }
 // What tasks pay, for the nudge a member at 0 DC sees, from the live catalogue.
 export function taskRewardsDetail(range: RewardRange | null): string | null {
   if (!range) return null
-  if (range.min === range.max) return `they pay ${range.min} DC each`
-  return `they pay ${range.min}–${range.max} DC`
+  if (range.min === range.max) return `they pay ${formatDcAmount(range.min)} each`
+  return `they pay ${formatDc(range.min)}–${formatDcAmount(range.max)}`
 }
 
 // Where the Admin tile goes: the queue that has work in it, approvals first, else the usual start.

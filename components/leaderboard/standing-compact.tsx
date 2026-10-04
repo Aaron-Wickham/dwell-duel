@@ -3,6 +3,7 @@ import { SectionCard } from '@/components/ui/section-card'
 import { rowTitleClass } from '@/components/ui/page'
 import { gapLine } from '@/components/leaderboard/your-standing'
 import type { YourStanding } from '@/lib/social/leaderboard'
+import { formatDcAmount } from '@/lib/format/dc'
 
 // The phone's version of YourStandingCard: one row, with "Jump to me" for a board too long to scroll
 // to your own place. It sits in the page flow and is deliberately not pinned: a fixed bar would fight
@@ -21,7 +22,7 @@ export function StandingCompact({ standing, jump }: { standing: YourStanding; ju
           <span className="sr-only">Rank {standing.rank} of {standing.memberCount}</span>
         </span>
         <div className="flex min-w-0 grow flex-col">
-          <span className={`${rowTitleClass} tabular-nums`}>You · {standing.score} DC</span>
+          <span className={`${rowTitleClass} tabular-nums`}>You · {formatDcAmount(standing.score)}</span>
           {gap && <span className="text-sm text-ink2">{gap}</span>}
         </div>
         {jump}

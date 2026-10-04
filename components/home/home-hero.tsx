@@ -7,19 +7,20 @@ import { eyebrowClass, figureHeroClass, figureInlineClass } from '@/components/u
 import { Message } from '@/components/ui/message'
 import { atStakeDetail, pendingDetail, taskRewardsDetail, type RewardRange } from '@/lib/home/copy'
 import { cardPaddingClass } from '@/components/ui/card'
+import { formatDcAmount } from '@/lib/format/dc'
 
 function StatTile({ href, label, value, detail }: { href: string; label: string; value: number; detail: string }) {
   return (
     <Link
       href={href}
-      aria-label={`${label}: ${value} DC ${detail}`}
+      aria-label={`${label}: ${formatDcAmount(value)} ${detail}`}
       className="pressable group flex min-h-11 min-w-0 items-center gap-2 rounded-tile bg-hero-inset px-3.5 py-2.5 text-on-hero no-underline md:px-4 md:py-3"
     >
       <span className="flex min-w-0 grow flex-col">
         <span className="text-xs font-extrabold tracking-[0.09em] text-hero-2 uppercase">{label}</span>
         <span className="flex flex-wrap items-baseline gap-x-1.5">
-          <AnimatedText plainText={`${value} DC`} className={cn(figureInlineClass, 'whitespace-nowrap')}>
-            <AnimatedNumber value={value} locales="en-US" format={{ useGrouping: false }} suffix=" DC" />
+          <AnimatedText plainText={formatDcAmount(value)} className={cn(figureInlineClass, 'whitespace-nowrap')}>
+            <AnimatedNumber value={value} locales="en-US" suffix=" DC" />
           </AnimatedText>
           <span className="text-sm text-hero-2 group-hover:underline group-hover:underline-offset-[3px]">{detail}</span>
         </span>
@@ -65,15 +66,15 @@ export function HomeHero({
           <p className={cn(eyebrowClass, 'text-hero-2')}>Dwell Coin</p>
           <p>
             <AnimatedText
-              plainText={`${balance} DC`}
+              plainText={formatDcAmount(balance)}
               className={cn(figureHeroClass, 'whitespace-nowrap text-hero-num')}
             >
-              <AnimatedNumber value={balance} locales="en-US" format={{ useGrouping: false }} suffix=" DC" />
+              <AnimatedNumber value={balance} locales="en-US" suffix=" DC" />
             </AnimatedText>
           </p>
         </div>
         {rank > 0 && (
-          <p className="inline-flex h-8 shrink-0 items-center rounded-full bg-hero-inset px-3 text-sm font-extrabold whitespace-nowrap tabular-nums">
+          <p className="inline-flex h-8 shrink-0 items-center rounded-full bg-hero-inset px-3 text-sm font-extrabold whitespace-nowrap">
             Rank {rank} of {memberCount}
           </p>
         )}

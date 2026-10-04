@@ -8,6 +8,7 @@ import { formatOdds } from '@/lib/parlays/odds'
 import type { MemberStats, WinLoss } from '@/lib/members/stats'
 import { cn } from '@/lib/utils'
 import { figureInlineClass } from '@/components/ui/page'
+import { formatDcAmount } from '@/lib/format/dc'
 
 function Stat({ label, children, detail }: { label: string; children: ReactNode; detail?: ReactNode }) {
   return (
@@ -34,7 +35,7 @@ function SignedDc({ value }: { value: number }) {
   return (
     <span className={value > 0 ? 'text-win' : 'text-loss'}>
       {value > 0 ? '+' : '−'}
-      {Math.abs(value)} DC
+      {formatDcAmount(Math.abs(value))}
     </span>
   )
 }
@@ -80,7 +81,7 @@ export function MemberStatsCard({ stats }: { stats: MemberStats }) {
             </Stat>
             <Stat
               label="Best parlay"
-              detail={stats.bestParlay && `Paid ${stats.bestParlay.payout} DC`}
+              detail={stats.bestParlay && `Paid ${formatDcAmount(stats.bestParlay.payout)}`}
             >
               {stats.bestParlay ? `${formatOdds(stats.bestParlay.multiplierBp)}×` : none}
             </Stat>

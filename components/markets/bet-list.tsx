@@ -4,6 +4,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { EmptyState } from '@/components/ui/empty-state'
 import type { MarketBet } from '@/lib/markets/get-market'
 import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
+import { formatDcAmount } from '@/lib/format/dc'
 
 export function BetList({
   bets,
@@ -38,7 +39,7 @@ export function BetList({
           <li key={b.id} {...focusTarget(domId)} className="flex min-h-[52px] items-center gap-3 py-3">
             <Avatar name={b.bettorName} src={b.bettorAvatarSrc} size="sm" />
             <p className="min-w-0 flex-1 break-words">
-              <Link href={`/members/${b.profileId}`} transitionTypes={['nav-forward']} className="text-ink">{b.bettorName}</Link> — {b.amount} DC on{' '}
+              <Link href={`/members/${b.profileId}`} transitionTypes={['nav-forward']} className="text-ink">{b.bettorName}</Link> — {formatDcAmount(b.amount)} on{' '}
               {outcomeLabel}
               {mine && <span className="text-ink2"> (you)</span>}
             </p>

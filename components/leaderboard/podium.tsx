@@ -4,6 +4,7 @@ import { cardClass } from '@/components/ui/card'
 import { signedDc } from '@/lib/social/season'
 import { cn } from '@/lib/utils'
 import { uiTextClass } from '@/components/ui/page'
+import { formatDcAmount } from '@/lib/format/dc'
 
 export interface PodiumMember {
   id: string
@@ -30,7 +31,7 @@ function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean
       </Link>
       {member.id === meId && <span className="-mt-1 text-xs font-bold text-ink2">you</span>}
       <span className="text-sm font-bold whitespace-nowrap text-ink2 tabular-nums">
-        {signed ? signedDc(member.score) : `${member.score} DC`}
+        {signed ? signedDc(member.score) : formatDcAmount(member.score)}
       </span>
       <span
         className={cn('mt-1 flex w-full items-start justify-center rounded-t-[10px] pt-1.5 text-lg font-extrabold tabular-nums', BLOCK[place])}

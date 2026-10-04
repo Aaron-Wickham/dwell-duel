@@ -7,6 +7,7 @@ import { ListCard } from '@/components/ui/list-card'
 import { rowTitleClass } from '@/components/ui/page'
 import { focusTarget } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
+import { formatDcAmount } from '@/lib/format/dc'
 
 // A card the title opens (its link stretches over it); the creator's name and Resolve sit above
 // the cover, so each still goes where it says.
@@ -25,7 +26,7 @@ export function AwaitingMarketRow({ market, now, domId }: { market: AwaitingMark
         </Link>
         <p className="text-sm text-ink2">
           Closed <LocalTime iso={market.closeAt} format="dateTime" /> · {relativeTime(market.closeAt, now)} ·{' '}
-          <span className="tabular-nums">{market.pooled} DC</span> in the pool · by{' '}
+          <span className="whitespace-nowrap">{formatDcAmount(market.pooled)}</span> in the pool · by{' '}
           <span className="relative z-[1]">
             <Link href={`/members/${market.creatorId}`} transitionTypes={['nav-forward']}>
               {market.creatorName}

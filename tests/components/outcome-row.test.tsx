@@ -112,12 +112,12 @@ describe('OutcomeRow', () => {
     expect(screen.queryByText('Winner')).not.toBeInTheDocument()
   })
 
-  it('formats every animated number as plain digits, in en-US regardless of the browser locale', () => {
+  it('groups every animated number in en-US, regardless of the browser locale (#382)', () => {
     renderRow('add')
     expect(numberFlowCalls.length).toBeGreaterThan(0)
     for (const call of numberFlowCalls) {
       expect(call.locales).toBe('en-US')
-      expect(call.format?.useGrouping).toBe(false)
+      expect(call.format?.useGrouping).not.toBe(false)
     }
   })
 

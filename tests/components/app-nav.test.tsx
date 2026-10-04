@@ -207,9 +207,9 @@ describe('AppNav', () => {
 
   // #210: NumberFlow's script stays off every page's first load; the chip is text until the
   // balance moves, and then animates from the old figure.
-  it('shows the balance as plain text until it first changes, then animates it from the old figure in en-US digits', async () => {
+  it('shows the balance as plain text until it first changes, then animates it from the old figure, grouped in en-US', async () => {
     const { rerender } = render(<Nav balance={1250} isAdmin={false} />)
-    expect(screen.getAllByText('1250 DC')).toHaveLength(2)
+    expect(screen.getAllByText('1,250 DC')).toHaveLength(2)
     expect(numberFlowCalls).toHaveLength(0)
 
     rerender(<Nav balance={1300} isAdmin={false} />)
@@ -218,7 +218,7 @@ describe('AppNav', () => {
     await waitFor(() => expect(numberFlowCalls.at(-1)?.value).toBe(1300))
     for (const call of numberFlowCalls) {
       expect(call.locales).toBe('en-US')
-      expect(call.format?.useGrouping).toBe(false)
+      expect(call.format?.useGrouping).not.toBe(false)
     }
   })
 

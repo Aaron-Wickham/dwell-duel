@@ -3,6 +3,7 @@ import type { LegStatus } from '@/lib/parlays/leg-status'
 import { legTally, tallySummary } from '@/lib/parlays/get-parlay'
 import type { ParlayView } from '@/lib/parlays/list-parlays'
 import { cn } from '@/lib/utils'
+import { formatDcAmount } from '@/lib/format/dc'
 
 const LEG_TONE: Record<LegStatus, StatusChipTone> = {
   open: 'wait',
@@ -55,7 +56,7 @@ export function ParlayStatusChip({
       )
     }
     case 'won':
-      return <StatusChip tone="won" className={className}>Won {parlay.credited} DC</StatusChip>
+      return <StatusChip tone="won" className={className}>Won {formatDcAmount(parlay.credited)}</StatusChip>
     case 'lost':
       return <StatusChip tone="lost" className={className}>Lost</StatusChip>
     case 'refunded':
@@ -72,13 +73,13 @@ export function outcomeFigure(p: Pick<ParlayView, 'status' | 'credited' | 'stake
 } {
   switch (p.status) {
     case 'pending':
-      return { label: 'Pays if all win', value: `${p.estimated ? '~' : ''}${p.potentialPayout} DC`, tone: 'win' }
+      return { label: 'Pays if all win', value: `${p.estimated ? '~' : ''}${formatDcAmount(p.potentialPayout)}`, tone: 'win' }
     case 'won':
-      return { label: 'Won', value: `${p.credited} DC`, tone: 'win' }
+      return { label: 'Won', value: formatDcAmount(p.credited), tone: 'win' }
     case 'lost':
       return { label: 'Result', value: 'Lost', tone: 'loss' }
     case 'refunded':
-      return { label: 'Returned', value: `${p.stake} DC`, tone: 'plain' }
+      return { label: 'Returned', value: formatDcAmount(p.stake), tone: 'plain' }
   }
 }
 

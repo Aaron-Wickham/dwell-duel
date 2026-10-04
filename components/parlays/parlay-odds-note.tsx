@@ -1,5 +1,6 @@
 import { MAX_LEG_ODDS, MAX_PAYOUT } from '@/lib/parlays/odds'
 import type { ParlayView } from '@/lib/parlays/list-parlays'
+import { formatDcAmount } from '@/lib/format/dc'
 
 type NoteParlay = Pick<ParlayView, 'fixed' | 'converted' | 'lockedAtPlacement' | 'capped' | 'maxMultiplier' | 'stake'>
 
@@ -8,7 +9,7 @@ type NoteParlay = Pick<ParlayView, 'fixed' | 'converted' | 'lockedAtPlacement' |
 export function ParlayOddsNote({ parlay, dropped }: { parlay: NoteParlay; dropped: number }) {
   const caps = (
     <>
-      {parlay.capped ? `, up to a ${parlay.maxMultiplier}× cap` : ''}. A win pays at most {MAX_PAYOUT} DC
+      {parlay.capped ? `, up to a ${parlay.maxMultiplier}× cap` : ''}. A win pays at most {formatDcAmount(MAX_PAYOUT)}
       {parlay.stake > MAX_PAYOUT ? ', or its stake back, since that was more' : ''}.
     </>
   )
@@ -18,7 +19,7 @@ export function ParlayOddsNote({ parlay, dropped }: { parlay: NoteParlay; droppe
         <>
           Each pick’s odds came from the other members’ money on its market, and were fixed by the time DwellDuel switched
           to fixed payouts in October 2026. They multiply together, up to a {parlay.maxMultiplier}× cap, and a win pays at
-          most {MAX_PAYOUT} DC{parlay.stake > MAX_PAYOUT ? ', or its stake back, since that was more' : ''}: the old caps
+          most {formatDcAmount(MAX_PAYOUT)}{parlay.stake > MAX_PAYOUT ? ', or its stake back, since that was more' : ''}: the old caps
           still apply.
         </>
       ) : parlay.fixed ? (

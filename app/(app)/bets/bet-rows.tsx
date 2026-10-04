@@ -10,6 +10,7 @@ import type { Wager } from '@/lib/bets/list-my-wagers'
 import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
 import { rowTitleClass } from '@/components/ui/page'
+import { formatDcAmount } from '@/lib/format/dc'
 
 // List cards, three across at lg. Each keeps its own height (items-start), so a tall parlay
 // doesn't leave blank space in its neighbours.
@@ -67,7 +68,7 @@ export function WagerRows({ wagers, rowIdPrefix }: { wagers: Wager[]; rowIdPrefi
             marketTitle={b.marketTitle}
             detail={
               <>
-                {b.amount} DC on {b.outcomeLabel} · {b.result.kind === 'open' ? 'Closes' : 'Placed'}{' '}
+                {formatDcAmount(b.amount)} on {b.outcomeLabel} · {b.result.kind === 'open' ? 'Closes' : 'Placed'}{' '}
                 <LocalTime iso={b.result.kind === 'open' ? b.closeAt : b.placedAt} format="dateTime" />
               </>
             }
@@ -90,7 +91,7 @@ export function CancelledBetRows({ bets, rowIdPrefix }: { bets: MyCancelledBet[]
           marketTitle={b.marketTitle}
           detail={
             <>
-              {b.amount} DC on {b.outcomeLabel} · Cancelled <LocalTime iso={b.cancelledAt} format="dateTime" />
+              {formatDcAmount(b.amount)} on {b.outcomeLabel} · Cancelled <LocalTime iso={b.cancelledAt} format="dateTime" />
             </>
           }
           aside={<StatusChip tone="void">Refunded</StatusChip>}

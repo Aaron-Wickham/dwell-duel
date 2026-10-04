@@ -45,12 +45,12 @@ describe('HomeHero', () => {
     expect(screen.queryByText(/^Rank/)).toBeNull()
   })
 
-  it('formats every number as plain digits, in en-US regardless of the browser locale', () => {
+  it('groups every number in en-US, regardless of the browser locale (#382)', () => {
     render(<HomeHero {...BASE} balance={1250} />)
     expect(numberFlowCalls).toHaveLength(3)
     for (const call of numberFlowCalls) {
       expect(call.locales).toBe('en-US')
-      expect(call.format?.useGrouping).toBe(false)
+      expect(call.format?.useGrouping).not.toBe(false)
     }
   })
 

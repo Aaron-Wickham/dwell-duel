@@ -14,6 +14,7 @@ import { ContentReveal } from '@/components/nav/page-transition'
 import { OutcomeRow } from '@/components/markets/outcome-row'
 import { Message } from '@/components/ui/message'
 import { SectionCard } from '@/components/ui/section-card'
+import { formatDcAmount } from '@/lib/format/dc'
 
 // The outcomes stream on their own, since only they wait on the parlay figure. Exported for the
 // component tests, which render this async section directly.
@@ -44,7 +45,7 @@ export async function MarketOutcomes({
       <SectionCard
         title="Outcomes"
         titleId="outcomes-title"
-        action={<span className="text-sm text-ink2 tabular-nums">{totalPool} DC {lmsr ? 'bet' : 'in the pool'}</span>}
+        action={<span className="text-sm whitespace-nowrap text-ink2">{formatDcAmount(totalPool)} {lmsr ? 'bet' : 'in the pool'}</span>}
         className="gap-1"
       >
         {canBet && slipFull && (

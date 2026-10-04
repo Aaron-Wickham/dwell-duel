@@ -95,6 +95,29 @@ describe('GoogleSignIn', () => {
     expect(script).not.toBeNull()
     script!.dispatchEvent(new Event('error'))
     expect(await screen.findByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument()
+    // Expected (a blocker, a bad network) and covered by the fallback, so not an error (#363).
+    expect(reportClientError).not.toHaveBeenCalled()
+  })
+
+  it('falls back without reporting when Google’s script never arrives, but reports a nonce that never does', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      delete window.google
+      const { unmount } = render(<GoogleSignIn clientId="c" />)
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(await screen.findByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument()
+      expect(reportClientError).not.toHaveBeenCalled()
+      unmount()
+
+      window.google = { accounts: { id: { initialize, renderButton } } }
+      fetchMock.mockImplementation(() => new Promise(() => {}))
+      render(<GoogleSignIn clientId="c" />)
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(await screen.findByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument()
+      expect(reportClientError).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('after a failed sign-in, offers Supabase’s redirect as well, so a fault on Google’s path can’t lock anyone out', async () => {

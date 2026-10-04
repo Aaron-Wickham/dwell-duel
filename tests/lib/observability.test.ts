@@ -65,6 +65,13 @@ describe('beforeSend', () => {
     expect(send({ exception: { values: [{ type: 'AbortError', value: 'Transition was skipped' }] } })).toBeNull()
   })
 
+  it('drops the bare "Script error." a browser reports for a cross-origin script (#363)', async () => {
+    const send = await beforeSend()
+    expect(send({ exception: { values: [{ type: 'Error', value: 'Script error.' }] } })).toBeNull()
+    expect(send({ message: 'Script error.' })).toBeNull()
+    expect(send({ exception: { values: [{ type: 'Error', value: 'Script error. Not.' }] } })).not.toBeNull()
+  })
+
   it('keeps every other error, InvalidStateErrors included, and still scrubs it', async () => {
     const send = await beforeSend()
     const other = { exception: { values: [{ type: 'InvalidStateError', value: 'The object is in an invalid state.' }] }, user: { email: 'a@b.c' } }

@@ -37,7 +37,7 @@ Every alarm emails the owner; what each one means is under
 
 | Monitor | Watches | Check it still works |
 |---|---|---|
-| Sentry (`dwellduel` / `dwell-duel`) | Uncaught errors and `reportError` calls, server and browser; its default alert emails high-priority issues | Its Issues page shows recent events (members' errors arrive within a minute). A build that uploaded its source maps shows a release with artifacts under Releases; one that didn't logs "No project provided" in its Vercel build log |
+| Sentry (`dwellduel` / `dwell-duel`) | Uncaught errors and `reportError` calls, server and browser; its default alert emails high-priority issues | Its Issues page shows recent events (members' errors arrive within a minute). A build that uploaded its source maps shows a release with artifacts under Releases; one that didn't logs "Sentry source map upload failed" in its Vercel build log |
 | healthchecks.io: keep-alive | The daily cron's ping (`/fail` when a step failed) | The check's last ping is under a day old; ping its URL with `/fail` once to see the email |
 | healthchecks.io: closing-alerts | Each closing-alerts run's ping | The last ping is minutes old |
 | UptimeRobot | `/api/health` every 5 minutes; the certificate's expiry | The monitor shows Up; pause and resume it to see the emails |
@@ -385,7 +385,7 @@ after changing one: Deploy Production → Run workflow, from `main`.
 | `CRON_SECRET` | The server refuses to boot | **Three places must match** (below) |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | The app boots, logs "Push notifications are off until they are set", and sends nothing; Settings says notifications aren't available | Below |
 | `NEXT_PUBLIC_SENTRY_DSN` | Errors aren't captured | Public by design; replace it only if it's being spammed: Sentry → the project → Client Keys → new key, set it, redeploy, disable the old key |
-| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | Builds don't upload source maps, so Sentry's stack traces stay minified; nothing else changes | Production (Preview builds are skipped, so the token's Preview copy does nothing). **As of Oct 4 only the token is set:** without `SENTRY_ORG` (`dwellduel`) and `SENTRY_PROJECT` (`dwell-duel`) every build logs "No project provided. Will not upload source maps". The token is a Sentry organization token (Settings → Auth Tokens), a Secret: create a new one, set it, redeploy, then revoke the old one |
+| `SENTRY_AUTH_TOKEN` (and, optionally, `SENTRY_ORG` and `SENTRY_PROJECT`) | Without the token, builds don't upload source maps, so Sentry's stack traces stay minified; nothing else changes | Production (Preview builds are skipped, so the token's Preview copy does nothing). The org and project default to `dwellduel` and `dwell-duel` in `next.config.ts` (#370), so only the token is set in Vercel. The token is a Sentry organization token (Settings → Auth Tokens), a Secret: create a new one, set it, redeploy, then revoke the old one |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Sign-in uses Supabase's Google redirect, whose account chooser names the Supabase project instead of dwellduel.com | Public by design (it's in the page). Changes only with a new Google OAuth client: see [Google sign-in and brand verification](#google-sign-in-and-brand-verification) |
 | `HEALTHCHECKS_KEEP_ALIVE_URL`, `HEALTHCHECKS_CLOSING_ALERTS_URL` | No heartbeat pings, so each check goes late and emails | healthchecks.io → the check → its ping URL; set it, redeploy, then confirm the next ping arrives |
 

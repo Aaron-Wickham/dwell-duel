@@ -33,11 +33,12 @@ const KIND_OPTIONS: { kind: MarketKind; label: string; hint: string }[] = [
   { kind: 'over_under', label: 'Over/Under', hint: 'Will a number land above or below a line?' },
 ]
 
-// update_market (0043) only ever changes the title and description, so the hint says so before
-// it's too late (#266).
+// update_market never changes the outcomes or the line, so the hint says so before it's too late
+// (#266). The close time can move while the market is open, but not by a creator with money on it
+// (can_move_market_close, 0106; #371).
 function closeTimeHint(kind: MarketKind): string {
-  const fixed = kind === 'over_under' ? 'The line, outcomes and close time' : 'The outcomes and close time'
-  return `Betting stops at this time, so set it before the answer is known. ${fixed} can’t be changed later.`
+  const fixed = kind === 'over_under' ? 'The line and outcomes' : 'The outcomes'
+  return `Betting stops at this time, so set it before the answer is known. ${fixed} can’t be changed later; you can move the close time while the market is open, unless you bet on it.`
 }
 
 // A market being duplicated (?from=), read on the server. `closeAt` is the original's close.

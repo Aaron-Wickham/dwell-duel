@@ -41,7 +41,7 @@ const TABS: Record<Tab, { label: string; empty: { icon: LucideIcon; title: strin
   },
   cancelled: {
     label: 'Cancelled',
-    empty: { icon: Ban, title: 'No cancelled bets.', body: 'Bets you cancel before a market closes show up here.' },
+    empty: { icon: Ban, title: 'No cancelled bets.', body: 'Bets are final. Bets cancelled before October 2026, when that was allowed, show up here.' },
   },
   coins: {
     label: 'Coins',

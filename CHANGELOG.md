@@ -10,6 +10,9 @@ the hood**, **Tests**. Add a line under `## Unreleased
 
 ## Unreleased
 
+### Under the hood
+- **More Claude Code setup.** Hooks that lint each edited file as CI does and refuse hand edits to the generated database types and `.env` files; `new-route` and `pr-ready` skills; `money-path-reviewer` and `conventions-reviewer` agents; and the context7 docs server in `.mcp.json` (#379).
+
 ## v0.10.1-beta — 2026-10-04
 
 A fixes release. The sign-in page fits a phone with the familiar Sign in with Google button, Create market's closing-time hint tells the truth about moving it, and the daily keep-alive that stops the database pausing passes again. Behind the scenes, Sentry now gets readable stack traces, the docs were reviewed end to end, and Claude Code works in the repo behind guard rails that keep production changes going through pull requests.

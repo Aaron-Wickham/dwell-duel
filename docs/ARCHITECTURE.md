@@ -1308,5 +1308,8 @@ value never stops production booting.
 - **Claude Code guard rails** (#368): `.claude/settings.json` refuses
   `supabase db push`, pushing straight to `main`, the Supabase connector's
   write tools and the Vercel and UptimeRobot connectors' irreversible ones; `.claude/hooks/protect-migrations.sh` refuses edits to a
-  shipped migration; `.mcp.json` adds a read-only Supabase MCP scoped to
-  production. Migrations still reach production only through Deploy Production.
+  shipped migration, `protect-files.sh` hand edits to `database.types.ts` and
+  `.env` files, and `lint-on-edit.sh` runs ESLint on each edited file as CI
+  does; `.mcp.json` adds a read-only Supabase MCP scoped to production and
+  context7 for library docs. Migrations still reach production only through
+  Deploy Production.

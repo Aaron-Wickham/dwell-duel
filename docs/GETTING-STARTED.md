@@ -515,15 +515,32 @@ booted iOS Simulator with the app installed. `docs/ARCHITECTURE.md`
   migration your branch added can still be edited. It compares against your
   local `origin/main` (so `git fetch` first), needs `jq`, and lets
   everything through when there's no `origin/main`.
+- **Two more hooks.** `.claude/hooks/protect-files.sh` refuses hand edits
+  to `lib/supabase/database.types.ts` (regenerate it) and to `.env` files
+  other than `.env.local.example`. `.claude/hooks/lint-on-edit.sh` runs
+  `eslint --max-warnings 0` on each TypeScript or JavaScript file Claude
+  edits and hands any warning back to it, so CI's lint step doesn't fail
+  later.
 - **A read-only production database server.** `.mcp.json` adds
   `supabase-prod-readonly`, Supabase's hosted MCP server scoped to the
   production project with `read_only=true`. Claude Code asks you to approve
   it the first time; sign in once with `/mcp`. It only works for people with
   access to the Supabase project, so most collaborators should decline it:
-  everything you build runs against local Supabase.
+  everything you build runs against local Supabase. It also adds
+  `context7`, which looks up current docs for libraries such as Base UI,
+  Tailwind v4, `motion` and supabase-js (Next's own are in
+  `node_modules/next/dist/docs/`).
 - **Project skills.** `new-migration` (number, keep additive, regenerate
-  types, test, document) and `release` (follows
-  [RELEASING.md](RELEASING.md)) load when the task matches, or by name.
+  types, test, document), `new-route` (a signed-in page with everything it
+  needs) and `release` (follows [RELEASING.md](RELEASING.md)) load when the
+  task matches, or by name. `/pr-ready` runs only when you ask: it checks
+  the branch against the same-PR rules (docs, changelog, types, limits,
+  attempt keys, env vars) and runs lint, types and unit tests.
+- **Project agents.** `money-path-reviewer` checks a change to how coins
+  move for drift between the TypeScript quotes and their SQL functions and
+  for broken ledger invariants; `conventions-reviewer` checks a diff
+  against AGENTS.md's rules that lint can't see. `/pr-ready` dispatches
+  them when the diff calls for it.
 - This is Next.js 16, newer than most models know. Have the agent read the
   guide in `node_modules/next/dist/docs/` before Next-specific code.
 - `next dev` re-adds a block at the top of AGENTS.md when it's missing.

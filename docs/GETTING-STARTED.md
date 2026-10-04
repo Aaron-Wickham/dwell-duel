@@ -142,8 +142,9 @@ on any project (a new personal one is fine):
    `http://127.0.0.1:54321/auth/v1/callback`
 4. Copy the client ID and client secret.
 
-**2. Give them to local Supabase.** Create `supabase/.env` (git-ignored, and
-separate from `.env.local`, because the Supabase CLI reads this one):
+**2. Give them to local Supabase.** Create `supabase/.env` (git-ignored). The
+Supabase CLI reads it, and also reads the root `.env.local`, so either file
+works:
 
 ```bash
 SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=your-id.apps.googleusercontent.com
@@ -194,9 +195,11 @@ invalidates it, so use real sign-in for anything longer than a glance.
 ### Getting some data to look at
 
 A fresh database is empty. Create markets and tasks from the app as an owner,
-or run the scale seeder for volume (500 members, 200 markets, 20,000 bets).
-It's for measuring query plans: its markets are pre-LMSR pool markets, so
-they can't take new bets. For markets you can bet on, create them in the app.
+or run the scale seeder (500 members, 200 markets, 20,000 bets, 400 parlays,
+results, overrides, voids and task completions). Its markets are priced by
+the market maker and every bet goes through the slip's own function, so it's
+what the app would make; about 70 markets stay open to bet on. Every member
+has 5,000 DC to spend.
 
 ```bash
 node scripts/seed-scale.mjs
@@ -501,7 +504,8 @@ booted iOS Simulator with the app installed. `docs/ARCHITECTURE.md`
   Code run the test, lint, type-check, build, `db:start` / `db:reset`,
   `check:ios` and local `supabase` commands without asking. It refuses
   `supabase db push` and `git push origin main`, plus the write tools of
-  Aaron's account-wide Supabase connector. Those tool names belong to his
+  Aaron's account-wide Supabase connector and the irreversible tools of his
+  Vercel and UptimeRobot connectors. Those tool names belong to his
   connector, so if you connect your own, its tools aren't covered: never
   point a write-capable one at production. Your own overrides go in
   `.claude/settings.local.json`, which git ignores.

@@ -38,7 +38,7 @@ export function ConfirmActionButton({
   trigger: ReactNode
   triggerLabel?: string
   triggerVariant?: 'danger' | 'secondary' | 'quiet'
-  triggerSize?: 'md' | 'sm' | 'chip'
+  triggerSize?: 'md' | 'sm'
   block?: boolean
   title: string
   description: ReactNode

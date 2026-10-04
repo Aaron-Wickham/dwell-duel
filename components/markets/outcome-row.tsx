@@ -37,8 +37,9 @@ export function OutcomeRow({
   series: Series
   state: OutcomeRowState
   winner?: boolean
-  // DC in pending parlays with a leg on this outcome (#279). Outside the bar and the percentage,
-  // since parlays are paid by DwellDuel and never move the pool.
+  // DC in pending parlays with a leg on this outcome (#279). Shown on its own, beside the bar and the
+  // percentage: on an LMSR market a leg's shares are already in the price, and an older pool
+  // parlay never moved the pool.
   riding?: number
   slipPick: SlipPick
   addAction: (formData: FormData) => ToastActionResult | Promise<ToastActionResult>

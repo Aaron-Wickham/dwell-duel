@@ -78,13 +78,15 @@ const nextConfig: NextConfig = {
 // exactly what they were. The plugin uploads hidden source maps and deletes them from the output, so
 // production never serves them. It stays errors-only: no build-time instrumentation or navigation
 // spans. A Sentry outage mustn't block a deploy, so an upload failure only warns. Vercel builds
-// without .git, so commits are named by SHA rather than read from git.
+// without .git, so commits are named by SHA rather than read from git. The org and project are
+// slugs, not secrets; Vercel never had them set, so without these defaults every build skipped the
+// upload (#370).
 const commit = process.env.VERCEL_GIT_COMMIT_SHA
 
 export default process.env.SENTRY_AUTH_TOKEN
   ? withSentryConfig(nextConfig, {
-      org: process.env.SENTRY_ORG,
-      project: process.env.SENTRY_PROJECT,
+      org: process.env.SENTRY_ORG || 'dwellduel',
+      project: process.env.SENTRY_PROJECT || 'dwell-duel',
       authToken: process.env.SENTRY_AUTH_TOKEN,
       release: {
         name: deployVersion,

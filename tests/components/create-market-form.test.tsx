@@ -41,7 +41,7 @@ describe('CreateMarketForm preview', () => {
   })
 })
 
-const CLOSE_HINT = 'Betting stops at this time, so set it before the answer is known. The outcomes and close time can’t be changed later.'
+const CLOSE_HINT = 'Betting stops at this time, so set it before the answer is known. The outcomes can’t be changed later; you can move the close time while the market is open, unless you bet on it.'
 
 describe('CreateMarketForm', () => {
   it('says what the close time does and what can never change, line included for an over/under (#266)', async () => {
@@ -50,7 +50,7 @@ describe('CreateMarketForm', () => {
     expect(screen.getByLabelText('Close time')).toHaveAccessibleDescription(CLOSE_HINT)
     await user.click(screen.getByRole('radio', { name: 'Over/Under' }))
     expect(screen.getByLabelText('Close time')).toHaveAccessibleDescription(
-      'Betting stops at this time, so set it before the answer is known. The line, outcomes and close time can’t be changed later.',
+      'Betting stops at this time, so set it before the answer is known. The line and outcomes can’t be changed later; you can move the close time while the market is open, unless you bet on it.',
     )
     expect(screen.getByRole('region', { name: 'Preview' })).toHaveTextContent('If you bet on it, a reviewer resolves it.')
   })

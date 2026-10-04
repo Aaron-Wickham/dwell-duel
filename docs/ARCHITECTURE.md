@@ -1175,8 +1175,8 @@ value never stops production booting.
   `Script error.` a browser reports for a cross-origin script
   (`isCrossOriginScriptError`, #363; it came from Google's sign-in script,
   which #366 removed, and stays as a cheap guard). Source maps: a build that
-  holds `SENTRY_AUTH_TOKEN` (Vercel's, with `SENTRY_ORG` and `SENTRY_PROJECT`,
-  which the Sentry–Vercel integration set) is wrapped in `withSentryConfig`
+  holds `SENTRY_AUTH_TOKEN` (Vercel's; the org and project default to
+  `dwellduel` and `dwell-duel`, #370) is wrapped in `withSentryConfig`
   (`next.config.ts`), which uploads hidden source maps under the deploy's
   release (`NEXT_PUBLIC_SW_VERSION`, the same value `sentryOptions` reports),
   names the release's commit, and deletes the maps from the output. It adds no
@@ -1301,11 +1301,12 @@ value never stops production booting.
   `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is optional and isn't checked: it's fixed
   at build, and without it sign-in uses Supabase's Google redirect. Optional and off when unset: `NEXT_PUBLIC_SENTRY_DSN`,
   `HEALTHCHECKS_KEEP_ALIVE_URL` and `HEALTHCHECKS_CLOSING_ALERTS_URL`
-  (Observability), and, in Vercel only, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and
-  `SENTRY_PROJECT`, which only turn on the source-map upload. Every
+  (Observability), and, in Vercel only, `SENTRY_AUTH_TOKEN`, which only turns on
+  the source-map upload (`SENTRY_ORG` and `SENTRY_PROJECT` override the
+  defaults in `next.config.ts`). Every
   variable and how to rotate it is in `docs/OPERATIONS.md`.
 - **Claude Code guard rails** (#368): `.claude/settings.json` refuses
-  `supabase db push`, pushing straight to `main` and the Supabase connector's
-  write tools; `.claude/hooks/protect-migrations.sh` refuses edits to a
+  `supabase db push`, pushing straight to `main`, the Supabase connector's
+  write tools and the Vercel and UptimeRobot connectors' irreversible ones; `.claude/hooks/protect-migrations.sh` refuses edits to a
   shipped migration; `.mcp.json` adds a read-only Supabase MCP scoped to
   production. Migrations still reach production only through Deploy Production.

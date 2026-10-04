@@ -143,16 +143,20 @@ Claude Code sessions the owner runs act with his logins: the Supabase CLI
 linked to production, the `supabase-prod-readonly` MCP server (`.mcp.json`:
 read-only, scoped to the production project), and his account-wide
 Supabase, Vercel, Sentry and UptimeRobot connectors. The checked-in
-`.claude/settings.json` refuses `supabase db push`, `git push origin main`
-and the Supabase connector's write tools, and
+`.claude/settings.json` refuses `supabase db push`, `git push origin main`,
+the Supabase connector's write tools, the Vercel connector's irreversible
+ones (deleting or pausing the project, environment variables, domains,
+firewall and protection settings, API keys, purchases) and the UptimeRobot
+connector's deletes, and
 `.claude/hooks/protect-migrations.sh` refuses an edit to a migration already
 on `origin/main`.
 
 These are guard rails against mistakes, not a security boundary. They match
 command prefixes and tool names; the connector rules name the owner's own
 connector, so they mean nothing in anyone else's session; and they don't
-cover `supabase db query --linked`, which can write, or the Vercel and
-UptimeRobot connectors' write tools. Read-only access still reads members'
+cover `supabase db query --linked`, which can write. Vercel deploys,
+rollbacks and promotions stay allowed, since they ask first and a rollback
+is how an incident is undone. Read-only access still reads members'
 data, emails included. What protects production is the same as for a
 collaborator: the `main` rulesets, the `Production` environment, and
 migrations reaching production only through Deploy Production.

@@ -196,8 +196,8 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
   build, so previews are off and PRs are reviewed through the diff and CI.
   Local Docker Supabase is the dev and test environment.
 - **Monitoring.** Sentry captures errors when `NEXT_PUBLIC_SENTRY_DSN` is
-  set, and a Vercel build holding `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and
-  `SENTRY_PROJECT` uploads its source maps, then deletes them from the
+  set, and a Vercel build holding `SENTRY_AUTH_TOKEN` uploads its source maps
+  (org and project default in `next.config.ts`), then deletes them from the
   output. healthchecks.io gets a ping from the daily keep-alive and from each
   closing-alerts run (`HEALTHCHECKS_KEEP_ALIVE_URL`,
   `HEALTHCHECKS_CLOSING_ALERTS_URL`) and emails when one is late or failed;
@@ -242,8 +242,7 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
   closing-alerts (paste its ping URL into the matching Vercel variable and
   redeploy), an UptimeRobot HTTP monitor on
   `https://www.dwellduel.com/api/health`, and the Sentry–Vercel and
-  Sentry–GitHub integrations, with `SENTRY_ORG` and `SENTRY_PROJECT` set in
-  Vercel beside the token.
+  Sentry–GitHub integrations, with `SENTRY_AUTH_TOKEN` set in Vercel.
 - **Before your first sign-in,** invite yourself in the SQL editor:
   `insert into public.allowed_emails (email) values ('you@gmail.com');`
 - **After it,** make yourself the owner, keyed off the verified

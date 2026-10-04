@@ -1,7 +1,10 @@
 // Adds about 10× today's data to the LOCAL database, for measuring query plans at the scale the
 // data-layer spec targets (docs/archive/superpowers/specs/2026-09-26-data-layer-scale-design.md):
 // 500 members, 200 markets, 20,000 bets with their ledger rows, resolutions and their payouts,
-// overrides, voids, parlays and task completions. Development only: it refuses any database that
+// overrides, voids, parlays and task completions. Markets are priced by the market maker
+// (pricing = 'lmsr') and every bet and parlay goes through place_slip_v4 as its member, so the
+// seed is data the app itself would make (#373); the unsettled markets stay open for betting.
+// Development only: it refuses any database that
 // isn't local, and CI never runs it. It only adds rows, tagged per run so it can run again;
 // `npm run db:reset` clears everything, and the DB test suite needs one afterwards.
 // Run it by hand: `node scripts/seed-scale.mjs`.
@@ -96,6 +99,8 @@ await run(
   insert into public.coin_transactions (profile_id, amount, type, meta)
   select id, 5000, 'admin_adjustment', jsonb_build_object('reason', 'Scale seed')
   from public.profiles where email like ${memberEmails};
+
+  ${syncBalances}
   `,
 )
 
@@ -103,10 +108,10 @@ await run(
   `Markets (${MARKETS})`,
   `
   ${scaleTempTables}
-  insert into public.markets (created_by, title, description, kind, close_at, created_at)
+  insert into public.markets (created_by, title, description, kind, close_at, created_at, pricing, seed_per_outcome)
   select m.id, format('Scale market %s', n), ${seedNote},
     case when n % 4 = 0 then 'multiple_choice' else 'binary' end,
-    now() + interval '30 days', now() - (${MARKETS} + 1 - n) * interval '12 hours'
+    now() + interval '30 days', now() - (${MARKETS} + 1 - n) * interval '12 hours', 'lmsr', 0
   from generate_series(1, ${MARKETS}) n
   join scale_members m on m.rn = 1 + (n * 37) % ${MEMBERS};
 
@@ -120,48 +125,84 @@ await run(
   `,
 )
 
+// Bets go through place_slip_v4 as their members, a chunk per call so none nears postgres-meta's
+// time limit. The shown payout is the stake, which a market-maker bet always pays at least, so
+// the 2% re-price check never refuses one.
+const BET_CHUNK = 2_500
+for (let first = 1; first <= BETS; first += BET_CHUNK) {
+  const last = Math.min(first + BET_CHUNK - 1, BETS)
+  await run(
+    `Bets ${first}–${last} of ${BETS}`,
+    `
+    select setseed(${(0.42 + first / (10 * BETS)).toFixed(6)});
+    ${scaleTempTables}
+    do $$
+    declare
+      v_bet record;
+    begin
+      for v_bet in
+        select p.id as profile_id, p.email, o.id as outcome_id, r.amount
+        from (
+          select 1 + floor(random() * ${MARKETS})::integer as market_rn,
+            random() as pick,
+            1 + floor(random() * ${MEMBERS})::integer as member_rn,
+            1 + floor(random() * 20)::integer as amount
+          from generate_series(${first}, ${last})
+        ) r
+        join scale_markets m on m.rn = r.market_rn
+        join scale_members p on p.rn = r.member_rn
+        join lateral (
+          select o.id from public.market_outcomes o
+          where o.market_id = m.id
+          order by o.label
+          offset floor(r.pick * (select count(*) from public.market_outcomes c where c.market_id = m.id))::integer
+          limit 1
+        ) o on true
+      loop
+        perform set_config(
+          'request.jwt.claims',
+          json_build_object('sub', v_bet.profile_id, 'email', v_bet.email, 'role', 'authenticated')::text,
+          true
+        );
+        perform public.place_slip_v4(
+          jsonb_build_array(jsonb_build_object('outcome_id', v_bet.outcome_id, 'amount', v_bet.amount, 'payout', v_bet.amount)),
+          null, null, null, null
+        );
+      end loop;
+    end
+    $$;
+    `,
+  )
+}
+
+// Every bet was placed just now. Spread each market's bets evenly over its life, keeping the order
+// they were placed in (bet ids rise with it), so the chance history the charts read from them is
+// the order the market maker priced them in. A bet's ledger row is the same rank among its
+// market's bet_placed rows, since each was written beside its bet.
 await run(
-  `Bets (${BETS}) and their ledger rows`,
+  'Bet times spread over each market\'s life',
   `
-  select setseed(0.42);
   ${scaleTempTables}
-  create temp table scale_outcomes on commit drop as
-    select id, market_id,
-      row_number() over (partition by market_id order by label) as ord,
-      count(*) over (partition by market_id) as k
-    from public.market_outcomes where market_id in (select id from scale_markets);
+  create temp table scale_bet_times on commit drop as
+    select b.id, b.market_id,
+      row_number() over (partition by b.market_id order by b.id) as rank,
+      m.created_at + (row_number() over (partition by b.market_id order by b.id) - 0.5)
+        / count(*) over (partition by b.market_id) * (now() - interval '1 minute' - m.created_at) as at
+    from public.bets b
+    join scale_markets m on m.id = b.market_id;
 
-  insert into public.bets (market_id, outcome_id, profile_id, amount, created_at)
-  select m.id, o.id, p.id, r.amount, m.created_at + r.at * (now() - m.created_at)
-  from (
-    select 1 + floor(random() * ${MARKETS})::integer as market_rn,
-      random() as pick,
-      1 + floor(random() * ${MEMBERS})::integer as member_rn,
-      1 + floor(random() * 20)::integer as amount,
-      random() as at
-    from generate_series(1, ${BETS})
-  ) r
-  join scale_markets m on m.rn = r.market_rn
-  join scale_members p on p.rn = r.member_rn
-  join scale_outcomes o on o.market_id = m.id and o.ord = 1 + floor(r.pick * o.k)::integer;
+  update public.bets b set created_at = x.at from scale_bet_times x where b.id = x.id;
 
-  -- The same meta place_bet writes.
-  insert into public.coin_transactions (profile_id, amount, type, meta, created_at)
-  select b.profile_id, -b.amount, 'bet_placed',
-    jsonb_build_object('market_id', b.market_id, 'outcome_id', b.outcome_id), b.created_at
-  from public.bets b
-  where b.market_id in (select id from scale_markets)
-  order by b.created_at, b.id;
-
-  update public.market_outcomes o set pool_total = s.total
-  from (
-    select outcome_id, sum(amount)::integer as total
-    from public.bets where market_id in (select id from scale_markets)
-    group by outcome_id
-  ) s
-  where o.id = s.outcome_id;
-
-  ${syncBalances}
+  with ranked as (
+    select t.id, (t.meta ->> 'market_id')::uuid as market_id,
+      row_number() over (partition by t.meta ->> 'market_id' order by t.id) as rank
+    from public.coin_transactions t
+    where t.type = 'bet_placed' and (t.meta ->> 'market_id')::uuid in (select id from scale_markets)
+  )
+  update public.coin_transactions t set created_at = x.at
+  from ranked r
+  join scale_bet_times x on x.market_id = r.market_id and x.rank = r.rank
+  where t.id = r.id;
   `,
 )
 
@@ -199,8 +240,9 @@ await run(
       ) picks
       where pick is not null;
 
+      -- The shown payout is the stake: a parlay's multiplier is at least 1.00×.
       if coalesce(array_length(v_outcomes, 1), 0) >= 2 then
-        perform public.place_parlay(v_outcomes, 1 + i % 10);
+        perform public.place_slip_v4('[]'::jsonb, v_outcomes, 1 + i % 10, 1 + i % 10, null);
       end if;
     end loop;
   end
@@ -283,31 +325,35 @@ await run(
     where m.description = ${seedNote} and m.status in ('resolved', 'voided');
 
   -- A market settles after it closes, and nobody bets on a closed market: close each one half an
-  -- hour before it settles, open it at least a week earlier, and move later bets (and their
-  -- ledger rows) back inside that window.
+  -- hour before it settles, open it at least a week earlier, and spread its bets (and their ledger
+  -- rows, matched by rank as above) over that window, still in the order they were placed.
   update public.markets m
   set close_at = s.at - interval '30 minutes',
     created_at = least(m.created_at, s.at - interval '7 days')
   from scale_settled s
   where m.id = s.market_id;
 
-  create temp table scale_moved_bets on commit drop as
-    select b.id, b.profile_id, b.market_id, b.outcome_id, b.amount, b.created_at as old_at,
-      m.created_at + random() * (m.close_at - m.created_at) as at
+  create temp table scale_settled_bets on commit drop as
+    select b.id, b.market_id,
+      row_number() over (partition by b.market_id order by b.id) as rank,
+      m.created_at + (row_number() over (partition by b.market_id order by b.id) - 0.5)
+        / count(*) over (partition by b.market_id) * (m.close_at - m.created_at) as at
     from public.bets b
     join public.markets m on m.id = b.market_id
-    join scale_settled s on s.market_id = m.id
-    where b.created_at >= m.close_at or b.created_at < m.created_at;
+    join scale_settled s on s.market_id = m.id;
 
-  update public.bets b set created_at = x.at from scale_moved_bets x where b.id = x.id;
+  update public.bets b set created_at = x.at from scale_settled_bets x where b.id = x.id;
 
-  -- bet_placed rows name no bet, so they're matched on everything else the seed wrote them with.
-  update public.coin_transactions t
-  set created_at = x.at
-  from scale_moved_bets x
-  where t.type = 'bet_placed' and t.profile_id = x.profile_id and t.amount = -x.amount
-    and t.created_at = x.old_at and (t.meta ->> 'market_id')::uuid = x.market_id
-    and (t.meta ->> 'outcome_id')::uuid = x.outcome_id;
+  with ranked as (
+    select t.id, (t.meta ->> 'market_id')::uuid as market_id,
+      row_number() over (partition by t.meta ->> 'market_id' order by t.id) as rank
+    from public.coin_transactions t
+    where t.type = 'bet_placed' and (t.meta ->> 'market_id')::uuid in (select market_id from scale_settled)
+  )
+  update public.coin_transactions t set created_at = x.at
+  from ranked r
+  join scale_settled_bets x on x.market_id = r.market_id and x.rank = r.rank
+  where t.id = r.id;
 
   update public.market_resolutions r
   set resolved_at = s.at + case when r.id = m.current_resolution_id then interval '1 hour' else interval '0' end

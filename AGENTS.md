@@ -414,4 +414,7 @@ a line to `CHANGELOG.md` under the next release.
   `supabase/migrations/`. Never edit a past migration in place — add a
   new one. A new migration must be numbered after `main`'s newest
   (`scripts/check-migration-order.sh` fails CI otherwise); renumber after
-  another PR takes the number.
+  another PR takes the number. `.claude/hooks/protect-migrations.sh`
+  refuses an edit to a migration already on `origin/main`, and
+  `.claude/settings.json` denies `supabase db push`; the `new-migration`
+  skill has the full checklist.

@@ -38,14 +38,30 @@ a line to `CHANGELOG.md` under the next release.
 - **Tokens, never raw colours.** Colours come from the CSS variables in
   `app/globals.css`, through Tailwind utilities (`bg-surface`, `text-ink2`,
   `border-line` and so on). Light and dark are the same markup with
-  different variables.
+  different variables. In dark, links are the near-white ink and lime marks
+  only the primary action and first place: active navigation uses
+  `nav-active`, `tab-active` and `segment-active`, and a card or row title
+  link takes `text-ink`. `StatusChip` tones come only from the semantic
+  tokens (`won` is win, `lost` loss, `wait` gold, `done` and `void` sunk),
+  never `primary`.
 - **Every signed-in page is a `<Page>`.** It lives in `components/ui/page.tsx`
   and has exactly one `<h1>`, from `PageHeader` or `h1Class`. Sections are
   `SectionCard`s, whose `<h2>` names the region; a line under that heading
   goes in its `description` slot, never a negative margin. Lists with
   nothing in them render an `EmptyState`. The title of a row or tile in a
   list is `rowTitleClass`, beside `h1Class`, `h2Class` and `eyebrowClass`;
-  don't add a `text-[Npx]` of your own.
+  a figure is `figureHeroClass`, `figureClass` or `figureInlineClass`, and
+  the sizes between body and caption are `uiTextClass`, `chipTextClass` and
+  `microTextClass`. Don't add a `text-[Npx]` of your own (the sign-in, 404
+  and brand art are the only exceptions), nor a `rounded-[Npx]`: radii are
+  `rounded-segment` (10px), `-control`, `-tile`, `-card` or `-full`. A card
+  built by hand takes `cardPaddingClass` from `components/ui/card.tsx`.
+- **Numbers.** Every DC amount goes through `lib/format/dc.ts`
+  (`formatDc`, `formatDcAmount`, `formatSignedDcAmount`), which groups it
+  ("2,577,831 DC") and signs a change with a true minus; an amount cell is
+  `whitespace-nowrap`. `tabular-nums` only where numbers line up in a
+  column (the leaderboard's scores, the ledger, coin history, tooltips),
+  never on a lone figure.
 - **A list item that opens one thing is a `ListCard`; a sentence row
   (feed) or data row (ledger) stays a divided row** (#328).
   `components/ui/list-card.tsx`'s `ListCard` is the My bets parlay card: a
@@ -184,6 +200,11 @@ a line to `CHANGELOG.md` under the next release.
   script checks `reducedMotion()` from `lib/ui/reduced-motion.ts`.
 - **Segmented tabs are `SubNav`** (`components/ui/sub-nav.tsx`, a client
   component whose pill slides between tabs), with tab state in the URL, as My bets' `?tab=` and the admin sections do.
+  `SubNav` is built on `SegmentedControl` (`components/ui/segmented-control.tsx`),
+  which every segmented control uses: one `rounded-tile` track, `rounded-segment`
+  segments, and one pill sliding on `PILL_SLIDE`. A local control (the theme,
+  the slip's Solo/Parlay, the chart's range) keeps its own semantics (radios,
+  pressed buttons) and marks its chosen segment with `segmentMarker`.
 - **Markets are LMSR** (0101, 0102, 0105). `create_market_v3`/`v4` make every
   new market `pricing = 'lmsr'`, 0105 converted every open pool market, and
   every money function branches on `markets.pricing`. The price is the chance

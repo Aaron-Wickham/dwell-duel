@@ -61,23 +61,32 @@ never a raw colour. The groups:
 | `--bg`, `--surface`, `--sunk` | the page, cards, and sunken panels and hover tints |
 | `--ink`, `--ink2`, `--line`, `--line-s` | text, secondary text, hairlines, stronger borders |
 | `--primary`, `--on-primary`, `--lime`, `--on-lime`, `--link`, `--focus` | buttons, the lime accent and what sits on it, links, focus rings |
+| `--nav-active`, `--on-nav-active` | the desktop nav's active pill, a chosen filter chip, your avatar's ring on your profile (teal and white in light, near-white and `#021B1F` in dark) |
+| `--tab-active`, `--on-tab-active`, `--tab-active-ring` | the phone tab bar's active pill and the top bar's Admin button when current (lime with a teal ring in light; `#17434A` with a `--line-s` ring in dark) |
+| `--segment-active` | a segmented control's chosen segment (the surface in light, `#17434A` in dark) |
 | `--acc-soft`, `--acc-text`, `--win`, `--win-soft`, `--loss`, `--loss-soft`, `--gold`, `--gold-soft` | chips, wins, losses and warnings |
 | `--hero`, `--on-hero`, `--hero-2`, `--hero-num`, `--hero-inset` | Home's balance hero |
 | `--s1` … `--s6` | chart series, one per outcome |
 | `--wm-a`, `--wm-b`, `--sym-d`, `--splash`, `--on-splash`, `--status-band` | the wordmark, the launch screen and the iOS status bar |
-| `--shadow`, `--overlay-shadow`, `--lift-shadow`, `--scrim` | cards, dialogs, hover lift, the dialog backdrop |
+| `--shadow`, `--overlay-shadow`, `--lift-shadow`, `--tab-shadow`, `--scrim` | cards, dialogs, hover lift, a chosen segment (`shadow-tab`, with its own dark value), the dialog backdrop |
 | `--safe-top`, `--safe-bottom` | the iPhone's safe areas, non-zero only in the installed app |
 | `--ease-*`, `--duration-*` | motion, in the `@theme static` block (mirrored by `lib/ui/motion.ts`) |
 
-Every text pairing passes WCAG AA in both themes; check a new one before using it.
+Every text pairing passes WCAG AA in both themes, and `--line-s` clears 3:1 on `--surface`, `--sunk` and `--acc-soft`; `tests/lib/ui/contrast.test.ts` checks them, so add a new pairing there.
 
-**Lime is never used as text on the light background.** It appears only as a fill behind teal text (the active nav item, the leaderboard's first-place rank badge and podium block, large avatars, Getting started's step dots). Count badges are red (`--loss`, #351).
+**In dark, links are near-white and lime marks only the primary action and first place (#380).** `--link` is the dark ink, plainly underlined; a card or row title link (a stretched link, a bettor's name in a divided row) takes `text-ink` in both themes; and active navigation uses the `nav-active`, `tab-active` and `segment-active` tokens rather than `--primary`. Light mode's lime and `--wm-b` are fills or brand only.
+
+**Chip tones** come only from the semantic tokens, never `--primary`: `open` (acc-soft), `wait` (gold), `won` (win: a won bet or parlay, a winning outcome), `done` (sunk with ink: a resolved market, the owner's role), `lost` (loss) and `void` (sunk with ink2). `StatusChip` comes in `md` (28px) and `sm` (24px).
+
+**Lime is never used as text on the light background.** It appears only as a fill behind teal text (the phone tab bar's active pill, the leaderboard's first-place rank badge and podium block, large avatars, Getting started's step dots). Count badges are red (`--loss`, #351).
 
 ## Sizing and accessibility
 
 - **Targets:** every control is at least 44px tall. Primary buttons are 48px and compact ones 44px.
 - **Focus:** every control gets a visible ring: `:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }`.
-- **Corner radii:** cards 18px, list cards and sunken panels 14px (`--radius-tile`), buttons and inputs 12px, chips fully rounded (999px).
+- **Corner radii:** cards and the home hero 18px (`--radius-card`), list cards, sunken panels and segmented tracks 14px (`--radius-tile`), buttons and inputs 12px (`--radius-control`), segments, icon tiles and inline code 10px (`--radius-segment`), chips fully rounded (999px). Every corner is one of these; there's no `rounded-[Npx]`.
+- **Card padding:** 18px on phones and 24px from `md:` (`cardPaddingClass`), for `Card`, `SectionCard` and every card built by hand, the market card and the home hero included.
+- **Grid gaps:** a `lg:` grid of cards is 20px apart (`lg:gap-5`).
 - **Page padding:** 16px on phone, 80px on desktop with a 1120px max content width.
 - **Page widths:** `<Page width>` picks one of two centred columns, and the page's header, tabs and content always share its edges, so nothing is left-pinned with empty space on the right. See *Desktop layouts* below.
 - **Type sizes (px):**
@@ -86,16 +95,26 @@ Every text pairing passes WCAG AA in both themes; check a new one before using i
 |---|---|---|---|
 | H1 | 28 | 40 | 800 |
 | H2 | 19 | 21 | 800 |
-| Row title (`rowTitleClass`: a tile, task or leaderboard row) | 17 | 17 | 800 |
+| Row title (`rowTitleClass`: a tile, task, bet, parlay, catalog or leaderboard row) | 17 | 17 | 800 |
 | Body | 16 | 16 | normal |
+| UI text (`uiTextClass`: buttons, tabs, filter chips, the nav, messages, labels) | 15 | 15 | 700–800 |
 | Caption | 14 | 14 | normal |
+| Chip text (`chipTextClass`: status and category chips, chart labels) | 13 | 13 | 700–800 |
+| Micro text (`microTextClass`: count badges, chart axes) | 11 | 11 | 700–800 |
+| Hero figure (`figureHeroClass`: Home's balance, a parlay's summary) | 40 | 56 | 800, `-0.03em` |
+| Stat figure (`figureClass`: the economy card, the chart's end labels, large avatars' initials) | 24 | 28 | 800 |
+| Inline figure (`figureInlineClass`: Home's stat tiles, a parlay card's figures, awards, member stats) | 20 | 20 | 800 |
+
+The sizes live in `components/ui/page.tsx`; nothing else sets a `text-[Npx]` except the sign-in page, the 404 and the brand mark.
+
+- **Numbers (#382):** every DC amount goes through `formatDc` / `formatDcAmount` / `formatSignedDcAmount` (`lib/format/dc.ts`): en-US grouping from 1,000 ("2,577,831 DC"), a true minus (−) and a `+` on a gain. Animated numbers group too. An amount cell doesn't wrap. Tabular figures only where numbers line up in a column (the leaderboard's scores, the ledger, coin history, tooltips); a lone figure keeps proportional digits.
 
 - **Real elements only:** `<button>`, `<a>`, and `<label>` paired with its input. No clickable divs.
 - **Icon-only buttons** get an `aria-label`.
 - **Press and hover (#153):** every control shrinks to 97% on press. Under a mouse (not on touch), buttons, chips, tabs and nav items grow to 103% and change colour; tappable cards lift 2px onto a shadow instead (`hover-lift`). A row or tile inside a card, such as a list card, a podium place, or a member on Admin › Members or a home tile below `lg:`, never lifts: it sits on a flat `--sunk` tint (`hover-tint`), since a card floating inside a card reads as a button inside a button (#244). Reduced motion keeps the colour changes (and the lift's shadow) and drops the movement. Curves and durations come from the motion tokens in `globals.css`.
 - **Section cards:** a `SectionCard`'s `description` slot puts a caption line right under its heading (the weekly recap's date range); the card's body follows at the usual gap.
 - **List cards (#328):** a list item that opens one thing is a `ListCard` (`components/ui/list-card.tsx`); a sentence row (the feed) or a data row (the ledger) stays a divided row. A list card is the My bets parlay card: a `--line` hairline, 14px corners (`--radius-tile`), 14px padding on phones and 16px from `md:`, no shadow, tinting flush to its border under a mouse. Its title link stretches over it; other controls (Resolve, Submit, Approve) sit above the cover. Inside a section card the cards are 8px apart with no dividers. Solo, settled and cancelled bets, parlays, tasks, markets waiting to be resolved, the admin task catalog, pending approvals, the leaderboard, admin members and the home tiles are list cards; the feed, ledger, coin history, invites and a market's bet list are divided rows. Your own leaderboard card keeps the `--acc-soft` tint.
-- **Sliding pills:** the desktop nav's, the phone tab bar's and the sub-tabs' active pill all slide to the new tab the same way: 280ms on the iOS curve. On the tab bar the new tab's icon pops (to 118% and back) over the same 280ms, and its label's weight eases from bold to extrabold.
+- **Sliding pills:** the desktop nav's, the phone tab bar's and every segmented control's active pill all slide to the new tab the same way: 280ms on the iOS curve. On the tab bar the new tab's icon pops (to 118% and back) over the same 280ms, and its label's weight eases from bold to extrabold.
 
 ## Desktop layouts (#158)
 
@@ -159,7 +178,9 @@ Written for someone who has just been invited: get them oriented, then signed in
 | `OutcomeRow` | label, % and pool, bar, payout multiplier, state `add` / `inslip` / `disabled` / `none`, winner | Button variants with cva |
 | `SlipPick` | market, outcome, odds or stale | — |
 
-The shared primitives are in `components/ui/`: Button (primary / secondary / danger / quiet; md and sm), Field (label, hint and inline error), StatusChip, Card, Message (error / ok / gold), `SectionCard`, `EmptyState`, `SubNav`, `ShowMore`, `SearchField`, `FilterChips`, the confirm dialogs and the skeletons. Every repeated piece comes from these.
+The shared primitives are in `components/ui/`: Button (primary / secondary / danger / quiet; md and sm), Field (label, hint and inline error), StatusChip (six tones; md and sm), Card, Message (error / ok / gold), `SectionCard`, `EmptyState`, `SegmentedControl`, `SubNav`, `ShowMore`, `SearchField`, `FilterChips`, the confirm dialogs and the skeletons. Every repeated piece comes from these.
+
+`SegmentedControl` (`components/ui/segmented-control.tsx`, #381) is every segmented control: a `--sunk` track with the tile radius and 4px padding, 44px segments with the segment radius, and one `--segment-active` pill with an `--ink2` border (the 3:1 indicator) and `shadow-tab` that slides on `PILL_SLIDE` (still under reduced motion). `SubNav` is its link form, with tab state in the URL and `aria-current`; the theme control (radios), the slip's Solo/Parlay toggle (pressed buttons) and the chart's range (a Base UI toggle group) are its local forms.
 
 ### Chart data
 

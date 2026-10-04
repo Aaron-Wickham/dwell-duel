@@ -1,6 +1,6 @@
 # LMSR 3/5: Parlays with split stakes and a fixed multiplier (#334)
 
-**Spec:** `docs/superpowers/specs/2026-10-01-lmsr-pricing-design.md`, section 2 and the
+**Spec:** `docs/archive/superpowers/specs/2026-10-01-lmsr-pricing-design.md`, section 2 and the
 parts of section 3 about parlays. Parts 1 and 2 (0101, 0102) gave us the LMSR functions,
 the inert `parlay_legs.factor/shares` and `parlays.multiplier/payout` columns, `lmsr`
 markets for new creations, `place_slip_v3` and a trigger refusing parlay legs on them.

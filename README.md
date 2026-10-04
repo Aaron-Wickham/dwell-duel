@@ -15,8 +15,9 @@
 Members bet **Dwell Coin (DC)**, a play-money currency, on friendly
 questions like "Will the sermon run past noon?" or "Who wins Sunday's
 chili cook-off?". They earn more DC by completing Bible-study tasks.
-Markets use shared-pool (pari-mutuel) odds; bets can be combined into
-parlays; and everything that happens shows up in a live feed.
+A market maker sells shares at each outcome's current chance, so every
+bet's payout is fixed when it's placed; bets can be combined into parlays;
+and everything that happens shows up in a live feed.
 
 **Current release:** [v0.10.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.10.0-beta) · see the [changelog](CHANGELOG.md).
 
@@ -32,18 +33,20 @@ parlays; and everything that happens shows up in a live feed.
 - **Markets:** Yes/No, multiple choice (up to 6 outcomes) or Over/Under
   with a .5 line. Each has a live chance chart, a closing time and an edit
   history.
-- **Shared-pool odds with a seed:** each outcome's chance counts a 20 DC
-  seed, so a new market shows an even split from the start; winners split
-  exactly the real pool, and the seed is never paid out.
+- **Fixed payouts:** a bet buys shares at the current chance, which moves
+  the price, and the slip shows exactly what it pays if it wins. Winners are
+  paid their shares, rounded down to whole DC.
 - **One slip for every bet:** add outcomes from any market, mark each
   Solo or Parlay, and place them all at once.
-- **Parlays:** 2–10 legs, each priced from other members' money when its
-  market closes, capped at 5× a leg, 20× a parlay and 1,000 DC paid.
+- **Parlays:** 2–6 legs, one per market. The stake is split across the
+  legs, each buying shares at its market's price, so the multiplier and
+  payout are fixed when it's placed.
 - **Results with receipts:** resolving needs a reason and can carry
   photos, files or links. Admins can override (blocked if a past winner has
   already spent their winnings) or void (everyone is refunded).
 - **My bets:** solo bets and parlays together, under Open, Settled and
-  Cancelled. Bets can be cancelled until the market closes.
+  Cancelled. Bets are final; the Cancelled tab keeps bets cancelled before
+  October 2026, when that was allowed.
 
 **Coins, tasks and people**
 - **A ledger:** every DC movement is recorded, starting with a 100 DC
@@ -107,7 +110,8 @@ Copy `.env.local.example` to `.env.local` and fill in
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and
 `SUPABASE_SECRET_KEY` from `npx supabase status` (its `API_URL`,
 `PUBLISHABLE_KEY` and `SECRET_KEY`). Required variables are checked when
-the server boots (`lib/env/required.ts`).
+the server boots (`lib/env/required.ts`). Signing in locally needs your own
+Google OAuth client: see [Signing in locally](docs/GETTING-STARTED.md#signing-in-locally).
 
 ### Tests
 
@@ -191,6 +195,15 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
   and the dashboard's Ignored Build Step setting skips every non-production
   build, so previews are off and PRs are reviewed through the diff and CI.
   Local Docker Supabase is the dev and test environment.
+- **Monitoring.** Sentry captures errors when `NEXT_PUBLIC_SENTRY_DSN` is
+  set, and a Vercel build holding `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and
+  `SENTRY_PROJECT` uploads its source maps, then deletes them from the
+  output. healthchecks.io gets a ping from the daily keep-alive and from each
+  closing-alerts run (`HEALTHCHECKS_KEEP_ALIVE_URL`,
+  `HEALTHCHECKS_CLOSING_ALERTS_URL`) and emails when one is late or failed;
+  UptimeRobot watches `/api/health`, which answers 503 when the app can't
+  read Supabase. What each alarm means is in
+  [docs/OPERATIONS.md](docs/OPERATIONS.md#incidents).
 
 ### One-time setup (outside the code)
 
@@ -198,6 +211,13 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
   callback (`https://<project-ref>.supabase.co/auth/v1/callback`) as an
   authorized redirect URI, and its ID and secret entered under Supabase →
   Auth → Providers → Google.
+- **Direct Google sign-in** (so Google's chooser says "continue to
+  dwellduel.com"): add `https://www.dwellduel.com/auth/google` and
+  `https://dwellduel.com/auth/google` as redirect URIs on the same client,
+  list its client ID under Supabase → Auth → Providers → Google → Client
+  IDs, set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` in Vercel (Production) and
+  redeploy. Without the variable, sign-in uses Supabase's redirect. Brand
+  verification is in [docs/OPERATIONS.md](docs/OPERATIONS.md#google-sign-in-and-brand-verification).
 - **Required:** in Supabase → Auth → Providers, disable every provider
   except Google, and disable email sign-ups. Otherwise anyone could get a
   session from the public publishable key without going through the invite gate.
@@ -218,6 +238,12 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
   read deployments), which lets Deploy Production watch the build to READY;
   if the project belongs to a Vercel team, also set the team's id as the
   `VERCEL_TEAM_ID` variable. Keep Vercel's own failed-build email on as well.
+- **Monitors:** a healthchecks.io check each for keep-alive and
+  closing-alerts (paste its ping URL into the matching Vercel variable and
+  redeploy), an UptimeRobot HTTP monitor on
+  `https://www.dwellduel.com/api/health`, and the Sentry–Vercel and
+  Sentry–GitHub integrations, with `SENTRY_ORG` and `SENTRY_PROJECT` set in
+  Vercel beside the token.
 - **Before your first sign-in,** invite yourself in the SQL editor:
   `insert into public.allowed_emails (email) values ('you@gmail.com');`
 - **After it,** make yourself the owner, keyed off the verified
@@ -231,7 +257,9 @@ use the symbol's art from `components/brand/symbol-paths.ts`.
 Every pull request runs lint, the type check, a check that the generated
 database types match the migrations, the Vitest suite, a production build
 and the Playwright suite (`.github/workflows/ci.yml`) as three parallel
-jobs behind one required check, `ci-ok`, against a throwaway local
+jobs (`static`: migration order, lint, type check; `db`: generated types
+and DB tests; `web`: unit tests, build, Playwright) behind one required
+check, `ci-ok`, against a throwaway local
 Supabase, never the production database. A PR must be up to date with
 `main` to merge, so `main` itself isn't tested again: merging deploys.
 `ci-ok` has no bypass, so nothing merges red. CI also fails a PR whose new

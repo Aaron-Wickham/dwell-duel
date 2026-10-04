@@ -15,13 +15,14 @@ merge rules.
 2. **Build it** following [AGENTS.md](AGENTS.md), the conventions every change
    follows. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains how the app
    fits together.
-3. **Test it locally** (see the [README](README.md#development)): `npm test`,
-   `npm run test:e2e`, `npm run lint`.
+3. **Test it locally** (see the [README](README.md#development)): `npm run lint`,
+   `npm run typecheck`, `npm test`, `npm run test:e2e`.
 4. **Open a pull request** using the template. Link the issue it closes.
 5. **Merging needs:**
    - an approval from [@Aaron-Wickham](https://github.com/Aaron-Wickham)
      (the code owner). A new push after approval asks for a fresh review.
-   - CI's `ci-ok` check passing (lint, unit and DB tests, build, e2e);
+   - CI's `ci-ok` check passing (migration order, lint, type check, generated
+     types, unit and DB tests, build, e2e);
    - the branch up to date with `main`. After another PR merges, update
      yours ("Update branch", or `gh pr update-branch <n>`) and CI runs
      again, so what was tested is what merges. CI runs on PRs only, and a

@@ -1,6 +1,6 @@
 # LMSR 4/5: Convert open markets at release and cut over (#335)
 
-**Spec:** `docs/superpowers/specs/2026-10-01-lmsr-pricing-design.md`, section 3 "Conversion
+**Spec:** `docs/archive/superpowers/specs/2026-10-01-lmsr-pricing-design.md`, section 3 "Conversion
 at release" and decision 9. Parts 1–3 (0101, 0102, 0104) gave us the LMSR functions, lmsr
 markets for new creations, `place_slip_v3`/`v4`, fixed parlays and the parlay book.
 

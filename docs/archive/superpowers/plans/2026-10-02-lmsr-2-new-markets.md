@@ -1,6 +1,6 @@
 # LMSR 2/5: New markets priced by LMSR (#333)
 
-**Spec:** `docs/superpowers/specs/2026-10-01-lmsr-pricing-design.md`, section 1 and the
+**Spec:** `docs/archive/superpowers/specs/2026-10-01-lmsr-pricing-design.md`, section 1 and the
 parts of section 3 for delivery item 2. Part 1 (#331, 0101) gave us `lmsr_cost`,
 `lmsr_price`, `lmsr_buy`, `lib/markets/lmsr.ts` and the inert columns.
 

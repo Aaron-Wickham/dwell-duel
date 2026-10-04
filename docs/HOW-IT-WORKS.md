@@ -82,7 +82,7 @@ The Markets page lists open markets **soonest to close first**, so one
 closing within the hour is at the top. A market closing within a day
 says so ("Closes in 2h"). Markets past their close time with no result
 yet are grouped under Awaiting resolution, after the open ones however
-many there are (each group has its own Show more), and Resolved and Voided markets
+many there are (open and awaiting markets each have their own Show more), and Resolved and Voided markets
 follow as two groups, each most recently settled first: the order they were resolved or
 voided in, not the order they were created in. A voided market shows the
 day it was voided.
@@ -98,7 +98,7 @@ Open tab's: markets still taking bets.
 
 For a question that comes round every week, **Duplicate** on any market
 opens Create market already filled in with its question, description,
-kind and outcomes (or line). The closing time moves on by one or more
+category, kind and outcomes (or line). The closing time moves on by one or more
 whole weeks, keeping the same local time, until it's in the future. Nothing is created until
 you tap Create market, so you can change anything first.
 
@@ -496,9 +496,9 @@ sign back in. Your other devices keep theirs.
 
 | Role | Can also…
 |---|---|
-| **Member** | Bet, create and resolve their own markets (and void them before they close), submit tasks |
+| **Member** | Bet, create markets and edit their own (wording, category, and the closing time while they have no money on it), resolve their own once they close and void them before they close (unless they have money on them), submit tasks |
 | **Reviewer** | Approve and reject task submissions (not their own), and resolve closed markets they have no stake in |
-| **Admin** | Invite people, manage tasks, resolve, override or void any market, change any market's category, rename, merge and hide categories, delete any comment, view members and the full ledger |
+| **Admin** | Invite people, manage tasks, resolve, override or void any market, move any market's closing time or reopen it, change any market's category, rename, merge and hide categories, delete any comment, view members and the full ledger |
 | **Owner** (exactly one) | Adjust balances, grant and remove roles, remove a member, and delete a market or task that hasn't been used |
 
 Reviewers and above get a red count on the **Admin** button for what is
@@ -533,8 +533,8 @@ member can make at most:
 | Reactions | 60 a minute, 1,000 a day |
 | Task submissions | 30 a day |
 
-Each count starts with your first one and resets once its minute, hour
-or day has passed. Going over just refuses that one, with a message
+Each count starts with your first one and resets once its minute or day
+has passed. Going over just refuses that one, with a message
 saying so; nothing else changes. Admins and the owner have no limits.
 Notifications stay on your ten most recently used devices: turning them
 on for an eleventh turns off the one you've used least recently.
@@ -585,8 +585,9 @@ sign-in. The owner, who runs DwellDuel, can see everything stored in the
 database.
 
 **Where it's kept:** the database, sign-ins and uploaded files are with
-Supabase, and the app runs on Vercel, both in the US (Ohio). Encrypted
-nightly backups are kept in a private GitHub repository.
+Supabase, and the app runs on Vercel, both in the US (Ohio). Error reports go to
+Sentry, in the US. Encrypted nightly backups are kept in a private GitHub
+repository.
 
 **How long it's kept**
 
@@ -644,7 +645,8 @@ or reach them through
   markets and wins, plus the result or void of any market you have a bet or
   a parlay leg on, and the void of any market you made).
 - **Finding a market:** on Markets, type in the search box to find a market
-  by any words in its title (not case-sensitive, up to 80 characters). It
+  whose title contains what you typed (not case-sensitive, up to 80
+  characters). It
   combines with the Open, Awaiting and Resolved tabs and the category chips,
   and lists every match in one list, newest first, rather than in sections.
   Your own bets are under My bets.

@@ -25,6 +25,10 @@ declare global {
   }
 }
 
+// Google's script being blocked or unreachable (a content blocker, a privacy browser, a bad network)
+// is expected, and the fallback button covers it, so it isn't reported (#363). Everything else is.
+class GoogleUnavailable extends Error {}
+
 let loading: Promise<GoogleId> | null = null
 
 function loadGoogleId(): Promise<GoogleId> {
@@ -36,7 +40,7 @@ function loadGoogleId(): Promise<GoogleId> {
     script.src = GIS_SCRIPT_SRC
     script.async = true
     script.onload = ready
-    script.onerror = () => reject(new Error('Google sign-in script failed to load'))
+    script.onerror = () => reject(new GoogleUnavailable('Google sign-in script failed to load'))
     document.head.appendChild(script)
   }).catch((error: unknown) => {
     loading = null
@@ -59,8 +63,14 @@ async function fetchNonce(next: string | null, signal: AbortSignal): Promise<str
   return nonce
 }
 
+// Still waiting on Google's script is Google being unreachable; still waiting on our nonce is ours.
 function timeout(ms: number): Promise<never> {
-  return new Promise((_, reject) => setTimeout(() => reject(new Error('Google sign-in timed out loading')), ms))
+  return new Promise((_, reject) =>
+    setTimeout(() => {
+      const Timeout = window.google?.accounts?.id ? Error : GoogleUnavailable
+      reject(new Timeout('Google sign-in timed out loading'))
+    }, ms),
+  )
 }
 
 function prefersDark(): boolean {
@@ -108,7 +118,7 @@ export function GoogleSignIn({ clientId }: { clientId: string }) {
       })
       .catch((error: unknown) => {
         if (cancelled) return
-        reportClientError(error)
+        if (!(error instanceof GoogleUnavailable)) reportClientError(error)
         setState('failed')
       })
     return () => {

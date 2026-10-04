@@ -15,7 +15,7 @@ const SKIPPED_VIEW_TRANSITION = new Set([
   'AbortError: Transition was skipped',
 ])
 
-type FilterableEvent = { exception?: { values?: { type?: string; value?: string }[] } }
+type FilterableEvent = { message?: string; exception?: { values?: { type?: string; value?: string }[] } }
 
 // A DOMException with a stack arrives as type + value; one without is a synthetic Error whose value
 // already reads "Name: message".
@@ -23,6 +23,15 @@ export function isSkippedViewTransition(event: FilterableEvent): boolean {
   return (event.exception?.values ?? []).some(
     ({ type, value }) => SKIPPED_VIEW_TRANSITION.has(`${type}: ${value}`) || (value !== undefined && SKIPPED_VIEW_TRANSITION.has(value)),
   )
+}
+
+// What the browser reports in place of an error thrown by a cross-origin script (on /sign-in, Google's):
+// no message, no stack, nothing to act on (#363). The SDK's own filter for it lives in an integration
+// that defaultIntegrations: false leaves out.
+const CROSS_ORIGIN_SCRIPT_ERROR = 'Script error.'
+
+export function isCrossOriginScriptError(event: FilterableEvent): boolean {
+  return event.message === CROSS_ORIGIN_SCRIPT_ERROR || (event.exception?.values ?? []).some(({ value }) => value === CROSS_ORIGIN_SCRIPT_ERROR)
 }
 
 // Errors only: no tracing (an absent tracesSampleRate switches it off, where 0 would keep the span
@@ -34,7 +43,7 @@ export function sentryOptions() {
     release: process.env.NEXT_PUBLIC_SW_VERSION,
     sendDefaultPii: false,
     beforeSend: <T extends Parameters<typeof scrubEvent>[0] & FilterableEvent>(event: T): T | null =>
-      isSkippedViewTransition(event) ? null : scrubEvent(event),
+      isSkippedViewTransition(event) || isCrossOriginScriptError(event) ? null : scrubEvent(event),
     beforeBreadcrumb: () => null,
   }
 }

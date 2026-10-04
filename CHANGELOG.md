@@ -14,6 +14,7 @@ the hood**, **Tests**. Add a line under `## Unreleased
 - **The daily keep-alive cron passes again.** Its idempotency-key cleanup had failed every run in production with "permission denied", because the production database never gave the server read and write rights on three tables that local databases do. The server can now read and write every table there, as it does locally, and new tables get the same rights.
 
 ### Under the hood
+- **Less noise in Sentry from sign-in.** A blocked or unreachable Google sign-in script no longer reports an error, since the page already falls back to the other sign-in button, and the detail-free "Script error." browsers report for Google's script is dropped (#363).
 - **Readable production stack traces in Sentry.** A Vercel build holding `SENTRY_AUTH_TOKEN` uploads its source maps to Sentry under the deploy's release and links the release to its commit, then deletes them from the output, so nothing public changes. Builds without the token (CI, e2e, local) are unchanged, and an upload that fails only warns.
 
 ## v0.10.0-beta — 2026-10-03

@@ -1160,7 +1160,11 @@ value never stops production booting.
   details. `scrubEvent` removes the user, cookies, request body,
   headers and query string from every event, and `beforeSend` drops a view
   transition the browser skipped (`isSkippedViewTransition`: a resize or a
-  hidden tab mid-transition, which react-dom leaves unhandled). Source maps: a build that
+  hidden tab mid-transition, which react-dom leaves unhandled) and the bare
+  `Script error.` a browser reports for a cross-origin script
+  (`isCrossOriginScriptError`). Sign-in's fallback to Supabase's Google button
+  is not reported when Google's script is blocked or never arrives, only when
+  something of ours fails (the nonce, `initialize`, `renderButton`). Source maps: a build that
   holds `SENTRY_AUTH_TOKEN` (Vercel's, with `SENTRY_ORG` and `SENTRY_PROJECT`,
   which the Sentry–Vercel integration set) is wrapped in `withSentryConfig`
   (`next.config.ts`), which uploads hidden source maps under the deploy's

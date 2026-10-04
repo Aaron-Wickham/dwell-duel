@@ -10,6 +10,9 @@ the hood**, **Tests**. Add a line under `## Unreleased
 
 ## Unreleased
 
+### Fixes
+- **The daily keep-alive cron passes again.** Its idempotency-key cleanup had failed every run in production with "permission denied", because the production database never gave the server read and write rights on three tables that local databases do. The server can now read and write every table there, as it does locally, and new tables get the same rights.
+
 ### Under the hood
 - **Readable production stack traces in Sentry.** A Vercel build holding `SENTRY_AUTH_TOKEN` uploads its source maps to Sentry under the deploy's release and links the release to its commit, then deletes them from the output, so nothing public changes. Builds without the token (CI, e2e, local) are unchanged, and an upload that fails only warns.
 

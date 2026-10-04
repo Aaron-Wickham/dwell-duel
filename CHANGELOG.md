@@ -21,6 +21,7 @@ the hood**, **Tests**. Add a line under `## Unreleased
 - **The old Sign in with Google button is back.** It replaces Google's own button and still goes straight to Google, so Google's account chooser still says "continue to dwellduel.com". Nothing of Google's loads on the page any more (#366).
 
 ### Under the hood
+- **More Claude Code setup.** Hooks that lint each edited file as CI does and refuse hand edits to the generated database types and `.env` files; `new-route` and `pr-ready` skills; `money-path-reviewer` and `conventions-reviewer` agents; and the context7 docs server in `.mcp.json`.
 - **Readable stack traces in Sentry, for real this time.** Vercel never had `SENTRY_ORG` or `SENTRY_PROJECT`, so every build skipped the source-map upload added before; `next.config.ts` now defaults them to `dwellduel` and `dwell-duel` (#370).
 - **The scale seeder makes today's data.** Its markets are priced by the market maker and its bets and parlays go through the slip's own function, in order, so the seed matches what the app makes and about 70 markets stay open to bet on; its parlay step, which had placed nothing since bets went final, works again (#373).
 - **Tidier code and setup notes.** The unused `chip` button size is gone, a comment on parlays riding an outcome is current, and the local Google sign-in notes agree on where the keys go (#374, #375).

@@ -345,7 +345,7 @@ describe('press feedback', () => {
     }
   })
 
-  it('gives every Button variant a hover colour as well as the grow', () => {
+  it('gives every Button variant a hover colour, since nothing grows on hover (#383)', () => {
     for (const variant of ['primary', 'secondary', 'danger', 'quiet'] as const) {
       const classes = buttonVariants({ variant }).split(' ')
       expect(classes).toContain('pressable')

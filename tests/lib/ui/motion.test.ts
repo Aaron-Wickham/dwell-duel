@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
-import { DURATION, EASE, ICON_POP, PILL_SLIDE, PILL_TRANSITION, cssEase } from '@/lib/ui/motion'
+import * as motion from '@/lib/ui/motion'
+import { DURATION, EASE, PILL_SLIDE, PILL_TRANSITION, cssEase } from '@/lib/ui/motion'
 
 const root = path.resolve(import.meta.dirname, '../../..')
 const css = readFileSync(path.join(root, 'app/globals.css'), 'utf8')
@@ -45,8 +46,22 @@ describe('motion tokens', () => {
     expect(PILL_TRANSITION).toEqual({ type: 'tween', duration: DURATION.slide / 1000, ease: [...EASE.ios] })
   })
 
-  it('pops the tab icon over the pill’s own slide', () => {
-    expect(ICON_POP).toMatchObject({ duration: PILL_TRANSITION.duration, ease: PILL_TRANSITION.ease })
+  // #383: the pill's slide alone says which tab you're on.
+  it('has no tab icon pop', () => {
+    expect(motion).not.toHaveProperty('ICON_POP')
+  })
+
+  // #383: a short cross-fade, not a cut, and nothing moves.
+  it('cross-fades view transitions under both kinds of reduced motion', () => {
+    const device = /@media \(prefers-reduced-motion: reduce\) \{\s*::view-transition-group\(\*\)([\s\S]*?)\n\}/.exec(css)?.[0] ?? ''
+    const setting = css.slice(css.indexOf(':root[data-motion="reduce"]::view-transition-group(*)'))
+    for (const rules of [device, setting]) {
+      expect(rules).toMatch(/::view-transition-group\(\*\) \{\s*animation-duration: 0s !important;/)
+      expect(rules).toMatch(/::view-transition-old\(\.page-exit\) \{\s*animation: var\(--duration-fast\) ease-out both vt-fade reverse;/)
+      expect(rules).toMatch(/::view-transition-new\(\.page-enter\) \{\s*animation: var\(--duration-fast\) ease-out both vt-fade;/)
+      expect(rules).toMatch(/::view-transition-new\(\.nav-forward\),/)
+    }
+    expect(css).not.toMatch(/::view-transition-(old|new)\(\*\)[^{]*\{\s*animation-duration: 0s/)
   })
 
   it('keeps every curve in the token block or its mirror', () => {

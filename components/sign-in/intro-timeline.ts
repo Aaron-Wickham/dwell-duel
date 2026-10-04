@@ -1,10 +1,14 @@
+import { DURATION } from '@/lib/ui/motion'
+
 // The sign-in hero's sequence, in ms from its first frame (the approved design on #329). The CSS
-// in globals.css ("Sign-in intro") uses the same moments as its animation delays, and the
-// sign-in-draw keyframes' stops are where each bet's step is revealed; change them together.
+// in globals.css ("Sign-in intro") reads its delays from INTRO_CSS_DELAYS, and the sign-in-draw
+// keyframes' stops are where each bet's step is revealed; change those together.
 export const INTRO = {
   // The leaves grow in over the centred symbol (the launch screen's `launch-leaf`) until here,
   // then the symbol shrinks into the wordmark over DURATION.sheet.
   shrinkAt: 900,
+  // Just before that flight lands, the flying symbol cross-fades into the wordmark's own.
+  swapAt: 1250,
   cardAt: 1100,
   // The chart draws, and the copy below the card rises in.
   drawAt: 1300,
@@ -15,6 +19,18 @@ export const INTRO = {
   ],
   // The last count has settled; the page drops the intro and rests on the final frame.
   endAt: 2600,
+} as const
+
+// When each CSS step starts. The pre-paint script that starts the intro (sign-in-intro.tsx) writes
+// these onto <html> as custom properties, and globals.css uses them as animation delays, so the CSS
+// can't drift from INTRO.
+export const INTRO_CSS_DELAYS = {
+  '--intro-backdrop-at': INTRO.shrinkAt,
+  '--intro-swap-at': INTRO.swapAt,
+  '--intro-hide-at': INTRO.shrinkAt + DURATION.sheet,
+  '--intro-card-at': INTRO.cardAt,
+  '--intro-draw-at': INTRO.drawAt,
+  '--intro-bet-at': INTRO.bets[0].at,
 } as const
 
 // A hard-coded sample: signed-out visitors can't read markets, and real questions mustn't leak.

@@ -298,9 +298,9 @@
   user-select: none;
 }
 
-/* The native press: controls give under the finger. Under a mouse they also grow a little as it
-   comes over them (#155), only where hovering is real: a tap on a phone would leave the hover stuck.
-   Reduced motion swaps the press for a dim and drops the grow, keeping the colour changes. */
+/* The native press: controls give under the finger. Under a mouse a control changes colour and
+   doesn't grow (#383 reversed #155's 103%: a growing label fought the sliding pills and read as a
+   landing page). Reduced motion swaps the press for a dim, keeping the colour changes. */
 @utility pressable {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -315,12 +315,6 @@
     text-decoration-color var(--duration-hover) ease-out,
     text-decoration-thickness var(--duration-hover) ease-out;
 
-  @media (hover: hover) and (pointer: fine) {
-    &:hover:not(:active, :disabled, [aria-disabled="true"]) {
-      scale: 1.03;
-    }
-  }
-
   /* A control inside a pressable card presses alone; the card stays put. */
   &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
     scale: 0.97;
@@ -331,10 +325,6 @@
       color var(--duration-hover) ease-out,
       background-color var(--duration-hover) ease-out,
       border-color var(--duration-hover) ease-out;
-
-    &:hover:not(:active, :disabled, [aria-disabled="true"]) {
-      scale: none;
-    }
 
     &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
       scale: none;
@@ -348,10 +338,6 @@
       background-color var(--duration-hover) ease-out,
       border-color var(--duration-hover) ease-out;
 
-    &:hover:not(:active, :disabled, [aria-disabled="true"]) {
-      scale: none;
-    }
-
     &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
       scale: none;
       opacity: 0.7;
@@ -359,13 +345,11 @@
   }
 }
 
-/* Cards and rows lift toward a mouse instead of growing: up 2px, onto a shadow. Always with
-   pressable, which carries the transition; `.pressable` in the selector outranks its grow.
-   Reduced motion keeps the shadow and drops the move. */
+/* A standalone card lifts toward a mouse: up 2px, onto a shadow. Always with pressable, which
+   carries the transition. Reduced motion keeps the shadow and drops the move. */
 @utility hover-lift {
   @media (hover: hover) and (pointer: fine) {
     &.pressable:hover:not(:active) {
-      scale: none;
       translate: 0 -2px;
       box-shadow: var(--lift-shadow);
     }
@@ -379,6 +363,29 @@
     :root[data-motion="reduce"] &.pressable:hover:not(:active) {
       translate: none;
     }
+  }
+}
+
+/* A nav link a sliding pill passes under: its colour cross-fades over the pill's own slide, so the
+   pill never covers a label still in its old colour (#383). With pressable, which it outranks.
+   Reduced motion moves the pill at once, so the colour changes at once too. */
+@utility pill-label {
+  &.pressable {
+    transition:
+      scale var(--duration-press) ease-out,
+      color var(--duration-slide) var(--ease-ios),
+      background-color var(--duration-hover) ease-out,
+      border-color var(--duration-hover) ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &.pressable {
+      transition: background-color var(--duration-hover) ease-out;
+    }
+  }
+
+  :root[data-motion="reduce"] &.pressable {
+    transition: background-color var(--duration-hover) ease-out;
   }
 }
 
@@ -402,10 +409,6 @@
   }
 
   @media (hover: hover) and (pointer: fine) {
-    &.pressable:hover:not(:active) {
-      scale: none;
-    }
-
     &.pressable:hover:not(:active)::before {
       opacity: 1;
     }
@@ -641,19 +644,37 @@
   animation: none;
 }
 
+/* Reduced motion keeps a short cross-fade instead of a hard cut (#383): nothing slides or rises,
+   and no group moves between the old and new boxes. The chrome above keeps its own rules. */
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(*),
-  ::view-transition-new(*),
   ::view-transition-group(*) {
     animation-duration: 0s !important;
     animation-delay: 0s !important;
   }
+  ::view-transition-old(.nav-forward),
+  ::view-transition-old(.nav-back),
+  ::view-transition-old(.page-exit) {
+    animation: var(--duration-fast) ease-out both vt-fade reverse;
+  }
+  ::view-transition-new(.nav-forward),
+  ::view-transition-new(.nav-back),
+  ::view-transition-new(.page-enter) {
+    animation: var(--duration-fast) ease-out both vt-fade;
+  }
 }
-:root[data-motion="reduce"]::view-transition-old(*),
-:root[data-motion="reduce"]::view-transition-new(*),
 :root[data-motion="reduce"]::view-transition-group(*) {
   animation-duration: 0s !important;
   animation-delay: 0s !important;
+}
+:root[data-motion="reduce"]::view-transition-old(.nav-forward),
+:root[data-motion="reduce"]::view-transition-old(.nav-back),
+:root[data-motion="reduce"]::view-transition-old(.page-exit) {
+  animation: var(--duration-fast) ease-out both vt-fade reverse;
+}
+:root[data-motion="reduce"]::view-transition-new(.nav-forward),
+:root[data-motion="reduce"]::view-transition-new(.nav-back),
+:root[data-motion="reduce"]::view-transition-new(.page-enter) {
+  animation: var(--duration-fast) ease-out both vt-fade;
 }
 
 /* The nav's pending hint (components/nav/nav-pending-hint.tsx) waits 120ms before showing, so
@@ -745,8 +766,9 @@
 
 /* Sign-in intro (components/sign-in/sign-in-intro.tsx). Plays only while the pre-paint script's
    data-sign-in-intro is on <html>: once a session, never under reduced motion. Without it every
-   piece rests on its final frame, which is also where each animation ends. The delays are INTRO in
-   components/sign-in/intro-timeline.ts; IntroDirector flies the symbol into the wordmark. */
+   piece rests on its final frame, which is also where each animation ends. The delays are the
+   --intro-*-at properties that script writes from INTRO_CSS_DELAYS
+   (components/sign-in/intro-timeline.ts); IntroDirector flies the symbol into the wordmark. */
 .sign-in-intro {
   display: none;
 }
@@ -758,28 +780,28 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  animation: sign-in-hide var(--duration-fast) 1350ms forwards;
+  animation: sign-in-hide var(--duration-fast) var(--intro-hide-at) forwards;
 }
 :root[data-sign-in-intro] .sign-in-intro-backdrop {
-  animation: sign-in-fade-out var(--duration-slide) var(--ease-ios) 900ms forwards;
+  animation: sign-in-fade-out var(--duration-slide) var(--ease-ios) var(--intro-backdrop-at) forwards;
 }
 :root[data-sign-in-intro] .sign-in-intro-symbol {
-  animation: sign-in-fade-out var(--duration-fast) var(--ease-ios) 1250ms forwards;
+  animation: sign-in-fade-out var(--duration-fast) var(--ease-ios) var(--intro-swap-at) forwards;
 }
 :root[data-sign-in-intro] .sign-in-intro-wordmark {
-  animation: sign-in-fade-in var(--duration-fast) var(--ease-ios) 1250ms both;
+  animation: sign-in-fade-in var(--duration-fast) var(--ease-ios) var(--intro-swap-at) both;
 }
 :root[data-sign-in-intro] .sign-in-intro-card {
-  animation: sign-in-rise var(--duration-page) var(--ease-ios) 1100ms both;
+  animation: sign-in-rise var(--duration-page) var(--ease-ios) var(--intro-card-at) both;
 }
 :root[data-sign-in-intro] .sign-in-intro-text {
-  animation: sign-in-rise var(--duration-page) var(--ease-ios) 1300ms both;
+  animation: sign-in-rise var(--duration-page) var(--ease-ios) var(--intro-draw-at) both;
 }
 :root[data-sign-in-intro] .sign-in-intro-draw {
-  animation: sign-in-draw calc(var(--duration-sheet) * 2) var(--ease-ios) 1300ms both;
+  animation: sign-in-draw calc(var(--duration-sheet) * 2) var(--ease-ios) var(--intro-draw-at) both;
 }
 :root[data-sign-in-intro] .sign-in-intro-bet {
-  animation: sign-in-fade-in var(--duration-enter) var(--ease-ios) 1900ms both;
+  animation: sign-in-fade-in var(--duration-enter) var(--ease-ios) var(--intro-bet-at) both;
 }
 @keyframes sign-in-fade-out {
   to {

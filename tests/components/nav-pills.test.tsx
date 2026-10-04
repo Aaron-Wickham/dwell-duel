@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { HTMLAttributes } from 'react'
 import { render, screen, within } from '@testing-library/react'
-import { ICON_POP, PILL_TRANSITION } from '@/lib/ui/motion'
+import { PILL_TRANSITION } from '@/lib/ui/motion'
 
 let pathname = '/markets'
 vi.mock('next/navigation', () => ({ usePathname: () => pathname }))
@@ -68,17 +68,22 @@ describe('the nav pills (#154)', () => {
     expect(byId.get('nav-pill')).toBe(PILL_TRANSITION)
   })
 
-  it('pops the newly active icon, never on first render', () => {
+  // #383: the pill's slide alone marks the tab; the icon doesn't pop as well.
+  it('animates only the pills, never an icon', () => {
     render(<Nav />)
-    const pops = spans.filter((s) => s.animate)
-    expect(pops).toHaveLength(5)
-    for (const pop of pops) {
-      expect(pop.initial).toBe(false)
-      expect(pop.transition).toBe(ICON_POP)
-    }
+    expect(spans.filter((s) => s.animate)).toHaveLength(0)
+    expect(spans.every((s) => s.layoutId === 'tabbar-pill' || s.layoutId === 'nav-pill')).toBe(true)
+  })
+
+  // #383: the label and icon change colour over the pill's slide, so it never covers one mid-way.
+  it('cross-fades each link’s colour over the pill’s slide', () => {
+    render(<Nav />)
+    for (const link of within(tabBar()).getAllByRole('link')) expect(link).toHaveClass('pill-label')
     const markets = within(tabBar()).getByRole('link', { name: 'Markets' })
-    expect(markets.querySelector('[data-pop]')).toHaveAttribute('data-pop', '[1,1.18,1]')
-    expect(within(tabBar()).getByRole('link', { name: 'Feed' }).querySelector('[data-pop]')).toHaveAttribute('data-pop', '1')
+    const iconWell = markets.querySelector('[data-layout-id="tabbar-pill"]')!.parentElement!
+    expect(iconWell).toHaveClass('transition-colors', 'duration-(--duration-slide)', 'ease-ios', 'motion-reduce:transition-none')
+    const desktop = screen.getAllByRole('navigation', { name: 'Primary' })[0]
+    for (const link of within(desktop).getAllByRole('link')) expect(link).toHaveClass('pill-label')
   })
 
   it('eases the label weight instead of snapping it', () => {

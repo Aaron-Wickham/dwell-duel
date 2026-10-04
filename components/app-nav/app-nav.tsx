@@ -12,7 +12,7 @@ import { AttentionBadge, AttentionNote } from '@/components/ui/attention-badge'
 import { Avatar } from '@/components/ui/avatar'
 import { NavPendingHint } from '@/components/nav/nav-pending-hint'
 import { haptics } from '@/lib/haptics'
-import { ICON_POP, PILL_TRANSITION } from '@/lib/ui/motion'
+import { PILL_TRANSITION } from '@/lib/ui/motion'
 import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
 import { BalanceNumber } from './balance-number'
@@ -104,7 +104,7 @@ function DesktopLink({
       aria-describedby={attention > 0 ? 'admin-attention-desktop' : undefined}
       title={label}
       className={cn(
-        `pressable relative isolate inline-flex min-h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap rounded-full ${uiTextClass} font-bold no-underline xl:px-3.5`,
+        `pressable pill-label relative isolate inline-flex min-h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap rounded-full ${uiTextClass} font-bold no-underline xl:px-3.5`,
         active ? 'text-on-nav-active' : 'text-ink2 hover:bg-sunk hover:text-ink',
       )}
     >
@@ -247,13 +247,13 @@ export function AppNav({
                 aria-label={tabAriaLabel(item)}
                 onClick={haptics.tap}
                 className={cn(
-                  'pressable relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-tile text-xs leading-[1.1] no-underline',
+                  'pressable pill-label relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-tile text-xs leading-[1.1] no-underline',
                   isActive ? 'text-ink' : 'text-ink2',
                 )}
               >
                 <span
                   className={cn(
-                    'relative isolate flex h-[30px] w-[52px] items-center justify-center rounded-full',
+                    'relative isolate flex h-[30px] w-[52px] items-center justify-center rounded-full transition-colors duration-(--duration-slide) ease-ios motion-reduce:transition-none',
                     isActive && 'text-on-tab-active',
                   )}
                 >
@@ -268,16 +268,7 @@ export function AppNav({
                       transition={PILL_TRANSITION}
                     />
                   )}
-                  {/* The newly active icon pops as the pill arrives; initial={false} keeps a cold
-                      launch still, and MotionConfig drops it under reduced motion. */}
-                  <m.span
-                    className="flex"
-                    initial={false}
-                    animate={{ scale: isActive ? [1, 1.18, 1] : 1 }}
-                    transition={ICON_POP}
-                  >
-                    <Icon aria-hidden="true" className="size-[22px]" />
-                  </m.span>
+                  <Icon aria-hidden="true" className="size-[22px]" />
                 </span>
                 {/* Manrope is variable, so the weight eases between bold and extrabold; the label
                     is centred in a fixed-width column, so nothing beside it moves. */}

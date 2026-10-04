@@ -1113,11 +1113,18 @@ WAAPI; `tests/lib/ui/motion.test.ts` keeps the two equal and rejects a
 phone tab bar's, each a Motion `layoutId`, and `SegmentedControl`'s WAAPI one,
 which slides under all four segmented controls: SubNav, the theme control, the
 slip's Solo/Parlay toggle and the chart's range) share one
-slide, `PILL_SLIDE` / `PILL_TRANSITION`: 280ms on the iOS curve.
-The three dialogs share `components/ui/dialog-classes.ts`. `pressable`
-shrinks every control on press and, under a mouse only, grows it; a
-tappable card adds `hover-lift` and lifts onto `--lift-shadow`
-instead, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244; My bets' parlay and bet tiles too, #269), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins).
+slide, `PILL_SLIDE` / `PILL_TRANSITION`: 280ms on the iOS curve, and the
+nav links they slide under (`pill-label`) cross-fade their colour over the
+same 280ms. The three dialogs share `components/ui/dialog-classes.ts`. `pressable`
+shrinks every control on press and never grows one on hover (#383); a
+standalone tappable card adds `hover-lift` and lifts onto `--lift-shadow`
+under a mouse, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244; My bets' parlay and bet tiles too, #269), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins). `AnimatedNumber` counts
+only when its value changes after mount, so a page load shows final figures.
+Under reduced motion every page transition is a `--duration-fast`
+cross-fade with nothing moving. The sign-in intro's CSS delays are
+`--intro-*-at` properties its pre-paint script writes from
+`INTRO_CSS_DELAYS` (`components/sign-in/intro-timeline.ts`), so they can't
+drift from the script's own timeline.
 
 **Getting started.** Home's onboarding card (`components/home/onboarding-card.tsx`)
 has five steps (four on a browser that can never get push, which

@@ -165,8 +165,9 @@ a line to `CHANGELOG.md` under the next release.
   another control or finished a text selection); any other control in
   the card sits in a `relative z-[1]` wrapper. `press-feedback.test.tsx`
   guards the listed components. Under a mouse (`(hover: hover) and
-  (pointer: fine)`), `pressable` also grows a control to 103%; a
-  standalone card adds `hover-lift` to lift onto `--lift-shadow` instead.
+  (pointer: fine)`) a `pressable` only changes colour; nothing grows on
+  hover (#383 reversed #155's 103%, which fought the sliding pills). A
+  standalone card adds `hover-lift` to lift onto `--lift-shadow`.
   A row or tile *inside* a card never lifts (#244: a card floating in a
   card reads as a button in a button): it takes `hover-tint`, a flat
   `--sunk` panel drawn a little wider than a divided list's row, or flush
@@ -178,8 +179,12 @@ a line to `CHANGELOG.md` under the next release.
   `duration-(--duration-fast)` in markup), mirrored for script by
   `lib/ui/motion.ts` (`EASE`, `DURATION`, `PILL_SLIDE`, `PILL_TRANSITION`);
   a test keeps them equal and fails on a `cubic-bezier` anywhere else.
-  Every sliding pill uses the pill slide, and every dialog takes
-  `components/ui/dialog-classes.ts`.
+  Every sliding pill uses the pill slide, and a link it slides under
+  takes `pill-label`, so its colour cross-fades over the same 280ms; every
+  dialog takes `components/ui/dialog-classes.ts`. Reduced motion turns page
+  transitions into a `--duration-fast` cross-fade, never a cut. Times in
+  CSS that script also keeps (the sign-in intro's) are custom properties
+  script writes from its constants, not copies.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.
 - **Every action that creates something is retry-safe,** not only the ones
   that move coins: `experimental.useOffline` replays an action whose
@@ -198,7 +203,8 @@ a line to `CHANGELOG.md` under the next release.
   set by the root layout before any JS runs. `motion-reduce:` covers both
   the device setting and Settings' choice; plain CSS repeats each
   `prefers-reduced-motion` rule under `:root[data-motion="reduce"]`; an
-  animated number uses `AnimatedNumber`, never `NumberFlow` directly, and
+  animated number uses `AnimatedNumber`, never `NumberFlow` directly (it
+  counts only on a change after mount, never on first render), and
   script checks `reducedMotion()` from `lib/ui/reduced-motion.ts`.
 - **Segmented tabs are `SubNav`** (`components/ui/sub-nav.tsx`, a client
   component whose pill slides between tabs), with tab state in the URL, as My bets' `?tab=` and the admin sections do.

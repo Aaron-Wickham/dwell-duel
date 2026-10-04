@@ -19,7 +19,7 @@ A market maker sells shares at each outcome's current chance, so every
 bet's payout is fixed when it's placed; bets can be combined into parlays;
 and everything that happens shows up in a live feed.
 
-**Current release:** [v0.10.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.10.0-beta) · see the [changelog](CHANGELOG.md).
+**Current release:** [v0.10.1-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.10.1-beta) · see the [changelog](CHANGELOG.md).
 
 | Home | A market | The feed | Settings |
 |---|---|---|---|

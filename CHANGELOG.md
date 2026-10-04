@@ -10,26 +10,30 @@ the hood**, **Tests**. Add a line under `## Unreleased
 
 ## Unreleased
 
+### Under the hood
+- **More Claude Code setup.** Hooks that lint each edited file as CI does and refuse hand edits to the generated database types and `.env` files; `new-route` and `pr-ready` skills; `money-path-reviewer` and `conventions-reviewer` agents; and the context7 docs server in `.mcp.json` (#379).
+
+## v0.10.1-beta — 2026-10-04
+
+A fixes release. The sign-in page fits a phone with the familiar Sign in with Google button, Create market's closing-time hint tells the truth about moving it, and the daily keep-alive that stops the database pausing passes again. Behind the scenes, Sentry now gets readable stack traces, the docs were reviewed end to end, and Claude Code works in the repo behind guard rails that keep production changes going through pull requests.
+
 ### Fixes
+- **The daily keep-alive cron passes again.** Its idempotency-key cleanup had failed every run in production with "permission denied", because the production database never gave the server read and write rights on three tables that local databases do. The server can now read and write every table there, as it does locally, and new tables get the same rights (0109, #362).
+- **The sign-in page doesn't scroll on a phone.** The paragraph under the headline is gone, and a phone too short for the rest drops the three facts, so the whole page fits on one screen (#366).
 - **Create market's closing-time hint is right again.** It said the closing time can't change later; it can be moved while the market is open, unless you bet on it, and only the outcomes (and an Over/Under's line) are fixed (#371).
 - **My bets' Cancelled tab explains itself.** Its empty state said "Bets you cancel…", but bets are final; it now says the tab keeps bets cancelled before October 2026 (#372).
-- **The daily keep-alive cron passes again.** Its idempotency-key cleanup had failed every run in production with "permission denied", because the production database never gave the server read and write rights on three tables that local databases do. The server can now read and write every table there, as it does locally, and new tables get the same rights.
-- **The sign-in page doesn't scroll on a phone.** The paragraph under the headline is gone, and a phone too short for the rest drops the three facts, so the whole page fits on one screen (#366).
 - **Create market's Type heading has room to breathe.** It sits as far above its options as Title does above its box, and Outcomes matches too (#365).
 
 ### Polish
 - **The old Sign in with Google button is back.** It replaces Google's own button and still goes straight to Google, so Google's account chooser still says "continue to dwellduel.com". Nothing of Google's loads on the page any more (#366).
 
 ### Under the hood
-- **More Claude Code setup.** Hooks that lint each edited file as CI does and refuse hand edits to the generated database types and `.env` files; `new-route` and `pr-ready` skills; `money-path-reviewer` and `conventions-reviewer` agents; and the context7 docs server in `.mcp.json`.
-- **Readable stack traces in Sentry, for real this time.** Vercel never had `SENTRY_ORG` or `SENTRY_PROJECT`, so every build skipped the source-map upload added before; `next.config.ts` now defaults them to `dwellduel` and `dwell-duel` (#370).
+- **Readable production stack traces in Sentry.** A Vercel build holding `SENTRY_AUTH_TOKEN` uploads its source maps to Sentry under the deploy's release, links the release to its commit, then deletes them from the output, so nothing public changes. Vercel never had the org and project set, so no build uploaded until `next.config.ts` defaulted them to `dwellduel` and `dwell-duel`. Builds without the token (CI, e2e, local) are unchanged, and an upload that fails only warns (#348, #370).
+- **Less noise in Sentry from sign-in.** A blocked or unreachable Google sign-in script stopped reporting errors, and the detail-free "Script error." browsers report for a cross-origin script is dropped; since #366 nothing of Google's loads at all (#363).
+- **Guard rails for Claude Code in the repo.** A checked-in `.claude/settings.json` refuses `supabase db push`, pushing straight to `main`, the Supabase connector's write tools, and the Vercel and UptimeRobot connectors' irreversible ones, and a hook refuses edits to a migration that's already on `main`. `.mcp.json` adds a read-only Supabase server scoped to production, and two project skills (`new-migration`, `release`) write down how those are done here (#368, #376).
+- **The docs match the app again.** A full review brought README, Getting started, the admin guide, Architecture, Operations and Security up to date with LMSR pricing, the direct Google sign-in, 0109's grants, the monitoring now in place and the Claude Code setup. How it works now says error reports go to Sentry, Operations gains a Monitoring section, Security gains an AI agents section, and the October plans moved into `docs/archive/` (#369).
 - **The scale seeder makes today's data.** Its markets are priced by the market maker and its bets and parlays go through the slip's own function, in order, so the seed matches what the app makes and about 70 markets stay open to bet on; its parlay step, which had placed nothing since bets went final, works again (#373).
 - **Tidier code and setup notes.** The unused `chip` button size is gone, a comment on parlays riding an outcome is current, and the local Google sign-in notes agree on where the keys go (#374, #375).
-- **Wider Claude Code guard rails.** The Vercel connector's irreversible tools (deleting or pausing the project, environment variables, domains, firewall, API keys, purchases) and UptimeRobot's deletes are refused in this repo too (#376).
-- **The docs match the app again.** A full review brought README, Getting started, the admin guide, Architecture, Operations and Security up to date with LMSR pricing, the direct Google sign-in, 0109's grants, the monitoring now in place and the Claude Code setup. How it works now says error reports go to Sentry, Operations gains a Monitoring section (what each monitor watches, how to check it, what to pause during planned work), Security gains an AI agents section, and the October plans moved into `docs/archive/`.
-- **Guard rails for Claude Code in the repo.** A checked-in `.claude/settings.json` refuses `supabase db push`, pushing straight to `main` and the Supabase connector's write tools, and a hook refuses edits to a migration that's already on `main`. `.mcp.json` adds a read-only Supabase server scoped to production, and two project skills (`new-migration`, `release`) write down how those are done here.
-- **Less noise in Sentry from sign-in.** A blocked or unreachable Google sign-in script no longer reports an error, since the page already falls back to the other sign-in button, and the detail-free "Script error." browsers report for Google's script is dropped (#363).
-- **Readable production stack traces in Sentry.** A Vercel build holding `SENTRY_AUTH_TOKEN` uploads its source maps to Sentry under the deploy's release and links the release to its commit, then deletes them from the output, so nothing public changes. Builds without the token (CI, e2e, local) are unchanged, and an upload that fails only warns.
 
 ## v0.10.0-beta — 2026-10-03
 

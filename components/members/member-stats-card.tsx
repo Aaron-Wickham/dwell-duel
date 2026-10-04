@@ -8,7 +8,7 @@ import { formatOdds } from '@/lib/parlays/odds'
 import type { MemberStats, WinLoss } from '@/lib/members/stats'
 import { cn } from '@/lib/utils'
 import { figureInlineClass } from '@/components/ui/page'
-import { formatDcAmount } from '@/lib/format/dc'
+import { formatDcAmount, formatSignedDcAmount } from '@/lib/format/dc'
 
 function Stat({ label, children, detail }: { label: string; children: ReactNode; detail?: ReactNode }) {
   return (
@@ -31,13 +31,8 @@ function Record({ record }: { record: WinLoss }) {
 const refunded = (record: WinLoss) => (record.refunded > 0 ? `${record.refunded} refunded` : undefined)
 
 function SignedDc({ value }: { value: number }) {
-  if (value === 0) return <>0 DC</>
-  return (
-    <span className={value > 0 ? 'text-win' : 'text-loss'}>
-      {value > 0 ? '+' : '−'}
-      {formatDcAmount(Math.abs(value))}
-    </span>
-  )
+  if (value === 0) return <>{formatSignedDcAmount(0)}</>
+  return <span className={value > 0 ? 'text-win' : 'text-loss'}>{formatSignedDcAmount(value)}</span>
 }
 
 const none = <span className="text-ink2">None yet</span>

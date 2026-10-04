@@ -74,9 +74,9 @@ never a raw colour. The groups:
 
 Every text pairing passes WCAG AA in both themes, and `--line-s` clears 3:1 on `--surface`, `--sunk` and `--acc-soft`; `tests/lib/ui/contrast.test.ts` checks them, so add a new pairing there.
 
-**In dark, links are near-white and lime marks only the primary action and first place (#380).** `--link` is the dark ink, plainly underlined; a card or row title link (a stretched link, a bettor's name in a divided row) takes `text-ink` in both themes; and active navigation uses the `nav-active`, `tab-active` and `segment-active` tokens rather than `--primary`. Light mode's lime and `--wm-b` are fills or brand only.
+**In dark, links are near-white and lime fills mark only the primary action and first place (#380).** `--acc-text` (`#8BE651` in dark) stays the positive and open text colour. `--link` is the dark ink, plainly underlined; a card or row title link (a stretched link, a bettor's name in a divided row) takes `text-ink` in both themes; and active navigation uses the `nav-active`, `tab-active` and `segment-active` tokens rather than `--primary`. Light mode's lime and `--wm-b` are fills or brand only.
 
-**Chip tones** come only from the semantic tokens, never `--primary`: `open` (acc-soft), `wait` (gold), `won` (win: a won bet or parlay, a winning outcome), `done` (sunk with ink: a resolved market, the owner's role), `lost` (loss) and `void` (sunk with ink2). `StatusChip` comes in `md` (28px) and `sm` (24px).
+**Chip tones** come only from the semantic tokens, never `--primary`: `open` (acc-soft with acc-text), `wait` (gold), `won` (win: a won bet or parlay, a winning outcome), `done` (sunk with ink: a resolved market, the owner's role), `lost` (loss) and `void` (sunk with ink2). `StatusChip` comes in `md` (28px) and `sm` (24px).
 
 **Lime is never used as text on the light background.** It appears only as a fill behind teal text (the phone tab bar's active pill, the leaderboard's first-place rank badge and podium block, large avatars, Getting started's step dots). Count badges are red (`--loss`, #351).
 
@@ -105,7 +105,7 @@ Every text pairing passes WCAG AA in both themes, and `--line-s` clears 3:1 on `
 | Stat figure (`figureClass`: the economy card, the chart's end labels, large avatars' initials) | 24 | 28 | 800 |
 | Inline figure (`figureInlineClass`: Home's stat tiles, a parlay card's figures, awards, member stats) | 20 | 20 | 800 |
 
-The sizes live in `components/ui/page.tsx`; nothing else sets a `text-[Npx]` except the sign-in page, the 404 and the brand mark.
+The sizes live in `components/ui/page.tsx`; nothing else sets a `text-[Npx]` except the sign-in page, the 404 and the brand mark (the wordmark and the beta badge).
 
 - **Numbers (#382):** every DC amount goes through `formatDc` / `formatDcAmount` / `formatSignedDcAmount` (`lib/format/dc.ts`): en-US grouping from 1,000 ("2,577,831 DC"), a true minus (−) and a `+` on a gain. Animated numbers group too. An amount cell doesn't wrap. Tabular figures only where numbers line up in a column (the leaderboard's scores, the ledger, coin history, tooltips); a lone figure keeps proportional digits.
 

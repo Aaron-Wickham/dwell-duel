@@ -38,12 +38,13 @@ a line to `CHANGELOG.md` under the next release.
 - **Tokens, never raw colours.** Colours come from the CSS variables in
   `app/globals.css`, through Tailwind utilities (`bg-surface`, `text-ink2`,
   `border-line` and so on). Light and dark are the same markup with
-  different variables. In dark, links are the near-white ink and lime marks
-  only the primary action and first place: active navigation uses
+  different variables. In dark, links are the near-white ink and lime
+  *fills* mark only the primary action and first place; `acc-text` (dark
+  `#8BE651`) stays the positive and open text colour. Active navigation uses
   `nav-active`, `tab-active` and `segment-active`, and a card or row title
   link takes `text-ink`. `StatusChip` tones come only from the semantic
-  tokens (`won` is win, `lost` loss, `wait` gold, `done` and `void` sunk),
-  never `primary`.
+  tokens (`open` is acc-soft / acc-text, `won` win, `lost` loss, `wait`
+  gold, `done` and `void` sunk), never `primary`.
 - **Every signed-in page is a `<Page>`.** It lives in `components/ui/page.tsx`
   and has exactly one `<h1>`, from `PageHeader` or `h1Class`. Sections are
   `SectionCard`s, whose `<h2>` names the region; a line under that heading
@@ -52,8 +53,9 @@ a line to `CHANGELOG.md` under the next release.
   list is `rowTitleClass`, beside `h1Class`, `h2Class` and `eyebrowClass`;
   a figure is `figureHeroClass`, `figureClass` or `figureInlineClass`, and
   the sizes between body and caption are `uiTextClass`, `chipTextClass` and
-  `microTextClass`. Don't add a `text-[Npx]` of your own (the sign-in, 404
-  and brand art are the only exceptions), nor a `rounded-[Npx]`: radii are
+  `microTextClass`. Don't add a `text-[Npx]` of your own (the sign-in page, the
+  404 and the brand mark (the wordmark and the beta badge) are the only
+  exceptions), nor a `rounded-[Npx]`: radii are
   `rounded-segment` (10px), `-control`, `-tile`, `-card` or `-full`. A card
   built by hand takes `cardPaddingClass` from `components/ui/card.tsx`.
 - **Numbers.** Every DC amount goes through `lib/format/dc.ts`

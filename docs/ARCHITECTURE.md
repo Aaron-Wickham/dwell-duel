@@ -114,10 +114,10 @@ app/            routes (see above), globals.css, manifest, error pages
 components/     UI by area: admin, app-nav, app-shell, bets, brand, docs, feed,
                 home, leaderboard, live, markets, members, nav, not-found,
                 offline, parlays, proof, push, sign-in, slip, tasks, ui (shared primitives: Page,
-                SectionCard, Button, Field, SubNav, ShowMore, EmptyState,
-                Skeleton…)
+                SectionCard, Button, Field, SegmentedControl, SubNav, ShowMore,
+                EmptyState, Skeleton…)
 lib/            logic by area: admin, app-shell, auth, bets, docs, economy, env,
-                errors, forms, home, invites, ledger, live, markets, members, nav,
+                errors, format (formatDc for every DC amount), forms, home, invites, ledger, live, markets, members, nav,
                 observability, offline, pagination, parlays, preferences, profile,
                 proof, push, search, social, supabase, tasks, theme, toast, ui
 supabase/       migrations/00NN_*.sql, config.toml
@@ -1110,7 +1110,9 @@ the bare root `app/not-found.tsx`; signed out, the layout passes the page throug
 `--duration-sheet`), and `lib/ui/motion.ts` mirrors them for Motion and
 WAAPI; `tests/lib/ui/motion.test.ts` keeps the two equal and rejects a
 `cubic-bezier` anywhere else. The sliding pills (the desktop nav's and the
-phone tab bar's, each a Motion `layoutId`, and SubNav's WAAPI one) share one
+phone tab bar's, each a Motion `layoutId`, and `SegmentedControl`'s WAAPI one,
+which slides under all four segmented controls: SubNav, the theme control, the
+slip's Solo/Parlay toggle and the chart's range) share one
 slide, `PILL_SLIDE` / `PILL_TRANSITION`: 280ms on the iOS curve.
 The three dialogs share `components/ui/dialog-classes.ts`. `pressable`
 shrinks every control on press and, under a mouse only, grows it; a

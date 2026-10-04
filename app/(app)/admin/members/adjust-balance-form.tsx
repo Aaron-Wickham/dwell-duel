@@ -11,7 +11,7 @@ import { Message } from '@/components/ui/message'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { toast } from 'sonner'
 import { haptics } from '@/lib/haptics'
-import { formatDcAmount } from '@/lib/format/dc'
+import { formatDcAmount, formatSignedDcAmount } from '@/lib/format/dc'
 
 // Owner only: the page leaves it out for anyone else, and adjust_balance refuses anyway.
 export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
@@ -37,7 +37,7 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
       const applied = Number(formData.get('amount'))
       setAmount('')
       setReason('')
-      toast.success(`Balance adjusted by ${applied > 0 ? '+' : '−'}${formatDcAmount(Math.abs(applied))}.`)
+      toast.success(`Balance adjusted by ${formatSignedDcAmount(applied)}.`)
       haptics.success()
     }
     return next

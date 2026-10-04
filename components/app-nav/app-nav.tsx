@@ -40,7 +40,7 @@ function BalanceChip({ balance, active }: { balance: number; active: boolean }) 
       aria-current={active ? 'page' : undefined}
       className="pressable inline-flex min-h-11 shrink-0 items-center rounded-full no-underline"
     >
-      <span className={`inline-flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-gold-soft pr-2.5 pl-1.5 ${uiTextClass} font-extrabold tabular-nums text-gold md:gap-1.5 md:pr-3 md:pl-2`}>
+      <span className={`inline-flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-gold-soft pr-2.5 pl-1.5 ${uiTextClass} font-extrabold text-gold md:gap-1.5 md:pr-3 md:pl-2`}>
         <CircleDot aria-hidden="true" className="size-4 md:size-[18px]" />
         <AnimatedText plainText={`Balance ${formatDcAmount(balance)}, view my bets`}>
           <BalanceNumber value={balance} />

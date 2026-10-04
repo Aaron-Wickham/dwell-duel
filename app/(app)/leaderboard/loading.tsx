@@ -42,7 +42,7 @@ export default function Loading() {
               <Skeleton className="h-[18px] w-20 max-w-full" />
               <Skeleton className="h-4 w-14" />
               <Skeleton
-                className={`mt-1 w-full rounded-t-[10px] rounded-b-none ${place.block}`}
+                className={`mt-1 w-full rounded-t-segment rounded-b-none ${place.block}`}
               />
             </div>
           ))}

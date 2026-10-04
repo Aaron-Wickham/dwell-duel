@@ -74,7 +74,7 @@ function availableFor(
 }
 
 function StakeChips({ label, available, onPick }: { label: string; available: number; onPick: (value: string) => void }) {
-  const chipClass = cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'px-2 tabular-nums')
+  const chipClass = cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'px-2')
   return (
     <div role="group" aria-label={label} className="grid grid-cols-4 gap-2">
       {QUICK_STAKES.map((amount) => (
@@ -133,7 +133,7 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
           <span className={rowTitleClass}>{pick.outcomeLabel}</span>
         </div>
         {pick.open ? (
-          odds !== null && <span className="text-lg font-extrabold tabular-nums">{odds}</span>
+          odds !== null && <span className="text-lg font-extrabold">{odds}</span>
         ) : (
           <StatusChip tone="lost">No longer available</StatusChip>
         )}
@@ -330,7 +330,7 @@ export function SlipPanel() {
         <span>
           Balance <strong className="whitespace-nowrap">{formatDcAmount(balance)}</strong>
         </span>
-        <span className={cn('tabular-nums', short ? 'font-extrabold text-loss' : 'text-ink2')}>
+        <span className={cn('whitespace-nowrap', short ? 'font-extrabold text-loss' : 'text-ink2')}>
           {short ? `${formatDcAmount(total - balance)} short` : `${formatDcAmount(balance - total)} left after this slip`}
         </span>
       </p>
@@ -356,7 +356,7 @@ export function SlipPanel() {
             <h3 id="slip-parlay-title" className="font-extrabold">
               Parlay · {legs.length} {legs.length === 1 ? 'pick' : 'picks'}
             </h3>
-            {fixedQuote && <span className="font-extrabold tabular-nums">{formatOdds(fixedQuote.multiplierBp)}×</span>}
+            {fixedQuote && <span className="font-extrabold">{formatOdds(fixedQuote.multiplierBp)}×</span>}
           </div>
           <p className="text-sm text-ink2">
             Your stake is split evenly across these picks, and each part buys at its market’s price now, so what the parlay

@@ -2,21 +2,13 @@ import { SectionCard } from '@/components/ui/section-card'
 import { monthLabel, type EconomySummary } from '@/lib/economy/summary'
 import { cn } from '@/lib/utils'
 import { figureClass } from '@/components/ui/page'
-import { formatDcAmount } from '@/lib/format/dc'
+import { formatDcAmount, formatSignedDcAmount } from '@/lib/format/dc'
 
-function Dc({ value, sign }: { value: number; sign: '+' | '−' }) {
-  if (value === 0) return <span className="text-ink2">0 DC</span>
+function Dc({ value }: { value: number }) {
+  if (value === 0) return <span className="whitespace-nowrap text-ink2">0 DC</span>
   return (
-    <span className={cn('font-extrabold', sign === '+' ? 'text-win' : 'text-loss')}>
-      {sign}
-      {formatDcAmount(value)}
-    </span>
+    <span className={cn('font-extrabold whitespace-nowrap', value > 0 ? 'text-win' : 'text-loss')}>{formatSignedDcAmount(value)}</span>
   )
-}
-
-function Net({ value }: { value: number }) {
-  if (value === 0) return <span className="text-ink2">0 DC</span>
-  return <Dc value={Math.abs(value)} sign={value > 0 ? '+' : '−'} />
 }
 
 // The owner's view of the whole supply: what exists now, and where this month's DC came from.
@@ -29,7 +21,7 @@ export function EconomyCard({ summary }: { summary: EconomySummary }) {
       <dl className="flex flex-col gap-1">
         <dt className="text-sm text-ink2">In circulation</dt>
         <dd className={cn(figureClass, 'whitespace-nowrap')}>{formatDcAmount(summary.inCirculation)}</dd>
-        <dd className="text-sm text-ink2 tabular-nums">
+        <dd className="text-sm text-ink2">
           {formatDcAmount(summary.balances)} in balances · {formatDcAmount(summary.betsAtStake)} in open bets · {formatDcAmount(summary.parlaysAtStake)} in
           open parlays
         </dd>
@@ -56,11 +48,11 @@ export function EconomyCard({ summary }: { summary: EconomySummary }) {
               <th scope="row" className="py-2 pr-3 font-normal">
                 {s.label}
               </th>
-              <td className="py-2 pr-3 text-right">
-                <Dc value={s.added} sign="+" />
+              <td className="py-2 pr-3 text-right whitespace-nowrap">
+                <Dc value={s.added} />
               </td>
-              <td className="py-2 text-right">
-                {s.removed === null ? <span className="text-ink2">—</span> : <Dc value={s.removed} sign="−" />}
+              <td className="py-2 text-right whitespace-nowrap">
+                {s.removed === null ? <span className="text-ink2">—</span> : <Dc value={-s.removed} />}
               </td>
             </tr>
           ))}
@@ -70,8 +62,8 @@ export function EconomyCard({ summary }: { summary: EconomySummary }) {
             <th scope="row" className="py-2 pr-3">
               Net change
             </th>
-            <td colSpan={2} className="py-2 text-right">
-              <Net value={summary.monthAdded - summary.monthRemoved} />
+            <td colSpan={2} className="py-2 text-right whitespace-nowrap">
+              <Dc value={summary.monthAdded - summary.monthRemoved} />
             </td>
           </tr>
         </tfoot>

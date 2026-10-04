@@ -22,7 +22,7 @@ export function StandingCompact({ standing, jump }: { standing: YourStanding; ju
           <span className="sr-only">Rank {standing.rank} of {standing.memberCount}</span>
         </span>
         <div className="flex min-w-0 grow flex-col">
-          <span className={`${rowTitleClass} tabular-nums`}>You · {formatDcAmount(standing.score)}</span>
+          <span className={`${rowTitleClass}`}>You · {formatDcAmount(standing.score)}</span>
           {gap && <span className="text-sm text-ink2">{gap}</span>}
         </div>
         {jump}

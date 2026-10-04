@@ -10,7 +10,7 @@ export function AttentionBadge({ count, className }: { count: number; className?
     <span
       aria-hidden="true"
       className={cn(
-        `pointer-events-none absolute flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-loss px-1 ${microTextClass} leading-none font-extrabold text-on-primary tabular-nums ring-2 ring-surface`,
+        `pointer-events-none absolute flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-loss px-1 ${microTextClass} leading-none font-extrabold text-on-primary ring-2 ring-surface`,
         className,
       )}
     >

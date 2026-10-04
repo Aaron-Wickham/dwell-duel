@@ -63,7 +63,7 @@ export function PositionCard({
               aside={
                 <>
                   {b.paysIfWins !== null && (
-                    <span className="font-extrabold tabular-nums">{`Pays ${formatDcAmount(b.paysIfWins)}`}</span>
+                    <span className="font-extrabold">{`Pays ${formatDcAmount(b.paysIfWins)}`}</span>
                   )}
                   <ResultChip result={b.result} />
                 </>

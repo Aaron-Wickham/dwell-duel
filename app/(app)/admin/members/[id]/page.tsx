@@ -54,7 +54,7 @@ export default async function AdminMemberPage(props: PageProps<'/admin/members/[
               <MemberActivity joinedAt={member.joinedAt} lastSignInAt={member.lastSignInAt} now={now} />
             </p>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span className={`inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-gold-soft pr-3 pl-2 ${uiTextClass} font-extrabold tabular-nums text-gold`}>
+              <span className={`inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-gold-soft pr-3 pl-2 ${uiTextClass} font-extrabold text-gold`}>
                 <CircleDot aria-hidden="true" className="size-[18px]" />
                 {formatDcAmount(member.balance)}
               </span>

@@ -29,7 +29,7 @@ export function clawbackMessage(short: ClawbackShort[]): string | null {
   if (short.length === 0) return null
   const [first, ...rest] = short.map(({ display_name, owed, balance }) => ({ name: display_name, spent: owed - balance, won: owed }))
   const lead = `${first.name} has already spent ${formatDc(first.spent)} of ${formatDcAmount(first.won)} won on this market`
-  const others = rest.map(({ name, spent, won }) => `${name} ${spent} of ${won}`)
+  const others = rest.map(({ name, spent, won }) => `${name} ${formatDc(spent)} of ${formatDc(won)}`)
   const list = others.length === 0 ? lead : `${[lead, ...others.slice(0, -1)].join(', ')}, and ${others.at(-1)}`
   return `Can’t override: ${list}. Adjust their balances first if you still want to override.`
 }

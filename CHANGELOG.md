@@ -11,7 +11,7 @@ the hood**, **Tests**. Add a line under `## Unreleased
 ## Unreleased
 
 ### Polish
-- **Dark mode has its own colour roles.** Links and card titles are near-white instead of lime, the active nav pill, tab bar pill, filter chip and segmented tab are a neutral raised surface, and lime is left to the primary button and first place. A won bet or parlay gets a win-toned chip and a resolved market a neutral one, in both themes; the segmented pills' shadow has a dark value, and light mode's stronger borders clear 3:1 (#380).
+- **Dark mode has its own colour roles.** Links and card titles are near-white instead of lime. The desktop nav pill and a chosen filter chip are near-white with dark text, the phone tab bar's pill and a chosen segment are a raised `#17434A`, and lime fills are left to the primary button and first place. A won bet or parlay gets a win-toned chip and a resolved market a neutral one, in both themes; the segmented pills' shadow has a dark value, and light mode's stronger borders clear 3:1 (#380).
 - **One type, radius and padding vocabulary.** Figures come from three named sizes, every corner from a radius token (a new 10px segment radius; the home hero takes the card's), every card from one padding, and bet, parlay and catalog titles match a market card's. The four segmented controls (sub-tabs, theme, Solo/Parlay, chart range) are one `SegmentedControl` with one sliding pill, and the small chips are `StatusChip`'s new small size (#381).
 - **Amounts are grouped.** Every DC amount reads "2,577,831 DC", animated ones included, and never wraps mid-figure; tabular figures are kept for columns that line up (#382).
 

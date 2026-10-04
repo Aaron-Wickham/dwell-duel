@@ -41,7 +41,7 @@ export function ReactionBar({ eventId, reactions }: { eventId: string; reactions
             aria-label={reactionLabel(name, count)}
             onClick={() => toggle(kind)}
             className={cn(
-              `pressable inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1 rounded-full border-[1.5px] px-2.5 ${uiTextClass} font-bold tabular-nums`,
+              `pressable inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1 rounded-full border-[1.5px] px-2.5 ${uiTextClass} font-bold`,
               count.mine ? 'border-acc-text bg-acc-soft text-acc-text' : 'border-line bg-surface text-ink2',
             )}
           >

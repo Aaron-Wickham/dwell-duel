@@ -21,7 +21,7 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       <dt className={eyebrowClass}>{label}</dt>
-      <dd className={`${rowTitleClass} tabular-nums`}>{children}</dd>
+      <dd className={`${rowTitleClass}`}>{children}</dd>
     </div>
   )
 }

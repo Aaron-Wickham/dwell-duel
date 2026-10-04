@@ -44,7 +44,7 @@ export function SlipSheet() {
           }}
           className={cn(
             buttonVariants(),
-            'fixed right-4 bottom-[calc(94px+var(--safe-bottom))] z-20 rounded-full tabular-nums shadow-overlay md:right-8 md:bottom-8',
+            'fixed right-4 bottom-[calc(94px+var(--safe-bottom))] z-20 rounded-full shadow-overlay md:right-8 md:bottom-8',
           )}
         >
           <Ticket aria-hidden="true" className="size-5" />

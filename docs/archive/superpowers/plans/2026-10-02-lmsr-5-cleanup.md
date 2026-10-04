@@ -1,6 +1,6 @@
 # LMSR 5/5: drop retired pricing code (#332)
 
-Part of #325. Spec: `docs/superpowers/specs/2026-10-01-lmsr-pricing-design.md`.
+Part of #325. Spec: `docs/archive/superpowers/specs/2026-10-01-lmsr-pricing-design.md`.
 
 Production has 0101–0106: every open market is `lmsr`, and no `pool` market can be
 opened or created. Resolved and voided `pool` markets, their bets, parlays and

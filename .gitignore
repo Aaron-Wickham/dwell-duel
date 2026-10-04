@@ -54,3 +54,6 @@ next-env.d.ts
 
 # Claude Code's git worktrees
 /.claude/worktrees/
+
+# Claude Code: personal permissions, never shared
+/.claude/settings.local.json

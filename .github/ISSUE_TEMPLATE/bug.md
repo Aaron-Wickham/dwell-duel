@@ -13,6 +13,7 @@ labels: [bug]
 - Page or URL:
 - Phone or desktop, and which browser (or the installed app):
 - Light or dark theme:
+- Error code (if the error page showed one):
 
 ## Steps to reproduce
 1.

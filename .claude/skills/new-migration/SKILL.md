@@ -23,8 +23,9 @@ the old app is still serving. Everything below follows from that.
    - A new member-entered text column gets a length CHECK plus a `TEXT_LIMITS` entry.
    - A new live table goes in `LIVE_TABLES` and the realtime publication; never a deferred trigger
      on a live table.
-   - Production's default privileges differ from local (0109): grant `service_role` explicitly if
-     server code reads or writes a new table.
+   - Since 0109, a new table gets `service_role` read and write by default, in production as
+     locally; `tests/db/schema-privileges.test.ts` checks it. A table that must stay read-only
+     to the server (like `activity_events`) revokes what it shouldn't have.
 5. **Apply and regenerate.** `npm run db:reset`, then
    `npx supabase gen types typescript --local > lib/supabase/database.types.ts` (CI fails when stale).
 6. **Test.** Add or extend a test in `tests/db/`; negative cases use `expectError`. Run `npm test`

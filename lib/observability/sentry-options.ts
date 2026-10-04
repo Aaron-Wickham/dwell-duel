@@ -25,7 +25,7 @@ export function isSkippedViewTransition(event: FilterableEvent): boolean {
   )
 }
 
-// What the browser reports in place of an error thrown by a cross-origin script (on /sign-in, Google's):
+// What the browser reports in place of an error thrown by a cross-origin script (Google's sign-in script, until #366 removed it):
 // no message, no stack, nothing to act on (#363). The SDK's own filter for it lives in an integration
 // that defaultIntegrations: false leaves out.
 const CROSS_ORIGIN_SCRIPT_ERROR = 'Script error.'

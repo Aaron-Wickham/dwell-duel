@@ -25,8 +25,8 @@ details.
    with the scale seeder so the pages have something on them.
 2. **Day 2: tour the code.** Read [AGENTS.md](../AGENTS.md), then
    [ARCHITECTURE.md](ARCHITECTURE.md) with the app open beside it, following
-   one flow end to end: tap Place in the slip, find `place_slip_v2` in
-   `supabase/migrations/`, and its test in `tests/db/place-slip.test.ts`
+   one flow end to end: tap Place in the slip, find `place_slip_v4` in
+   `supabase/migrations/0104_lmsr_parlays.sql`, and its test in `tests/db/place-slip.test.ts`
    ([section 7](#7-read-these-before-writing-code)). Read
    [HOW-IT-WORKS.md](HOW-IT-WORKS.md) as a member would.
 3. **Day 3: pick something small.** Ask Aaron for an issue
@@ -48,7 +48,7 @@ words the code and the docs use.
 |---|---|---|
 | **Node** | 22 (see `.nvmrc`; `engines.node` pins Vercel to it) | `brew install nvm` then `nvm install 22`, or [nodejs.org](https://nodejs.org) |
 | **Docker Desktop** | any current | [docker.com](https://www.docker.com/products/docker-desktop/). Local Supabase runs in Docker; it must be **running** before `npm run db:start`. |
-| **Supabase CLI** | 2.117.0 (what CI and deploys use) | `brew install supabase/tap/supabase` |
+| **Supabase CLI** | 2.117.0 or newer (CI and deploys pin 2.117.0) | `brew install supabase/tap/supabase` |
 | **GitHub CLI** (optional, handy) | any | `brew install gh` then `gh auth login` |
 
 Check them:
@@ -96,20 +96,24 @@ cp .env.local.example .env.local
 npx supabase status
 ```
 
-Fill in the three required values in `.env.local` from that status output:
+Fill in the three required values in `.env.local` from
+`npx supabase status -o env`:
 
-| `.env.local` | from `supabase status` |
+| `.env.local` | from `supabase status -o env` |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | `API URL` |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `Publishable key` |
-| `SUPABASE_SECRET_KEY` | `Secret key` |
+| `NEXT_PUBLIC_SUPABASE_URL` | `API_URL` |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `PUBLISHABLE_KEY` |
+| `SUPABASE_SECRET_KEY` | `SECRET_KEY` |
 
-Leave the two VAPID (push notification) variables blank: locally, sending
-is a no-op and Settings just says notifications aren't available.
+Leave everything else blank. The VAPID pair (push), the Sentry DSN and the
+healthchecks URLs are production only, and without them each feature is
+simply off. Leave `NEXT_PUBLIC_GOOGLE_CLIENT_ID` blank too, so local
+sign-in goes through local Supabase (below).
 
 `.env.local` is git-ignored. Never commit secrets. The server refuses to boot
-if a required variable is missing (`lib/env/required.ts`), so a blank screen
-on start usually means this step.
+without the URL and publishable key (`lib/env/required.ts`), so a blank
+screen on start usually means this step; the secret key is needed by the DB
+tests, the seeder and the server's admin calls.
 
 ## 5. Run the app
 
@@ -175,7 +179,10 @@ where id = (select id from auth.users where email = 'you@gmail.com');
 **If sign-in bounces back to `/sign-in`:** check the redirect URI in Google
 matches step 1 character for character, that `supabase/.env` has both values
 and the stack was restarted after adding them, and that you ran the invite
-insert with the email you're signing in with.
+insert with the email you're signing in with. If `.env.local` sets
+`NEXT_PUBLIC_GOOGLE_CLIENT_ID`, the button goes straight to Google instead
+(the production path), which needs `http://localhost:3000/auth/google` as a
+redirect URI on that client; clear it to use the local Supabase path.
 
 **Shortcut for quick UI checks: borrow the e2e session.** The Playwright
 global setup writes an owner session ("Alice") to `e2e/.auth/session.json`
@@ -187,8 +194,9 @@ invalidates it, so use real sign-in for anything longer than a glance.
 ### Getting some data to look at
 
 A fresh database is empty. Create markets and tasks from the app as an owner,
-or run the scale seeder for a realistic load (500 members, 200 markets,
-20,000 bets):
+or run the scale seeder for volume (500 members, 200 markets, 20,000 bets).
+It's for measuring query plans: its markets are pre-LMSR pool markets, so
+they can't take new bets. For markets you can bet on, create them in the app.
 
 ```bash
 node scripts/seed-scale.mjs
@@ -213,7 +221,7 @@ Faster loops:
 ```bash
 npx vitest run --project unit          # only tests that don't need the database
 npx vitest run --project db            # only the DB tests (run npm run db:reset first)
-npx vitest run tests/db/place-bet      # one file
+npx vitest run tests/db/place-slip     # one file
 npm run test:watch                     # watch mode
 npx playwright test e2e/parlays.spec.ts   # one e2e spec
 npx playwright test --ui               # Playwright's UI runner
@@ -271,14 +279,17 @@ against the real database in `tests/db/`, not mocked:
 
 - **Start from the fixtures** in `tests/db/fixtures.ts`: `makeMember` and
   `seedMembers` for members, `clientFor(member)` for a client signed in as
-  them, `giveRole` for a role, `createTestMarket` and `createTestTask`, and
-  `backers()` / `backLeg()` for the other members' money a parlay leg needs.
+  them, `giveRole` for a role, `createTestMarket(client, labels, { lmsr: true })` for a
+  market as the app makes it today (without `lmsr` it makes a pre-October
+  pool market, for history tests), `createTestTask`, and `createPoolMarket`
+  / `backLeg()` only when testing pool history.
   `serviceClient()` (`tests/db/helpers.ts`) is the service role, for setup
   only: call the function under test as the member who would call it.
 - **The ledger is checked after every test.** `tests/db/setup.ts` runs
   `assertLedgerConsistent()`: every balance equals its ledger rows, every
-  outcome's pool equals its live bets, and every parlay's credit equals its
-  payout rows. Set a balance with `setBalanceViaLedger`, never a raw update;
+  outcome's pool equals its live bets, each `lmsr` outcome's shares equal
+  its bets' shares plus its parlay legs', and every parlay's credit equals
+  its payout rows. Set a balance with `setBalanceViaLedger`, never a raw update;
   a test that writes raw rows on purpose calls `skipLedgerCheck('why')`.
 - **Test the refusals as carefully as the happy path.** Wrong role, no
   invite, a stake on the market, after close, a replayed attempt key. Check
@@ -288,9 +299,11 @@ against the real database in `tests/db/`, not mocked:
 - **Races** go in `tests/db/money-races.test.ts`, which runs two members'
   calls at once.
 - **If a rule changes,** the maths in [HOW-IT-WORKS.md](HOW-IT-WORKS.md)
-  changes with it, and where TypeScript mirrors SQL (`parlay_limits()` and
-  `lib/parlays/odds.ts`, `pool_payout()` and `poolPayout`) a DB test keeps the
-  two equal, so update both.
+  changes with it, and where TypeScript mirrors SQL (`lmsrQuote` and
+  `place_lmsr_bet`, `lmsrParlayQuote` / `fixedParlay` and `place_lmsr_parlay`
+  / `settle_parlay`, `MAX_PICKS` and `parlay_limits().max_legs`) DB tests
+  (`tests/db/lmsr-markets.test.ts`, `lmsr-parlays.test.ts`) keep the two
+  equal, so update both.
 - Then click it through once in the app, and cover the flow in `e2e/` if a
   member would notice it breaking.
 
@@ -322,7 +335,8 @@ Next-specific code.
 ```
 app/(app)/        signed-in routes: home, markets, bets, parlays, tasks, feed, leaderboard,
                   members, profile, settings, how-it-works, admin
-app/(auth)/       sign-in, callback, not-invited, offline
+app/(auth)/       sign-in, auth/google (direct Google sign-in), callback, not-invited,
+                  offline, privacy
 app/api/          cron/keep-alive, cron/closing-alerts, health, push/resync
 components/       ui/ (Page, SectionCard, Button, dialogs…), brand/, live/, and feature components
 lib/              server actions, Supabase clients, odds maths, pagination, auth, forms
@@ -330,7 +344,8 @@ supabase/         migrations/ (every one, numbered; the newest is the last file)
 tests/            Vitest: app/ (route handlers), components/, lib/, and DB tests in db/
 e2e/              Playwright specs
 docs/             everything you're reading; archive/ holds the dated specs and plans
-scripts/          favicons, iOS splash, iOS standalone check, scale seeder, backup/
+scripts/          favicons, iOS splash, iOS standalone check, migration-order check,
+                  scale seeder, backup/
 ```
 
 ## 8. Pick up an issue
@@ -388,8 +403,9 @@ changes, and which docs you updated.
 
 **Aaron merges.** Once it's green, approved and up to date, he merges it;
 you don't need to. On merge, the
-Deploy Production workflow backs up the database, applies any migrations
-production doesn't have yet and then deploys through Vercel. It runs only
+Deploy Production workflow checks production for migrations it doesn't
+have yet; if there are any, it backs up the database and applies them, then
+deploys through Vercel. It runs only
 from `main`. There is no undo button for a migration, so the checklist
 matters; `docs/OPERATIONS.md` covers backups and rollback.
 
@@ -410,7 +426,16 @@ matters; `docs/OPERATIONS.md` covers backups and rollback.
   npm run db:reset
   npx supabase gen types typescript --local > lib/supabase/database.types.ts
   ```
-- Gate new SQL with `has_role('<min>')` and test it in `tests/db/`.
+- Gate new SQL with `has_role('<min>')` and test it in `tests/db/`. A new
+  `security definer` function sets `search_path = ''`, checks its caller
+  itself, and goes in `tests/db/schema-privileges.test.ts`.
+- `scripts/check-migration-order.sh origin/main` (after `git fetch`) runs
+  CI's order check locally.
+- Add a row to `docs/ARCHITECTURE.md`'s migrations table and a line under
+  `## Unreleased` in `CHANGELOG.md`.
+- Using Claude Code? The `new-migration` skill walks through these steps,
+  and a hook refuses edits to a migration already on `origin/main` (see
+  [Using Claude or another AI agent](#using-claude-or-another-ai-agent)).
 
 ### Checking the installed iPhone app
 
@@ -472,6 +497,29 @@ booted iOS Simulator with the app installed. `docs/ARCHITECTURE.md`
 - `CLAUDE.md` just includes `AGENTS.md`, so both point an agent at the
   same conventions. AGENTS.md is authoritative; if the agent's habit and
   AGENTS.md disagree, AGENTS.md wins.
+- **Checked-in Claude Code settings.** `.claude/settings.json` lets Claude
+  Code run the test, lint, type-check, build, `db:start` / `db:reset`,
+  `check:ios` and local `supabase` commands without asking. It refuses
+  `supabase db push` and `git push origin main`, plus the write tools of
+  Aaron's account-wide Supabase connector. Those tool names belong to his
+  connector, so if you connect your own, its tools aren't covered: never
+  point a write-capable one at production. Your own overrides go in
+  `.claude/settings.local.json`, which git ignores.
+- **The migration guard.** A PreToolUse hook,
+  `.claude/hooks/protect-migrations.sh`, refuses an Edit or Write to a
+  `supabase/migrations/` file that already exists on `origin/main`. A
+  migration your branch added can still be edited. It compares against your
+  local `origin/main` (so `git fetch` first), needs `jq`, and lets
+  everything through when there's no `origin/main`.
+- **A read-only production database server.** `.mcp.json` adds
+  `supabase-prod-readonly`, Supabase's hosted MCP server scoped to the
+  production project with `read_only=true`. Claude Code asks you to approve
+  it the first time; sign in once with `/mcp`. It only works for people with
+  access to the Supabase project, so most collaborators should decline it:
+  everything you build runs against local Supabase.
+- **Project skills.** `new-migration` (number, keep additive, regenerate
+  types, test, document) and `release` (follows
+  [RELEASING.md](RELEASING.md)) load when the task matches, or by name.
 - This is Next.js 16, newer than most models know. Have the agent read the
   guide in `node_modules/next/dist/docs/` before Next-specific code.
 - `next dev` re-adds a block at the top of AGENTS.md when it's missing.
@@ -510,11 +558,11 @@ node scripts/seed-scale.mjs   # 500 members, 200 markets, 20,000 bets, locally
 |---|---|
 | **DC** | Dwell Coin, the play money. Every movement is a row in `coin_transactions` |
 | **Market** | A question members bet on: Yes/No, multiple choice or Over/Under |
-| **Pool** | The real DC bet on one outcome (`market_outcomes.pool_total`); winners split the whole market's pools |
-| **Seed** | 20 virtual DC per outcome (`seed_per_outcome`) that only shapes a market's chance and charts; never paid |
-| **Slip** | Where picks wait before they're placed, each Solo or Parlay; `place_slip_v2` places them all or none |
+| **Shares** | What a bet buys on an `lmsr` market (`bets.shares`); each winning share pays 1 DC, rounded down per bet |
+| **Pool, seed** | Pre-October 2026 pricing (`pricing = 'pool'`): winners split the real DC bet, and a 20 DC virtual seed shaped the chance. Kept for history only |
+| **Slip** | Where picks wait before they're placed, each Solo or Parlay; `place_slip_v4` places them all or none |
 | **Parlay** | Several picks combined into one bet that wins only if every pick wins, paid by the house |
-| **Leg** | One pick in a parlay (`parlay_legs`); its odds are set when its market closes |
+| **Leg** | One pick in a parlay (`parlay_legs`); it buys an even share of the stake's shares, so its factor is fixed when placed |
 | **Open** | A market still taking bets, before its close time |
 | **Awaiting** | Past its close time, with no result yet |
 | **Settled** | Resolved or voided; for a bet or parlay, paid, lost or refunded |

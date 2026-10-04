@@ -3,9 +3,12 @@
 How production runs: what it's made of, how it's deployed, rolled back,
 backed up and restored, how each secret is rotated, what each alarm means,
 and the free-tier limits to watch. The owner (Aaron) holds every secret and
-key named here, and is the only person who can carry out these steps.
+key named here, and is the only person who can carry out these steps. Claude Code sessions
+he runs act with his logins; what they can and can't reach is in
+SECURITY.md, [AI agents](../SECURITY.md#ai-agents).
 
 - [Systems map](#systems-map)
+- [Monitoring](#monitoring)
 - [Deploys](#deploys)
 - [Rolling back](#rolling-back)
 - [Backups and restore](#backups-and-restore)
@@ -21,11 +24,36 @@ key named here, and is the only person who can carry out these steps.
 | **Vercel** project `dwell-duel` (Hobby) | The app, its functions in `cle1` (Cleveland, `vercel.json`), the daily keep-alive cron | Vercel → Settings (environment variables, deploy hook, domains); `vercel.json` |
 | **Supabase** project `lymrpiivqvdnfcjmxksx` (Free, us-east-2) | Postgres, Auth (Google only), Realtime, Storage (`avatars`, `proof`), `pg_cron` and `pg_net` | Supabase dashboard; schema only through `supabase/migrations/` |
 | **Supabase Vault** | `app_url` and `cron_secret`, for `pg_cron`'s closing-alerts call | SQL editor (README, One-time setup) |
-| **GitHub** `Aaron-Wickham/dwell-duel` (public) | Code, CI, Deploy Production, Backups, the Closing alerts backup | Rulesets "CI" (`ci-ok` required, up to date, no bypass) and "Protect main" (code-owner review); the `Production` environment (secrets, `main` only); repository secret `CRON_SECRET`; variables `APP_URL` and `VERCEL_TEAM_ID` |
+| **GitHub** `Aaron-Wickham/dwell-duel` (public) | Code, CI, Deploy Production, Backups, the Closing alerts backup, Warm caches, Cleanup caches; the Sentry GitHub app (code mapping, suspect commits) | Rulesets "CI" (`ci-ok` required, up to date, no bypass) and "Protect main" (code-owner review); the `Production` environment (secrets, `main` only); repository secret `CRON_SECRET`; variables `APP_URL` and `VERCEL_TEAM_ID` |
 | **GitHub** `Aaron-Wickham/dwell-duel-backups` (private) | The encrypted backups | Written with `BACKUP_REPO_TOKEN` |
 | **Google Cloud** OAuth client | Google sign-in | Its client ID and secret are in Supabase → Auth → Providers → Google |
 | **Domains** | `www.dwellduel.com` serves the app; `dwellduel.com` 308-redirects to it; `dwelldule.com` and `www.dwelldule.com` 301 to it | Vercel → Settings → Domains |
-| **Monitoring** | Sentry (errors), healthchecks.io (two heartbeats), UptimeRobot (`/api/health`) | Each service's dashboard; the app's side is ARCHITECTURE.md's Observability |
+| **Monitoring** | Sentry org `dwellduel`, project `dwell-duel`: errors, emailed by its default high-priority-issue alert, linked to Vercel and to GitHub (code mapping). healthchecks.io: the keep-alive and closing-alerts heartbeats. UptimeRobot: `/api/health` every 5 minutes, with SSL expiry reminders. GitHub: an email for each failed workflow | Each service's dashboard; every alert emails the owner; the app's side is ARCHITECTURE.md's Observability |
+
+## Monitoring
+
+Every alarm emails the owner; what each one means is under
+[Incidents](#what-each-alarm-means).
+
+| Monitor | Watches | Check it still works |
+|---|---|---|
+| Sentry (`dwellduel` / `dwell-duel`) | Uncaught errors and `reportError` calls, server and browser; its default alert emails high-priority issues | Its Issues page shows recent events (members' errors arrive within a minute). A build that uploaded its source maps shows a release with artifacts under Releases; one that didn't logs "No project provided" in its Vercel build log |
+| healthchecks.io: keep-alive | The daily cron's ping (`/fail` when a step failed) | The check's last ping is under a day old; ping its URL with `/fail` once to see the email |
+| healthchecks.io: closing-alerts | Each closing-alerts run's ping | The last ping is minutes old |
+| UptimeRobot | `/api/health` every 5 minutes; the certificate's expiry | The monitor shows Up; pause and resume it to see the emails |
+| GitHub | Failed workflows | Settings → Notifications → Actions → failed workflows only |
+
+**Planned downtime** (a restore, a long migration): pause the UptimeRobot
+monitor and the two healthchecks.io checks first, and resume them after,
+so the alarms don't fire for work you're doing.
+
+**Not watched:** Realtime connections and messages, egress, the Sentry
+error quota, and the sign-in page itself. Read them in the monthly usage
+check ([Free-tier limits](#free-tier-limits)).
+
+**Claude Code** can read Sentry issues, UptimeRobot monitors and Vercel
+deployments and logs through the owner's connectors, which is the quickest
+first look when an alarm fires.
 
 ## Deploys
 
@@ -60,7 +88,8 @@ Guardrails:
 - A dry run whose list of pending migrations can't be read fails the run
   rather than counting as "nothing pending".
 - A failed backup, migration or build fails the run and leaves the old app
-  live. Turn on GitHub's "failed workflows only" notification so it's an email.
+  live. GitHub's "failed workflows only" notification is on, so it's an email to
+  the owner.
 - Merging needs the `ci-ok` check green, with no bypass. CI also fails a PR
   whose new migration is numbered at or below `main`'s newest
   (`scripts/check-migration-order.sh`), since `db push` refuses one that
@@ -313,9 +342,14 @@ still there.
    and the same for `avatars`.
 6. Set up Auth (Google provider, site URL, redirect URLs) and new API keys as
    in the README, then point Vercel's variables, the `lymrpiivqvdnfcjmxksx`
-   project ref in the two workflows, and the `SUPABASE_DB_URL` secret at the
+   project ref (in the two workflows, `.mcp.json` and
+   `tests/lib/deploy/deploy-order.test.ts`; `git grep` finds them), and the `SUPABASE_DB_URL` secret at the
    new project, and redeploy. Every member signs in again, since the new
    project signs sessions with a new key.
+7. Run the keep-alive cron (Vercel → Settings → Cron Jobs → Run) and check
+   it answers 200. A `42501` means `service_role` is missing a table grant:
+   a new project's default privileges may give it none, as production's did
+   until 0109.
 
 ### Restore rehearsal
 
@@ -351,7 +385,7 @@ after changing one: Deploy Production → Run workflow, from `main`.
 | `CRON_SECRET` | The server refuses to boot | **Three places must match** (below) |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | The app boots, logs "Push notifications are off until they are set", and sends nothing; Settings says notifications aren't available | Below |
 | `NEXT_PUBLIC_SENTRY_DSN` | Errors aren't captured | Public by design; replace it only if it's being spammed: Sentry → the project → Client Keys → new key, set it, redeploy, disable the old key |
-| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | Builds don't upload source maps, so Sentry's stack traces stay minified; nothing else changes | Production and Preview. The org and project came from the Sentry–Vercel integration. The token is a Sentry organization token (Settings → Auth Tokens), a Secret: create a new one, set it, redeploy, then revoke the old one |
+| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | Builds don't upload source maps, so Sentry's stack traces stay minified; nothing else changes | Production (Preview builds are skipped, so the token's Preview copy does nothing). **As of Oct 4 only the token is set:** without `SENTRY_ORG` (`dwellduel`) and `SENTRY_PROJECT` (`dwell-duel`) every build logs "No project provided. Will not upload source maps". The token is a Sentry organization token (Settings → Auth Tokens), a Secret: create a new one, set it, redeploy, then revoke the old one |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Sign-in uses Supabase's Google redirect, whose account chooser names the Supabase project instead of dwellduel.com | Public by design (it's in the page). Changes only with a new Google OAuth client: see [Google sign-in and brand verification](#google-sign-in-and-brand-verification) |
 | `HEALTHCHECKS_KEEP_ALIVE_URL`, `HEALTHCHECKS_CLOSING_ALERTS_URL` | No heartbeat pings, so each check goes late and emails | healthchecks.io → the check → its ping URL; set it, redeploy, then confirm the next ping arrives |
 
@@ -399,6 +433,15 @@ Update them under Settings → Environments → Production.
   add a secret; paste it into Supabase → Auth → Providers → Google; sign
   in once to check; then disable and delete the old secret.
 - **The backup key:** [The key](#the-key).
+- **The owner's Supabase CLI login** (`supabase login`, which
+  `npx supabase db query --linked` uses): Supabase → Account → Access Tokens;
+  revoke the CLI's token if the laptop is lost.
+- **Claude's connectors** (Supabase, Vercel, Sentry, UptimeRobot) and the
+  `supabase-prod-readonly` MCP server: each is an OAuth grant on the owner's
+  account. Revoke them in each service's authorized-apps settings if the
+  laptop or the Claude account is lost.
+- **The Sentry GitHub app:** GitHub → Settings → Applications. It reads the
+  repo for code mapping and holds no secret of ours.
 
 ## Google sign-in and brand verification
 
@@ -414,15 +457,15 @@ chooser names `lymrpiivqvdnfcjmxksx.supabase.co`. The second is also the
 
 1. Google Cloud → Google Auth Platform → Clients → the client
    (`499057846503-erb8u68614jkmm4g6ti1t0ovoffdabl0.apps.googleusercontent.com`):
-   - **Authorized JavaScript origins:** add `https://www.dwellduel.com` and
-     `https://dwellduel.com`.
+   - **Authorized JavaScript origins:** not needed since #366, which stopped
+     loading Google's script; the ones already there do no harm.
    - **Authorized redirect URIs:** add `https://www.dwellduel.com/auth/google`
      and `https://dwellduel.com/auth/google`. The `redirect_uri` sent to
      Google must match one exactly. Keep Supabase's
      `https://lymrpiivqvdnfcjmxksx.supabase.co/auth/v1/callback` for the
      fallback.
-   - Optional, to try it locally: origins `http://localhost` and
-     `http://localhost:3000`, redirect URI `http://localhost:3000/auth/google`.
+   - Optional, to try it locally: the redirect URI
+     `http://localhost:3000/auth/google`.
 2. Supabase → Auth → Providers → Google: **Client IDs** must include that
    client ID (Supabase checks the token was issued to it), and **Skip nonce
    check** stays off.
@@ -458,13 +501,14 @@ logo rather than an unverified app):
 | Alarm | Means | First look |
 |---|---|---|
 | healthchecks.io: **keep-alive** late | The daily cron (05:15 UTC) didn't run, or couldn't reach healthchecks | Vercel → Settings → Cron Jobs: run it by hand and read the response. A rollback can change the cron (see [Rolling back](#the-app)) |
-| healthchecks.io: **keep-alive** failed | The cron ran but a step failed: its 502 response names the steps (`database`, `proof cleanup`, `proof retention`, `avatar cleanup`, `storage usage`, `key cleanup`, `uninvited sign-in cleanup`, `season settle`, `resolve reminders`) | Sentry for the error. `storage usage` failing means Storage is past 800 MB: see [Free-tier limits](#free-tier-limits) |
+| healthchecks.io: **keep-alive** failed | The cron ran but a step failed: its 502 response names the steps (`database`, `proof cleanup`, `proof retention`, `avatar cleanup`, `storage usage`, `key cleanup`, `uninvited sign-in cleanup`, `season settle`, `resolve reminders`) | Sentry for the error. A `42501 permission denied for table …` means production's `service_role` lacks a grant on that table (production's default privileges differ from local; 0109): compare with `npx supabase db query --linked`, and fix it in a migration. `storage usage` failing means Storage is past 800 MB: see [Free-tier limits](#free-tier-limits) |
 | healthchecks.io: **closing-alerts** late | Nothing has called `/api/cron/closing-alerts` successfully: `pg_cron`'s job stopped, its Vault secrets are wrong or missing, or the app answers 401 (a `CRON_SECRET` mismatch) | Supabase → Integrations → Cron → `closing-alerts` and its run history; the Vault secrets; Closing alerts → Run workflow |
 | healthchecks.io: **closing-alerts** failed, or the route's **502** | A run read its queue but delivered nothing and at least one failure was ours or the push service's (wrong VAPID keys answer 401/403 everywhere, our network, 429, 5xx), or it couldn't read the queue at all | Sentry ("Closing alerts failed"); the VAPID variables; the push services' status. One member's dead device never causes this |
 | **Admin warning**: "Closing alerts last ran …" | The same as closing-alerts late, seen in the app: no run has stamped the heartbeat for 30 minutes. Until one does, only the daily cron sends closing alerts | As above |
 | **Admin warning**: "Couldn't check whether closing alerts are running" | Reading `cron_heartbeats` failed; Admin still works | Usually transient; if it stays, check Supabase's health |
-| **UptimeRobot**: `/api/health` down | 503: the app can't read Supabase (an outage, a paused project, a bad `SUPABASE_SECRET_KEY`). No answer at all: Vercel or DNS | status.supabase.com, Supabase → the project's status, vercel-status.com; Vercel → Deployments for a failed or rolled-back deploy |
-| **Sentry**: a new issue | An uncaught error, or one `reportError` captured. A member's "Error code" on the error page is the event's digest | The event's stack and route; the PR that last touched it |
+| **UptimeRobot**: `/api/health` down | 503: the app can't read Supabase (an outage, a paused project, a bad `SUPABASE_SECRET_KEY`, a missing `service_role` grant on `profiles`); Sentry also gets "Health check failed". No answer at all: Vercel or DNS | status.supabase.com, Supabase → the project's status, vercel-status.com; Vercel → Deployments for a failed or rolled-back deploy |
+| **UptimeRobot**: SSL certificate expiring | Vercel hasn't renewed the certificate for `www.dwellduel.com` | Vercel → Settings → Domains, for a domain showing a configuration error |
+| **Sentry**: a high-priority issue email | A new or escalating issue Sentry rates high priority: an uncaught error, or one `reportError` captured. Lower-priority issues only show in Sentry. A member's "Error code" on the error page is the event's digest | The event's stack and route, and the suspect commit Sentry links through GitHub. Claude Code can read the issue through the Sentry connector |
 | **GitHub email**: a failed workflow | Deploy Production (the backup, migration, hook or build; the old app stays live), Backups, or the Closing alerts backup | The run's log; re-run from `main` once fixed |
 
 ### Checklist
@@ -472,7 +516,7 @@ logo rather than an unverified app):
 1. **Look quickly.** Vercel's runtime logs are kept for only an hour on
    Hobby, and Supabase's API and database logs for a day (its Auth audit
    log for an hour), so read them before anything else. Sentry keeps the
-   errors longer.
+   errors for weeks (its free plan's retention).
 2. **Is it the app or the data?** If a deploy broke it, roll the app back
    ([Rolling back](#the-app)) and fix forward. If data is wrong, stop
    whatever is writing it, then restore what's needed
@@ -660,6 +704,8 @@ app runs to each at 1,000 members.
 | Vercel Hobby: **1M function invocations, 4 h Active CPU a month** | Vercel → Usage | Going over can pause the project; the levers are in ARCHITECTURE's budget. The tightest of the Vercel limits |
 | Vercel Hobby: **Data Cache reads and writes, Fast Data Transfer** | Vercel → Usage | The sparkline cache is the main reader |
 | Vercel Hobby: **one cron a day**, 100 deployments a day, runtime logs kept 1 hour | — | Why `pg_cron` sends the closing alerts and Sentry keeps the errors |
+| Sentry free plan: a **monthly error quota**, one user | Sentry → Stats | Past it, errors are dropped until the month resets: ignore the noisy issue, or filter it in `beforeSend` (`lib/observability/sentry-options.ts`) |
+| UptimeRobot free: 50 monitors at a 5-minute interval; healthchecks.io free: 20 checks | — | One monitor and two checks are used |
 | Vercel Analytics and Speed Insights quotas | Vercel → Usage | Already sampled to 10% and 5% (`lib/app-shell/analytics-sampling.ts`) |
 | GitHub Actions: free minutes on a public repo; **10 GB cache**; scheduled workflows **disabled after 60 days** without repository activity | Settings → Actions → Caches; the Actions tab | `cleanup-caches.yml` deletes a closed PR's caches; re-enable a disabled schedule (Backups, Closing alerts, Warm caches) in the Actions tab |
 
@@ -677,3 +723,5 @@ ARCHITECTURE's guesses with what they show.
 | Backups: database | 03:17 daily | GitHub, `.github/workflows/backups.yml` | The encrypted dump ([Backups and restore](#backups-and-restore)) |
 | Backups: Storage | 03:47 Sundays | GitHub, the same workflow | The `proof` and `avatars` buckets |
 | Warm caches | 06:17 Mondays, and when the setup or lockfile changes | GitHub, `.github/workflows/warm-caches.yml` | Saves CI's Supabase image, npm, Next and Playwright caches on `main` |
+| Uptime check | Every 5 minutes | UptimeRobot | GETs `/api/health`; emails the owner when it isn't 200, and before the certificate expires |
+| Heartbeat checks | — | healthchecks.io | Email when the keep-alive or closing-alerts ping is late, or arrives as `/fail` |

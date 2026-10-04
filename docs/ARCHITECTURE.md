@@ -72,9 +72,9 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/admin/members/[id]` | One member's Admin page (#254), outside the sections' layout so their name is the `<h1>`: email, join and last sign-in, balance, Coin history (their last five movements and "Open in Ledger"), and for the owner Adjust balance, Role and Access (Remove from DwellDuel, or Invite again for a removed member). No `loading.tsx`: the member is found first (an unknown id is a real 404) and the coin history streams behind `<Suspense>` |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
-return), `/auth/google` and `/auth/google/nonce` (Google's own button,
+return), `/auth/google` and `/auth/google/nonce` (signing in straight with Google,
 below), `/privacy` (How it works' Your data section, for anyone, and the
-privacy policy Google's brand review reads), `/not-invited` and `/offline`. The API has three routes.
+privacy policy Google's brand review reads), `/not-invited` and `/offline`. The API has four routes; the fourth, `/api/push/resync`, is the service worker's (Push notifications, below).
 `/api/cron/keep-alive`, which a daily Vercel cron calls so the free
 Supabase project never pauses. It also deletes unattached proof files,
 attempt keys older than a day and uninvited sign-ins (below), expires
@@ -111,23 +111,27 @@ heartbeat, below.
 
 ```
 app/            routes (see above), globals.css, manifest, error pages
-components/     UI by area: admin, app-nav, app-shell, brand, docs, feed, home,
-                leaderboard, live, markets, members, nav, not-found, offline,
-                parlays, proof, slip, tasks, ui (shared primitives: Page,
+components/     UI by area: admin, app-nav, app-shell, bets, brand, docs, feed,
+                home, leaderboard, live, markets, members, nav, not-found,
+                offline, parlays, proof, push, sign-in, slip, tasks, ui (shared primitives: Page,
                 SectionCard, Button, Field, SubNav, ShowMore, EmptyState,
                 Skeleton…)
 lib/            logic by area: admin, app-shell, auth, bets, docs, economy, env,
                 errors, forms, home, invites, ledger, live, markets, members, nav,
-                offline, pagination, parlays, preferences, profile, proof, push,
-                social, supabase, tasks, theme, toast, ui…
+                observability, offline, pagination, parlays, preferences, profile,
+                proof, push, search, social, supabase, tasks, theme, toast, ui
 supabase/       migrations/00NN_*.sql, config.toml
 tests/          app/ (route handlers), components/, lib/, db/ (Vitest)
 e2e/            Playwright specs
-scripts/        generate-splash.mjs, generate-favicons.mjs, ios-standalone-check.mjs
+scripts/        check-migration-order.sh, backup/ (backup.sh, restore.sh…),
+                generate-splash.mjs, generate-favicons.mjs, ios-standalone-check.mjs
                 (npm run check:ios), seed-scale.mjs
 public/         sw.js (service worker), icons, favicons, iOS splash screens
 docs/           this file, HOW-IT-WORKS, OPERATIONS, ADMIN-GUIDE, RELEASING, GETTING-STARTED,
                 the design handoff, and archive/ (dated specs and plans, history only)
+(root)          proxy.ts, instrumentation*.ts, next.config.ts (CSP, Sentry wrap),
+                vercel.json; .github/ (CI, deploys, scheduled jobs); .claude/ and
+                .mcp.json (Claude Code's guard rails and skills, below)
 ```
 
 ## Data model
@@ -148,7 +152,10 @@ table's policies.
 `public`. Since 0091, nothing postgres creates there grants `anon` anything
 by default, and no new function is executable by `PUBLIC`; `authenticated`
 keeps Supabase's defaults, so a new function or table still needs its
-`revoke ... from public, anon` and the grants it means. A new table still
+`revoke ... from public, anon` and the grants it means. Since 0109,
+`service_role` gets select, insert, update and delete on every table postgres
+creates in `public` (production's defaults gave it none), and the schema test
+checks it holds them on every table but `activity_events`. A new table still
 needs `enable row level security` (production's automatic-RLS event trigger
 is a backstop, not the rule). `tests/db/schema-privileges.test.ts` sweeps the
 schema: RLS on every table, no `anon` table, column, sequence or function
@@ -158,18 +165,18 @@ that list is the review step: a definer function skips RLS, so it must check
 its caller (`is_invited`, `has_role`, `auth.uid()`) itself.
 
 **Write limits** (0090, #273). A member's own inserts into `markets`,
-`market_comments`, `feed_reactions` and `task_completions`
+`market_categories`, `market_comments`, `feed_reactions` and `task_completions`
 pass `enforce_write_limit`, a BEFORE INSERT trigger that counts them per
 fixed window in `write_rate_counters` (one row per member, action and
 window, out of members' reach) and raises SQLSTATE `DD429` once a window is
-full: 20 markets a day, 10 comments a minute and 200 a day, 60 reactions a
+full: 20 markets a day, 20 new categories a day (0103; editing a market
+can make one too), 10 comments a minute and 200 a day, 60 reactions a
 minute and 1,000 a day, 30 task submissions a day (bet cancels had their own
 limit until #332 dropped cancelling, 0107).
 The limits live in `write_limits()`, mirrored by `WRITE_LIMITS` in
 `lib/forms/limits.ts` (a DB test keeps them equal), whose
 `RATE_LIMIT_ERRORS` word each raise for its action. The service role, admins
-and the owner aren't counted, nor is a row written for someone else (the
-owner removing a bet). Push devices are capped instead: saving an eleventh
+and the owner aren't counted, nor is a row written for someone else. Push devices are capped instead: saving an eleventh
 subscription drops the member's least recently used one
 (`cap_push_subscriptions`). A new member-written table that can grow without
 spending coins should get a trigger and a `write_limits()` row.
@@ -231,8 +238,8 @@ spending coins should get a trigger and a `write_limits()` row.
   only for a market converted from a pool, #335). `pool_total` still counts
   the DC staked there, which `delete_market`, "at stake" and the ledger
   check read.
-- `bets`: live stakes only. Bets cancelled or removed before 0107 (#332)
-  dropped `cancel_bet` and `remove_bet` sit in `cancelled_bets`, read-only
+- `bets`: live stakes only. Bets cancelled or removed before 0107 (#332),
+  which dropped `cancel_bet` and `remove_bet`, sit in `cancelled_bets`, read-only
   history for My bets' Cancelled tab; nothing writes there now. On an
   `lmsr` market a bet also records `cost` (equal to `amount`) and `shares`
   (to six places, rounded down), and it is final. A bet converted from a
@@ -487,8 +494,7 @@ market's creator, who has the reminder, `resolve_reminders` on), which claim
 nothing; 0098 dropped the claiming `push_resolve_reminders()` and
 `push_market_alerts()` they replaced; the route sends one market at a time and claims through
 `claim_push_log(kind, refs)` only the markets at least one device took, so
-a failed push is due again next run. Nothing calls the two claiming
-functions since; dropping them is destructive, so it waits for its own PR.
+a failed push is due again next run.
 `my_review_counts()` (security invoker) counts what waits on the caller: other
 members' pending task submissions for a reviewer and above, closed unresolved
 markets for an admin and above.
@@ -574,7 +580,8 @@ subquery per row, so 0055 adds no index.
 ### Migrations
 
 Migrations are numbered sequentially from `0001`, and none is ever edited
-after it ships. They roughly follow the project's history:
+after it ships (`.claude/hooks/protect-migrations.sh` refuses an edit to
+one already on `origin/main`). They roughly follow the project's history:
 
 | Range | What they add |
 |---|---|
@@ -627,6 +634,7 @@ after it ships. They roughly follow the project's history:
 | 0098 | Destructive cleanup of what the app stopped using: `market_outcomes`, `tasks` and `feed_reactions` leave the realtime publication, `markets.sparkline` with its trigger and `cache_market_sparkline`, and the claiming `push_resolve_reminders` and `push_market_alerts` |
 | 0099 | `rls_auto_enable()`, Supabase's platform function behind automatic RLS, loses EXECUTE for `PUBLIC` too (0015 revoked only `anon` and `authenticated`), so the Security Advisor no longer lists it as callable signed out; guarded, since only hosted projects have it |
 | 0100 | Private Postgres Changes channels: the `realtime.messages` policy `member_topics_receive` lets an invited member join only their own `live-member:<id>:base:<n>` and `live-member:<id>:page:<n>` topics, so the project can refuse public channels |
+| 0101 | LMSR core, part 1 of #325 (#331): pure `lmsr_cost`, `lmsr_price` and `lmsr_buy` (mirrored by `lib/markets/lmsr.ts`, kept equal by `tests/db/lmsr.test.ts`); `markets.liquidity` (default 50) and `markets.pricing` (`pool` for every market until part 2); `market_outcomes.shares` and `q_offset`; `bets.shares` and `cost`; `parlay_legs.factor` and `shares`; `parlays.multiplier` and `payout`. Nothing reads them yet |
 | 0102 | LMSR part 2 of #325 (#333): `create_market_v3` makes `lmsr` markets (no seed, even prices); `place_slip_v3` and the internal `place_lmsr_bet` buy shares with the 2% re-price refusal (`price_moved:<payout>`); `place_bet`, `cancel_bet` and `remove_bet` refuse `lmsr` markets, and a `parlay_legs` trigger refuses a leg on one until #334; `resolve_market_core` pays `floor(shares)` and keeps `market_resolutions.payout_remainder`; `pool_version` also follows `shares`; `market_sparklines` and `weekly_recap`'s upset read the LMSR price; `economy_flows` and `economy_summary` gain the market maker line (two columns at the end of the row); `member_stats`, `member_records` and `leaderboard_awards` stop counting an `lmsr` bet nobody else backed as refunded |
 | 0103 | Market categories (#327): `market_categories` (Other seeded with a fixed id), `markets.category_id` (NOT NULL, default Other) and its `(category_id, status, close_at, id)` index, `market_edits.old_category_id` / `new_category_id`; `create_market_v4` (v3 plus `p_category`), a four-argument `update_market` with `p_category`, the admin `rename_market_category`, `merge_market_categories` and `set_market_category_hidden`, and `category_counts()` |
 | 0104 | LMSR part 3 of #325 (#334): `place_slip_v4` and the internal `place_lmsr_parlay` place a parlay on `lmsr` markets, its stake split across 2–6 legs into the house parlay book, its factors, `multiplier` and `payout` fixed at placement with the 2% re-price refusal, refusing a parlay that mixes in a `pool` market; `parlay_limits()` caps every parlay at 6 legs; 0102's leg trigger becomes `check_parlay_leg_pricing` (an `lmsr` leg carries factor and shares, a `pool` leg neither) and `place_parlay` refuses an `lmsr` leg; `settle_parlay` pays a fixed parlay (a voided leg drops its factor); `parlay_leg_odds`, `member_stats` and `leaderboard_awards` read a fixed parlay's factors and multiplier; `economy_flows` books fixed parlays on the market maker line; `market_sparklines` charts parlay legs (exp in double precision); `activity_feed` pays `floor(shares)` on `lmsr` markets; `has_stake_in_market` counts any parlay leg on the market, whatever its parlay's status, and `void_market` refuses a creator with a stake |
@@ -635,7 +643,6 @@ after it ships. They roughly follow the project's history:
 | 0107 | LMSR part 5 of #325 (#332), destructive: drops `cancel_bet`, `remove_bet` and `refund_room`, `place_slip`, `place_slip_v2`, `place_slip_v3`, `create_market` and `create_market_v2`, and `cancelled_bets`' write-limit trigger with the `bet_cancel` limit. Keeps everything history, overrides and charts read: `cancelled_bets`, `seed_per_outcome`, `payout_seed`, `locked_odds`, `pool_payout`, `pick_quote`, `parlay_leg_odds`, `place_bet` / `place_parlay`, and `pick_quotes` until the build before this one is gone |
 | 0108 | LMSR leftovers (#345), destructive: drops `pick_quotes` (no build or function body calls it) and `enforce_write_limit`'s `bet_cancel` message, and takes `cancelled_bets` out of the realtime publication (the table stays). Category changes go live: a row trigger on `market_categories` pings the `markets` topic, and `market_categories` joins the publication so the market page follows its own category's row |
 | 0109 | Grants `service_role` select, insert, update and delete on `idempotency_keys`, `live_pings` and `live_ping_queue`, and makes that the default for tables `postgres` creates in `public`. Production's defaults gave `service_role` none of the four on a new table where local Supabase gives all of them, so the keep-alive cron's key cleanup failed with 42501 in production only; `schema-privileges.test.ts` now checks every table (`activity_events` stays read-only) |
-| 0101 | LMSR core, part 1 of #325 (#331): pure `lmsr_cost`, `lmsr_price` and `lmsr_buy` (mirrored by `lib/markets/lmsr.ts`, kept equal by `tests/db/lmsr.test.ts`); `markets.liquidity` (default 50) and `markets.pricing` (`pool` for every market until part 2); `market_outcomes.shares` and `q_offset`; `bets.shares` and `cost`; `parlay_legs.factor` and `shares`; `parlays.multiplier` and `payout`. Nothing reads them yet |
 
 Numbers 0075, 0077–0082 and 0084–0088 were reserved by branches that merged later under higher numbers, so they are unused.
 
@@ -666,7 +673,8 @@ off. There are two ways in, chosen at build by `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
 - **With it, straight to Google** (OpenID Connect, `response_type=id_token`,
   `response_mode=form_post`; a full-page redirect, never a popup, which the
   installed iPhone app can't do). The same `SignInButton`, with `direct`,
-  first POSTs to `/auth/google/nonce`, which keeps a random nonce in the
+  first POSTs to `/auth/google/nonce` (a 403 when `Sec-Fetch-Site` names
+  another site, a 404 without a client ID), which keeps a random nonce in the
   httpOnly `google-nonce` cookie and a random state in `google-state`, and
   returns Google's authorize URL (`googleAuthorizeUrl`) carrying the state,
   the nonce's SHA-256 (hex) and `prompt=select_account`; `next` rides in
@@ -686,6 +694,10 @@ off. There are two ways in, chosen at build by `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
   (`?error=`) the page shows Supabase's redirect as "Try another way" under
   the button, so a fault on the direct path can't lock members out. Nothing
   of Google's loads on our pages, so the CSP allows nothing from Google.
+  The page (`app/(auth)/sign-in/page.tsx`, inside `SignInFrame` with its
+  brand intro) fits a phone without scrolling: under the `short:` variant
+  (`globals.css`; a short viewport below `lg`) its three facts drop out so
+  the button stays on screen (#366).
 
 Either way, `finishSignIn` (`lib/auth/finish-sign-in.ts`) does the rest, and
 a member whose email isn't in `allowed_emails` lands on `/not-invited`. A signed-out request
@@ -745,7 +757,7 @@ can be copied, and an unknown or unreadable id opens a blank form. The
 form moves the original close time on by at least one whole week in the viewer's own
 time zone (`lib/markets/weekly-close.ts`), so a weekly market keeps its
 local time across a DST change. Nothing is written until the form is
-submitted through `create_market` as usual.
+submitted through `create_market_v4` as usual.
 
 **Odds on `lmsr` markets** (0102). An LMSR market maker (`lmsr_cost`,
 `lmsr_price`, `lmsr_buy`, 0101, mirrored by `lib/markets/lmsr.ts`) with
@@ -777,7 +789,7 @@ converted bet's point at the pool chance it showed, so history is
 unchanged, and LMSR prices from the next bet on. The pool code below stays
 for markets settled before 0105: their chance, charts and results, and an
 admin's override. Clean-up (#332, 0107) dropped only what nothing can reach;
-the audit is in `docs/superpowers/plans/2026-10-02-lmsr-5-cleanup.md`.
+the audit is in `docs/archive/superpowers/plans/2026-10-02-lmsr-5-cleanup.md`.
 `tests/db/lmsr-conversion.test.ts` converts a production-shaped snapshot
 (`tests/db/conversion-snapshot.ts`) and resolves every market to every
 outcome, and every parlay through wins and voids, against the pool rules.
@@ -1161,9 +1173,8 @@ value never stops production booting.
   transition the browser skipped (`isSkippedViewTransition`: a resize or a
   hidden tab mid-transition, which react-dom leaves unhandled) and the bare
   `Script error.` a browser reports for a cross-origin script
-  (`isCrossOriginScriptError`). Sign-in's fallback to Supabase's Google button
-  is not reported when Google's script is blocked or never arrives, only when
-  something of ours fails (the nonce, `initialize`, `renderButton`). Source maps: a build that
+  (`isCrossOriginScriptError`, #363; it came from Google's sign-in script,
+  which #366 removed, and stays as a cheap guard). Source maps: a build that
   holds `SENTRY_AUTH_TOKEN` (Vercel's, with `SENTRY_ORG` and `SENTRY_PROJECT`,
   which the Sentry–Vercel integration set) is wrapped in `withSentryConfig`
   (`next.config.ts`), which uploads hidden source maps under the deploy's
@@ -1180,8 +1191,9 @@ value never stops production booting.
 - **Admin health read.** `readClosingAlertsHealth` returns `{ unknown: true }`
   on a failed read; the banner then says it couldn't check, and every
   Admin page still renders.
-- **Uptime.** Point an external monitor (UptimeRobot or Better Stack free,
-  5-minute interval) at `/api/health` and at `/`.
+- **Uptime.** UptimeRobot (free, every 5 minutes) checks `/api/health` and
+  emails the owner on a 503 or no answer, with SSL expiry reminders on; what
+  each alert means is in `docs/OPERATIONS.md`.
 - **Heartbeat.** `HEALTHCHECKS_KEEP_ALIVE_URL` is a healthchecks.io check's
   ping URL; the daily cron GETs it after its steps, or `<url>/fail` when any
   step failed, and healthchecks emails when a ping is late or fails. A failed
@@ -1273,8 +1285,10 @@ value never stops production booting.
   real null. Every client and helper uses `DbClient`.
 - **Security headers** (`next.config.ts`): a Content Security Policy that
   only allows scripts from the app itself (and `va.vercel-scripts.com`, for
-  Vercel Analytics and Speed Insights) and connections to the app and its
-  Supabase project, plus `X-Frame-Options: DENY`, `nosniff`, a referrer policy and
+  Vercel Analytics and Speed Insights) and connections to the app, its
+  Supabase project and Sentry's ingest (`*.sentry.io`); nothing from Google,
+  since sign-in leaves and returns by navigation. `form-action 'self'`,
+  `frame-ancestors 'none'` with `X-Frame-Options: DENY`, `nosniff`, a referrer policy and
   a `Permissions-Policy` denying camera, microphone and location. `poweredByHeader` is off. A
   new third-party origin (analytics, an image host) has to be added to the
   CSP there.
@@ -1285,5 +1299,13 @@ value never stops production booting.
   `VAPID_PRIVATE_KEY` only warn (#210): production boots without them, logs
   "Push notifications are off until they are set" and sends nothing.
   `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is optional and isn't checked: it's fixed
-  at build, and without it sign-in uses Supabase's Google redirect. Every
+  at build, and without it sign-in uses Supabase's Google redirect. Optional and off when unset: `NEXT_PUBLIC_SENTRY_DSN`,
+  `HEALTHCHECKS_KEEP_ALIVE_URL` and `HEALTHCHECKS_CLOSING_ALERTS_URL`
+  (Observability), and, in Vercel only, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and
+  `SENTRY_PROJECT`, which only turn on the source-map upload. Every
   variable and how to rotate it is in `docs/OPERATIONS.md`.
+- **Claude Code guard rails** (#368): `.claude/settings.json` refuses
+  `supabase db push`, pushing straight to `main` and the Supabase connector's
+  write tools; `.claude/hooks/protect-migrations.sh` refuses edits to a
+  shipped migration; `.mcp.json` adds a read-only Supabase MCP scoped to
+  production. Migrations still reach production only through Deploy Production.

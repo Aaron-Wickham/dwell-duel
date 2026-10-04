@@ -52,8 +52,8 @@ targets, not guarantees; a serious issue gets dropped-everything attention.
 
 **Out of scope:**
 
-- Supabase, Vercel, Google, GitHub, Sentry and the browsers' push services
-  themselves; report those to their owners;
+- Supabase, Vercel, Google, GitHub, Sentry, UptimeRobot, healthchecks.io and
+  the browsers' push services themselves; report those to their owners;
 - denial of service, load testing, and anything that relies on
   overwhelming the free-tier limits;
 - social engineering of members or the maintainer, and physical attacks;
@@ -108,6 +108,9 @@ to understand and fix the problem.
 - **The service-role (secret) key** exists only on the server, in
   Vercel's Production environment, and is used only by the cron routes,
   the health check and push sending. Nothing in the browser holds it.
+  Production's default privileges gave that role no table rights; 0109
+  grants it read and write on every `public` table and makes that the
+  default for new ones.
 
 ### What a collaborator with write access can and can't do
 
@@ -131,7 +134,28 @@ to understand and fix the problem.
   sends nothing that wasn't already due and reads no member data back.
   It's rotated whenever the set of people with write access changes.
 - **No production data access.** Collaborators don't get the Supabase or
-  Vercel dashboards, the production database or members' data.
+  Vercel dashboards, the production database or members' data. AI agents
+  the owner runs are the exception: see below.
+
+### AI agents
+
+Claude Code sessions the owner runs act with his logins: the Supabase CLI
+linked to production, the `supabase-prod-readonly` MCP server (`.mcp.json`:
+read-only, scoped to the production project), and his account-wide
+Supabase, Vercel, Sentry and UptimeRobot connectors. The checked-in
+`.claude/settings.json` refuses `supabase db push`, `git push origin main`
+and the Supabase connector's write tools, and
+`.claude/hooks/protect-migrations.sh` refuses an edit to a migration already
+on `origin/main`.
+
+These are guard rails against mistakes, not a security boundary. They match
+command prefixes and tool names; the connector rules name the owner's own
+connector, so they mean nothing in anyone else's session; and they don't
+cover `supabase db query --linked`, which can write, or the Vercel and
+UptimeRobot connectors' write tools. Read-only access still reads members'
+data, emails included. What protects production is the same as for a
+collaborator: the `main` rulesets, the `Production` environment, and
+migrations reaching production only through Deploy Production.
 
 ### Data
 
@@ -139,7 +163,8 @@ What the app stores about members, who can see it and how long it's kept
 is in [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md#your-data), which the app
 shows under Settings → Your data. It lives in Supabase (us-east-2) and
 Vercel (Cleveland), with nightly age-encrypted backups in a private
-repository, kept about 60 days.
+repository, kept about 60 days. Error reports go to Sentry, stripped of
+who the member is and what they typed (below).
 
 ## Controls in place
 
@@ -150,11 +175,19 @@ repository, kept about 60 days.
   the policies, privileges and refusals.
 - Per-member write limits and Storage upload quotas in the database.
 - A Content Security Policy, `X-Frame-Options: DENY`, `nosniff`, a referrer
-  policy and a `Permissions-Policy` (`next.config.ts`).
+  policy and a `Permissions-Policy` (`next.config.ts`); nothing of Google's
+  loads on the sign-in page (#366).
 - Push endpoints allowlisted to known push services, in SQL and in the
   sender.
 - Error reports scrubbed of users, cookies, request bodies, headers and
-  query strings.
+  query strings. Source maps go to Sentry from the Vercel build and are
+  deleted from the output, so production never serves them.
+- Monitoring that emails the owner: Sentry's high-priority-issue alert,
+  UptimeRobot on `/api/health` every 5 minutes, healthchecks.io heartbeats
+  for the crons, and GitHub's failed-workflow email.
+- Claude Code guard rails, checked in: `supabase db push` and pushes to
+  `main` refused, a hook refusing edits to applied migrations, and a
+  read-only production MCP server ([AI agents](#ai-agents)).
 - GitHub secret scanning with push protection, Dependabot security and
   version updates, and every Action pinned to a commit SHA.
 - Branch rulesets on `main` (review, `ci-ok`, up to date) and the

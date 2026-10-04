@@ -13,10 +13,10 @@ reviewers and above see, and on market pages.
 
 | Role | Can | Admin sections |
 |---|---|---|
-| **Member** | Bet, create markets, resolve their own markets once they close (unless they have money on them), void their own markets before they close, submit tasks | none |
+| **Member** | Bet, create markets and edit their own (wording, category, and the closing time while they have no money on it), resolve their own markets once they close (unless they have money on them), void their own markets before they close, submit tasks | none |
 | **Reviewer** | Everything a member can, plus approve and reject other members' task submissions, and resolve any closed market they have no money on | Tasks (the approval queue only) |
-| **Admin** | Everything a reviewer can, plus invite people, create and edit tasks, resolve any market at any time (even before it closes, and even one they have money on), override a result, void any market, delete any comment, and see members' emails and the full ledger | Invites, Tasks, Markets, Members, Ledger |
-| **Owner** (exactly one) | Everything an admin can, plus adjust balances, change roles, remove a member or invite them again, remove anyone's bet before its market closes, and delete a market or task nobody has used | The same, with the owner's cards on each member's page and the Economy card on Ledger |
+| **Admin** | Everything a reviewer can, plus invite people, create and edit tasks, resolve any market at any time (even before it closes, and even one they have money on), override a result, void any market, move any market's closing time or reopen it, delete any comment, and see members' emails and the full ledger | Invites, Tasks, Markets, Members, Ledger |
+| **Owner** (exactly one) | Everything an admin can, plus adjust balances, change roles, remove a member or invite them again, and delete a market or task nobody has used | The same, with the owner's cards on each member's page and the Economy card on Ledger |
 
 A role only counts while its account is invited. Removing a member takes
 their role away with their invite, straight away.
@@ -53,14 +53,15 @@ the owner's, through their page (see [Members](#members-owner)).
 ### Creating one
 
 Any member can create a market from Markets → Create market: a question,
-an optional description, a closing time, and its kind.
+an optional description, a category, a closing time, and its kind.
 
 - **Yes/No**, or **Multiple choice** with 2 to 6 outcomes.
 - **Over/Under** takes a number with a line ending in .5 (for example
   "Minutes the sermon runs, 42.5"), so it can never tie. Its outcomes are
   made from the line: Over 42.5 and Under 42.5.
 - **Set the closing time before the answer is known.** Betting stops then.
-  The outcomes, the closing time and the line can never change afterwards.
+  The outcomes and the line can never change afterwards; the closing time
+  can be moved (see Editing and deleting).
 - **Duplicate** on any market opens the form already filled in, a week (or
   more) later, for a question that comes round every week.
 
@@ -119,9 +120,11 @@ for you, you can't resolve it: the database decides
    stay.
 4. Tap **Resolve market**, and confirm. The confirmation names the winner.
 
-**What happens.** Winning solo bets are paid at once: the winners split
-the whole real pool in proportion to their stakes (the 20 DC seed is never
-paid). If nobody backed the winner, everyone on the market is refunded.
+**What happens.** Winning solo bets are paid at once: each is paid its
+shares, rounded down to whole DC, which is what its slip said it would
+pay. Nobody is refunded when nobody backed the winner, with one exception:
+a bet placed before the October 2026 switch gets its stake back if the
+market resolves to an outcome nobody had backed at the switch.
 Each parlay with a pick on the market settles that leg: a losing pick
 loses the parlay, and a parlay pays once every pick has won.
 
@@ -265,8 +268,10 @@ member's page, **Open in Ledger** narrows it to them.
 
 The **Economy card** above it (owner only) shows the DC in circulation
 (balances plus stakes still riding) and this month's DC added and removed,
-by source: starting grants, task rewards, payout rounding, house-paid
-parlays and owner adjustments. It also checks that **everything ever added,
+by source: starting grants, task rewards, the market maker (what markets
+paid winners, less every stake on them, parlays included), payout rounding,
+house-paid parlays and owner adjustments, plus seed payouts in a month
+when an older result was paid or overridden. It also checks that **everything ever added,
 less everything ever removed, equals what's in circulation**. If it says
 the check fails, or that the ledger holds a type it doesn't know, coins
 have moved outside the rules: tell Aaron, and don't adjust balances to

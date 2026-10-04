@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { microTextClass } from '@/components/ui/page'
 
 // A count of what waits on the viewer (tasks to review, markets to resolve), on the top bar's
 // Admin button and on the admin section tabs that make up its number (#243, #351). Decorative to
@@ -9,7 +10,7 @@ export function AttentionBadge({ count, className }: { count: number; className?
     <span
       aria-hidden="true"
       className={cn(
-        'pointer-events-none absolute flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-loss px-1 text-[11px] leading-none font-extrabold text-on-primary tabular-nums ring-2 ring-surface',
+        `pointer-events-none absolute flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-loss px-1 ${microTextClass} leading-none font-extrabold text-on-primary tabular-nums ring-2 ring-surface`,
         className,
       )}
     >

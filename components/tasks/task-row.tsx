@@ -54,15 +54,15 @@ export function TaskRow({
           <p className="flex flex-wrap items-center gap-1 text-sm text-ink2">
             {description}
             {cadence && (
-              <span className="inline-flex h-6 items-center whitespace-nowrap rounded-full bg-sunk px-[9px] text-xs font-extrabold text-ink2">
+              <StatusChip tone="void" size="sm">
                 {cadence}
-              </span>
+              </StatusChip>
             )}
             {streak && <StreakBadge period={streak.period} count={streak.count} />}
             {proofRequired && (
-              <span className="inline-flex h-6 items-center whitespace-nowrap rounded-full bg-sunk px-[9px] text-xs font-extrabold text-ink2">
+              <StatusChip tone="void" size="sm">
                 Proof required
-              </span>
+              </StatusChip>
             )}
           </p>
         )}

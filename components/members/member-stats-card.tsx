@@ -7,12 +7,13 @@ import { Skeleton, SkeletonCard } from '@/components/ui/skeleton'
 import { formatOdds } from '@/lib/parlays/odds'
 import type { MemberStats, WinLoss } from '@/lib/members/stats'
 import { cn } from '@/lib/utils'
+import { figureInlineClass } from '@/components/ui/page'
 
 function Stat({ label, children, detail }: { label: string; children: ReactNode; detail?: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
       <dt className="text-sm text-ink2">{label}</dt>
-      <dd className="text-xl font-extrabold tabular-nums">{children}</dd>
+      <dd className={figureInlineClass}>{children}</dd>
       {detail && <dd className="text-sm text-ink2 break-words">{detail}</dd>}
     </div>
   )

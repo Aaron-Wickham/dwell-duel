@@ -35,7 +35,7 @@ export function YourStandingCard({ standing, record, className }: { standing: Yo
         <>
           <dl className="grid grid-cols-3 gap-3">
             <Stat label="Rank">
-              {ordinal(standing.rank)} <span className="font-semibold text-ink2">of {standing.memberCount}</span>
+              {ordinal(standing.rank)} <span className="font-bold text-ink2">of {standing.memberCount}</span>
             </Stat>
             <Stat label="Net worth">{standing.score} DC</Stat>
             <Stat label="Record">{settled ? `${record.won}-${record.lost}` : '–'}</Stat>

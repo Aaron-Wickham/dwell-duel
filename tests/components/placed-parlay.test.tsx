@@ -140,7 +140,7 @@ describe('PlacedParlay', () => {
     expect(screen.getAllByRole('link')).toHaveLength(1)
     expect(screen.getByText(/Will it rain\?/)).toBeInTheDocument()
     expect(screen.getByText('Grace').tagName).toBe('STRONG')
-    expect(screen.getByText('Won')).toHaveClass('bg-acc-soft', 'text-acc-text', 'h-6', 'rounded-full')
+    expect(screen.getByText('Won')).toHaveClass('bg-win-soft', 'text-win', 'h-6', 'rounded-full')
     expect(screen.getByText('Voided')).toHaveClass('bg-sunk', 'text-ink2')
   })
 

@@ -6,7 +6,7 @@ function SkeletonToggle({ hintWidth }: { hintWidth: string }) {
   return (
     <div className="flex flex-col gap-0.5">
       <div className="flex min-h-11 items-center gap-2.5">
-        <Skeleton className="size-[22px] rounded-[4px]" />
+        <Skeleton className="size-[22px] rounded-segment" />
         <Skeleton className="h-5 w-36" />
       </div>
       <Skeleton className={`ml-8 h-5 ${hintWidth}`} />
@@ -30,7 +30,7 @@ export default function Loading() {
             <Skeleton className="h-6 w-32" />
             <div className="flex flex-col gap-1.5">
               <Skeleton className="mb-1.5 h-5 w-16" />
-              <Skeleton className="h-[52px] w-full rounded-[14px]" />
+              <Skeleton className="h-[52px] w-full rounded-tile" />
               <Skeleton className="h-5 w-64 max-w-full" />
             </div>
           </SkeletonCard>

@@ -78,7 +78,7 @@ export default async function AdminTasksPage(props: PageProps<'/admin/tasks'>) {
               {tasks.length === 0 ? (
                 <EmptyState icon={BookOpen} title="No tasks yet." />
               ) : (
-                <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-4')}>
+                <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-5')}>
                   {tasks.map((task) => (
                     <TaskCatalogItem key={task.id} task={task} canDelete={role === 'owner'} />
                   ))}

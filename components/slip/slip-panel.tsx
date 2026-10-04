@@ -10,7 +10,8 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
-import { h2Class, labelClass, rowTitleClass } from '@/components/ui/page'
+import { h2Class, labelClass, rowTitleClass, uiTextClass } from '@/components/ui/page'
+import { SegmentedControl, segmentClass, segmentMarker } from '@/components/ui/segmented-control'
 import { StatusChip } from '@/components/ui/status-chip'
 import type { SlipPick } from '@/lib/parlays/get-slip'
 import { lmsrPrices } from '@/lib/markets/lmsr'
@@ -93,11 +94,7 @@ function StakeChips({ label, available, onPick }: { label: string; available: nu
   )
 }
 
-const segmentClass = (on: boolean) =>
-  cn(
-    'pressable min-h-11 cursor-pointer rounded-[10px] px-3 text-[15px] font-bold disabled:cursor-not-allowed disabled:opacity-50',
-    on ? 'bg-surface text-ink shadow-tab' : 'text-ink2',
-  )
+const modeClass = (on: boolean) => cn(segmentClass(on), uiTextClass, 'disabled:cursor-not-allowed disabled:opacity-50')
 
 // What a Solo stake pays if it wins, exactly as place_lmsr_bet will (0102).
 function lmsrPays(pick: SlipPick, stake: number): number | null {
@@ -161,19 +158,26 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
 
       {pick.open && (
         <>
-          <div role="group" aria-label={`Bet type for ${name}`} className="grid grid-cols-2 gap-1 rounded-[12px] bg-sunk p-1">
-            <button type="button" aria-pressed={!pick.parlay} className={segmentClass(!pick.parlay)} onClick={() => setMode(pick.outcomeId, false)}>
+          <SegmentedControl role="group" aria-label={`Bet type for ${name}`} activeKey={pick.parlay ? 'parlay' : 'solo'} className="grid grid-cols-2">
+            <button
+              type="button"
+              aria-pressed={!pick.parlay}
+              {...segmentMarker(!pick.parlay)}
+              className={modeClass(!pick.parlay)}
+              onClick={() => setMode(pick.outcomeId, false)}
+            >
               Solo
             </button>
             <button
               type="button"
               aria-pressed={pick.parlay}
-              className={segmentClass(pick.parlay)}
+              {...segmentMarker(pick.parlay)}
+              className={modeClass(pick.parlay)}
               onClick={() => setMode(pick.outcomeId, true)}
             >
               Parlay
             </button>
-          </div>
+          </SegmentedControl>
           {!pick.parlay && (
             <>
               <div className="flex flex-wrap items-center gap-3">
@@ -321,7 +325,7 @@ export function SlipPanel() {
           {picks.length} {picks.length === 1 ? 'pick' : 'picks'}
         </span>
       </div>
-      <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-[12px] bg-sunk px-3 py-2.5 text-sm">
+      <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-control bg-sunk px-3 py-2.5 text-sm">
         <span>
           Balance <strong className="tabular-nums">{balance} DC</strong>
         </span>

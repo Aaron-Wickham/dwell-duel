@@ -9,11 +9,11 @@ export default function Loading() {
     <SkeletonScreen name="admin-tasks" className="flex flex-col gap-5 md:gap-7">
       <SkeletonCard className="gap-4">
         <Skeleton className="h-6 w-48" />
-        <div className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-4')}>
+        <div className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-5')}>
           {Array.from({ length: 2 }, (_, i) => (
             <div key={i} className={cn(listCardClass, 'flex flex-col gap-3')}>
               <div className="flex items-start gap-2">
-                <Skeleton className="size-[22px] shrink-0 rounded-md" />
+                <Skeleton className="size-[22px] shrink-0 rounded-segment" />
                 <div className="flex grow flex-col gap-2">
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-4 w-28" />
@@ -37,7 +37,7 @@ export default function Loading() {
         </SkeletonCard>
         <SkeletonCard>
           <Skeleton className="h-6 w-32" />
-          <div className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-4')}>
+          <div className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-5')}>
             {Array.from({ length: 3 }, (_, i) => (
               <div key={i} className={cn(listCardClass, 'flex flex-col gap-2')}>
                 <div className="flex items-center justify-between gap-3">

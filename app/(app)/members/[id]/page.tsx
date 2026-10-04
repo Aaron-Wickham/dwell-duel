@@ -8,7 +8,7 @@ import { readPageParams } from '@/lib/pagination/cursor'
 import { isUuid } from '@/lib/uuid'
 import Link from 'next/link'
 import { Settings, UserRound } from 'lucide-react'
-import { Page } from '@/components/ui/page'
+import { Page, rowTitleClass } from '@/components/ui/page'
 import { buttonVariants } from '@/components/ui/button'
 import { HistoryBackLink } from '@/components/ui/history-back-link'
 import { MemberProfileHeader } from '@/components/members/member-profile-header'
@@ -41,7 +41,7 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
           <div className="flex min-w-0 flex-col gap-5 md:gap-7">
             <section className="flex flex-col gap-4">
               <MemberProfileHeader name={member.displayName} avatarSrc={member.avatarSrc} bio={member.bio}>
-                <p className="text-[18px] font-extrabold tabular-nums">
+                <p className={rowTitleClass}>
                   {member.score} DC net worth ·{' '}
                   {member.rank === null ? 'Not ranked' : `Rank ${member.rank} of ${member.memberCount}`}
                 </p>

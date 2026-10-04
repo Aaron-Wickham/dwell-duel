@@ -9,7 +9,7 @@ export default function Loading() {
     <SkeletonScreen name="tasks" className={pageClass}>
       <SkeletonPageHeader description />
       <SkeletonCard>
-        <div className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:gap-4')}>
+        <div className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:gap-5')}>
           {Array.from({ length: 4 }, (_, i) => (
             <div key={i} className={cn(listCardClass, 'flex flex-col gap-3 md:flex-row md:items-center md:gap-5')}>
               <div className="flex grow flex-col gap-2">

@@ -32,7 +32,7 @@ export function FeedItem({
     // A grid, so the reactions can run under the time as well as the sentence: in the sentence's
     // column alone, four 44px buttons wrapped onto a second row on a phone.
     <li {...focusTarget(domId, labelId)} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 py-3.5">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-sunk text-ink">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-segment bg-sunk text-ink">
         <Icon aria-hidden="true" className="size-5" />
       </span>
       <div className="flex min-w-0 grow flex-col gap-1 pt-[5px]">

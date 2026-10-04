@@ -263,6 +263,7 @@
   --color-splash: var(--splash);
   --color-on-splash: var(--on-splash);
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius-segment: 10px;
   --radius-control: 12px;
   --radius-tile: 14px;
   --radius-card: 18px;

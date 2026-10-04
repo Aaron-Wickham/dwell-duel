@@ -1,15 +1,15 @@
-import { StatusChip } from '@/components/ui/status-chip'
+import { StatusChip, type StatusChipTone } from '@/components/ui/status-chip'
 import type { LegStatus } from '@/lib/parlays/leg-status'
 import { legTally, tallySummary } from '@/lib/parlays/get-parlay'
 import type { ParlayView } from '@/lib/parlays/list-parlays'
 import { cn } from '@/lib/utils'
 
-const LEG_PILL: Record<LegStatus, string> = {
-  open: 'bg-gold-soft text-gold',
-  awaiting: 'bg-gold-soft text-gold',
-  won: 'bg-acc-soft text-acc-text',
-  lost: 'bg-loss-soft text-loss',
-  voided: 'bg-sunk text-ink2',
+const LEG_TONE: Record<LegStatus, StatusChipTone> = {
+  open: 'wait',
+  awaiting: 'wait',
+  won: 'won',
+  lost: 'lost',
+  voided: 'void',
 }
 
 const LEG_LABEL: Record<LegStatus, string> = {
@@ -30,14 +30,9 @@ const SEGMENT: Record<LegStatus, string> = {
 
 export function LegPill({ status }: { status: LegStatus }) {
   return (
-    <span
-      className={cn(
-        'inline-flex h-6 items-center whitespace-nowrap rounded-full px-[9px] text-xs font-extrabold',
-        LEG_PILL[status],
-      )}
-    >
+    <StatusChip tone={LEG_TONE[status]} size="sm">
       {LEG_LABEL[status]}
-    </span>
+    </StatusChip>
   )
 }
 

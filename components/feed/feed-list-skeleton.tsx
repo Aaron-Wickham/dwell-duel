@@ -21,7 +21,7 @@ export function FeedListSkeleton({
       <div className={cn('flex flex-col divide-y divide-line', headingHidden && 'px-[18px] md:px-6')}>
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 py-3.5">
-            <Skeleton className="size-9 shrink-0 rounded-[10px]" />
+            <Skeleton className="size-9 shrink-0 rounded-segment" />
             <div className="grow pt-[7px]">
               <Skeleton className={cn('h-4', ROW_WIDTHS[i % ROW_WIDTHS.length])} />
             </div>

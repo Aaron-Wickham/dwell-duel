@@ -1,6 +1,7 @@
 import { SectionCard } from '@/components/ui/section-card'
 import { monthLabel, type EconomySummary } from '@/lib/economy/summary'
 import { cn } from '@/lib/utils'
+import { figureClass } from '@/components/ui/page'
 
 function Dc({ value, sign }: { value: number; sign: '+' | '−' }) {
   if (value === 0) return <span className="text-ink2">0 DC</span>
@@ -26,7 +27,7 @@ export function EconomyCard({ summary }: { summary: EconomySummary }) {
     <SectionCard title="Economy" titleId="economy-title">
       <dl className="flex flex-col gap-1">
         <dt className="text-sm text-ink2">In circulation</dt>
-        <dd className="text-2xl font-extrabold tabular-nums">{summary.inCirculation} DC</dd>
+        <dd className={cn(figureClass, 'whitespace-nowrap')}>{summary.inCirculation} DC</dd>
         <dd className="text-sm text-ink2 tabular-nums">
           {summary.balances} DC in balances · {summary.betsAtStake} DC in open bets · {summary.parlaysAtStake} DC in
           open parlays

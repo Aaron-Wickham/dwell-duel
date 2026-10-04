@@ -6,7 +6,7 @@ import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { getAdminMember } from '@/lib/members/list-members'
 import { isUuid } from '@/lib/uuid'
-import { Page } from '@/components/ui/page'
+import { Page, uiTextClass } from '@/components/ui/page'
 import { BackLink } from '@/components/ui/back-link'
 import { SectionCard } from '@/components/ui/section-card'
 import { SkeletonScreen } from '@/components/ui/skeleton'
@@ -53,7 +53,7 @@ export default async function AdminMemberPage(props: PageProps<'/admin/members/[
               <MemberActivity joinedAt={member.joinedAt} lastSignInAt={member.lastSignInAt} now={now} />
             </p>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-gold-soft pr-3 pl-2 text-[15px] font-extrabold tabular-nums text-gold">
+              <span className={`inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-gold-soft pr-3 pl-2 ${uiTextClass} font-extrabold tabular-nums text-gold`}>
                 <CircleDot aria-hidden="true" className="size-[18px]" />
                 {member.balance} DC
               </span>

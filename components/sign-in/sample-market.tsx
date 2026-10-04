@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { cardClass } from '@/components/ui/card'
 import { StatusChip } from '@/components/ui/status-chip'
 import { AnimatedNumber } from '@/components/ui/animated-number'
-import { rowTitleClass } from '@/components/ui/page'
+import { rowTitleClass, chipTextClass } from '@/components/ui/page'
 import { INTRO, SAMPLE, samplePath, sampleTop } from './intro-timeline'
 import { introClock } from './intro-clock'
 import { cn } from '@/lib/utils'
@@ -33,7 +33,7 @@ export function SampleMarket() {
     <div role="img" aria-label={LABEL} className={cn(cardClass, 'flex flex-col gap-2.5 p-4 lg:gap-3 lg:p-5')}>
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip tone="open">Open</StatusChip>
-        <span className="inline-flex h-6 items-center rounded-full bg-sunk px-[9px] text-xs font-extrabold text-ink2">Church</span>
+        <StatusChip tone="void" size="sm">Church</StatusChip>
         <span className="text-sm text-ink2">Sample</span>
       </div>
       <p className={rowTitleClass}>{SAMPLE.title}</p>
@@ -46,7 +46,7 @@ export function SampleMarket() {
             <path d={samplePath('yes')} fill="none" className="stroke-s2" strokeWidth={3} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           </svg>
         </div>
-        <div className="absolute inset-y-0 right-0 w-16 text-[13px] leading-none font-extrabold tabular-nums">
+        <div className={`absolute inset-y-0 right-0 w-16 ${chipTextClass} leading-none font-extrabold tabular-nums`}>
           <span className="absolute left-1.5 -translate-y-1/2 whitespace-nowrap text-s2" style={{ top: `${sampleTop(SAMPLE.yes)}%` }}>
             Yes <AnimatedNumber value={yes} suffix="%" />
           </span>

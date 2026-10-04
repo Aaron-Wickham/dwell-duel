@@ -3,21 +3,22 @@ import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AnimatedNumber } from '@/components/ui/animated-number'
 import { AnimatedText } from '@/components/ui/animated-text'
-import { eyebrowClass } from '@/components/ui/page'
+import { eyebrowClass, figureHeroClass, figureInlineClass } from '@/components/ui/page'
 import { Message } from '@/components/ui/message'
 import { atStakeDetail, pendingDetail, taskRewardsDetail, type RewardRange } from '@/lib/home/copy'
+import { cardPaddingClass } from '@/components/ui/card'
 
 function StatTile({ href, label, value, detail }: { href: string; label: string; value: number; detail: string }) {
   return (
     <Link
       href={href}
       aria-label={`${label}: ${value} DC ${detail}`}
-      className="pressable group flex min-h-11 min-w-0 items-center gap-2 rounded-[14px] bg-hero-inset px-3.5 py-2.5 text-on-hero no-underline md:px-4 md:py-3"
+      className="pressable group flex min-h-11 min-w-0 items-center gap-2 rounded-tile bg-hero-inset px-3.5 py-2.5 text-on-hero no-underline md:px-4 md:py-3"
     >
       <span className="flex min-w-0 grow flex-col">
         <span className="text-xs font-extrabold tracking-[0.09em] text-hero-2 uppercase">{label}</span>
         <span className="flex flex-wrap items-baseline gap-x-1.5">
-          <AnimatedText plainText={`${value} DC`} className="text-xl font-extrabold tabular-nums md:text-2xl">
+          <AnimatedText plainText={`${value} DC`} className={cn(figureInlineClass, 'whitespace-nowrap')}>
             <AnimatedNumber value={value} locales="en-US" format={{ useGrouping: false }} suffix=" DC" />
           </AnimatedText>
           <span className="text-sm text-hero-2 group-hover:underline group-hover:underline-offset-[3px]">{detail}</span>
@@ -54,7 +55,7 @@ export function HomeHero({
   return (
     <section
       aria-labelledby="home-hero-heading"
-      className="flex flex-col gap-4 rounded-[22px] bg-hero p-[18px] text-on-hero md:p-7 lg:flex-row lg:flex-wrap lg:items-center lg:gap-6"
+      className={`flex flex-col gap-4 rounded-card bg-hero text-on-hero ${cardPaddingClass} lg:flex-row lg:flex-wrap lg:items-center lg:gap-6`}
     >
       <h2 id="home-hero-heading" className="sr-only">
         Your balance
@@ -65,7 +66,7 @@ export function HomeHero({
           <p>
             <AnimatedText
               plainText={`${balance} DC`}
-              className="text-[40px] leading-none font-extrabold tracking-[-0.03em] whitespace-nowrap tabular-nums text-hero-num md:text-[56px]"
+              className={cn(figureHeroClass, 'whitespace-nowrap text-hero-num')}
             >
               <AnimatedNumber value={balance} locales="en-US" format={{ useGrouping: false }} suffix=" DC" />
             </AnimatedText>

@@ -84,7 +84,7 @@ describe('skeletons match their pages', () => {
     const { container } = render(<MarketsLoading />)
     const bar = withClass(container, 'h-[52px]')
     expect(bar).toHaveLength(1)
-    expect(bar[0]).toHaveClass('rounded-[14px]', 'md:w-80')
+    expect(bar[0]).toHaveClass('rounded-tile', 'md:w-80')
     expect(container.querySelector('.lg\\:grid-cols-3')).not.toBeNull()
   })
 

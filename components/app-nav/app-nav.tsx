@@ -17,6 +17,7 @@ import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
 import { BalanceNumber } from './balance-number'
 import { NAV_ITEMS, activeNavId, tabAriaLabel, type NavId } from './nav-items'
+import { uiTextClass } from '@/components/ui/page'
 
 const loadMotionFeatures = () => import('@/lib/ui/motion-features').then((mod) => mod.default)
 
@@ -38,7 +39,7 @@ function BalanceChip({ balance, active }: { balance: number; active: boolean }) 
       aria-current={active ? 'page' : undefined}
       className="pressable inline-flex min-h-11 shrink-0 items-center rounded-full no-underline"
     >
-      <span className="inline-flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-gold-soft pr-2.5 pl-1.5 text-[15px] font-extrabold tabular-nums text-gold md:gap-1.5 md:pr-3 md:pl-2">
+      <span className={`inline-flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-gold-soft pr-2.5 pl-1.5 ${uiTextClass} font-extrabold tabular-nums text-gold md:gap-1.5 md:pr-3 md:pl-2`}>
         <CircleDot aria-hidden="true" className="size-4 md:size-[18px]" />
         <AnimatedText plainText={`Balance ${balance} DC, view my bets`}>
           <BalanceNumber value={balance} />
@@ -102,7 +103,7 @@ function DesktopLink({
       aria-describedby={attention > 0 ? 'admin-attention-desktop' : undefined}
       title={label}
       className={cn(
-        'pressable relative isolate inline-flex min-h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap rounded-full text-[15px] font-bold no-underline xl:px-3.5',
+        `pressable relative isolate inline-flex min-h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap rounded-full ${uiTextClass} font-bold no-underline xl:px-3.5`,
         active ? 'text-on-nav-active' : 'text-ink2 hover:bg-sunk hover:text-ink',
       )}
     >
@@ -245,7 +246,7 @@ export function AppNav({
                 aria-label={tabAriaLabel(item)}
                 onClick={haptics.tap}
                 className={cn(
-                  'pressable relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-[14px] text-xs leading-[1.1] no-underline',
+                  'pressable relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-tile text-xs leading-[1.1] no-underline',
                   isActive ? 'text-ink' : 'text-ink2',
                 )}
               >

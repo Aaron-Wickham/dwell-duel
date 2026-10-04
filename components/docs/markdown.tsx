@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import type { Block, Inline } from '@/lib/docs/markdown'
+import { uiTextClass, rowTitleClass } from '@/components/ui/page'
+import { cn } from '@/lib/utils'
 
 // A doc is written for the repo, so a link to another file in it has nowhere to go in the app
 // and keeps only its text. App paths and web addresses stay links.
@@ -37,7 +39,7 @@ export function InlineContent({ nodes }: { nodes: Inline[] }): ReactNode {
         )
       case 'code':
         return (
-          <code key={i} className="rounded-[6px] bg-sunk px-1 py-0.5 text-[0.9em]">
+          <code key={i} className="rounded-segment bg-sunk px-1 py-0.5 text-[0.9em]">
             {node.text}
           </code>
         )
@@ -71,7 +73,7 @@ function BlockContent({ block }: { block: Block }) {
     case 'heading':
       // h1 and h2 are taken by the page and its sections, so anything deeper sits below them.
       return (
-        <h3 className="mt-1 text-[17px] leading-[1.25] font-extrabold">
+        <h3 className={cn(rowTitleClass, 'mt-1')}>
           <InlineContent nodes={block.children} />
         </h3>
       )
@@ -96,7 +98,7 @@ function BlockContent({ block }: { block: Block }) {
     case 'table':
       return (
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-[15px]">
+          <table className={`w-full border-collapse text-left ${uiTextClass}`}>
             <thead>
               <tr>
                 {block.head.map((cell, i) => (

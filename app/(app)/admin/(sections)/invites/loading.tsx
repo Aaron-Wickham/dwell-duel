@@ -26,7 +26,7 @@ export default function Loading() {
             <Skeleton className="h-12 grow" />
             <Skeleton className="h-12 w-24 shrink-0" />
           </div>
-          <Skeleton className="h-[52px] w-full rounded-[14px] md:w-64" />
+          <Skeleton className="h-[52px] w-full rounded-tile md:w-64" />
         </div>
         <div className="flex flex-col divide-y divide-line">
           {Array.from({ length: 3 }, (_, i) => (

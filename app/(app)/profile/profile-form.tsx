@@ -14,6 +14,7 @@ import { resizePhoto } from '@/lib/profile/resize-photo'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { updateProfileAction, type ActionState } from '@/lib/profile/update-profile'
 import { labelClass } from '@/components/ui/page'
+import { cardPaddingClass } from '@/components/ui/card'
 
 type NewPhoto = { blob: Blob; preview: string }
 
@@ -76,7 +77,7 @@ export function ProfileForm({
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-5 rounded-card border border-line bg-surface p-[18px] shadow-card md:p-6 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
+      className={`flex flex-col gap-5 rounded-card border border-line bg-surface ${cardPaddingClass} shadow-card lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none`}
     >
       {/* One card on a phone; at lg the photo and preview sit in cards beside a card of fields. */}
       <div className="contents lg:flex lg:flex-col lg:gap-5">

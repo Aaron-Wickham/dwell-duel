@@ -13,7 +13,7 @@ export default function Loading() {
             <Skeleton className="h-6 w-56" />
             <Skeleton className="h-4 w-3/4" />
           </div>
-          <div className={cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-4')}>
+          <div className={cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-5')}>
             {Array.from({ length: 3 }, (_, i) => (
               <div key={i} className={cn(listCardClass, 'flex flex-col gap-3')}>
                 <div className="flex flex-col gap-2">

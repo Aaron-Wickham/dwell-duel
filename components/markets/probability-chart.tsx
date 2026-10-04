@@ -12,6 +12,8 @@ import { formatDay } from '@/lib/markets/format-date'
 import type { Series } from '@/lib/markets/outcome-series'
 import { availableRanges, type RangeKey, type SeriesPoint } from '@/lib/markets/probability-series'
 import { cn } from '@/lib/utils'
+import { chipTextClass, microTextClass, figureClass } from '@/components/ui/page'
+import { SegmentedControl, segmentClass, segmentMarker } from '@/components/ui/segmented-control'
 
 export type ChartOutcome = { id: string; label: string; series: Series }
 
@@ -189,24 +191,23 @@ export function ProbabilityChart({
       <div className="flex min-h-11 flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-ink2">{betCount === 1 ? '1 bet' : `${betCount} bets`}</p>
         {ranges.length > 1 && (
-          <ToggleGroup
-            aria-label="Time range"
-            value={[range]}
-            onValueChange={(value) => {
-              if (value[0]) setPicked(value[0])
-            }}
-            className="flex gap-0.5 rounded-control bg-sunk p-[3px]"
-          >
-            {ranges.map((key) => (
-              <Toggle
-                key={key}
-                value={key}
-                className="pressable min-h-11 min-w-[52px] cursor-pointer rounded-[9px] px-3 text-sm font-extrabold text-ink2 data-pressed:bg-surface data-pressed:text-ink data-pressed:shadow-tab"
-              >
-                {key}
-              </Toggle>
-            ))}
-          </ToggleGroup>
+          <SegmentedControl activeKey={range}>
+            {/* contents, so the segments sit on the control's track and its pill can measure them. */}
+            <ToggleGroup
+              aria-label="Time range"
+              value={[range]}
+              onValueChange={(value) => {
+                if (value[0]) setPicked(value[0])
+              }}
+              className="contents"
+            >
+              {ranges.map((key) => (
+                <Toggle key={key} value={key} {...segmentMarker(range === key)} className={cn(segmentClass(range === key), 'min-w-[52px] text-sm font-extrabold')}>
+                  {key}
+                </Toggle>
+              ))}
+            </ToggleGroup>
+          </SegmentedControl>
         )}
       </div>
       <div className="relative h-[220px] md:h-[300px]">
@@ -273,8 +274,8 @@ export function ProbabilityChart({
               style={{ '--label-top': `${phoneTops[index]}px`, '--label-top-md': `${desktopTops[index]}px` } as CSSProperties}
             >
               {/* Bounded so `truncate` has a width to cut off at -- the 76px/128px gutter minus this label's left-3.5 inset. */}
-              <div className="w-[62px] truncate text-[13px] font-bold md:w-[114px]">{outcome.label}</div>
-              <div className="text-xl font-extrabold tracking-[-0.02em] tabular-nums md:text-[26px]">
+              <div className={`w-[62px] truncate ${chipTextClass} font-bold md:w-[114px]`}>{outcome.label}</div>
+              <div className={figureClass}>
                 {percent(last.shares[outcome.id])}%
               </div>
             </div>
@@ -282,7 +283,7 @@ export function ProbabilityChart({
           {GRID.map((p) => (
             <span
               key={p}
-              className="absolute right-0 hidden -translate-y-1/2 text-[11px] font-bold text-ink2 md:block"
+              className={`absolute right-0 hidden -translate-y-1/2 ${microTextClass} font-bold text-ink2 md:block`}
               style={{ top: `${100 - p}%` }}
             >
               {p}%

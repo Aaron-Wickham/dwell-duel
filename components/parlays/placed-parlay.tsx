@@ -7,6 +7,7 @@ import type { ParlayView } from '@/lib/parlays/list-parlays'
 import { focusTarget } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
 import { FIGURE_TONE, LegPill, ParlayProgress, ParlayStatusChip, outcomeFigure } from './parlay-parts'
+import { uiTextClass, figureInlineClass, rowTitleClass } from '@/components/ui/page'
 
 // A card shows this many picks; the rest are one tap away on the parlay's page.
 const PREVIEW_LEGS = 3
@@ -15,7 +16,7 @@ function Figure({ label, value, className }: { label: string; value: string; cla
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
       <span className="text-xs text-ink2">{label}</span>
-      <span className={cn('text-xl leading-tight font-extrabold tabular-nums', className)}>{value}</span>
+      <span className={cn(figureInlineClass, 'whitespace-nowrap', className)}>{value}</span>
     </div>
   )
 }
@@ -37,7 +38,7 @@ export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: st
             id={titleId}
             href={`/parlays/${parlay.id}`}
             transitionTypes={['nav-forward']}
-            className="stretched-link font-bold text-ink no-underline"
+            className={cn(rowTitleClass, 'stretched-link text-ink no-underline')}
           >
             Parlay · {parlay.legs.length} picks
           </Link>
@@ -60,7 +61,7 @@ export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: st
 
       <ul className="flex flex-col divide-y divide-line border-t border-line">
         {shown.map((leg) => (
-          <li key={leg.marketId} className="flex items-center justify-between gap-3 py-2 text-[15px]">
+          <li key={leg.marketId} className={`flex items-center justify-between gap-3 py-2 ${uiTextClass}`}>
             <span className="min-w-0 grow break-words">
               {leg.marketTitle}
               {' — '}

@@ -106,7 +106,7 @@ export function PendingApprovals({
         emptyState ?? <EmptyState icon={Check} title="Nothing pending." />
       ) : (
         <>
-          <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-4')}>
+          <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-5')}>
             {pending.map((c) => {
               const own = c.submitterId === viewerId
               return (

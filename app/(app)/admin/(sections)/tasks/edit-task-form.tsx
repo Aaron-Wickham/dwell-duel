@@ -32,7 +32,7 @@ export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSumma
   const errorId = `${id}-error`
 
   return (
-    <form id={id} action={formAction} className="flex flex-col gap-4 rounded-[14px] bg-sunk p-3.5">
+    <form id={id} action={formAction} className="flex flex-col gap-4 rounded-tile bg-sunk p-3.5">
       <Field label="Title" htmlFor={`${id}-title`}>
         <Input
           id={`${id}-title`}

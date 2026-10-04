@@ -5,6 +5,7 @@ import { rowTitleClass } from '@/components/ui/page'
 import { focusTarget } from '@/lib/pagination/row-id'
 import { signedDc } from '@/lib/social/season'
 import { cn } from '@/lib/utils'
+import { StatusChip } from '@/components/ui/status-chip'
 
 export function LeaderboardRow({
   rank,
@@ -45,13 +46,13 @@ export function LeaderboardRow({
         <IntentLink href={href} transitionTypes={['nav-forward']} className="stretched-link text-ink">
           {name}
         </IntentLink>
-        {isMe && <span className="font-semibold text-ink2"> (you)</span>}
+        {isMe && <span className="font-bold text-ink2"> (you)</span>}
       </span>
       {record && record.won + record.lost > 0 && (
-        <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-sunk px-2 text-xs font-extrabold text-ink2 tabular-nums">
+        <StatusChip tone="void" size="sm" className="shrink-0">
           <span aria-hidden="true">{record.won}-{record.lost}</span>
           <span className="sr-only">{record.won} won, {record.lost} lost</span>
-        </span>
+        </StatusChip>
       )}
       <span className={cn(rowTitleClass, 'shrink-0 whitespace-nowrap tabular-nums')}>{signed ? signedDc(score) : `${score} DC`}</span>
     </ListCard>

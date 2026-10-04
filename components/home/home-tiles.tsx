@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react'
 import { listCardsClass, tappableListCardClass } from '@/components/ui/list-card'
 import { rowTitleClass } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
+import { cardPaddingClass } from '@/components/ui/card'
 
 export interface HomeTile {
   id: string
@@ -42,7 +43,7 @@ export function HomeTiles({ tiles }: { tiles: HomeTile[] }) {
   return (
     <nav aria-label="Everything in DwellDuel">
       <h2 className="sr-only">Go to</h2>
-      <div className={cn(listCardsClass, 'rounded-card border border-line bg-surface p-[18px] md:p-6 lg:grid lg:grid-cols-3 lg:gap-5 lg:border-0 lg:bg-transparent lg:p-0')}>
+      <div className={cn(listCardsClass, `rounded-card border border-line bg-surface ${cardPaddingClass} lg:grid lg:grid-cols-3 lg:gap-5 lg:border-0 lg:bg-transparent lg:p-0`)}>
         {tiles.map((tile) =>
           // The mail app opens outside DwellDuel, so this is a real <a>, not a routed <Link> --
           // no transitionTypes, and no client-side navigation to cancel or wait on.

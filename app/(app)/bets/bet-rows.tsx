@@ -9,10 +9,11 @@ import type { MyCancelledBet } from '@/lib/bets/list-my-bets'
 import type { Wager } from '@/lib/bets/list-my-wagers'
 import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
+import { rowTitleClass } from '@/components/ui/page'
 
 // List cards, three across at lg. Each keeps its own height (items-start), so a tall parlay
 // doesn't leave blank space in its neighbours.
-const betListClass = cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-4')
+const betListClass = cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-5')
 
 function Row({
   domId,
@@ -38,7 +39,7 @@ function Row({
           id={titleId}
           href={`/markets/${marketId}`}
           transitionTypes={['nav-forward']}
-          className="stretched-link font-bold break-words text-ink"
+          className={cn(rowTitleClass, 'stretched-link break-words text-ink')}
         >
           {marketTitle}
         </IntentLink>

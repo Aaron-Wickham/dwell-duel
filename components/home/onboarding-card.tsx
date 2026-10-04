@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Check } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { cardClass } from '@/components/ui/card'
+import { cardClass, cardPaddingClass } from '@/components/ui/card'
 import { h2Class } from '@/components/ui/page'
 import { dismissOnboardingAction } from '@/lib/home/dismiss-onboarding'
 import type { OnboardingSteps } from '@/lib/home/onboarding'
@@ -54,7 +54,7 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
   }
 
   return (
-    <section aria-labelledby="onboarding-title" className={cn(cardClass, 'flex flex-col gap-3 p-[18px] md:p-6')}>
+    <section aria-labelledby="onboarding-title" className={cn(cardClass, `flex flex-col gap-3 ${cardPaddingClass}`)}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <h2 id="onboarding-title" className={h2Class}>

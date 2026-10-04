@@ -22,7 +22,7 @@ export default function Loading() {
   return (
     <SkeletonScreen name="leaderboard" className={pageClass}>
       <SkeletonPageHeader description />
-      <Skeleton className="h-[52px] w-full rounded-[14px] md:w-72" />
+      <Skeleton className="h-[52px] w-full rounded-tile md:w-72" />
       <SkeletonCard className="flex-row items-center gap-3 p-4 lg:hidden">
         <Skeleton className="size-10 shrink-0" />
         <div className="flex grow flex-col gap-1.5">

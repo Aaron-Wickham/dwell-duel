@@ -4,7 +4,7 @@ import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { Bell } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { cardClass } from '@/components/ui/card'
+import { cardClass, cardPaddingClass } from '@/components/ui/card'
 import { h2Class } from '@/components/ui/page'
 import { NOTIFICATIONS_HREF } from '@/components/home/onboarding-card'
 import { useDevicePush } from '@/lib/push/use-device-push'
@@ -48,7 +48,7 @@ export function NotificationsCard({ onboardingShown }: { onboardingShown: boolea
   }
 
   return (
-    <section aria-labelledby="notifications-card-title" className={cn(cardClass, 'flex flex-col gap-3 p-[18px] md:p-6')}>
+    <section aria-labelledby="notifications-card-title" className={cn(cardClass, `flex flex-col gap-3 ${cardPaddingClass}`)}>
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"

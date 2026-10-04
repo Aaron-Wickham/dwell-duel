@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { cardClass } from '@/components/ui/card'
+import { cardClass, cardPaddingClass } from '@/components/ui/card'
 import { SkeletonReveal } from '@/components/nav/page-transition'
 import { cn } from '@/lib/utils'
 
@@ -37,7 +37,7 @@ export function SkeletonScreen({
 }
 
 export function SkeletonCard({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn(cardClass, 'flex flex-col gap-3 p-[18px] md:p-6', className)}>{children}</div>
+  return <div className={cn(cardClass, `flex flex-col gap-3 ${cardPaddingClass}`, className)}>{children}</div>
 }
 
 export function SkeletonPageHeader({ description = false, action = false }: { description?: boolean; action?: boolean }) {

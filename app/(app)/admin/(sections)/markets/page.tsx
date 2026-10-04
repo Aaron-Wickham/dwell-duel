@@ -59,7 +59,7 @@ export default async function AdminMarketsPage(props: PageProps<'/admin/markets'
               </EmptyState>
             )
           ) : (
-            <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-4')}>
+            <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-5')}>
               {markets.rows.map((m) => (
                 <AwaitingMarketRow key={m.id} market={m} now={now} domId={rowDomId(ROW_ID_PREFIX, m.id)} />
               ))}
@@ -78,7 +78,7 @@ export default async function AdminMarketsPage(props: PageProps<'/admin/markets'
           titleId="categories-title"
           description="Members make these when they create a market. Rename a misspelt one, merge two that mean the same, or hide one nobody should pick."
         >
-          <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-4')}>
+          <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-5')}>
             {categories.map((c) => (
               <CategoryCard key={c.id} category={c} fixed={c.id === OTHER_CATEGORY_ID} targets={visible.filter((t) => t.id !== c.id)} />
             ))}

@@ -1,7 +1,7 @@
 import { formatLine, type MarketKind } from '@/lib/markets/kind'
 import { IntentLink } from '@/components/ui/intent-link'
 import { Trophy } from 'lucide-react'
-import { cardClass } from '@/components/ui/card'
+import { cardClass, cardPaddingClass } from '@/components/ui/card'
 import { StatusChip, type StatusChipTone } from '@/components/ui/status-chip'
 import { LocalTime } from '@/components/ui/local-time'
 import { SERIES_BG } from '@/components/markets/series-classes'
@@ -95,7 +95,7 @@ export function MarketCard({
   const titleId = domId ? `${domId}-title` : undefined
 
   return (
-    <article {...focusTarget(domId, titleId)} className={cn(cardClass, 'relative flex min-w-0 flex-col gap-3 p-[18px]', !preview && 'pressable hover-lift')}>
+    <article {...focusTarget(domId, titleId)} className={cn(cardClass, `relative flex min-w-0 flex-col gap-3 ${cardPaddingClass}`, !preview && 'pressable hover-lift')}>
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</StatusChip>
         {status === 'open' && now !== undefined && <ClosesSoonChip closeAt={closeAt} now={now} />}
@@ -163,12 +163,9 @@ export function MarketCard({
         <>
           <div className="flex flex-wrap gap-2">
             {outcomes.map((outcome) => (
-              <span
-                key={outcome.id}
-                className="inline-flex min-h-6 max-w-full items-center rounded-full bg-sunk px-[9px] py-0.5 text-xs font-extrabold text-ink2 break-words"
-              >
+              <StatusChip key={outcome.id} tone="void" size="sm" className="h-auto min-h-6 max-w-full whitespace-normal break-words py-0.5">
                 {outcome.label}
-              </span>
+              </StatusChip>
             ))}
           </div>
           <p className="text-ink2">No bets were placed.</p>

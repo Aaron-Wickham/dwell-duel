@@ -8,10 +8,10 @@ export default function Loading() {
   return (
     <SkeletonScreen name="bets" className={pageClass}>
       <SkeletonPageHeader description />
-      <Skeleton className="h-[52px] w-full rounded-[14px] md:w-96" />
+      <Skeleton className="h-[52px] w-full rounded-tile md:w-96" />
       <SkeletonCard className="gap-3">
         <Skeleton className="h-6 w-24" />
-        <div className={cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:gap-4')}>
+        <div className={cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:gap-5')}>
           {Array.from({ length: 6 }, (_, i) => (
             <div
               key={i}

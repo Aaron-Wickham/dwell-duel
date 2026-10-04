@@ -3,7 +3,7 @@
 import { useState, useSyncExternalStore } from 'react'
 import { Smartphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { cardClass } from '@/components/ui/card'
+import { cardClass, cardPaddingClass } from '@/components/ui/card'
 import { h2Class } from '@/components/ui/page'
 import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import { cn } from '@/lib/utils'
@@ -58,7 +58,7 @@ export function InstallCard() {
   }
 
   return (
-    <section aria-labelledby="install-card-title" className={cn(cardClass, 'flex items-start gap-4 p-[18px] md:p-6')}>
+    <section aria-labelledby="install-card-title" className={cn(cardClass, `flex items-start gap-4 ${cardPaddingClass}`)}>
       <span
         aria-hidden="true"
         className="flex size-12 shrink-0 items-center justify-center rounded-full bg-acc-soft text-acc-text"

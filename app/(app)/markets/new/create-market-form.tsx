@@ -20,6 +20,7 @@ import { h2Class, labelClass } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
 import { nextWeeklyClose } from '@/lib/markets/weekly-close'
 import { useTimeZone } from '@/components/ui/local-time'
+import { cardPaddingClass } from '@/components/ui/card'
 
 const MAX_OUTCOMES = 6
 const MIN_OUTCOMES = 2
@@ -124,7 +125,7 @@ export function CreateMarketForm({
     <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
       <form
         action={formAction}
-        className="flex flex-col gap-5 rounded-card border border-line bg-surface p-[18px] shadow-card md:p-6"
+        className={`flex flex-col gap-5 rounded-card border border-line bg-surface ${cardPaddingClass} shadow-card`}
       >
         <Field label="Title" htmlFor="cm-title">
           <Input

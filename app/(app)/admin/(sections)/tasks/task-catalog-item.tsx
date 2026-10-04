@@ -14,6 +14,7 @@ import { ConfirmActionButton } from '@/components/ui/confirm-action-button'
 import { deleteTaskAction } from '@/lib/admin/owner-actions'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { EditTaskForm } from './edit-task-form'
+import { rowTitleClass } from '@/components/ui/page'
 
 // `canDelete` is the owner's: delete_task (0040) only removes a task nobody has submitted yet.
 export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary; canDelete?: boolean }) {
@@ -30,7 +31,7 @@ export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary
   return (
     <ListCard tappable={false} className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-        <p className={cn('min-w-0 break-words font-extrabold', !task.isActive && 'text-ink2')}>
+        <p className={cn(rowTitleClass, 'min-w-0 break-words', !task.isActive && 'text-ink2')}>
           {task.title} — {task.rewardAmount} DC
         </p>
         <span className="flex flex-wrap gap-1.5">

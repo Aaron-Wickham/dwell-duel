@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { cva } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
+import { chipTextClass } from '@/components/ui/page'
 
 // Tones come only from the semantic tokens (win, loss, gold, sunk), never `primary`: lime in dark is
 // kept for the primary action and first place.
@@ -15,7 +16,7 @@ const chipVariants = cva('no-callout inline-flex items-center gap-1.5 whitespace
       void: 'bg-sunk text-ink2',
     },
     size: {
-      md: 'h-7 px-2.5 text-[13px]',
+      md: `h-7 px-2.5 ${chipTextClass}`,
       sm: 'h-6 px-[9px] text-xs',
     },
   },

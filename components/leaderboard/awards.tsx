@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Avatar } from '@/components/ui/avatar'
-import { eyebrowClass, h2Class } from '@/components/ui/page'
+import { eyebrowClass, h2Class, figureInlineClass } from '@/components/ui/page'
+import { cn } from '@/lib/utils'
 import { formatOdds, lockedOddsToBp } from '@/lib/parlays/odds'
 import type { Award, AwardKind } from '@/lib/social/leaderboard-extras'
 import { signedDc } from '@/lib/social/season'
@@ -50,7 +51,7 @@ export function Awards({ awards }: { awards: Award[] }) {
         {awards.map((award) => (
           <li key={award.kind} className="pressable hover-lift relative flex min-w-0 flex-col gap-1.5 rounded-card border border-line bg-surface p-3.5 shadow-card">
             <span className={eyebrowClass}>{LABEL[award.kind]}</span>
-            <span className="text-xl leading-none font-extrabold tabular-nums text-acc-text">{figure(award)}</span>
+            <span className={cn(figureInlineClass, 'leading-none text-acc-text')}>{figure(award)}</span>
             <span className="flex min-w-0 items-center gap-2">
               <Avatar name={award.name} src={award.avatarSrc} size="sm" />
               <Link href={`/members/${award.memberId}`} transitionTypes={['nav-forward']} className="stretched-link min-w-0 truncate font-bold text-ink">

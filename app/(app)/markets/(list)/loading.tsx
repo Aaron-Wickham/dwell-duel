@@ -12,7 +12,7 @@ export default function Loading() {
       <div className="flex flex-col gap-5 md:flex-row md:flex-wrap md:items-center">
         <Skeleton className="h-12 w-full rounded-control md:max-w-[520px] md:flex-1" />
         <div className="md:basis-full">
-          <Skeleton className="h-[52px] w-full rounded-[14px] md:w-80" />
+          <Skeleton className="h-[52px] w-full rounded-tile md:w-80" />
         </div>
         <div className="flex gap-2 overflow-hidden md:basis-full">
           {Array.from({ length: 5 }, (_, i) => (
@@ -24,7 +24,7 @@ export default function Loading() {
         <Skeleton className="h-6 w-20" />
         <div className="grid items-start gap-5 lg:grid-cols-3">
           {Array.from({ length: 3 }, (_, i) => (
-            <SkeletonCard key={i} className="md:p-[18px]">
+            <SkeletonCard key={i}>
               <div className="flex items-center gap-2">
                 <Skeleton className="h-7 w-16 rounded-full" />
                 <Skeleton className="h-4 w-32" />

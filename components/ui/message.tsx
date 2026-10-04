@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { CircleAlert, CircleCheck, Info, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ErrorHaptic } from '@/components/ui/error-haptic'
+import { uiTextClass } from '@/components/ui/page'
 
 // Gold marks static notes like "Awaiting resolution", not news, so it is not a live region.
 const TONES = {
@@ -29,7 +30,7 @@ export function Message({
     <p
       id={id}
       role={role}
-      className={cn('flex items-start gap-2.5 rounded-control px-3.5 py-3 text-[15px] font-bold leading-[1.4]', toneClass, className)}
+      className={cn(`flex items-start gap-2.5 rounded-control px-3.5 py-3 ${uiTextClass} font-bold leading-[1.4]`, toneClass, className)}
     >
       <Icon aria-hidden="true" className="mt-px size-5 shrink-0" />
       <span>{children}</span>

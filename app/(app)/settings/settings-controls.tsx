@@ -8,6 +8,7 @@ import { setHapticsAction, setReduceMotionAction } from '@/lib/preferences/set-p
 import { useDeviceReducesMotion } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
 import { labelClass } from '@/components/ui/page'
+import { SegmentedControl, segmentClass, segmentMarker } from '@/components/ui/segmented-control'
 
 const THEMES: { value: ThemeChoice; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -50,15 +51,9 @@ export function ThemeSetting({ initial }: { initial: ThemeChoice }) {
   return (
     <fieldset className="flex flex-col gap-1.5">
       <legend className={`mb-1.5 ${labelClass}`}>Theme</legend>
-      <div className="grid grid-cols-3 gap-1.5 rounded-[14px] bg-sunk p-1">
+      <SegmentedControl activeKey={theme} className="grid grid-cols-3">
         {THEMES.map(({ value, label }) => (
-          <label
-            key={value}
-            className={cn(
-              'pressable flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[10px] font-bold text-ink2',
-              theme === value && 'bg-surface text-ink shadow-tab',
-            )}
-          >
+          <label key={value} {...segmentMarker(theme === value)} className={cn(segmentClass(theme === value), 'gap-2 px-0')}>
             <input
               type="radio"
               name="theme"
@@ -70,7 +65,7 @@ export function ThemeSetting({ initial }: { initial: ThemeChoice }) {
             {label}
           </label>
         ))}
-      </div>
+      </SegmentedControl>
       {theme === 'system' && <p className="text-sm text-ink2">Follows your device’s light or dark setting.</p>}
       {failed && <Message tone="error">{SAVE_FAILED}</Message>}
     </fieldset>

@@ -48,7 +48,7 @@ export function Wordmark({
       href={href}
       aria-label="DwellDuel home"
       aria-current={current ? 'page' : undefined}
-      className="pressable inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[10px] pr-1 no-underline"
+      className="pressable inline-flex min-h-11 shrink-0 items-center gap-2 rounded-segment pr-1 no-underline"
     >
       <DwellDuelSymbol size={WORDMARK_SYMBOL_SIZE[size]} className={WORDMARK_SYMBOL_LIFT[size]} />
       <WordmarkName

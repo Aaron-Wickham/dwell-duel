@@ -6,6 +6,7 @@ import { haptics } from '@/lib/haptics'
 import { REACTIONS, reactionLabel, toggleReaction, type EventReactions, type ReactionKind } from '@/lib/social/reactions'
 import { setReactionAction } from '@/lib/social/reactions-actions'
 import { cn } from '@/lib/utils'
+import { uiTextClass } from '@/components/ui/page'
 
 // Reactions are optimistic: they move no coins, so the tap shows at once and gives way to the
 // server's counts when the action's refresh lands. A refused toggle falls back on its own, since
@@ -40,7 +41,7 @@ export function ReactionBar({ eventId, reactions }: { eventId: string; reactions
             aria-label={reactionLabel(name, count)}
             onClick={() => toggle(kind)}
             className={cn(
-              'pressable inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1 rounded-full border-[1.5px] px-2.5 text-[15px] font-bold tabular-nums',
+              `pressable inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1 rounded-full border-[1.5px] px-2.5 ${uiTextClass} font-bold tabular-nums`,
               count.mine ? 'border-acc-text bg-acc-soft text-acc-text' : 'border-line bg-surface text-ink2',
             )}
           >

@@ -27,7 +27,7 @@ export default function SignInPage() {
       <ul aria-label="What DwellDuel is" className="flex flex-col gap-2.5 short:hidden">
         {FACTS.map(({ Icon, text }) => (
           <li key={text} className="flex items-center gap-3 font-bold">
-            <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-acc-soft text-acc-text">
+            <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-segment bg-acc-soft text-acc-text">
               <Icon className="size-5" />
             </span>
             {text}

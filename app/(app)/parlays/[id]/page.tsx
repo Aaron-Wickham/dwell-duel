@@ -8,14 +8,14 @@ import { LegPill, ParlayProgress, ParlayStatusChip, outcomeFigure } from '@/comp
 import { BackLink } from '@/components/ui/back-link'
 import { LoadingStatus } from '@/components/ui/loading-status'
 import { LocalTime } from '@/components/ui/local-time'
-import { Page, PageHeader } from '@/components/ui/page'
+import { Page, PageHeader, figureHeroClass } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { requireUser } from '@/lib/auth/require-user'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { getParlayDetail, getParlayHead, type ParlayLegDetail } from '@/lib/parlays/get-parlay'
 import { formatOdds } from '@/lib/parlays/odds'
 import { ParlayOddsNote } from '@/components/parlays/parlay-odds-note'
-import { cardClass } from '@/components/ui/card'
+import { cardClass, cardPaddingClass } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
 // No loading.tsx for this route: the parlay must be found before anything streams, so an unknown
@@ -86,7 +86,7 @@ export async function ParlayBody({ id }: { id: string }) {
 
   return (
     <ContentReveal>
-      <section aria-labelledby="parlay-summary" className={cn(cardClass, 'flex flex-col gap-4 bg-hero p-[18px] text-on-hero md:p-6 lg:col-start-2 lg:row-start-1')}>
+      <section aria-labelledby="parlay-summary" className={cn(cardClass, `flex flex-col gap-4 bg-hero text-on-hero ${cardPaddingClass} lg:col-start-2 lg:row-start-1`)}>
         <h2 id="parlay-summary" className="sr-only">
           Summary
         </h2>
@@ -95,7 +95,7 @@ export async function ParlayBody({ id }: { id: string }) {
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-sm text-hero-2">{figure.label}</span>
-          <span className={cn('text-[34px] leading-none font-extrabold tabular-nums', figure.tone === 'win' ? 'text-hero-num' : '')}>
+          <span className={cn(figureHeroClass, figure.tone === 'win' && 'text-hero-num')}>
             {figure.value}
           </span>
           <span className="text-sm text-hero-2">

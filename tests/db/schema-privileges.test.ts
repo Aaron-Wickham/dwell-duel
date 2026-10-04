@@ -132,6 +132,27 @@ describe('schema-wide privileges', () => {
     expect(executable.map((r) => r.proname)).toEqual([...AUTHENTICATED_DEFINER].sort())
   })
 
+  // Production's defaults gave service_role no SELECT, INSERT, UPDATE or DELETE on a new table, where
+  // local Supabase gives it all four, so a table no migration granted worked here and failed there
+  // (0109: the keep-alive cron's key cleanup). 0109 sets the default on both; this catches a revoke.
+  it('lets service_role read and write every table in public (0109)', async () => {
+    const missing = await pgQuery<{ relname: string; privilege: string }>(`
+      select c.relname, p.privilege from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      cross join (values ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')) p(privilege)
+      where n.nspname = 'public' and c.relkind in ('r', 'p') and not has_table_privilege('service_role', c.oid, p.privilege)
+      order by 1, 2
+    `)
+    // activity_events is written only by its triggers, so even the server only reads it (0035).
+    expect(missing.filter((m) => m.relname !== 'activity_events')).toEqual([])
+    const defaults = await pgQuery<{ privilege: string }>(`
+      select x.privilege_type as privilege
+      from pg_default_acl d cross join lateral aclexplode(d.defaclacl) x
+      where d.defaclrole = 'postgres'::regrole and d.defaclnamespace = 'public'::regnamespace
+        and d.defaclobjtype = 'r' and x.grantee = 'service_role'::regrole
+    `)
+    expect(defaults.map((d) => d.privilege)).toEqual(expect.arrayContaining(['SELECT', 'INSERT', 'UPDATE', 'DELETE']))
+  })
+
   it('gives anon nothing, and PUBLIC no EXECUTE, on objects postgres creates from now on (0091)', async () => {
     const defaults = await pgQuery<{ schema: string | null; objtype: string; grantee: string; privilege: string }>(`
       select nullif(d.defaclnamespace::regnamespace::text, '-') as schema, d.defaclobjtype as objtype,

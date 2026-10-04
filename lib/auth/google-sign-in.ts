@@ -1,13 +1,15 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 
-// Google Identity Services in redirect mode: Google POSTs the ID token to this path on our own
-// domain, which is why its account chooser names dwellduel.com rather than the Supabase project.
-// It must match an authorized redirect URI on the Google client exactly, so it carries no query.
+// Google's OpenID Connect sign-in, straight to Google rather than through Supabase: Google POSTs the
+// ID token to this path on our own domain (form_post), which is why its account chooser names
+// dwellduel.com rather than the Supabase project. It must match an authorized redirect URI on the
+// Google client exactly, so it carries no query.
 export const GOOGLE_LOGIN_PATH = '/auth/google'
 export const GOOGLE_NONCE_PATH = '/auth/google/nonce'
 export const GOOGLE_NONCE_COOKIE = 'google-nonce'
-// Set by Google's own script on our origin, and posted back beside the credential (double submit).
-export const GOOGLE_CSRF_COOKIE = 'g_csrf_token'
+// Sent to Google as `state` and posted back beside the ID token (double submit).
+export const GOOGLE_STATE_COOKIE = 'google-state'
+const GOOGLE_AUTHORIZE_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 // Long enough for a sign-in page left open a while; the nonce is single-use either way.
 export const GOOGLE_NONCE_MAX_AGE = 60 * 60
 
@@ -19,12 +21,28 @@ export function googleCookieOptions(origin: string) {
   return { path: GOOGLE_LOGIN_PATH, httpOnly: true, sameSite: https ? 'none' : 'lax', secure: https } as const
 }
 
-// Google's double submit, compared in constant time.
+// The `state` double submit, compared in constant time.
 export function csrfMatches(cookie: string | null, body: unknown): boolean {
   if (!cookie || typeof body !== 'string') return false
   const a = Buffer.from(cookie)
   const b = Buffer.from(body)
   return a.length === b.length && timingSafeEqual(a, b)
+}
+
+// `nonce` is the hash; the raw value never leaves the httpOnly cookie. Always Google's account
+// chooser, so "Try another account" can't quietly reuse the account that wasn't invited (#263).
+export function googleAuthorizeUrl({ origin, clientId, nonce, state }: { origin: string; clientId: string; nonce: string; state: string }): string {
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: `${origin}${GOOGLE_LOGIN_PATH}`,
+    response_type: 'id_token',
+    response_mode: 'form_post',
+    scope: 'openid email profile',
+    nonce,
+    state,
+    prompt: 'select_account',
+  })
+  return `${GOOGLE_AUTHORIZE_URL}?${params}`
 }
 
 export function newNonce(): string {

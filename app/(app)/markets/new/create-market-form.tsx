@@ -17,6 +17,7 @@ import { MarketCard } from '@/components/markets/market-card'
 import { CategoryField } from '@/components/markets/category-field'
 import { normalizeCategoryName } from '@/lib/markets/categories'
 import { h2Class, labelClass } from '@/components/ui/page'
+import { cn } from '@/lib/utils'
 import { nextWeeklyClose } from '@/lib/markets/weekly-close'
 import { useTimeZone } from '@/components/ui/local-time'
 
@@ -160,7 +161,7 @@ export function CreateMarketForm({
         />
 
         <fieldset className="flex flex-col gap-1.5">
-          <legend className={labelClass}>Type</legend>
+          <legend className={cn(labelClass, 'mb-1.5')}>Type</legend>
           <div className="grid gap-2 lg:grid-cols-3">
             {KIND_OPTIONS.map((option) => (
               <label
@@ -225,7 +226,7 @@ export function CreateMarketForm({
           </Field>
         ) : (
           <fieldset className="flex flex-col gap-2">
-            <legend className={labelClass}>Outcomes</legend>
+            <legend className={cn(labelClass, 'mb-2')}>Outcomes</legend>
             <span className="text-sm text-ink2">
               Up to {MAX_OUTCOMES} outcomes · {outcomes.length} of {MAX_OUTCOMES} used
             </span>

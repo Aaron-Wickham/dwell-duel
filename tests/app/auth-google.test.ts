@@ -31,13 +31,15 @@ const token = (nonce: string | undefined) =>
 
 function request({
   credential = token(hashed(RAW_NONCE)),
-  csrfBody = 'csrf-1',
-  cookies = { g_csrf_token: 'csrf-1', 'google-nonce': RAW_NONCE } as Record<string, string>,
-}: { credential?: string | null; csrfBody?: string | null; cookies?: Record<string, string> } = {}) {
+  state = 'state-1',
+  cookies = { 'google-state': 'state-1', 'google-nonce': RAW_NONCE } as Record<string, string>,
+  error = null,
+}: { credential?: string | null; state?: string | null; cookies?: Record<string, string>; error?: string | null } = {}) {
   jar = new Map(Object.entries(cookies))
   const body = new URLSearchParams()
-  if (credential !== null) body.set('credential', credential)
-  if (csrfBody !== null) body.set('g_csrf_token', csrfBody)
+  if (credential !== null) body.set('id_token', credential)
+  if (state !== null) body.set('state', state)
+  if (error !== null) body.set('error', error)
   return new Request('https://www.dwellduel.com/auth/google', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -65,22 +67,23 @@ describe('POST /auth/google', () => {
     expect(authSignOut).not.toHaveBeenCalled()
   })
 
-  it('goes where the member was headed, and spends the nonce and next cookies', async () => {
-    const res = await POST(request({ cookies: { g_csrf_token: 'csrf-1', 'google-nonce': RAW_NONCE, 'sign-in-next': '/markets/abc?from=share' } }))
+  it('goes where the member was headed, and spends the nonce, state and next cookies', async () => {
+    const res = await POST(request({ cookies: { 'google-state': 'state-1', 'google-nonce': RAW_NONCE, 'sign-in-next': '/markets/abc?from=share' } }))
     expect(res.headers.get('location')).toBe('https://www.dwellduel.com/markets/abc?from=share')
     const options = { path: '/auth/google', httpOnly: true, sameSite: 'none', secure: true, maxAge: 0 }
     expect(setCookie).toHaveBeenCalledWith('google-nonce', '', options)
+    expect(setCookie).toHaveBeenCalledWith('google-state', '', options)
     expect(setCookie).toHaveBeenCalledWith('sign-in-next', '', options)
   })
 
   it('ignores a next cookie that would leave the site', async () => {
-    const res = await POST(request({ cookies: { g_csrf_token: 'csrf-1', 'google-nonce': RAW_NONCE, 'sign-in-next': '//evil.example' } }))
+    const res = await POST(request({ cookies: { 'google-state': 'state-1', 'google-nonce': RAW_NONCE, 'sign-in-next': '//evil.example' } }))
     expect(res.headers.get('location')).toBe('https://www.dwellduel.com/')
   })
 
   it('sends an account that isn’t invited to /not-invited, signed out, with the email in a cookie and next in the URL', async () => {
     createOwnProfile.mockResolvedValue({ ok: false, reason: 'not_invited' })
-    const res = await POST(request({ cookies: { g_csrf_token: 'csrf-1', 'google-nonce': RAW_NONCE, 'sign-in-next': '/tasks' } }))
+    const res = await POST(request({ cookies: { 'google-state': 'state-1', 'google-nonce': RAW_NONCE, 'sign-in-next': '/tasks' } }))
     expect(res.status).toBe(303)
     expect(res.headers.get('location')).toBe('https://www.dwellduel.com/not-invited?next=%2Ftasks')
     expect(authSignOut).toHaveBeenCalledWith({ scope: 'local' })
@@ -95,16 +98,17 @@ describe('POST /auth/google', () => {
 
   it('signs this device out and says so when the profile can’t be made', async () => {
     createOwnProfile.mockResolvedValue({ ok: false, reason: 'error' })
-    const res = await POST(request({ cookies: { g_csrf_token: 'csrf-1', 'google-nonce': RAW_NONCE, 'sign-in-next': '/tasks' } }))
+    const res = await POST(request({ cookies: { 'google-state': 'state-1', 'google-nonce': RAW_NONCE, 'sign-in-next': '/tasks' } }))
     expect(res.headers.get('location')).toBe('https://www.dwellduel.com/sign-in?error=auth&next=%2Ftasks')
     expect(authSignOut).toHaveBeenCalledWith({ scope: 'local' })
   })
 
   it.each([
-    ['no CSRF cookie', { cookies: { 'google-nonce': RAW_NONCE } }],
-    ['no CSRF token in the body', { csrfBody: null }],
-    ['a CSRF token that doesn’t match the cookie', { csrfBody: 'csrf-2' }],
+    ['no state cookie', { cookies: { 'google-nonce': RAW_NONCE } }],
+    ['no state in the body', { state: null }],
+    ['a state that doesn’t match the cookie', { state: 'state-2' }],
     ['no credential', { credential: null }],
+    ['an error from Google', { error: 'server_error', credential: null }],
   ])('refuses %s without asking Supabase', async (_, options) => {
     const res = await POST(request(options))
     expect(res.status).toBe(303)
@@ -114,7 +118,7 @@ describe('POST /auth/google', () => {
   })
 
   it.each([
-    ['no nonce cookie (the page was left too long)', { cookies: { g_csrf_token: 'csrf-1' } }],
+    ['no nonce cookie (the page was left too long)', { cookies: { 'google-state': 'state-1' } }],
     ['a token minted for another nonce (another tab)', { credential: token(hashed('other')) }],
     ['a token with no nonce', { credential: token(undefined) }],
     ['a token that isn’t a JWT', { credential: 'garbage' }],
@@ -125,16 +129,24 @@ describe('POST /auth/google', () => {
     expect(reportError).toHaveBeenCalledOnce()
   })
 
+  it('goes quietly back to sign-in, keeping next, when the member declines Google’s consent', async () => {
+    const res = await POST(request({ error: 'access_denied', credential: null, cookies: { 'google-state': 'state-1', 'google-nonce': RAW_NONCE, 'sign-in-next': '/feed' } }))
+    expect(res.status).toBe(303)
+    expect(res.headers.get('location')).toBe('https://www.dwellduel.com/sign-in?next=%2Ffeed')
+    expect(signInWithIdToken).not.toHaveBeenCalled()
+    expect(reportError).not.toHaveBeenCalled()
+  })
+
   it('reports a Supabase error and goes back to sign-in, keeping next', async () => {
     signInWithIdToken.mockResolvedValue({ data: { user: null, session: null }, error: { message: 'Bad ID token', code: 'bad_jwt' } })
-    const res = await POST(request({ cookies: { g_csrf_token: 'csrf-1', 'google-nonce': RAW_NONCE, 'sign-in-next': '/feed' } }))
+    const res = await POST(request({ cookies: { 'google-state': 'state-1', 'google-nonce': RAW_NONCE, 'sign-in-next': '/feed' } }))
     expect(res.headers.get('location')).toBe('https://www.dwellduel.com/sign-in?error=auth&next=%2Ffeed')
     expect(reportError).toHaveBeenCalledWith('Sign-in with Google: signInWithIdToken failed', expect.anything())
     expect(createOwnProfile).not.toHaveBeenCalled()
   })
 
   it('never reports the token itself', async () => {
-    await POST(request({ csrfBody: 'csrf-2' }))
+    await POST(request({ state: 'state-2' }))
     expect(JSON.stringify(reportError.mock.calls.map(([context, error]) => [context, String(error)]))).not.toContain('signature')
   })
 })

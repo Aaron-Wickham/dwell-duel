@@ -663,36 +663,35 @@ off. There are two ways in, chosen at build by `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
   `signInWithOAuth` with `prompt=select_account`, so Google always shows its
   account chooser, and Google returns through Supabase to `/callback`, which
   exchanges the code. The chooser names the Supabase project's domain.
-- **With it, Google's own button** (Google Identity Services, `ux_mode:
-  'redirect'`, never a popup, which the installed iPhone app can't do).
-  `GoogleSignIn` loads `accounts.google.com/gsi/client` and first POSTs to
-  `/auth/google/nonce`, which keeps a random nonce in the httpOnly
-  `google-nonce` cookie and returns its SHA-256 (hex), which goes to Google;
-  `next` rides in `sign-in-next` beside it. Both cookies have path
-  `/auth/google`, last an hour, and over https are `SameSite=None; Secure`,
-  because Google's POST back is cross-site and a Lax cookie isn't sent on
-  one (plain-http local dev gets Lax, without Secure).
-  Google posts `credential` (the ID token) and `g_csrf_token` to
-  `/auth/google` on our domain, so the chooser says "continue to
-  dwellduel.com". The route checks Google's double submit (the body's
-  `g_csrf_token` equals the cookie Google's script set), that the token's
-  `nonce` claim is the hash of our cookie's raw nonce (a mismatch is a page
-  left too long or another tab: `?error=expired`), then calls
-  `signInWithIdToken` with the raw nonce, which verifies the token and sets
-  the session cookies. Both cookies are spent whatever happens, and every
-  answer is a 303. Google's chooser is shown on every click, as with
-  `prompt=select_account`; its button may name the last account used, but
-  only as a label. If Google's script or the nonce can't be had within ten
-  seconds, the page falls back to Supabase's button, and after any failed
-  sign-in (`?error=`) it shows Supabase's redirect as "Try another way" under
-  Google's button, so a fault on Google's path can't lock members out. The
-  CSRF values are compared in constant time.
+- **With it, straight to Google** (OpenID Connect, `response_type=id_token`,
+  `response_mode=form_post`; a full-page redirect, never a popup, which the
+  installed iPhone app can't do). The same `SignInButton`, with `direct`,
+  first POSTs to `/auth/google/nonce`, which keeps a random nonce in the
+  httpOnly `google-nonce` cookie and a random state in `google-state`, and
+  returns Google's authorize URL (`googleAuthorizeUrl`) carrying the state,
+  the nonce's SHA-256 (hex) and `prompt=select_account`; `next` rides in
+  `sign-in-next` beside them. All three cookies have path `/auth/google`,
+  last an hour, and over https are `SameSite=None; Secure`, because Google's
+  POST back is cross-site and a Lax cookie isn't sent on one (plain-http
+  local dev gets Lax, without Secure). Google posts `id_token` and `state`
+  to `/auth/google` on our domain, so the chooser says "continue to
+  dwellduel.com". The route checks the body's `state` equals the cookie
+  (compared in constant time), that the token's `nonce` claim is the hash
+  of our cookie's raw nonce (a mismatch is a page left too long or another
+  tab: `?error=expired`), then calls `signInWithIdToken` with the raw nonce,
+  which verifies the token and sets the session cookies. A member who
+  declines Google's consent (`error=access_denied`) goes quietly back to
+  sign-in; any other Google error is reported. The cookies are spent
+  whatever happens, and every answer is a 303. After any failed sign-in
+  (`?error=`) the page shows Supabase's redirect as "Try another way" under
+  the button, so a fault on the direct path can't lock members out. Nothing
+  of Google's loads on our pages, so the CSP allows nothing from Google.
 
 Either way, `finishSignIn` (`lib/auth/finish-sign-in.ts`) does the rest, and
 a member whose email isn't in `allowed_emails` lands on `/not-invited`. A signed-out request
 for an app page is sent to `/sign-in?next=<path>`; the sign-in page keeps
 `next` in the short-lived `sign-in-next` cookie (path `/callback`, or
-`/auth/google` for Google's button) for the round trip through Google, and
+`/auth/google` when going straight to Google) for the round trip through Google, and
 the route Google returns to sends the member there instead of Home. Both ends pass it through `safeNextPath` (`lib/auth/next-path.ts`):
 only a same-site app path, never `//host`, a backslash or a scheme. A
 cookie, rather than `/callback?next=` in `redirectTo`, keeps Supabase's
@@ -1275,9 +1274,7 @@ value never stops production booting.
 - **Security headers** (`next.config.ts`): a Content Security Policy that
   only allows scripts from the app itself (and `va.vercel-scripts.com`, for
   Vercel Analytics and Speed Insights) and connections to the app and its
-  Supabase project (and, only when `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is set at
-  build, the `accounts.google.com/gsi/` script, style, frame and connect
-  paths Google documents for its button), plus `X-Frame-Options: DENY`, `nosniff`, a referrer policy and
+  Supabase project, plus `X-Frame-Options: DENY`, `nosniff`, a referrer policy and
   a `Permissions-Policy` denying camera, microphone and location. `poweredByHeader` is off. A
   new third-party origin (analytics, an image host) has to be added to the
   CSP there.

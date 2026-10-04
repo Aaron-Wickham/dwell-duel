@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createHash } from 'node:crypto'
 
 const setCookie = vi.fn()
@@ -15,18 +15,46 @@ const request = (body: unknown, site: string | null = 'same-origin', origin = 'h
 
 const cookie = (name: string) => setCookie.mock.calls.find(([n]) => n === name)
 
-beforeEach(() => setCookie.mockReset())
+beforeEach(() => {
+  setCookie.mockReset()
+  vi.stubEnv('NEXT_PUBLIC_GOOGLE_CLIENT_ID', 'client-123.apps.googleusercontent.com')
+})
+afterEach(() => vi.unstubAllEnvs())
 
 describe('POST /auth/google/nonce', () => {
-  it('keeps the raw nonce in an httpOnly cookie for /auth/google and hands the page only its SHA-256, as hex', async () => {
+  it('keeps the raw nonce in an httpOnly cookie for /auth/google and sends Google only its SHA-256, as hex', async () => {
     const res = await POST(request({ next: null }))
     expect(res.status).toBe(200)
     expect(res.headers.get('cache-control')).toBe('no-store')
-    const { nonce } = await res.json()
+    const url = new URL((await res.json()).url)
     const [, raw, options] = cookie('google-nonce')!
     expect(options).toEqual({ path: '/auth/google', httpOnly: true, sameSite: 'none', secure: true, maxAge: 3600 })
     expect(raw).toMatch(/^[A-Za-z0-9_-]{43}$/)
-    expect(nonce).toBe(createHash('sha256').update(raw).digest('hex'))
+    expect(url.searchParams.get('nonce')).toBe(createHash('sha256').update(raw).digest('hex'))
+  })
+
+  it('sends the member to Google, posting the ID token back to /auth/google with the state in a cookie', async () => {
+    const url = new URL((await (await POST(request({}))).json()).url)
+    expect(`${url.origin}${url.pathname}`).toBe('https://accounts.google.com/o/oauth2/v2/auth')
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({
+      client_id: 'client-123.apps.googleusercontent.com',
+      redirect_uri: 'https://www.dwellduel.com/auth/google',
+      response_type: 'id_token',
+      response_mode: 'form_post',
+      scope: 'openid email profile',
+      prompt: 'select_account',
+    })
+    const [, state, options] = cookie('google-state')!
+    expect(options).toEqual({ path: '/auth/google', httpOnly: true, sameSite: 'none', secure: true, maxAge: 3600 })
+    expect(url.searchParams.get('state')).toBe(state)
+    expect(state).not.toBe(cookie('google-nonce')![1])
+  })
+
+  it('is not found without a Google client ID', async () => {
+    vi.stubEnv('NEXT_PUBLIC_GOOGLE_CLIENT_ID', '')
+    const res = await POST(request({}))
+    expect(res.status).toBe(404)
+    expect(setCookie).not.toHaveBeenCalled()
   })
 
   it('makes a new nonce every time', async () => {

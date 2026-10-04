@@ -18,11 +18,43 @@ function rememberNext(next: string | null) {
   document.cookie = `${NEXT_COOKIE}=${value}; Path=/callback; Max-Age=${maxAge}; SameSite=Lax${secure}`
 }
 
-// `alternative`: shown under Google's own button after a failed sign-in, so a fault on that path
-// (a client ID Supabase doesn't list, a blocked CSRF cookie) never leaves members with no way in.
-export function SignInButton({ alternative = false }: { alternative?: boolean }) {
+// Through Supabase's redirect, whose account chooser names the Supabase project.
+async function startSupabase(next: string | null) {
+  rememberNext(next)
+  // Loaded on tap rather than imported, so the sign-in page doesn't ship the Supabase client.
+  const { browserClient } = await import('@/lib/supabase/client')
+  const supabase = browserClient()
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    // Always Google's account chooser, so "Try another account" can't quietly reuse the
+    // account that wasn't invited (#263).
+    options: { redirectTo: `${window.location.origin}/callback`, queryParams: { prompt: 'select_account' } },
+  })
+  if (error) throw error
+}
+
+// Straight to Google, which posts the ID token back to /auth/google, so its chooser names
+// dwellduel.com. The route sets the nonce, state and `next` cookies and says where to go.
+async function startDirect(next: string | null) {
+  const response = await fetch('/auth/google/nonce', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ next }),
+    cache: 'no-store',
+  })
+  if (!response.ok) throw new Error(`Google sign-in: ${response.status}`)
+  const { url } = (await response.json()) as { url?: unknown }
+  if (typeof url !== 'string') throw new Error('Google sign-in: no URL')
+  window.location.assign(url)
+}
+
+// `direct` with a Google client ID set. After a failed direct sign-in, an `alternative` Supabase
+// button shows beneath, so a fault on that path (a client ID Supabase doesn't list, a blocked
+// cookie) never leaves members with no way in.
+export function SignInButton({ direct = false, alternative = false }: { direct?: boolean; alternative?: boolean }) {
   const searchParams = useSearchParams()
   const next = safeNextPath(searchParams.get('next'))
+  const failedBefore = searchParams.has('error')
   // Google's page can take a moment to arrive; until it does, the button says so.
   const [redirecting, setRedirecting] = useState(false)
   // A redirect that never started (Google or Supabase unreachable) used to put the button back
@@ -33,18 +65,8 @@ export function SignInButton({ alternative = false }: { alternative?: boolean })
     if (redirecting) return
     setRedirecting(true)
     setFailed(false)
-    rememberNext(next)
     try {
-      // Loaded on tap rather than imported, so the sign-in page doesn't ship the Supabase client.
-      const { browserClient } = await import('@/lib/supabase/client')
-      const supabase = browserClient()
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        // Always Google's account chooser, so "Try another account" can't quietly reuse the
-        // account that wasn't invited (#263).
-        options: { redirectTo: `${window.location.origin}/callback`, queryParams: { prompt: 'select_account' } },
-      })
-      if (error) throw error
+      await (direct ? startDirect(next) : startSupabase(next))
     } catch {
       setRedirecting(false)
       setFailed(true)
@@ -70,6 +92,7 @@ export function SignInButton({ alternative = false }: { alternative?: boolean })
           </>
         )}
       </Button>
+      {direct && failedBefore && <SignInButton alternative />}
     </div>
   )
 }

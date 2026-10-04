@@ -12,6 +12,11 @@ the hood**, **Tests**. Add a line under `## Unreleased
 
 ### Fixes
 - **The daily keep-alive cron passes again.** Its idempotency-key cleanup had failed every run in production with "permission denied", because the production database never gave the server read and write rights on three tables that local databases do. The server can now read and write every table there, as it does locally, and new tables get the same rights.
+- **The sign-in page doesn't scroll on a phone.** The paragraph under the headline is gone, and a phone too short for the rest drops the three facts, so the whole page fits on one screen (#366).
+- **Create market's Type heading has room to breathe.** It sits as far above its options as Title does above its box, and Outcomes matches too (#365).
+
+### Polish
+- **The old Sign in with Google button is back.** It replaces Google's own button and still goes straight to Google, so Google's account chooser still says "continue to dwellduel.com". Nothing of Google's loads on the page any more (#366).
 
 ### Under the hood
 - **Less noise in Sentry from sign-in.** A blocked or unreachable Google sign-in script no longer reports an error, since the page already falls back to the other sign-in button, and the detail-free "Script error." browsers report for Google's script is dropped (#363).

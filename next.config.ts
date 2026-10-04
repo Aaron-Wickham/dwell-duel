@@ -4,24 +4,22 @@ import { withSentryConfig } from '@sentry/nextjs/config'
 // Scripts and connections only to DwellDuel itself and its Supabase project; nothing frames the app
 // (clickjacking on admin actions). Next's own inline scripts and the launch screen's cold-start
 // script need 'unsafe-inline' without a per-request nonce, and dev mode needs 'unsafe-eval'.
-// With a Google client ID set at build, the sign-in page also shows Google's own button, allowed
-// from exactly the paths Google documents for Sign in with Google.
+// Sign-in leaves for Google by navigation and comes back by Google's own form post, so nothing of
+// Google's loads here.
 function contentSecurityPolicy(): string {
   const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
   const realtime = supabase.replace(/^http/, 'ws')
   const dev = process.env.NODE_ENV === 'development'
-  const gis = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID)
-  const google = (source: string) => (gis ? ` ${source}` : '')
   return [
     "default-src 'self'",
     // Vercel Analytics and Speed Insights: same-origin in production, va.vercel-scripts.com otherwise.
-    `script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com${google('https://accounts.google.com/gsi/client')}${dev ? " 'unsafe-eval'" : ''}`,
-    `style-src 'self' 'unsafe-inline'${google('https://accounts.google.com/gsi/style')}`,
-    `frame-src 'self'${google('https://accounts.google.com/gsi/')}`,
+    `script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com${dev ? " 'unsafe-eval'" : ''}`,
+    "style-src 'self' 'unsafe-inline'",
+    "frame-src 'self'",
     `img-src 'self' data: blob: ${supabase}`,
     "font-src 'self' data:",
     // Sentry's ingest hosts (o123.ingest.us.sentry.io and the like), for client error reports.
-    `connect-src 'self' ${supabase} ${realtime} https://*.sentry.io${google('https://accounts.google.com/gsi/')}`,
+    `connect-src 'self' ${supabase} ${realtime} https://*.sentry.io`,
     "worker-src 'self'",
     "manifest-src 'self'",
     "object-src 'none'",

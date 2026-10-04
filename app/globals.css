@@ -12,10 +12,11 @@
   }
 }
 
-/* A phone too short to show the whole sign-in page (an iPhone SE is 667pt tall): it drops what can
-   go so the Google button stays above the fold. Not at lg, where the page is two columns. */
+/* A phone too short to show the whole sign-in page without scrolling (it needs about 727px; a
+   browser tab on most iPhones is shorter): it drops what can go so nothing scrolls. Not at lg,
+   where the page is two columns. */
 @custom-variant short {
-  @media (max-height: 667px) and (width < 64rem) {
+  @media (max-height: 740px) and (width < 64rem) {
     @slot;
   }
 }

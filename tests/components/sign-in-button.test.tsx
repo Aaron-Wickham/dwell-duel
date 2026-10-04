@@ -71,6 +71,39 @@ describe('SignInButton', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Opening Google…')
   })
 
+  it('goes straight to Google’s URL from /auth/google/nonce when direct, carrying next', async () => {
+    const assign = vi.fn()
+    vi.spyOn(window, 'location', 'get').mockReturnValue({ ...window.location, assign })
+    const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ url: 'https://accounts.google.com/o/oauth2/v2/auth?x=1' }))
+    params = new URLSearchParams('next=/markets/abc')
+    render(<SignInButton direct />)
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }))
+    expect(fetch).toHaveBeenCalledWith('/auth/google/nonce', expect.objectContaining({ method: 'POST', body: JSON.stringify({ next: '/markets/abc' }) }))
+    expect(assign).toHaveBeenCalledWith('https://accounts.google.com/o/oauth2/v2/auth?x=1')
+    expect(signInWithOAuth).not.toHaveBeenCalled()
+    vi.restoreAllMocks()
+  })
+
+  it('says so when direct sign-in can’t start', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 500 }))
+    render(<SignInButton direct />)
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t open Google sign-in.')
+    vi.restoreAllMocks()
+  })
+
+  it('offers Supabase’s redirect beside a direct button after a failed sign-in, and only then', async () => {
+    const { unmount } = render(<SignInButton direct />)
+    expect(screen.queryByRole('button', { name: 'Try another way' })).toBeNull()
+    unmount()
+
+    params = new URLSearchParams('error=auth')
+    render(<SignInButton direct />)
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Try another way' }))
+    expect(signInWithOAuth).toHaveBeenCalledOnce()
+  })
+
   it('shows the friendly error after a failed redirect back', () => {
     params = new URLSearchParams('error=auth')
     render(<SignInButton />)

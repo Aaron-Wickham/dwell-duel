@@ -48,6 +48,6 @@ export function signInFailed(origin: string, next: string | null, error: SignInE
   return withNext(origin, `/sign-in?error=${error}`, next)
 }
 
-function withNext(origin: string, path: string, next: string | null): string {
+export function withNext(origin: string, path: string, next: string | null): string {
   return `${origin}${path}${next ? `${path.includes('?') ? '&' : '?'}next=${encodeURIComponent(next)}` : ''}`
 }

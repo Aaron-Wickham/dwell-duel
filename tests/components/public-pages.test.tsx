@@ -3,8 +3,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 
 vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams() }))
-vi.mock('@/app/(auth)/sign-in/google-sign-in', () => ({
-  GoogleSignIn: ({ clientId }: { clientId: string }) => <p>Google’s button for {clientId}</p>,
+vi.mock('@/app/(auth)/sign-in/sign-in-button', () => ({
+  SignInButton: ({ direct }: { direct?: boolean }) => <button type="button">{direct ? 'Direct' : 'Supabase'} sign-in</button>,
 }))
 
 import SignInPage from '@/app/(auth)/sign-in/page'
@@ -17,9 +17,7 @@ afterEach(() => vi.unstubAllEnvs())
 describe('the sign-in page', () => {
   it('says what DwellDuel is, and links to the privacy page', () => {
     render(<SignInPage />)
-    expect(screen.getByText(/^Bet play-money Dwell Coin on questions from your church friends/)).toHaveTextContent(
-      'Bet play-money Dwell Coin on questions from your church friends, and earn more by studying the Bible.',
-    )
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Friendly bets. Faithful study.')
     expect(screen.getByText('Play money, invite-only')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy')
   })
@@ -27,15 +25,13 @@ describe('the sign-in page', () => {
   it('uses Supabase’s Google redirect without a Google client ID', () => {
     vi.stubEnv('NEXT_PUBLIC_GOOGLE_CLIENT_ID', '')
     render(<SignInPage />)
-    expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument()
-    expect(screen.queryByText(/Google’s button/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Supabase sign-in' })).toBeInTheDocument()
   })
 
-  it('shows Google’s own button with one', () => {
+  it('goes straight to Google with one', () => {
     vi.stubEnv('NEXT_PUBLIC_GOOGLE_CLIENT_ID', 'client.apps.googleusercontent.com')
     render(<SignInPage />)
-    expect(screen.getByText('Google’s button for client.apps.googleusercontent.com')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Sign in with Google' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Direct sign-in' })).toBeInTheDocument()
   })
 })
 

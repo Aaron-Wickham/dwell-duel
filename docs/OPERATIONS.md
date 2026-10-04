@@ -404,21 +404,21 @@ Update them under Settings → Environments → Production.
 
 Two ways in share one Google OAuth client (the one in Supabase → Auth →
 Providers → Google). With `NEXT_PUBLIC_GOOGLE_CLIENT_ID` set, the sign-in
-page shows Google's own button, Google posts the ID token to
+button goes straight to Google, Google posts the ID token to
 `/auth/google` on our domain, and the account chooser says "continue to
 dwellduel.com". Without it, sign-in goes through Supabase's redirect, whose
 chooser names `lymrpiivqvdnfcjmxksx.supabase.co`. The second is also the
-fallback when Google's script can't load.
+"Try another way" fallback after a failed sign-in.
 
-**Turning on Google's button** (each step is a setting outside the repo):
+**Turning on the direct sign-in** (each step is a setting outside the repo):
 
 1. Google Cloud → Google Auth Platform → Clients → the client
    (`499057846503-erb8u68614jkmm4g6ti1t0ovoffdabl0.apps.googleusercontent.com`):
    - **Authorized JavaScript origins:** add `https://www.dwellduel.com` and
      `https://dwellduel.com`.
    - **Authorized redirect URIs:** add `https://www.dwellduel.com/auth/google`
-     and `https://dwellduel.com/auth/google`. Google's `login_uri` must match
-     one exactly. Keep Supabase's
+     and `https://dwellduel.com/auth/google`. The `redirect_uri` sent to
+     Google must match one exactly. Keep Supabase's
      `https://lymrpiivqvdnfcjmxksx.supabase.co/auth/v1/callback` for the
      fallback.
    - Optional, to try it locally: origins `http://localhost` and

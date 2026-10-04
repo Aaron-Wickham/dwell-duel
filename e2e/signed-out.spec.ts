@@ -69,13 +69,11 @@ test('not-invited names the refused account once, and Try another account keeps 
   await expect(page.getByText(/You signed in as/)).toHaveCount(0)
 })
 
-// #329: an iPhone SE's viewport. The lede and facts drop out so Google's button is on screen
-// without scrolling, once the intro (if any) has settled.
+// #329: an iPhone SE's viewport. The facts drop out so the sign-in button is on screen without
+// scrolling, once the intro (if any) has settled.
 test('on a short phone the sign-in button stays above the fold', async ({ page }) => {
-  test.skip(!!googleClientId, 'Google’s own button can’t render here without its script')
   await page.setViewportSize({ width: 375, height: 667 })
   await page.goto('/sign-in')
-  await expect(page.getByText(/Bet play-money Dwell Coin/)).toBeHidden()
   await expect(page.getByRole('list', { name: 'What DwellDuel is' })).toBeHidden()
   const button = page.getByRole('button', { name: 'Sign in with Google' })
   await expect(button).toBeInViewport({ ratio: 1 })
@@ -96,7 +94,7 @@ test('the sign-in page says what DwellDuel is, and the privacy page is public', 
   expect(privacy.status()).toBe(200)
 
   await page.goto('/sign-in')
-  await expect(page.getByText(/Bet play-money Dwell Coin on questions from your church friends/)).toBeVisible()
+  await expect(page.getByText('Earn DC with Bible-study tasks')).toBeVisible()
   await expect(page.getByRole('img', { name: /^Sample market: Will the sermon run past noon\?/ })).toBeVisible()
   await page.getByRole('link', { name: 'Privacy' }).click()
   await expect(page).toHaveURL(/\/privacy$/)
@@ -105,91 +103,68 @@ test('the sign-in page says what DwellDuel is, and the privacy page is public', 
   await expect(page.getByRole('table')).toBeVisible()
 })
 
-test('Google’s POST to /auth/google is refused without a matching CSRF cookie, or without the nonce', async ({ request, page }) => {
-  const post = (cookie: string, csrf: string) =>
-    request.post('/auth/google', { form: { credential: 'a.b.c', g_csrf_token: csrf }, headers: { cookie }, maxRedirects: 0 })
+test('Google’s POST to /auth/google is refused without a matching state cookie, or without the nonce', async ({ request, page }) => {
+  const post = (cookie: string, state: string) =>
+    request.post('/auth/google', { form: { id_token: 'a.b.c', state }, headers: { cookie }, maxRedirects: 0 })
 
-  const noCookie = await post('', 'csrf-1')
+  const noCookie = await post('', 'state-1')
   expect(noCookie.status()).toBe(303)
   expect(noCookie.headers()['location']).toMatch(/\/sign-in\?error=auth$/)
 
-  const mismatch = await post('g_csrf_token=csrf-2', 'csrf-1')
+  const mismatch = await post('google-state=state-2', 'state-1')
   expect(mismatch.headers()['location']).toMatch(/\/sign-in\?error=auth$/)
 
-  const noNonce = await post('g_csrf_token=csrf-1', 'csrf-1')
+  const noNonce = await post('google-state=state-1', 'state-1')
   expect(noNonce.headers()['location']).toMatch(/\/sign-in\?error=expired$/)
 
   await page.goto('/sign-in?error=expired')
   await expect(page.getByText('That sign-in expired or was started in another tab. Try again.')).toBeVisible()
 })
 
-// Google can't run here, so its script is replaced by a stand-in that records the configuration and
-// posts the way Google does: the credential and the double-submit CSRF token, to login_uri.
-const GIS_STUB = `
-window.google = { accounts: { id: {
-  initialize: (config) => { window.__gis = config },
-  renderButton: (parent) => {
-    const button = document.createElement('button')
-    button.textContent = 'Stand-in Google button'
-    button.onclick = () => {
-      const payload = btoa(JSON.stringify({ nonce: window.__gis.nonce })).replace(/=+$/, '')
-      document.cookie = 'g_csrf_token=csrf-e2e; path=/'
-      const form = document.createElement('form')
-      form.method = 'POST'
-      form.action = window.__gis.login_uri
-      for (const [name, value] of [['credential', 'e30.' + payload + '.sig'], ['g_csrf_token', 'csrf-e2e']]) {
-        const input = document.createElement('input')
-        input.type = 'hidden'
-        input.name = name
-        input.value = value
-        form.appendChild(input)
-      }
-      document.body.appendChild(form)
-      form.submit()
-    }
-    parent.appendChild(button)
-  },
-} } }`
+// Google can't run here, so its authorize page is replaced by a stand-in that posts back the way
+// Google does (form_post): an ID token carrying the nonce, and the state, to redirect_uri. It's
+// served from our own origin, since over plain http the cookies are Lax and a cross-site POST
+// wouldn't carry them (over https they're SameSite=None, which the unit tests check).
+function googleStandIn(url: URL): string {
+  const payload = Buffer.from(JSON.stringify({ nonce: url.searchParams.get('nonce') })).toString('base64url')
+  const field = (name: string, value: string) => `<input type="hidden" name="${name}" value="${value}">`
+  return `<form method="POST" action="${url.searchParams.get('redirect_uri')}">${field('id_token', `e30.${payload}.sig`)}${field('state', url.searchParams.get('state') ?? '')}</form><script>document.forms[0].submit()</script>`
+}
 
-test('with a Google client ID, sign-in shows Google’s button in redirect mode, posting to /auth/google', async ({ page }) => {
+test('with a Google client ID, sign-in goes straight to Google, which posts back to /auth/google', async ({ page }) => {
   test.skip(!googleClientId, 'needs NEXT_PUBLIC_GOOGLE_CLIENT_ID at build and here')
-  await page.route('https://accounts.google.com/gsi/client', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/javascript', body: GIS_STUB }),
-  )
+  let authorize: URL | null = null
+  await page.route('https://accounts.google.com/o/oauth2/v2/auth?**', (route) => {
+    authorize = new URL(route.request().url())
+    const ours = new URL(authorize.searchParams.get('redirect_uri')!).origin
+    // A script rather than a 302: Playwright doesn't route a request a redirect made.
+    return route.fulfill({ status: 200, contentType: 'text/html', body: `<script>location.replace('${ours}/e2e-google-stand-in')</script>` })
+  })
+  await page.route('**/e2e-google-stand-in', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: googleStandIn(authorize!) }))
   await page.goto('/sign-in?next=%2Fmarkets%3Ffrom%3Dshare')
-  await expect(page.getByRole('button', { name: 'Stand-in Google button' })).toBeVisible()
+  await page.getByRole('button', { name: 'Sign in with Google' }).click()
 
-  const config = await page.evaluate(() => (window as unknown as { __gis: Record<string, unknown> }).__gis)
-  expect(config).toMatchObject({ client_id: googleClientId, ux_mode: 'redirect', login_uri: 'http://localhost:3000/auth/google', auto_select: false })
-  expect(config.nonce).toMatch(/^[0-9a-f]{64}$/)
-
-  const cookies = await page.context().cookies('http://localhost:3000/auth/google')
-  const nonce = cookies.find((c) => c.name === 'google-nonce')
-  // Plain http here: Lax and not Secure. Over https they're SameSite=None; Secure (unit-tested).
-  expect(nonce).toMatchObject({ path: '/auth/google', httpOnly: true, sameSite: 'Lax', secure: false })
-  expect(decodeURIComponent(cookies.find((c) => c.name === 'sign-in-next')!.value)).toBe('/markets?from=share')
-
-  // The stand-in's token passes the CSRF and nonce checks, so it reaches Supabase, which refuses it,
-  // and the member is back at sign-in with the destination kept and the nonce spent.
-  await page.getByRole('button', { name: 'Stand-in Google button' }).click()
+  // The stand-in's token passes the state and nonce checks, so it reaches Supabase, which refuses it,
+  // and the member is back at sign-in with the destination kept.
   await expect(page).toHaveURL(/\/sign-in\?error=auth&next=%2Fmarkets%3Ffrom%3Dshare$/)
   await expect(page.getByText('Something went wrong signing you in. Try again.')).toBeVisible()
-  // Google's button again, and Supabase's redirect beside it, in case Google's path is what failed.
-  await expect(page.getByRole('button', { name: 'Stand-in Google button' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Try another way' })).toBeVisible()
-})
+  expect(Object.fromEntries(authorize!.searchParams)).toMatchObject({
+    client_id: googleClientId,
+    redirect_uri: 'http://localhost:3000/auth/google',
+    response_type: 'id_token',
+    response_mode: 'form_post',
+    prompt: 'select_account',
+  })
+  expect(authorize!.searchParams.get('nonce')).toMatch(/^[0-9a-f]{64}$/)
 
-test('with a Google client ID, sign-in falls back to Supabase’s redirect when Google’s script can’t load', async ({ page }) => {
-  test.skip(!googleClientId, 'needs NEXT_PUBLIC_GOOGLE_CLIENT_ID at build and here')
-  await page.route('https://accounts.google.com/gsi/client', (route) => route.abort())
+  // Supabase's redirect beside it, in case the direct path is what failed.
   await page.route(/\/auth\/v1\/authorize/, (route) => route.abort())
-  const authorize = page.waitForRequest(/\/auth\/v1\/authorize/)
-  await page.goto('/sign-in')
-  await page.getByRole('button', { name: 'Sign in with Google' }).click()
-  expect(new URL((await authorize).url()).searchParams.get('prompt')).toBe('select_account')
+  const supabase = page.waitForRequest(/\/auth\/v1\/authorize/)
+  await page.getByRole('button', { name: 'Try another way' }).click()
+  expect(new URL((await supabase).url()).searchParams.get('prompt')).toBe('select_account')
 })
 
-test('without a Google client ID, sign-in never loads Google’s script', async ({ page }) => {
+test('without a Google client ID, sign-in goes through Supabase, never to Google directly', async ({ page }) => {
   test.skip(!!googleClientId, 'only without NEXT_PUBLIC_GOOGLE_CLIENT_ID')
   const gis: string[] = []
   page.on('request', (r) => {

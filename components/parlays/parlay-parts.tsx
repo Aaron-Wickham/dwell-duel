@@ -60,7 +60,7 @@ export function ParlayStatusChip({
       )
     }
     case 'won':
-      return <StatusChip tone="done" className={className}>Won {parlay.credited} DC</StatusChip>
+      return <StatusChip tone="won" className={className}>Won {parlay.credited} DC</StatusChip>
     case 'lost':
       return <StatusChip tone="lost" className={className}>Lost</StatusChip>
     case 'refunded':

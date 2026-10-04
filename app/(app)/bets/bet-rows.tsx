@@ -38,7 +38,7 @@ function Row({
           id={titleId}
           href={`/markets/${marketId}`}
           transitionTypes={['nav-forward']}
-          className="stretched-link font-bold break-words"
+          className="stretched-link font-bold break-words text-ink"
         >
           {marketTitle}
         </IntentLink>

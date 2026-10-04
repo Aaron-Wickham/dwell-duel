@@ -39,7 +39,7 @@ export function PositionCard({
       title="Your position"
       titleId="position-title"
       description={summary && <span className={SUMMARY_TONE[summary.tone]}>{summary.text}</span>}
-      className={cn('gap-1 border-2 border-primary', className)}
+      className={cn('gap-1 border-2 border-ink', className)}
     >
       <ul className="flex flex-col divide-y divide-line">
         {position.bets.map((b) => {

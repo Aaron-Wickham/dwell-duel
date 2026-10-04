@@ -2,7 +2,7 @@ import { formatLine, type MarketKind } from '@/lib/markets/kind'
 import { IntentLink } from '@/components/ui/intent-link'
 import { Trophy } from 'lucide-react'
 import { cardClass } from '@/components/ui/card'
-import { StatusChip } from '@/components/ui/status-chip'
+import { StatusChip, type StatusChipTone } from '@/components/ui/status-chip'
 import { LocalTime } from '@/components/ui/local-time'
 import { SERIES_BG } from '@/components/markets/series-classes'
 import { MarketSparkline } from '@/components/markets/market-sparkline'
@@ -24,7 +24,7 @@ export const STATUS_LABEL: Record<MarketCardStatus, string> = {
   voided: 'Voided',
 }
 
-export const STATUS_TONE: Record<MarketCardStatus, 'open' | 'wait' | 'done' | 'lost' | 'void'> = {
+export const STATUS_TONE: Record<MarketCardStatus, StatusChipTone> = {
   open: 'open',
   awaiting: 'wait',
   resolved: 'done',
@@ -130,7 +130,7 @@ export function MarketCard({
         {preview ? (
           title
         ) : (
-          <IntentLink href={`/markets/${id}`} transitionTypes={['nav-forward']} className="stretched-link no-underline">
+          <IntentLink href={`/markets/${id}`} transitionTypes={['nav-forward']} className="stretched-link text-ink no-underline">
             {title}
           </IntentLink>
         )}

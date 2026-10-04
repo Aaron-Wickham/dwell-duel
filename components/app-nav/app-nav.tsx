@@ -62,7 +62,7 @@ function ProfileLink({ me, active }: { me: NavMember; active: boolean }) {
       <span
         className={cn(
           'flex size-9 items-center justify-center rounded-full',
-          active && 'ring-2 ring-primary ring-offset-2 ring-offset-surface',
+          active && 'ring-2 ring-nav-active ring-offset-2 ring-offset-surface',
         )}
       >
         <Avatar name={me.name} src={me.avatarSrc} size="nav" />
@@ -103,14 +103,14 @@ function DesktopLink({
       title={label}
       className={cn(
         'pressable relative isolate inline-flex min-h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap rounded-full text-[15px] font-bold no-underline xl:px-3.5',
-        active ? 'text-on-primary' : 'text-ink2 hover:bg-sunk hover:text-ink',
+        active ? 'text-on-nav-active' : 'text-ink2 hover:bg-sunk hover:text-ink',
       )}
     >
       {active && (
         <m.span
           layoutId="nav-pill"
           aria-hidden="true"
-          className="absolute inset-0 -z-10 rounded-full bg-primary"
+          className="absolute inset-0 -z-10 rounded-full bg-nav-active"
           transition={PILL_TRANSITION}
         />
       )}
@@ -216,7 +216,7 @@ export function AppNav({
               aria-current={active === 'admin' ? 'page' : undefined}
               className={cn(
                 'pressable relative inline-flex size-11 shrink-0 items-center justify-center rounded-control no-underline',
-                active === 'admin' ? 'border-[1.5px] border-primary bg-lime text-on-lime' : 'text-ink hover:bg-sunk',
+                active === 'admin' ? 'border-[1.5px] border-tab-active-ring bg-tab-active text-on-tab-active' : 'text-ink hover:bg-sunk',
               )}
             >
               <ShieldCheck aria-hidden="true" className="size-[22px]" />
@@ -252,7 +252,7 @@ export function AppNav({
                 <span
                   className={cn(
                     'relative isolate flex h-[30px] w-[52px] items-center justify-center rounded-full',
-                    isActive && 'text-on-lime',
+                    isActive && 'text-on-tab-active',
                   )}
                 >
                   {/* One pill that slides between tabs, like the desktop nav's. The tab bar stays
@@ -262,7 +262,7 @@ export function AppNav({
                     <m.span
                       layoutId="tabbar-pill"
                       aria-hidden="true"
-                      className="absolute inset-0 -z-10 rounded-full border-[1.5px] border-primary bg-lime"
+                      className="absolute inset-0 -z-10 rounded-full border-[1.5px] border-tab-active-ring bg-tab-active"
                       transition={PILL_TRANSITION}
                     />
                   )}

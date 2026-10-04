@@ -7,7 +7,7 @@ export type FilterChip = { href: string; label: string; current: boolean }
 export function filterChipClass(current: boolean): string {
   return cn(
     'pressable inline-flex min-h-11 shrink-0 cursor-pointer items-center whitespace-nowrap rounded-full border-[1.5px] px-4 text-[15px] font-bold no-underline',
-    current ? 'border-primary bg-primary text-on-primary' : 'border-line-s bg-surface text-ink hover:bg-sunk',
+    current ? 'border-nav-active bg-nav-active text-on-nav-active' : 'border-line-s bg-surface text-ink hover:bg-sunk',
   )
 }
 

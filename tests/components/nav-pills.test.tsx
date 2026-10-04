@@ -46,7 +46,7 @@ describe('the nav pills (#154)', () => {
     render(<Nav />)
     const [pill, ...rest] = tabBar().querySelectorAll('[data-layout-id="tabbar-pill"]')
     expect(rest).toHaveLength(0)
-    expect(pill).toHaveClass('bg-lime', 'absolute', 'inset-0', '-z-10')
+    expect(pill).toHaveClass('bg-tab-active', 'absolute', 'inset-0', '-z-10')
     expect(pill.closest('a')).toHaveAttribute('aria-current', 'page')
     expect(pill.closest('a')).toHaveAttribute('href', '/markets')
   })
@@ -58,7 +58,7 @@ describe('the nav pills (#154)', () => {
     const found = tabBar().querySelectorAll('[data-layout-id="tabbar-pill"]')
     expect(found).toHaveLength(1)
     expect(found[0].closest('a')).toHaveAttribute('href', '/feed')
-    expect(within(tabBar()).getByRole('link', { name: 'Markets' }).querySelector('.bg-lime')).toBeNull()
+    expect(within(tabBar()).getByRole('link', { name: 'Markets' }).querySelector('.bg-tab-active')).toBeNull()
   })
 
   it('slides the tab bar and desktop pills the same way', () => {

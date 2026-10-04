@@ -42,7 +42,7 @@ export function LeaderboardRow({
       </span>
       <Avatar name={name} src={avatarSrc} />
       <span className={cn(rowTitleClass, 'min-w-0 grow break-words')}>
-        <IntentLink href={href} transitionTypes={['nav-forward']} className="stretched-link">
+        <IntentLink href={href} transitionTypes={['nav-forward']} className="stretched-link text-ink">
           {name}
         </IntentLink>
         {isMe && <span className="font-semibold text-ink2"> (you)</span>}

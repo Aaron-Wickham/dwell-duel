@@ -24,7 +24,7 @@ function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean
   return (
     <li className={cn('pressable hover-tint relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-t-[10px] text-center', PLACE_ORDER[place])}>
       <Avatar name={member.name} src={member.avatarSrc} size={place === 1 ? 'lg' : 'md'} />
-      <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="stretched-link max-w-full text-[15px] font-extrabold line-clamp-3 wrap-break-word">
+      <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="stretched-link max-w-full text-[15px] font-extrabold text-ink line-clamp-3 wrap-break-word">
         {member.name}
       </Link>
       {member.id === meId && <span className="-mt-1 text-xs font-bold text-ink2">you</span>}

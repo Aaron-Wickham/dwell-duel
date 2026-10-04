@@ -115,7 +115,7 @@ describe('PositionCard, while the market is open', () => {
   it('lists each bet separately with what it pays, and no Cancel', () => {
     render(<PositionCard position={open} resolvedAt={null} />)
     const card = screen.getByRole('region', { name: 'Your position' })
-    expect(card).toHaveClass('border-2', 'border-primary')
+    expect(card).toHaveClass('border-2', 'border-ink')
     expect(within(card).getByText('30 DC on this market · Bets are final.')).toBeInTheDocument()
 
     const rows = within(card).getAllByRole('listitem')

@@ -29,7 +29,7 @@ export function MarketChartSkeleton() {
 export function MarketPositionSkeleton({ rows }: { rows: number }) {
   return (
     <SkeletonScreen name="market-position" announce={false} className="lg:col-start-2 lg:row-start-1 lg:mb-7">
-      <SkeletonCard className="gap-1 border-2 border-primary">
+      <SkeletonCard className="gap-1 border-2 border-ink">
         <Skeleton className="h-6 w-36" />
         <Skeleton className="h-4 w-56 max-w-full" />
         <div className="flex flex-col divide-y divide-line">

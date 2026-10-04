@@ -53,7 +53,7 @@ export function Awards({ awards }: { awards: Award[] }) {
             <span className="text-xl leading-none font-extrabold tabular-nums text-acc-text">{figure(award)}</span>
             <span className="flex min-w-0 items-center gap-2">
               <Avatar name={award.name} src={award.avatarSrc} size="sm" />
-              <Link href={`/members/${award.memberId}`} transitionTypes={['nav-forward']} className="stretched-link min-w-0 truncate font-bold">
+              <Link href={`/members/${award.memberId}`} transitionTypes={['nav-forward']} className="stretched-link min-w-0 truncate font-bold text-ink">
                 {award.name}
               </Link>
             </span>

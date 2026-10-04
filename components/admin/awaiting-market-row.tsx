@@ -19,7 +19,7 @@ export function AwaitingMarketRow({ market, now, domId }: { market: AwaitingMark
           id={titleId}
           href={`/markets/${market.id}`}
           transitionTypes={['nav-forward']}
-          className={cn(rowTitleClass, 'stretched-link break-words no-underline')}
+          className={cn(rowTitleClass, 'stretched-link break-words text-ink no-underline')}
         >
           {market.title}
         </Link>

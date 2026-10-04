@@ -87,10 +87,10 @@ describe('the market outcomes skeleton', () => {
 })
 
 describe('the market position skeleton', () => {
-  it('draws a row per bet or parlay, at most four, in the card’s primary border', () => {
+  it('draws a row per bet or parlay, at most four, in the card’s ink border', () => {
     const { container } = render(<MarketPositionSkeleton rows={6} />)
 
-    expect(container.querySelector('.rounded-card')).toHaveClass('border-2', 'border-primary')
+    expect(container.querySelector('.rounded-card')).toHaveClass('border-2', 'border-ink')
     expect(container.querySelector('[data-skeleton="market-position"] .divide-y')?.children).toHaveLength(4)
   })
 })

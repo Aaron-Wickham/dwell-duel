@@ -9,7 +9,7 @@ export function ResultChip({ result }: { result: MyBetResult }) {
     case 'awaiting':
       return <StatusChip tone="wait">Awaiting resolution</StatusChip>
     case 'won':
-      return <StatusChip tone="done">Won {result.payout} DC</StatusChip>
+      return <StatusChip tone="won">Won {result.payout} DC</StatusChip>
     case 'lost':
       return <StatusChip tone="lost">Lost</StatusChip>
     case 'refunded':

@@ -40,12 +40,19 @@
   --ink: #03272D;
   --ink2: #46605E;
   --line: #D5DFD8;
-  --line-s: #7A8F8B;
+  --line-s: #6F8581;
   --primary: #03272D;
   --on-primary: #FFFFFF;
   --lime: #72DB2B;
   --on-lime: #03272D;
   --link: #03272D;
+  /* The desktop nav's active pill, the phone tab bar's, and a segmented control's chosen segment. */
+  --nav-active: #03272D;
+  --on-nav-active: #FFFFFF;
+  --tab-active: #72DB2B;
+  --on-tab-active: #03272D;
+  --tab-active-ring: #03272D;
+  --segment-active: #FCFDFB;
   --acc-soft: #E3F4D5;
   --acc-text: #2A6E0B;
   --gold: #855600;
@@ -66,6 +73,7 @@
   --shadow: 0 1px 2px rgba(3, 39, 45, 0.05), 0 6px 20px rgba(3, 39, 45, 0.05);
   --overlay-shadow: 0 2px 6px rgba(3, 39, 45, 0.08), 0 18px 48px rgba(3, 39, 45, 0.18);
   --lift-shadow: 0 2px 6px rgba(3, 39, 45, 0.06), 0 12px 28px rgba(3, 39, 45, 0.12);
+  --tab-shadow: 0 1px 3px rgba(3, 39, 45, 0.12);
   --scrim: rgba(3, 39, 45, 0.45);
   --s1: #03272D;
   --s2: #2A6E0B;
@@ -115,7 +123,15 @@
   --line-s: #5E8883;
   --primary: #72DB2B;
   --on-primary: #03272D;
-  --link: #8BE651;
+  --link: #EAF4EE;
+  /* Lime in dark marks only the primary action and first place, so active navigation is a
+     neutral raised surface. */
+  --nav-active: #EAF4EE;
+  --on-nav-active: #021B1F;
+  --tab-active: #17434A;
+  --on-tab-active: #EAF4EE;
+  --tab-active-ring: #5E8883;
+  --segment-active: #17434A;
   --acc-soft: #143A1E;
   --acc-text: #8BE651;
   --gold: #F0C15A;
@@ -137,6 +153,7 @@
   --overlay-shadow: none;
   /* Dark surfaces hide a soft shadow, so the lifted card's edge brightens too. */
   --lift-shadow: 0 0 0 1px var(--line-s), 0 12px 28px rgba(0, 8, 10, 0.55);
+  --tab-shadow: 0 1px 3px rgba(0, 8, 10, 0.5);
   --scrim: rgba(0, 8, 10, 0.72);
   --s1: #EAF4EE;
   --s2: #8BE651;
@@ -158,7 +175,15 @@
     --line-s: #5E8883;
     --primary: #72DB2B;
     --on-primary: #03272D;
-    --link: #8BE651;
+    --link: #EAF4EE;
+    /* Lime in dark marks only the primary action and first place, so active navigation is a
+       neutral raised surface. */
+    --nav-active: #EAF4EE;
+    --on-nav-active: #021B1F;
+    --tab-active: #17434A;
+    --on-tab-active: #EAF4EE;
+    --tab-active-ring: #5E8883;
+    --segment-active: #17434A;
     --acc-soft: #143A1E;
     --acc-text: #8BE651;
     --gold: #F0C15A;
@@ -180,6 +205,7 @@
     --overlay-shadow: none;
   /* Dark surfaces hide a soft shadow, so the lifted card's edge brightens too. */
   --lift-shadow: 0 0 0 1px var(--line-s), 0 12px 28px rgba(0, 8, 10, 0.55);
+  --tab-shadow: 0 1px 3px rgba(0, 8, 10, 0.5);
     --scrim: rgba(0, 8, 10, 0.72);
     --s1: #EAF4EE;
     --s2: #8BE651;
@@ -203,6 +229,12 @@
   --color-lime: var(--lime);
   --color-on-lime: var(--on-lime);
   --color-link: var(--link);
+  --color-nav-active: var(--nav-active);
+  --color-on-nav-active: var(--on-nav-active);
+  --color-tab-active: var(--tab-active);
+  --color-on-tab-active: var(--on-tab-active);
+  --color-tab-active-ring: var(--tab-active-ring);
+  --color-segment-active: var(--segment-active);
   --color-acc-soft: var(--acc-soft);
   --color-acc-text: var(--acc-text);
   --color-gold: var(--gold);
@@ -235,7 +267,7 @@
   --radius-tile: 14px;
   --radius-card: 18px;
   --shadow-card: var(--shadow);
-  --shadow-tab: 0 1px 3px rgba(3, 39, 45, 0.12);
+  --shadow-tab: var(--tab-shadow);
   --shadow-overlay: var(--overlay-shadow);
   --shadow-lift: var(--lift-shadow);
 }

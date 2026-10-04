@@ -55,7 +55,7 @@ export function OutcomeRow({
           <span aria-hidden="true" className={cn('size-2.5 shrink-0 rounded-full', SERIES_BG[series])} />
           <span className={cn(rowTitleClass, 'min-w-0 wrap-break-word')}>{label}</span>
           {winner && (
-            <StatusChip tone="done">
+            <StatusChip tone="won">
               <Trophy aria-hidden="true" className="size-4" />
               Winner
             </StatusChip>

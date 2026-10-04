@@ -26,7 +26,7 @@ export function MemberRow({ member, domId, now }: { member: MemberSummary; domId
             id={titleId}
             href={`/admin/members/${member.id}`}
             transitionTypes={['nav-forward']}
-            className={cn(rowTitleClass, 'stretched-link min-w-0 break-words no-underline')}
+            className={cn(rowTitleClass, 'stretched-link min-w-0 break-words text-ink no-underline')}
           >
             {member.displayName}
           </Link>

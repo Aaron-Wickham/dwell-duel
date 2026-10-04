@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm test:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run db:start:*)",
+      "Bash(npm run db:reset:*)",
+      "Bash(npm run check:ios:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(npx supabase status:*)",
+      "Bash(npx supabase start:*)",
+      "Bash(npx supabase stop:*)",
+      "Bash(npx supabase gen types typescript --local:*)",
+      "Bash(scripts/check-migration-order.sh:*)"
+    ],
+    "deny": [
+      "Bash(npx supabase db push:*)",
+      "Bash(supabase db push:*)",
+      "Bash(git push origin main:*)",
+      "Bash(git push origin HEAD:main:*)",
+      "mcp__0791f801-7ed6-4e3e-8f18-309c9c1dbccb__apply_migration",
+      "mcp__0791f801-7ed6-4e3e-8f18-309c9c1dbccb__execute_sql",
+      "mcp__0791f801-7ed6-4e3e-8f18-309c9c1dbccb__deploy_edge_function",
+      "mcp__0791f801-7ed6-4e3e-8f18-309c9c1dbccb__create_project",
+      "mcp__0791f801-7ed6-4e3e-8f18-309c9c1dbccb__pause_project",
+      "mcp__0791f801-7ed6-4e3e-8f18-309c9c1dbccb__restore_project",
+      "mcp__0791f801-7ed6-4e3e-8f18-309c9c1dbccb__create_branch",
+      "mcp__0791f801-7ed6-4e3e-8f18-309c9c1dbccb__delete_branch",
+      "mcp__0791f801-7ed6-4e3e-8f18-309c9c1dbccb__merge_branch",
+      "mcp__0791f801-7ed6-4e3e-8f18-309c9c1dbccb__rebase_branch",
+      "mcp__0791f801-7ed6-4e3e-8f18-309c9c1dbccb__reset_branch"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-migrations.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

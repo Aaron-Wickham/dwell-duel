@@ -19,6 +19,7 @@ the hood**, **Tests**. Add a line under `## Unreleased
 - **The old Sign in with Google button is back.** It replaces Google's own button and still goes straight to Google, so Google's account chooser still says "continue to dwellduel.com". Nothing of Google's loads on the page any more (#366).
 
 ### Under the hood
+- **Guard rails for Claude Code in the repo.** A checked-in `.claude/settings.json` refuses `supabase db push`, pushing straight to `main` and the Supabase connector's write tools, and a hook refuses edits to a migration that's already on `main`. `.mcp.json` adds a read-only Supabase server scoped to production, and two project skills (`new-migration`, `release`) write down how those are done here.
 - **Less noise in Sentry from sign-in.** A blocked or unreachable Google sign-in script no longer reports an error, since the page already falls back to the other sign-in button, and the detail-free "Script error." browsers report for Google's script is dropped (#363).
 - **Readable production stack traces in Sentry.** A Vercel build holding `SENTRY_AUTH_TOKEN` uploads its source maps to Sentry under the deploy's release and links the release to its commit, then deletes them from the output, so nothing public changes. Builds without the token (CI, e2e, local) are unchanged, and an upload that fails only warns.
 

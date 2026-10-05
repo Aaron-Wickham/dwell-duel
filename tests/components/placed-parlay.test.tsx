@@ -88,9 +88,9 @@ describe('PlacedParlay', () => {
     expect(row).toHaveAttribute('tabindex', '-1')
   })
 
-  it('spans both columns of the desktop grid', () => {
+  it('spans both of the desktop list’s columns', () => {
     renderParlay(parlay({}))
-    expect(screen.getByRole('link').closest('li')).toHaveClass('lg:col-span-full')
+    expect(screen.getByRole('link').closest('li')).toHaveClass('lg:[column-span:all]')
   })
 
   it('lists the picks as plain lines, "Market · Pick", with a word for each result, so the whole card is one link', () => {

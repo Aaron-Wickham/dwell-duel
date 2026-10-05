@@ -10,9 +10,10 @@ import { cn } from '@/lib/utils'
 import { rowTitleClass } from '@/components/ui/page'
 import { formatDcAmount } from '@/lib/format/dc'
 
-// List cards on the page (D2), two across at lg, with a parlay spanning both (#393). Each keeps
-// its own height (items-start); full-width parlays leave no holes beside a tall card.
-const betListClass = cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-5')
+// List cards on the page (D2), in two newspaper columns at lg, with a parlay spanning both (#393).
+// Columns rather than a grid: each card keeps its own height and the next one sits right under it,
+// so a tall card leaves no hole beside it. They read down the first column, then the second.
+export const betListClass = cn(listCardsClass, 'lg:block lg:columns-2 lg:gap-5 lg:*:mb-5 lg:*:break-inside-avoid')
 
 function Row({
   domId,

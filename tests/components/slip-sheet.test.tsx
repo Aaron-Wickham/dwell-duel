@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeAll } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { SlipPick, SlipView } from '@/lib/parlays/get-slip'
 
@@ -10,6 +10,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 
 import { SlipProvider } from '@/components/slip/slip-provider'
 import { SlipSheet } from '@/components/slip/slip-sheet'
+import { DURATION } from '@/lib/ui/motion'
 
 const pick: SlipPick = {
   outcomeId: '00000001-0000-4000-8000-000000000000',
@@ -51,6 +52,41 @@ describe('SlipSheet', () => {
     expect(trigger).toHaveAttribute('aria-haspopup', 'dialog')
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  // #384: the button rises in and fades out instead of popping.
+  it('just shows a button already there on load, rises in with a first pick, and fades out after the last', () => {
+    vi.useFakeTimers()
+    try {
+      const { rerender } = render(
+        <SlipProvider view={viewOf(pick)}>
+          <SlipSheet />
+        </SlipProvider>,
+      )
+      const wrapper = () => screen.queryByRole('button', { name: /^Slip/ })?.parentElement
+      expect(wrapper()).toHaveClass('slip-fab', 'fixed')
+      expect(wrapper()).not.toHaveAttribute('data-enter')
+
+      rerender(
+        <SlipProvider view={viewOf()}>
+          <SlipSheet />
+        </SlipProvider>,
+      )
+      expect(screen.getByRole('button', { name: 'Slip (1)', hidden: true }).parentElement).toHaveAttribute('data-leaving')
+      expect(screen.getByRole('button', { name: 'Slip (1)', hidden: true }).parentElement).toHaveAttribute('inert')
+      act(() => vi.advanceTimersByTime(DURATION.fast))
+      expect(screen.queryByRole('button', { name: /^Slip/, hidden: true })).toBeNull()
+
+      rerender(
+        <SlipProvider view={viewOf(pick)}>
+          <SlipSheet />
+        </SlipProvider>,
+      )
+      expect(wrapper()).toHaveAttribute('data-enter')
+      expect(wrapper()).not.toHaveAttribute('data-leaving')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('loads and opens the slip on a tap, and hands focus back to the button on Escape', async () => {

@@ -5,7 +5,6 @@ import path from 'node:path'
 import type { ReactElement } from 'react'
 import Link from 'next/link'
 import { render } from '@testing-library/react'
-import { ChartColumn } from 'lucide-react'
 
 vi.mock('@/lib/markets/create-market', () => ({ createMarketAction: vi.fn() }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
@@ -22,7 +21,8 @@ import { JumpToMe } from '@/components/leaderboard/jump-to-me'
 import { Wordmark } from '@/components/brand/wordmark'
 import { MarketCard } from '@/components/markets/market-card'
 import { PlacedParlay } from '@/components/parlays/placed-parlay'
-import { HomeTiles } from '@/components/home/home-tiles'
+import { NeedsYou } from '@/components/home/needs-you'
+import { YourBets } from '@/components/home/your-bets'
 import { LeaderboardRow } from '@/components/leaderboard/leaderboard-row'
 import { Podium } from '@/components/leaderboard/podium'
 import { Awards } from '@/components/leaderboard/awards'
@@ -98,8 +98,34 @@ const CASES: [string, () => ReactElement][] = [
     ),
   ],
   [
-    'HomeTiles',
-    () => <HomeTiles tiles={[{ id: 'markets', href: '/markets', icon: ChartColumn, title: 'Markets', subtitle: 'Bet on it' }]} />,
+    'NeedsYou',
+    () => (
+      <NeedsYou
+        counts={{ tasks: 2, markets: 1 }}
+        showReviews
+        showAdminMarkets
+        marketsToResolve={{ total: 0, markets: [] }}
+        balance={0}
+        taskRewards={null}
+      />
+    ),
+  ],
+  [
+    'YourBets',
+    () => (
+      <YourBets
+        openCount={4}
+        markets={[]}
+        now={Date.parse('2026-10-04T12:00:00Z')}
+        wagers={[
+          { kind: 'bet', key: 'bet:1', marketId: 'k1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', amount: 10, payout: 18, closeAt: '2026-10-06T12:00:00Z' },
+        ]}
+      />
+    ),
+  ],
+  [
+    'YourBets (none open)',
+    () => <YourBets openCount={0} wagers={[]} now={0} markets={[{ id: 'k1', title: 'Will it rain?', closeAt: '2026-10-06T12:00:00Z' }]} />,
   ],
   [
     'LeaderboardRow',
@@ -141,6 +167,7 @@ const CASES: [string, () => ReactElement][] = [
               amount: 5,
               placedAt: '2026-09-25T12:00:00Z',
               closeAt: '2026-10-01T12:00:00Z',
+              pays: 9,
               result: { kind: 'open' },
             },
           },
@@ -160,13 +187,15 @@ const CASES: [string, () => ReactElement][] = [
   [
     'MemberRow',
     () => (
-      <ul>
-        <MemberRow
-          domId="member-m1"
-          now={Date.parse('2026-09-28T12:00:00Z')}
-          member={{ id: 'm1', displayName: 'Grace', avatarSrc: null, email: 'g@example.com', balance: 90, role: 'member', joinedAt: null, lastSignInAt: null, removed: false }}
-        />
-      </ul>
+      <table>
+        <tbody>
+          <MemberRow
+            domId="member-m1"
+            netWorth={120}
+            member={{ id: 'm1', displayName: 'Grace', avatarSrc: null, email: 'g@example.com', balance: 90, role: 'member', joinedAt: null, lastSignInAt: null, removed: false }}
+          />
+        </tbody>
+      </table>
     ),
   ],
   [
@@ -188,7 +217,7 @@ const CASES: [string, () => ReactElement][] = [
     'CategoryField',
     () => <CategoryField id="c" value="" onChange={() => {}} suggestions={['Weather']} popular={['Weather', 'Arts']} errorId="e" />,
   ],
-  ['MarketSearch', () => <MarketSearch q="" status="all" category={null} />],
+  ['MarketSearch', () => <MarketSearch q="" category={null} tabs={null} />],
   ['JumpToMe', () => <JumpToMe href="/leaderboard?at=me" focusId="member-1" />],
   ['MotionSettings', () => <MotionSettings haptics reduceMotion={false} />],
   ['CreateMarketForm', () => <CreateMarketForm />],
@@ -274,11 +303,11 @@ describe('press feedback', () => {
     for (const label of kinds) expect(label).toHaveClass('pressable')
   })
 
-  it('tints the home tiles as rows of one card on a phone, and lifts them as cards of their own from lg', () => {
+  it('tints a Needs you row rather than lifting it', () => {
     const { container } = render(
-      <HomeTiles tiles={[{ id: 'markets', href: '/markets', icon: ChartColumn, title: 'Markets', subtitle: 'Bet on it' }]} />,
+      <NeedsYou counts={{ tasks: 2, markets: 0 }} showReviews showAdminMarkets={false} marketsToResolve={{ total: 0, markets: [] }} balance={5} taskRewards={null} />,
     )
-    expect(container.querySelector('a')).toHaveClass('pressable', 'relative', 'hover-tint', 'lg:hover-lift', 'lg:before:hidden')
+    expect(container.querySelector('a')).toHaveClass('pressable', 'relative', 'hover-tint')
     expect(container.querySelector('a')).not.toHaveClass('hover-lift')
   })
 
@@ -345,7 +374,7 @@ describe('press feedback', () => {
     }
   })
 
-  it('gives every Button variant a hover colour as well as the grow', () => {
+  it('gives every Button variant a hover colour, since nothing grows on hover (#383)', () => {
     for (const variant of ['primary', 'secondary', 'danger', 'quiet'] as const) {
       const classes = buttonVariants({ variant }).split(' ')
       expect(classes).toContain('pressable')
@@ -353,8 +382,9 @@ describe('press feedback', () => {
     }
   })
 
-  it('presses the market page’s edit history disclosure', () => {
-    const page = readFileSync(path.resolve(import.meta.dirname, '../../app/(app)/markets/[id]/page.tsx'), 'utf8')
-    expect(page).toMatch(/<summary className="[^"]*\bpressable\b/)
+  it('presses the market page’s More actions button and its items', () => {
+    const menu = readFileSync(path.resolve(import.meta.dirname, '../../app/(app)/markets/[id]/market-menu.tsx'), 'utf8')
+    expect(menu).toMatch(/aria-label="More actions"\s+className="pressable\b/)
+    expect(menu).toMatch(/const itemClass = `pressable\b/)
   })
 })

@@ -1,5 +1,6 @@
 import type { DbClient } from '@/lib/supabase/database'
 import { chunk, IN_CHUNK } from '@/lib/pagination/chunk'
+import { formatDcAmount } from '@/lib/format/dc'
 
 // What a market's creator has riding on it: solo bets per outcome, and the outcomes they picked in
 // parlays. Shown beside the market and its result, since in a small group trust in the result
@@ -51,11 +52,25 @@ export async function getCreatorStakes(
   return stakes
 }
 
+// "40 DC on Yes and a parlay on No". Null when there's no stake.
+function describeStake(stake: CreatorStake | undefined): string | null {
+  if (!stake || (stake.solo.length === 0 && stake.parlayLabels.length === 0)) return null
+  const parts = stake.solo.map((s) => `${formatDcAmount(s.amount)} on ${s.label}`)
+  if (stake.parlayLabels.length > 0) parts.push(`a parlay on ${stake.parlayLabels.join(' and ')}`)
+  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0]
+}
+
 // "Creator has 40 DC on Yes and a parlay on No." Null when they have no stake.
 export function describeCreatorStake(stake: CreatorStake | undefined, tense: 'has' | 'had'): string | null {
-  if (!stake || (stake.solo.length === 0 && stake.parlayLabels.length === 0)) return null
-  const parts = stake.solo.map((s) => `${s.amount} DC on ${s.label}`)
-  if (stake.parlayLabels.length > 0) parts.push(`a parlay on ${stake.parlayLabels.join(' and ')}`)
-  const joined = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0]
-  return `Creator ${tense} ${joined}.`
+  const joined = describeStake(stake)
+  return joined && `Creator ${tense} ${joined}.`
+}
+
+// The market page's line for every member (#84, #390): "Ben has 40 DC on Yes.", or to the creator
+// themself (name null) "You have 40 DC on Yes." Null with no stake.
+export function describeMarketStake(stake: CreatorStake | undefined, name: string | null, open: boolean): string | null {
+  const joined = describeStake(stake)
+  if (!joined) return null
+  const verb = open ? (name === null ? 'have' : 'has') : 'had'
+  return `${name ?? 'You'} ${verb} ${joined}.`
 }

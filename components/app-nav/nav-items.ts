@@ -1,4 +1,4 @@
-export type NavId = 'markets' | 'bets' | 'tasks' | 'feed' | 'leaderboard' | 'admin'
+export type NavId = 'home' | 'markets' | 'bets' | 'tasks' | 'leaderboard'
 
 export interface NavItem {
   id: NavId
@@ -7,12 +7,13 @@ export interface NavItem {
   shortLabel: string
 }
 
-// Home has no tab: the wordmark is the way home. Parlays live on My bets beside solo bets.
+// D1 (#385): Home is a tab and carries the feed as its Activity section, so Feed has none. Parlays
+// live on My bets beside solo bets. Admin is reached from Home's Needs you and the avatar menu.
 export const NAV_ITEMS: NavItem[] = [
+  { id: 'home', href: '/', label: 'Home', shortLabel: 'Home' },
   { id: 'markets', href: '/markets', label: 'Markets', shortLabel: 'Markets' },
   { id: 'bets', href: '/bets', label: 'My bets', shortLabel: 'Bets' },
   { id: 'tasks', href: '/tasks', label: 'Tasks', shortLabel: 'Tasks' },
-  { id: 'feed', href: '/feed', label: 'Feed', shortLabel: 'Feed' },
   { id: 'leaderboard', href: '/leaderboard', label: 'Leaderboard', shortLabel: 'Leaders' },
 ]
 
@@ -23,21 +24,21 @@ export function tabAriaLabel({ label, shortLabel }: NavItem): string | undefined
   return `${shortLabel}, ${label.toLowerCase()}`
 }
 
+// Activity (/feed) is opened from Home, so Home stays marked there. Admin has no tab.
 export function activeNavId(pathname: string): NavId | null {
   switch (pathname.split('/')[1]) {
+    case '':
+    case 'feed':
+      return 'home'
     case 'markets':
       return 'markets'
     case 'bets':
       return 'bets'
     case 'tasks':
       return 'tasks'
-    case 'feed':
-      return 'feed'
     case 'leaderboard':
     case 'members':
       return 'leaderboard'
-    case 'admin':
-      return 'admin'
     default:
       return null
   }

@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, type CSSProperties, type KeyboardEvent } from 'react'
-import { ArrowDown, ArrowUp, Flag } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { ArrowDown, ArrowUp } from 'lucide-react'
 import { Line, LineChart, ReferenceLine, XAxis, YAxis } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { EmptyState } from '@/components/ui/empty-state'
 import { SectionCard } from '@/components/ui/section-card'
 import { useTimeZone } from '@/components/ui/local-time'
-import { exitStep, raceLayout } from '@/components/leaderboard/race-layout'
+import { exitStep, memberSeries, raceLayout } from '@/components/leaderboard/race-layout'
 import { formatDay } from '@/lib/markets/format-date'
 import type { RaceSeries } from '@/lib/social/leaderboard-extras'
 import { signedDc } from '@/lib/social/season'
@@ -19,8 +20,29 @@ const PHONE = { height: 220, gap: 40 }
 const DESKTOP = { height: 260, gap: 44 }
 // The line's room above and below, so a peak isn't cut at the edge.
 const PAD = 12
-const SERIES_TEXT = ['text-s1', 'text-s2', 'text-s3', 'text-s4', 'text-s5', 'text-s6'] as const
-const SERIES_BG = ['bg-s1', 'bg-s2', 'bg-s3', 'bg-s4', 'bg-s5', 'bg-s6'] as const
+// By series number (memberSeries), 1–6.
+const SERIES_TEXT = ['', 'text-s1', 'text-s2', 'text-s3', 'text-s4', 'text-s5', 'text-s6'] as const
+const SERIES_BG = ['', 'bg-s1', 'bg-s2', 'bg-s3', 'bg-s4', 'bg-s5', 'bg-s6'] as const
+
+type Standing = { id: string; name: string; profit: number; hue: number }
+
+// The readout as it shows above the plot on a phone, where a box beside the cursor would cover
+// the lines under the finger.
+function PhoneReadout({ label, standings }: { label: string; standings: Standing[] }) {
+  return (
+    <div data-readout className="flex flex-col gap-1">
+      <span className="text-xs font-bold text-ink2">{label}</span>
+      <p className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+        {standings.map(({ id, name, profit, hue }) => (
+          <span key={id} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            <span className={cn('size-2 shrink-0 rounded-full', SERIES_BG[hue])} />
+            {firstName(name)} <strong className="tabular-nums">{signedDc(profit)}</strong>
+          </span>
+        ))}
+      </p>
+    </div>
+  )
+}
 
 type Row = { step: number } & Record<string, number>
 
@@ -48,11 +70,13 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
   const timeZone = useTimeZone()
   // The moment the keyboard is on, or null while nobody has stepped (the chart then reads as now).
   const [keyStep, setKeyStep] = useState<number | null>(null)
+  // Where the hover readout goes on a phone: the strip above the plot.
+  const [phoneSlot, setPhoneSlot] = useState<HTMLDivElement | null>(null)
 
   if (series.length === 0) {
     return (
       <SectionCard title="The race" titleId="leaderboard-race">
-        <EmptyState icon={Flag} title="The race starts once bets settle.">
+        <EmptyState title="The race starts once bets settle.">
           Then each of the month’s top five gets a line that steps up or down as their bets pay out.
         </EmptyState>
       </SectionCard>
@@ -66,7 +90,8 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
   const last = moments.length - 1
 
   const keys = series.map((_, i) => `m${i}`)
-  const config: ChartConfig = Object.fromEntries(series.map((s, i) => [keys[i], { label: s.name, color: `var(--s${(i % 6) + 1})` }]))
+  const hues = memberSeries(series.map((s) => s.id))
+  const config: ChartConfig = Object.fromEntries(series.map((s, i) => [keys[i], { label: s.name, color: `var(--s${hues[i]})` }]))
   const rows: Row[] = moments.map((_, step) => ({ step, ...Object.fromEntries(points.map((p, i) => [keys[i], p[step].profit])) }))
 
   const values = points.map((p) => p.map((point) => point.profit))
@@ -80,8 +105,10 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
   const momentLabel = (step: number) =>
     step === 0 ? 'Before the first settlement' : step === last ? 'Now' : formatMoment(moments[step], timeZone)
   // Everyone's total at a moment, best first, as the readout lists them.
-  const standings = (step: number) =>
-    series.map((s, i) => ({ i, name: s.name, profit: values[i][step] })).sort((a, b) => b.profit - a.profit || a.i - b.i)
+  const standings = (step: number): Standing[] =>
+    series
+      .map((s, i) => ({ i, id: s.id, name: s.name, profit: values[i][step], hue: hues[i] }))
+      .sort((a, b) => b.profit - a.profit || a.i - b.i)
 
   // A live refresh can shorten the race under the keyboard.
   const active = keyStep === null ? null : Math.min(keyStep, last)
@@ -127,6 +154,16 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
       description={`Net betting profit for this month’s top ${series.length}, move by move since the first bet settled.`}
     >
       <div className="flex flex-col gap-2">
+        <div
+          ref={setPhoneSlot}
+          aria-hidden="true"
+          className="min-h-[5.5rem] md:hidden [&:has([data-readout])>[data-hint]]:hidden"
+        >
+          <p data-hint className="text-xs text-ink2">
+            Touch the chart to see each move.
+          </p>
+          {active !== null && <PhoneReadout label={momentLabel(active)} standings={standings(active)} />}
+        </div>
         <div className="relative h-[220px] md:h-[260px]">
           <div
             role="slider"
@@ -150,7 +187,7 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
                   aria-hidden="true"
                   data-testid="race-exit"
                   strokeWidth={3}
-                  className={cn('absolute top-0 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-surface', SERIES_TEXT[clippedTop! % 6])}
+                  className={cn('absolute top-0 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-surface', SERIES_TEXT[hues[clippedTop!]])}
                   style={{ left: `${xPercent(exitTop)}%` }}
                 />
               </>
@@ -164,7 +201,7 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
                   strokeWidth={3}
                   className={cn(
                     'absolute bottom-0 size-4 -translate-x-1/2 translate-y-1/2 rounded-full bg-surface',
-                    SERIES_TEXT[clippedBottom! % 6],
+                    SERIES_TEXT[hues[clippedBottom!]],
                   )}
                   style={{ left: `${xPercent(exitBottom)}%` }}
                 />
@@ -174,20 +211,27 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
               <LineChart data={rows} margin={{ top: PAD, right: 0, bottom: PAD, left: 0 }} accessibilityLayer={false}>
                 <XAxis dataKey="step" type="number" domain={[0, last]} hide />
                 <YAxis type="number" domain={[low, high]} allowDataOverflow hide />
-                <ReferenceLine y={0} stroke="var(--line-s)" strokeDasharray="4 4" />
+                <ReferenceLine y={0} stroke="var(--line)" />
                 <ChartTooltip
                   isAnimationActive={false}
                   position={{ y: 8 }}
                   offset={14}
                   cursor={{ stroke: 'var(--line-s)', strokeWidth: 1.5 }}
                   content={(props) => (
-                    <ChartTooltipContent
-                      active={props.active}
-                      label={props.label}
-                      payload={[...(props.payload ?? [])].sort((a, b) => Number(b.value) - Number(a.value))}
-                      labelFormatter={(step) => momentLabel(Number(step))}
-                      valueFormatter={signedDc}
-                    />
+                    <>
+                      <ChartTooltipContent
+                        active={props.active}
+                        label={props.label}
+                        payload={[...(props.payload ?? [])].sort((a, b) => Number(b.value) - Number(a.value))}
+                        labelFormatter={(step) => momentLabel(Number(step))}
+                        valueFormatter={signedDc}
+                        className="hidden md:flex"
+                      />
+                      {props.active &&
+                        props.label !== undefined &&
+                        phoneSlot &&
+                        createPortal(<PhoneReadout label={momentLabel(Number(props.label))} standings={standings(Number(props.label))} />, phoneSlot)}
+                    </>
                   )}
                 />
                 {keys.map((key) => (
@@ -213,15 +257,15 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
                     runs under the label column. */}
                 <div
                   className={cn(
-                    'absolute top-2 flex min-w-[150px] flex-col gap-1.5 rounded-control border border-line bg-surface px-3 py-2.5 text-ink shadow-card',
+                    'absolute top-2 hidden min-w-[150px] flex-col gap-1.5 rounded-control border border-line bg-surface px-3 py-2.5 text-ink shadow-card md:flex',
                     xPercent(active) > 40 ? 'right-0' : 'ml-3.5',
                   )}
                   style={xPercent(active) > 40 ? undefined : { left: `${xPercent(active)}%` }}
                 >
                   <span className="whitespace-nowrap text-xs font-bold text-ink2">{momentLabel(active)}</span>
-                  {standings(active).map(({ i, name, profit }) => (
-                    <div key={series[i].id} className="flex items-center gap-2 text-sm">
-                      <span className={cn('size-2 shrink-0 rounded-full', SERIES_BG[i % 6])} />
+                  {standings(active).map(({ id, name, profit, hue }) => (
+                    <div key={id} className="flex items-center gap-2 text-sm">
+                      <span className={cn('size-2 shrink-0 rounded-full', SERIES_BG[hue])} />
                       <span className="grow">{name}</span>
                       <strong className="tabular-nums">{signedDc(profit)}</strong>
                     </div>
@@ -246,14 +290,16 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
                 <li
                   key={s.id}
                   className={cn(
-                    'absolute left-2.5 top-(--label-top) flex w-[86px] -translate-y-1/2 flex-col leading-[1.1] md:top-(--label-top-md) md:w-[110px]',
+                    'absolute left-2.5 top-(--label-top) flex w-[86px] -translate-y-1/2 flex-col leading-[1.1] text-ink md:top-(--label-top-md) md:w-[110px]',
                     phoneTop === null && 'hidden md:flex',
                     desktopTop === null && 'md:hidden',
-                    SERIES_TEXT[i % 6],
                   )}
                   style={{ '--label-top': `${phoneTop ?? 0}px`, '--label-top-md': `${desktopTop ?? 0}px` } as CSSProperties}
                 >
-                  <span className="truncate text-sm font-bold">{firstName(s.name)}</span>
+                  <span className="flex min-w-0 items-center gap-1 text-sm font-bold">
+                    <span className={cn('size-2 shrink-0 rounded-full', SERIES_BG[hues[i]])} />
+                    <span className="truncate">{firstName(s.name)}</span>
+                  </span>
                   <span className="flex items-center gap-0.5 text-base font-extrabold tabular-nums md:text-lg">
                     {s.final > high && <ArrowUp data-testid="race-off-top" strokeWidth={3} className="size-3.5 shrink-0" />}
                     {s.final < low && <ArrowDown data-testid="race-off-bottom" strokeWidth={3} className="size-3.5 shrink-0" />}

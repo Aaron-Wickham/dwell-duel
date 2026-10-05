@@ -68,7 +68,7 @@ test('a removed member is marked, left off the leaderboard, and can be invited a
 
   await page.goto('/admin/members?show=removed')
   const removed = page.getByRole('region', { name: 'Removed members' })
-  await expect(removed.getByRole('listitem').filter({ has: page.getByRole('link', { name, exact: true }) })).toContainText('Removed')
+  await expect(removed.getByRole('row').filter({ has: page.getByRole('link', { name, exact: true }) })).toContainText('Removed')
   await page.goto('/admin/members')
   await expect(page.getByRole('region', { name: 'Members' }).getByRole('link', { name, exact: true })).toHaveCount(0)
 

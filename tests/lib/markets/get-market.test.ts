@@ -70,6 +70,27 @@ describe('getMarket', () => {
     expect(market?.resolvedAt).toBeNull()
   })
 
+  it('keeps outcomes in the order the creator typed them, read by position (#409)', async () => {
+    const row = {
+      id: 'market-3',
+      title: 'Order',
+      description: null,
+      kind: 'multiple_choice',
+      status: 'open',
+      close_at: '2026-01-01T00:00:00Z',
+      created_by: 'member-1',
+      current_resolution_id: null,
+      creator: { display_name: 'Alice' },
+      market_outcomes: ['Ruth', 'Eli', 'Abe'].map((label) => ({ id: label, label, pool_total: 0 })),
+      current_resolution: null,
+    }
+    const builder = chainableBuilder({ data: row, error: null })
+    const select = vi.fn(() => builder)
+    const market = await getMarket({ from: vi.fn(() => ({ select })) } as unknown as SupabaseClient, 'market-3')
+    expect(builder.order).toHaveBeenCalledWith('position', { referencedTable: 'market_outcomes' })
+    expect(market?.outcomes.map((o) => o.label)).toEqual(['Ruth', 'Eli', 'Abe'])
+  })
+
   it('returns null, with no query at all beyond the one lookup, when the market is missing', async () => {
     const select = vi.fn(() => chainableBuilder({ data: null, error: null }))
     const from = vi.fn(() => ({ select }))

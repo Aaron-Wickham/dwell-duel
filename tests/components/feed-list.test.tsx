@@ -48,7 +48,7 @@ describe('FeedList', () => {
       />,
     )
     const item = screen.getByRole('listitem')
-    expect(item).toHaveTextContent('Alice voided Social layer market')
+    expect(item).toHaveTextContent('Alice called off Social layer market')
     expect(item).toHaveTextContent('The picnic moved indoors.')
   })
 
@@ -72,14 +72,15 @@ describe('FeedList', () => {
     expect(screen.getByText('Nothing yet.')).toBeInTheDocument()
   })
 
-  it('keeps the empty state in the card, with a body, when the heading is hidden', () => {
+  // D2 (#386): with its heading hidden the feed is the page's only content, so it sits on the page.
+  it('drops the card when the heading is hidden, keeping the region and the empty state’s body', () => {
     render(<FeedList now={NOW} events={[]} heading="Events" headingId="feed-events" headingHidden />)
-    const card = screen.getByRole('region', { name: 'Events' })
-    expect(card).toHaveClass('p-[18px]')
-    expect(card).not.toHaveClass('px-0')
-    expect(card).toHaveTextContent('Nothing yet.')
-    expect(card).toHaveTextContent('Bets, new markets, results and finished tasks show up here as they happen.')
-    expect(screen.getByRole('heading', { name: 'Events' }).firstElementChild).toHaveClass('sr-only')
+    const region = screen.getByRole('region', { name: 'Events' })
+    expect(region).not.toHaveClass('bg-surface')
+    expect(region).not.toHaveClass('border')
+    expect(region).toHaveTextContent('Nothing yet.')
+    expect(region).toHaveTextContent('Bets, new markets, results and finished tasks show up here as they happen.')
+    expect(screen.getByRole('heading', { name: 'Events' })).toHaveClass('sr-only')
   })
 
   it('shows a relative age for a recent event and a date once it is over a week old', () => {
@@ -96,10 +97,11 @@ describe('FeedList', () => {
     expect(screen.getByText('Sep 1')).toBeInTheDocument()
   })
 
-  it('lists events padded inside a zero-padded card when the heading is hidden', () => {
+  it('lists events as divided rows on the page when the heading is hidden', () => {
     render(<FeedList now={NOW} events={[event]} heading="Events" headingId="feed-events" headingHidden />)
     expect(screen.getByRole('listitem')).toHaveTextContent('Alice bet 5 DC on Yes in Social layer market')
-    expect(screen.getByRole('list')).toHaveClass('px-[18px]')
+    expect(screen.getByRole('list')).toHaveClass('divide-y')
+    expect(screen.getByRole('list')).not.toHaveClass('px-[18px]')
   })
 
   it('renders aboveList before the list and belowList after it, inside the visible-heading card', () => {

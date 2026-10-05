@@ -129,7 +129,8 @@ describe('Avatar', () => {
     rerender(<Avatar name="Sarah" size="sm" />)
     expect(container.firstChild).toHaveClass('size-8', 'text-sm')
     rerender(<Avatar name="Sarah" size="lg" />)
-    expect(container.firstChild).toHaveClass('size-16', 'md:size-20', 'bg-lime', 'text-on-lime')
+    expect(container.firstChild).toHaveClass('size-16', 'md:size-20', 'bg-acc-soft', 'text-acc-text')
+    expect(container.firstChild).not.toHaveClass('bg-lime')
   })
 
   it('shows a photo instead of the letter when given one, still hidden from assistive tech', () => {

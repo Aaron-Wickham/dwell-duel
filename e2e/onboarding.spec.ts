@@ -20,16 +20,29 @@ test('Getting started opens with How it works, and ticks it off once the page ha
 
   await learn.getByRole('link', { name: 'Read' }).click()
   await expect(page).toHaveURL(/\/how-it-works$/)
-  await expect(page.getByRole('heading', { level: 2, name: 'The short version' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 2, name: 'Betting' })).toBeVisible()
 
   await page.goto('/')
   await expect(learn.getByRole('link')).toHaveCount(0)
   await expect(learn.getByText('Learn how DwellDuel works')).toHaveClass(/line-through/)
 })
 
-test('How it works has a collapsed On this page list on a phone', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 })
+// #398: How it works is the short version; the full rules are a tap away.
+test('How it works answers a question in place and opens the full rules', async ({ page }) => {
   await page.goto('/how-it-works')
+  const question = page.locator('summary', { hasText: 'Can I take a bet back?' })
+  await expect(page.getByText(/Bets and parlays are final once placed/)).toBeHidden()
+  await question.click()
+  await expect(page.getByText(/Bets and parlays are final once placed/)).toBeVisible()
+
+  await page.getByRole('link', { name: 'Read the full rules' }).click()
+  await expect(page).toHaveURL(/\/how-it-works\/rules$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'How DwellDuel works' })).toBeVisible()
+})
+
+test('the full rules have a collapsed On this page list on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/how-it-works/rules')
   await expect(page.getByRole('navigation', { name: 'Contents' })).toBeHidden()
   const list = page.getByRole('navigation', { name: 'On this page' })
   await expect(list).toBeHidden()
@@ -59,9 +72,10 @@ test('a member at 0 DC is pointed to Tasks on Home and in the slip, which keeps 
     await db.from('profiles').update({ balance: 0 }).eq('id', bob.id)
 
     await page.goto('/')
-    const hero = page.getByRole('region', { name: 'Your balance' })
-    await expect(hero.getByText(/You’re out of Dwell Coin\. Earn more with Tasks/)).toBeVisible()
-    await expect(hero.getByRole('link', { name: 'Tasks' })).toHaveAttribute('href', '/tasks')
+    // Home's Needs you (#388).
+    const earn = page.getByRole('region', { name: 'Needs you' }).getByRole('link', { name: /You’re out of Dwell Coin\. Earn more with Tasks/ })
+    await expect(earn).toBeVisible()
+    await expect(earn).toHaveAttribute('href', '/tasks')
 
     await page.goto(`/markets/${marketId}`)
     await addToSlip(page, 'Yes')
@@ -70,7 +84,7 @@ test('a member at 0 DC is pointed to Tasks on Home and in the slip, which keeps 
     await expect(sheet.getByText('You have 0 DC. Earn more with Tasks, then come back to this slip.')).toBeVisible()
     await sheet.getByLabel('Stake (DC)').fill('5')
     await expect(sheet.getByText('5 DC short')).toBeVisible()
-    const place = sheet.getByRole('button', { name: 'Place 1 bet · 5 DC' })
+    const place = sheet.getByRole('button', { name: 'Place bet · 5 DC' })
     await expect(place).toHaveAttribute('aria-disabled', 'true')
     await expect(place).toHaveAccessibleDescription('You have 0 DC. Earn more with Tasks, then come back to this slip.')
     await expect(sheet.getByText('Will Bob find the Tasks page?')).toBeVisible()

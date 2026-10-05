@@ -1,9 +1,9 @@
 // Seasons are calendar months in America/New_York (0051), the same clock settle_season uses.
 import { GROUP_TIME_ZONE } from '@/lib/group-time-zone'
+import { formatSignedDcAmount } from '@/lib/format/dc'
 
 export function signedDc(amount: number): string {
-  const sign = amount > 0 ? '+' : amount < 0 ? '−' : ''
-  return `${sign}${Math.abs(amount)} DC`
+  return formatSignedDcAmount(amount)
 }
 
 // The month a season_champion event's id names: `season:YYYY-MM`.

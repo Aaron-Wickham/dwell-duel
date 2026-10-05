@@ -43,18 +43,18 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   const even = { q: [0, 0], liquidity: 50, index: 0 }
   const quote = lmsrParlayQuote([even, even], 5)
   const multiplier = `${formatOdds(quote.multiplierBp)}×`
-  await expect(parlay.getByText(`Pays ${quote.payout} DC (${multiplier}) if every pick wins`)).toBeVisible()
-  await sheet.getByRole('button', { name: 'Place 1 bet · 5 DC' }).click()
-  await expect(page.getByText(`Placed a 2-leg parlay paying ${quote.payout} DC (${multiplier}). Bets are final.`).first()).toBeVisible()
+  await expect(parlay.getByText(`Wins ${quote.payout} DC if every pick wins`, { exact: true })).toBeVisible()
+  await sheet.getByRole('button', { name: 'Place parlay · 5 DC' }).click()
+  await expect(page.getByText(`Placed a 2-pick parlay paying ${quote.payout} DC (${multiplier}). Bets are final.`).first()).toBeVisible()
 
   // The old Parlays page lands on My bets, where the parlay sits beside solo bets.
   await page.goto('/parlays')
   await expect(page).toHaveURL(/\/bets$/)
   const placed = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: titles[0] }).first()
-  await expect(placed.getByText(multiplier, { exact: true })).toBeVisible()
-  await expect(placed.getByText(`${quote.payout} DC`, { exact: true })).toBeVisible()
-  // The parlay's chip and both of its legs.
-  await expect(placed.getByText('Open', { exact: true })).toHaveCount(3)
+  // The card says what it pays (#393), and each pick's result as a word; no chip, no multiplier.
+  await expect(placed.getByText(`5 DC · pays ${quote.payout} DC if all win`, { exact: true })).toBeVisible()
+  await expect(placed.getByText('Waiting', { exact: true })).toHaveCount(2)
+  await expect(placed.getByText(multiplier, { exact: true })).toHaveCount(0)
 
   // The card opens the parlay's breakdown, and the way back is My bets.
   await placed.getByRole('link', { name: 'Parlay · 2 picks' }).click()
@@ -72,17 +72,21 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
     await page.getByRole('combobox').last().selectOption({ label: 'Yes' })
     await page.getByLabel('Why did this outcome win?').fill('Checked against the recording')
     await page.getByRole('button', { name: 'Resolve market' }).click()
-    await page.getByRole('button', { name: 'Confirm outcome' }).click()
-    await expect(page.getByText('Resolved', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: /^(Resolve as|Change to) / }).click()
+    await expect(page.getByRole('region', { name: 'Outcomes' }).getByText('Yes won', { exact: true })).toBeVisible()
   }
 
   await page.goto('/bets')
   await page.getByRole('navigation', { name: 'My bets sections' }).getByRole('link', { name: 'Settled' }).click()
   await expect(page).toHaveURL(/\/bets\?tab=settled$/)
   const won = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: titles[0] }).first()
-  await expect(won.getByText(`Won ${quote.payout} DC`)).toBeVisible()
+  await expect(won.getByText(`5 DC · won ${quote.payout} DC`, { exact: true })).toBeVisible()
+  await expect(won.getByText('Won', { exact: true })).toHaveCount(2)
   await won.getByRole('link', { name: 'Parlay · 2 picks' }).click()
-  await expect(page.getByRole('region', { name: 'Summary' })).toContainText(`Won ${quote.payout} DC`)
+  const summary = page.getByRole('region', { name: 'Summary' })
+  await expect(summary.getByText('Won', { exact: true })).toBeVisible()
+  await expect(summary.getByText(`${quote.payout} DC`, { exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'How it adds up' }).getByText('Won', { exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Picks' }).getByText('Resolved: Yes')).toHaveCount(2)
   await expect(page.getByRole('region', { name: 'How it adds up' }).getByText(`= ${multiplier}`)).toBeVisible()
 })

@@ -1,23 +1,22 @@
-import { StatusChip } from '@/components/ui/status-chip'
+import { StatusChip, type StatusChipTone } from '@/components/ui/status-chip'
 import type { LegStatus } from '@/lib/parlays/leg-status'
 import { legTally, tallySummary } from '@/lib/parlays/get-parlay'
-import type { ParlayView } from '@/lib/parlays/list-parlays'
 import { cn } from '@/lib/utils'
 
-const LEG_PILL: Record<LegStatus, string> = {
-  open: 'bg-gold-soft text-gold',
-  awaiting: 'bg-gold-soft text-gold',
-  won: 'bg-acc-soft text-acc-text',
-  lost: 'bg-loss-soft text-loss',
-  voided: 'bg-sunk text-ink2',
+const LEG_TONE: Record<LegStatus, StatusChipTone> = {
+  open: 'wait',
+  awaiting: 'wait',
+  won: 'won',
+  lost: 'lost',
+  voided: 'void',
 }
 
 const LEG_LABEL: Record<LegStatus, string> = {
   open: 'Open',
-  awaiting: 'Awaiting resolution',
+  awaiting: 'Waiting for a result',
   won: 'Won',
   lost: 'Lost',
-  voided: 'Voided',
+  voided: 'Called off',
 }
 
 const SEGMENT: Record<LegStatus, string> = {
@@ -30,64 +29,26 @@ const SEGMENT: Record<LegStatus, string> = {
 
 export function LegPill({ status }: { status: LegStatus }) {
   return (
-    <span
-      className={cn(
-        'inline-flex h-6 items-center whitespace-nowrap rounded-full px-[9px] text-xs font-extrabold',
-        LEG_PILL[status],
-      )}
-    >
+    <StatusChip tone={LEG_TONE[status]} size="sm">
       {LEG_LABEL[status]}
-    </span>
+    </StatusChip>
   )
 }
 
-// A pending parlay is Open while a pick can still be bet on; once every market has closed it waits
-// on their results, like a solo bet does.
-export function ParlayStatusChip({
-  parlay,
-  className,
-}: {
-  parlay: Pick<ParlayView, 'status' | 'credited'> & { legs?: { status: LegStatus }[] }
-  className?: string
-}) {
-  switch (parlay.status) {
-    case 'pending': {
-      const awaiting = parlay.legs !== undefined && parlay.legs.length > 0 && parlay.legs.every((leg) => leg.status !== 'open')
-      return awaiting ? (
-        <StatusChip tone="wait" className={className}>Awaiting resolution</StatusChip>
-      ) : (
-        <StatusChip tone="open" className={className}>Open</StatusChip>
-      )
-    }
-    case 'won':
-      return <StatusChip tone="done" className={className}>Won {parlay.credited} DC</StatusChip>
-    case 'lost':
-      return <StatusChip tone="lost" className={className}>Lost</StatusChip>
-    case 'refunded':
-      return <StatusChip tone="void" className={className}>Refunded</StatusChip>
-  }
+// A pick's result as a word, not a pill, on My bets' parlay card and the parlay's page (#393): a
+// pick still to play out is Waiting, open or closed.
+const LEG_WORD: Record<LegStatus, { label: string; className: string }> = {
+  open: { label: 'Waiting', className: 'text-ink2' },
+  awaiting: { label: 'Waiting', className: 'text-ink2' },
+  won: { label: 'Won', className: 'font-extrabold text-win' },
+  lost: { label: 'Lost', className: 'font-extrabold text-loss' },
+  voided: { label: 'Called off', className: 'text-ink2' },
 }
 
-// The third figure of the card and the detail's hero: what it pays while open (an estimate until
-// every leg's odds are set at close), then what it did.
-export function outcomeFigure(p: Pick<ParlayView, 'status' | 'credited' | 'stake' | 'potentialPayout' | 'estimated'>): {
-  label: string
-  value: string
-  tone: 'win' | 'loss' | 'plain'
-} {
-  switch (p.status) {
-    case 'pending':
-      return { label: 'Pays if all win', value: `${p.estimated ? '~' : ''}${p.potentialPayout} DC`, tone: 'win' }
-    case 'won':
-      return { label: 'Won', value: `${p.credited} DC`, tone: 'win' }
-    case 'lost':
-      return { label: 'Result', value: 'Lost', tone: 'loss' }
-    case 'refunded':
-      return { label: 'Returned', value: `${p.stake} DC`, tone: 'plain' }
-  }
+export function LegResult({ status }: { status: LegStatus }) {
+  const { label, className } = LEG_WORD[status]
+  return <span className={cn('shrink-0 whitespace-nowrap', className)}>{label}</span>
 }
-
-export const FIGURE_TONE = { win: 'text-acc-text', loss: 'text-loss', plain: 'text-ink' } as const
 
 // One segment per pick, in order: how far along the parlay is, at a glance.
 export function ParlayProgress({ legs, className }: { legs: { status: LegStatus }[]; className?: string }) {

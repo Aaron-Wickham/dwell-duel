@@ -45,10 +45,14 @@ describe('likePattern', () => {
 describe('marketsHref', () => {
   it('is /markets for the default view', () => {
     expect(marketsHref({})).toBe('/markets')
-    expect(marketsHref({ status: 'all', q: '', category: null })).toBe('/markets')
+    expect(marketsHref({ status: 'open', q: '', category: null })).toBe('/markets')
   })
 
-  it('combines the search, the status and the category, encoding the search', () => {
-    expect(marketsHref({ q: 'a&b c', status: 'open', category: 'bible-study' })).toBe('/markets?q=a%26b+c&status=open&category=bible-study')
+  it('combines the status and the category', () => {
+    expect(marketsHref({ status: 'awaiting', category: 'bible-study' })).toBe('/markets?status=awaiting&category=bible-study')
+  })
+
+  it('drops the status from a search, which reads every status, and encodes the search', () => {
+    expect(marketsHref({ q: 'a&b c', status: 'resolved', category: 'bible-study' })).toBe('/markets?q=a%26b+c&category=bible-study')
   })
 })

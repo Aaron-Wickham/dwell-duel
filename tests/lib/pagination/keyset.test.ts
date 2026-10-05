@@ -171,6 +171,22 @@ describe('readKeyset', () => {
     expect(third.next).toBeNull()
   })
 
+  it('pages by a smaller pageSize when asked, extending by that many each time', async () => {
+    const table = fakeTable(makeRows(25))
+    const first = await readKeyset(FIRST, COLS, table.fetchRows, keyOf, undefined, 500, 10)
+    expect(first.rows).toEqual(table.sorted.slice(0, 10))
+    expect(first.next?.firstId).toBe(table.sorted[10].id)
+    expect(decodeCursor(first.next?.cursor)).toEqual(keyOf(table.sorted[19]))
+    expect(table.calls.map((c) => c.limit)).toEqual([10, 10])
+
+    const secondParams = pageFrom(first, FIRST)
+    const second = await readKeyset(secondParams, COLS, table.fetchRows, keyOf, undefined, 500, 10)
+    expect(second.rows).toEqual(table.sorted.slice(0, 20))
+    const third = await readKeyset(pageFrom(second, secondParams), COLS, table.fetchRows, keyOf, undefined, 500, 10)
+    expect(third.rows).toEqual(table.sorted)
+    expect(third.next).toBeNull()
+  })
+
   it('shows a short first page with no Show more, in one request', async () => {
     const table = fakeTable(makeRows(30))
     const page = await readKeyset(FIRST, COLS, table.fetchRows, keyOf)

@@ -9,13 +9,12 @@ import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { voidMarketAction, type ActionState } from '@/lib/markets/void-market'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { focusPageHeading } from '@/lib/ui/focus-page-heading'
-import { cn } from '@/lib/utils'
 
 const FORM_ID = 'void-form'
 
 // Every void says why (0073), as every resolution does; the reason shows on the market and in the
 // feed. A successful void stops the page rendering this form, so focus goes to the page heading.
-export function VoidForm({ marketId, className }: { marketId: string; className?: string }) {
+export function VoidForm({ marketId }: { marketId: string }) {
   const [reason, setReason] = useState('')
   const [done, setDone] = useState(false)
   const confirm = useConfirmSubmit()
@@ -34,16 +33,16 @@ export function VoidForm({ marketId, className }: { marketId: string; className?
         }
       },
       (s) => Boolean(s?.formError),
-      'Market voided.',
+      'Market called off.',
     ),
     undefined,
   )
   const reasonError = state?.field === 'reason'
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className="flex flex-col gap-2">
       <form id={FORM_ID} action={formAction} onSubmit={confirm.onSubmit} className="flex flex-col gap-4">
-        <Field label="Why void this market?" htmlFor="void-reason" hint="Everyone sees this. Voiding refunds every bet; parlays drop this leg and carry on with the rest.">
+        <Field label="Why call off this market?" htmlFor="void-reason" hint="Everyone sees this. Every bet is refunded; parlays drop this pick and carry on with the rest, and a parlay with no picks left is refunded.">
           <Textarea
             id="void-reason"
             name="reason"
@@ -57,10 +56,10 @@ export function VoidForm({ marketId, className }: { marketId: string; className?
         </Field>
         <FormSubmitButton
           variant="danger"
-          block
+          className="self-start"
           aria-describedby={state?.formError && !reasonError ? 'void-error' : undefined}
         >
-          Void this market
+          Call off this market
         </FormSubmitButton>
       </form>
       <ConfirmSubmitDialog
@@ -70,9 +69,9 @@ export function VoidForm({ marketId, className }: { marketId: string; className?
         pending={isPending}
         finalFocus={done ? focusPageHeading : true}
         variant="danger"
-        title="Void this market?"
-        description="Every bet is refunded. Parlays drop this leg and carry on with the rest (a parlay with no legs left is refunded). This can’t be undone."
-        confirmLabel="Void market"
+        title="Call off this market?"
+        description="Every bet is refunded. Parlays drop this pick and carry on with the rest; a parlay with no picks left is refunded. This can’t be undone."
+        confirmLabel="Call off market"
       />
       {state?.formError && (
         <Message tone="error" id="void-error">

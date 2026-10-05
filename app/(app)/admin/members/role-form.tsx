@@ -5,7 +5,7 @@ import type { MemberSummary } from '@/lib/members/list-members'
 import { ROLE_LABELS, type Role } from '@/lib/auth/roles'
 import { setMemberRoleAction, type SetRoleState } from '@/lib/admin/owner-actions'
 import { ConfirmSubmitDialog, useConfirmSubmit } from '@/components/ui/confirm-submit-dialog'
-import { Field, Select } from '@/components/ui/field'
+import { Select } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
@@ -41,7 +41,11 @@ export function RoleForm({ member }: { member: MemberSummary }) {
       }}
       className="flex flex-col gap-3"
     >
-      <Field label="Role" htmlFor={selectId}>
+      {/* The card's heading already says Role (CR-B12), so the label is for screen readers only. */}
+      <div className="flex flex-col">
+        <label htmlFor={selectId} className="sr-only">
+          Role
+        </label>
         <Select
           id={selectId}
           name="role"
@@ -56,7 +60,7 @@ export function RoleForm({ member }: { member: MemberSummary }) {
             </option>
           ))}
         </Select>
-      </Field>
+      </div>
       <FormSubmitButton variant="secondary" block>
         Save role <span className="sr-only">for {member.displayName}</span>
       </FormSubmitButton>

@@ -4,7 +4,7 @@ import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { Bell } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { cardClass } from '@/components/ui/card'
+import { cardClass, cardPaddingClass } from '@/components/ui/card'
 import { h2Class } from '@/components/ui/page'
 import { NOTIFICATIONS_HREF } from '@/components/home/onboarding-card'
 import { useDevicePush } from '@/lib/push/use-device-push'
@@ -23,7 +23,7 @@ function wasDismissed(): boolean {
   }
 }
 
-// The installed app's counterpart to InstallCard, which never shows there: once installed, what's
+// The installed app's nudge (a browser tab gets Settings' Install the app instead): once installed, what's
 // left is turning on push, which Markets to resolve depends on (#260). While Getting started is up,
 // its own step asks instead, so this waits until that card has been dismissed.
 function shouldNudge(): boolean {
@@ -48,7 +48,7 @@ export function NotificationsCard({ onboardingShown }: { onboardingShown: boolea
   }
 
   return (
-    <section aria-labelledby="notifications-card-title" className={cn(cardClass, 'flex flex-col gap-3 p-[18px] md:p-6')}>
+    <section aria-labelledby="notifications-card-title" className={cn(cardClass, `flex flex-col gap-3 ${cardPaddingClass}`)}>
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"

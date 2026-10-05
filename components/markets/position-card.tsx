@@ -7,6 +7,7 @@ import { rowTitleClass } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { legSummary, positionSummary, type MarketPosition } from '@/lib/markets/position'
 import { cn } from '@/lib/utils'
+import { formatDcAmount } from '@/lib/format/dc'
 
 const SUMMARY_TONE = { plain: '', win: 'font-bold text-win', loss: 'font-bold text-ink' } as const
 
@@ -39,7 +40,7 @@ export function PositionCard({
       title="Your position"
       titleId="position-title"
       description={summary && <span className={SUMMARY_TONE[summary.tone]}>{summary.text}</span>}
-      className={cn('gap-1 border-2 border-primary', className)}
+      className={cn('gap-1 border-2 border-ink', className)}
     >
       <ul className="flex flex-col divide-y divide-line">
         {position.bets.map((b) => {
@@ -47,7 +48,7 @@ export function PositionCard({
           return (
             <Row
               key={`bet-${b.id}`}
-              title={`${b.amount} DC on ${b.outcomeLabel}`}
+              title={`${formatDcAmount(b.amount)} on ${b.outcomeLabel}`}
               detail={
                 live ? (
                   <>
@@ -62,9 +63,10 @@ export function PositionCard({
               aside={
                 <>
                   {b.paysIfWins !== null && (
-                    <span className="font-extrabold tabular-nums">{`Pays ${b.paysIfWins} DC`}</span>
+                    <span className="font-extrabold">{`Pays ${formatDcAmount(b.paysIfWins)}`}</span>
                   )}
-                  <ResultChip result={b.result} />
+                  {/* Every bet in an open market is open, so only a result earns a chip (#387). */}
+                  {b.result.kind !== 'open' && <ResultChip result={b.result} />}
                 </>
               }
             />
@@ -73,7 +75,7 @@ export function PositionCard({
         {position.legs.map(({ parlay, leg }) => (
           <Row
             key={`parlay-${parlay.id}`}
-            title={`Parlay leg: ${leg.outcomeLabel}`}
+            title={`Parlay pick: ${leg.outcomeLabel}`}
             detail={legSummary({ parlay, leg })}
             aside={
               <>
@@ -81,7 +83,7 @@ export function PositionCard({
                 <Link
                   href={`/parlays/${parlay.id}`}
                   transitionTypes={['nav-forward']}
-                  aria-label={`View parlay: ${parlay.legs.length} picks, ${parlay.stake} DC`}
+                  aria-label={`View parlay: ${parlay.legs.length} picks, ${formatDcAmount(parlay.stake)}`}
                   className="pressable hit-area text-sm font-bold"
                 >
                   View parlay

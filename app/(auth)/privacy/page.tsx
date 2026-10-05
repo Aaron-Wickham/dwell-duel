@@ -16,11 +16,11 @@ const YOUR_DATA_SLUG = 'your-data'
 
 // Public, for Google's brand review and anyone deciding whether to sign in. It's How it works' Your
 // data section, so the policy and the rules members read can't drift apart. Its links to other
-// sections go to How it works, which asks a signed-out visitor to sign in first.
+// sections go to the full rules, which ask a signed-out visitor to sign in first.
 export default function PrivacyPage() {
   const section = howItWorks.sections.find((s) => s.slug === YOUR_DATA_SLUG)
   if (!section) throw new Error(`docs/HOW-IT-WORKS.md has no "Your data" section`)
-  const blocks = rebaseHashLinks(section.blocks, `/how-it-works#${SECTION_ID_PREFIX}`)
+  const blocks = rebaseHashLinks(section.blocks, `/how-it-works/rules#${SECTION_ID_PREFIX}`)
 
   return (
     <main id="main" className="flex flex-1 flex-col items-center gap-4 px-4 py-10 md:px-20">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useId } from 'react'
-import Link from 'next/link'
+import Link, { useLinkStatus } from 'next/link'
 import { buttonVariants } from '@/components/ui/button'
 import { requestShowMoreFocus } from '@/components/ui/show-more-focus'
 import { cn } from '@/lib/utils'
@@ -22,8 +22,11 @@ const linkClass = cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'self
 // `focusId` is the DOM id of the first row the link will show (rowDomId of next.firstId). The
 // link itself leaves the page or moves, so focus would otherwise fall back to the document; the
 // page's ShowMoreFocus moves it to that row once it renders.
-// `description` names the list when a page has more than one "Show more" (the markets list's open
-// and resolved lists), so they're distinguishable out of context while their name stays "Show more".
+// While the next rows load, the label reads "Loading…" (both labels hold their place, so the
+// button doesn't change width) and the label is marked busy, so a second tap isn't the only sign.
+// The label ignores the pointer, so the link itself is what a tap or click lands on.
+// `description` names the list when a page has more than one "Show more", so they're
+// distinguishable out of context while their name stays "Show more".
 export function ShowMore({
   href,
   fresh = false,
@@ -46,7 +49,7 @@ export function ShowMore({
         aria-describedby={description ? descriptionId : undefined}
         onNavigate={focusId ? () => requestShowMoreFocus(focusId) : undefined}
       >
-        Show more
+        <ShowMoreLabel />
       </Link>
       {description && (
         <span id={descriptionId} hidden>
@@ -54,6 +57,21 @@ export function ShowMore({
         </span>
       )}
     </>
+  )
+}
+
+// useLinkStatus reads the status of the Link it sits in, so the label is its own component.
+function ShowMoreLabel() {
+  const { pending } = useLinkStatus()
+  return (
+    <span aria-busy={pending} className="pointer-events-none grid">
+      <span aria-hidden={pending || undefined} className={cn('[grid-area:1/1]', pending && 'invisible')}>
+        Show more
+      </span>
+      <span aria-hidden={!pending || undefined} className={cn('[grid-area:1/1]', !pending && 'invisible')}>
+        Loading…
+      </span>
+    </span>
   )
 }
 

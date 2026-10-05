@@ -24,14 +24,15 @@ export function likePattern(query: string): string {
   return `%${query.replace(/\*/g, '').replace(/[\\%_]/g, '\\$&')}%`
 }
 
-// `category` is a category's slug (0103).
+// `category` is a category's slug (0103). A search reads every status, so a view with `q` drops
+// the status.
 export type MarketsView = { status?: MarketFilter; q?: string; category?: string | null }
 
 // The list's own URL for a view; the cursors never carry over, so a change of view starts at the top.
-export function marketsHref({ status = 'all', q = '', category = null }: MarketsView): string {
+export function marketsHref({ status = 'open', q = '', category = null }: MarketsView): string {
   const query = new URLSearchParams()
   if (q) query.set('q', q)
-  if (status !== 'all') query.set('status', status)
+  else if (status !== 'open') query.set('status', status)
   if (category) query.set('category', category)
   const search = query.toString()
   return search ? `/markets?${search}` : '/markets'

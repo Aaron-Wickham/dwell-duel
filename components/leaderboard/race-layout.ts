@@ -105,3 +105,35 @@ export function exitStep(values: number[], edge: number, side: 'top' | 'bottom')
   const index = values.findIndex((v) => (side === 'top' ? v > edge : v < edge))
   return index === -1 ? null : index
 }
+
+// The five validated hues; past five members, the grey line (--s6).
+const MEMBER_HUES = 5
+
+function hash(id: string): number {
+  let h = 2166136261
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619)
+  return h >>> 0
+}
+
+// Each member's series (1–6) from their id, so a colour follows the member and not their rank.
+// Two members whose ids land on one hue: the first by id keeps it and the other takes the next
+// free one, so the race never draws two members alike.
+export function memberSeries(ids: string[]): number[] {
+  const taken = new Set<number>()
+  const byId = new Map<string, number>()
+  for (const id of [...new Set(ids)].sort()) {
+    let slot = hash(id) % MEMBER_HUES
+    let tries = 0
+    while (taken.has(slot) && tries < MEMBER_HUES) {
+      slot = (slot + 1) % MEMBER_HUES
+      tries++
+    }
+    if (taken.has(slot)) {
+      byId.set(id, MEMBER_HUES + 1)
+      continue
+    }
+    taken.add(slot)
+    byId.set(id, slot + 1)
+  }
+  return ids.map((id) => byId.get(id)!)
+}

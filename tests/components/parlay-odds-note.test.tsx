@@ -16,13 +16,13 @@ describe('ParlayOddsNote', () => {
     render(<ParlayOddsNote parlay={{ ...base, converted: true, capped: true }} dropped={1} />)
     const note = screen.getByText(/came from the other members’ money/)
     expect(note).toHaveTextContent('fixed by the time DwellDuel switched to fixed payouts in October 2026')
-    expect(note).toHaveTextContent('up to a 20× cap, and a win pays at most 1000 DC: the old caps still apply.')
-    expect(note).toHaveTextContent('1 voided pick was left out')
+    expect(note).toHaveTextContent('up to a 20× cap, and a win pays at most 1,000 DC: the old caps still apply.')
+    expect(note).toHaveTextContent('1 called-off pick was left out')
     expect(note).not.toHaveTextContent('stake was split')
   })
 
   it('keeps a pool parlay’s wording', () => {
     render(<ParlayOddsNote parlay={{ ...base, fixed: false, capped: true }} dropped={0} />)
-    expect(screen.getByText(/set when its market closes/)).toHaveTextContent('up to a 20× cap. A win pays at most 1000 DC.')
+    expect(screen.getByText(/set when its market closes/)).toHaveTextContent('up to a 20× cap. A win pays at most 1,000 DC.')
   })
 })

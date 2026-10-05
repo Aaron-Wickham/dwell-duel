@@ -11,10 +11,14 @@ export const ONBOARDING_DISMISSED = 'dismissed'
 // browser for that one itself.
 export type OnboardingSteps = { learn: boolean; photo: boolean; bet: boolean; task: boolean }
 
+export async function onboardingDismissed(): Promise<boolean> {
+  return (await cookies()).get(ONBOARDING_COOKIE)?.value === ONBOARDING_DISMISSED
+}
+
 // Null once the member has dismissed the card; the card hides itself when every step is done.
 export async function getOnboarding(supabase: DbClient): Promise<OnboardingSteps | null> {
   const jar = await cookies()
-  if (jar.get(ONBOARDING_COOKIE)?.value === ONBOARDING_DISMISSED) return null
+  if (await onboardingDismissed()) return null
 
   // One row from my_onboarding (0071) for the signed-in member, in place of five count queries (#210).
   const { data, error } = await supabase.rpc('my_onboarding').single()

@@ -1,8 +1,9 @@
-import Link from 'next/link'
+import { IntentLink } from '@/components/ui/intent-link'
 import { Avatar } from '@/components/ui/avatar'
-import { cardClass } from '@/components/ui/card'
 import { signedDc } from '@/lib/social/season'
 import { cn } from '@/lib/utils'
+import { uiTextClass } from '@/components/ui/page'
+import { formatDcAmount } from '@/lib/format/dc'
 
 export interface PodiumMember {
   id: string
@@ -22,17 +23,17 @@ const PLACE_ORDER = { 1: 'order-2', 2: 'order-1', 3: 'order-3' } as const
 function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean; meId: string }) {
   const place = Math.min(member.rank, 3) as 1 | 2 | 3
   return (
-    <li className={cn('pressable hover-tint relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-t-[10px] text-center', PLACE_ORDER[place])}>
+    <li className={cn('pressable hover-tint relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-t-segment text-center', PLACE_ORDER[place])}>
       <Avatar name={member.name} src={member.avatarSrc} size={place === 1 ? 'lg' : 'md'} />
-      <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="stretched-link max-w-full text-[15px] font-extrabold line-clamp-3 wrap-break-word">
+      <IntentLink href={`/members/${member.id}`} transitionTypes={['nav-forward']} className={`stretched-link max-w-full ${uiTextClass} truncate font-extrabold text-ink no-underline`}>
         {member.name}
-      </Link>
+      </IntentLink>
       {member.id === meId && <span className="-mt-1 text-xs font-bold text-ink2">you</span>}
-      <span className="text-sm font-bold whitespace-nowrap text-ink2 tabular-nums">
-        {signed ? signedDc(member.score) : `${member.score} DC`}
+      <span className="text-sm font-bold whitespace-nowrap text-ink2">
+        {signed ? signedDc(member.score) : formatDcAmount(member.score)}
       </span>
       <span
-        className={cn('mt-1 flex w-full items-start justify-center rounded-t-[10px] pt-1.5 text-lg font-extrabold tabular-nums', BLOCK[place])}
+        className={cn('mt-1 flex w-full items-start justify-center rounded-t-segment pt-1.5 text-lg font-extrabold tabular-nums', BLOCK[place])}
       >
         <span aria-hidden="true">{member.rank}</span>
         <span className="sr-only">Rank {member.rank}</span>
@@ -41,11 +42,12 @@ function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean
   )
 }
 
-// The top three, second and third flanking the winner. Only for the top of a board of at least
-// three: a window that starts mid-board has no podium.
+// The top three, second and third flanking the winner, straight on the page (#396): in the side
+// column at lg, so it never stretches across the whole width. Only for the top of the net-worth
+// board: a window that starts mid-board has no podium, and This month leads with the race.
 export function Podium({ members, signed, meId }: { members: PodiumMember[]; signed: boolean; meId: string }) {
   return (
-    <section aria-labelledby="podium-heading" className={cn(cardClass, 'p-4 md:p-6')}>
+    <section aria-labelledby="podium-heading">
       <h2 id="podium-heading" className="sr-only">
         Top three
       </h2>

@@ -2,12 +2,14 @@
 
 import { useActionState, useState } from 'react'
 import { approveTaskCompletionAction, rejectTaskCompletionAction, type ActionState } from '@/lib/tasks/review-task-completion'
-import { Input } from '@/components/ui/field'
+import { Button } from '@/components/ui/button'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
-import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
+import { RejectDialog } from './reject-dialog'
 
+// A row's Approve stays a direct button (AGENTS.md); Reject asks for its optional reason in a
+// dialog rather than a field on every row (COPY-13).
 export function ReviewButtons({
   completionId,
   submitterName,
@@ -23,65 +25,60 @@ export function ReviewButtons({
     hasError,
     'Submission approved.',
   )
+  const [rejecting, setRejecting] = useState(false)
   // Controlled, so a refused reject keeps the typed reason; cleared once the reject goes through.
   const [reason, setReason] = useState('')
   const boundReject = withSuccessToast(
     async (prev: ActionState, formData: FormData) => {
       const next = await rejectTaskCompletionAction(completionId, prev, formData)
-      if (!next?.formError) setReason('')
+      if (!next?.formError) {
+        setReason('')
+        setRejecting(false)
+      }
       return next
     },
     hasError,
     'Submission rejected.',
   )
   const [approveState, approveAction] = useActionState<ActionState, FormData>(boundApprove, undefined)
-  const [rejectState, rejectAction] = useActionState<ActionState, FormData>(boundReject, undefined)
-  const reasonId = `reject-reason-${completionId}`
+  const [rejectState, rejectAction, isRejectPending] = useActionState<ActionState, FormData>(boundReject, undefined)
   const approveErrorId = `approve-${completionId}-error`
-  const rejectErrorId = `reject-${completionId}-error`
 
   return (
-    <div className="flex flex-col gap-2 md:pl-[52px]">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center">
+    <div className="flex flex-col items-end gap-2">
+      <div className="flex flex-col items-stretch gap-1 lg:flex-row lg:items-center">
         <form action={approveAction} className="flex">
           <FormSubmitButton
             size="sm"
+            variant="secondary"
             className="grow"
             aria-describedby={approveState?.formError ? approveErrorId : undefined}
           >
             Approve <span className="sr-only">{submitterName}’s {taskTitle}</span>
           </FormSubmitButton>
         </form>
-        <form action={rejectAction} className="flex flex-col gap-2 md:grow md:flex-row md:items-center">
-          <label htmlFor={reasonId} className="sr-only">
-            Reason for rejecting (optional)
-          </label>
-          <Input
-            id={reasonId}
-            name="reason"
-            placeholder="Reason (optional)"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            maxLength={TEXT_LIMITS.reviewNote}
-            className="min-h-11 md:grow"
-            aria-invalid={Boolean(rejectState?.formError)}
-            aria-describedby={rejectState?.formError ? rejectErrorId : undefined}
-          />
-          <FormSubmitButton size="sm" variant="secondary">
-            Reject <span className="sr-only">{submitterName}’s {taskTitle}</span>
-          </FormSubmitButton>
-        </form>
+        <Button size="sm" variant="quiet" onClick={() => setRejecting(true)}>
+          <span>Reject<span aria-hidden="true">…</span></span> <span className="sr-only">{submitterName}’s {taskTitle}</span>
+        </Button>
       </div>
       {approveState?.formError && (
         <Message tone="error" id={approveErrorId}>
           {approveState.formError}
         </Message>
       )}
-      {rejectState?.formError && (
-        <Message tone="error" id={rejectErrorId}>
-          {rejectState.formError}
-        </Message>
-      )}
+      <RejectDialog
+        formId={`reject-${completionId}`}
+        open={rejecting}
+        onOpenChange={setRejecting}
+        pending={isRejectPending}
+        title={`Reject ${submitterName}’s ${taskTitle}?`}
+        submitLabel="Reject"
+        action={rejectAction}
+        reason={reason}
+        onReasonChange={setReason}
+        error={isRejectPending ? undefined : rejectState?.formError}
+        reasonInvalid={!isRejectPending && rejectState?.field === 'reason'}
+      />
     </div>
   )
 }

@@ -32,8 +32,13 @@ describe('isBalanceCheckViolation', () => {
 })
 
 describe('insufficientBalanceMessage', () => {
-  it("names the member's balance in the approved copy", () => {
-    expect(insufficientBalanceMessage(120)).toBe('Insufficient balance — you have 120 DC. Try a smaller amount.')
-    expect(insufficientBalanceMessage(0)).toBe('Insufficient balance — you have 0 DC. Try a smaller amount.')
+  it("names the member's balance and how far short the stake is", () => {
+    expect(insufficientBalanceMessage(120, 150)).toBe('You have 120 DC, 30 DC short. Try a smaller stake.')
+    expect(insufficientBalanceMessage(0, 1_500)).toBe('You have 0 DC, 1,500 DC short. Try a smaller stake.')
+  })
+
+  it('names only the balance when the stake is unknown or covered', () => {
+    expect(insufficientBalanceMessage(120)).toBe('You only have 120 DC. Try a smaller stake.')
+    expect(insufficientBalanceMessage(120, 100)).toBe('You only have 120 DC. Try a smaller stake.')
   })
 })

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { exitStep, raceLayout } from '@/components/leaderboard/race-layout'
+import { exitStep, memberSeries, raceLayout } from '@/components/leaderboard/race-layout'
 
 const PHONE = { height: 220, pad: 12, gap: 40 }
 
@@ -173,5 +173,28 @@ describe('raceLayout', () => {
     const layout = raceLayout([[0, 0], [0, 0]], PHONE)
     expect(layout.high).toBeGreaterThan(layout.low)
     expect(shown(layout.labelTops).every(Number.isFinite)).toBe(true)
+  })
+})
+
+describe('memberSeries (#391)', () => {
+  const ids = ['3f1c', 'a9e2', '07bd', 'c4d0', 'e811']
+
+  it('gives each member the same colour whatever their rank', () => {
+    const colours = Object.fromEntries(ids.map((id, i) => [id, memberSeries(ids)[i]]))
+    const reranked = [...ids].reverse()
+    expect(Object.fromEntries(reranked.map((id, i) => [id, memberSeries(reranked)[i]]))).toEqual(colours)
+  })
+
+  it('never gives two of five members one colour, and stays within the five hues', () => {
+    for (let n = 0; n < 50; n++) {
+      const some = Array.from({ length: 5 }, (_, i) => `member-${n}-${i}`)
+      const colours = memberSeries(some)
+      expect(new Set(colours).size).toBe(5)
+      expect(colours.every((c) => c >= 1 && c <= 5)).toBe(true)
+    }
+  })
+
+  it('draws a sixth member in the grey line colour', () => {
+    expect(memberSeries(['a', 'b', 'c', 'd', 'e', 'f']).filter((c) => c === 6)).toHaveLength(1)
   })
 })

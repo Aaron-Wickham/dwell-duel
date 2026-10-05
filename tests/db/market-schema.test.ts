@@ -46,11 +46,11 @@ describe('market_outcomes table', () => {
       .select('id')
       .single()
 
-    const { error: first } = await db.from('market_outcomes').insert({ market_id: market!.id, label: 'Yes' })
+    const { error: first } = await db.from('market_outcomes').insert({ market_id: market!.id, label: 'Yes', position: 0 })
     expect(first).toBeNull()
 
-    const { error: second } = await db.from('market_outcomes').insert({ market_id: market!.id, label: 'Yes' })
-    expect(second).not.toBeNull()
+    const { error: second } = await db.from('market_outcomes').insert({ market_id: market!.id, label: 'Yes', position: 1 })
+    expectError(second, { code: '23505', message: 'market_outcomes_market_id_label_key' })
   })
 
   it('rejects a negative pool_total', async () => {
@@ -63,7 +63,7 @@ describe('market_outcomes table', () => {
       .single()
     const { data: outcome } = await db
       .from('market_outcomes')
-      .insert({ market_id: market!.id, label: 'Yes' })
+      .insert({ market_id: market!.id, label: 'Yes', position: 0 })
       .select('id')
       .single()
 
@@ -83,7 +83,7 @@ describe('bets table', () => {
       .single()
     const { data: outcome } = await db
       .from('market_outcomes')
-      .insert({ market_id: market!.id, label: 'Yes' })
+      .insert({ market_id: market!.id, label: 'Yes', position: 0 })
       .select('id')
       .single()
 
@@ -105,7 +105,7 @@ describe('market_resolutions table', () => {
       .single()
     const { data: outcome } = await db
       .from('market_outcomes')
-      .insert({ market_id: market!.id, label: 'Yes' })
+      .insert({ market_id: market!.id, label: 'Yes', position: 0 })
       .select('id')
       .single()
 

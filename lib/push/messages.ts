@@ -1,3 +1,5 @@
+import { formatDcAmount } from '@/lib/format/dc'
+
 export interface PushPayload {
   title: string
   body: string
@@ -18,7 +20,7 @@ export function taskAlertPayload(row: { taskTitle: string; submitterName: string
 }
 
 export function marketAlertPayload(market: { marketId: string; title: string }): PushPayload {
-  return { title: 'Market needs a result', body: `${market.title} has closed`, url: `/markets/${market.marketId}` }
+  return { title: 'Time to resolve', body: `${market.title} has closed`, url: `/markets/${market.marketId}` }
 }
 
 export interface MarketResultRow {
@@ -37,11 +39,11 @@ export function marketResultPayload(marketId: string, row: MarketResultRow): Pus
   const url = `/markets/${marketId}`
   const { title } = row
   if (row.status === 'voided') {
-    const body = row.hasSolo ? `${title}: your stake is refunded` : `${title} was dropped from your parlay`
-    return { title: 'Market voided', body, url }
+    const body = row.hasSolo ? `${title}: your stake is refunded` : `${title} was called off and dropped from your parlay`
+    return { title: 'Market called off', body, url }
   }
   const result = row.isOverride ? `${title} changed to ${row.outcomeLabel}` : `${title}: ${row.outcomeLabel}`
-  if (row.hasSolo && row.won > 0) return { title: `You won ${row.won} DC`, body: result, url }
+  if (row.hasSolo && row.won > 0) return { title: `You won ${formatDcAmount(row.won)}`, body: result, url }
   const heading = row.isOverride ? 'Result changed' : 'Market resolved'
   if (row.hasSolo && row.refunded > 0) return { title: heading, body: `${result}. Your stake is refunded`, url }
   return { title: heading, body: result, url }
@@ -56,7 +58,7 @@ export interface TaskReviewRow {
 
 export function taskReviewPayload(row: TaskReviewRow): PushPayload {
   if (row.status === 'approved') {
-    return { title: 'Task approved', body: `${row.taskTitle}: +${row.rewardAmount} DC`, url: '/tasks' }
+    return { title: 'Task approved', body: `${row.taskTitle}: +${formatDcAmount(row.rewardAmount)}`, url: '/tasks' }
   }
   const reason = row.reviewNote?.trim()
   return { title: 'Task not approved', body: reason ? `${row.taskTitle}: ${reason}` : row.taskTitle, url: '/tasks' }

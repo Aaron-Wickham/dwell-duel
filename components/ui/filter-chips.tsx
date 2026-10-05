@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { uiTextClass } from '@/components/ui/page'
 
 export type FilterChip = { href: string; label: string; current: boolean }
 
 export function filterChipClass(current: boolean): string {
   return cn(
-    'pressable inline-flex min-h-11 shrink-0 cursor-pointer items-center whitespace-nowrap rounded-full border-[1.5px] px-4 text-[15px] font-bold no-underline',
-    current ? 'border-primary bg-primary text-on-primary' : 'border-line-s bg-surface text-ink hover:bg-sunk',
+    `pressable inline-flex min-h-11 shrink-0 cursor-pointer items-center whitespace-nowrap rounded-full border-[1.5px] px-4 ${uiTextClass} font-bold no-underline`,
+    current ? 'border-nav-active bg-nav-active text-on-nav-active' : 'border-line-s bg-surface text-ink hover:bg-sunk',
   )
 }
 
@@ -33,7 +34,7 @@ export function FilterChips({
       aria-label={label}
       className={cn(
         'no-callout flex items-center gap-2',
-        scroll ? '-mx-4 overflow-x-auto px-4 py-0.5 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0' : 'flex-wrap',
+        scroll ? '-mx-4 -my-1 overflow-x-auto px-4 py-1.5 [scrollbar-width:none] md:mx-0 md:my-0 md:flex-wrap md:overflow-visible md:px-0 md:py-0' : 'flex-wrap',
         className,
       )}
     >

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
-import { BookOpen } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
+import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { listTasks } from '@/lib/tasks/list-tasks'
@@ -16,8 +16,7 @@ import { ageLabel } from '@/lib/social/relative-time'
 import { SectionCard } from '@/components/ui/section-card'
 import { StatusChip } from '@/components/ui/status-chip'
 import { EmptyState } from '@/components/ui/empty-state'
-import { listCardsClass } from '@/components/ui/list-card'
-import { cn } from '@/lib/utils'
+import { dividedRowsClass } from '@/components/ui/list-card'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { CreateTaskForm } from './create-task-form'
 import { PENDING_ROW_ID_PREFIX, PendingApprovals } from './pending-approvals'
@@ -46,10 +45,10 @@ export default async function AdminTasksPage(props: PageProps<'/admin/tasks'>) {
   return (
     <ContentReveal>
       <div className="flex flex-col gap-5 md:gap-7">
-        <LiveTables subscriptions={pageSubscriptions.adminTasks()} />
+        <LiveTables subscriptions={pageSubscriptions.adminTasks()} renderedAt={renderStamp()} />
         <SectionCard
-          title="Pending approvals"
-          titleId="pending-approvals"
+          title="To review"
+          titleId="to-review"
           className="gap-4"
           action={waiting > 0 ? <StatusChip tone="wait">{waiting} waiting</StatusChip> : undefined}
         >
@@ -76,9 +75,9 @@ export default async function AdminTasksPage(props: PageProps<'/admin/tasks'>) {
             </SectionCard>
             <SectionCard title="Task catalog" titleId="task-catalog">
               {tasks.length === 0 ? (
-                <EmptyState icon={BookOpen} title="No tasks yet." />
+                <EmptyState title="No tasks yet." />
               ) : (
-                <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-4')}>
+                <ul className={dividedRowsClass}>
                   {tasks.map((task) => (
                     <TaskCatalogItem key={task.id} task={task} canDelete={role === 'owner'} />
                   ))}

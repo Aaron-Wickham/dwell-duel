@@ -4,14 +4,14 @@ import { revalidatePath } from 'next/cache'
 import { rewardError } from './limits'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
-import { friendlyError } from '@/lib/errors/friendly-error'
+import { friendlyError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { TASK_ERRORS } from './task-errors'
 
 export type ActionState = { formError?: string; field?: 'title' | 'description' | 'reward_amount' } | undefined
 
 export async function updateTaskAction(taskId: string, _prevState: ActionState, formData: FormData): Promise<ActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const title = String(formData.get('title') ?? '').trim()
   // A textarea's newlines arrive as CRLF once the browser serialises the form, doubling up

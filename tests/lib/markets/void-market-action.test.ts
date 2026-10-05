@@ -37,7 +37,7 @@ describe('voidMarketAction', () => {
 
   it('asks for a reason before calling the database', async () => {
     expect(await voidMarketAction('m1', undefined, reasonForm('   '))).toEqual({
-      formError: 'Say why this market is being voided.',
+      formError: 'Say why this market is being called off.',
       field: 'reason',
     })
     expect(supabase.rpc).not.toHaveBeenCalled()
@@ -54,7 +54,7 @@ describe('voidMarketAction', () => {
   it('puts a closed market in plain words', async () => {
     supabase.rpc.mockResolvedValue({ data: null, error: { message: 'this market has closed, so only an admin can void it' } })
     expect(await voidMarketAction('m1', undefined, reasonForm('Rained off'))).toEqual({
-      formError: 'This market has closed, so only an admin can void it.',
+      formError: 'This market has closed, so only an admin can call it off.',
     })
     expect(revalidatePath).not.toHaveBeenCalled()
   })
@@ -62,7 +62,7 @@ describe('voidMarketAction', () => {
 
 describe('voidMarketAction replay', () => {
   const NOT_VOIDABLE = { code: 'P0001', message: 'only an unresolved, unvoided market can be voided' }
-  const REFUSAL = { formError: 'Only an unresolved, unvoided market can be voided.' }
+  const REFUSAL = { formError: 'This market already has a result or was already called off.' }
   const OPEN_UNTIL = new Date(Date.now() + 3_600_000).toISOString()
   const CLOSED_AT = new Date(Date.now() - 3_600_000).toISOString()
   const run = () => voidMarketAction('market-1', undefined, reasonForm('Duplicate'))

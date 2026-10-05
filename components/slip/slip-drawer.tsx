@@ -1,15 +1,21 @@
 'use client'
 
-import { useEffect, useState, type MouseEvent, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type RefObject } from 'react'
 import { Drawer } from '@base-ui/react/drawer'
 import { X } from 'lucide-react'
 import { useSlip } from '@/components/slip/slip-provider'
-import { SlipPanel } from '@/components/slip/slip-panel'
+import { SLIP_CLOSE_ID, SlipPanel } from '@/components/slip/slip-panel'
 import { focusPageHeading } from '@/lib/ui/focus-page-heading'
+import { APP_SHELL_ID } from '@/lib/ui/app-shell'
 import { useIsDesktop } from '@/lib/ui/use-is-desktop'
 import { cn } from '@/lib/utils'
 
 const EASE = 'transition-transform duration-(--duration-sheet) ease-ios data-swiping:select-none data-swiping:duration-0 data-ending-style:duration-[calc(var(--drawer-swipe-strength)*400ms)] motion-reduce:transition-none'
+
+function unblockShell() {
+  const shell = document.getElementById(APP_SHELL_ID)
+  if (shell) shell.inert = false
+}
 
 // The slip itself, as a bottom sheet on a phone and a panel from the right on desktop. SlipSheet
 // loads it the first time the slip opens, keeping it off every page's first load.
@@ -33,6 +39,37 @@ export function SlipDrawer({
     return () => cancelAnimationFrame(frame)
   }, [])
   const count = picks.length
+  const shown = open && settled
+  // SlipSheet clears returnFocusTo once the close finishes, which is before Base UI asks where focus
+  // goes, so the target the slip opened with is kept until then.
+  const closingTarget = useRef<HTMLElement | null>(null)
+
+  // Base UI's focus guards alone leak under key repeat and in the moment before the popup takes
+  // focus, and only aria-hide the page (#392).
+  useLayoutEffect(() => {
+    if (!shown) return
+    const shell = document.getElementById(APP_SHELL_ID)
+    if (!shell) return
+    const target = returnFocusTo.current
+    shell.inert = true
+    // Focus that was in the page (the slip button, or wherever a quick Tab took it) falls to <body>
+    // once the page is inert, and Base UI may already have placed its initial focus, so the sheet
+    // takes it back: at its first control, as soon as that has mounted.
+    let frame = 0
+    let tries = 0
+    const reclaim = () => {
+      const close = document.getElementById(SLIP_CLOSE_ID)
+      const active = document.activeElement
+      if (close && (!active || active === document.body || shell.contains(active))) close.focus()
+      else if (!close && ++tries < 30) frame = requestAnimationFrame(reclaim)
+    }
+    frame = requestAnimationFrame(reclaim)
+    return () => {
+      cancelAnimationFrame(frame)
+      closingTarget.current = target
+      unblockShell()
+    }
+  }, [shown, returnFocusTo])
 
   function handleContentClick(event: MouseEvent<HTMLDivElement>) {
     // A link to the page already on screen doesn't navigate, so it would leave the slip stuck open.
@@ -40,8 +77,10 @@ export function SlipDrawer({
   }
 
   return (
+    // Modal: Tab and Shift+Tab stay inside the sheet while it's open (A11Y-01), and Escape closes it.
     <Drawer.Root
-      open={open && settled}
+      modal
+      open={shown}
       swipeDirection={isDesktop ? 'right' : 'down'}
       onOpenChange={(next) => {
         setOpen(next)
@@ -57,7 +96,11 @@ export function SlipDrawer({
           <Drawer.Viewport className={cn('fixed inset-0 z-40 flex', isDesktop ? 'justify-end' : 'items-end justify-center')}>
             <Drawer.Popup
               aria-labelledby="slip-title"
-              finalFocus={count === 0 ? focusPageHeading : () => returnFocusTo.current ?? true}
+              // The page must be live again before Base UI focuses something in it.
+              finalFocus={() => {
+                unblockShell()
+                return count === 0 ? focusPageHeading() : (closingTarget.current ?? returnFocusTo.current ?? true)
+              }}
               className={cn(
                 'flex flex-col border-line bg-bg text-ink shadow-overlay outline-none',
                 EASE,
@@ -71,6 +114,7 @@ export function SlipDrawer({
                   <span aria-hidden="true" className="absolute top-2.5 left-1/2 h-1.5 w-12 -translate-x-1/2 rounded-full bg-line-s" />
                 )}
                 <Drawer.Close
+                  id={SLIP_CLOSE_ID}
                   aria-label="Close slip"
                   className="pressable inline-flex size-11 cursor-pointer items-center justify-center rounded-control text-ink hover:bg-sunk"
                 >

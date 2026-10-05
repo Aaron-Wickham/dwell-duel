@@ -1,5 +1,6 @@
 import { StatusChip } from '@/components/ui/status-chip'
 import type { MyBetResult } from '@/lib/bets/list-my-bets'
+import { formatDcAmount } from '@/lib/format/dc'
 
 // A solo bet's state, the same on My bets and the market page's Your position card.
 export function ResultChip({ result }: { result: MyBetResult }) {
@@ -7,9 +8,9 @@ export function ResultChip({ result }: { result: MyBetResult }) {
     case 'open':
       return <StatusChip tone="open">Open</StatusChip>
     case 'awaiting':
-      return <StatusChip tone="wait">Awaiting resolution</StatusChip>
+      return <StatusChip tone="wait">Waiting for a result</StatusChip>
     case 'won':
-      return <StatusChip tone="done">Won {result.payout} DC</StatusChip>
+      return <StatusChip tone="won">Won {formatDcAmount(result.payout)}</StatusChip>
     case 'lost':
       return <StatusChip tone="lost">Lost</StatusChip>
     case 'refunded':

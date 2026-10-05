@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
-import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
+import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { RATE_LIMIT_ERRORS, TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { normalizeCategoryName } from './categories'
 
@@ -38,7 +38,7 @@ const UPDATE_MARKET_ERRORS: readonly KnownError<Field>[] = [
 // time was changed, so an untouched field never moves the close by the seconds the input drops.
 export async function updateMarketAction(marketId: string, _prevState: ActionState, formData: FormData): Promise<ActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const wording = formData.has('title')
   const title = String(formData.get('title') ?? '').trim()

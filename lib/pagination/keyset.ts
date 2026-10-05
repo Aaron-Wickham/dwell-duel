@@ -57,7 +57,8 @@ export type KeysetOrder<Key> = {
 
 // fetchKeys, when given, answers the probe below with only the key columns: the probe needs
 // nothing else, and the full row select can carry embeds that cost a join per row. Without it
-// the probe falls back to fetchRows.
+// the probe falls back to fetchRows. pageSize is how many rows the first page and each "Show
+// more" add; a section that sits above others on its page can ask for fewer.
 export async function readOrdered<Row, Key extends { id: string }>(
   page: { top: Key | null; bottom: Key | null },
   order: KeysetOrder<Key>,
@@ -65,17 +66,18 @@ export async function readOrdered<Row, Key extends { id: string }>(
   keyOf: (row: Row) => Key,
   fetchKeys?: (filter: string, limit: number) => Promise<Key[]>,
   windowCap: number = WINDOW_CAP,
+  pageSize: number = PAGE_SIZE,
 ): Promise<KeysetPage<Row>> {
   const windowed = page.top !== null
 
-  const rows = await fetchRows(order.range(page), page.bottom ? windowCap : PAGE_SIZE)
-  if (rows.length === 0 || (page.bottom === null && rows.length < PAGE_SIZE)) return { rows, next: null, windowed }
+  const rows = await fetchRows(order.range(page), page.bottom ? windowCap : pageSize)
+  if (rows.length === 0 || (page.bottom === null && rows.length < pageSize)) return { rows, next: null, windowed }
 
-  // "Show more" points at the 50th row past the last one shown, so the read needs those rows'
+  // "Show more" points at the pageSize-th row past the last one shown, so the read needs those rows'
   // keys. Probing from the last row returned, not from the cursor, means rows that arrived at the
   // top and pushed the range past the cap are picked up here instead of skipped.
   const after = order.after(keyOf(rows[rows.length - 1]))
-  const probe = fetchKeys ? await fetchKeys(after, PAGE_SIZE) : (await fetchRows(after, PAGE_SIZE)).map(keyOf)
+  const probe = fetchKeys ? await fetchKeys(after, pageSize) : (await fetchRows(after, pageSize)).map(keyOf)
   if (probe.length === 0) return { rows, next: null, windowed }
   const firstId = probe[0].id
   if (rows.length + probe.length > windowCap) {
@@ -91,6 +93,7 @@ export async function readKeyset<Row>(
   keyOf: (row: Row) => Cursor,
   fetchKeys?: (filter: string, limit: number) => Promise<Cursor[]>,
   windowCap: number = WINDOW_CAP,
+  pageSize: number = PAGE_SIZE,
 ): Promise<KeysetPage<Row>> {
   const valid = (c: Cursor | null) => (c && (!cols.isId || cols.isId(c.id)) ? c : null)
   const order: KeysetOrder<Cursor> = {
@@ -98,5 +101,5 @@ export async function readKeyset<Row>(
     after: (key) => (cols.ascending ? newerThanFilter(cols, key) : olderThanFilter(cols, key)),
     encode: encodeCursor,
   }
-  return readOrdered({ top: valid(rawPage.top), bottom: valid(rawPage.bottom) }, order, fetchRows, keyOf, fetchKeys, windowCap)
+  return readOrdered({ top: valid(rawPage.top), bottom: valid(rawPage.bottom) }, order, fetchRows, keyOf, fetchKeys, windowCap, pageSize)
 }

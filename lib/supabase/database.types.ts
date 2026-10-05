@@ -613,6 +613,7 @@ export type Database = {
           market_id: string
           pool_total: number
           pool_version: number
+          position: number
           q_offset: number
           shares: number
         }
@@ -623,6 +624,7 @@ export type Database = {
           market_id: string
           pool_total?: number
           pool_version?: number
+          position: number
           q_offset?: number
           shares?: number
         }
@@ -633,6 +635,7 @@ export type Database = {
           market_id?: string
           pool_total?: number
           pool_version?: number
+          position?: number
           q_offset?: number
           shares?: number
         }
@@ -1569,6 +1572,14 @@ export type Database = {
         Returns: {
           outcome_id: string
           riding: number
+        }[]
+      }
+      market_series: {
+        Args: { p_buckets?: number; p_froms: string[]; p_market_ids: string[] }
+        Returns: {
+          from_at: string
+          market_id: string
+          points: Json
         }[]
       }
       market_sparklines: {

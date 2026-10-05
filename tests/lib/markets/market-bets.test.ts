@@ -15,16 +15,17 @@ function betRow(n: number) {
 }
 
 describe('getMarketBets', () => {
-  it("reads the market's newest 50 bets, and points Show more at the 50th one past them", async () => {
-    const shown = Array.from({ length: 50 }, (_, i) => betRow(200 - i))
-    const probed = Array.from({ length: 50 }, (_, i) => betRow(150 - i))
+  // #390: ten at a time, so the comments under them aren't buried.
+  it("reads the market's newest 10 bets, and points Show more at the 10th one past them", async () => {
+    const shown = Array.from({ length: 10 }, (_, i) => betRow(200 - i))
+    const probed = Array.from({ length: 10 }, (_, i) => betRow(190 - i))
     const { client, queries } = fakeSupabase((_query, index) => ({ data: index === 0 ? shown : probed }))
 
     const page = await getMarketBets(client, 'm1', { top: null, bottom: null })
 
     expect(queries.map((q) => [q.table, q.select, q.eq, q.limit])).toEqual([
-      ['bets', 'id, outcome_id, amount, created_at, profile_id, profiles(display_name, avatar_path)', [['market_id', 'm1']], 50],
-      ['bets', 'id, created_at', [['market_id', 'm1']], 50],
+      ['bets', 'id, outcome_id, amount, created_at, profile_id, profiles(display_name, avatar_path)', [['market_id', 'm1']], 10],
+      ['bets', 'id, created_at', [['market_id', 'm1']], 10],
     ])
     expect(queries[1].order).toEqual(queries[0].order)
     expect(page.rows[0]).toEqual({
@@ -36,9 +37,9 @@ describe('getMarketBets', () => {
       bettorName: 'Bob',
       bettorAvatarSrc: null,
     })
-    expect(page.rows).toHaveLength(50)
-    expect(decodeCursor(page.next?.cursor)).toEqual({ ts: betRow(101).created_at, id: '101' })
-    expect(page.next?.firstId).toBe('150')
+    expect(page.rows).toHaveLength(10)
+    expect(decodeCursor(page.next?.cursor)).toEqual({ ts: betRow(181).created_at, id: '181' })
+    expect(page.next?.firstId).toBe('190')
   })
 
   it('ignores a cursor whose id is not a bet id', async () => {

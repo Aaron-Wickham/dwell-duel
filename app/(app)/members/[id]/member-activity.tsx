@@ -40,6 +40,7 @@ export async function MemberActivity({
         heading="Recent activity"
         headingId="recent-activity"
         rowIdPrefix={ROW_ID_PREFIX}
+        plainHref={pathname}
         emptyState={activity.windowed ? <NothingOlder href={backToNewestHref} /> : undefined}
         aboveList={activity.windowed && activity.rows.length > 0 && <BackToNewest href={backToNewestHref} />}
         belowList={

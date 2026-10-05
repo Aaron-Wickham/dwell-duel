@@ -40,12 +40,21 @@
   --ink: #03272D;
   --ink2: #46605E;
   --line: #D5DFD8;
-  --line-s: #7A8F8B;
+  --line-s: #6F8581;
   --primary: #03272D;
   --on-primary: #FFFFFF;
+  /* Light lime and --wm-b fail 3:1 on every light surface (A11Y-08): they are fills and brand
+     only, never an indicator on their own (a selected state, a status, a chart series). */
   --lime: #72DB2B;
   --on-lime: #03272D;
   --link: #03272D;
+  /* The desktop nav's active pill, the phone tab bar's, and a segmented control's chosen segment. */
+  --nav-active: #03272D;
+  --on-nav-active: #FFFFFF;
+  --tab-active: #72DB2B;
+  --on-tab-active: #03272D;
+  --tab-active-ring: #03272D;
+  --segment-active: #FCFDFB;
   --acc-soft: #E3F4D5;
   --acc-text: #2A6E0B;
   --gold: #855600;
@@ -66,13 +75,16 @@
   --shadow: 0 1px 2px rgba(3, 39, 45, 0.05), 0 6px 20px rgba(3, 39, 45, 0.05);
   --overlay-shadow: 0 2px 6px rgba(3, 39, 45, 0.08), 0 18px 48px rgba(3, 39, 45, 0.18);
   --lift-shadow: 0 2px 6px rgba(3, 39, 45, 0.06), 0 12px 28px rgba(3, 39, 45, 0.12);
+  --tab-shadow: 0 1px 3px rgba(3, 39, 45, 0.12);
   --scrim: rgba(3, 39, 45, 0.45);
+  /* Chart series, validated for colour-vision deficiency as a set (tests/lib/ui/contrast.test.ts):
+     change one and re-run the dataviz palette validator. A sixth outcome is the grey line. */
   --s1: #03272D;
   --s2: #2A6E0B;
-  --s3: #855600;
-  --s4: #3155B8;
-  --s5: #7B3FA8;
-  --s6: #B0306F;
+  --s3: #3155B8;
+  --s4: #B0306F;
+  --s5: #C77700;
+  --s6: var(--line-s);
   --status-band: #03272D;
   /* The launch screen matches the static iOS splash, teal with a white D, in both themes. */
   --splash: #03272D;
@@ -115,7 +127,15 @@
   --line-s: #5E8883;
   --primary: #72DB2B;
   --on-primary: #03272D;
-  --link: #8BE651;
+  --link: #EAF4EE;
+  /* Lime in dark marks only the primary action and first place, so active navigation is a
+     neutral raised surface. */
+  --nav-active: #EAF4EE;
+  --on-nav-active: #021B1F;
+  --tab-active: #17434A;
+  --on-tab-active: #EAF4EE;
+  --tab-active-ring: #5E8883;
+  --segment-active: #17434A;
   --acc-soft: #143A1E;
   --acc-text: #8BE651;
   --gold: #F0C15A;
@@ -137,13 +157,14 @@
   --overlay-shadow: none;
   /* Dark surfaces hide a soft shadow, so the lifted card's edge brightens too. */
   --lift-shadow: 0 0 0 1px var(--line-s), 0 12px 28px rgba(0, 8, 10, 0.55);
+  --tab-shadow: 0 1px 3px rgba(0, 8, 10, 0.5);
   --scrim: rgba(0, 8, 10, 0.72);
   --s1: #EAF4EE;
   --s2: #8BE651;
-  --s3: #F0C15A;
-  --s4: #9DB0FF;
-  --s5: #D2A8FF;
-  --s6: #FF8FC4;
+  --s3: #9DB0FF;
+  --s4: #FF8FC4;
+  --s5: #D9822B;
+  --s6: var(--line-s);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -158,7 +179,15 @@
     --line-s: #5E8883;
     --primary: #72DB2B;
     --on-primary: #03272D;
-    --link: #8BE651;
+    --link: #EAF4EE;
+    /* Lime in dark marks only the primary action and first place, so active navigation is a
+       neutral raised surface. */
+    --nav-active: #EAF4EE;
+    --on-nav-active: #021B1F;
+    --tab-active: #17434A;
+    --on-tab-active: #EAF4EE;
+    --tab-active-ring: #5E8883;
+    --segment-active: #17434A;
     --acc-soft: #143A1E;
     --acc-text: #8BE651;
     --gold: #F0C15A;
@@ -180,13 +209,14 @@
     --overlay-shadow: none;
   /* Dark surfaces hide a soft shadow, so the lifted card's edge brightens too. */
   --lift-shadow: 0 0 0 1px var(--line-s), 0 12px 28px rgba(0, 8, 10, 0.55);
+  --tab-shadow: 0 1px 3px rgba(0, 8, 10, 0.5);
     --scrim: rgba(0, 8, 10, 0.72);
     --s1: #EAF4EE;
     --s2: #8BE651;
-    --s3: #F0C15A;
-    --s4: #9DB0FF;
-    --s5: #D2A8FF;
-    --s6: #FF8FC4;
+    --s3: #9DB0FF;
+    --s4: #FF8FC4;
+    --s5: #D9822B;
+    --s6: var(--line-s);
   }
 }
 
@@ -203,6 +233,12 @@
   --color-lime: var(--lime);
   --color-on-lime: var(--on-lime);
   --color-link: var(--link);
+  --color-nav-active: var(--nav-active);
+  --color-on-nav-active: var(--on-nav-active);
+  --color-tab-active: var(--tab-active);
+  --color-on-tab-active: var(--on-tab-active);
+  --color-tab-active-ring: var(--tab-active-ring);
+  --color-segment-active: var(--segment-active);
   --color-acc-soft: var(--acc-soft);
   --color-acc-text: var(--acc-text);
   --color-gold: var(--gold);
@@ -231,11 +267,12 @@
   --color-splash: var(--splash);
   --color-on-splash: var(--on-splash);
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius-segment: 10px;
   --radius-control: 12px;
   --radius-tile: 14px;
   --radius-card: 18px;
   --shadow-card: var(--shadow);
-  --shadow-tab: 0 1px 3px rgba(3, 39, 45, 0.12);
+  --shadow-tab: var(--tab-shadow);
   --shadow-overlay: var(--overlay-shadow);
   --shadow-lift: var(--lift-shadow);
 }
@@ -265,9 +302,9 @@
   user-select: none;
 }
 
-/* The native press: controls give under the finger. Under a mouse they also grow a little as it
-   comes over them (#155), only where hovering is real: a tap on a phone would leave the hover stuck.
-   Reduced motion swaps the press for a dim and drops the grow, keeping the colour changes. */
+/* The native press: controls give under the finger. Under a mouse a control changes colour and
+   doesn't grow (#383 reversed #155's 103%: a growing label fought the sliding pills and read as a
+   landing page). Reduced motion swaps the press for a dim, keeping the colour changes. */
 @utility pressable {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -280,13 +317,8 @@
     background-color var(--duration-hover) ease-out,
     border-color var(--duration-hover) ease-out,
     text-decoration-color var(--duration-hover) ease-out,
-    text-decoration-thickness var(--duration-hover) ease-out;
-
-  @media (hover: hover) and (pointer: fine) {
-    &:hover:not(:active, :disabled, [aria-disabled="true"]) {
-      scale: 1.03;
-    }
-  }
+    text-decoration-thickness var(--duration-hover) ease-out,
+    opacity var(--duration-fast) ease-out;
 
   /* A control inside a pressable card presses alone; the card stays put. */
   &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
@@ -298,10 +330,6 @@
       color var(--duration-hover) ease-out,
       background-color var(--duration-hover) ease-out,
       border-color var(--duration-hover) ease-out;
-
-    &:hover:not(:active, :disabled, [aria-disabled="true"]) {
-      scale: none;
-    }
 
     &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
       scale: none;
@@ -315,10 +343,6 @@
       background-color var(--duration-hover) ease-out,
       border-color var(--duration-hover) ease-out;
 
-    &:hover:not(:active, :disabled, [aria-disabled="true"]) {
-      scale: none;
-    }
-
     &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
       scale: none;
       opacity: 0.7;
@@ -326,13 +350,11 @@
   }
 }
 
-/* Cards and rows lift toward a mouse instead of growing: up 2px, onto a shadow. Always with
-   pressable, which carries the transition; `.pressable` in the selector outranks its grow.
-   Reduced motion keeps the shadow and drops the move. */
+/* A standalone card lifts toward a mouse: up 2px, onto a shadow. Always with pressable, which
+   carries the transition. Reduced motion keeps the shadow and drops the move. */
 @utility hover-lift {
   @media (hover: hover) and (pointer: fine) {
     &.pressable:hover:not(:active) {
-      scale: none;
       translate: 0 -2px;
       box-shadow: var(--lift-shadow);
     }
@@ -346,6 +368,29 @@
     :root[data-motion="reduce"] &.pressable:hover:not(:active) {
       translate: none;
     }
+  }
+}
+
+/* A nav link a sliding pill passes under: its colour cross-fades over the pill's own slide, so the
+   pill never covers a label still in its old colour (#383). With pressable, which it outranks.
+   Reduced motion moves the pill at once, so the colour changes at once too. */
+@utility pill-label {
+  &.pressable {
+    transition:
+      scale var(--duration-press) ease-out,
+      color var(--duration-slide) var(--ease-ios),
+      background-color var(--duration-hover) ease-out,
+      border-color var(--duration-hover) ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &.pressable {
+      transition: background-color var(--duration-hover) ease-out;
+    }
+  }
+
+  :root[data-motion="reduce"] &.pressable {
+    transition: background-color var(--duration-hover) ease-out;
   }
 }
 
@@ -369,10 +414,6 @@
   }
 
   @media (hover: hover) and (pointer: fine) {
-    &.pressable:hover:not(:active) {
-      scale: none;
-    }
-
     &.pressable:hover:not(:active)::before {
       opacity: 1;
     }
@@ -381,8 +422,17 @@
 
 /* A card or row that one link makes tappable as a whole: the link's ::after covers its nearest
    positioned ancestor, the card, which is `relative pressable`. Another control inside the card
-   sits above the cover in a `relative z-[1]` wrapper. */
+   sits above the cover in a `relative z-[1]` wrapper. The link is the card's title, so it isn't
+   underlined until it's hovered or focused (#393): the whole card is the tap target, and a line
+   under every title in a list is noise. */
 @utility stretched-link {
+  text-decoration-line: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration-line: underline;
+  }
+
   &::after {
     content: '';
     position: absolute;
@@ -394,6 +444,13 @@
       content: none;
     }
   }
+}
+
+/* A tapped link's card or control while its page is on the way (#384): IntentLink's marker inside
+   the link, or the attribute CardLinkClick puts on a clicked card. Only a navigation that wasn't
+   prefetched or cached is ever pending, so a fast one never dims. */
+.pressable:is([data-card-pending], :has(> [data-link-pending], .stretched-link > [data-link-pending])) {
+  opacity: 0.7;
 }
 
 /* With the cover off under a mouse, components/ui/card-link-click.tsx opens the card on click. */
@@ -438,9 +495,16 @@
     -webkit-font-smoothing: antialiased;
     /* No pull-to-refresh, overscroll glow or scroll chaining; live updates keep data fresh. */
     overscroll-behavior-y: none;
-    /* Vertical scroll only: no pinch-zoom and no sideways panning, in the installed app too. */
-    touch-action: pan-y;
     overflow-x: clip;
+  }
+
+  /* The installed app scrolls vertically only: no pinch-zoom (which displaces the fixed bars) and
+     no sideways panning. A browser tab keeps pinch-zoom (D6, #402); StandaloneZoomLock locks the
+     viewport meta to match. */
+  @media (display-mode: standalone) {
+    body {
+      touch-action: pan-y;
+    }
   }
 
   /* Drops the double-tap-to-zoom wait, so taps land at once. */
@@ -524,10 +588,13 @@
 }
 
 /* Page transitions. React's <ViewTransition> (components/nav/page-transition.tsx) adds these
-   classes: nav-forward / nav-back from a link's transitionTypes, page-enter / page-exit for
-   everything else. */
+   classes: nav-forward / nav-back from a link's transitionTypes, page-enter / page-exit for a
+   skeleton giving way to content. A tab switch (nav-tab) gets none and swaps at once (#384).
+   On a drill-down the old page is gone by 120ms (--duration-press), before the new one fades in,
+   so two titles never show stacked. */
 :root {
   --vt-exit: var(--duration-fast);
+  --vt-push-exit: var(--duration-press);
   --vt-enter: var(--duration-enter);
   --vt-move: var(--duration-page);
 }
@@ -555,25 +622,25 @@
 ::view-transition-old(.nav-forward) {
   --vt-offset: -60px;
   animation:
-    var(--vt-exit) ease-in both vt-fade reverse,
+    var(--vt-push-exit) ease-in both vt-fade reverse,
     var(--vt-move) var(--ease-ios) both vt-slide-x reverse;
 }
 ::view-transition-new(.nav-forward) {
   --vt-offset: 60px;
   animation:
-    var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
+    var(--vt-enter) ease-out var(--vt-push-exit) both vt-fade,
     var(--vt-move) var(--ease-ios) both vt-slide-x;
 }
 ::view-transition-old(.nav-back) {
   --vt-offset: 60px;
   animation:
-    var(--vt-exit) ease-in both vt-fade reverse,
+    var(--vt-push-exit) ease-in both vt-fade reverse,
     var(--vt-move) var(--ease-ios) both vt-slide-x reverse;
 }
 ::view-transition-new(.nav-back) {
   --vt-offset: -60px;
   animation:
-    var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
+    var(--vt-enter) ease-out var(--vt-push-exit) both vt-fade,
     var(--vt-move) var(--ease-ios) both vt-slide-x;
 }
 
@@ -608,19 +675,37 @@
   animation: none;
 }
 
+/* Reduced motion keeps a short cross-fade instead of a hard cut (#383): nothing slides or rises,
+   and no group moves between the old and new boxes. The chrome above keeps its own rules. */
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(*),
-  ::view-transition-new(*),
   ::view-transition-group(*) {
     animation-duration: 0s !important;
     animation-delay: 0s !important;
   }
+  ::view-transition-old(.nav-forward),
+  ::view-transition-old(.nav-back),
+  ::view-transition-old(.page-exit) {
+    animation: var(--duration-fast) ease-out both vt-fade reverse;
+  }
+  ::view-transition-new(.nav-forward),
+  ::view-transition-new(.nav-back),
+  ::view-transition-new(.page-enter) {
+    animation: var(--duration-fast) ease-out both vt-fade;
+  }
 }
-:root[data-motion="reduce"]::view-transition-old(*),
-:root[data-motion="reduce"]::view-transition-new(*),
 :root[data-motion="reduce"]::view-transition-group(*) {
   animation-duration: 0s !important;
   animation-delay: 0s !important;
+}
+:root[data-motion="reduce"]::view-transition-old(.nav-forward),
+:root[data-motion="reduce"]::view-transition-old(.nav-back),
+:root[data-motion="reduce"]::view-transition-old(.page-exit) {
+  animation: var(--duration-fast) ease-out both vt-fade reverse;
+}
+:root[data-motion="reduce"]::view-transition-new(.nav-forward),
+:root[data-motion="reduce"]::view-transition-new(.nav-back),
+:root[data-motion="reduce"]::view-transition-new(.page-enter) {
+  animation: var(--duration-fast) ease-out both vt-fade;
 }
 
 /* The nav's pending hint (components/nav/nav-pending-hint.tsx) waits 120ms before showing, so
@@ -647,6 +732,34 @@
 @keyframes vt-hint-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
+}
+
+/* The slip's floating button (components/slip/slip-sheet.tsx) rises in with the first pick and
+   fades out after the last (#384); reduced motion fades it without the rise. */
+.slip-fab[data-enter] {
+  animation: slip-fab-in var(--duration-enter) var(--ease-ios) both;
+}
+.slip-fab[data-leaving] {
+  animation: slip-fab-out var(--duration-fast) ease-in forwards;
+}
+@keyframes slip-fab-in {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+  }
+}
+@keyframes slip-fab-out {
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slip-fab[data-enter]:not([data-leaving]) {
+    animation-name: vt-fade;
+  }
+}
+:root[data-motion="reduce"] .slip-fab[data-enter]:not([data-leaving]) {
+  animation-name: vt-fade;
 }
 
 /* Launch screen (components/brand/launch-screen.tsx). Hidden unless the cold-start script set
@@ -712,8 +825,9 @@
 
 /* Sign-in intro (components/sign-in/sign-in-intro.tsx). Plays only while the pre-paint script's
    data-sign-in-intro is on <html>: once a session, never under reduced motion. Without it every
-   piece rests on its final frame, which is also where each animation ends. The delays are INTRO in
-   components/sign-in/intro-timeline.ts; IntroDirector flies the symbol into the wordmark. */
+   piece rests on its final frame, which is also where each animation ends. The delays are the
+   --intro-*-at properties that script writes from INTRO_CSS_DELAYS
+   (components/sign-in/intro-timeline.ts); IntroDirector flies the symbol into the wordmark. */
 .sign-in-intro {
   display: none;
 }
@@ -725,28 +839,28 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  animation: sign-in-hide var(--duration-fast) 1350ms forwards;
+  animation: sign-in-hide var(--duration-fast) var(--intro-hide-at) forwards;
 }
 :root[data-sign-in-intro] .sign-in-intro-backdrop {
-  animation: sign-in-fade-out var(--duration-slide) var(--ease-ios) 900ms forwards;
+  animation: sign-in-fade-out var(--duration-slide) var(--ease-ios) var(--intro-backdrop-at) forwards;
 }
 :root[data-sign-in-intro] .sign-in-intro-symbol {
-  animation: sign-in-fade-out var(--duration-fast) var(--ease-ios) 1250ms forwards;
+  animation: sign-in-fade-out var(--duration-fast) var(--ease-ios) var(--intro-swap-at) forwards;
 }
 :root[data-sign-in-intro] .sign-in-intro-wordmark {
-  animation: sign-in-fade-in var(--duration-fast) var(--ease-ios) 1250ms both;
+  animation: sign-in-fade-in var(--duration-fast) var(--ease-ios) var(--intro-swap-at) both;
 }
 :root[data-sign-in-intro] .sign-in-intro-card {
-  animation: sign-in-rise var(--duration-page) var(--ease-ios) 1100ms both;
+  animation: sign-in-rise var(--duration-page) var(--ease-ios) var(--intro-card-at) both;
 }
 :root[data-sign-in-intro] .sign-in-intro-text {
-  animation: sign-in-rise var(--duration-page) var(--ease-ios) 1300ms both;
+  animation: sign-in-rise var(--duration-page) var(--ease-ios) var(--intro-draw-at) both;
 }
 :root[data-sign-in-intro] .sign-in-intro-draw {
-  animation: sign-in-draw calc(var(--duration-sheet) * 2) var(--ease-ios) 1300ms both;
+  animation: sign-in-draw calc(var(--duration-sheet) * 2) var(--ease-ios) var(--intro-draw-at) both;
 }
 :root[data-sign-in-intro] .sign-in-intro-bet {
-  animation: sign-in-fade-in var(--duration-enter) var(--ease-ios) 1900ms both;
+  animation: sign-in-fade-in var(--duration-enter) var(--ease-ios) var(--intro-bet-at) both;
 }
 @keyframes sign-in-fade-out {
   to {

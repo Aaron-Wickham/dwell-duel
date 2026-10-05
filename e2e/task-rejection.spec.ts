@@ -14,28 +14,34 @@ test('reject a task submission with a reason the member then sees', async ({ pag
   const member = await browser.newContext({ storageState: MEMBER_STORAGE_STATE_PATH })
   const bobPage = await member.newPage()
   await bobPage.goto('/')
-  const balance = bobPage.getByRole('region', { name: 'Your balance' }).getByText(/^\d+ DC$/).first()
+  const balance = bobPage.getByRole('region', { name: 'Balance' }).getByText(/^[\d,]+ DC$/).first()
   const startingBalance = await balance.textContent()
 
   await bobPage.goto('/tasks')
-  const row = bobPage.getByRole('listitem').filter({ hasText: title })
+  // Tasks groups rows by state (#394), so the row moves from To do to Waiting for review.
+  const group = (name: string) => bobPage.getByRole('region', { name }).getByRole('listitem').filter({ hasText: title })
   const submitted = serverActionSettled(bobPage)
-  await row.getByRole('button', { name: /I did this/ }).click()
+  await group('To do').getByRole('button', { name: /I did this/ }).click()
   await bobPage.getByRole('dialog').getByRole('button', { name: 'Submit for review' }).click()
-  await expect(row.getByText('Pending review')).toBeVisible()
   await submitted
+  await expect(group('Waiting for review')).toBeVisible()
 
   await page.goto('/admin/tasks')
-  const pending = page.getByRole('listitem').filter({ hasText: title })
-  await pending.getByLabel('Reason for rejecting (optional)').fill('Say it to your small group leader first')
+  // A row's Reject asks for its optional reason in a dialog (#399).
+  const pending = page.getByRole('row').filter({ hasText: title })
   await pending.getByRole('button', { name: `Reject Bob’s ${title}` }).click()
+  const dialog = page.getByRole('dialog', { name: `Reject Bob’s ${title}?` })
+  await dialog.getByLabel('Why not? (optional)').fill('Say it to your small group leader first')
+  await dialog.getByRole('button', { name: 'Reject', exact: true }).click()
   await expect(page.getByText('Submission rejected.').first()).toBeVisible()
-  await expect(page.getByText('Nothing pending.')).toBeVisible()
+  await expect(dialog).toBeHidden()
+  await expect(page.getByText('No tasks to review.')).toBeVisible()
 
   await bobPage.goto('/tasks')
-  await expect(row.getByText('Not approved — Say it to your small group leader first')).toBeVisible()
+  const rejected = group('Not approved')
+  await expect(rejected.getByText('“Say it to your small group leader first”')).toBeVisible()
   // A rejected task can be tried again, and paid nothing.
-  await expect(row.getByRole('button', { name: /I did this/ })).toBeVisible()
+  await expect(rejected.getByRole('button', { name: /Try again/ })).toBeVisible()
   await bobPage.goto('/')
   await expect(balance).toHaveText(startingBalance!)
   await member.close()

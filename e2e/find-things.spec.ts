@@ -46,7 +46,8 @@ test('markets search by title, narrow to a category, and clear', async ({ page }
   await expect(page).toHaveURL(new RegExp(`q=${word}&category=${category.toLowerCase().replace(' ', '-')}$`))
   await expect(chips.getByRole('link', { name: category })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByText(`Showing markets in ${category}`)).toBeVisible()
-  await expect(page.getByRole('article').filter({ hasText: title })).toContainText(category)
+  // Filtered to a category, the card drops its category chip: the filter already says it (#387).
+  await expect(page.getByRole('article').filter({ hasText: title })).toBeVisible()
   await chips.getByRole('link', { name: 'All', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`/markets\\?q=${word}$`))
 
@@ -110,7 +111,7 @@ test.describe('Jump to me', () => {
     await page.goto('/leaderboard')
     const card = page.getByRole('region', { name: 'Your rank' })
     await expect(card).toBeVisible()
-    await expect(card.getByText(/^You · /)).toBeVisible()
+    await expect(card.getByText('You', { exact: true })).toBeVisible()
     // Alice is behind all fifty-six, so her row is past the first page.
     await expect(page.getByRole('listitem').filter({ hasText: '(you)' })).toHaveCount(0)
 

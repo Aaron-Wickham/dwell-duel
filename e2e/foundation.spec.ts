@@ -7,8 +7,9 @@ test('signed-in member sees their name and balance', async ({ page }) => {
   // this balance past its starting 100 depending on test execution order,
   // so this only asserts a balance is shown at all, not a specific value.
   await page.goto('/')
-  await expect(page.getByText('Alice', { exact: false })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Your balance' }).getByText(/^\d+ DC$/).first()).toBeAttached()
+  await expect(page.getByRole('heading', { level: 1, name: /Alice/ })).toBeVisible()
+  // The desktop Balance card (#388); on a phone the top bar's chip carries it.
+  await expect(page.getByRole('region', { name: 'Balance' }).getByText(/^[\d,]+ DC$/).first()).toBeAttached()
 })
 
 test('admin can add and revoke an invite', async ({ page }) => {

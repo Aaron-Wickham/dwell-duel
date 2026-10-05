@@ -12,7 +12,31 @@ describe('LeaderboardRow', () => {
     )
     const link = screen.getByRole('link', { name: 'Bob' })
     expect(link).toHaveAttribute('href', '/members/bob')
-    expect(screen.getByText('90 DC')).toBeInTheDocument()
+    // The column shows the bare figure (#396); the unit is for a screen reader.
+    expect(screen.getByRole('listitem')).toHaveTextContent(/Bob90 DC$/)
+    expect(screen.getByText('DC', { exact: false })).toHaveClass('sr-only')
+  })
+
+  // #396: at 375px the rank tile, avatar, chip and score left the name ~50px, broken a letter a line.
+  it('keeps a long name on one line, truncated, with the record chip left out on a phone', () => {
+    render(
+      <ol>
+        <LeaderboardRow
+          rank={12}
+          name="Bartholomew Montgomery-Fitzwilliam"
+          score={5353}
+          record={{ won: 4, lost: 3 }}
+          isMe={false}
+          href="/members/b"
+        />
+      </ol>,
+    )
+    const link = screen.getByRole('link', { name: 'Bartholomew Montgomery-Fitzwilliam' })
+    expect(link).toHaveClass('truncate', 'min-w-0')
+    expect(link).not.toHaveClass('break-words')
+    expect(link.parentElement).toHaveClass('min-w-0', 'grow')
+    expect(screen.getByText('5,353')).toHaveClass('shrink-0', 'whitespace-nowrap')
+    expect(screen.getByText('4 won, 3 lost').closest('span.hidden')).toHaveClass('md:inline-flex')
   })
 
   it('gives rank 1 the top style, announced as Rank 1', () => {
@@ -60,7 +84,7 @@ describe('LeaderboardRow', () => {
         <LeaderboardRow rank={2} name="Bob" score={90} isMe={false} href="/members/bob" domId="member-bob" />
       </ol>,
     )
-    const row = screen.getByRole('listitem', { name: /Rank 2.*Bob.*90 DC/ })
+    const row = screen.getByRole('listitem', { name: /Rank 2.*Bob.*90.*DC/ })
     expect(row).toHaveAttribute('id', 'member-bob')
     expect(row).toHaveAttribute('tabindex', '-1')
   })
@@ -68,15 +92,15 @@ describe('LeaderboardRow', () => {
 
 describe('LeaderboardRow on the month board', () => {
   it.each([
-    [140, '+140 DC'],
-    [-25, '−25 DC'],
-    [0, '0 DC'],
+    [140, '+140'],
+    [-25, '−25'],
+    [0, '0'],
   ])('shows a profit of %i as %s', (score, text) => {
     render(
       <ol>
         <LeaderboardRow rank={1} name="Bob" score={score} signed isMe={false} href="/members/bob" />
       </ol>,
     )
-    expect(screen.getByText(text)).toBeInTheDocument()
+    expect(screen.getByRole('listitem')).toHaveTextContent(new RegExp(`Bob${text.replace('+', '\\+')} DC$`))
   })
 })

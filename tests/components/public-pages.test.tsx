@@ -18,7 +18,7 @@ describe('the sign-in page', () => {
   it('says what DwellDuel is, and links to the privacy page', () => {
     render(<SignInPage />)
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Friendly bets. Faithful study.')
-    expect(screen.getByText('Play money, invite-only')).toBeInTheDocument()
+    expect(screen.getByText(/Play money, invite-only\.$/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy')
   })
 
@@ -48,6 +48,6 @@ describe('the privacy page', () => {
 
   it('points links to other sections at How it works', () => {
     render(<PrivacyPage />)
-    expect(screen.getAllByRole('link', { name: 'Roles' }).every((a) => a.getAttribute('href') === '/how-it-works#how-roles')).toBe(true)
+    expect(screen.getAllByRole('link', { name: 'Roles' }).every((a) => a.getAttribute('href') === '/how-it-works/rules#how-roles')).toBe(true)
   })
 })

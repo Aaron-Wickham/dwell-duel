@@ -6,9 +6,22 @@ import userEvent from '@testing-library/user-event'
 const { success } = vi.hoisted(() => ({ success: vi.fn() }))
 vi.mock('sonner', () => ({ toast: { success } }))
 
-import { ShareButton, marketShareUrl } from '@/app/(app)/markets/[id]/share-button'
+import { ManualShareLink, marketShareUrl, useMarketShare } from '@/app/(app)/markets/[id]/market-share'
 
 const ID = '11111111-1111-4111-8111-111111111111'
+
+// The market's "More actions" menu calls share() from its Share item and renders the manual link.
+function ShareHarness() {
+  const { share, manualUrl } = useMarketShare(ID, 'Will it rain?')
+  return (
+    <>
+      <button type="button" onClick={share}>
+        Share
+      </button>
+      {manualUrl && <ManualShareLink url={manualUrl} />}
+    </>
+  )
+}
 const URL_ON_LOCALHOST = `${window.location.origin}/markets/${ID}`
 
 function setNavigator(key: 'share' | 'clipboard', value: unknown) {
@@ -42,9 +55,9 @@ describe('marketShareUrl', () => {
   })
 })
 
-describe('ShareButton', () => {
+describe('useMarketShare', () => {
   it('uses the share sheet when there is one', async () => {
-    render(<ShareButton marketId={ID} title="Will it rain?" />)
+    render(<ShareHarness />)
     const { click } = clickShare()
     const share = vi.fn().mockResolvedValue(undefined)
     const writeText = vi.fn()
@@ -58,7 +71,7 @@ describe('ShareButton', () => {
   })
 
   it('treats a cancelled share as nothing to report', async () => {
-    render(<ShareButton marketId={ID} title="Will it rain?" />)
+    render(<ShareHarness />)
     const { click } = clickShare()
     const writeText = vi.fn()
     setNavigator('share', vi.fn().mockRejectedValue(new DOMException('Share canceled', 'AbortError')))
@@ -71,29 +84,29 @@ describe('ShareButton', () => {
   })
 
   it('copies the link and toasts when there is no share sheet', async () => {
-    render(<ShareButton marketId={ID} title="Will it rain?" />)
+    render(<ShareHarness />)
     const { click } = clickShare()
     const writeText = vi.fn().mockResolvedValue(undefined)
     setNavigator('clipboard', { writeText })
 
     await click()
-    await waitFor(() => expect(success).toHaveBeenCalledWith('Link copied'))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Link copied.'))
     expect(writeText).toHaveBeenCalledWith(URL_ON_LOCALHOST)
   })
 
   it('copies when sharing fails for another reason', async () => {
-    render(<ShareButton marketId={ID} title="Will it rain?" />)
+    render(<ShareHarness />)
     const { click } = clickShare()
     const writeText = vi.fn().mockResolvedValue(undefined)
     setNavigator('share', vi.fn().mockRejectedValue(new DOMException('Not allowed', 'NotAllowedError')))
     setNavigator('clipboard', { writeText })
 
     await click()
-    await waitFor(() => expect(success).toHaveBeenCalledWith('Link copied'))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Link copied.'))
   })
 
   it('falls back to a hidden textarea when there is no Clipboard API', async () => {
-    render(<ShareButton marketId={ID} title="Will it rain?" />)
+    render(<ShareHarness />)
     const { click } = clickShare()
     setNavigator('clipboard', undefined)
     let copied = ''
@@ -103,14 +116,14 @@ describe('ShareButton', () => {
     })
 
     await click()
-    await waitFor(() => expect(success).toHaveBeenCalledWith('Link copied'))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Link copied.'))
     expect(document.execCommand).toHaveBeenCalledWith('copy')
     expect(copied).toBe(URL_ON_LOCALHOST)
     expect(document.querySelector('textarea')).toBeNull()
   })
 
   it('shows the link to copy by hand when nothing else works', async () => {
-    render(<ShareButton marketId={ID} title="Will it rain?" />)
+    render(<ShareHarness />)
     const { click } = clickShare()
     setNavigator('clipboard', { writeText: vi.fn().mockRejectedValue(new Error('denied')) })
     document.execCommand = vi.fn(() => false)

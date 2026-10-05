@@ -2,14 +2,14 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
-import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
+import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { afterAction, notifyTaskSubmitted } from '@/lib/push/notify'
 import { RATE_LIMIT_ERRORS, TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import type { ProofRecord } from '@/lib/proof/types'
 
 export type ActionState = { formError?: string; field?: 'note' } | undefined
 
-// submit_task_completion's raises (0019, 0042, 0046), its attachment checks included, and the write
+// submit_task_completion's raises (0019, 0042, 0046), its attachment checks (0089's caps) included, and the write
 // limit (0090).
 const SUBMIT_TASK_ERRORS: readonly KnownError<'note'>[] = [
   { match: 'not invited', formError: 'Only invited members can submit a task.' },
@@ -20,7 +20,8 @@ const SUBMIT_TASK_ERRORS: readonly KnownError<'note'>[] = [
     formError: 'You’ve already submitted this task for the current period.',
   },
   { match: 'attachments must be a list', formError: 'Your attachments didn’t come through. Try again.' },
-  { match: 'add at most 10 attachments', formError: 'Add at most 10 attachments.' },
+  { match: 'add at most 5 attachments', formError: 'Add at most 5 attachments. Remove one and send again.' },
+  { match: 'add at most 3 photos or files', formError: 'Add at most 3 photos or files. Remove one and send again.' },
   { match: 'links must start with http:// or https://', formError: 'Links must start with http:// or https://.' },
   { match: "that file can't be attached here", formError: 'That file can’t be attached here.' },
   { match: "an attachment didn't finish uploading; try again", formError: 'An attachment didn’t finish uploading. Try again.' },
@@ -32,7 +33,7 @@ const SUBMIT_TASK_ERRORS: readonly KnownError<'note'>[] = [
 // their records, which submit_task_completion checks are the member's own before storing.
 export async function submitTaskCompletionAction(taskId: string, _prevState: ActionState, formData: FormData): Promise<ActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const note = String(formData.get('note') ?? '')
     .replace(/\r\n/g, '\n')

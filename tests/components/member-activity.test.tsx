@@ -25,6 +25,7 @@ vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase
 vi.mock('@/components/ui/show-more-focus', () => ({ ShowMoreFocus: () => null, requestShowMoreFocus }))
 // A plain click runs onNavigate, as the App Router's Link does for a client-side navigation.
 vi.mock('next/link', () => ({
+  useLinkStatus: () => ({ pending: false }),
   default: ({
     href,
     scroll,
@@ -117,5 +118,13 @@ describe('MemberActivity', () => {
 
     fireEvent.click(showMore)
     expect(requestShowMoreFocus).toHaveBeenCalledWith('activity-bet_003a2')
+  })
+
+  // A11Y-05: the member's own name doesn't link back to the page you're on; the market still links.
+  it('shows the member’s own name as plain text and keeps other links', async () => {
+    await renderActivity({ rows: [{ ...event('bet:1'), actorId: 'p-bob', actorName: 'Bob' }], next: null, windowed: false })
+    expect(screen.getByText('Bob')).not.toHaveAttribute('href')
+    expect(screen.queryByRole('link', { name: 'Bob' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Social layer market' })).toHaveAttribute('href', '/markets/m1')
   })
 })

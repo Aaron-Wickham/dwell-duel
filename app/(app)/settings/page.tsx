@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { BookOpenText, ShieldCheck, UserRound } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { resolvePreferences } from '@/lib/preferences/preferences'
@@ -18,6 +17,7 @@ import { cn } from '@/lib/utils'
 import { NotificationSettings } from './notification-settings'
 import { MotionSettings, ThemeSetting } from './settings-controls'
 import { SignOutButton } from './sign-out-button'
+import { InstallApp } from './install-app'
 
 export default async function SettingsPage() {
   const { supabase, user } = await requireUser()
@@ -34,77 +34,70 @@ export default async function SettingsPage() {
   const prefs = resolvePreferences((name) => jar.get(name)?.value)
 
   return (
-    <Page transition="drill-down">
+    // One reading-width column (#398). Each card says whether it applies to this device or to
+    // your account, since the page holds both.
+    <Page width="reading" transition="drill-down">
       <BackLink href={`/members/${user.id}`}>Your profile</BackLink>
-      <PageHeader title="Settings" description="These apply on this device." />
-      <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-2 lg:items-start">
-        <div className="flex flex-col gap-5 md:gap-7">
-          <SectionCard title="Appearance" titleId="settings-appearance">
-            <ThemeSetting initial={theme} />
-          </SectionCard>
-          {/* A member still being set up has no profile yet, but can always change the rest and sign out. */}
-          {profile && (
-            <SectionCard title="Profile" titleId="settings-profile">
-              <div className="flex flex-wrap items-center gap-4">
-                <Avatar name={profile.display_name as string} src={avatarUrl(profile.avatar_path as string | null)} />
-                <p className="min-w-0 grow font-bold break-words">{profile.display_name as string}</p>
-                <Link
-                  href="/profile"
-                  transitionTypes={['nav-forward']}
-                  className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
-                >
-                  <UserRound aria-hidden="true" className="size-[18px]" />
-                  Edit profile
-                </Link>
-              </div>
-            </SectionCard>
-          )}
-          <SectionCard title="Haptics & motion" titleId="settings-motion">
-            <MotionSettings haptics={prefs.haptics} reduceMotion={prefs.reduceMotion} />
-          </SectionCard>
+      <PageHeader title="Settings" />
+      <SectionCard title="Appearance & motion" titleId="settings-appearance" description="On this device.">
+        <div className="flex flex-col gap-5">
+          <ThemeSetting initial={theme} />
+          <MotionSettings haptics={prefs.haptics} reduceMotion={prefs.reduceMotion} />
         </div>
-        <div className="flex flex-col gap-5 md:gap-7">
-          {/* Home's Turn on notifications links here; the margin keeps the heading clear of the bar. */}
-          <SectionCard
-            title="Notifications"
-            titleId="settings-notifications"
-            className="[&_h2]:scroll-mt-[calc(64px+var(--safe-top)+40px)] md:[&_h2]:scroll-mt-[calc(72px+var(--safe-top)+48px)]"
+      </SectionCard>
+      {/* Home's Turn on notifications links here; the margin keeps the heading clear of the bar. */}
+      <SectionCard
+        title="Notifications"
+        titleId="settings-notifications"
+        description="Turned on for each device. What you get follows your account."
+        className="[&_h2]:scroll-mt-[calc(64px+var(--safe-top)+40px)] md:[&_h2]:scroll-mt-[calc(72px+var(--safe-top)+48px)]"
+      >
+        <NotificationSettings
+          userId={user.id}
+          publicKey={vapidKeys()?.publicKey ?? null}
+          endpoints={notifications.endpoints}
+          prefs={notifications.prefs}
+          reviewer={atLeast(role, 'reviewer')}
+        />
+      </SectionCard>
+      <InstallApp />
+      <SectionCard title="Help" titleId="settings-help">
+        <p className="text-ink2">Betting, parlays, results and tasks, explained, and what DwellDuel keeps about you.</p>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/how-it-works"
+            transitionTypes={['nav-forward']}
+            className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
           >
-            <NotificationSettings
-              userId={user.id}
-              publicKey={vapidKeys()?.publicKey ?? null}
-              endpoints={notifications.endpoints}
-              prefs={notifications.prefs}
-              reviewer={atLeast(role, 'reviewer')}
-            />
-          </SectionCard>
-          <SectionCard title="Help" titleId="settings-help">
-            <p className="text-ink2">Odds, payouts, parlays, results and tasks, explained, and what DwellDuel keeps about you.</p>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/how-it-works"
-                transitionTypes={['nav-forward']}
-                className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
-              >
-                <BookOpenText aria-hidden="true" className="size-[18px]" />
-                How it works
-              </Link>
-              {/* The privacy note is How it works' Your data section (docs/HOW-IT-WORKS.md), so it renders in the app. */}
-              <Link
-                href="/how-it-works#how-your-data"
-                transitionTypes={['nav-forward']}
-                className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
-              >
-                <ShieldCheck aria-hidden="true" className="size-[18px]" />
-                Your data
-              </Link>
-            </div>
-          </SectionCard>
-          <SectionCard title="Account" titleId="settings-account">
-            <SignOutButton />
-          </SectionCard>
+            How it works
+          </Link>
+          {/* The privacy note is the full rules' Your data section (docs/HOW-IT-WORKS.md), so it renders in the app. */}
+          <Link
+            href="/how-it-works/rules#how-your-data"
+            transitionTypes={['nav-forward']}
+            className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
+          >
+            Your data
+          </Link>
         </div>
-      </div>
+      </SectionCard>
+      <SectionCard title="Account" titleId="settings-account" description="Your profile shows on every device you sign in on.">
+        {/* A member still being set up has no profile yet, but can always change the rest and sign out. */}
+        {profile && (
+          <div className="flex flex-wrap items-center gap-4">
+            <Avatar name={profile.display_name as string} src={avatarUrl(profile.avatar_path as string | null)} />
+            <p className="min-w-0 grow font-bold break-words">{profile.display_name as string}</p>
+            <Link
+              href="/profile"
+              transitionTypes={['nav-forward']}
+              className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
+            >
+              Edit profile
+            </Link>
+          </div>
+        )}
+        <SignOutButton />
+      </SectionCard>
     </Page>
   )
 }

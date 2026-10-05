@@ -1,8 +1,7 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, type RefObject } from 'react'
 import { Dialog } from '@base-ui/react/dialog'
-import { CalendarClock, Pencil } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { ConfirmSubmitDialog, useConfirmSubmit } from '@/components/ui/confirm-submit-dialog'
 import { dialogBackdropClass, dialogPopupClass } from '@/components/ui/dialog-classes'
@@ -59,6 +58,13 @@ function instantOf(local: string): string {
   return local && !Number.isNaN(date.getTime()) ? date.toISOString() : ''
 }
 
+// The menu item that opens each mode (market-menu.tsx).
+export function editMenuLabel(mode: EditMarketMode): string {
+  return COPY[mode].trigger
+}
+
+// Opened from the market's "More actions" menu, so it has no trigger of its own: the menu holds
+// `open`, and focus goes back to the menu's button (`finalFocus`) when it closes.
 export function EditMarketDialog({
   marketId,
   title,
@@ -69,6 +75,9 @@ export function EditMarketDialog({
   canMoveClose = true,
   suggestions,
   popular,
+  open,
+  onOpenChange,
+  finalFocus,
 }: {
   marketId: string
   title: string
@@ -80,12 +89,14 @@ export function EditMarketDialog({
   canMoveClose?: boolean
   suggestions: string[]
   popular: string[]
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  finalFocus?: RefObject<HTMLElement | null>
 }) {
   const copy = COPY[mode]
   const wording = mode === 'edit'
   const hasCategory = mode !== 'reopen'
   const hasClose = mode === 'reopen' || (mode === 'edit' && canMoveClose)
-  const [open, setOpen] = useState(false)
   const [draftTitle, setDraftTitle] = useState(title)
   const [draftDescription, setDraftDescription] = useState(description ?? '')
   const [draftCategory, setDraftCategory] = useState(category)
@@ -93,6 +104,19 @@ export function EditMarketDialog({
   // seconds, so sending it untouched would move the close.
   const [shownClose, setShownClose] = useState('')
   const [draftClose, setDraftClose] = useState('')
+  // Each opening starts from the market as it stands, not from an edit that was cancelled.
+  const [wasOpen, setWasOpen] = useState(false)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) {
+      setDraftTitle(title)
+      setDraftDescription(description ?? '')
+      setDraftCategory(category)
+      const shown = mode === 'edit' ? localInputValue(closeAt, browserTimeZone()) : ''
+      setShownClose(shown)
+      setDraftClose(shown)
+    }
+  }
   const closeChanged = hasClose && (mode === 'reopen' || draftClose !== shownClose)
   const newClose = closeChanged ? instantOf(draftClose) : ''
   const confirm = useConfirmSubmit(() => closeChanged)
@@ -101,7 +125,7 @@ export function EditMarketDialog({
       async (prev: ActionState, formData: FormData) => {
         try {
           const next = await updateMarketAction(marketId, prev, formData)
-          if (next?.saved) setOpen(false)
+          if (next?.saved) onOpenChange(false)
           return next
         } finally {
           confirm.setOpen(false)
@@ -121,25 +145,12 @@ export function EditMarketDialog({
       open={open}
       onOpenChange={(next) => {
         if (isPending && !next) return
-        // Each opening starts from the market as it stands, not from an edit that was cancelled.
-        if (next) {
-          setDraftTitle(title)
-          setDraftDescription(description ?? '')
-          setDraftCategory(category)
-          const shown = mode === 'edit' ? localInputValue(closeAt, browserTimeZone()) : ''
-          setShownClose(shown)
-          setDraftClose(shown)
-        }
-        setOpen(next)
+        onOpenChange(next)
       }}
     >
-      <Dialog.Trigger className={`${buttonVariants({ variant: 'secondary', size: 'sm' })} self-start`}>
-        {mode === 'reopen' ? <CalendarClock aria-hidden="true" className="size-[18px]" /> : <Pencil aria-hidden="true" className="size-[18px]" />}
-        {copy.trigger}
-      </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Backdrop className={dialogBackdropClass} />
-        <Dialog.Popup className={cn(dialogPopupClass, 'max-w-[560px]')}>
+        <Dialog.Popup finalFocus={finalFocus} className={cn(dialogPopupClass, 'max-w-[560px]')}>
           <div className="flex flex-col gap-2">
             <Dialog.Title className={h2Class}>{copy.title}</Dialog.Title>
             <Dialog.Description className="text-ink2">{copy.description}</Dialog.Description>

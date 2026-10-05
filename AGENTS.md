@@ -38,27 +38,77 @@ a line to `CHANGELOG.md` under the next release.
 - **Tokens, never raw colours.** Colours come from the CSS variables in
   `app/globals.css`, through Tailwind utilities (`bg-surface`, `text-ink2`,
   `border-line` and so on). Light and dark are the same markup with
-  different variables.
+  different variables. In dark, links are the near-white ink and lime
+  *fills* mark only the primary action and first place; `acc-text` (dark
+  `#8BE651`) stays the positive and open text colour. Active navigation uses
+  `nav-active`, `tab-active` and `segment-active`, and a card or row title
+  link takes `text-ink`. In light, lime is a fill or brand only (the tab
+  bar's pill, first place), never text on the background nor a state shown
+  by colour alone. `StatusChip` tones come only from the semantic
+  tokens (`open` is acc-soft / acc-text, `won` win, `lost` loss, `wait`
+  gold, `done` and `void` sunk), never `primary`.
 - **Every signed-in page is a `<Page>`.** It lives in `components/ui/page.tsx`
   and has exactly one `<h1>`, from `PageHeader` or `h1Class`. Sections are
-  `SectionCard`s, whose `<h2>` names the region; a line under that heading
+  `SectionCard`s, whose `<h2>` names the region (a page of prose, like How it
+  works' short version, uses plain `<section>`s under `h2Class` instead); a line under that heading
   goes in its `description` slot, never a negative margin. Lists with
-  nothing in them render an `EmptyState`. The title of a row or tile in a
+  nothing in them render an `EmptyState`: no icon (the prop is optional
+  and no list passes one) and, wherever there is one, the next step as
+  its `action` (#387). The title of a row or card in a
   list is `rowTitleClass`, beside `h1Class`, `h2Class` and `eyebrowClass`;
-  don't add a `text-[Npx]` of your own.
-- **A list item that opens one thing is a `ListCard`; a sentence row
-  (feed) or data row (ledger) stays a divided row** (#328).
+  a figure is `figureHeroClass`, `figureClass` or `figureInlineClass`, and
+  the sizes between body and caption are `uiTextClass`, `chipTextClass` and
+  `microTextClass`. Don't add a `text-[Npx]` of your own (the sign-in page
+  and the brand mark (the wordmark and the beta badge) are the only
+  exceptions), nor a `rounded-[Npx]`: radii are
+  `rounded-segment` (10px), `-control`, `-tile`, `-card` or `-full`. A card
+  built by hand takes `cardPaddingClass` from `components/ui/card.tsx`.
+- **Numbers.** Every DC amount goes through `lib/format/dc.ts`
+  (`formatDc`, `formatDcAmount`, `formatSignedDcAmount`), which groups it
+  ("2,577,831 DC") and signs a change with a true minus; an amount cell is
+  `whitespace-nowrap`. `tabular-nums` only where numbers line up in a
+  column (the leaderboard's scores, the ledger, coin history, tooltips),
+  never on a lone figure.
+- **One container per list** (D2, #386; this supersedes #328's list
+  cards "inside a SectionCard"). A list that is a page's only content
+  drops the outer card: its `ListCard`s or rows sit straight on the page,
+  in a `ListSection` (`components/ui/list-section.tsx`) whose `h2` names
+  the region, visibly, or `titleHidden` only where a visible heading
+  would repeat the `h1` or the current tab. A list inside a real
+  `SectionCard` (a page with several sections) is divided rows
+  (`dividedRowsClass` / `dividedRowClass`), a row that opens one thing
+  taking `pressable hover-tint relative` and a `stretched-link` title:
+  never bordered cards inside the card.
+- **`ListCard` is for a standalone list on the page.**
   `components/ui/list-card.tsx`'s `ListCard` is the My bets parlay card: a
   `border-line` hairline, `rounded-tile` (`--radius-tile`, 14px), `p-3.5`
   / `md:p-4`, no shadow, tinting flush (`hover-tint [--tint-inset:0]`)
   rather than lifting. Its title link is a `stretched-link` and any other
-  control sits in a `relative z-[1]` wrapper; a card whose only controls
-  are its own buttons (a task, a submission to review) passes
-  `tappable={false}`. Inside a `SectionCard` the list is `listCardsClass`
-  (`flex flex-col gap-2`, no dividers), with its `lg:` grid added at the
-  call site. Something that isn't an `<li>` (a home tile's link) uses
-  `tappableListCardClass`. The feed, ledger, coin history, invites and a
-  market's bet list stay divided rows.
+  control sits in a `relative z-[1]` wrapper; a card that doesn't open
+  anything as a whole (a pick in the slip) passes `tappable={false}`. The list is
+  `listCardsClass` (`flex flex-col gap-2`, no dividers), with its `lg:`
+  grid added at the call site. Something that isn't an `<li>` uses
+  `tappableListCardClass`. My bets is list cards on the page; the
+  leaderboard, Activity and Tasks' groups are divided rows on the page;
+  Admin › Members is a table on the page (divided rows below `lg:`) and
+  the review queue a table in its card (#399); the task catalog,
+  categories, markets waiting to be resolved, the ledger, coin history,
+  invites, a market's bet list and Home's Your bets and Needs you are
+  divided rows.
+- **A chip only when it adds information the context doesn't** (#387).
+  A list filtered to one status shows no status chip on its items; a
+  category chip shows only while more than one category holds markets
+  and the list isn't narrowed to one. No emoji in chrome. An icon stays
+  only where it carries meaning (the tab bar and the menus' items, the
+  back arrow, the close X, `Message`'s marks, the Needs you chevrons, a
+  select's or disclosure's chevron, the plus on Add and Create market,
+  search, proof types, the Google G); other secondary buttons are text
+  only.
+- **Home's lists are uncarded on a phone** (#388, D1/D2). Your bets,
+  Activity and Needs you (`HomeSection`, `components/home/home-section.tsx`)
+  are rows on the page under an `<h2>` below `lg:`, and cards like a
+  `SectionCard` from `lg:`; Getting started, Turn on notifications and the
+  weekly recap stay cards at every width.
 - **Page widths come from `<Page width>`:** `wide` (default, 1120px of
   content) or `reading` (about 820px, centred), and a skeleton uses
   `pageClassFor(width)`. Don't cap a card's width inside a page; fill the
@@ -79,7 +129,7 @@ a line to `CHANGELOG.md` under the next release.
   form through its `form` attribute. A form with several submit buttons
   passes `useConfirmSubmit` a predicate naming which ones ask. The one
   exception is approving a single task submission from its row, which
-  stays a direct button (the e2e suite clicks the first "Approve");
+  stays a direct button (the e2e specs click a row's own "Approve");
   "Approve selected" confirms, saying how many it approves and what it pays.
 - **Controls.** Every control is a real `<button>`, `<a>` or `<label>`ed
   input, at least 44px tall. Selects and checkboxes stay native. When a
@@ -87,11 +137,41 @@ a line to `CHANGELOG.md` under the next release.
   at the call site. A standalone inline text link that acts as a primary
   tap target — a title link in a row, say — gets the `hit-area` utility:
   a 44px invisible tap area without growing the row. A link inside a
-  sentence doesn't need it.
+  sentence doesn't need it, unless the sentence is the row's only tap
+  target, as a feed row's names are (#395). An action that swaps the pressed control
+  for another (Add for Remove) moves focus to its replacement, and
+  every sheet traps focus while it's open: the slip also makes the page
+  behind it `inert` (`#app-shell`, `lib/ui/app-shell.ts`), since focus
+  guards alone leak under key repeat (#392).
 - **Links are underlined by default.** The base `a` rule underlines
   every link, matching the mockup (its links use the browser default
   underline). A link styled as a button, tab, tile, chip or nav item
-  carries `no-underline`.
+  carries `no-underline`. The one exception is a card or row title that
+  is a `stretched-link`: the utility drops its underline until it's
+  hovered or focused (#393), since the whole card is the tap target.
+- **Charts** (#391; the handoff's Charts section). A two-outcome market
+  draws one line, Yes or Over (`plottedOutcomes`), in `--s2`. Series
+  colours come from `outcomeSeries` (the race's from `memberSeries`, by
+  member id), and `--s1`…`--s5` are a palette validated as a set: change
+  one only after re-running the dataviz validator, then update the test in
+  `tests/lib/ui/contrast.test.ts`; `--s6` is `--line-s`. End labels are ink
+  with a series-coloured dot, gridlines solid `--line`, tooltips sorted by
+  value, points thinned by time (`chartWindow`'s `buckets`), Recharts
+  animation off, and every chart names how its lines moved
+  (`describeMovement`).
+- **A `PageHeader` description states a rule the page enforces,** not a
+  summary of the page (#400): Tasks keeps "Earn DC with Bible study. A reviewer checks each
+  one.";
+  most pages have none, and their skeleton draws no description line.
+- **Words we use** (#400). Member-facing text, docs for members and tests
+  say: **pick**, never "leg" (leg stays in code and in HOW-IT-WORKS' parlay
+  maths); **submission**, never "completion" (the table's name); **To
+  review** for submissions waiting, never "approvals"; a rank as **"218th
+  of 502"** (`rankText`, `lib/format/rank.ts`); **created** a market, never
+  "opened"; **Time to resolve** for a closed market without a result;
+  **called off**, never "voided", and **waiting for a result**, never
+  "awaiting resolution" (D7, #403; the database values `voided` and
+  `awaiting`, RPC names and the admin ledger's labels keep theirs).
 - **Visual source of truth:** `docs/design/app-redesign-handoff.md`, which
   describes the app as it is. The dated specs and plans in `docs/archive/`
   are history: they name things the code no longer has, so don't build
@@ -99,6 +179,11 @@ a line to `CHANGELOG.md` under the next release.
 
 ## Native feel and speed
 
+- **A transient banner never covers the page** (#401): the offline
+  banner is `fixed` under the top bar, and an invisible copy in the
+  page's flow (`OfflineSpacer`) reserves its height while it shows. The
+  banner itself renders outside `#app-shell` with an explicit
+  `aria-live`, so it stays announced while the slip makes the page inert.
 - **Skeletons, or a streamed Suspense.** Every signed-in route gets a
   `loading.tsx` skeleton (`SkeletonScreen`), unless a real 404 must
   survive the initial load, in which case it streams behind `<Suspense>`
@@ -111,15 +196,40 @@ a line to `CHANGELOG.md` under the next release.
   `display: contents` wrapper announcing one status scoped to its own
   subtree, for as long as any of its fallbacks is still showing — as the
   market page does. A route-level `loading.tsx` keeps its own single
-  status.
+  status. A skeleton draws only blocks that always render, at their real
+  height at 375 and 1280 (a text line is a box as tall as the line, a
+  header description 24px lines, two below `md:`), so nothing jumps when
+  the page arrives (#401). A block that shows only sometimes streams
+  behind a `<Suspense fallback={null}>` instead, as Home's Needs you and
+  Getting started do (#388).
 - **Drill-down pages** pass `Page`'s `transition="drill-down"`, which
   also enables the back-swipe; its logical parents live in
   `lib/nav/back-swipe.ts`.
+- **Tab switches swap at once** (#384). A link to a tab (the nav, the tab
+  bar, `SubNav`) passes `transitionTypes={TAB_TRANSITION}`
+  (`components/nav/page-transition.tsx`), which turns the view transition
+  off; a link into a drill-down passes `['nav-forward']`. Pages stay in the
+  client router's cache for 30s (`experimental.staleTimes.dynamic` in
+  `next.config.ts`): a revisited page shows its cached copy at once, then
+  refreshes in place, because every page passes `<LiveTables
+  renderedAt={renderStamp()}>` and `LiveRefresh` refreshes a page whose
+  render is over 2s old when it mounts. While you're on a page, live
+  updates refresh it; your own actions revalidate (every money action and
+  creating a market call `revalidatePath`, which clears the client cache),
+  so a new action that changes what another page lists does too. This
+  fits #251: a revisit costs the same one render as before, just after
+  the page shows, and nothing prefetches more than before.
+- **Pending state is UI, not data.** The nav's pill moves to a tapped tab
+  as its navigation starts (`useLinkStatus`), and `IntentLink` marks a
+  pending link so `globals.css` dims its card or control (`pendingMarker`;
+  the nav passes `false`). That isn't an optimistic update, so it doesn't
+  break "Never optimistic".
 - **Prefetch on intent.** The nav, `SubNav` and dense list rows link
   through `IntentLink`, which prefetches on hover or focus (and on touch
   for the nav and `SubNav`) instead of on sight: every signed-in page is
   dynamic, so each viewport prefetch is a server render on Vercel's
-  budget (#251).
+  budget (#251). The 30s client cache (above) keeps a visited page, not a
+  prefetch on sight, so it doesn't reopen #251.
 - **Signed-out redirects** live in `proxy.ts`, and a new `(app)` section
   must be added to `lib/auth/app-paths.ts` (a test guards the drift).
 - **The brand mark's art** lives in `components/brand/symbol-paths.ts`.
@@ -137,6 +247,13 @@ a line to `CHANGELOG.md` under the next release.
   changes to the shell in the simulator's installed app, not just Safari:
   `npm run check:ios` cold-launches the installed app on a booted
   simulator and fails on a short viewport (`--video` records the launch).
+- **Zoom is locked only in the installed app** (D6, #402). A browser tab
+  must keep pinch-zoom (low-vision members need it), so never put
+  `maximum-scale` or `user-scalable` in `siteViewport`, and never set
+  `touch-action` that excludes pinch-zoom outside `display-mode:
+  standalone`. `StandaloneZoomLock` adds the lock to the viewport meta in
+  standalone, where a zoomed page displaces the fixed bars; check shell
+  changes with `npm run check:ios`.
 - **The `pressable` and `no-callout` utilities,** plus the `--safe-top` /
   `--safe-bottom` tokens, which are non-zero only in standalone mode.
   Every tap target is `pressable`. A card or row that one link makes
@@ -147,8 +264,9 @@ a line to `CHANGELOG.md` under the next release.
   another control or finished a text selection); any other control in
   the card sits in a `relative z-[1]` wrapper. `press-feedback.test.tsx`
   guards the listed components. Under a mouse (`(hover: hover) and
-  (pointer: fine)`), `pressable` also grows a control to 103%; a
-  standalone card adds `hover-lift` to lift onto `--lift-shadow` instead.
+  (pointer: fine)`) a `pressable` only changes colour; nothing grows on
+  hover (#383 reversed #155's 103%, which fought the sliding pills). A
+  standalone card adds `hover-lift` to lift onto `--lift-shadow`.
   A row or tile *inside* a card never lifts (#244: a card floating in a
   card reads as a button in a button): it takes `hover-tint`, a flat
   `--sunk` panel drawn a little wider than a divided list's row, or flush
@@ -160,8 +278,13 @@ a line to `CHANGELOG.md` under the next release.
   `duration-(--duration-fast)` in markup), mirrored for script by
   `lib/ui/motion.ts` (`EASE`, `DURATION`, `PILL_SLIDE`, `PILL_TRANSITION`);
   a test keeps them equal and fails on a `cubic-bezier` anywhere else.
-  Every sliding pill uses the pill slide, and every dialog takes
-  `components/ui/dialog-classes.ts`.
+  Every sliding pill uses the pill slide, and a nav or tab-bar link it
+  slides under takes `pill-label`, so its colour cross-fades over the same
+  280ms; every
+  dialog takes `components/ui/dialog-classes.ts`. Reduced motion turns page
+  transitions into a `--duration-fast` cross-fade, never a cut. Times in
+  CSS that script also keeps (the sign-in intro's) are custom properties
+  script writes from its constants, not copies.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.
 - **Every action that creates something is retry-safe,** not only the ones
   that move coins: `experimental.useOffline` replays an action whose
@@ -180,10 +303,16 @@ a line to `CHANGELOG.md` under the next release.
   set by the root layout before any JS runs. `motion-reduce:` covers both
   the device setting and Settings' choice; plain CSS repeats each
   `prefers-reduced-motion` rule under `:root[data-motion="reduce"]`; an
-  animated number uses `AnimatedNumber`, never `NumberFlow` directly, and
+  animated number uses `AnimatedNumber`, never `NumberFlow` directly (it
+  counts only on a change after mount, never on first render), and
   script checks `reducedMotion()` from `lib/ui/reduced-motion.ts`.
 - **Segmented tabs are `SubNav`** (`components/ui/sub-nav.tsx`, a client
   component whose pill slides between tabs), with tab state in the URL, as My bets' `?tab=` and the admin sections do.
+  `SubNav` is built on `SegmentedControl` (`components/ui/segmented-control.tsx`),
+  which every segmented control uses: one `rounded-tile` track, `rounded-segment`
+  segments, and one pill sliding on `PILL_SLIDE`. A local control (the theme,
+  the slip's Solo/Parlay, the chart's range) keeps its own semantics (radios,
+  pressed buttons) and marks its chosen segment with `segmentMarker`.
 - **Markets are LMSR** (0101, 0102, 0105). `create_market_v3`/`v4` make every
   new market `pricing = 'lmsr'`, 0105 converted every open pool market, and
   every money function branches on `markets.pricing`. The price is the chance
@@ -272,14 +401,17 @@ a line to `CHANGELOG.md` under the next release.
   optional `fresh` prop — pass `fresh` when `next.kind === 'window'`, so a
   fresh window scrolls to the top — `focusId`, `rowDomId(prefix,
   next.firstId)`, and an optional `description` for a page that has more
-  than one "Show more" on it. Each row spreads
+  than one "Show more" on it. While its navigation is pending
+  (`useLinkStatus`) its label reads "Loading…" and is marked `aria-busy`. Each row spreads
   `focusTarget(rowDomId(prefix, row.id))` (`lib/pagination/row-id.ts`); a
   row whose content is long enough to make a verbose accessible name (a
   card) instead passes `focusTarget(domId, labelId)`, naming itself from
   its title. The page renders one `<ShowMoreFocus />`, and a window that
   comes back empty renders `NothingOlder` instead of the list's empty
   state. A reader whose row select carries embeds passes `readKeyset` a
-  keys-only `fetchKeys` for its probe. An order that isn't
+  keys-only `fetchKeys` for its probe. A page is 50 rows (`PAGE_SIZE`); a
+  list with sections under it on the same page can pass a smaller page
+  size, as a market's bets do (10, #390). An order that isn't
   `(timestamp, id)` — the leaderboard's rank — reads through
   `readOrdered` with its own `KeysetOrder`, `lib/pagination/rank-cursor.ts`'s
   `RANK_ORDER`, instead of `readKeyset`.
@@ -321,10 +453,15 @@ a line to `CHANGELOG.md` under the next release.
 - **Every level has an error page** — `app/(app)/error.tsx`,
   `app/error.tsx` and `app/global-error.tsx` — rendering
   `components/ui/error-card.tsx`'s `ErrorCard`, whose "Try again" calls
-  Next 16's `retry()`.
+  Next 16's `retry()`, beside a plain "Go to Home" link (#401).
 - **A new member-entered text column** gets a length CHECK in a
   migration, a `TEXT_LIMITS` entry in `lib/forms/limits.ts`, `maxLength`
   on its input, and a `tooLong` check in its server action.
+- **Every member-facing error says what to do next,** and nothing from
+  Postgres reaches a member unmapped (#400): an action maps known raises
+  through `friendlyError` or its own table (the slip's is
+  `parseSlipError`), logs anything else and shows `GENERIC_ERROR`. A
+  signed-out action returns `SIGNED_OUT_ERROR` (`lib/errors/friendly-error.ts`).
 - **A new required env var** goes in `lib/env/required.ts`. A
   production-only one must be set in Vercel before merging, or
   production won't boot. Supabase keys are the publishable and secret
@@ -347,7 +484,7 @@ a line to `CHANGELOG.md` under the next release.
   on its own. `FeedList` skips a kind it doesn't know, so a new kind reaches
   the database before the build that renders it without breaking the feed. No trigger watches `market_resolutions`. A feed
   row is a sentence, not a card: its member and market names are its links
-  and tap targets, and the row itself doesn't press, lift or open anything
+  and tap targets (each with `hit-area`), and the row itself doesn't press, lift or open anything
   (decided in #187), since one row can name two destinations.
 - **Members can't select `activity_feed`** since 0036. It stays only as
   the DB tests' equivalence oracle, and tests read it through the service

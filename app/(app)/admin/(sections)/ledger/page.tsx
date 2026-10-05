@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { NotebookText } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { listAllTransactions } from '@/lib/ledger/list-transactions'
@@ -8,6 +7,7 @@ import { readEconomySummary } from '@/lib/economy/summary'
 import { newestHref, readPageParams, showMoreHref } from '@/lib/pagination/cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
 import { cardClass } from '@/components/ui/card'
+import { h2Class } from '@/components/ui/page'
 import { LedgerRow } from '@/components/admin/ledger-row'
 import { EconomyCard } from '@/components/admin/economy-card'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -61,7 +61,7 @@ export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>)
         </p>
       )}
       <section aria-labelledby="ledger-title" className={cn(cardClass, 'px-[18px] py-1 md:px-6')}>
-        <h2 id="ledger-title" className="sr-only">
+        <h2 id="ledger-title" className={cn(h2Class, 'pt-[18px] pb-1 md:pt-6')}>
           {member ? `${member.name}’s coin movements` : 'Every coin movement'}
         </h2>
         <ShowMoreFocus />
@@ -75,7 +75,7 @@ export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>)
             {ledger.windowed ? (
               <NothingOlder href={backToNewestHref} />
             ) : (
-              <EmptyState icon={NotebookText} title={member ? `No coin movements for ${member.name} yet.` : 'No coin movements yet.'} />
+              <EmptyState title={member ? `No coin movements for ${member.name} yet.` : 'No coin movements yet.'} />
             )}
           </div>
         ) : (

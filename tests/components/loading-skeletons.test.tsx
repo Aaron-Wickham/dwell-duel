@@ -15,6 +15,7 @@ import TasksLoading from '@/app/(app)/tasks/loading'
 import ProfileLoading from '@/app/(app)/profile/loading'
 import SettingsLoading from '@/app/(app)/settings/loading'
 import HowItWorksLoading from '@/app/(app)/how-it-works/loading'
+import HowItWorksRulesLoading from '@/app/(app)/how-it-works/rules/loading'
 import FeedLoading from '@/app/(app)/feed/loading'
 import LeaderboardLoading from '@/app/(app)/leaderboard/loading'
 import AdminInvitesLoading from '@/app/(app)/admin/(sections)/invites/loading'
@@ -32,6 +33,7 @@ const SKELETONS: [string, ComponentType][] = [
   ['profile', ProfileLoading],
   ['settings', SettingsLoading],
   ['how-it-works', HowItWorksLoading],
+  ['how-it-works-rules', HowItWorksRulesLoading],
   ['feed', FeedLoading],
   ['leaderboard', LeaderboardLoading],
   ['admin-invites', AdminInvitesLoading],
@@ -68,6 +70,9 @@ describe('skeletons of reading-width pages', () => {
   it.each([
     ['feed', FeedLoading],
     ['how-it-works', HowItWorksLoading],
+    ['how-it-works-rules', HowItWorksRulesLoading],
+    ['settings', SettingsLoading],
+    ['profile', ProfileLoading],
   ] as const)('the %s skeleton is centred at the reading width, like its page', (name, Loading) => {
     const { container } = render(<Loading />)
     expect(container.querySelector(`[data-skeleton="${name}"]`)).toHaveClass('max-w-[980px]', 'mx-auto')
@@ -84,7 +89,7 @@ describe('skeletons match their pages', () => {
     const { container } = render(<MarketsLoading />)
     const bar = withClass(container, 'h-[52px]')
     expect(bar).toHaveLength(1)
-    expect(bar[0]).toHaveClass('rounded-[14px]', 'md:w-80')
+    expect(bar[0]).toHaveClass('rounded-tile', 'md:w-[276px]')
     expect(container.querySelector('.lg\\:grid-cols-3')).not.toBeNull()
   })
 
@@ -99,47 +104,71 @@ describe('skeletons match their pages', () => {
       expect.stringContaining('order-3'),
     ])
     expect(withClass(container, 'h-[72px]')).toHaveLength(1)
-    expect(container.querySelectorAll('.rounded-tile.border-line')).toHaveLength(6)
+    // The rankings are divided rows on the page (D2), not list cards.
+    expect(container.querySelectorAll('.rounded-tile.border-line')).toHaveLength(0)
+    expect(container.querySelector('.divide-y')!.children).toHaveLength(8)
   })
 
-  it('the leaderboard skeleton puts a side card beside the rankings at lg', () => {
+  it('the leaderboard skeleton puts the podium and Your standing in a side column at lg', () => {
     const { container } = render(<LeaderboardLoading />)
     const grid = container.querySelector('[class*="lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]"]')!
     expect(grid.children).toHaveLength(2)
-    expect(grid.children[1]).toHaveClass('hidden', 'lg:flex')
+    const [side, rankings] = [...grid.children]
+    expect(side).toHaveClass('lg:col-start-2')
+    expect(side.querySelector('.items-end.justify-center')).not.toBeNull()
+    expect(side.lastElementChild).toHaveClass('hidden', 'lg:flex')
+    expect(rankings).toHaveClass('divide-y', 'lg:col-start-1')
   })
 
-  it('the home skeleton draws one stat tile and the six tiles every member sees', () => {
+  // #388: only what every member sees, so nothing conditional: Your bets' and Activity's three
+  // rows each, and the Balance card, shown from lg.
+  it('the home skeleton draws Your bets and Activity with three rows each, and the desktop Balance card', () => {
     const { container } = render(<HomeLoading />)
-    expect(container.querySelector('.grid-cols-1')?.children).toHaveLength(1)
-    expect(container.querySelector('.grid-cols-2')).toBeNull()
-    expect(container.querySelectorAll('.min-h-\\[72px\\]')).toHaveLength(6)
+    const lists = container.querySelectorAll('.divide-y')
+    expect(lists).toHaveLength(2)
+    for (const list of lists) expect(list.children).toHaveLength(3)
+    expect(container.querySelector('.bg-acc-soft')).toHaveClass('hidden', 'lg:flex')
   })
 
-  it('the feed skeleton draws four reaction pills under every row', () => {
+  // #395: a row shows only the reactions someone used, plus one React button.
+  it('the feed skeleton draws one React button under every row’s age', () => {
     const { container } = render(<FeedLoading />)
     const rows = container.querySelectorAll('[data-skeleton-reactions]')
     expect(rows).toHaveLength(6)
-    for (const row of rows) expect(row.querySelectorAll('.skeleton.rounded-full.h-11')).toHaveLength(4)
+    for (const row of rows) expect(row.querySelectorAll('.skeleton.rounded-full.size-6')).toHaveLength(1)
   })
 
   it('the settings skeleton draws the theme legend and hint, and every notification kind', () => {
     const { container } = render(<SettingsLoading />)
     const cards = container.querySelectorAll('.rounded-card')
     const segmented = cards[0].querySelector('.h-\\[52px\\]')!
-    expect(segmented.previousElementSibling).toHaveClass('mb-1.5')
-    expect(segmented.nextElementSibling).toHaveClass('h-5')
-    const notifications = cards[3]
+    // The legend keeps its own margin and sits outside the gap, as a <fieldset> lays one out.
+    expect(segmented.parentElement!.previousElementSibling).toHaveClass('mb-1.5', 'h-[23px]')
+    expect(segmented.nextElementSibling!.firstElementChild).toHaveClass('h-5')
+    // Appearance & motion holds the two toggles too (#398).
+    expect(cards[0].querySelectorAll('.size-\\[22px\\]')).toHaveLength(2)
+    const notifications = cards[1]
     expect(notifications.querySelectorAll('.size-\\[22px\\]')).toHaveLength(4)
     // The device status button and the save button.
     expect(notifications.querySelectorAll('.skeleton.h-11')).toHaveLength(2)
+    // A hint is indented by its wrapper's padding, never a margin beside w-full that overflows (ST-6).
+    expect(container.querySelector('.skeleton.ml-8')).toBeNull()
+    expect(container.querySelectorAll('.pl-8')).toHaveLength(6)
+    // Each line of text is a box as tall as the line, so the card is as tall as the page's (#398).
+    for (const line of container.querySelectorAll('.pl-8 .skeleton')) expect(line.parentElement).toHaveClass('h-5')
   })
 
-  it('the edit-profile skeleton previews a heading, its description and a name as wide as a name', () => {
+  it('the edit-profile skeleton is one card: photo, name, bio and Save (#397)', () => {
     const { container } = render(<ProfileLoading />)
-    const preview = container.querySelectorAll('.rounded-card')[1]
-    expect(preview.querySelector('.h-6')).not.toBeNull()
-    expect(preview.querySelector('.h-5.w-72')).not.toBeNull()
-    expect(preview.querySelector('.size-20 + .h-11.w-56')).not.toBeNull()
+    const cards = container.querySelectorAll('.rounded-card')
+    expect(cards).toHaveLength(1)
+    expect(cards[0].querySelector('.rounded-full + .h-11')).not.toBeNull()
+    expect(cards[0].querySelector('.h-\\[100px\\]')).not.toBeNull()
+  })
+
+  it('the how-it-works skeleton draws four short sections and four questions, with no cards (#398)', () => {
+    const { container } = render(<HowItWorksLoading />)
+    expect(container.querySelectorAll('.rounded-card')).toHaveLength(0)
+    expect(container.querySelector('.divide-y')!.children).toHaveLength(4)
   })
 })

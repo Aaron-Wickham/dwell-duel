@@ -198,7 +198,7 @@ describe('placeSlipAction', () => {
     rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: `pick ${A}: market is not open for betting` } })
 
     const result = await placeSlipAction(undefined, form([['pick', `${A}:solo`], ['stake:' + A, '3']]))
-    expect(result).toEqual({ pickErrors: { [A]: 'Market is not open for betting.' } })
+    expect(result).toEqual({ pickErrors: { [A]: 'This market has closed. Remove it from your slip to place the rest.' } })
     expect(writeSlip).not.toHaveBeenCalled()
   })
 
@@ -216,12 +216,12 @@ describe('placeSlipAction', () => {
     from.mockReturnValue({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { balance: 7 } }) }) }) })
 
     const result = await placeSlipAction(undefined, form([['pick', `${A}:solo`], ['stake:' + A, '30']]))
-    expect(result).toEqual({ formError: 'Insufficient balance — you have 7 DC. Try a smaller amount.' })
+    expect(result).toEqual({ formError: 'You have 7 DC, 23 DC short. Try a smaller stake.' })
   })
 
   it('refuses an empty slip and a signed-out member', async () => {
     expect(await placeSlipAction(undefined, form([]))).toEqual({ formError: 'Your slip is empty.' })
     userHolder.current = null
-    expect(await placeSlipAction(undefined, form([['pick', `${A}:solo`]]))).toEqual({ formError: 'Not signed in.' })
+    expect(await placeSlipAction(undefined, form([['pick', `${A}:solo`]]))).toEqual({ formError: 'You’re signed out. Sign in again.' })
   })
 })

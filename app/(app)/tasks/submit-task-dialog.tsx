@@ -2,7 +2,6 @@
 
 import { useActionState, useOptimistic, useState } from 'react'
 import { Dialog } from '@base-ui/react/dialog'
-import { PendingReviewChip } from '@/components/tasks/task-row'
 import { ProofPicker } from '@/components/proof/proof-picker'
 import { buttonVariants } from '@/components/ui/button'
 import { dialogBackdropClass, dialogPopupClass } from '@/components/ui/dialog-classes'
@@ -18,19 +17,21 @@ import { cn } from '@/lib/utils'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { submitTaskCompletionAction, type ActionState } from '@/lib/tasks/submit-task-completion'
 
-// "I did this" opens a dialog for an optional note and proof (photos, a document, links). Files
-// upload from the browser first, then the action records them with the submission; if the
-// submission fails, the uploads are removed again.
+// "I did this" (or "Try again" after a rejection) opens a dialog for an optional note and proof
+// (photos, a document, links). Files upload from the browser first, then the action records them
+// with the submission; if the submission fails, the uploads are removed again.
 export function SubmitTaskDialog({
   taskId,
   taskTitle,
   memberId,
   proofRequired,
+  label = 'I did this',
 }: {
   taskId: string
   taskTitle: string
   memberId: string
   proofRequired: boolean
+  label?: 'I did this' | 'Try again'
 }) {
   const [open, setOpen] = useState(false)
   const [drafts, setDrafts] = useState<ProofDraft[]>([])
@@ -66,10 +67,11 @@ export function SubmitTaskDialog({
   const errorId = `${id}-error`
   const hintId = `${id}-hint`
 
-  // TaskRow renders this only while the task is available; once the server has the submission the
-  // row shows its own chip in the same render that ends `submitting`. Until then the chip stands in
-  // for the trigger here, with the dialog still mounted and closed: unmounting it open would drop
-  // focus on <body>, and its trigger is gone, so the dialog hands focus to the page heading instead.
+  // TaskRow renders this only for a task to do or to try again; once the server has the submission
+  // the row moves to Waiting for review in the same render that ends `submitting`. Until then
+  // "Sent for review" stands in for the trigger here, with the dialog still mounted and closed:
+  // unmounting it open would drop focus on <body>, and its trigger is gone, so the dialog hands
+  // focus to the page heading instead.
   return (
     <Dialog.Root
       open={open && !submitting}
@@ -79,10 +81,12 @@ export function SubmitTaskDialog({
       }}
     >
       {submitting ? (
-        <PendingReviewChip />
+        <span className="text-sm font-bold text-ink2">Sent for review</span>
       ) : (
-        <Dialog.Trigger className={buttonVariants({ size: 'sm' })}>
-          I did this<span className="sr-only">, {taskTitle}</span>
+        // Secondary: one primary button per row made twenty equal calls to action (#394).
+        <Dialog.Trigger className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+          {label}
+          <span className="sr-only">, {taskTitle}</span>
         </Dialog.Trigger>
       )}
       <Dialog.Portal>

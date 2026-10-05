@@ -39,6 +39,16 @@ describe('adminHref', () => {
     expect(adminHref('reviewer')).toBe('/admin/tasks')
     expect(adminHref('member')).toBeNull()
   })
+
+  // #385: Admin opens where the work is, task submissions first.
+  it('opens the section with work waiting, task submissions first', () => {
+    expect(adminHref('owner', { tasks: 2, markets: 3 })).toBe('/admin/tasks')
+    expect(adminHref('admin', { tasks: 0, markets: 3 })).toBe('/admin/markets')
+    expect(adminHref('admin', { tasks: 0, markets: 0 })).toBe('/admin/invites')
+    expect(adminHref('reviewer', { tasks: 4, markets: 0 })).toBe('/admin/tasks')
+    expect(adminHref('reviewer', { tasks: 0, markets: 2 })).toBe('/admin/tasks')
+    expect(adminHref('member', { tasks: 4, markets: 2 })).toBeNull()
+  })
 })
 
 describe('isRole', () => {

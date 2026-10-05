@@ -1,6 +1,7 @@
 import { reportError } from '@/lib/observability/report'
 
 export const GENERIC_ERROR = 'Something went wrong. Try again.'
+export const SIGNED_OUT_ERROR = 'You’re signed out. Sign in again.'
 
 // `match` is either an RPC's exact `raise exception` text or a constraint's name, which Postgres
 // quotes inside a check or unique violation's message.

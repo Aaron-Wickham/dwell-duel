@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { Manrope } from 'next/font/google'
-import { ErrorCard, useReportError } from '@/components/ui/error-card'
+import { ERROR_TITLE, ErrorCard, useReportError } from '@/components/ui/error-card'
 import './globals.css'
 
 const manrope = Manrope({
@@ -30,7 +30,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
   return (
     <html lang="en" suppressHydrationWarning className={`${manrope.variable} h-full`}>
       <body className="flex min-h-full flex-col">
-        <title>Something went wrong</title>
+        <title>{ERROR_TITLE}</title>
         <main id="main" className="flex flex-1 flex-col">
           <ErrorCard retry={retry} digest={error.digest} />
         </main>

@@ -18,6 +18,7 @@ export function logicalParent(pathname: string): string {
   if (first === 'admin' && second === 'members' && third) return '/admin/members'
   if (first === 'markets' && second) return '/markets'
   if (first === 'members' && second) return '/leaderboard'
+  if (first === 'how-it-works' && second) return '/how-it-works'
   if (first === 'parlays' && second) return '/bets'
   return '/'
 }

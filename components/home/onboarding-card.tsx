@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { TAB_TRANSITION } from '@/components/nav/page-transition'
 import { Check } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { cardClass } from '@/components/ui/card'
+import { cardClass, cardPaddingClass } from '@/components/ui/card'
 import { h2Class } from '@/components/ui/page'
 import { dismissOnboardingAction } from '@/lib/home/dismiss-onboarding'
 import type { OnboardingSteps } from '@/lib/home/onboarding'
@@ -25,7 +26,7 @@ const STEPS: {
   href: string
   drillDown?: boolean
 }[] = [
-  { key: 'learn', title: 'Learn how DwellDuel works', hint: 'Two-minute read: Dwell Coin, odds and parlays.', cta: 'Read', href: '/how-it-works', drillDown: true },
+  { key: 'learn', title: 'Learn how DwellDuel works', hint: 'Betting, parlays and earning DC, in short.', cta: 'Read', href: '/how-it-works', drillDown: true },
   // Settings handles every device state (not installed on iOS, unsupported, blocked), so the step
   // only points there.
   { key: 'notify', title: 'Turn on notifications', hint: 'Hear when your markets close and your bets pay.', cta: 'Turn on', href: NOTIFICATIONS_HREF, drillDown: true },
@@ -54,7 +55,7 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
   }
 
   return (
-    <section aria-labelledby="onboarding-title" className={cn(cardClass, 'flex flex-col gap-3 p-[18px] md:p-6')}>
+    <section aria-labelledby="onboarding-title" className={cn(cardClass, `flex flex-col gap-3 ${cardPaddingClass}`)}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <h2 id="onboarding-title" className={h2Class}>
@@ -64,7 +65,7 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
             {doneCount} of {shown.length} done
           </p>
         </div>
-        <Button variant="quiet" size="sm" onClick={dismiss}>
+        <Button variant="quiet" size="sm" onClick={dismiss} aria-label="Dismiss getting started">
           Dismiss
         </Button>
       </div>
@@ -86,13 +87,16 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
                 </span>
               )}
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className={cn('font-extrabold', stepDone && 'text-ink2 line-through')}>{step.title}</span>
+                <span id={`onboarding-step-${step.key}`} className={cn('font-extrabold', stepDone && 'text-ink2 line-through')}>
+                  {step.title}
+                </span>
                 {stepDone ? <span className="sr-only">Done</span> : <span className="text-sm text-ink2">{step.hint}</span>}
               </div>
               {!stepDone && (
                 <Link
                   href={step.href}
-                  transitionTypes={step.drillDown ? ['nav-forward'] : undefined}
+                  transitionTypes={step.drillDown ? ['nav-forward'] : TAB_TRANSITION}
+                  aria-describedby={`onboarding-step-${step.key}`}
                   className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'shrink-0 no-underline')}
                 >
                   {step.cta}

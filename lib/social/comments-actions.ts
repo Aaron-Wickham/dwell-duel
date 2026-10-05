@@ -2,7 +2,7 @@
 
 import { refresh } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
-import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
+import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { RATE_LIMIT_ERRORS, TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { isUuid } from '@/lib/uuid'
 
@@ -12,7 +12,7 @@ export type CommentState = { formError?: string; posted?: boolean } | undefined
 
 export async function postCommentAction(marketId: string, _prev: CommentState, formData: FormData): Promise<CommentState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
   if (!isUuid(marketId)) return { formError: 'This market no longer exists.' }
 
   // A textarea's newlines arrive as CRLF once the browser serialises the form, doubling up
@@ -51,7 +51,7 @@ const DELETE_COMMENT_ERRORS: readonly KnownError<never>[] = [
 // delete_market_comment (0053) decides who may: the author, or an admin or the owner.
 export async function deleteCommentAction(commentId: number, _prev: DeleteCommentState, _formData: FormData): Promise<DeleteCommentState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const { error } = await supabase.rpc('delete_market_comment', { p_comment_id: commentId })
   if (error) return friendlyError(error, DELETE_COMMENT_ERRORS, 'delete_market_comment failed')

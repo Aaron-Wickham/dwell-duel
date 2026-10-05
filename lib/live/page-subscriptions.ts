@@ -26,14 +26,17 @@ export const pageSubscriptions = {
   markets(): LiveSubscription[] {
     return [{ topic: 'markets' }, { topic: 'pools' }]
   },
-  // The HomeHero's pending-review count and the admin tile's pending-approvals count both only
-  // change via task_completions -- a rejection moves no balance, so bets/profiles don't cover it.
-  // A reviewer or above needs every submission; a member only needs their own.
+  // Needs you's task submissions to review only change via task_completions -- a rejection moves
+  // no balance, so bets/profiles don't cover it. A reviewer or above needs every submission (the
+  // reviews topic); a member only needs their own, for Getting started's task step.
   // profiles isn't watched here: every bet moves some balance, so watching all of them refreshed
   // every open Home on every bet (#68). The layout's base channel already follows this member's
   // own profile; the rank catches up on the next visit.
-  // The hero's At stake moves when the member bets or places a parlay, and when a market
-  // or parlay settles (markets, and parlays' own status).
+  // Your bets and what's riding move when the member bets or places a parlay, and when a market
+  // or parlay settles (markets, and parlays' own status). Activity, the feed's newest rows (#388),
+  // doesn't follow the activity topic: every bet pings it, and Home is the most-opened page, so
+  // that would bring back #68's refresh-on-every-bet and its Vercel cost. It catches up with any
+  // of these refreshes, and /feed stays live. tasks carries what tasks pay, which a member at 0 DC sees.
   home({ me, reviewer }: { me: string; reviewer: boolean }): LiveSubscription[] {
     return [
       { topic: 'markets' },

@@ -1,14 +1,24 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 
 const INTERACTIVE = 'a, button, input, select, textarea, label, summary, [role="button"]'
 
 // Under a mouse, `stretched-link` drops its cover so a card's text can be selected, so the card's
 // click is handled here instead, for every card at once: one listener, not one per server-rendered card.
+// The card carries data-card-pending until its page arrives, which globals.css dims as it does a
+// tapped link's card (#384).
 export function CardLinkClick() {
   const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  const pendingCard = useRef<Element | null>(null)
+
+  useEffect(() => {
+    if (pending) return
+    pendingCard.current?.removeAttribute('data-card-pending')
+    pendingCard.current = null
+  }, [pending])
 
   useEffect(() => {
     const mouse = window.matchMedia('(pointer: fine)')
@@ -32,7 +42,10 @@ export function CardLinkClick() {
         event.preventDefault()
         window.open(link.href, '_blank')
       } else {
-        router.push(link.getAttribute('href')!, { transitionTypes: ['nav-forward'] })
+        pendingCard.current?.removeAttribute('data-card-pending')
+        card.setAttribute('data-card-pending', '')
+        pendingCard.current = card
+        startTransition(() => router.push(link.getAttribute('href')!, { transitionTypes: ['nav-forward'] }))
       }
     }
 

@@ -20,8 +20,11 @@ Every rule below is in AGENTS.md; this is the order to apply them in for a new p
 3. **Shape it.** The page returns one `<Page>` (`components/ui/page.tsx`) with exactly one `<h1>`,
    from `PageHeader` or `h1Class`. `width` is `wide` (default) or `reading`; don't cap a card's
    width inside it. Regions are `SectionCard`s whose `<h2>` names the region (a line under it goes in
-   `description`). An empty list renders `EmptyState`. A list item that opens one thing is a
-   `ListCard` in `listCardsClass`; a sentence (feed) or data (ledger) row stays a divided row.
+   `description`). An empty list renders `EmptyState`. One container per list (D2, #386): a list
+   that is the page's only content sits on the page in a `ListSection`, with no card around it; a
+   list inside a `SectionCard` is divided rows, never cards in the card. A standalone list whose
+   items each open one thing can be `ListCard`s in `listCardsClass`; a sentence (feed) or data
+   (ledger) row stays a divided row.
    Tokens only (`bg-surface`, `text-ink2`…), no raw colours or `text-[Npx]`. Type and padding
    switch at `md:`, grids at `lg:`.
 4. **Drill-down or tab.** A page reached from another page (a detail, settings, a form) passes

@@ -6,7 +6,6 @@ import { readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/k
 import { isUuid } from '@/lib/uuid'
 import { likePattern } from '@/lib/markets/search'
 import type { MarketCategory } from '@/lib/markets/categories'
-import type { MarketFilter } from '@/lib/markets/status-filter'
 
 export interface MarketSummary {
   id: string
@@ -26,6 +25,8 @@ export interface MarketSummary {
   // When it stopped being open (0066): the first resolution or the void; null while open.
   settledAt: string | null
   outcomes: PricedOutcome[]
+  // Solo bets on it, as the market page's chart caption counts them.
+  betCount: number
   // Moves whenever the card's sparkline can (#252): with every bet or cancellation while the
   // market is open (0095's pool_version), and never once it has settled.
   sparkVersion: string
@@ -35,7 +36,7 @@ export interface MarketSummary {
 // second `.in()` whose URL would grow with the list. The hint names the foreign key because
 // market_resolutions also points back at markets through market_id.
 const SUMMARY_SELECT =
-  'id, title, kind, status, close_at, created_at, settled_at, seed_per_outcome, pricing, liquidity, line, edited_at, category:market_categories(name, slug), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at), market_outcomes(id, label, pool_total, pool_version, shares, q_offset)'
+  'id, title, kind, status, close_at, created_at, settled_at, seed_per_outcome, pricing, liquidity, line, edited_at, category:market_categories(name, slug), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at), market_outcomes(id, label, pool_total, pool_version, shares, q_offset), bets(count)'
 
 type SummaryRow = {
   id: string
@@ -53,6 +54,7 @@ type SummaryRow = {
   category: MarketCategory | null
   current_resolution: { outcome_id: string; resolved_at: string } | null
   market_outcomes: { id: string; label: string; pool_total: number; pool_version: number; shares: number; q_offset: number }[] | null
+  bets: { count: number }[] | null
 }
 
 function sparkVersion(m: SummaryRow): string {
@@ -86,6 +88,7 @@ function toSummary(m: SummaryRow): MarketSummary {
     resolvedAt: resolution?.resolved_at ?? null,
     settledAt: m.settled_at,
     outcomes,
+    betCount: m.bets?.[0]?.count ?? 0,
     sparkVersion: sparkVersion(m),
   }
 }
@@ -144,10 +147,9 @@ async function listMarkets(
     keys,
     async (filter, limit) => {
       const { data, error } = await marketsQuery(supabase, statuses, keys, SUMMARY_SELECT, filter, limit, bound, narrow)
-        // Same tiebreak as getMarket: insertion time, then label, so outcome order (and
-        // therefore colour assignment) is stable across requests.
-        .order('created_at', { referencedTable: 'market_outcomes' })
-        .order('label', { referencedTable: 'market_outcomes' })
+        // The order the creator typed them in (0110), as getMarket reads them, so a card's
+        // outcomes (and their colours) match the market page's.
+        .order('position', { referencedTable: 'market_outcomes' })
       if (error) throw error
       return (data ?? []) as unknown as SummaryRow[]
     },
@@ -181,21 +183,17 @@ export async function listResolvedMarkets(
   return listMarkets(supabase, ['resolved', 'voided'], RESOLVED_KEYS, page, undefined, narrow)
 }
 
-// A search lists matches as one flat list, newest first, whatever their status:
-// the open and resolved lists order by different columns, and a person looking for one market
-// doesn't want it split into sections. The status tab still narrows it, split at the close time.
+// A search lists matches as one flat list, newest first, in every status: the open and resolved
+// lists order by different columns, and a person looking for one market doesn't want it split
+// into sections, or hidden behind a tab they didn't think to check.
 const MATCH_KEYS: MarketKeys = { ts: 'created_at', id: 'id', isId: isUuid }
 
 export async function listMatchingMarkets(
   supabase: DbClient,
   page: PageParams,
-  filter: MarketFilter,
   narrow: MarketNarrow,
-  at: string,
 ): Promise<KeysetPage<MarketSummary>> {
-  if (filter === 'resolved') return listMarkets(supabase, ['resolved', 'voided'], MATCH_KEYS, page, undefined, narrow)
-  if (filter === 'all') return listMarkets(supabase, ['open', 'resolved', 'voided'], MATCH_KEYS, page, undefined, narrow)
-  return listMarkets(supabase, ['open'], MATCH_KEYS, page, { upcoming: filter === 'open', at }, narrow)
+  return listMarkets(supabase, ['open', 'resolved', 'voided'], MATCH_KEYS, page, undefined, narrow)
 }
 
 // Only markets still taking bets (#261): one past its close is waiting on a result.

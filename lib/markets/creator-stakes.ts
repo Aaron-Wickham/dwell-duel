@@ -66,8 +66,11 @@ export function describeCreatorStake(stake: CreatorStake | undefined, tense: 'ha
   return joined && `Creator ${tense} ${joined}.`
 }
 
-// The creator's own line on their market (#390): "You have 40 DC on Yes." Null with no stake.
-export function describeOwnStake(stake: CreatorStake | undefined, tense: 'have' | 'had'): string | null {
+// The market page's line for every member (#84, #390): "Ben has 40 DC on Yes.", or to the creator
+// themself (name null) "You have 40 DC on Yes." Null with no stake.
+export function describeMarketStake(stake: CreatorStake | undefined, name: string | null, open: boolean): string | null {
   const joined = describeStake(stake)
-  return joined && `You ${tense} ${joined}.`
+  if (!joined) return null
+  const verb = open ? (name === null ? 'have' : 'has') : 'had'
+  return `${name ?? 'You'} ${verb} ${joined}.`
 }

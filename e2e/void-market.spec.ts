@@ -81,7 +81,7 @@ test('a creator with a stake in their own market isn’t offered Void', async ({
     const page = await member.newPage()
     // void_market refuses since 0104; can_void_market (0105) keeps the page from offering it.
     await page.goto(`/markets/${stakedId}`)
-    await expect(page.getByText('only an admin can void it')).toBeVisible()
+    await expect(page.getByText('You have 5 DC on Yes. A reviewer or an admin resolves it, and only an admin can void it.')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Void this market', exact: true })).toHaveCount(0)
 
     await page.goto(`/markets/${(unstaked.data as { market_id: string }).market_id}`)

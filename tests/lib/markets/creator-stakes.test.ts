@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { describeCreatorStake, describeOwnStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
+import { describeCreatorStake, describeMarketStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
 import { IN_CHUNK } from '@/lib/pagination/chunk'
 import { fakeSupabase } from '../fake-supabase'
 
@@ -32,17 +32,20 @@ describe('getCreatorStakes', () => {
   })
 })
 
-describe('describeCreatorStake and describeOwnStake', () => {
+describe('describeCreatorStake and describeMarketStake', () => {
   const stake = { solo: [{ label: 'Yes', amount: 1200 }], parlayLabels: ['No'] }
 
-  it('says what the creator has riding, to everyone and, on the market page, to the creator (#390)', () => {
-    expect(describeCreatorStake(stake, 'has')).toBe('Creator has 1,200 DC on Yes and a parlay on No.')
-    expect(describeOwnStake(stake, 'have')).toBe('You have 1,200 DC on Yes and a parlay on No.')
-    expect(describeOwnStake(stake, 'had')).toBe('You had 1,200 DC on Yes and a parlay on No.')
+  // #84: every member sees what the creator has riding; the creator reads it as "You".
+  it('names the creator to every member, and says "You" to the creator', () => {
+    expect(describeCreatorStake(stake, 'had')).toBe('Creator had 1,200 DC on Yes and a parlay on No.')
+    expect(describeMarketStake(stake, 'Ben', true)).toBe('Ben has 1,200 DC on Yes and a parlay on No.')
+    expect(describeMarketStake(stake, 'Ben', false)).toBe('Ben had 1,200 DC on Yes and a parlay on No.')
+    expect(describeMarketStake(stake, null, true)).toBe('You have 1,200 DC on Yes and a parlay on No.')
+    expect(describeMarketStake(stake, null, false)).toBe('You had 1,200 DC on Yes and a parlay on No.')
   })
 
   it('says nothing when there is no stake', () => {
-    expect(describeOwnStake(undefined, 'have')).toBeNull()
-    expect(describeOwnStake({ solo: [], parlayLabels: [] }, 'have')).toBeNull()
+    expect(describeMarketStake(undefined, 'Ben', true)).toBeNull()
+    expect(describeMarketStake({ solo: [], parlayLabels: [] }, null, true)).toBeNull()
   })
 })

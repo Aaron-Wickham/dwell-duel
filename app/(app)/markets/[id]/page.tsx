@@ -38,7 +38,7 @@ import { MarketMenu } from './market-menu'
 import { MarketOutcomes } from './market-outcomes'
 import { MarketPosition } from './market-position'
 import { getPositionKeys } from '@/lib/markets/position'
-import { describeOwnStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
+import { describeMarketStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
 import { hasBetHistory } from '@/lib/markets/bet-history'
 import { listMarketEdits } from '@/lib/markets/market-edits'
 import { listCategoryCounts, mostUsedCategories } from '@/lib/markets/categories'
@@ -61,11 +61,11 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // The position keys and the viewer's rights are read before anything streams, so a viewer with
   // nothing on the market gets no card and no skeleton for one, and the resolve and void cards
   // take their place straight away: a placeholder that then vanished would shift the page.
-  const [resolution, edits, role, ownStakes, positionKeys, categoryCounts, resolvable, voidable, stake] = await Promise.all([
+  const [resolution, edits, role, creatorStakes, positionKeys, categoryCounts, resolvable, voidable, stake] = await Promise.all([
     market.status === 'resolved' ? getResolutionProof(supabase, market.id) : null,
     market.editedAt ? listMarketEdits(supabase, market.id) : [],
     getRole(supabase),
-    isCreator ? getCreatorStakes(supabase, [{ id: market.id, createdBy: market.createdBy }]) : null,
+    getCreatorStakes(supabase, [{ id: market.id, createdBy: market.createdBy }]),
     getPositionKeys(supabase, market.id),
     listCategoryCounts(supabase),
     rpcFlag(supabase.rpc('can_resolve_market', { p_market_id: market.id })),
@@ -115,9 +115,14 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // void forms, which could be taller than the screen and then never show their bottom.
   const stickyRail = !manage
 
-  // The creator's own stake, and, when it stops them settling the market, who will (0046, 0104).
-  const ownStake = describeOwnStake(ownStakes?.get(market.id), market.status === 'open' ? 'have' : 'had')
-  const stakeBlocks = market.status === 'open' && stake && !admin
+  // What the creator has riding on it, shown to every member, since in a small group trust in the
+  // result matters most (#84); to the creator, also who settles it when their stake stops them (0046, 0104).
+  const creatorStake = describeMarketStake(
+    creatorStakes.get(market.id),
+    isCreator ? null : market.creatorName,
+    market.status === 'open',
+  )
+  const stakeBlocks = isCreator && market.status === 'open' && stake && !admin
   // #387: a category is worth naming only when more than one holds markets.
   const severalCategories = categoryCounts.filter((c) => c.markets > 0).length > 1
 
@@ -165,9 +170,9 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
             {when && <>{when} · </>}by {isCreator ? 'you' : market.creatorName}
             {severalCategories && market.category && <> · {market.category.name}</>}
           </p>
-          {ownStake && (
+          {creatorStake && (
             <p className="text-sm font-bold text-ink2">
-              {ownStake}
+              {creatorStake}
               {stakeBlocks && ' A reviewer or an admin resolves it, and only an admin can void it.'}
             </p>
           )}

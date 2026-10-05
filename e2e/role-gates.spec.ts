@@ -69,6 +69,8 @@ test('a plain member sees no admin controls on someone else’s market, and no A
   await bobPage.goto(marketPath)
   await expect(bobPage.getByRole('heading', { level: 1, name: 'Will the choir start on time?' })).toBeVisible()
   await expect(bobPage.getByRole('region', { name: 'Bets' }).getByText('1 DC on Yes')).toBeVisible()
+  // #84: every member sees what the creator has riding on their own market.
+  await expect(bobPage.getByText('Alice has 1 DC on Yes.')).toBeVisible()
   await expect(bobPage.getByRole('region', { name: 'Outcomes' }).getByRole('button', { name: 'Add Yes to slip' })).toBeVisible()
 
   await expect(bobPage.getByRole('button', { name: 'Void this market' })).toHaveCount(0)

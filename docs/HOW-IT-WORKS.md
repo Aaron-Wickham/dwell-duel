@@ -299,8 +299,8 @@ full ledger) can see it.
   leaves it to a reviewer. A parlay leg counts even after its parlay has
   been settled on another market, since an override there could bring it
   back. A market whose creator has money on it shows
-  what, bets and parlay picks alike ("Ben has 40 DC on Yes"), and so does
-  its result in the feed. The resolver picks the winner (or, for an Over/Under,
+  what, bets and parlay picks alike ("Ben has 40 DC on Yes"), and its
+  result in the feed says the same. The resolver picks the winner (or, for an Over/Under,
   types the actual number) and **must say why**. They can attach photos,
   files or links as proof (see **Proof limits and expiry** under Tasks). The
   reason and proof show on the market page and in the feed. Before anything is paid, the app asks them to confirm,

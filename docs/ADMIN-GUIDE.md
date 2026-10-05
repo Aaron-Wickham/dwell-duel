@@ -303,8 +303,8 @@ paper over it.
   market early, or moving its close time, doesn't change what a parlay
   pays.
 - A parlay's stake buys shares on each of its picks, so parlays move a
-  market's chance like solo bets do. "+N DC riding in parlays" on an
-  outcome shows how much parlay money is on it.
+  market's chance like solo bets do. "Includes N DC riding in parlays" under
+  the outcomes shows how much parlay money is on the market.
 - An override settles every affected parlay again; a void drops the leg,
   and the rest pay at their own odds.
 - Parlays placed before the October 2026 switch keep their old caps: 20×

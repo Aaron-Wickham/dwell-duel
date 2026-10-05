@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, type ReactNode, type RefObject } from 'react'
-import Link from 'next/link'
+import { IntentLink } from '@/components/ui/intent-link'
 import { Menu } from '@base-ui/react/menu'
 import { Dialog } from '@base-ui/react/dialog'
 import { CalendarClock, CopyPlus, History, MoreHorizontal, Pencil, Share2, type LucideIcon } from 'lucide-react'
@@ -80,7 +80,7 @@ export function MarketMenu({
               <Menu.LinkItem
                 closeOnClick
                 className={itemClass}
-                render={<Link href={`/markets/new?from=${marketId}`} transitionTypes={['nav-forward']} />}
+                render={<IntentLink prefetchOnTouch pendingMarker={false} href={`/markets/new?from=${marketId}`} transitionTypes={['nav-forward']} />}
               >
                 <ItemContent icon={CopyPlus}>Duplicate</ItemContent>
               </Menu.LinkItem>

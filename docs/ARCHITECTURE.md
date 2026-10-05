@@ -726,7 +726,7 @@ won't delete can't turn every run red; only a failed listing does. A member, a r
 keeps their profile) and an invitee who hasn't finished signing in are
 never listed.
 
-**Betting through the slip.** An outcome's "Add to slip" writes a cookie
+**Betting through the slip.** An outcome's "Add" writes a cookie
 of picks (`lib/parlays/slip.ts`). `SlipProvider` in the signed-in layout
 holds those picks, each marked Solo or Parlay, with optimistic add, remove
 and mode switches. Stakes live only in client state. The layout also
@@ -769,8 +769,8 @@ points for the market page, 24 for a card); the charts then thin what's
 visible by time to about one point every 3px of plot width
 (`bucketByTime` in `lib/markets/chart-window.ts`, each bucket keeping its
 last value), so a burst of bets draws one step rather than a comb. A bet's payout is `floor(shares)`, fixed when
-it's placed; the "× payout per DC" beside an outcome is 1 ÷ its price
-(`lmsrOddsBp`). `effectivePools`, `poolPayout`, `pool_payout()` and the
+it's placed; an outcome row's "10 DC wins N" is `soloPays` (`lib/parlays/solo-pays.ts`),
+the same quote the slip shows. `effectivePools`, `poolPayout`, `pool_payout()` and the
 seed apply to `pool` markets only. A parlay on
 `lmsr` markets (0104) is quoted by `lmsrParlayQuote` and shown by
 `fixedParlay` (`lib/parlays/odds.ts`), BigInt maths in millionths that
@@ -802,7 +802,7 @@ outcome, and every parlay through wins and voids, against the pool rules.
 `pool_payout()` in SQL, which `resolve_market_core` pays with (an override
 of a pool market still does), and `poolPayout` in `lib/markets/odds.ts`,
 which My bets (`betResult`) uses; `tests/db/seeded-odds.test.ts` keeps the
-two equal. A resolved pool market's "× payout per DC" is `legOddsBp`. The seed is display only: each outcome's chance
+two equal. The seed is display only: each outcome's chance
 counts `seed_per_outcome` virtual DC on top of real stakes, so a new
 market shows an even split, through `effectivePools` (mirrored by
 `market_sparklines`). A resolution from before 0074 counted the seed in its

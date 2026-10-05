@@ -21,7 +21,7 @@ const numberClass = 'lg:text-right lg:tabular-nums'
 // Separates the phone line's figures; the table's columns do that from lg.
 const dot = (
   <span aria-hidden="true" className="text-ink2 lg:hidden">
-    {' · '}
+    {'\u00a0· '}
   </span>
 )
 

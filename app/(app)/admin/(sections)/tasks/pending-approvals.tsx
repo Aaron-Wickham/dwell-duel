@@ -179,66 +179,69 @@ export function PendingApprovals({
   return (
     <div className="flex flex-col gap-3">
       {/* At the top and sticky under the top bar, so it's in reach however far down the queue you
-          are (#399). Below lg it's one line until something is ticked, when its buttons join it, so
-          a phone screen holds five submissions under it (#418). */}
-      <div className="sticky top-[calc(64px+var(--safe-top)+8px)] z-[2] flex flex-col gap-1 rounded-tile border border-line bg-surface px-3.5 py-0.5 md:top-[calc(72px+var(--safe-top)+8px)] lg:flex-row lg:items-center lg:justify-between lg:gap-2 lg:py-2">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 lg:justify-start">
-          <label className="pressable inline-flex min-h-11 cursor-pointer items-center gap-2.5 font-bold">
-            <input
-              type="checkbox"
-              checked={allSelected}
-              // indeterminate is a DOM property with no attribute, so it's set here on every render.
-              ref={(el) => {
-                if (el) el.indeterminate = someSelected
-              }}
-              onChange={(e) => {
-                setNothingToReject(false)
-                setSelected(e.target.checked ? new Set(selectable) : new Set())
-              }}
-              className="m-0 size-[22px] accent-primary"
-            />
-            Select all
-          </label>
-          <p aria-live="polite" className="font-extrabold max-lg:text-sm">
-            {selectedCount} selected · pays <span className="whitespace-nowrap">{formatDcAmount(selectedDc)}</span>
-          </p>
+          are (#399). It sits on an opaque band the card's full inner width, flush to the top bar,
+          so no row shows above or around it while it's stuck. Below lg it's one line until something
+          is ticked, when its buttons join it, so a phone screen holds five submissions under it (#418). */}
+      <div className="sticky top-[calc(64px+var(--safe-top))] z-[2] -mx-[18px] -my-2 bg-surface px-[18px] py-2 md:top-[calc(72px+var(--safe-top))] md:-mx-6 md:px-6">
+        <div className="flex flex-col gap-1 rounded-tile border border-line bg-surface px-3.5 py-0.5 lg:flex-row lg:items-center lg:justify-between lg:gap-2 lg:py-2">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 lg:justify-start">
+            <label className="pressable inline-flex min-h-11 cursor-pointer items-center gap-2.5 font-bold">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                // indeterminate is a DOM property with no attribute, so it's set here on every render.
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelected
+                }}
+                onChange={(e) => {
+                  setNothingToReject(false)
+                  setSelected(e.target.checked ? new Set(selectable) : new Set())
+                }}
+                className="m-0 size-[22px] accent-primary"
+              />
+              Select all
+            </label>
+            <p aria-live="polite" className="font-extrabold max-lg:text-sm">
+              {selectedCount} selected · pays <span className="whitespace-nowrap">{formatDcAmount(selectedDc)}</span>
+            </p>
+          </div>
+          {/* The form's own action is the approve, so the confirm dialog's button (which submits through
+              its form attribute) runs it. Reject selected opens its own dialog and form. */}
+          <form
+            id={BULK_FORM_ID}
+            action={approveAction}
+            onSubmit={confirm.onSubmit}
+            className={cn('flex gap-2 max-lg:pb-1.5', selectedCount === 0 && !rejectNoneShown && 'max-lg:hidden')}
+          >
+            <Button
+              size="sm"
+              variant="secondary"
+              className="max-lg:grow"
+              onClick={startBulkReject}
+              aria-describedby={rejectNoneShown ? BULK_REJECT_ERROR_ID : undefined}
+            >
+              {/* "Reject…" below lg, so both buttons fit one line beside each other. */}
+              <span aria-hidden="true" className="lg:hidden">
+                Reject…
+              </span>
+              <span className="max-lg:sr-only">
+                Reject selected<span aria-hidden="true">…</span>
+              </span>
+            </Button>
+            {/* Quiet until something is ticked, so an empty bar doesn't shout. */}
+            <FormSubmitButton
+              size="sm"
+              variant={selectedCount > 0 ? 'primary' : 'secondary'}
+              className="max-lg:grow"
+              onClick={() => setLastBulk('approve')}
+              aria-describedby={
+                lastBulk === 'approve' && !isApprovePending && approveState?.formError ? BULK_APPROVE_ERROR_ID : undefined
+              }
+            >
+              Approve selected
+            </FormSubmitButton>
+          </form>
         </div>
-        {/* The form's own action is the approve, so the confirm dialog's button (which submits through
-            its form attribute) runs it. Reject selected opens its own dialog and form. */}
-        <form
-          id={BULK_FORM_ID}
-          action={approveAction}
-          onSubmit={confirm.onSubmit}
-          className={cn('flex gap-2 max-lg:pb-1.5', selectedCount === 0 && !rejectNoneShown && 'max-lg:hidden')}
-        >
-          <Button
-            size="sm"
-            variant="secondary"
-            className="max-lg:grow"
-            onClick={startBulkReject}
-            aria-describedby={rejectNoneShown ? BULK_REJECT_ERROR_ID : undefined}
-          >
-            {/* "Reject…" below lg, so both buttons fit one line beside each other. */}
-            <span aria-hidden="true" className="lg:hidden">
-              Reject…
-            </span>
-            <span className="max-lg:sr-only">
-              Reject selected<span aria-hidden="true">…</span>
-            </span>
-          </Button>
-          {/* Quiet until something is ticked, so an empty bar doesn't shout. */}
-          <FormSubmitButton
-            size="sm"
-            variant={selectedCount > 0 ? 'primary' : 'secondary'}
-            className="max-lg:grow"
-            onClick={() => setLastBulk('approve')}
-            aria-describedby={
-              lastBulk === 'approve' && !isApprovePending && approveState?.formError ? BULK_APPROVE_ERROR_ID : undefined
-            }
-          >
-            Approve selected
-          </FormSubmitButton>
-        </form>
       </div>
 
       {results}

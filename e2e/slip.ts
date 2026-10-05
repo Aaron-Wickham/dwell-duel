@@ -6,7 +6,7 @@ import { serverActionSettled } from './server-action'
 export async function addToSlip(page: Page, outcome: string): Promise<void> {
   const settled = serverActionSettled(page)
   const row = page.getByRole('region', { name: 'Outcomes' }).getByRole('listitem').filter({ hasText: outcome })
-  await row.getByRole('button', { name: `Add to slip ${outcome}` }).click()
+  await row.getByRole('button', { name: `Add ${outcome} to slip` }).click()
   await expect(row.getByText('In your slip')).toBeVisible()
   await settled
 }
@@ -23,7 +23,7 @@ export async function placeSolo(page: Page, outcome: string, amount: number): Pr
   await addToSlip(page, outcome)
   const sheet = await openSlip(page)
   await sheet.getByLabel('Stake (DC)').fill(String(amount))
-  await sheet.getByRole('button', { name: `Place 1 bet · ${amount} DC` }).click()
+  await sheet.getByRole('button', { name: `Place bet · ${amount} DC` }).click()
   await expect(page.getByText('Placed 1 solo bet.').first()).toBeVisible()
   await expect(sheet).toHaveCount(0)
 }

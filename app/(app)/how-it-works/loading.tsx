@@ -1,9 +1,8 @@
-import { Fragment } from 'react'
 import { pageClassFor } from '@/components/ui/page'
-import { Skeleton, SkeletonCard, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
+import { Skeleton, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
 
-// Mirrors How it works: back link, header, intro and a stack of section cards, with the contents
-// beside them at lg, and below lg the collapsed contents after the first card.
+// Mirrors How it works' short version: back link, header, four short sections, the questions as
+// divided rows, then the link to the full rules (which has its own skeleton, rules/loading.tsx).
 export default function Loading() {
   return (
     <SkeletonScreen name="how-it-works" className={pageClassFor('reading')}>
@@ -11,31 +10,27 @@ export default function Loading() {
         <Skeleton className="h-5 w-16" />
       </div>
       <SkeletonPageHeader />
-      <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start">
-        <div className="hidden lg:flex lg:flex-col lg:gap-4">
-          <Skeleton className="h-4 w-20" />
-          {Array.from({ length: 8 }, (_, i) => (
-            <Skeleton key={i} className="h-5 w-36" />
-          ))}
-        </div>
-        <div className="flex min-w-0 flex-col gap-5 md:gap-7">
-          <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="flex flex-col gap-1">
+            <Skeleton className="h-6 w-40" />
             <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-4/5" />
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-5 w-3/5" />
           </div>
-          {[0, 1, 2].map((i) => (
-            <Fragment key={i}>
-              <SkeletonCard className="gap-3">
-                <Skeleton className="h-6 w-40" />
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-3/5" />
-              </SkeletonCard>
-              {i === 0 && <Skeleton className="h-12 w-full rounded-card lg:hidden" />}
-            </Fragment>
+        ))}
+      </div>
+      <div className="flex flex-col gap-1">
+        <Skeleton className="h-6 w-28" />
+        <div className="flex flex-col divide-y divide-line">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex min-h-[52px] items-center">
+              <Skeleton className="h-5 w-64 max-w-full" />
+            </div>
           ))}
         </div>
       </div>
+      <Skeleton className="h-5 w-36" />
     </SkeletonScreen>
   )
 }

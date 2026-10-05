@@ -17,9 +17,9 @@ export default async function ProfilePage() {
   if (error) throw error
 
   return (
-    <Page transition="drill-down">
+    <Page width="reading" transition="drill-down">
       <BackLink href={`/members/${user.id}`}>Your profile</BackLink>
-      <PageHeader title="Edit profile" description="Your name, photo and bio show to every member." />
+      <PageHeader title="Edit profile" />
       <ProfileForm
         displayName={profile.display_name as string}
         bio={(profile.bio as string | null) ?? ''}

@@ -1,6 +1,6 @@
-import Link from 'next/link'
+import { IntentLink } from '@/components/ui/intent-link'
 import { Avatar } from '@/components/ui/avatar'
-import { eyebrowClass, h2Class } from '@/components/ui/page'
+import { h2Class } from '@/components/ui/page'
 import { formatOdds, lockedOddsToBp } from '@/lib/parlays/odds'
 import type { Award, AwardKind } from '@/lib/social/leaderboard-extras'
 import { signedDc } from '@/lib/social/season'
@@ -39,6 +39,8 @@ function caption(award: Award): string | null {
   }
 }
 
+// A divided list of sentences, not a tile grid (#396): each row names the award, its winner and
+// the figure, in ink, since most of these figures aren't gains.
 export function Awards({ awards }: { awards: Award[] }) {
   if (awards.length === 0) return null
   return (
@@ -46,18 +48,18 @@ export function Awards({ awards }: { awards: Award[] }) {
       <h2 id="leaderboard-awards" className={h2Class}>
         This month’s awards
       </h2>
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-2">
+      <ul className="flex flex-col divide-y divide-line">
         {awards.map((award) => (
-          <li key={award.kind} className="pressable hover-lift relative flex min-w-0 flex-col gap-1.5 rounded-card border border-line bg-surface p-3.5 shadow-card">
-            <span className={eyebrowClass}>{LABEL[award.kind]}</span>
-            <span className="text-xl leading-none font-extrabold tabular-nums text-acc-text">{figure(award)}</span>
-            <span className="flex min-w-0 items-center gap-2">
-              <Avatar name={award.name} src={award.avatarSrc} size="sm" />
-              <Link href={`/members/${award.memberId}`} transitionTypes={['nav-forward']} className="stretched-link min-w-0 truncate font-bold">
+          <li key={award.kind} className="pressable hover-tint relative flex min-h-11 items-center gap-3 py-2.5">
+            <Avatar name={award.name} src={award.avatarSrc} size="sm" />
+            <span className="flex min-w-0 grow flex-col">
+              <span className="text-sm text-ink2">{LABEL[award.kind]}</span>
+              <IntentLink href={`/members/${award.memberId}`} transitionTypes={['nav-forward']} className="stretched-link min-w-0 truncate font-bold text-ink no-underline">
                 {award.name}
-              </Link>
+              </IntentLink>
+              {caption(award) && <span className="truncate text-sm text-ink2">{caption(award)}</span>}
             </span>
-            {caption(award) && <span className="line-clamp-2 text-sm break-words text-ink2">{caption(award)}</span>}
+            <span className="shrink-0 font-extrabold whitespace-nowrap text-ink">{figure(award)}</span>
           </li>
         ))}
       </ul>

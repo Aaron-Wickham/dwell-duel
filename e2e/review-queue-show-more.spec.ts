@@ -30,12 +30,13 @@ test('the review queue pages oldest first, with Show more, and the waiting count
     if (insertErr) throw insertErr
 
     await page.goto('/admin/tasks')
-    const queue = page.getByRole('region', { name: 'Pending approvals' })
-    const row = (n: string) => queue.getByRole('listitem').filter({ hasText: `Queue check ${n}` })
+    const queue = page.getByRole('region', { name: 'To review' })
+    // The queue is a table (#399), and each note sits in its row's Proof cell.
+    const row = (n: string) => queue.getByRole('row').filter({ hasText: `Queue check ${n}` })
     await expect(row('00')).toBeVisible()
     await expect(row(String(PAGE_SIZE - 1))).toBeVisible()
     await expect(row(String(PAGE_SIZE))).toHaveCount(0)
-    // The signed-in owner reviews Bob's rows (never their own, 0046). The first button named Approve is still a row's, and the badge counts past the page.
+    // The signed-in owner reviews Bob's rows (never their own, 0046). The badge counts past the page.
     // A row's button is "Approve <name>'s <task>"; this skips "Approve selected".
     await expect(queue.getByRole('button', { name: /^Approve(?! selected)/ }).first()).toBeVisible()
     // Everything pending that isn't the owner's own, not just the page on screen.

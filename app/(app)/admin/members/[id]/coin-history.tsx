@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { NotebookText } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { listMemberTransactions } from '@/lib/ledger/list-transactions'
@@ -28,7 +27,7 @@ export async function CoinHistory({ memberId }: { memberId: string }) {
       >
         {entries.length === 0 ? (
           <div className="pt-2">
-            <EmptyState icon={NotebookText} title="No coin movements yet." />
+            <EmptyState title="No coin movements yet." />
           </div>
         ) : (
           <ul className="flex flex-col divide-y divide-line">

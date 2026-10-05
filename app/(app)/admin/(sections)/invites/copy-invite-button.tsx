@@ -1,6 +1,5 @@
 'use client'
 
-import { Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { haptics } from '@/lib/haptics'
@@ -29,7 +28,6 @@ export function CopyInviteButton({ email, className }: { email: string; classNam
       aria-label={`Copy invite message for ${email}`}
       onClick={copy}
     >
-      <Copy aria-hidden className="size-[18px]" />
       Copy invite message
     </Button>
   )

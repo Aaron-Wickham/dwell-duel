@@ -1,5 +1,6 @@
-<!-- The app renders this file as its How it works page (/how-it-works), so write it for
-members. Links to other repo files show there as plain text. -->
+<!-- The app renders this file as its full rules (/how-it-works/rules), a tap below How it
+works' short version (/how-it-works), so write it for members. Links to other repo files show
+there as plain text. -->
 
 # How DwellDuel works
 
@@ -7,8 +8,6 @@ DwellDuel is an invite-only app for a church friend group. Members bet
 **Dwell Coin (DC)** on friendly questions ("Will the sermon run past
 noon?") and earn DC by completing Bible-study tasks. DC is play money: it
 can't be bought or cashed out.
-
-This page explains the rules.
 
 ## The short version
 
@@ -38,8 +37,8 @@ This page explains the rules.
 
 ## Markets
 
-Any member can create a market. It has a question, an optional
-description, a category and a closing time, and it comes in one of three
+Any member can create a market. It has a question, a kind, a closing
+time, a category and optional details, and it comes in one of three
 kinds:
 
 | Kind | Outcomes |
@@ -61,49 +60,51 @@ While a market is open, its creator (or an admin) can edit the
 description and the category, and can reword the title until someone else
 has bet on it, solo or as a parlay pick. An admin can change a market's
 category at any time, even after it closes. Everyone can see every past
-version under "Edited". The outcomes and the line can never change,
+version under Edit history, in the market's More actions menu (the ⋯
+button at its top right, beside Share and Duplicate). The outcomes and
+the line can never change,
 because changing them would change the bet. Betting stops at the closing
 time, so set it before the answer is known, and if you bet on your own
 market, a reviewer resolves it (see [Results](#results)).
 
 The creator (or an admin) can also move the closing time, later or
 earlier, as long as the new time is still to come. Once a market has
-closed, and until it's resolved or voided, the same people can
+closed, and until it's resolved or called off, the same people can
 **reopen** it by giving it a new closing time: it takes bets again until
 then. Only reopen a market whose result isn't known yet. A creator who
 has money on their own market, a bet or a parlay pick, can't move its
 closing time; an admin can. Bets already placed stay exactly as they are, since every payout
 and parlay multiplier is fixed when it's placed. Only an admin can
 resolve a reopened market before it closes again, and its creator and
-admins are reminded about it again when it does. Every move shows under
-"Edited".
+admins are reminded about it again when it does. Every move shows in
+Edit history.
 
-The Markets page lists open markets **soonest to close first**, so one
-closing within the hour is at the top. A market closing within a day
-says so ("Closes in 2h"). Markets past their close time with no result
-yet are grouped under Awaiting resolution, after the open ones however
-many there are (open and awaiting markets each have their own Show more), and Resolved and Voided markets
-follow as two groups, each most recently settled first: the order they were resolved or
-voided in, not the order they were created in. A voided market shows the
-day it was voided.
+The Markets page has three tabs: **Open** (the default: still taking
+bets, **soonest to close first**, so one closing within the hour is at
+the top), **Waiting** (past the close time, waiting for a result, oldest
+close first) and **Resolved** (has a result, most recently settled first;
+called-off markets are here too, in their own group). Each card shows the
+leading outcome's chance (Yes, or Over, on a two-outcome market; the
+favourite of several), how many points it moved this week, a small chart,
+and when it closes ("Closes in 2h" within a day) with how many bets it
+has. A resolved card says who won ("Yes won"). When more than one category
+holds markets, chips under the tabs narrow the list to one: **All**, then
+the eight busiest categories (the most markets still taking bets), then
+**More…** for the rest. The choices are in the page's address, so a reload
+or a shared link keeps them.
 
-The tabs above the list narrow it: **All** (the default), **Open** (still
-taking bets), **Awaiting** (past the close time, waiting to be resolved)
-and **Resolved** (has a result; voided markets are here too, marked
-Voided). Below them, the category chips narrow it to one category:
-**All**, then the eight busiest categories (the most markets still taking
-bets), then **More…** for the rest. The choices are in the page's address,
-so a reload or a shared link keeps them. Home's open-market count is the
-Open tab's: markets still taking bets.
+A yes/no chart draws one line, Yes's chance (an over/under draws Over's):
+No is the same line read from the top. A multiple-choice chart draws a
+line per outcome.
 
-For a question that comes round every week, **Duplicate** on any market
-opens Create market already filled in with its question, description,
+For a question that comes round every week, **Duplicate** (in any
+market's More actions menu) opens Create market already filled in with its question, description,
 category, kind and outcomes (or line). The closing time moves on by one or more
 whole weeks, keeping the same local time, until it's in the future. Nothing is created until
 you tap Create market, so you can change anything first.
 
-**Share** sends a market's link through your phone's share sheet, or
-copies it where there isn't one. Only signed-in members can open it.
+**Share** (in the same menu) sends a market's link through your phone's
+share sheet, or copies it where there isn't one. Only signed-in members can open it.
 
 ## Betting: fixed payouts
 
@@ -115,11 +116,12 @@ pays before you place it, and nothing anyone does afterwards changes it.
 - **A market opens at even odds:** 50% / 50% for Yes/No, 25% each for
   four outcomes. Nobody has to bet first.
 - **The price is the chance.** Buying an outcome's shares raises its price
-  (and lowers the others'), so the chance, the chart and the sparkline all
-  show the same number. A bigger bet moves the price more, so each extra
+  (and lowers the others'), so the chance, the market page's chart and the
+  card's chart all show the same number. A bigger bet moves the price more, so each extra
   DC buys a little less.
-- **The slip shows the exact payout** ("Pays 18 DC if it wins"), with no
-  "~". If the price moves between showing it and placing it, so that your bet
+- **The slip shows the exact payout** ("Wins 18 DC"), with no
+  "~". Each outcome on a market page shows the same figure for 10 DC
+  ("10 DC wins 18"), worked out exactly as the slip does. If the price moves between showing it and placing it, so that your bet
   would pay more than 2% less, nothing is placed: the slip says what it
   pays now, and you tap Place again to accept.
 - **Bets are final.** A bet can't be cancelled, and the owner can't remove
@@ -143,8 +145,8 @@ pays before you place it, and nothing anyone does afterwards changes it.
   panel.
 
 **A worked example.** On a new Yes/No market, both sides show 50%. Alice
-bets 10 DC on Yes. That buys **18.33 shares**, so the slip says "Pays 18 DC
-if it wins", and Yes moves to about **59%**. If Yes wins, Alice gets
+bets 10 DC on Yes. That buys **18.33 shares**, so the slip says "Wins 18 DC",
+and Yes moves to about **59%**. If Yes wins, Alice gets
 **18 DC** (an 8 DC profit), whatever anyone bets after her. If No wins, she
 gets nothing: the house took the other side of her bet. Nobody is refunded
 when nobody backed the winner (bets from before October 2026 aside: see
@@ -161,10 +163,10 @@ line.
 card at the top (above the chart on a phone, at the top of the right-hand
 column on a computer). Only you see it. While the market is open it lists
 each of your bets with exactly what it pays if it wins, and each parlay
-that has a leg on the market, linking to the parlay. Once the market
+that has a pick on the market, linking to the parlay. Once the market
 settles, each bet shows Won, Lost or Refunded, the card says what you won
 or lost on the market overall (left out when it comes to 0), and each
-parlay leg says where it and its parlay stand.
+parlay pick says where it and its parlay stand.
 
 ## Markets from before October 2026
 
@@ -191,14 +193,14 @@ expected payout changed**:
   the switch gets its stake back, as the old rules promised, even if
   someone bets on that outcome afterwards. Bets placed after the switch
   are paid like any other: their shares if they win, nothing if they
-  lose. My bets marks such a refund "Refunded · no winners".
+  lose. My bets marks such a refund "refunded, no winners".
 - **Pending parlays were fixed too.** A pick whose odds weren't set yet
   got them from its market's pool as it stood: other members' DC on the
   market ÷ other members' DC on your pick, at most 5×, or 1.00× without
   50 DC from 2 other members or with nobody else on your pick. Picks whose
   odds were already set kept them. The multiplier and payout were then
   fixed under the old caps (20×, and 1,000 DC, or the stake back if a
-  parlay staked more than that), and a pick voided later drops out under
+  parlay staked more than that), and a pick called off later drops out under
   the same caps. These parlays hold no shares, so they never moved any
   chance, just as before.
 - Those bets and parlays are final, like every other.
@@ -209,28 +211,34 @@ payouts).
 
 ## The slip, solo bets and parlays
 
-Every bet goes through the **slip**. Tap "Add to slip" on outcomes from
+Every bet goes through the **slip**. Tap "Add" on outcomes from
 any number of markets, then open the slip to set stakes. Type a stake,
 or tap a quick stake: 5, 10, 25 or Max. Max is your balance less the
 other stakes already in the slip, and a chip for more than that is
-greyed out. The top of the slip shows your balance and what's left after
-the slip (or how many DC short it is), and when Place can't be tapped, a
-line under it says why. At 0 DC it points you to Tasks; your picks stay
-in the slip. Each pick is either:
+greyed out. Each pick shows its chance and what its stake wins. The top
+of the slip shows your balance (and how many DC short the slip is, when
+it is), and when Place can't be tapped, a line under it says why. At 0 DC
+it points you to Tasks; your picks stay in the slip. Adding or removing a
+pick doesn't pop up a message: the outcome's row and the slip button's
+count change instead. Once the slip holds two or more picks, each is
+either:
 
 - **Solo:** a normal bet on that outcome, buying shares at a fixed
   payout.
 - **Parlay:** combined with your other Parlay picks into one bet that
   wins only if every pick wins.
 
-"Place" sends everything at once. If any single bet can't be placed, none
-of them are.
+A single pick is always Solo, since a parlay needs two. The button says
+what it places: "Place bet · 10 DC", "Place 3 bets · 30 DC", or "Place
+parlay · 10 DC" when the parlay is all the slip holds. It sends everything
+at once. If any single bet can't be placed, none of them are.
 
 **How parlays pay.** A parlay's payout is **fixed when you place it**,
 like a solo bet's:
 
-- Between 2 and **6** legs, one per market.
-- It's lost as soon as one leg loses, and paid once every leg has won.
+- Between 2 and **6** picks, one per market. (The maths below calls each
+  pick a *leg*.)
+- It's lost as soon as one pick loses, and paid once every pick has won.
 - **Your stake is split evenly across the picks.** Each pick's share buys
   shares in its outcome at that market's price, just as a solo bet of
   that size would, so a parlay **moves each market's chance**. The shares
@@ -241,16 +249,17 @@ like a solo bet's:
   places, rounded down. A leg never counts less than 1.00×.
 - **The multiplier** is the legs' odds multiplied together, and the
   **payout** is the stake × the multiplier, rounded down to a whole DC.
-  The slip shows both exactly ("Pays 49 DC (4.96×) if every pick wins"),
+  The slip shows both exactly ("4.96×" beside "Parlay · 2 picks", and
+  "Wins 49 DC if every pick wins"),
   with no "~". If the payout would be more than 2% lower by the time you
   place it, nothing is placed: the slip shows the new payout and you tap
   Place again.
 - **No other limits:** your own markets can be legs, a pick needs no
   money from other members first, and there is no cap on the multiplier
   or the payout. Your balance is the limit.
-- **A voided leg** drops out: the payout becomes the stake × the other
+- **A called-off leg** drops out: the payout becomes the stake × the other
   legs' odds, rounded down. With one leg left, it pays at that leg's odds.
-  If every leg is voided, the stake is refunded.
+  If every leg is called off, the stake is refunded.
 - **Bets are final:** a parlay can't be cancelled.
 - Example: market A has just opened, at 50% Yes; on market B, 30 shares
   of Yes have been bought (about 65% Yes, 35% No). A 10 DC parlay on Yes
@@ -259,16 +268,16 @@ like a solo bet's:
   **1.909028×** (and A's Yes moves to about 55%). 5 DC buys 12.995170
   shares of B's No, so that leg is **2.599034×**. The multiplier is
   1.909028 × 2.599034 = **4.96×**, so the parlay pays **49 DC** if both
-  win. If B is voided instead, it pays 10 × 1.909028 = **19 DC** when A's
+  win. If B is called off instead, it pays 10 × 1.909028 = **19 DC** when A's
   Yes wins.
 
 Parlays placed before October 2026 were fixed when their markets switched
 over: see [Markets from before October 2026](#markets-from-before-october-2026).
 
-**Riding in parlays.** So a busy parlay market doesn't look empty, each
-outcome on a market page shows the DC in parlays still pending that ride
-on it, as "+45 DC riding in parlays". Each parlay's full stake is counted
-on every pick it rides on. The figure itself is for information only: it
+**Riding in parlays.** So a busy parlay market doesn't look empty, a
+market page says under its outcomes how much DC rides on the market in
+parlays still pending, as "Includes 45 DC riding in parlays". Each
+parlay's full stake is counted. The figure itself is for information only: it
 isn't the chance or anyone's payout (the parlay's share of its stake has
 already moved the chance like any bet, apart from a parlay from before
 October 2026, which never did). It never says whose parlays they are.
@@ -277,14 +286,21 @@ October 2026, which never did). It never says whose parlays they are.
 Open, Settled and Cancelled. Only you can see it. Everyone can see who
 bet what on each market, and bets and parlays also appear in the feed.
 
-Tap a parlay to open its **breakdown**: its stake, multiplier and what it
-pays (or paid), each pick with its odds and where its market stands (Open, Awaiting resolution, Won, Lost
-or Voided), and a short sum showing how the multiplier adds
-up. A voided pick is shown as left out, and the rest carry on.
+Each open bet says what it pays if it wins ("10 DC on Yes · pays 18 DC")
+and when its market closes; a settled one says what it did ("won 18 DC",
+"lost", "refunded"). A parlay's card says its stake and what it pays if
+all its picks win, and lists its picks with a word for each: Won, Lost,
+Waiting or Called off.
+
+Tap a parlay to open its **breakdown**: what it pays (or paid, or "Lost"),
+its stake and how many times your stake it pays, each pick with its odds
+and where its market stands (Won, Lost, Waiting or Called off), and a short
+sum showing how the multiplier adds up. A called-off pick is shown as left
+out, and the rest carry on.
 
 My bets' **Coins** tab is your coin history: every DC that came in or went
 out, newest first, in plain words ("Won 26 DC on Will it rain?", "Task
-reward: Read Ruth", "Refund: market voided"). It includes the reason for
+reward: Read Ruth", "Refund: market called off"). It includes the reason for
 any balance adjustment the owner made. Only you (and admins, through the
 full ledger) can see it.
 
@@ -292,19 +308,19 @@ full ledger) can see it.
 
 - **Who resolves:** once a market has closed, its creator or any
   reviewer, or an admin at any time. **Nobody but an admin resolves a
-  market they have money on** (a bet or a parlay leg), so a creator who bet
-  leaves it to a reviewer. A parlay leg counts even after its parlay has
+  market they have money on** (a bet or a parlay pick), so a creator who bet
+  leaves it to a reviewer. A parlay pick counts even after its parlay has
   been settled on another market, since an override there could bring it
   back. A market whose creator has money on it shows
-  what, bets and parlay picks alike ("Creator has 40 DC on Yes"), and so does
-  its result in the feed. The resolver picks the winner (or, for an Over/Under,
+  what, bets and parlay picks alike ("Ben has 40 DC on Yes"), and its
+  result in the feed says the same. The resolver picks the winner (or, for an Over/Under,
   types the actual number) and **must say why**. They can attach photos,
   files or links as proof (see **Proof limits and expiry** under Tasks). The
   reason and proof show on the market page and in the feed. Before anything is paid, the app asks them to confirm,
   naming the winner ("Yes wins").
-- **Reminders:** bettors' DC and parlays wait on a market awaiting
-  resolution until it's resolved, so Home shows **Markets to resolve** to
-  whoever should do it. A creator sees their own markets as soon as they close
+- **Reminders:** bettors' DC and parlays wait on a market waiting for
+  a result until it's resolved, so Home's **Needs you** lists them for
+  whoever should do it (an admin sees how many wait, opening Admin's Markets). A creator sees their own markets as soon as they close
   (unless they have money on one and aren't an admin). Reviewers and admins see any market
   still unresolved 48 hours after closing, and straight away one whose
   creator has money on it, since the creator can't resolve that one.
@@ -313,12 +329,13 @@ full ledger) can see it.
   taken back and the new winners paid; the confirmation says so first. If a past winner has already spent
   their winnings, the override is blocked and names who, so an admin can
   sort out balances first.
-- **Voids:** until a market closes, its creator or an admin can void it;
-  once it has closed, only an admin can, the same way nobody with money on a
+- **Calling a market off:** until a market closes, its creator or an admin
+  can call it off (admins and the database call this *voiding*); once it
+  has closed, only an admin can, the same way nobody with money on a
   market settles it. A creator with money on their own market (a bet or a
-  parlay leg) can't void it at all: they ask an admin. Every void **must say why**, and the reason shows on
+  parlay pick) can't call it off at all: they ask an admin. Calling a market off **must say why**, and the reason shows on
   the market page and in the feed. Every bet on it is refunded what it
-  cost, and a parlay leg on it drops out.
+  cost, and a parlay pick on it drops out.
 - **Paying out:** each winning bet is paid its shares, rounded down to
   whole DC. Nobody is refunded when nobody backed the winner, apart from
   bets placed before October 2026 (see
@@ -327,14 +344,21 @@ full ledger) can see it.
 ## Tasks
 
 Admins keep a catalogue of Bible-study tasks, each with a DC reward.
+Tasks groups them by what you can do with each: **To do** (tasks you can
+submit now), **Waiting for review**, **Not approved** and **Done**
+(approved and not open again yet: this period for a repeating task, for
+good for a one-off). A group with nothing in it
+isn't shown.
 
 - A task is **one-off** or **repeats** daily, weekly (Monday–Sunday
   weeks), monthly or yearly. Periods run on US Eastern time, so a daily
   task resets at **midnight Eastern**, a weekly one at midnight going into
   Monday, and so on. Once a repeating task is approved, its row says when
-  you can do it again ("Again Monday, midnight ET").
-- You submit a task once per period, with an optional note. Some tasks
-  **require proof**: a photo, file or link.
+  you can do it again ("Again Monday, midnight ET"), and it moves back to
+  To do then.
+- You submit a task once per period with **I did this**, adding an
+  optional note. Some tasks **require proof**: a photo, file or link (their
+  row says "Photo, file or link needed").
 - **Proof limits and expiry.** Proof is a photo, a PDF or a text file, or a
   link: up to 5 attachments, no more than 3 of them files, 3 MB a file and
   6 MB of files together. Photos are shrunk on your device before they upload.
@@ -347,12 +371,14 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   expiry the row still says how many attachments there were and that they've
   expired; links aren't files and stay.
 - A **reviewer** approves it, which pays the reward, or rejects it,
-  optionally saying why. Your row then says "Not approved", with the
-  reason if they gave one, and you can submit again. Nobody reviews their
+  optionally saying why. The task then moves to Not approved, with the
+  reason if they gave one, and **Try again** submits it again. Nobody reviews their
   own submission, and a task can reward at most 500 DC.
-- Your Home screen shows DC that's **Pending** review.
+- A submission waiting for review sits under **Waiting for review**,
+  saying when you sent it, until it's approved, and its reward is paid
+  then.
 - **Streaks:** do a repeating task in back-to-back periods and its row
-  shows your streak, like "🔥 5-week streak", from two in a row. Only
+  shows your streak, like "5-week streak", from two in a row. Only
   approved submissions count: one waiting for review joins the streak
   once it's approved. The streak lasts until the end of the current
   period, so a daily streak survives today until midnight even if you
@@ -364,9 +390,12 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
 - **Net worth** (the main board) ranks everyone by **balance plus the DC
   riding on open bets**: solo bets on markets that haven't resolved yet
   and parlays not yet settled. Placing a bet doesn't move you down; losing
-  it does. Home and your profile show your rank on this board. On a phone
-  a small card shows your rank and net worth, with **Jump to me**, which
-  opens the list ten places above you instead of paging down from the top.
+  it does. Your profile shows your rank on this board, and so does Home
+  once you've had a bet or parlay settled. Your own row is highlighted
+  and stays pinned to the bottom of the screen until you scroll to it.
+  When you're further down than the list shows, a bar with your rank and
+  net worth stands in for it on a phone, with **Jump to me**, which opens
+  the list ten places above you instead of paging down from the top.
 - **This month** ranks **net betting profit** for the calendar month, on
   Eastern time (America/New_York): winnings, refunds and cancelled-bet
   refunds, minus stakes, and minus any winnings an override took back.
@@ -377,14 +406,15 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   or been paid this month appear.
 - **Ties share a rank** on both boards ("1, 1, 3").
 - **Only current members are ranked.** Someone the owner has removed drops
-  off both boards and out of "Rank X of N"; their profile still shows
+  off both boards and out of the count in a rank like "218th of 502"; their profile still shows
   their net worth, marked "Not ranked".
 - **Your standing** (Net worth, wide screens only): a card beside the
-  rankings shows your rank, net worth, record and how far you are behind
-  the member above you.
+  rankings, under the podium, shows your rank, net worth, record and how
+  far you are behind the member above you, with Jump to me.
 - **Podium and records:** once three members are ranked, the top three
-  of either board stand on a podium above the list. Each row shows a win-loss record (like 6-3):
-  your settled solo bets and parlays, all time. Bets on a voided market,
+  of the Net worth board stand on a podium (This month leads with the
+  race instead). From tablet width up, each row shows a win-loss record (like 6-3):
+  your settled solo bets and parlays, all time. Bets on a called-off market,
   or refunded because nobody had backed the winner, are refunds and count
   as neither, and open bets don't count yet.
 - **The race** (This month): a step line for each of the month's top five,
@@ -417,10 +447,13 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
 
 ## Profile stats
 
-Every member's profile has a **Stats** card, which any member can see:
+A member's profile shows their net worth and rank, and how the net worth
+splits into balance and DC riding on open bets ("4,886 DC balance + 275 DC
+riding on open bets"). It also has a **Stats** card, which any member can
+see:
 
-- **Solo bets** and **Parlays:** how many settled bets were won, lost
-  and refunded. A bet on a voided market, or one refunded because nobody
+- **Solo bets** and **Parlays:** the settled record as won–lost ("17–12"),
+  with the share won and how many were refunded under it. A bet on a called-off market, or one refunded because nobody
   had backed the winner, counts as refunded. Cancelled bets, and bets
   still open or waiting to be resolved, don't count. After an override,
   a bet counts by the final result.
@@ -430,7 +463,7 @@ Every member's profile has a **Stats** card, which any member can see:
 - **Biggest win:** the largest payout minus its stake on a single solo
   bet, with the market. A payout an override took back doesn't count.
 - **Best parlay:** the won parlay with the highest multiplier (the
-  multiplier fixed when it was placed, less any voided legs, and up to its
+  multiplier fixed when it was placed, less any called-off picks, and up to its
   cap for a parlay from before October 2026), and what it paid.
 - **Markets created** and **Tasks completed** (approved submissions only).
 
@@ -440,9 +473,10 @@ bets yet." and shows only markets created and tasks completed.
 ## Reactions and comments
 
 - **Reactions:** on any item in the feed or in a member's activity, tap
-  🔥 🙏 😂 or 👏 to react, and tap it again to take it back. You can
-  give each of the four once per item. Everyone sees the counts, and
-  your own reactions are highlighted.
+  **React** (the smiley) and pick 🔥 🙏 😂 or 👏. You can give each of the
+  four once per item. An item shows only the reactions someone has given,
+  each with its count, and your own are highlighted; tap one of those to
+  add yours, or to take yours back.
 - **Comments:** every market has a short comment thread under its bets.
   A comment is up to 280 characters and shows its author and when it was
   posted, newest at the bottom. The latest 50 show first; "Show more"
@@ -457,18 +491,21 @@ bets yet." and shows only markets created and tasks completed.
 DwellDuel can send notifications to your phone or computer, even when
 the app is closed. They're off until you turn them on, under **Settings →
 Notifications**, on each device you want them on. You choose what you
-hear about, and your choices apply on every device:
+hear about, and your choices follow your account onto every device. Where a
+device can't get notifications (an iPhone that hasn't added DwellDuel to
+the Home Screen, a browser without them, or notifications blocked), the
+choices are greyed out there, with a line saying why:
 
 | Notification | When | Starts |
 |---|---|---|
 | **Markets to resolve** | A market you made has closed and is waiting for you to resolve it. Admins and the owner also hear about every closed market that has no result, once each. Sent within about a minute of closing, with a daily backup if that's missed | On |
-| **Results** | A market you bet on, solo or as a parlay leg, is resolved ("You won 26 DC", then the market and its result), changed by an override or voided | On |
+| **Results** | A market you bet on, solo or as a parlay pick, is resolved ("You won 26 DC", then the market and its result), changed by an override or called off | On |
 | **Task reviews** | Your task submission is approved or rejected, with the reviewer's reason, if they gave one | On |
 | **Tasks to review** (reviewers and above only) | A member submits a task waiting for review. Never your own | On |
 | **New markets** | Someone else creates a market | Off |
 
-A parlay only pays once all its legs are settled, so if your only stake
-in a market is a parlay leg, the notification just gives the result. A
+A parlay only pays once all its picks are settled, so if your only stake
+in a market is a parlay pick, the notification just gives the result. A
 cancelled bet gets no notification. Tapping a notification opens the
 market, your tasks, or (for Task to review) the review queue.
 
@@ -496,25 +533,25 @@ sign back in. Your other devices keep theirs.
 
 | Role | Can also…
 |---|---|
-| **Member** | Bet, create markets and edit their own (wording, category, and the closing time while they have no money on it), resolve their own once they close and void them before they close (unless they have money on them), submit tasks |
+| **Member** | Bet, create markets and edit their own (wording, category, and the closing time while they have no money on it), resolve their own once they close and call them off before they close (unless they have money on them), submit tasks |
 | **Reviewer** | Approve and reject task submissions (not their own), and resolve closed markets they have no stake in |
-| **Admin** | Invite people, manage tasks, resolve, override or void any market, move any market's closing time or reopen it, change any market's category, rename, merge and hide categories, delete any comment, view members and the full ledger |
+| **Admin** | Invite people, manage tasks, resolve, override or call off any market, move any market's closing time or reopen it, change any market's category, rename, merge and hide categories, delete any comment, view members and the full ledger |
 | **Owner** (exactly one) | Adjust balances, grant and remove roles, remove a member, and delete a market or task that hasn't been used |
 
-Reviewers and above get a red count on the **Admin** button for what is
-waiting on them: other members' task submissions (reviewers and above) and
-closed markets with no result (admins and above). It disappears at zero.
-Home's Admin tile counts the same things and opens the queue that has
-work in it.
+Reviewers and above see what is waiting on them: other members' task
+submissions (reviewers and above) and closed markets with no result (admins
+and above). Their avatar gets a red dot, its menu's **Admin** item says
+"N waiting", and Home's **Needs you** lists each queue with its count; all
+of it disappears at zero. Admin opens on the queue that has work in it.
 
 A role only counts while you're invited, and so does what you can do with
 your own markets and comments. The owner can **remove a member**
 from their page under Admin → Members: they go back to plain member, their
 invite is revoked, they're signed out on every device and their devices
 stop getting notifications, straight away. They can no longer resolve,
-void or edit the markets they created, or delete their comments. Their
+call off or edit the markets they created, or delete their comments. Their
 coins, bets and history stay where they are, but they're left out of both
-leaderboards, the "Rank X of N" count, the month's champion and the weekly
+leaderboards, the count in a rank like "218th of 502", the month's champion and the weekly
 recap's best call and top tasker, and Admin → Members lists them under
 **Removed**. If they sign in again they land on the not-invited page. The
 owner's **Invite again** on their page (it asks first) brings them back as
@@ -618,13 +655,18 @@ or reach them through
 
 ## Around the app
 
-- **Home:** your balance, rank, DC at stake and pending rewards, plus
-  links to everything else. At 0 DC it points you to Tasks, the way to
-  earn more. New members also get a **Getting started** card: read this
-  page, turn on notifications on this device (left out on a browser that
-  can't get them), add your photo, place your first bet and try a task.
-  It goes away once you've done them all, or
-  when you dismiss it. After that, the installed app without
+- **Home:** a greeting with your rank (once you've had a bet settled) and
+  the DC riding on your open bets; your balance is in the top bar, and on
+  a computer in a Balance card too. **Needs you** appears when something
+  does: submissions to review and markets to resolve, and at 0 DC a pointer
+  to Tasks, the way to earn more. **Your bets** lists the three closing
+  soonest (or, with none open, the markets closing soonest), and
+  **Activity** the latest from the feed, with See all. New members also get
+  a **Getting started** card: read this page, turn on notifications on this
+  device (left out on a browser that can't get them), add your photo, place
+  your first bet and try a task. It goes away once you've done them all,
+  when you dismiss it, or once you've had a bet settled and a task
+  approved. After that, the installed app without
   notifications asks once to turn them on, until you tap Not now.
 - **Weekly recap:** on Sundays and Mondays (Eastern time), Home recaps
   the week, Monday to Sunday. On Sunday it's the week so far; on Monday
@@ -637,28 +679,32 @@ or reach them through
   whoever got there first); and the markets closing in the week ahead.
   A line with nothing to report is left out, and a quiet week shows no
   recap at all.
-- **Feed:** everyone's bets, parlays, new markets, results, voids (with
+- **Activity:** opened from Home's Activity (See all). Everyone's bets, parlays, new markets, results, markets called off (with
   their reason), wins, approved tasks and each month's champion, with their
   reactions, updated live. See [Reactions and comments](#reactions-and-comments).
-  The tabs narrow it: **All**, **Results** (markets resolved or voided,
+  The tabs narrow it: **All**, **Results** (markets resolved or called off,
   bets and parlays won, each month's champion) and **Mine** (your own bets,
-  markets and wins, plus the result or void of any market you have a bet or
-  a parlay leg on, and the void of any market you made).
+  markets and wins, plus the result of any market you have a bet or a parlay
+  pick on, or its being called off, and any market you made being called off).
 - **Finding a market:** on Markets, type in the search box to find a market
   whose title contains what you typed (not case-sensitive, up to 80
-  characters). It
-  combines with the Open, Awaiting and Resolved tabs and the category chips,
-  and lists every match in one list, newest first, rather than in sections.
+  characters). It looks in every status, whichever tab you're on, keeps
+  the category chip, and lists every match in one list, newest first,
+  rather than in sections.
   Your own bets are under My bets.
 - **Leaderboard and profiles:** see [The leaderboard](#the-leaderboard)
   and [Profile stats](#profile-stats).
-  Tap your avatar (top right) for your profile, where Edit profile and
-  Settings live.
-- **Settings:** theme (System, Light or Dark), vibration on taps (Android),
-  reduced animations, your profile (photo and name), [notifications](#notifications), this How it works
-  page, [what DwellDuel keeps about you](#your-data), and sign out. Signing out only signs out the device you're on, and
+  Tap your avatar (top right) for a menu: **Your profile** (where Edit
+  profile lives), **Settings**, **Admin** for reviewers and above, and
+  **Send feedback**.
+- **Settings:** on this device, theme (System, Light or Dark), vibration on
+  taps (Android) and reduced animations; [notifications](#notifications); how
+  to install the app (on a phone browser that hasn't yet); How it works (the
+  short version, which links to these full rules) and
+  [what DwellDuel keeps about you](#your-data); and your account: your
+  profile (photo and name) and sign out. Signing out only signs out the device you're on, and
   stops its notifications; your other devices stay signed in.
 - **Install it:** add DwellDuel to your Home Screen for a full-screen app
   with a launch animation. It shows an offline page when you lose
   connection, and on iPhone and iPad it's how you get notifications.
-- **Feedback:** use "Send feedback" on Home.
+- **Feedback:** use "Send feedback" in your avatar's menu.

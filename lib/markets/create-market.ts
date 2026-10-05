@@ -1,9 +1,10 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
-import { friendlyError } from '@/lib/errors/friendly-error'
+import { friendlyError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { afterAction, notifyNewMarket } from '@/lib/push/notify'
 import { isUuid } from '@/lib/uuid'
 import { normalizeCategoryName } from './categories'
@@ -17,7 +18,7 @@ const MIN_OUTCOMES = 2
 
 export async function createMarketAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const title = String(formData.get('title') ?? '').trim()
   // A textarea's newlines arrive as CRLF once the browser serialises the form, doubling up
@@ -35,11 +36,11 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
   if (!title) return { formError: 'Enter a title.', field: 'title' }
   if (title.length > TEXT_LIMITS.marketTitle) return { formError: tooLong('Title', TEXT_LIMITS.marketTitle), field: 'title' }
   if (description.length > TEXT_LIMITS.marketDescription) {
-    return { formError: tooLong('Description', TEXT_LIMITS.marketDescription), field: 'description' }
+    return { formError: tooLong('Details', TEXT_LIMITS.marketDescription), field: 'description' }
   }
   if (!category) return { formError: 'Choose a category.', field: 'category' }
   if (category.length > TEXT_LIMITS.category) return { formError: tooLong('Category', TEXT_LIMITS.category), field: 'category' }
-  if (kind !== 'binary' && kind !== 'multiple_choice' && kind !== 'over_under') return { formError: 'Choose a market kind.' }
+  if (kind !== 'binary' && kind !== 'multiple_choice' && kind !== 'over_under') return { formError: 'Choose a type.' }
 
   const closeAtDate = closeAt ? new Date(closeAt) : null
   if (!closeAtDate || Number.isNaN(closeAtDate.getTime()) || closeAtDate.getTime() <= Date.now()) {
@@ -105,5 +106,8 @@ type Created = { market_id: string; replayed: boolean }
 function finish(data: unknown): never {
   const { market_id, replayed } = data as Created
   if (!replayed) afterAction(() => notifyNewMarket(market_id))
+  // The markets list and Home's open count may sit in the creator's 30s client cache (#384).
+  revalidatePath('/markets')
+  revalidatePath('/')
   redirect(`/markets/${market_id}`)
 }

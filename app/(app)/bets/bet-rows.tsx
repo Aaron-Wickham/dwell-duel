@@ -1,53 +1,105 @@
 import type { ReactNode } from 'react'
 import { IntentLink } from '@/components/ui/intent-link'
-import { ResultChip } from '@/components/bets/result-chip'
 import { LocalTime } from '@/components/ui/local-time'
-import { StatusChip } from '@/components/ui/status-chip'
 import { PlacedParlay } from '@/components/parlays/placed-parlay'
 import { ListCard, listCardsClass } from '@/components/ui/list-card'
-import type { MyCancelledBet } from '@/lib/bets/list-my-bets'
+import type { MyBet, MyCancelledBet } from '@/lib/bets/list-my-bets'
 import type { Wager } from '@/lib/bets/list-my-wagers'
 import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
+import { rowTitleClass } from '@/components/ui/page'
+import { formatDcAmount } from '@/lib/format/dc'
 
-// List cards, three across at lg. Each keeps its own height (items-start), so a tall parlay
-// doesn't leave blank space in its neighbours.
-const betListClass = cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-4')
+// List cards on the page (D2), two to a row at lg, with a parlay spanning both (#393). The cards in
+// a row stretch to one height, so a tall card leaves no hole beside the short one; they read left to
+// right, top to bottom, and Show more appends rows without moving a card already on screen, as
+// balanced CSS columns would (ST-5).
+export const betListClass = cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-stretch lg:gap-5')
 
 function Row({
   domId,
   marketId,
   marketTitle,
+  when,
   detail,
-  aside,
 }: {
   domId: string
   marketId: string
   marketTitle: string
+  // The day beside the title, right-aligned as on the markets board.
+  when: ReactNode
   detail: ReactNode
-  aside: ReactNode
 }) {
   const titleId = `${domId}-title`
   return (
-    <ListCard
-      {...focusTarget(domId, titleId)}
-      className="flex items-start justify-between gap-3 lg:flex-col lg:justify-start"
-    >
-      <div className="flex min-w-0 flex-col gap-1">
+    <ListCard {...focusTarget(domId, titleId)} className="flex flex-col gap-1">
+      <div className="flex items-start justify-between gap-3">
         <IntentLink
           id={titleId}
           href={`/markets/${marketId}`}
           transitionTypes={['nav-forward']}
-          className="stretched-link font-bold break-words"
+          className={cn(rowTitleClass, 'stretched-link min-w-0 break-words text-ink')}
         >
           {marketTitle}
         </IntentLink>
-        <p className="text-sm text-ink2">{detail}</p>
+        <span className="shrink-0 text-sm whitespace-nowrap text-ink2">{when}</span>
       </div>
-      <div className="flex min-w-0 max-w-full shrink-0 flex-col items-end gap-2 lg:mt-auto lg:w-full lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
-        {aside}
-      </div>
+      <p className="text-sm">{detail}</p>
     </ListCard>
+  )
+}
+
+// What the bet pays while it's open, then what it did: in the line, not a chip (#393).
+function BetOutcome({ bet }: { bet: MyBet }) {
+  const { result } = bet
+  switch (result.kind) {
+    case 'open':
+    case 'awaiting':
+      return (
+        <>
+          {bet.pays !== null && (
+            <>
+              {' · pays '}
+              <span className="font-extrabold text-win">{formatDcAmount(bet.pays)}</span>
+            </>
+          )}
+          {result.kind === 'awaiting' && ' · waiting for a result'}
+        </>
+      )
+    case 'won':
+      return (
+        <>
+          {' · won '}
+          <span className="font-extrabold text-win">{formatDcAmount(result.payout)}</span>
+        </>
+      )
+    case 'lost':
+      return (
+        <>
+          {' · '}
+          <span className="font-extrabold text-loss">lost</span>
+        </>
+      )
+    case 'refunded':
+      return <>{result.reason === 'no_winners' ? ' · refunded, no winners' : ' · refunded'}</>
+  }
+}
+
+function BetWhen({ bet }: { bet: MyBet }) {
+  if (bet.result.kind === 'awaiting') return <>Closed</>
+  if (bet.result.kind === 'open') {
+    return (
+      <>
+        <span className="sr-only">Closes </span>
+        <LocalTime iso={bet.closeAt} format="day" />
+      </>
+    )
+  }
+  return (
+    <>
+      <span className="sr-only">Placed </span>
+      <LocalTime iso={bet.placedAt} format="day" />
+    </>
   )
 }
 
@@ -64,13 +116,13 @@ export function WagerRows({ wagers, rowIdPrefix }: { wagers: Wager[]; rowIdPrefi
             domId={domId}
             marketId={b.marketId}
             marketTitle={b.marketTitle}
+            when={<BetWhen bet={b} />}
             detail={
               <>
-                {b.amount} DC on {b.outcomeLabel} · {b.result.kind === 'open' ? 'Closes' : 'Placed'}{' '}
-                <LocalTime iso={b.result.kind === 'open' ? b.closeAt : b.placedAt} format="dateTime" />
+                {formatDcAmount(b.amount)} on <strong>{b.outcomeLabel}</strong>
+                <BetOutcome bet={b} />
               </>
             }
-            aside={<ResultChip result={b.result} />}
           />
         )
       })}
@@ -87,12 +139,17 @@ export function CancelledBetRows({ bets, rowIdPrefix }: { bets: MyCancelledBet[]
           domId={rowDomId(rowIdPrefix, b.id)}
           marketId={b.marketId}
           marketTitle={b.marketTitle}
-          detail={
+          when={
             <>
-              {b.amount} DC on {b.outcomeLabel} · Cancelled <LocalTime iso={b.cancelledAt} format="dateTime" />
+              <span className="sr-only">Cancelled </span>
+              <LocalTime iso={b.cancelledAt} format="day" />
             </>
           }
-          aside={<StatusChip tone="void">Refunded</StatusChip>}
+          detail={
+            <>
+              {formatDcAmount(b.amount)} on <strong>{b.outcomeLabel}</strong> · refunded
+            </>
+          }
         />
       ))}
     </ul>

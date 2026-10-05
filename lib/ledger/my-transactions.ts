@@ -2,6 +2,7 @@ import type { DbClient } from '@/lib/supabase/database'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 import { fetchLookups, type EntryMeta, type Lookups } from './list-transactions'
+import { formatDcAmount } from '@/lib/format/dc'
 
 export interface MyCoinEntry {
   id: number
@@ -13,7 +14,7 @@ export interface MyCoinEntry {
 // A member reads their own rows, so this names what happened to them in their words, where the
 // admin ledger's buildContext names the movement for someone auditing everyone's.
 export function coinLabel(type: string, amount: number, meta: EntryMeta, lookups: Lookups): string {
-  const dc = `${Math.abs(amount)} DC`
+  const dc = formatDcAmount(Math.abs(amount))
   const market = meta.market_id ? lookups.markets.get(meta.market_id) : undefined
   const outcome = meta.outcome_id ? lookups.outcomes.get(meta.outcome_id) : undefined
   const onMarket = (text: string) => (market ? `${text} · ${market}` : text)
@@ -27,7 +28,7 @@ export function coinLabel(type: string, amount: number, meta: EntryMeta, lookups
     case 'bet_won':
       return market ? `Won ${dc} on ${market}` : `Won ${dc}`
     case 'bet_voided_refund':
-      return onMarket('Refund: market voided')
+      return onMarket('Refund: market called off')
     case 'bet_refunded':
       return onMarket('Refund: nobody picked the winner')
     case 'bet_cancelled':
@@ -39,7 +40,7 @@ export function coinLabel(type: string, amount: number, meta: EntryMeta, lookups
     case 'parlay_won':
       return `Won ${dc} on a parlay`
     case 'parlay_refunded':
-      return 'Refund: parlay voided'
+      return 'Refund: parlay called off'
     case 'parlay_reversed':
       return 'Parlay payout taken back: result changed'
     case 'task_completed': {

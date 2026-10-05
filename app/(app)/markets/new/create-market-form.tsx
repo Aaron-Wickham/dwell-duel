@@ -20,6 +20,7 @@ import { h2Class, labelClass } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
 import { nextWeeklyClose } from '@/lib/markets/weekly-close'
 import { useTimeZone } from '@/components/ui/local-time'
+import { cardPaddingClass } from '@/components/ui/card'
 
 const MAX_OUTCOMES = 6
 const MIN_OUTCOMES = 2
@@ -33,13 +34,9 @@ const KIND_OPTIONS: { kind: MarketKind; label: string; hint: string }[] = [
   { kind: 'over_under', label: 'Over/Under', hint: 'Will a number land above or below a line?' },
 ]
 
-// update_market never changes the outcomes or the line, so the hint says so before it's too late
-// (#266). The close time can move while the market is open, but not by a creator with money on it
-// (can_move_market_close, 0106; #371).
-function closeTimeHint(kind: MarketKind): string {
-  const fixed = kind === 'over_under' ? 'The line and outcomes' : 'The outcomes'
-  return `Betting stops at this time, so set it before the answer is known. ${fixed} can’t be changed later; you can move the close time while the market is open, unless you bet on it.`
-}
+// The close-time hint says only what the time does (COPY-11). What can't change later is said
+// beside the preview, where it's read before Create market.
+const CLOSE_TIME_HINT = 'Betting stops here, so pick a time before anyone knows the answer.'
 
 // A market being duplicated (?from=), read on the server. `closeAt` is the original's close.
 export interface MarketPrefill {
@@ -124,13 +121,14 @@ export function CreateMarketForm({
     <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
       <form
         action={formAction}
-        className="flex flex-col gap-5 rounded-card border border-line bg-surface p-[18px] shadow-card md:p-6"
+        className={`flex flex-col gap-5 rounded-card border border-line bg-surface ${cardPaddingClass} shadow-card`}
       >
         <Field label="Title" htmlFor="cm-title">
           <Input
             id="cm-title"
             name="title"
             required
+            placeholder="Will the sermon run past noon?"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={TEXT_LIMITS.marketTitle}
@@ -139,35 +137,13 @@ export function CreateMarketForm({
           />
         </Field>
 
-        <Field label="Description" htmlFor="cm-desc">
-          <Textarea
-            id="cm-desc"
-            name="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            maxLength={TEXT_LIMITS.marketDescription}
-            aria-invalid={state?.field === 'description'}
-            aria-describedby={state?.field === 'description' ? 'create-market-error' : undefined}
-          />
-        </Field>
-
-        <CategoryField
-          id="cm-category"
-          value={category}
-          onChange={setCategory}
-          suggestions={categories.suggestions}
-          popular={categories.popular}
-          errorId="create-market-error"
-          invalid={state?.field === 'category'}
-        />
-
         <fieldset className="flex flex-col gap-1.5">
           <legend className={cn(labelClass, 'mb-1.5')}>Type</legend>
           <div className="grid gap-2 lg:grid-cols-3">
             {KIND_OPTIONS.map((option) => (
               <label
                 key={option.kind}
-                className="pressable relative flex min-h-11 cursor-pointer items-start gap-3 rounded-tile border border-line bg-surface p-3.5 has-checked:border-acc-text has-checked:bg-acc-soft has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus md:p-4"
+                className="pressable relative flex min-h-11 cursor-pointer items-start gap-3 rounded-tile border border-line bg-surface p-3.5 has-checked:border-acc-text has-checked:bg-acc-soft has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus md:p-4"
               >
                 <input
                   type="radio"
@@ -269,7 +245,7 @@ export function CreateMarketForm({
           </fieldset>
         )}
 
-        <Field label="Close time" htmlFor="cm-close" hint={closeTimeHint(kind)}>
+        <Field label="Close time" htmlFor="cm-close" hint={CLOSE_TIME_HINT}>
           <Input
             id="cm-close"
             type="datetime-local"
@@ -283,6 +259,37 @@ export function CreateMarketForm({
         {/* The picker's value is local wall-clock time; the server needs the instant it names. */}
         <input type="hidden" name="close_at" value={closeAt ? new Date(closeAt).toISOString() : ''} />
 
+        <CategoryField
+          id="cm-category"
+          value={category}
+          onChange={setCategory}
+          suggestions={categories.suggestions}
+          popular={categories.popular}
+          errorId="create-market-error"
+          invalid={state?.field === 'category'}
+        />
+
+        <Field label="Details (optional)" htmlFor="cm-desc">
+          <Textarea
+            id="cm-desc"
+            name="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            maxLength={TEXT_LIMITS.marketDescription}
+            aria-invalid={state?.field === 'description'}
+            aria-describedby={state?.field === 'description' ? 'create-market-error' : undefined}
+          />
+        </Field>
+
+        {/* update_market never changes the outcomes or the line (#266); the close time can move while the
+            market is open, but not by a creator with money on it (can_move_market_close, 0106; #371).
+            can_resolve_market (0046): nobody but an admin resolves a market they have money on. Said
+            here, next to Create market, rather than under the close time (COPY-11). */}
+        <p className="text-sm text-ink2">
+          {kind === 'over_under' ? 'The line and outcomes' : 'The outcomes'} can’t be changed later. You can move the close
+          time while it’s open, unless you bet on it.{!admin && ' If you bet on it, a reviewer resolves it.'}
+        </p>
+
         {state?.formError && (
           <Message tone="error" id="create-market-error">
             {state.formError}
@@ -293,7 +300,7 @@ export function CreateMarketForm({
           Create market
         </FormSubmitButton>
       </form>
-      <MarketPreview kind={kind} title={title} category={category} outcomes={outcomes} line={line} closeAt={closeAt} admin={admin} />
+      <MarketPreview kind={kind} title={title} category={category} outcomes={outcomes} line={line} closeAt={closeAt} />
     </div>
   )
 }
@@ -307,9 +314,7 @@ function MarketPreview({
   outcomes,
   line,
   closeAt,
-  admin,
 }: {
-  admin: boolean
   kind: MarketKind
   title: string
   category: string
@@ -341,8 +346,6 @@ function MarketPreview({
         Preview
       </h2>
       <p className="text-sm text-ink2">How the card will look on Markets.</p>
-      {/* can_resolve_market (0046): nobody but an admin resolves a market they have money on. */}
-      {!admin && <p className="text-sm text-ink2">If you bet on it, a reviewer resolves it.</p>}
       <MarketCard
         preview
         id="preview"
@@ -350,7 +353,6 @@ function MarketPreview({
         category={normalizeCategoryName(category) || null}
         status="open"
         kind={kind}
-        line={shownLine}
         closeAt={closeDate && !Number.isNaN(closeDate.getTime()) ? closeDate.toISOString() : ''}
         resolvedAt={null}
         outcomes={odds.map((o) => ({

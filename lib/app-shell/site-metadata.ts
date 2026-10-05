@@ -45,8 +45,9 @@ export const siteMetadata: Metadata = {
 
 // viewport-fit=cover lets the page run under the notch and home indicator; the --safe-* tokens
 // in globals.css put the chrome back inside the safe area. resizes-content makes the keyboard
-// shrink the layout viewport instead of covering a focused field. Zoom is locked: a pinch-zoomed
-// installed app leaves the fixed top and tab bars displaced from the screen edges. The
+// shrink the layout viewport instead of covering a focused field. A browser tab can pinch-zoom
+// (D6, #402); StandaloneZoomLock adds the lock to this meta only in the installed app, where a
+// pinch-zoomed page leaves the fixed top and tab bars displaced from the screen edges. The
 // color-scheme meta applies while the HTML is still being parsed, before globals.css, so a full
 // page load in dark mode (a reload after a deploy) paints the browser's dark canvas, not white (#353).
 export const siteViewport: Viewport = {
@@ -54,8 +55,6 @@ export const siteViewport: Viewport = {
   colorScheme: 'light dark',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: 'cover',
   interactiveWidget: 'resizes-content',
 }

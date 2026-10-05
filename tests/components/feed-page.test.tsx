@@ -25,9 +25,10 @@ vi.mock('@/lib/social/reactions-actions', () => ({ setReactionAction: vi.fn() })
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase: {}, user: { id: 'p-me' } }) }))
 vi.mock('@/components/live/live-tables', () => ({ LiveTables: () => null }))
 vi.mock('@/components/ui/show-more-focus', () => ({ ShowMoreFocus: () => null, requestShowMoreFocus }))
-vi.mock('next/navigation', () => ({ redirect: vi.fn() }))
+vi.mock('next/navigation', () => ({ redirect: vi.fn(), usePathname: () => '/feed', useRouter: () => ({ back: vi.fn(), push: vi.fn() }) }))
 // A plain click runs onNavigate, as the App Router's Link does for a client-side navigation.
 vi.mock('next/link', () => ({
+  useLinkStatus: () => ({ pending: false }),
   default: ({
     href,
     scroll,
@@ -109,10 +110,13 @@ describe('FeedPage', () => {
 
     expect(getReactions).toHaveBeenCalledTimes(1)
     expect(getReactions).toHaveBeenCalledWith({}, ['bet:1', 'bet:2'])
-    const [first, second] = screen.getAllByRole('group', { name: 'Reactions' })
+    const [first, second] = screen.getAllByRole('listitem')
+    expect(within(first).getAllByRole('group', { name: 'Reactions' })).toHaveLength(1)
     expect(within(first).getByRole('button', { name: 'React fire, 3 reactions, you reacted' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(first).getByRole('button', { name: 'React clap, 1 reaction' })).toHaveAttribute('aria-pressed', 'false')
-    expect(within(second).getByRole('button', { name: 'React fire, 0 reactions' })).toHaveAttribute('aria-pressed', 'false')
+    // An item nobody reacted to shows only React (#395).
+    expect(within(second).queryByRole('group', { name: 'Reactions' })).toBeNull()
+    expect(within(second).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['React'])
   })
 
   it('moves focus to the first new row when Show more is clicked', async () => {

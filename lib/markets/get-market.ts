@@ -1,8 +1,9 @@
 import type { MarketKind } from '@/lib/markets/kind'
 import type { Pricing, PricedOutcome } from '@/lib/markets/pricing'
 import type { DbClient } from '@/lib/supabase/database'
-import type { Cursor, PageParams } from '@/lib/pagination/cursor'
+import { WINDOW_CAP, type Cursor, type PageParams } from '@/lib/pagination/cursor'
 import { avatarUrl } from '@/lib/profile/avatar'
+import { orderOutcomes } from '@/lib/markets/outcome-series'
 import type { MarketCategory } from '@/lib/markets/categories'
 import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 
@@ -58,7 +59,8 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
     .eq('id', marketId)
     // Rows come back with no default order, and colours are assigned by position for
     // multiple-choice markets, so pin a stable order: insertion time, then label to
-    // break the tie (create_market inserts every outcome in one transaction).
+    // break the tie (create_market inserts every outcome in one transaction). orderOutcomes then
+    // puts Yes and Over first.
     .order('created_at', { referencedTable: 'market_outcomes' })
     .order('label', { referencedTable: 'market_outcomes' })
     .maybeSingle()
@@ -66,7 +68,9 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
   if (error) throw error
   if (!data) return null
 
-  const outcomes = (data.market_outcomes ?? []).map((o) => ({
+  // Text column with a CHECK constraint (0043), so the generated type says only string.
+  const kind = data.kind as MarketDetail['kind']
+  const outcomes = orderOutcomes(kind, data.market_outcomes ?? []).map((o) => ({
     id: o.id,
     label: o.label,
     poolTotal: o.pool_total,
@@ -87,8 +91,8 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
     id: data.id,
     title: data.title,
     description: data.description,
-    // Text columns with CHECK constraints (0043, 0001), so the generated types say only string.
-    kind: data.kind as MarketDetail['kind'],
+    kind,
+    // A text column with a CHECK constraint (0001), so the generated type says only string.
     status: data.status as MarketDetail['status'],
     closeAt: data.close_at,
     createdAt: data.created_at,
@@ -127,6 +131,10 @@ type BetRow = {
 
 const betKey = (b: { id: number; created_at: string }): Cursor => ({ ts: b.created_at, id: String(b.id) })
 
+// The market page shows the latest bets and "Show more" (#390), so comments and the rest of the
+// page aren't buried under every bet.
+export const MARKET_BETS_PAGE = 10
+
 // The range read and its key probe share one builder, so the two can't drift apart on filters. Its column list is a runtime string, so
 // the generated types can't follow it, and each reader casts its rows.
 function betsQuery(supabase: DbClient, marketId: string, columns: string, filter: string | null, limit: number) {
@@ -150,6 +158,8 @@ export async function getMarketBets(supabase: DbClient, marketId: string, page: 
       if (error) throw error
       return ((data ?? []) as unknown as { id: number; created_at: string }[]).map(betKey)
     },
+    WINDOW_CAP,
+    MARKET_BETS_PAGE,
   )
 
   return {

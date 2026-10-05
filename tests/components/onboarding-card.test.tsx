@@ -108,7 +108,7 @@ describe('OnboardingCard', () => {
         <OnboardingCard steps={{ ...NONE, photo: true }} />
       </>,
     )
-    await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Dismiss getting started' }))
     expect(dismissOnboardingAction).toHaveBeenCalledOnce()
     expect(screen.queryByRole('region', { name: 'Getting started' })).toBeNull()
     expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()

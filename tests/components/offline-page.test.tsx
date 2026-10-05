@@ -1,15 +1,13 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
 import OfflinePage from '@/app/(auth)/offline/page'
 
 describe('OfflinePage', () => {
   it('explains the page needs a connection', () => {
     render(<OfflinePage />)
     expect(screen.getByRole('heading', { level: 1, name: 'You’re offline' })).toBeInTheDocument()
-    expect(
-      screen.getByText('DwellDuel needs a connection for this page. It’ll load as soon as you’re back online.'),
-    ).toBeInTheDocument()
+    expect(screen.getByText('This page loads by itself as soon as you’re back online.')).toBeInTheDocument()
   })
 
   it('puts its content in the main landmark', () => {
@@ -24,5 +22,22 @@ describe('OfflinePage', () => {
     expect(retry.tagName).toBe('A')
     expect(retry).toHaveAttribute('href', '')
     expect(retry).toHaveClass('no-underline')
+  })
+
+  it('offers Go to Home too, so it is never a dead end (#401)', () => {
+    render(<OfflinePage />)
+    expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/')
+  })
+
+  it('reloads by itself when the connection comes back (ST-12)', () => {
+    const reload = vi.fn()
+    vi.stubGlobal('location', { ...window.location, reload })
+    render(<OfflinePage />)
+    act(() => {
+      window.dispatchEvent(new Event('online'))
+    })
+    expect(reload).toHaveBeenCalledOnce()
+    expect(screen.getByRole('status')).toHaveTextContent('Trying again…')
+    vi.unstubAllGlobals()
   })
 })

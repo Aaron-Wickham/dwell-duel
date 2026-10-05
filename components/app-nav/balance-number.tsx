@@ -1,6 +1,7 @@
 'use client'
 
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { formatDcAmount } from '@/lib/format/dc'
 
 const AnimatedNumber = lazy(() => import('@/components/ui/animated-number').then((m) => ({ default: m.AnimatedNumber })))
 
@@ -29,11 +30,11 @@ export function BalanceNumber({ value }: { value: number }) {
     void import('@/components/ui/animated-number')
   }, [])
 
-  const text = <span>{value} DC</span>
+  const text = <span>{formatDcAmount(value)}</span>
   if (!live) return text
   return (
     <Suspense fallback={text}>
-      <AnimatedNumber value={mounted ? value : initial} locales="en-US" format={{ useGrouping: false }} suffix=" DC" />
+      <AnimatedNumber value={mounted ? value : initial} locales="en-US" suffix=" DC" />
       <Mounted onMount={onMount} />
     </Suspense>
   )

@@ -3,11 +3,12 @@
 For the people who run DwellDuel: reviewers, admins and the owner. It's
 task by task: what to tap, what the app asks, and what happens to members'
 coins. The rules every member plays by are in
-[How it works](HOW-IT-WORKS.md) (in the app under Settings → How it works);
+[How it works](HOW-IT-WORKS.md) (in the app under Settings → How it works → Read the full rules);
 this guide doesn't repeat them except where running the group needs them.
 
-Everything here happens under **Admin**, the shield in the top bar, which
-reviewers and above see, and on market pages.
+Everything here happens under **Admin**, which reviewers and above open
+from their avatar's menu or from Home's **Needs you** (it opens on whatever
+is waiting), and on market pages.
 
 ## Roles at a glance
 
@@ -21,11 +22,12 @@ reviewers and above see, and on market pages.
 A role only counts while its account is invited. Removing a member takes
 their role away with their invite, straight away.
 
-The red count on **Admin** is what's waiting on you: other members' task
-submissions (reviewers and above) and closed markets with no result
-(admins and above). The **Tasks** and **Markets** tabs show their share of
-it, and Home's Admin tile counts the same and opens whichever queue has
-work.
+What's waiting on you is other members' task submissions (reviewers and
+above) and closed markets with no result (admins and above). While
+anything waits, your avatar carries a red dot and its menu's **Admin** item
+says "N waiting"; inside Admin, the **Tasks** and **Markets** tabs show
+their share as a red count; and Home's **Needs you** lists each queue with
+its count, opening that section.
 
 ## Inviting people
 
@@ -62,20 +64,26 @@ an optional description, a category, a closing time, and its kind.
 - **Set the closing time before the answer is known.** Betting stops then.
   The outcomes and the line can never change afterwards; the closing time
   can be moved (see Editing and deleting).
-- **Duplicate** on any market opens the form already filled in, a week (or
-  more) later, for a question that comes round every week.
+- **Duplicate** (in a market's **More actions** menu, the ⋯ button at the
+  top right) opens the form already filled in, a week (or more) later, for
+  a question that comes round every week.
 
 A member can create up to 20 markets a day; admins and the owner aren't
 limited.
 
 ### Editing and deleting
 
+Edit, Reopen and Edit history are in the market's **More actions** menu
+(the ⋯ button at the top right of the market page), beside Share and
+Duplicate.
+
 - **Edit** (the creator or an admin, until the market closes) changes the
   description, and the title only until someone else has bet on it, solo
-  or as a parlay pick. Every version is kept under "Edited", which every
-  member can read.
+  or as a parlay pick. Every version is kept under **Edit history**, which
+  every member can read.
 - **Category:** the creator can change it until the market closes, and an
-  admin at any time. It's logged under "Edited" too.
+  admin at any time (**Edit category** once it has closed). It's logged in
+  Edit history too.
 - **Close time and Reopen:** the creator or an admin can move the close
   time, later or earlier as long as it's still to come. A market that has
   closed without a result shows **Reopen**, which takes bets again until
@@ -83,8 +91,8 @@ limited.
   anyone could otherwise buy the known winner cheaply. A creator with a
   bet or parlay pick on their own market can't move its close time; an
   admin does it for them.
-- **Delete** (the owner only) removes a market nobody has ever bet on,
-  cancelled a bet on, or picked in a parlay. Anything with money on it
+- **Delete** (the owner only, its own card on the market page) removes a
+  market nobody has ever bet on, cancelled a bet on, or picked in a parlay. Anything with money on it
   can't be deleted: void it instead, which refunds everyone and keeps the
   record.
 
@@ -94,10 +102,11 @@ Members' DC waits on a market until it's resolved, so resolve within 48
 hours of it closing.
 
 **Where to find them.** **Admin → Markets** lists every market that has
-closed with no result, oldest first, with when it closed, its pool, who
-made it and a Resolve button. **Home → Markets to resolve** shows what's
-waiting on *you*: a creator sees their own as soon as they close, and
-reviewers and admins see any market still unresolved 48 hours after
+closed with no result, oldest first, with when it closed, the DC in it, who
+made it and a Resolve button. Home's **Needs you** shows what's waiting on
+*you*: an admin sees how many markets wait, opening Admin → Markets; a
+creator sees each of their own as soon as it closes ("… closed. Resolve
+it."), and a reviewer also sees any market still unresolved 48 hours after
 closing, and straight away one whose creator has money on it (since the
 creator can't resolve that one).
 
@@ -107,13 +116,16 @@ resolve any market at any time. If the Resolve form isn't on a market page
 for you, you can't resolve it: the database decides
 (`can_resolve_market`), and the app only shows what it allows.
 
-**Steps.** On the market page:
+**Steps.** On the market page, in the **Resolve market** card: on a phone
+it comes straight after the outcomes and your position once the market has
+closed (before then, for an admin resolving early, it's near the bottom);
+from a laptop it's in the right-hand column, under the outcomes.
 
 1. Pick the **winning outcome**. For an Over/Under, type the **actual
    number** instead; it can't equal the line, and the app picks Over or
    Under from it.
 2. Say **why** it won (required, up to 1,000 characters). Everyone sees
-   this on the market page and in the feed.
+   this on the market page and in Activity.
 3. Optionally add **proof**: photos, a PDF or text file, or links (up to 5
    attachments, at most 3 of them files, 3 MB a file and 6 MB together).
    Resolution proof files are deleted 90 days after the result; links
@@ -132,8 +144,9 @@ loses the parlay, and a parlay pays once every pick has won.
 
 Admins only, for a result that was wrong.
 
-1. On the resolved market, choose a **different** outcome (the current
-   one can't be picked again) and say why.
+1. On the resolved market, in the **Override resolution** card, choose a
+   **different** outcome (the current one can't be picked again) and say
+   why.
 2. The confirmation warns that earlier payouts are reversed. Confirm.
 
 The app takes back every original payout, pays the new winners, and
@@ -145,19 +158,21 @@ it out first: talk to them, and if the group agrees, the owner adds DC to
 their balance with a reason (see [Adjusting a balance](#adjusting-a-balance)),
 then override again.
 
-### Voiding
+### Voiding (calling a market off)
 
 Void a market that can't be settled fairly: the question was ambiguous,
-the event was cancelled, or it was made in error.
+the event was cancelled, or it was made in error. Members never see the
+word: the app says the market was **called off**, and a market past its
+close with no result is **waiting for a result** (#403).
 
 - **Who:** until it closes, its creator or an admin; once it has closed,
   only an admin. A creator with a bet or parlay pick on their own market
   can't void it; an admin does.
-- **Steps:** Void market on the market page, give the reason (required, up
-  to 500 characters; everyone sees it on the market page and in the feed),
-  and confirm.
+- **Steps:** in the **Call off market** card, its own card below Resolve on
+  the market page, tap **Call off this market**, give the reason (required, up to 500 characters;
+  everyone sees it on the market page and in Activity), and confirm.
 - **What happens:** every bet is refunded. A parlay with a pick on it drops
-  that leg and carries on with the rest; a parlay with no legs left is
+  that pick and carries on with the rest; a parlay with no picks left is
   refunded. This can't be undone.
 
 ### Categories (admins)
@@ -169,7 +184,7 @@ markets it has:
 - **Rename** fixes a name. It can't clash with another category's name
   (capitals and spacing don't count as different).
 - **Merge** moves every market in one category into another, logs each
-  move under the market's "Edited", and hides the old category.
+  move in the market's Edit history, and hides the old category.
 - **Hide** takes a category out of the filter chips and suggestions
   without touching its markets. Typing a hidden category's name for a
   market brings it back.
@@ -196,16 +211,21 @@ back). The owner can also **Delete** a task nobody has submitted yet.
 
 ### Reviewing submissions (reviewers and above)
 
-**Admin → Tasks → Pending approvals** lists submissions oldest first, 50 at
-a time, with **Show more** for the rest. Each shows who, which task, the
-reward, their note and any proof.
+**Admin → Tasks → To review** lists submissions oldest first, 50 at
+a time, with **Show more** for the rest. On a computer it's a table (member,
+task and reward, proof, when it was sent); on a phone, one compact row each.
+Tap a row's proof line ("Note · 1 photo") to read their note and open any
+proof.
 
 - **Approve** pays the reward at once. It doesn't ask first.
-- **Reject** takes an optional reason (up to 500 characters). The member
-  sees "Not approved" and the reason, and can submit again.
-- **Select all**, or tick several, then **Approve selected** (it asks
-  first, saying how many it approves and how much it pays) or **Reject
-  selected** with one shared reason.
+- **Reject…** opens a small window asking why, optionally (up to 500
+  characters). The member sees "Not approved" and the reason, and can
+  submit again.
+- The bar at the top of the queue stays in view as you scroll. **Select
+  all**, or tick several, and it says how many are selected and what they
+  pay. **Approve selected** asks first, saying how many it approves and how
+  much it pays; **Reject selected…** asks for one optional reason, sent to
+  each of them.
 - **Your own submissions** are in the list but can't be reviewed by you;
   another reviewer does those.
 
@@ -215,10 +235,13 @@ at it when you review.
 ## Members (owner)
 
 **Admin → Members** lists everyone, A to Z, in two tabs: **Active** and
-**Removed**. Search finds a member by name or email. Each row opens that
-member's Admin page: their email, when they joined and last signed in,
-their balance and their last five coin movements (**Open in Ledger** shows
-all of them). Admins can look; the cards below are the owner's.
+**Removed**: on a computer a table of name and email, role, balance, net
+worth (balance plus DC riding on open bets) and when they joined. Search
+finds a member by name or email. A member's name opens their Admin page:
+their email, when they joined and last signed in, their balance and their
+last five coin movements (**Open in Ledger** shows all of them), then the
+owner's cards below, with Access last. Admins can look; the cards are the
+owner's.
 
 ### Adjusting a balance
 
@@ -249,7 +272,7 @@ move).
   notifications;
 - can no longer resolve, void or edit markets they made, or delete their
   comments;
-- drop off both leaderboards, "Rank X of N", the month's champion and the
+- drop off both leaderboards, the count in a rank like "218th of 502", the month's champion and the
   weekly recap.
 
 Their coins, bets and history stay where they are, and they're listed
@@ -292,9 +315,9 @@ paper over it.
   market early, or moving its close time, doesn't change what a parlay
   pays.
 - A parlay's stake buys shares on each of its picks, so parlays move a
-  market's chance like solo bets do. "+N DC riding in parlays" on an
-  outcome shows how much parlay money is on it.
-- An override settles every affected parlay again; a void drops the leg,
+  market's chance like solo bets do. "Includes N DC riding in parlays" under
+  the outcomes shows how much parlay money is on the market.
+- An override settles every affected parlay again; a void drops the pick,
   and the rest pay at their own odds.
 - Parlays placed before the October 2026 switch keep their old caps: 20×
   and 1,000 DC.
@@ -302,7 +325,7 @@ paper over it.
 ## Good practice
 
 - **Resolve within 48 hours** of a market closing; members are waiting on
-  their DC and parlays on their legs.
+  their DC, and parlays on their picks.
 - **Say why** in every resolution and void, plainly, and add proof when
   there is any: a photo of the scoreboard beats "Yes won".
 - **Don't resolve a market you're unsure of.** Leave it for another

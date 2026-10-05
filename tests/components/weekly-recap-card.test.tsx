@@ -6,6 +6,7 @@ import { WeeklyRecapCard } from '@/components/home/weekly-recap-card'
 import type { WeeklyRecap } from '@/lib/home/recap'
 
 vi.mock('next/link', () => ({
+  useLinkStatus: () => ({ pending: false }),
   default: ({ href, transitionTypes: _transitionTypes, ...props }: ComponentProps<'a'> & { href: string; transitionTypes?: string[] }) => (
     <a href={href} {...props} />
   ),

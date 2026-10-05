@@ -94,7 +94,7 @@ describe('bulkApproveTaskCompletionsAction', () => {
   it('asks for a selection before calling anything', async () => {
     const state = await bulkApproveTaskCompletionsAction(undefined, selection([]))
 
-    expect(state).toEqual({ formError: 'Select at least one completion.' })
+    expect(state).toEqual({ formError: 'Select at least one submission.' })
     expect(supabase.rpc).not.toHaveBeenCalled()
   })
 })

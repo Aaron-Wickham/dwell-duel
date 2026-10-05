@@ -1,17 +1,12 @@
 'use client'
 
-import { UserRoundPlus } from 'lucide-react'
 import type { MemberSummary } from '@/lib/members/list-members'
 import { reinviteMemberAction } from '@/lib/admin/owner-actions'
 import { Button } from '@/components/ui/button'
 import { ConfirmActionButton } from '@/components/ui/confirm-action-button'
 
-const trigger = (
-  <>
-    <UserRoundPlus aria-hidden="true" className="size-[18px]" />
-    Invite again
-  </>
-)
+// Words only, like every secondary button (#387).
+const trigger = 'Invite again'
 
 // Owner only, for a removed member: it gives them access back, so it asks first (#265). An invite
 // is an email, so a member with none on file can't be invited again; the button says why instead

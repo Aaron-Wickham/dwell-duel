@@ -66,12 +66,12 @@ describe('push payloads', () => {
 
   it('tells solo bettors a void refunds them, and parlay holders the leg is dropped', () => {
     expect(result({ status: 'voided', outcomeLabel: null })).toEqual({
-      title: 'Market voided',
+      title: 'Market called off',
       body: 'Will it rain?: your stake is refunded',
     })
     expect(result({ status: 'voided', outcomeLabel: null, hasSolo: false })).toEqual({
-      title: 'Market voided',
-      body: 'Will it rain? was dropped from your parlay',
+      title: 'Market called off',
+      body: 'Will it rain? was called off and dropped from your parlay',
     })
   })
 
@@ -123,7 +123,7 @@ describe('push payloads', () => {
 
   it('tells an admin a market needs a result, linking to it', () => {
     expect(marketAlertPayload({ marketId: 'm-1', title: 'Will it rain?' })).toEqual({
-      title: 'Market needs a result',
+      title: 'Time to resolve',
       body: 'Will it rain? has closed',
       url: '/markets/m-1',
     })

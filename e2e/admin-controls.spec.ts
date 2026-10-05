@@ -23,8 +23,9 @@ test('bulk-approve two pending task completions from the admin queue', async ({ 
     const submitted = serverActionSettled(bobPage)
     await row.getByRole('button', { name: /I did this/ }).click()
     await bobPage.getByRole('dialog').getByRole('button', { name: 'Submit for review' }).click()
-    await expect(row.getByText('Pending review')).toBeVisible()
     await submitted
+    // The row moves to Waiting for review (#394).
+    await expect(bobPage.getByRole('region', { name: 'Waiting for review' }).getByText(title)).toBeVisible()
   }
   await member.close()
 
@@ -35,5 +36,5 @@ test('bulk-approve two pending task completions from the admin queue', async ({ 
   await page.getByRole('alertdialog').getByRole('button', { name: 'Approve and pay' }).click()
 
   await expect(page.getByText('2 approved.')).toBeVisible()
-  await expect(page.getByText('Nothing pending.')).toBeVisible()
+  await expect(page.getByText('No tasks to review.')).toBeVisible()
 })

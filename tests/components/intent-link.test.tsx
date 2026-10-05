@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import type { ReactNode } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 
+const linkStatus = vi.hoisted(() => ({ pending: false }))
 vi.mock('next/link', () => ({
+  useLinkStatus: () => linkStatus,
   default: ({ prefetch, children, ...props }: { prefetch?: boolean | null; children: ReactNode }) => (
     <a {...props} data-prefetch={String(prefetch)}>
       {children}
@@ -14,6 +16,10 @@ vi.mock('next/link', () => ({
 }))
 
 import { IntentLink } from '@/components/ui/intent-link'
+
+beforeEach(() => {
+  linkStatus.pending = false
+})
 
 describe('IntentLink', () => {
   it.each([
@@ -61,6 +67,34 @@ describe('IntentLink', () => {
     expect(onMouseEnter).toHaveBeenCalledTimes(1)
   })
 
+  // #384: globals.css dims the card or control holding the marker while the page is on the way.
+  it('marks itself while its page is on the way, unless the caller shows its own pending state', () => {
+    render(
+      <>
+        <IntentLink href="/markets/m1">Row</IntentLink>
+        <IntentLink href="/feed" pendingMarker={false}>
+          Tab
+        </IntentLink>
+      </>,
+    )
+    expect(document.querySelector('[data-link-pending]')).toBeNull()
+  })
+
+  it('renders the marker hidden inside the link while pending', () => {
+    linkStatus.pending = true
+    render(
+      <>
+        <IntentLink href="/markets/m1">Row</IntentLink>
+        <IntentLink href="/feed" pendingMarker={false}>
+          Tab
+        </IntentLink>
+      </>,
+    )
+    const marker = screen.getByRole('link', { name: 'Row' }).querySelector(':scope > [data-link-pending]')
+    expect(marker).toHaveAttribute('hidden')
+    expect(screen.getByRole('link', { name: 'Tab' }).querySelector('[data-link-pending]')).toBeNull()
+  })
+
   // #251: the nav, sub-nav and dense list rows are what viewport prefetch rendered most often.
   it.each([
     'components/app-nav/app-nav.tsx',
@@ -71,7 +105,7 @@ describe('IntentLink', () => {
     'app/(app)/bets/bet-rows.tsx',
   ])('%s links through IntentLink', (file) => {
     const source = readFileSync(path.resolve(import.meta.dirname, '../..', file), 'utf8')
-    expect(source).not.toMatch(/from 'next\/link'/)
+    expect(source).not.toMatch(/import Link\b[^;]*from 'next\/link'/)
     expect(source).toMatch(/<IntentLink\b/)
   })
 })

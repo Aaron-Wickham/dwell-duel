@@ -43,10 +43,17 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   experimental: {
     useOffline: true,
+    // A page visited in the last 30s comes back from the client router's cache at once instead of
+    // a skeleton (#384), and LiveRefresh then refreshes it in place (a page passes LiveTables its
+    // render time). That's the same one render a revisit cost before (#251). An action that
+    // revalidates (every money action does) clears the cache.
+    staleTimes: {
+      dynamic: 30,
+    },
   },
-  // /how-it-works and /privacy render docs/HOW-IT-WORKS.md, read from disk (lib/docs/how-it-works.ts).
+  // /how-it-works/rules and /privacy render docs/HOW-IT-WORKS.md, read from disk (lib/docs/how-it-works.ts).
   outputFileTracingIncludes: {
-    '/how-it-works': ['./docs/HOW-IT-WORKS.md'],
+    '/how-it-works/rules': ['./docs/HOW-IT-WORKS.md'],
     '/privacy': ['./docs/HOW-IT-WORKS.md'],
   },
   env: {

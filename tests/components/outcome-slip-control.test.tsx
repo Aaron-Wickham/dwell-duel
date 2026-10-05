@@ -4,7 +4,8 @@ import { startTransition, useState } from 'react'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SlipProvider, useSlip } from '@/components/slip/slip-provider'
-import { OutcomeSlipControl } from '@/components/markets/outcome-slip-control'
+import { OutcomeRow } from '@/components/markets/outcome-row'
+import type { OutcomeRowState } from '@/lib/markets/row-state'
 import { EMPTY_SLIP, type SlipPick, type SlipView } from '@/lib/parlays/get-slip'
 import { CommitHistory } from './commit-history'
 
@@ -43,31 +44,98 @@ function Count() {
   return <output aria-label="Slip">{`Picks ${picks.length}${open ? ' · open' : ''}`}</output>
 }
 
+type SlipAction = Parameters<typeof OutcomeRow>[0]['addAction']
+
+// The control lives in its outcome row, which says "In your slip" beside it.
+function Row({
+  pick,
+  state,
+  addAction,
+  removeAction,
+  disabledReasonId,
+}: {
+  pick: SlipPick
+  state: Exclude<OutcomeRowState, 'none'>
+  addAction: SlipAction
+  removeAction: SlipAction
+  disabledReasonId?: string
+}) {
+  return (
+    <OutcomeRow
+      label={pick.outcomeLabel}
+      probability={0.5}
+      pays={20}
+      state={state}
+      slipPick={pick}
+      addAction={addAction}
+      removeAction={removeAction}
+      disabledReasonId={disabledReasonId}
+    />
+  )
+}
+
 function countChips(text: string): number {
   return text.split('In your slip').length - 1
 }
 
-describe('OutcomeSlipControl', () => {
+describe('OutcomeSlipControl, in its row', () => {
   it('flips to In your slip and adds the pick to the slip before the server answers', async () => {
     const answer = deferred<boolean>()
     const addAction = vi.fn(() => answer.promise)
     render(
       <SlipProvider view={viewOf()}>
         <Count />
-        <OutcomeSlipControl pick={YES} state="add" addAction={addAction} removeAction={vi.fn()} />
+        <Row pick={YES} state="add" addAction={addAction} removeAction={vi.fn()} />
       </SlipProvider>,
     )
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add to slip Yes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Yes to slip' }))
 
     expect(addAction).toHaveBeenCalledWith(expect.any(FormData))
     expect(screen.getByText('In your slip')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Remove Yes' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove Yes from slip' })).toBeInTheDocument()
     expect(screen.getByLabelText('Slip')).toHaveTextContent('Picks 1')
     expect(success).not.toHaveBeenCalled()
 
+    // The row's change and the slip button say it; no toast (#392).
     await act(async () => answer.resolve(true))
-    await waitFor(() => expect(success).toHaveBeenCalledWith('Added to your slip.'))
+    expect(success).not.toHaveBeenCalled()
+  })
+
+  it('keeps keyboard focus on the control that replaces Add (A11Y-02)', async () => {
+    const answer = deferred<boolean>()
+    render(
+      <SlipProvider view={viewOf()}>
+        <Row pick={YES} state="add" addAction={() => answer.promise} removeAction={vi.fn()} />
+      </SlipProvider>,
+    )
+    screen.getByRole('button', { name: 'Add Yes to slip' }).focus()
+    await userEvent.keyboard('{Enter}')
+    expect(screen.getByRole('button', { name: 'Remove Yes from slip' })).toHaveFocus()
+    await act(async () => answer.resolve(true))
+  })
+
+  it('gives focus back to the row’s control when the server’s refresh remounts the row', async () => {
+    const answer = deferred<void>()
+    function Page() {
+      const [view, setView] = useState(viewOf())
+      async function addAction() {
+        await answer.promise
+        startTransition(() => setView(viewOf(YES)))
+        return true
+      }
+      // A new key stands in for a refresh that rebuilds the outcome list.
+      return (
+        <SlipProvider view={view}>
+          <Row key={view.picks.length} pick={YES} state="add" addAction={addAction} removeAction={vi.fn()} />
+        </SlipProvider>
+      )
+    }
+    render(<Page />)
+    screen.getByRole('button', { name: 'Add Yes to slip' }).focus()
+    await userEvent.keyboard('{Enter}')
+    await act(async () => answer.resolve())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Remove Yes from slip' })).toHaveFocus())
   })
 
   it('flips back when the server makes no change', async () => {
@@ -75,16 +143,16 @@ describe('OutcomeSlipControl', () => {
     render(
       <SlipProvider view={viewOf()}>
         <Count />
-        <OutcomeSlipControl pick={YES} state="add" addAction={() => answer.promise} removeAction={vi.fn()} />
+        <Row pick={YES} state="add" addAction={() => answer.promise} removeAction={vi.fn()} />
       </SlipProvider>,
     )
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add to slip Yes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Yes to slip' }))
     expect(screen.getByText('In your slip')).toBeInTheDocument()
 
     await act(async () => answer.resolve(false))
 
-    expect(screen.getByRole('button', { name: 'Add to slip Yes' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add Yes to slip' })).toBeInTheDocument()
     expect(screen.getByLabelText('Slip')).toHaveTextContent('Picks 0')
     expect(success).not.toHaveBeenCalled()
   })
@@ -94,30 +162,19 @@ describe('OutcomeSlipControl', () => {
     render(
       <SlipProvider view={viewOf()}>
         <Count />
-        <OutcomeSlipControl pick={YES} state="add" addAction={() => answer.promise} removeAction={vi.fn()} />
+        <Row pick={YES} state="add" addAction={() => answer.promise} removeAction={vi.fn()} />
       </SlipProvider>,
     )
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add to slip Yes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Yes to slip' }))
     expect(screen.getByText('In your slip')).toBeInTheDocument()
 
     await act(async () => answer.resolve({ error: 'Your slip is full (10 picks). Place or remove some to add more.' }))
 
-    expect(screen.getByRole('button', { name: 'Add to slip Yes' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add Yes to slip' })).toBeInTheDocument()
     expect(screen.getByLabelText('Slip')).toHaveTextContent('Picks 0')
     expect(error).toHaveBeenCalledWith('Your slip is full (10 picks). Place or remove some to add more.')
     expect(success).not.toHaveBeenCalled()
-  })
-
-  it('opens the slip from a row that is in it', async () => {
-    render(
-      <SlipProvider view={viewOf(YES)}>
-        <Count />
-        <OutcomeSlipControl pick={YES} state="inslip" addAction={vi.fn()} removeAction={vi.fn()} />
-      </SlipProvider>,
-    )
-    await userEvent.click(screen.getByRole('button', { name: 'Open slip' }))
-    expect(screen.getByLabelText('Slip')).toHaveTextContent('Picks 1 · open')
   })
 
   it('keeps In your slip on screen while the server slip lands, with no flash back to Add', async () => {
@@ -136,7 +193,7 @@ describe('OutcomeSlipControl', () => {
         <SlipProvider view={view}>
           <p>{`Server slip: ${view.picks.length}`}</p>
           <Count />
-          <OutcomeSlipControl pick={YES} state="add" addAction={addAction} removeAction={vi.fn()} />
+          <Row pick={YES} state="add" addAction={addAction} removeAction={vi.fn()} />
         </SlipProvider>
       )
     }
@@ -146,7 +203,7 @@ describe('OutcomeSlipControl', () => {
         <Page />
       </CommitHistory>,
     )
-    await userEvent.click(screen.getByRole('button', { name: 'Add to slip Yes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add Yes to slip' }))
     expect(screen.getByText('Server slip: 0')).toBeInTheDocument()
     expect(screen.getByText('In your slip')).toBeInTheDocument()
     const flipped = history.length
@@ -158,7 +215,7 @@ describe('OutcomeSlipControl', () => {
     for (const text of history.slice(flipped - 1)) {
       expect(text).toContain('In your slip')
       expect(text).toContain('Picks 1')
-      expect(text).not.toContain('Add to slip')
+      expect(text).not.toContain('Add Yes to slip')
     }
   })
 
@@ -169,26 +226,26 @@ describe('OutcomeSlipControl', () => {
       <CommitHistory history={history}>
         <SlipProvider view={viewOf(YES, pick('o9', 'Other', 'm9'))}>
           <Count />
-          <OutcomeSlipControl pick={YES} state="inslip" addAction={vi.fn()} removeAction={vi.fn()} />
-          <OutcomeSlipControl pick={NO} state="add" addAction={() => answer.promise} removeAction={vi.fn()} />
+          <Row pick={YES} state="inslip" addAction={vi.fn()} removeAction={vi.fn()} />
+          <Row pick={NO} state="add" addAction={() => answer.promise} removeAction={vi.fn()} />
         </SlipProvider>
       </CommitHistory>,
     )
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add to slip No' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add No to slip' }))
 
     expect(screen.getAllByText('In your slip')).toHaveLength(1)
-    expect(screen.getByRole('button', { name: 'Remove No' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add to slip Yes' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove No from slip' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add Yes to slip' })).toBeInTheDocument()
     expect(screen.getByLabelText('Slip')).toHaveTextContent('Picks 2')
     for (const text of history) expect(countChips(text)).toBeLessThanOrEqual(1)
     // React entangles every pending action, so one left hanging would hold later tests' optimistic state.
     await act(async () => answer.resolve(true))
   })
 
-  it('shows Add to slip disabled, with its reason, when the slip is full', () => {
-    render(<OutcomeSlipControl pick={YES} state="disabled" addAction={vi.fn()} removeAction={vi.fn()} disabledReasonId="slip-full-note" />)
-    const add = screen.getByRole('button', { name: 'Add to slip Yes' })
+  it('shows Add disabled, with its reason, when the slip is full', () => {
+    render(<Row pick={YES} state="disabled" addAction={vi.fn()} removeAction={vi.fn()} disabledReasonId="slip-full-note" />)
+    const add = screen.getByRole('button', { name: 'Add Yes to slip' })
     expect(add).toBeDisabled()
     expect(add).toHaveAttribute('aria-describedby', 'slip-full-note')
   })

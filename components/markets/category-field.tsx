@@ -27,7 +27,7 @@ export function CategoryField({
 }) {
   const chosen = categorySlug(value)
   return (
-    <Field label="Category" htmlFor={id} hint={`Pick one, or type a new one of up to ${TEXT_LIMITS.category} characters.`}>
+    <Field label="Category" htmlFor={id} hint="Pick one or type your own.">
       <Input
         id={id}
         name="category"

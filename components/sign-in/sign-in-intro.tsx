@@ -1,10 +1,15 @@
 import { D_PATH, LEAF_ANGLES, LEAF_PATH } from '@/components/brand/symbol-paths'
 import { INTRO_SYMBOL_ID } from './intro-clock'
 import { IntroDirector } from './intro-director'
+import { INTRO_CSS_DELAYS } from './intro-timeline'
+
+const SET_DELAYS = Object.entries(INTRO_CSS_DELAYS)
+  .map(([name, ms]) => `r.style.setProperty('${name}','${ms}ms')`)
+  .join(';')
 
 // Runs while the HTML is still parsing, before the first paint, so the page opens on the intro's
 // first frame or on its last, never one and then the other. Once a session, like the launch screen.
-export const PLAY_ONCE_PER_SESSION = `try{var r=document.documentElement;if(!sessionStorage.getItem('dd-sign-in-intro')&&r.dataset.motion!=='reduce'&&!matchMedia('(prefers-reduced-motion: reduce)').matches){sessionStorage.setItem('dd-sign-in-intro','1');r.dataset.signInIntro=''}}catch(e){}`
+export const PLAY_ONCE_PER_SESSION = `try{var r=document.documentElement;if(!sessionStorage.getItem('dd-sign-in-intro')&&r.dataset.motion!=='reduce'&&!matchMedia('(prefers-reduced-motion: reduce)').matches){sessionStorage.setItem('dd-sign-in-intro','1');${SET_DELAYS};r.dataset.signInIntro=''}}catch(e){}`
 
 // The launch screen's frames on the page's own background: the D centred, its leaves growing in
 // one after another, then (IntroDirector) the symbol flying into the wordmark. In the installed

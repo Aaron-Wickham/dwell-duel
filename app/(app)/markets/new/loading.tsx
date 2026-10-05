@@ -16,7 +16,7 @@ export default function Loading() {
           <SkeletonField tall />
           <div className="flex flex-col gap-1.5">
             <Skeleton className="h-5 w-12" />
-            <Skeleton className="h-[52px] rounded-[14px]" />
+            <Skeleton className="h-[52px] rounded-tile" />
           </div>
           <SkeletonField />
           <Skeleton className="h-12 w-full md:w-44" />
@@ -24,7 +24,7 @@ export default function Loading() {
         <div className="hidden lg:flex lg:flex-col lg:gap-3">
           <Skeleton className="h-7 w-24" />
           <Skeleton className="h-4 w-56" />
-          <SkeletonCard className="gap-3 md:p-[18px]">
+          <SkeletonCard className="gap-3">
             <Skeleton className="h-6 w-48 rounded-full" />
             <Skeleton className="h-6 w-3/4" />
             <Skeleton className="h-5 w-full" />

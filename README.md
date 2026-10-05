@@ -17,13 +17,13 @@ questions like "Will the sermon run past noon?" or "Who wins Sunday's
 chili cook-off?". They earn more DC by completing Bible-study tasks.
 A market maker sells shares at each outcome's current chance, so every
 bet's payout is fixed when it's placed; bets can be combined into parlays;
-and everything that happens shows up in a live feed.
+and everything that happens shows up in a live activity feed.
 
 **Current release:** [v0.10.1-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.10.1-beta) · see the [changelog](CHANGELOG.md).
 
-| Home | A market | The feed | Settings |
+| Home | A market | Activity | Settings |
 |---|---|---|---|
-| ![Home, with the balance hero](docs/images/home-phone-light.png) | ![A market with its chance chart](docs/images/market-phone-dark.png) | ![The activity feed](docs/images/feed-phone-light.png) | ![Settings](docs/images/settings-phone-dark.png) |
+| ![Home: your bets closing soonest and the latest activity](docs/images/home-phone-light.png) | ![A market's outcomes, each with what 10 DC wins](docs/images/market-phone-dark.png) | ![Activity, showing results](docs/images/feed-phone-light.png) | ![Settings](docs/images/settings-phone-dark.png) |
 
 ![The markets list on desktop](docs/images/markets-desktop-light.png)
 
@@ -38,12 +38,12 @@ and everything that happens shows up in a live feed.
   paid their shares, rounded down to whole DC.
 - **One slip for every bet:** add outcomes from any market, mark each
   Solo or Parlay, and place them all at once.
-- **Parlays:** 2–6 legs, one per market. The stake is split across the
-  legs, each buying shares at its market's price, so the multiplier and
+- **Parlays:** 2–6 picks, one per market. The stake is split across the
+  picks, each buying shares at its market's price, so the multiplier and
   payout are fixed when it's placed.
 - **Results with receipts:** resolving needs a reason and can carry
   photos, files or links. Admins can override (blocked if a past winner has
-  already spent their winnings) or void (everyone is refunded).
+  already spent their winnings) or call a market off (everyone is refunded).
 - **My bets:** solo bets and parlays together, under Open, Settled and
   Cancelled. Bets are final; the Cancelled tab keeps bets cancelled before
   October 2026, when that was allowed.
@@ -55,7 +55,7 @@ and everything that happens shows up in a live feed.
   optional or required proof, and reviewed singly or in bulk.
 - **Roles:** Owner › Admin › Reviewer › Member.
 - **Social:** a leaderboard, member profiles with photos and bios, who bet
-  what on each market, and a live activity feed.
+  what on each market, and a live activity feed with reactions.
 
 **App feel**
 - **Installable:** add it to your Home Screen for a full-screen app with a

@@ -29,6 +29,21 @@ export async function listMyTaskCompletions(supabase: DbClient): Promise<MyCompl
   }))
 }
 
+// When each of the member's waiting submissions was sent, by task, for Tasks' "sent Thu" (#394).
+// my_current_task_completions doesn't return it. Only pending rows are read, one per task and
+// period, so this stays as small as the member's own review queue.
+export async function getMyPendingSentAt(supabase: DbClient, profileId: string): Promise<Map<string, string>> {
+  const { data, error } = await supabase
+    .from('task_completions')
+    .select('task_id, submitted_at')
+    .eq('profile_id', profileId)
+    .eq('status', 'pending')
+    .order('submitted_at', { ascending: true })
+  if (error) throw error
+  // Ascending, so a task still waiting from an earlier period gives way to this period's submission.
+  return new Map((data ?? []).map((c) => [c.task_id, c.submitted_at]))
+}
+
 export interface PendingCompletion {
   id: string
   taskTitle: string

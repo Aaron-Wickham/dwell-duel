@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
 
@@ -71,7 +71,7 @@ describe('text limits on form inputs', () => {
   it('caps the market title, description, category and every outcome label', async () => {
     render(<CreateMarketForm />)
     expect(screen.getByLabelText('Title')).toHaveAttribute('maxlength', '120')
-    expect(screen.getByLabelText('Description')).toHaveAttribute('maxlength', '1000')
+    expect(screen.getByLabelText('Details (optional)')).toHaveAttribute('maxlength', '1000')
     expect(screen.getByLabelText('Category')).toHaveAttribute('maxlength', '24')
 
     await userEvent.click(screen.getByRole('radio', { name: 'Multiple choice' }))
@@ -91,10 +91,16 @@ describe('text limits on form inputs', () => {
     expect(screen.getByLabelText('Description')).toHaveAttribute('maxlength', '1000')
   })
 
-  it('caps the single and shared rejection reasons', () => {
+  it('caps the single and shared rejection reasons', async () => {
     render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
-    expect(screen.getByLabelText('Reason for rejecting (optional)')).toHaveAttribute('maxlength', '500')
-    expect(screen.getByLabelText('Shared reason (optional)')).toHaveAttribute('maxlength', '500')
+    await userEvent.click(screen.getAllByRole('button', { name: /^Reject .+’s / })[0])
+    expect(within(await screen.findByRole('dialog')).getByLabelText('Why not? (optional)')).toHaveAttribute('maxlength', '500')
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Alice’s submission' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }))
+    expect(within(await screen.findByRole('dialog')).getByLabelText('Why not? (optional)')).toHaveAttribute('maxlength', '500')
   })
 
   it('caps the balance-adjust reason and the invite email', () => {
@@ -135,7 +141,7 @@ describe('the profile form', () => {
 
 describe('too-long errors point at their field', () => {
   it('ties a market description error to the description only', async () => {
-    actions.createMarketAction.mockResolvedValue({ formError: 'Description can be at most 1000 characters.', field: 'description' })
+    actions.createMarketAction.mockResolvedValue({ formError: 'Details can be at most 1000 characters.', field: 'description' })
     render(<CreateMarketForm />)
 
     await userEvent.type(screen.getByLabelText('Title'), 'Will it rain?')
@@ -143,9 +149,9 @@ describe('too-long errors point at their field', () => {
     await userEvent.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await userEvent.click(screen.getByRole('button', { name: 'Create market' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Description can be at most 1000 characters.')
-    expect(screen.getByLabelText('Description')).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getByLabelText('Description')).toHaveAccessibleDescription('Description can be at most 1000 characters.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Details can be at most 1000 characters.')
+    expect(screen.getByLabelText('Details (optional)')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Details (optional)')).toHaveAccessibleDescription('Details can be at most 1000 characters.')
     expect(screen.getByLabelText('Title')).toHaveAttribute('aria-invalid', 'false')
   })
 
@@ -197,10 +203,12 @@ describe('too-long errors point at their field', () => {
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Alice’s submission' }))
     await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }))
+    const dialog = await screen.findByRole('dialog')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Reject' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Reason can be at most 500 characters.')
-    const shared = screen.getByLabelText('Shared reason (optional)')
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Reason can be at most 500 characters.')
+    const shared = within(dialog).getByLabelText('Why not? (optional)')
     expect(shared).toHaveAttribute('aria-invalid', 'true')
-    expect(shared).toHaveAccessibleDescription('Reason can be at most 500 characters.')
+    expect(shared).toHaveAccessibleDescription('Shown to them with the rejection. Reason can be at most 500 characters.')
   })
 })

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
-import { CalendarDays, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
+import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { getJumpToMeTop, getLeaderboardPage, getYourStanding, type Board } from '@/lib/social/leaderboard'
 import { currentSeasonName } from '@/lib/social/season'
@@ -9,9 +9,12 @@ import { newestHref, showMoreHref, type SearchParams } from '@/lib/pagination/cu
 import { readRankPageParams } from '@/lib/pagination/rank-cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
 import { Page, PageHeader } from '@/components/ui/page'
-import { SectionCard } from '@/components/ui/section-card'
+import { ListSection } from '@/components/ui/list-section'
+import { buttonVariants } from '@/components/ui/button'
+import { IntentLink } from '@/components/ui/intent-link'
+import { TAB_TRANSITION } from '@/components/nav/page-transition'
 import { EmptyState } from '@/components/ui/empty-state'
-import { listCardsClass } from '@/components/ui/list-card'
+import { dividedRowsClass } from '@/components/ui/list-card'
 import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
@@ -39,9 +42,10 @@ function readBoard(value: SearchParams[string]): Board {
   return value === 'month' ? 'month' : 'all'
 }
 
-function description(board: Board): string {
-  if (board === 'all') return 'Ranked by net worth: balance plus DC riding on open bets. Ties share a rank.'
-  return `Ranked by net betting profit in ${currentSeasonName()}: winnings and refunds minus stakes. Ties share a rank.`
+// A line under the rankings saying what the score is.
+function note(board: Board): string {
+  if (board === 'all') return 'Net worth is your balance plus DC riding on open bets.'
+  return `Profit is winnings and refunds minus stakes on bets in ${currentSeasonName()}.`
 }
 
 // Both tabs page on `before`: a tab link carries no cursor, so switching always starts at the top.
@@ -63,8 +67,8 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
   )
   // The month's extras show only above the top of the board, never inside a window part-way down it.
   const showMonthExtras = board === 'month' && !page.windowed && page.rows.length > 0
-  // On a wide screen the net-worth board fills its side column with your own standing; it needs
-  // rankings beside it, so it's read only when there are rows below the podium.
+  // Your standing: the phone's sticky bar and the side card at lg. It needs rankings to stand
+  // beside, so it's read only when there are rows below the podium.
   const showStanding = board === 'all' && page.rows.length > 1 && (page.windowed || page.rows.length > 3)
   const [records, race, awards, champions, standing, myRecords] = await Promise.all([
     getRecords(
@@ -77,7 +81,8 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
     showStanding ? getYourStanding(supabase, user.id) : null,
     showStanding ? getRecords(supabase, [user.id]) : new Map(),
   ])
-  const podium = !page.windowed && page.rows.length >= 3 ? page.rows.slice(0, 3) : null
+  // Only the net-worth board has a podium; This month leads with the race instead (#396).
+  const podium = board === 'all' && !page.windowed && page.rows.length >= 3 ? page.rows.slice(0, 3) : null
   const listed = podium ? page.rows.slice(3) : page.rows
   const backToNewestHref = newestHref(PATH, { ...searchParams, at: undefined }, 'before')
   const meListed = page.rows.some((r) => r.id === user.id)
@@ -89,28 +94,38 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
     body = <NothingOlder href={backToNewestHref} />
   } else if (board === 'all' && !page.windowed && page.rows.length <= 1) {
     body = (
-      <EmptyState icon={Trophy} title="No other members yet.">
+      <EmptyState title="No other members yet.">
         Invite friends to start the competition.
       </EmptyState>
     )
   } else if (board === 'month' && page.rows.length === 0) {
     body = (
-      <EmptyState icon={CalendarDays} title="No bets this month yet.">
+      <EmptyState
+        title="No bets this month yet."
+        action={
+          <IntentLink
+            href="/markets"
+            transitionTypes={TAB_TRANSITION}
+            className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'self-start no-underline')}
+          >
+            Browse markets
+          </IntentLink>
+        }
+      >
         Place a bet to get on this month’s board.
       </EmptyState>
     )
   } else {
-    // The race always shows on the month's board, saying so when no bet has settled yet.
-    const hasSide = showMonthExtras
     const hasChampions = board === 'month' && !page.windowed && champions.length > 0
-    // At lg the month's extras move into a side column beside the rankings; on a phone they keep
-    // their order around it, which is why the race and awards sit in a wrapper that is only a box at lg.
-    const split = listed.length > 0 && (hasSide || hasChampions || showStanding)
+    const jump = !meListed && <JumpToMe href={`${PATH}?at=me`} focusId={rowDomId(ROW_ID_PREFIX, user.id)} />
+    // The rankings sit on the page as divided rows (D2). Their heading would repeat the h1 and the
+    // tab, so it's for a screen reader only.
     const rankings = listed.length > 0 && (
-      <SectionCard
-        title={<span className="sr-only">{board === 'all' ? 'Net worth rankings' : 'This month’s rankings'}</span>}
+      <ListSection
+        title={board === 'all' ? 'Net worth rankings' : 'This month’s rankings'}
         titleId="leaderboard-rankings"
-        className={cn('gap-0', split && 'lg:col-start-1 lg:row-span-2 lg:row-start-1')}
+        titleHidden
+        className="gap-0 lg:col-start-1 lg:row-start-1"
       >
         {page.windowed && (
           <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -120,7 +135,7 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
             <BackToNewest href={backToNewestHref} label="Back to the top" />
           </div>
         )}
-        <ol className={listCardsClass}>
+        <ol className={dividedRowsClass}>
           {listed.map((member) => (
             <LeaderboardRow
               key={member.id}
@@ -136,6 +151,8 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
             />
           ))}
         </ol>
+        {/* After the rows, so it sticks to the bottom only while they're on screen. */}
+        {showStanding && standing && !meListed && <StandingCompact standing={standing} jump={jump} />}
         {page.next && (
           <div className="mt-3 flex flex-col">
             <ShowMore
@@ -145,40 +162,58 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
             />
           </div>
         )}
-      </SectionCard>
+        <p className="mt-3 text-sm text-ink2">{note(board)}</p>
+      </ListSection>
     )
+    const podiumBlock = podium && (
+      <Podium
+        members={podium.map((m) => ({ id: m.id, name: m.displayName, avatarSrc: m.avatarSrc, score: m.score, rank: m.rank }))}
+        signed={false}
+        meId={user.id}
+      />
+    )
+    // At lg the rankings take 7 parts and a side column the other 5: the podium and Your standing on
+    // Net worth, the awards and past champions on This month. A phone reads the podium above the
+    // rankings and the awards below them; at lg the net-worth column sticks below the top bar.
+    const side =
+      board === 'all' ? (
+        (podiumBlock || (showStanding && listed.length > 0)) && (
+          <div className="flex flex-col gap-5 lg:sticky lg:top-[calc(72px+var(--safe-top)+28px)] lg:col-start-2 lg:row-start-1 lg:gap-7">
+            {podiumBlock}
+            {showStanding && listed.length > 0 && (
+              <YourStandingCard standing={standing} record={myRecords.get(user.id)} jump={jump} className="hidden lg:flex" />
+            )}
+          </div>
+        )
+      ) : (
+        (awards.length > 0 || hasChampions) && (
+          <div className="flex flex-col gap-5 lg:col-start-2 lg:row-start-1 lg:gap-7">
+            <Awards awards={awards} />
+            {hasChampions && <PastChampions champions={champions} />}
+          </div>
+        )
+      )
+    const split = listed.length > 0 && Boolean(side)
     body = (
       <>
-        {showStanding && standing && (
-          <StandingCompact
-            standing={standing}
-            jump={!meListed && <JumpToMe href={`${PATH}?at=me`} focusId={rowDomId(ROW_ID_PREFIX, user.id)} />}
-          />
-        )}
-        {podium && (
-          <Podium
-            members={podium.map((m) => ({ id: m.id, name: m.displayName, avatarSrc: m.avatarSrc, score: m.score, rank: m.rank }))}
-            signed={board === 'month'}
-            meId={user.id}
-          />
-        )}
+        {showMonthExtras && <RaceChart series={race} />}
         <div
           className={cn(
             'flex flex-col gap-5 md:gap-7',
-            split && 'lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:grid-rows-[auto_1fr] lg:items-start',
+            split && 'lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start',
           )}
         >
-          {hasSide && (
-            <div className="contents lg:col-start-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-7">
-              <RaceChart series={race} />
-              <Awards awards={awards} />
-            </div>
+          {board === 'all' ? (
+            <>
+              {side}
+              {rankings}
+            </>
+          ) : (
+            <>
+              {rankings}
+              {side}
+            </>
           )}
-          {rankings}
-          {showStanding && listed.length > 0 && (
-            <YourStandingCard standing={standing} record={myRecords.get(user.id)} className="hidden lg:col-start-2 lg:row-start-1 lg:flex" />
-          )}
-          {hasChampions && <PastChampions champions={champions} className="lg:col-start-2" />}
         </div>
       </>
     )
@@ -186,8 +221,8 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
 
   return (
     <Page transition="tab">
-      <PageHeader title="Leaderboard" description={description(board)} />
-      <LiveTables subscriptions={pageSubscriptions.leaderboard()} />
+      <PageHeader title="Leaderboard" />
+      <LiveTables subscriptions={pageSubscriptions.leaderboard()} renderedAt={renderStamp()} />
       <ShowMoreFocus />
       <SubNav
         label="Ranking"

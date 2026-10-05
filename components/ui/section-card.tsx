@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { cardClass } from '@/components/ui/card'
+import { cardClass, cardPaddingClass } from '@/components/ui/card'
 import { h2Class } from '@/components/ui/page'
 
 export function SectionCard({
@@ -33,7 +33,7 @@ export function SectionCard({
     heading
   )
   return (
-    <section aria-labelledby={titleId} className={cn(cardClass, 'flex flex-col gap-3 p-[18px] md:p-6', className)}>
+    <section aria-labelledby={titleId} className={cn(cardClass, `flex flex-col gap-3 ${cardPaddingClass}`, className)}>
       {action ? (
         <div className="flex items-center justify-between gap-3">
           {head}

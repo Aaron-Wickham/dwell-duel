@@ -1,10 +1,11 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Ticket } from 'lucide-react'
 import { useSlip } from '@/components/slip/slip-provider'
 import { buttonVariants } from '@/components/ui/button'
+import { DURATION } from '@/lib/ui/motion'
 import { cn } from '@/lib/utils'
 
 const loadDrawer = () => import('@/components/slip/slip-drawer')
@@ -21,7 +22,28 @@ export function SlipSheet() {
   const returnFocusTo = useRef<HTMLElement | null>(null)
   if (open && !wanted) setWanted(true)
   const count = picks.length
-  if (count === 0 && !open && !closing) return null
+  // The button rises in with the first pick and fades out after the last (#384): it stays mounted,
+  // inert, showing the last count, while it leaves. One already there when the page loads just shows.
+  const [shownCount, setShownCount] = useState(count)
+  const [leaving, setLeaving] = useState(false)
+  const [presentAtLoad, setPresentAtLoad] = useState(count > 0)
+  if (count > 0 && (count !== shownCount || leaving)) {
+    setShownCount(count)
+    setLeaving(false)
+  }
+  if (count === 0 && shownCount > 0 && !leaving) setLeaving(true)
+
+  useEffect(() => {
+    if (!leaving) return
+    const timer = setTimeout(() => {
+      setLeaving(false)
+      setShownCount(0)
+      setPresentAtLoad(false)
+    }, DURATION.fast)
+    return () => clearTimeout(timer)
+  }, [leaving])
+
+  if (shownCount === 0 && !open && !closing) return null
 
   function prepare() {
     void loadDrawer()
@@ -30,26 +52,30 @@ export function SlipSheet() {
 
   return (
     <>
-      {count > 0 && (
-        <button
-          type="button"
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          onPointerEnter={prepare}
-          onPointerDown={prepare}
-          onFocus={prepare}
-          onClick={(event) => {
-            returnFocusTo.current = event.currentTarget
-            setOpen(true)
-          }}
-          className={cn(
-            buttonVariants(),
-            'fixed right-4 bottom-[calc(94px+var(--safe-bottom))] z-20 rounded-full tabular-nums shadow-overlay md:right-8 md:bottom-8',
-          )}
+      {shownCount > 0 && (
+        <div
+          data-enter={presentAtLoad ? undefined : ''}
+          data-leaving={leaving || undefined}
+          inert={leaving}
+          className="slip-fab fixed right-4 bottom-[calc(94px+var(--safe-bottom))] z-20 md:right-8 md:bottom-8"
         >
-          <Ticket aria-hidden="true" className="size-5" />
-          {`Slip (${count})`}
-        </button>
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            onPointerEnter={prepare}
+            onPointerDown={prepare}
+            onFocus={prepare}
+            onClick={(event) => {
+              returnFocusTo.current = event.currentTarget
+              setOpen(true)
+            }}
+            className={cn(buttonVariants(), 'rounded-full shadow-overlay')}
+          >
+            <Ticket aria-hidden="true" className="size-5" />
+            {`Slip (${shownCount})`}
+          </button>
+        </div>
       )}
       {wanted && (
         <SlipDrawer
@@ -65,8 +91,11 @@ export function SlipSheet() {
   )
 }
 
-// Room at the bottom of the page, so the floating button never covers its last content.
+// Room at the bottom of the page, so its last control can always scroll clear of the floating
+// button. Enough on its own, whatever the page's own bottom padding: on a phone <main> already
+// clears the 82px tab bar and the button's 48px rises from 94px, so 72px clears its top by 24px;
+// on desktop the button rises from 32px, so 88px clears it by 8px.
 export function SlipSpacer() {
   const { picks } = useSlip()
-  return picks.length > 0 ? <div aria-hidden="true" className="h-16 shrink-0" /> : null
+  return picks.length > 0 ? <div aria-hidden="true" className="h-[72px] shrink-0 md:h-[88px]" /> : null
 }

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
-import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
+import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { AVATAR_MAX_BYTES, AVATAR_TYPE, avatarPathFor } from '@/lib/profile/avatar'
 
@@ -22,7 +22,7 @@ const UPDATE_PROFILE_ERRORS: readonly KnownError<Field>[] = [
 
 export async function updateProfileAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const displayName = String(formData.get('display_name') ?? '').trim()
   const bio = String(formData.get('bio') ?? '').trim()

@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import { IntentLink } from '@/components/ui/intent-link'
 import { Trophy } from 'lucide-react'
 import { SectionCard } from '@/components/ui/section-card'
 import { StatusChip } from '@/components/ui/status-chip'
@@ -14,9 +14,9 @@ export function PastChampions({ champions, className }: { champions: PastChampio
           <li key={champion.season} className="pressable hover-tint relative flex min-h-11 items-center gap-3 py-2 first:pt-0 last:pb-0">
             <Trophy aria-hidden="true" className="size-5 shrink-0 text-gold" />
             <span className="min-w-0 grow">{seasonName(champion.season)}</span>
-            <Link href={`/members/${champion.memberId}`} transitionTypes={['nav-forward']} className="stretched-link min-w-0 font-extrabold break-words">
+            <IntentLink href={`/members/${champion.memberId}`} transitionTypes={['nav-forward']} className="stretched-link min-w-0 font-extrabold break-words text-ink">
               {champion.name}
-            </Link>
+            </IntentLink>
             <StatusChip tone="open">{signedDc(champion.profit)}</StatusChip>
           </li>
         ))}

@@ -3,8 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { isBalanceCheckViolation } from '@/lib/errors/balance-error'
-import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
+import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
+import { formatDcAmount } from '@/lib/format/dc'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -22,7 +23,7 @@ const ADJUST_BALANCE_ERRORS: readonly KnownError<'amount' | 'reason'>[] = [
 
 export async function adjustBalanceAction(profileId: string, _prevState: ActionState, formData: FormData): Promise<ActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const amount = Number(formData.get('amount'))
   const reason = String(formData.get('reason') ?? '').trim()
@@ -42,7 +43,7 @@ export async function adjustBalanceAction(profileId: string, _prevState: ActionS
     if (isBalanceCheckViolation(error)) {
       const { data: profile } = await supabase.from('profiles').select('display_name, balance').eq('id', profileId).maybeSingle()
       if (profile) {
-        return { formError: `That would take ${profile.display_name}’s balance below zero — they have ${profile.balance} DC.`, field: 'amount' }
+        return { formError: `That would take ${profile.display_name}’s balance below zero — they have ${formatDcAmount(profile.balance)}.`, field: 'amount' }
       }
     }
     return friendlyError(error, ADJUST_BALANCE_ERRORS, 'adjust_balance failed')

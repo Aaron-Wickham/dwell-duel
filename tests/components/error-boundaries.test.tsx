@@ -40,8 +40,9 @@ describe.each([
     const error = testError()
     render(<Boundary error={error} retry={retry} />)
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Something went wrong' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'This page didn’t load' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/')
     expect(consoleError).toHaveBeenCalledWith(error, { digest: 'digest-123' })
   })
 })
@@ -73,8 +74,8 @@ describe('app/global-error.tsx', () => {
     const error = testError()
     render(<GlobalError error={error} retry={retry} />)
 
-    expect(document.title).toBe('Something went wrong')
-    expect(screen.getByRole('heading', { level: 1, name: 'Something went wrong' })).toBeInTheDocument()
+    expect(document.title).toBe('This page didn’t load')
+    expect(screen.getByRole('heading', { level: 1, name: 'This page didn’t load' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
     expect(consoleError).toHaveBeenCalledWith(error, { digest: 'digest-123' })
     // React 19 hoists the boundary's <html> attributes onto the real document element rather

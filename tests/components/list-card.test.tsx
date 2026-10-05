@@ -19,11 +19,9 @@ import { TaskRow } from '@/components/tasks/task-row'
 import { AwaitingMarketRow } from '@/components/admin/awaiting-market-row'
 import { LeaderboardRow } from '@/components/leaderboard/leaderboard-row'
 import { MemberRow } from '@/app/(app)/admin/members/member-row'
-import { HomeTiles } from '@/components/home/home-tiles'
 import { PendingApprovals } from '@/app/(app)/admin/(sections)/tasks/pending-approvals'
 import { TaskCatalogItem } from '@/app/(app)/admin/(sections)/tasks/task-catalog-item'
 import { CancelledBetRows } from '@/app/(app)/bets/bet-rows'
-import { ChartColumn } from 'lucide-react'
 
 const root = path.resolve(import.meta.dirname, '../..')
 const source = (file: string) => readFileSync(path.join(root, file), 'utf8')
@@ -33,6 +31,13 @@ function expectListCard(el: Element | null) {
   expect(el).not.toBeNull()
   expect(el).toHaveClass('rounded-tile', 'border', 'border-line', 'p-3.5', 'md:p-4')
   expect(el).not.toHaveClass('shadow-card')
+}
+
+// A row of a list inside a SectionCard (D2, #386): no border or corners of its own.
+function expectDividedRow(el: Element | null) {
+  expect(el).not.toBeNull()
+  expect(el).toHaveClass('py-3.5')
+  expect(el).not.toHaveClass('border', 'rounded-tile')
 }
 
 describe('ListCard', () => {
@@ -69,7 +74,9 @@ describe('ListCard', () => {
   })
 })
 
-describe('lists that open one thing are ListCards (#328)', () => {
+// D2 (#386, superseding #328's nesting): a list that is a page's only content is ListCards on the
+// page; a list inside a SectionCard is divided rows.
+describe('a page-level list is ListCards', () => {
   it('cancelled bets', () => {
     const { container } = render(
       <CancelledBetRows
@@ -81,17 +88,41 @@ describe('lists that open one thing are ListCards (#328)', () => {
     expect(container.querySelector('ul')).not.toHaveClass('divide-y')
   })
 
-  it('tasks, with the action beside the text', () => {
-    const { container } = render(
-      <ul>
-        <TaskRow title="Read Genesis 1-3" rewardAmount={10} description={null} state={{ kind: 'available' }} action={<button type="button">I did this</button>} />
-      </ul>,
+  // #399: admin members are data, so a table (divided rows on a phone), not cards.
+  it('admin members are table rows, not cards', () => {
+    const { container: members } = render(
+      <table>
+        <tbody>
+          <MemberRow
+            domId="member-m1"
+            netWorth={120}
+            member={{ id: 'm1', displayName: 'Grace', avatarSrc: null, email: 'g@example.com', balance: 90, role: 'member', joinedAt: null, lastSignInAt: null, removed: false }}
+          />
+        </tbody>
+      </table>,
     )
-    const card = container.querySelector('li')
-    expectListCard(card)
-    expect(card).not.toHaveClass('pressable')
+    const row = members.querySelector('tr')!
+    expect(row).not.toHaveClass('rounded-tile')
+    expect(row).not.toHaveClass('hover-lift')
   })
 
+  it('sit on the page two to a row, stretched to one height per row, spaced with no dividers or card around them', () => {
+    const lists: [string, RegExp][] = [
+      ['app/(app)/bets/bet-rows.tsx', /lg:grid-cols-2 lg:items-stretch/],
+    ]
+    for (const [file, grid] of lists) {
+      const text = source(file)
+      expect(text, file).toMatch(grid)
+      expect(text, file).toMatch(/listCardsClass/)
+      expect(text, file).not.toMatch(/divide-y/)
+    }
+    for (const page of ['app/(app)/bets/page.tsx', 'app/(app)/admin/(sections)/members/page.tsx']) {
+      expect(source(page), page).not.toMatch(/SectionCard/)
+    }
+  })
+})
+
+describe('a list inside a SectionCard is divided rows', () => {
   it('markets waiting to be resolved, opened by their title, with the creator and Resolve above the cover', () => {
     render(
       <ul>
@@ -101,9 +132,9 @@ describe('lists that open one thing are ListCards (#328)', () => {
         />
       </ul>,
     )
-    const card = screen.getByRole('listitem')
-    expectListCard(card)
-    expect(card).toHaveClass('pressable', 'hover-tint')
+    const row = screen.getByRole('listitem')
+    expectDividedRow(row)
+    expect(row).toHaveClass('pressable', 'hover-tint', 'relative')
     expect(screen.getByRole('link', { name: 'Will it rain?' })).toHaveClass('stretched-link')
     for (const name of ['Grace', 'Resolve Will it rain?']) {
       expect(screen.getByRole('link', { name }).closest('.z-\\[1\\]'), name).not.toBeNull()
@@ -118,10 +149,11 @@ describe('lists that open one thing are ListCards (#328)', () => {
         />
       </ul>,
     )
-    expectListCard(container.querySelector('li'))
+    expectDividedRow(container.querySelector('li'))
   })
 
-  it('pending approvals, with a row’s Approve still the first one', () => {
+  // #399: a table (divided rows on a phone), with the bulk bar above it.
+  it('pending approvals, as divided table rows, each with its own Approve', () => {
     const { container } = render(
       <PendingApprovals
         viewerId="p-me"
@@ -140,55 +172,49 @@ describe('lists that open one thing are ListCards (#328)', () => {
         ]}
       />,
     )
-    expectListCard(container.querySelector('li'))
-    expect(container.querySelector('ul')).not.toHaveClass('divide-y')
-    expect(screen.getAllByRole('button', { name: /^Approve/ })[0]).toHaveAccessibleName('Approve Alice’s Read Genesis 1-3')
+    expect(container.querySelector('tbody')).toHaveClass('divide-y')
+    expect(container.querySelector('tbody tr')).not.toHaveClass('rounded-tile')
+    expect(screen.getAllByRole('button', { name: /^Approve(?! selected)/ })[0]).toHaveAccessibleName('Approve Alice’s Read Genesis 1-3')
   })
 
-  it('the leaderboard, with your own card tinted', () => {
+
+  // #394: grouped under visible headings, a task's row needs no card of its own.
+  it('tasks, divided rows on the page under each group’s heading, with the action beside the text', () => {
+    const { container } = render(
+      <ul>
+        <TaskRow title="Read Genesis 1-3" rewardAmount={10} description={null} cadence="once" state={{ kind: 'todo' }} action={<button type="button">I did this</button>} />
+      </ul>,
+    )
+    expectDividedRow(container.querySelector('li'))
+    expect(container.querySelector('li')).not.toHaveClass('pressable')
+    const page = source('app/(app)/tasks/page.tsx')
+    expect(page).toMatch(/<ul className=\{dividedRowsClass\}>/)
+    expect(page).not.toMatch(/SectionCard|listCardsClass/)
+  })
+
+  it('the leaderboard, rows on the page with your own row tinted', () => {
     const { container } = render(
       <ol>
         <LeaderboardRow rank={2} name="Grace" score={120} isMe href="/members/m1" />
       </ol>,
     )
-    const card = container.querySelector('li')
-    expectListCard(card)
-    expect(card).toHaveClass('bg-acc-soft', 'pressable', 'hover-tint')
+    const row = container.querySelector('li')
+    expect(row).not.toHaveClass('border')
+    expect(row).toHaveClass('bg-acc-soft', 'pressable', 'hover-tint')
+    expect(source('app/(app)/leaderboard/page.tsx')).toMatch(/<ol className=\{dividedRowsClass\}>/)
   })
 
-  it('admin members and home tiles gain the border below lg, and stay lifted cards from lg', () => {
-    const { container: members } = render(
-      <ul>
-        <MemberRow
-          domId="member-m1"
-          now={Date.parse('2026-09-28T12:00:00Z')}
-          member={{ id: 'm1', displayName: 'Grace', avatarSrc: null, email: 'g@example.com', balance: 90, role: 'member', joinedAt: null, lastSignInAt: null, removed: false }}
-        />
-      </ul>,
-    )
-    const { container: home } = render(
-      <HomeTiles tiles={[{ id: 'markets', href: '/markets', icon: ChartColumn, title: 'Markets', subtitle: 'Bet on it' }]} />,
-    )
-    for (const card of [members.querySelector('li'), home.querySelector('a')]) {
-      expectListCard(card)
-      expect(card).toHaveClass('lg:rounded-card', 'lg:shadow-card', 'lg:hover-lift')
-    }
-  })
-
-  it('lay out per the approved grid, with no dividers', () => {
-    const lists: [string, RegExp][] = [
-      ['app/(app)/bets/bet-rows.tsx', /lg:grid-cols-3/],
-      ['app/(app)/admin/(sections)/markets/page.tsx', /lg:grid-cols-3/],
-      ['app/(app)/tasks/page.tsx', /lg:grid-cols-2/],
-      ['app/(app)/admin/(sections)/tasks/page.tsx', /lg:grid-cols-2/],
-      ['app/(app)/admin/(sections)/tasks/pending-approvals.tsx', /lg:grid-cols-2/],
-    ]
-    for (const [file, grid] of lists) {
+  it('no SectionCard holds a ListCard', () => {
+    for (const file of [
+      'app/(app)/admin/(sections)/markets/page.tsx',
+      'app/(app)/admin/(sections)/tasks/page.tsx',
+      'app/(app)/admin/(sections)/tasks/pending-approvals.tsx',
+      'components/admin/category-card.tsx',
+      'components/admin/awaiting-market-row.tsx',
+      'app/(app)/admin/(sections)/tasks/task-catalog-item.tsx',
+    ]) {
       const text = source(file)
-      expect(text, file).toMatch(grid)
-      expect(text, file).toMatch(/listCardsClass/)
-      expect(text, file).not.toMatch(/divide-y/)
+      expect(text, file).not.toMatch(/listCardsClass|<ListCard/)
     }
-    expect(source('app/(app)/leaderboard/page.tsx')).toMatch(/<ol className=\{listCardsClass\}>/)
   })
 })

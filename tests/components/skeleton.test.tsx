@@ -7,7 +7,7 @@ vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
 )
 
-import { Skeleton, SkeletonField, SkeletonScreen } from '@/components/ui/skeleton'
+import { Skeleton, SkeletonField, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
 
 beforeEach(() => {
   viewTransitionCalls.length = 0
@@ -35,6 +35,24 @@ describe('Skeleton', () => {
   })
 })
 
+// jsdom can't measure, so this pins the arithmetic instead: PageHeader's description is body text
+// with a 24px line, which wraps to two lines at 375px and fits on one from md (ST-3, #401).
+describe('SkeletonPageHeader', () => {
+  it('draws a description as 24px lines: two on a phone, one from md', () => {
+    const { container } = render(<SkeletonPageHeader description />)
+    const rows = container.querySelectorAll('.h-6')
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).not.toHaveClass('md:hidden')
+    expect(rows[1]).toHaveClass('md:hidden')
+  })
+
+  it('draws no description line unless the page has one', () => {
+    const { container } = render(<SkeletonPageHeader />)
+    expect(container.querySelectorAll('.h-6')).toHaveLength(0)
+    expect(container.querySelectorAll('.skeleton')).toHaveLength(1)
+  })
+})
+
 describe('SkeletonScreen', () => {
   it('names the skeleton, announces loading, and hands off through the route transition', () => {
     const { container } = render(
@@ -43,7 +61,7 @@ describe('SkeletonScreen', () => {
       </SkeletonScreen>,
     )
     expect(viewTransitionCalls).toHaveLength(1)
-    expect(viewTransitionCalls[0].exit).toEqual({ 'nav-forward': 'nav-forward', 'nav-back': 'nav-back', default: 'page-exit' })
+    expect(viewTransitionCalls[0].exit).toEqual({ 'nav-forward': 'nav-forward', 'nav-back': 'nav-back', 'nav-tab': 'none', default: 'page-exit' })
     expect(viewTransitionCalls[0].default).toBe('none')
     const screenEl = container.firstElementChild!
     expect(screenEl).toHaveAttribute('data-skeleton', 'feed')

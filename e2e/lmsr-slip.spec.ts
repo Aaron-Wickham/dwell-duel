@@ -33,18 +33,21 @@ test('the slip shows an exact payout on a new market, and its bet is final', asy
   if (error) throw error
   await page.goto(`/markets/${(data as { market_id: string }).market_id}`)
 
-  // A new market opens at even odds.
+  // A new market opens at even odds, and each row quotes 10 DC with the slip's own number (#390).
   const outcomes = page.getByRole('region', { name: 'Outcomes' })
-  await expect(outcomes.getByText('50% (0 DC)')).toHaveCount(2)
+  // Each animated figure keeps a plain-text twin for screen readers (AnimatedText); NumberFlow's own
+  // fallback text can linger undrawn behind its shadow root, so count only what's visible.
+  await expect(outcomes.getByText('50%', { exact: true }).filter({ visible: true })).toHaveCount(2)
+  await expect(outcomes.getByText('10 DC wins 18', { exact: true })).toHaveCount(2)
 
   await addToSlip(page, 'Yes')
   const sheet = await openSlip(page)
-  await expect(sheet.getByText('Bets are final: once placed, they can’t be cancelled.')).toBeVisible()
+  await expect(sheet.getByText('Bets are final once placed.')).toBeVisible()
   await sheet.getByLabel('Stake (DC)').fill('10')
   // The spec's worked example: 10 DC buys 18.33 shares, and a share pays 1 DC.
-  await expect(sheet.getByText('Pays 18 DC if it wins')).toBeVisible()
-  await expect(sheet.getByText(/Pays ~/)).toHaveCount(0)
-  await sheet.getByRole('button', { name: 'Place 1 bet · 10 DC' }).click()
+  await expect(sheet.getByText('Wins 18 DC', { exact: true })).toBeVisible()
+  await expect(sheet.getByText(/~/)).toHaveCount(0)
+  await sheet.getByRole('button', { name: 'Place bet · 10 DC' }).click()
   await expect(page.getByText('Placed 1 solo bet. Bets are final.').first()).toBeVisible()
   await expect(sheet).toHaveCount(0)
 
@@ -56,7 +59,7 @@ test('the slip shows an exact payout on a new market, and its bet is final', asy
   await expect(page.getByRole('button', { name: /^Cancel your/ })).toHaveCount(0)
 
   // The price moved to about 59%.
-  await expect(outcomes.getByText('59% (10 DC)')).toBeVisible()
+  await expect(outcomes.getByText('59%', { exact: true })).toBeVisible()
 })
 
 // 0104 (#334): a parlay of new markets splits its stake across the picks, so the slip shows exactly
@@ -84,21 +87,21 @@ test('the slip shows a parlay’s exact payout on new markets, and placing fixes
     await sheet.getByRole('group', { name: `Bet type for Yes, ${title}` }).getByRole('button', { name: 'Parlay' }).click()
   }
   const parlay = sheet.getByRole('region', { name: 'Parlay · 2 picks' })
-  await expect(parlay.getByText(/Your stake is split evenly across these picks/)).toBeVisible()
   await parlay.getByLabel('Stake (DC)').fill('10')
 
   // Both markets open at 50%: each leg buys 5 DC of shares.
   const even = { q: [0, 0], liquidity: 50, index: 0 }
   const quote = lmsrParlayQuote([even, even], 10)
   const multiplier = `${formatOdds(quote.multiplierBp)}×`
-  await expect(parlay.getByText(`Pays ${quote.payout} DC (${multiplier}) if every pick wins`)).toBeVisible()
+  await expect(parlay.getByText(`Wins ${quote.payout} DC if every pick wins`, { exact: true })).toBeVisible()
+  await expect(parlay.getByText(multiplier, { exact: true })).toBeVisible()
   await expect(sheet.getByText(/~/)).toHaveCount(0)
-  await sheet.getByRole('button', { name: 'Place 1 bet · 10 DC' }).click()
-  await expect(page.getByText(`Placed a 2-leg parlay paying ${quote.payout} DC (${multiplier}). Bets are final.`).first()).toBeVisible()
+  await sheet.getByRole('button', { name: 'Place parlay · 10 DC' }).click()
+  await expect(page.getByText(`Placed a 2-pick parlay paying ${quote.payout} DC (${multiplier}). Bets are final.`).first()).toBeVisible()
   await expect(sheet).toHaveCount(0)
 
   // The market on screen shows the leg with the fixed payout, and the parlay moved its price.
   const position = page.getByRole('region', { name: 'Your position' })
   await expect(position.getByText(`10 DC · 2 picks · pays ${quote.payout} DC if every pick wins.`)).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Outcomes' }).getByText(/^5\d% \(0 DC\)$/)).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Outcomes' }).locator('.sr-only').getByText(/^5\d%$/)).toHaveCount(1)
 })

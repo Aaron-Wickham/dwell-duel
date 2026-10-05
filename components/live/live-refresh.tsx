@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { RealtimeChannel } from '@supabase/supabase-js'
-import { subscriptionKey, useLiveBaseSubscription, useLiveMemberId, usePageSubscriptions } from './live-tables'
+import { subscriptionKey, useLiveBaseSubscription, useLiveMemberId, usePageSubscriptions, useStaleRenderSubscription } from './live-tables'
 
 // Every table a page may follow row by row, always through a filter naming one market, member,
 // parlay or row. supabase/migrations/0032 and 0035 publish them to the realtime publication (0053
@@ -127,6 +127,7 @@ export function LiveRefresh(): null {
   const router = useRouter()
   const base = useLiveBaseSubscription()
   const memberId = useLiveMemberId()
+  const onStaleRender = useStaleRenderSubscription()
   const declared = usePageSubscriptions()
   const tables = declared.filter((s): s is LiveTableSubscription => 'table' in s)
   const topics = declared.flatMap((s) => ('topic' in s ? [s.topic] : []))
@@ -272,6 +273,10 @@ export function LiveRefresh(): null {
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [router])
+
+  // A page shown from the client cache (#384) is refreshed in place, through the debounce, so it
+  // folds into any refresh a live change has already booked.
+  useEffect(() => onStaleRender(() => scheduler().refresh()), [onStaleRender])
 
   // The base `profiles` channel. The member's own balance must stay live through a navigation that
   // rebuilds the page's channels, so this never depends on the page's declarations.

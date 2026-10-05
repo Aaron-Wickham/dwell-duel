@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
 
-test('Add to slip flips the row and shows the slip button before the server answers', async ({ page }) => {
+test('Add flips the row and shows the slip button before the server answers', async ({ page }) => {
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill('Will the optimistic pick land?')
   await page.getByLabel('Category', { exact: true }).fill('Testing')
@@ -30,24 +30,26 @@ test('Add to slip flips the row and shows the slip button before the server answ
   const yesRow = outcomes.getByRole('listitem').filter({ hasText: 'Yes' })
   await expect(page.getByRole('button', { name: /^Slip \(/ })).toHaveCount(0)
 
-  await yesRow.getByRole('button', { name: 'Add to slip Yes' }).click()
+  await yesRow.getByRole('button', { name: 'Add Yes to slip' }).click()
 
   await expect(yesRow.getByText('In your slip')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Slip (1)', exact: true })).toBeVisible()
   await expect.poll(() => intercepted).toBe(true)
   await expect(page.getByText('Added to your slip.')).toHaveCount(0)
 
-  // Record whether the row ever flashes back to "Add to slip" while the server state lands.
+  // Record whether the row ever flashes back to its Add button while the server state lands.
   await yesRow.evaluate((row) => {
     const flags = window as unknown as { flashedBack: boolean }
     flags.flashedBack = false
     new MutationObserver(() => {
-      if (row.textContent?.includes('Add to slip')) flags.flashedBack = true
+      if (row.textContent?.includes('Add Yes to slip')) flags.flashedBack = true
     }).observe(row, { childList: true, subtree: true, characterData: true })
   })
   release()
 
-  await expect(page.getByText('Added to your slip.')).toBeVisible()
+  // The row and the slip button are the confirmation; adding a pick never toasts (#392).
+  await expect(page.getByRole('button', { name: 'Remove Yes from slip' })).toBeVisible()
+  await expect(page.getByText('Added to your slip.')).toHaveCount(0)
   await expect(outcomes.getByText('In your slip')).toHaveCount(1)
   await expect(page.getByRole('button', { name: 'Slip (1)', exact: true })).toBeVisible()
   expect(await page.evaluate(() => (window as unknown as { flashedBack: boolean }).flashedBack)).toBe(false)

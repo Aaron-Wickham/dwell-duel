@@ -1,24 +1,22 @@
 import { redirect } from 'next/navigation'
-import { UserRoundX, Users } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { countMembers, listMembersPage } from '@/lib/members/list-members'
+import { readNetWorths } from '@/lib/members/net-worth'
 import { newestHref, showMoreHref, type SearchParams } from '@/lib/pagination/cursor'
 import { readNamePageParams } from '@/lib/pagination/name-cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
 import { readSearchQuery } from '@/lib/search/query'
 import { EmptyState } from '@/components/ui/empty-state'
-import { listCardsClass } from '@/components/ui/list-card'
 import { NothingOlder } from '@/components/ui/nothing-older'
-import { SectionCard } from '@/components/ui/section-card'
+import { ListSection } from '@/components/ui/list-section'
 import { SearchField } from '@/components/ui/search-field'
 import { SearchSummary } from '@/components/ui/search-summary'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { SubNav } from '@/components/ui/sub-nav'
 import { ContentReveal } from '@/components/nav/page-transition'
-import { cn } from '@/lib/utils'
-import { MemberRow } from '@/app/(app)/admin/members/member-row'
+import { MemberRow, MembersTableHead, membersBodyClass, membersTableClass } from '@/app/(app)/admin/members/member-row'
 
 const PATH = '/admin/members'
 const ROW_ID_PREFIX = 'member'
@@ -46,10 +44,10 @@ export default async function AdminMembersPage(props: PageProps<'/admin/members'
     listMembersPage(supabase, { query, removed, page: readNamePageParams(searchParams, 'after') }),
     countMembers(supabase, query),
   ])
-  // A Server Component renders once per request, so the purity rule's re-render worry doesn't
-  // apply; passing this down keeps "2h ago" the same on the server and at hydration.
-  // eslint-disable-next-line react-hooks/purity
-  const now = Date.now()
+  const netWorths = await readNetWorths(
+    supabase,
+    list.rows.map((m) => m.id),
+  )
   const backToStartHref = newestHref(PATH, searchParams, 'after')
   const tabCount = removed ? counts.removed : counts.active
 
@@ -78,13 +76,12 @@ export default async function AdminMembersPage(props: PageProps<'/admin/members'
           <SearchSummary count={tabCount} noun={['member', 'members']} query={query} clearHref={hrefWith(searchParams, { q: null })} />
         )}
         <ShowMoreFocus />
-        {/* One card of member cards on a phone; at lg, the section's card falls away and each member is a card of its own in a grid. */}
-        <SectionCard
+        {/* The section's only content, so its table sits on the page (D2); divided rows on a phone (#399). */}
+        <ListSection
           title={removed ? 'Removed members' : 'Members'}
           titleId="members-title"
           description={removed ? 'They can’t sign in and aren’t ranked. Their coins, bets and history stay.' : undefined}
           action={removed ? undefined : <span className="text-sm text-ink2">A–Z</span>}
-          className={cn(list.rows.length > 0 && 'lg:gap-4 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none')}
         >
           {list.windowed && list.rows.length > 0 && (
             <div className="flex flex-col">
@@ -96,21 +93,25 @@ export default async function AdminMembersPage(props: PageProps<'/admin/members'
               {list.windowed ? (
                 <NothingOlder href={backToStartHref} />
               ) : query ? (
-                <EmptyState icon={Users} title={`No ${removed ? 'removed members' : 'members'} match “${query}”.`}>
+                <EmptyState title={`No ${removed ? 'removed members' : 'members'} match “${query}”.`}>
                   Try part of their name or email.
                 </EmptyState>
               ) : removed ? (
-                <EmptyState icon={UserRoundX} title="Nobody has been removed." />
+                <EmptyState title="Nobody has been removed." />
               ) : (
-                <EmptyState icon={Users} title="No members yet." />
+                <EmptyState title="No members yet." />
               )}
             </div>
           ) : (
-            <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-5')}>
-              {list.rows.map((m) => (
-                <MemberRow key={m.id} member={m} domId={rowDomId(ROW_ID_PREFIX, m.id)} now={now} />
-              ))}
-            </ul>
+            <table role="table" className={membersTableClass}>
+              <caption className="sr-only">{removed ? 'Removed members' : 'Members'}, A–Z</caption>
+              <MembersTableHead />
+              <tbody role="rowgroup" className={membersBodyClass}>
+                {list.rows.map((m) => (
+                  <MemberRow key={m.id} member={m} domId={rowDomId(ROW_ID_PREFIX, m.id)} netWorth={netWorths.get(m.id)} />
+                ))}
+              </tbody>
+            </table>
           )}
           {list.next && (
             <div className="flex flex-col">
@@ -121,7 +122,7 @@ export default async function AdminMembersPage(props: PageProps<'/admin/members'
               />
             </div>
           )}
-        </SectionCard>
+        </ListSection>
       </div>
     </ContentReveal>
   )

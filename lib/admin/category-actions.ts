@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
-import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
+import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { normalizeCategoryName } from '@/lib/markets/categories'
 import { isUuid } from '@/lib/uuid'
@@ -33,7 +33,7 @@ export async function renameCategoryAction(categoryId: string, _prev: CategoryAc
   if (!name) return { formError: 'Enter a name.' }
   if (name.length > TEXT_LIMITS.category) return { formError: tooLong('A name', TEXT_LIMITS.category) }
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
   const { error } = await supabase.rpc('rename_market_category', { p_category_id: categoryId, p_name: name })
   if (error) return friendlyError(error, CATEGORY_ERRORS, 'rename_market_category failed')
   revalidatePath('/', 'layout')
@@ -44,7 +44,7 @@ export async function mergeCategoryAction(categoryId: string, _prev: CategoryAct
   const into = String(formData.get('into') ?? '')
   if (!isUuid(into)) return { formError: 'Choose a category to merge into.' }
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
   const { error } = await supabase.rpc('merge_market_categories', { p_from: categoryId, p_into: into })
   if (error) return friendlyError(error, CATEGORY_ERRORS, 'merge_market_categories failed')
   revalidatePath('/', 'layout')
@@ -58,7 +58,7 @@ export async function setCategoryHiddenAction(
   _formData: FormData,
 ): Promise<CategoryActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
   const { error } = await supabase.rpc('set_market_category_hidden', { p_category_id: categoryId, p_hidden: hidden })
   if (error) return friendlyError(error, CATEGORY_ERRORS, 'set_market_category_hidden failed')
   revalidatePath('/', 'layout')

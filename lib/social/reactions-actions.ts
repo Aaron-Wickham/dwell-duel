@@ -4,6 +4,7 @@ import { refresh } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { RATE_LIMIT_ERRORS } from '@/lib/forms/limits'
 import { isReactionKind } from './reactions'
+import { SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 
 export type ReactionResult = { error?: string }
 
@@ -11,7 +12,7 @@ export type ReactionResult = { error?: string }
 // state the member last asked for.
 export async function setReactionAction(eventId: string, kind: string, on: boolean): Promise<ReactionResult> {
   const { supabase, user } = await requireUser()
-  if (!user) return { error: 'Not signed in.' }
+  if (!user) return { error: SIGNED_OUT_ERROR }
   if (!isReactionKind(kind) || typeof eventId !== 'string' || eventId.length === 0) return { error: 'That reaction isn’t available.' }
 
   if (on) {

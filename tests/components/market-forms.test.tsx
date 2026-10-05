@@ -16,7 +16,7 @@ import { ResolveForm } from '@/app/(app)/markets/[id]/resolve-form'
 
 async function resolveAndConfirm() {
   await userEvent.click(screen.getByRole('button', { name: 'Resolve market' }))
-  await userEvent.click(await screen.findByRole('button', { name: 'Confirm outcome' }))
+  await userEvent.click(await screen.findByRole('button', { name: /^(Resolve as|Change to) / }))
 }
 
 const outcomes = [
@@ -80,7 +80,7 @@ describe('ResolveForm', () => {
   })
 
   it('marks neither field of an over/under for an error that is about neither (#219)', async () => {
-    resolveMarketAction.mockResolvedValue({ formError: 'Not signed in.' })
+    resolveMarketAction.mockResolvedValue({ formError: 'You’re signed out. Sign in again.' })
     render(<ResolveForm marketId="m1" outcomes={[{ id: 'o', label: 'Over 3.5' }, { id: 'u', label: 'Under 3.5' }]} line={3.5} />)
     await userEvent.type(screen.getByLabelText('Actual result'), '4')
     await userEvent.type(screen.getByLabelText('Why did this outcome win?'), 'Counted')
@@ -214,7 +214,7 @@ describe('ResolveForm confirmation (#64)', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Winning outcome' }), 'No')
     await userEvent.type(screen.getByLabelText('Why did this outcome win?'), 'Recount')
     await userEvent.click(screen.getByRole('button', { name: 'Override resolution' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Confirm outcome' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^(Resolve as|Change to) / }))
 
     await waitFor(() => expect(resolveMarketAction).toHaveBeenCalledOnce())
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'Winning outcome' })).toHaveValue(''))

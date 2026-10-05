@@ -26,7 +26,7 @@ describe('NotInvitedPage', () => {
   it('explains the invite-only rule and offers a way back to sign-in', async () => {
     await renderPage()
     expect(screen.getByRole('heading', { level: 1, name: 'You’re not on the list yet' })).toBeInTheDocument()
-    expect(screen.getByText('This Google account isn’t on the invite list.')).toBeInTheDocument()
+    expect(screen.queryByText('This Google account isn’t on the invite list.')).toBeNull()
     expect(screen.getByText(/Ask the friend who invited you to check which email they used/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy')
     expect(screen.getByRole('link', { name: 'Try another account' })).toHaveAttribute('href', '/sign-in')

@@ -17,11 +17,14 @@ export function atLeast(role: Role, min: Role): boolean {
   return RANK[role] >= RANK[min]
 }
 
-// Reviewers only see the approval queue; everyone above them starts on invites.
-export function adminHref(role: Role): string | null {
-  if (atLeast(role, 'admin')) return '/admin/invites'
-  if (atLeast(role, 'reviewer')) return '/admin/tasks'
-  return null
+// Where Admin opens: the section with work waiting (#385), task submissions first, else the first
+// section the role can see. Reviewers only see the approval queue; everyone above them starts on
+// invites. `waiting` is getReviewCounts', whose market count is always 0 below admin.
+export function adminHref(role: Role, waiting: { tasks: number; markets: number } = { tasks: 0, markets: 0 }): string | null {
+  if (!atLeast(role, 'reviewer')) return null
+  if (waiting.tasks > 0) return '/admin/tasks'
+  if (!atLeast(role, 'admin')) return '/admin/tasks'
+  return waiting.markets > 0 ? '/admin/markets' : '/admin/invites'
 }
 
 // Throws on an RPC error rather than reporting 'member': an Auth or database outage isn't a

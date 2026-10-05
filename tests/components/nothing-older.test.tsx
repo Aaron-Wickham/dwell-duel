@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 
 vi.mock('next/link', () => ({
+  useLinkStatus: () => ({ pending: false }),
   default: ({ href, scroll, replace, ...props }: ComponentProps<'a'> & { href: string; scroll?: boolean; replace?: boolean }) => (
     <a href={href} data-scroll={String(scroll ?? true)} data-replace={String(replace ?? false)} {...props} />
   ),

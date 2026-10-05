@@ -37,7 +37,7 @@ test('a place whose response is lost can be retried without placing twice', asyn
 
   const sheet = await openSlip(page)
   await sheet.getByLabel('Stake (DC)').fill('7')
-  const place = sheet.getByRole('button', { name: 'Place 1 bet · 7 DC' })
+  const place = sheet.getByRole('button', { name: 'Place bet · 7 DC' })
   await place.click()
   // Next replays an action whose fetch failed as if it never reached the server; if it doesn't,
   // the slip says it couldn't confirm and the member taps Place again. Either way, one bet.
@@ -54,7 +54,7 @@ test('a place whose response is lost can be retried without placing twice', asyn
     const reopened = await openSlip(page)
     await expect(reopened.getByText(/couldn’t confirm your bets/)).toBeVisible()
     await expect(reopened.getByLabel('Stake (DC)')).toHaveValue('7')
-    await reopened.getByRole('button', { name: 'Place 1 bet · 7 DC' }).click()
+    await reopened.getByRole('button', { name: 'Place bet · 7 DC' }).click()
   }
   await expect(placed).toBeVisible()
   expect(dropped).toBe(true)

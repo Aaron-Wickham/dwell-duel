@@ -15,7 +15,6 @@ export async function MarketPosition({ market, keys, now }: { market: MarketDeta
       <PositionCard
         position={position}
         resolvedAt={market.status === 'resolved' ? market.resolvedAt : null}
-        className="lg:col-start-2 lg:row-start-1 lg:mb-7"
       />
     </ContentReveal>
   )

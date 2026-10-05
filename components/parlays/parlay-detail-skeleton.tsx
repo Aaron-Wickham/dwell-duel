@@ -8,20 +8,20 @@ export function ParlayDetailSkeleton({ legs }: { legs: number }) {
   return (
     <>
       <SkeletonScreen name="parlay-summary" announce={false} className="lg:col-start-2 lg:row-start-1">
-        <SkeletonCard className="gap-4 bg-hero">
-          <Skeleton className="h-7 w-24 rounded-full bg-hero-inset" />
+        {/* A plain card: the summary only takes a tint once the parlay has won (#393). */}
+        <SkeletonCard className="gap-4">
           <div className="flex flex-col gap-1">
-            <Skeleton className="h-5 w-24 bg-hero-inset" />
-            <Skeleton className="h-[34px] w-32 bg-hero-inset" />
-            <Skeleton className="h-5 w-56 max-w-full bg-hero-inset" />
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-10 w-32 md:h-14" />
+            <Skeleton className="h-5 w-56 max-w-full" />
           </div>
           <div className="flex flex-col gap-1.5">
             <div className="flex gap-[3px]">
               {Array.from({ length: legs }, (_, i) => (
-                <Skeleton key={i} className="h-1.5 flex-1 rounded-full bg-hero-inset" />
+                <Skeleton key={i} className="h-1.5 flex-1 rounded-full" />
               ))}
             </div>
-            <Skeleton className="h-5 w-28 bg-hero-inset" />
+            <Skeleton className="h-5 w-28" />
           </div>
         </SkeletonCard>
       </SkeletonScreen>
@@ -33,7 +33,7 @@ export function ParlayDetailSkeleton({ legs }: { legs: number }) {
               <div key={i} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
                 <div className="flex items-start justify-between gap-3">
                   <Skeleton className="h-6 w-3/5" />
-                  <Skeleton className="h-6 w-16 shrink-0 rounded-full" />
+                  <Skeleton className="h-6 w-14 shrink-0" />
                 </div>
                 <Skeleton className="h-5 w-48 max-w-full" />
                 <Skeleton className="h-5 w-40 max-w-full" />

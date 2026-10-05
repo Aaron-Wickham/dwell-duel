@@ -10,7 +10,7 @@ for (const [name, viewport] of [
 ] as const) {
   test.describe(name, () => {
     test.use({ viewport })
-    test('reopen a closed market, confirming the new close time, and see it in Edited', async ({ page }) => {
+    test('reopen a closed market from More actions, confirming the new close time, and see it in Edit history', async ({ page }) => {
       const title = `Reopen check ${Date.now()}`
       await page.goto('/markets/new')
       await page.getByLabel('Title').fill(title)
@@ -26,9 +26,12 @@ for (const [name, viewport] of [
         .eq('id', marketId)
       if (error) throw error
       await page.reload()
-      await expect(page.getByRole('heading', { name: 'No more bets' })).toBeVisible()
+      const outcomes = page.getByRole('region', { name: 'Outcomes' })
+      await expect(outcomes.getByText('Betting has closed. Waiting for a result.')).toBeVisible()
 
-      await page.getByRole('button', { name: 'Reopen', exact: true }).click()
+      const moreActions = page.getByRole('button', { name: 'More actions' })
+      await moreActions.click()
+      await page.getByRole('menuitem', { name: 'Reopen', exact: true }).click()
       const dialog = page.getByRole('dialog', { name: 'Reopen market' })
       await dialog.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 3 * 60 * 60 * 1000)))
       await dialog.getByRole('button', { name: 'Reopen market' }).click()
@@ -36,10 +39,11 @@ for (const [name, viewport] of [
       await expect(confirm).toContainText('Members can bet until')
       await confirm.getByRole('button', { name: 'Reopen market' }).click()
 
-      await expect(page.getByRole('heading', { name: 'Place a bet' })).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Reopen', exact: true })).toHaveCount(0)
-      await page.getByText(/^Edited/).click()
-      await expect(page.getByText(/^Close time moved from/)).toBeVisible()
+      await expect(outcomes.getByRole('button', { name: 'Add Yes to slip' })).toBeVisible()
+      await moreActions.click()
+      await expect(page.getByRole('menuitem', { name: 'Reopen', exact: true })).toHaveCount(0)
+      await page.getByRole('menuitem', { name: 'Edit history' }).click()
+      await expect(page.getByRole('dialog', { name: 'Edit history' }).getByText(/^Close time moved from/)).toBeVisible()
     })
   })
 }

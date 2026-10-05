@@ -54,22 +54,23 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 
 | Route | What it is |
 |---|---|
-| `/` | Home: greeting, balance hero (balance, rank, At stake, Pending), a new member's Getting started card, Markets to resolve, the weekly recap (Sundays and Mondays), tiles |
-| `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then those awaiting resolution (oldest close first), then resolved and voided newest first. The All tab reads these as three keyset lists, each with its own Show more (`?open=`, `?awaiting=`, `?resolved=`), so open markets lead page one however many wait on a result (#261); the open and awaiting lists are `listOpenMarkets` split at one `now` (its `bound`). `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) reads just one list. `?q=` (a title search, `lib/markets/search.ts`: trimmed, `*` and control characters dropped, 80 characters, then `ilike` with `\`, `%` and `_` escaped, sent as its own filter parameter, backed by a trigram index) switches it to one flat list of matches, newest first and paged under `?match=` (`listMatchingMarkets`), whatever their status, which the status tab still narrows. `?category=<slug>` (0103, #327) narrows every list, search included, to one category: the "Categories" `FilterChips` row (All, the 8 busiest by `category_counts()`, the chosen one if it isn't among them, then a More… dialog, `MoreCategories`, listing the rest) scrolls sideways on a phone and wraps from `md`, with a "Showing … in X · Show all categories" line under it; an unknown or hidden slug, and the old `?mine=` links (whose chips #327 removed; the `i_bet_on` column stays), fall through to All. The search box (`MarketSearch`), the tabs and the chips keep each other in the URL. Card sparklines come from `market_sparks` (0095) through Next's data cache, one entry per list, keyed by a hash of its markets' `sparkVersion`s (the summed `pool_version` while open, `settled` after): a render costs one cache read per list, and a live refresh reads from Supabase only a list whose markets moved (`lib/markets/sparklines.ts`, #252; the budget is below) |
+| `/` | Home, a tab (#388): "Hi, {first name}" with rank (once the member has a settled bet, `getHomeHistory`) and what's riding; Needs you, only when something waits (task submissions to review for reviewers and up, markets to resolve for admins and up, each opening its Admin section; a member's own closed markets from `markets_to_resolve()`; the 0 DC nudge to Tasks); Getting started, for newcomers only; Your bets, the three open bets and parlays closing soonest (`getClosingSoon`, `lib/home/closing-soon.ts`: the markets the member has bets on, soonest first through `markets (status, close_at)`, merged with their pending parlays' next close), or the three open markets closing soonest; Notifications; Activity, the feed's three newest rows (`listLatestFeed`) with See all to `/feed`; the weekly recap (Sundays and Mondays). From `lg` a Balance card and Needs you sit in a 5fr column beside the rest |
+| `/markets` | Three tabs, each one keyset list with its own Show more (#389): Open (the default; soonest to close first, `?open=`), Waiting (`?status=awaiting`, oldest close first, `?awaiting=`) and Resolved (`?status=resolved`, resolved and voided newest settled first, `?resolved=`). Open and Waiting are `listOpenMarkets` split at one `now` (its `bound`, #261). `lib/markets/status-filter.ts` maps the old `pending`, `closed` and `all` to awaiting, resolved and open. Each card (`MarketCard`) leads with its leading outcome's chance and weekly change (`weeklyChange` in `lib/markets/chart-summary.ts`, read from the card's sparkline points), then the chart, a multiple-choice legend and the meta line, whose bet count is a `bets(count)` embed in the list's own query. Outcomes read Yes before No and Over before Under (`orderOutcomes`, in `listMarkets` and `getMarket`); multiple choice keeps insertion order, then label. `?q=` (a title search, `lib/markets/search.ts`: trimmed, `*` and control characters dropped, 80 characters, then `ilike` with `\`, `%` and `_` escaped, sent as its own filter parameter, backed by a trigram index) switches it to one flat list of matches in every status, newest first and paged under `?match=` (`listMatchingMarkets`); no tab is current then, and each tab leads back out of the search. `?category=<slug>` (0103, #327) narrows every list, search included, to one category: the "Categories" `FilterChips` row (All, the 8 busiest by `category_counts()`, the chosen one if it isn't among them, then a More… dialog, `MoreCategories`, listing the rest) scrolls sideways on a phone and wraps from `md`, with a "Showing … in X · Show all categories" line under it; an unknown or hidden slug, and the old `?mine=` links (whose chips #327 removed; the `i_bet_on` column stays), fall through to All. The chips show only while more than one category holds markets. The search (`MarketSearch`: a field at the right of the tabs from `md`, an icon button that opens it on a phone) keeps the chip in the URL, and the tabs and chips keep each other. Card sparklines come from `market_sparks` (0095) through Next's data cache, one entry per list, keyed by a hash of its markets' `sparkVersion`s (the summed `pool_version` while open, `settled` after): a render costs one cache read per list, and a live refresh reads from Supabase only a list whose markets moved (`lib/markets/sparklines.ts`, #252; the budget is below) |
 | `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under. `?from=<id>` pre-fills it from a market (Duplicate) |
-| `/markets/[id]` | A market: the viewer's own position (#262: each solo bet with the payout fixed when it was placed, each parlay leg linking to its parlay, then results and the net once settled; read from `my_market_position`'s keys before anything streams, so a viewer with nothing on the market gets no card and no skeleton), chart, outcomes (with each outcome's "riding in parlays" figure from `market_parlay_riding`, #279, display only), the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
+| `/markets/[id]` | A market (#390): outcomes first, each with its chance, what 10 DC wins (`soloPays`, `lib/parlays/solo-pays.ts`, the slip's own quote) and the slip control, with the result or void stated once above them and one "riding in parlays" line under them (`market_parlay_riding`, #279, display only); the chart; the viewer's own position (#262: each solo bet with the payout fixed when it was placed, each parlay leg linking to its parlay, then results and the net once settled; read from `my_market_position`'s keys before anything streams, so a viewer with nothing on the market gets no card and no skeleton); comments; the latest 10 bets (`MARKET_BETS_PAGE`, `readKeyset`'s page size). Resolve, Void and Delete are separate cards (`market-manage.tsx`), whose rights (`can_resolve_market`, `can_void_market`, `has_stake_in_market`) are read before anything streams too; Share, Duplicate, Edit, Reopen and Edit history are a "More actions" menu (`market-menu.tsx`). From `lg:` the outcomes, position and cards are a rail beside the chart, comments and bets, sticky unless it holds a card |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
 | `/parlays` | Redirects to `/bets` (kept for old links) |
 | `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its odds (on a pool market, an estimate from `parlay_leg_odds` until its market closes; on an `lmsr` market, its factor, fixed at placement) and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`: the page checks the parlay exists first (so an unknown id is a real 404), then streams the body behind `<Suspense>` with `ParlayDetailSkeleton` |
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
-| `/feed` | Everyone's activity, with reactions, live; a "Show" `SubNav` (`?show=all|results|mine`, `lib/social/feed-filter.ts`) narrows it to results (`RESULT_KINDS`, voids included) or your own events plus results and voids on markets you have a stake in and voids of markets you created (`my_activity_events()`, 0094, whose `UNION ALL` branches each use an index) |
-| `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`). On a phone the Net worth board has a compact standing card with Jump to me (`?at=me`): `getJumpToMeTop` reads the 10 members above you through `rankedAbove` and the page opens a `readOrdered` window there, with focus on your row; any cursor in the URL overrides it, and Back to the top drops it |
-| `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings. `/members` alone redirects to the leaderboard |
-| `/profile` | Edit your name, photo and bio |
-| `/settings` | Theme, your profile, haptics, reduced motion, notifications, How it works and Your data (How it works' privacy section, `/how-it-works#how-your-data`), sign out |
-| `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`). A link to a section from another page (`#how-<slug>`) lands on it through `ScrollToHash`, since a client navigation looks for the id while the skeleton shows |
-| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role, in `app/(app)/admin/(sections)/` under its layout's Admin header (whose description links `docs/ADMIN-GUIDE.md` on GitHub) and tabs; `/admin` alone redirects to the first one the role can see (`adminHref`); Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243), then a Categories section of `ListCard`s (`CategoryCard`) with Rename, Merge (a panel with a confirm) and Hide or Unhide (`lib/admin/category-actions.ts`, #327); Tasks pages its review queue oldest first with "Show more", signs proof only for the rows shown (an extended range caps at 150 rows, then starts a fresh window), and reads its "waiting" chip from `my_review_counts` (`lib/tasks/list-task-completions.ts`, #255); the ledger opens with the owner's Economy card, and `?member=<id>` narrows it to one member's movements (#254). Members and Invites (#254) each have a search box (`SearchField`, `?q=`) and two tabs (`SubNav`, `?show=`): Members' Active · Removed, paged A–Z by `admin_members` with `NAME_ORDER` (`lib/pagination/name-cursor.ts`), as compact read-only rows; Invites' Waiting · Claimed, paged newest first with `INVITE_ORDER` (`lib/invites/list-invites.ts`) |
-| `/admin/members/[id]` | One member's Admin page (#254), outside the sections' layout so their name is the `<h1>`: email, join and last sign-in, balance, Coin history (their last five movements and "Open in Ledger"), and for the owner Adjust balance, Role and Access (Remove from DwellDuel, or Invite again for a removed member). No `loading.tsx`: the member is found first (an unknown id is a real 404) and the coin history streams behind `<Suspense>` |
+| `/feed` | Activity (#385, #388): a drill-down from Home (back-swipe parent `/`), Home's tab marked while it shows. Everyone's activity, with reactions, live; a "Show" `SubNav` (`?show=all|results|mine`, `lib/social/feed-filter.ts`) narrows it to results (`RESULT_KINDS`, voids included) or your own events plus results and voids on markets you have a stake in and voids of markets you created (`my_activity_events()`, 0094, whose `UNION ALL` branches each use an index) |
+| `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`). The rankings are divided rows on the page; your own row sticks to the bottom of the viewport, and on a phone the Net worth board puts a sticky standing bar with Jump to me after the rows when yours isn't among them, while at lg Your standing (with Jump to me) sits under the podium in a sticky side column (#396). Jump to me (`?at=me`): `getJumpToMeTop` reads the 10 members above you through `rankedAbove` and the page opens a `readOrdered` window there, with focus on your row; any cursor in the URL overrides it, and Back to the top drops it |
+| `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings. Net worth is shown with its split into balance and DC riding (`getMemberStanding`'s `balance` and `score`), and the activity list renders the member's own name as plain text (`FeedList`'s `plainHref`, #397). `/members` alone redirects to the leaderboard |
+| `/profile` | Edit your name, photo and bio, one card at reading width (#397) |
+| `/settings` | One reading-width column (#398): Appearance & motion (theme, haptics, reduced motion; this device), Notifications (this device's push, and the account's choices, disabled with a reason where push can't work), Install the app (on a phone browser that hasn't installed it, `install-app.tsx`), Help (How it works, and Your data: the full rules' privacy section, `/how-it-works/rules#how-your-data`), Account (your profile and sign out) |
+| `/how-it-works` | The member version (#398): four short sections and four questions as native `<details>`, written in the page (`app/(app)/how-it-works/page.tsx`, kept true to `docs/HOW-IT-WORKS.md`), then a link to the full rules. Opening it ticks Getting started's first step (`MarkHowItWorksRead`) |
+| `/how-it-works/rules` | The full rules, a drill-down from `/how-it-works` (back-swipe parent), rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`), with a sticky contents list at `lg`. A link to a section from another page (`/how-it-works/rules#how-<slug>`) lands on it through `ScrollToHash`, since a client navigation looks for the id while the skeleton shows |
+| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role, in `app/(app)/admin/(sections)/` under its layout's Admin header (whose description links `docs/ADMIN-GUIDE.md` on GitHub) and tabs; `/admin` alone redirects to the section with work waiting, else the first one the role can see (`adminHref(role, counts)`, which the avatar menu's Admin item uses too); Tasks and Markets carry their share of the avatar's waiting count as a badge (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243), then a Categories section of divided rows (`CategoryCard`) with Rename, Merge (a panel with a confirm) and Hide or Unhide (`lib/admin/category-actions.ts`, #327); Tasks pages its review queue oldest first with "Show more", signs proof only for the rows shown (an extended range caps at 150 rows, then starts a fresh window), and reads its "waiting" chip from `my_review_counts` (`lib/tasks/list-task-completions.ts`, #255); the ledger opens with the owner's Economy card, and `?member=<id>` narrows it to one member's movements (#254). Members and Invites (#254) each have a search box (`SearchField`, `?q=`) and two tabs (`SubNav`, `?show=`): Members' Active · Removed, paged A–Z by `admin_members` with `NAME_ORDER` (`lib/pagination/name-cursor.ts`), as a read-only table (divided rows below `lg`) whose net worth column is read for the page's members by `readNetWorths` (`lib/members/net-worth.ts`: the net-worth board, chunked, and `member_standing` for a removed member, #399); Tasks' queue is a table too, under a sticky bulk bar, and Reject asks for its reason in a dialog (`reject-dialog.tsx`); Invites' Waiting · Claimed, paged newest first with `INVITE_ORDER` (`lib/invites/list-invites.ts`) |
+| `/admin/members/[id]` | One member's Admin page (#254), outside the sections' layout so their name is the `<h1>`: one reading-width column (#399): email, join and last sign-in, balance, Coin history (their last five movements and "Open in Ledger"), then for the owner Role, Adjust balance and, last, Access (Remove from DwellDuel, or Invite again for a removed member). No `loading.tsx`: the member is found first (an unknown id is a real 404) and the coin history streams behind `<Suspense>` |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/auth/google` and `/auth/google/nonce` (signing in straight with Google,
@@ -114,10 +115,10 @@ app/            routes (see above), globals.css, manifest, error pages
 components/     UI by area: admin, app-nav, app-shell, bets, brand, docs, feed,
                 home, leaderboard, live, markets, members, nav, not-found,
                 offline, parlays, proof, push, sign-in, slip, tasks, ui (shared primitives: Page,
-                SectionCard, Button, Field, SubNav, ShowMore, EmptyState,
-                Skeleton…)
+                SectionCard, Button, Field, SegmentedControl, SubNav, ShowMore,
+                EmptyState, Skeleton…)
 lib/            logic by area: admin, app-shell, auth, bets, docs, economy, env,
-                errors, forms, home, invites, ledger, live, markets, members, nav,
+                errors, format (formatDc for every DC amount), forms, home, invites, ledger, live, markets, members, nav,
                 observability, offline, pagination, parlays, preferences, profile,
                 proof, push, search, social, supabase, tasks, theme, toast, ui
 supabase/       migrations/00NN_*.sql, config.toml
@@ -312,8 +313,8 @@ spending coins should get a trigger and a `write_limits()` row.
   the caller's own rows) returns `task_id, streak, includes_current`: the
   run of consecutive periods with an approved completion ending in the
   current period or the one before, numbered by `period_index` (not
-  callable by members). The Tasks page shows it as `StreakBadge` from two
-  periods up.
+  callable by members). The Tasks page shows it in the row's line (`streakLabel`,
+  "3-week streak") from two periods up.
 - `proof_attachments`: files, photos and links attached to a submission or
   a resolution. The files live in the private `proof` storage bucket.
 
@@ -327,7 +328,7 @@ spending coins should get a trigger and a `write_limits()` row.
   keyed `void:<market id>`, with the reason read from `markets.void_reason`.
   Neither has a row in `activity_feed`, so the DB tests' equivalence check
   leaves them out. `actor_id` cascades, so a champion's events go with
-  their profile. `FeedList` skips any kind missing from its `EVENT_ICONS`,
+  their profile. `FeedList` skips any kind missing from its `KNOWN_KINDS`,
   so a kind added by a migration can't break a build that predates it.
 - `feed_reactions` (0053): one row per member, event and kind (`fire`,
   `pray`, `laugh`, `clap`), keyed `(event_id, profile_id, kind)` and
@@ -379,8 +380,8 @@ spending coins should get a trigger and a `write_limits()` row.
 - `my_wagers`: keys for My bets, solo bets and parlays together
   (`bet:<id>`, `parlay:<uuid>`), bucketed open or settled.
 - `stakes_riding` (0051, security invoker): one row per live stake, solo
-  bets on open markets and pending parlays. `my_at_stake` (Home's At
-  stake) and `leaderboard_net_worth` both read it, so they can't disagree.
+  bets on open markets and pending parlays. `my_at_stake` (what Home says is
+  riding) and `leaderboard_net_worth` both read it, so they can't disagree.
 
 ### The functions that move coins
 
@@ -499,7 +500,7 @@ a failed push is due again next run.
 members' pending task submissions for a reviewer and above, closed unresolved
 markets for an admin and above.
 
-The leaderboard's extras (0059, `lib/social/leaderboard-extras.ts`) sit on the This month tab and the rows: `leaderboard_race_steps(p_top)` (0062: the top members' running profit from the month's first settled bet, one step per moment a total moved, capped at 120 steps; drawn by `RaceChart` as step lines, with `race-layout.ts` choosing the scale, clipping a runaway leader or last place and placing the end labels; the chart is a keyboard slider over the moments with a polite live region reading out the totals), `leaderboard_awards()` (four awards for the month), `member_records(ids)` (the W-L chip, read for the page's rows in chunks) and the past champions from the `season_champion` events. The top of either board also shows a `Podium`.
+The leaderboard's extras (0059, `lib/social/leaderboard-extras.ts`) sit on the This month tab and the rows: `leaderboard_race_steps(p_top)` (0062: the top members' running profit from the month's first settled bet, one step per moment a total moved, capped at 120 steps; drawn by `RaceChart` as step lines, with `race-layout.ts` choosing the scale, clipping a runaway leader or last place and placing the end labels; the chart is a keyboard slider over the moments with a polite live region reading out the totals), `leaderboard_awards()` (four awards for the month), `member_records(ids)` (the W-L chip, read for the page's rows in chunks) and the past champions from the `season_champion` events. The top of the Net worth board also shows a `Podium`; This month leads with the race.
 
 The leaderboard (0051) reads two boards through `rpc()`, each returning
 `id, display_name, avatar_path, score, rank` with a competition rank over
@@ -595,7 +596,7 @@ one already on `origin/main`). They roughly follow the project's history:
 | 0046 | Security: parlay odds without your own stakes, no resolving with a stake, no self-review, a 500 DC task cap, hidden emails |
 | 0047 | Attempt keys, so a retried slip or balance adjustment never acts twice |
 | 0048 | Indexes for the markets list, a market's resolutions, a member's coin history and unindexed foreign keys |
-| 0049 | Closing soon: `markets (status, close_at, id)` for the Open list's close-time order, and `markets_to_resolve()` for Home's nudge |
+| 0049 | Closing soon: `markets (status, close_at, id)` for the Open list's close-time order, and `markets_to_resolve()` for Home's nudge (now its Needs you) |
 | 0050 | `member_activity`: join and last sign-in dates for Admin → Members, admins only |
 | 0051 | Net worth and seasons: `stakes_riding` (shared with `my_at_stake`), `leaderboard_net_worth`, `season_profits`, `leaderboard_month`, `settle_season` and the `season_champion` feed kind |
 | 0052 | `economy_summary`: the owner's economy panel on Admin → Ledger (supply in circulation, and this month's DC added and removed by source) |
@@ -604,7 +605,7 @@ one already on `origin/main`). They roughly follow the project's history:
 | 0055 | Member stats: `member_stats` for the profile's Stats card, and `betting_ledger_types()`, 0051's betting types named once and shared with `season_profits` |
 | 0056 | `weekly_recap(p_week)`: Home's weekly recap, one row of date-bounded aggregates for the Eastern week holding `p_week` |
 | 0057 | Push notifications: `push_subscriptions`, `notification_prefs`, `push_log`, `save_push_subscription` and the service-role `push_*` recipient functions |
-| 0058 | Review alerts (#123): `notification_prefs.review_alerts`, `push_task_alerts`, `push_market_alerts`, the `market_alert` kind in `push_log`, and `my_review_counts` for the Admin badge |
+| 0058 | Review alerts (#123): `notification_prefs.review_alerts`, `push_task_alerts`, `push_market_alerts`, the `market_alert` kind in `push_log`, and `my_review_counts` for the avatar's attention dot and the Admin count |
 | 0059 | Leaderboard extras (#121): `leaderboard_race`, `leaderboard_awards`, `member_records` (security definer, invited members only, aggregates only) |
 | 0060 | Best parlay award (#146): `leaderboard_awards` computes Best parlay's multiplier as `member_stats` does (resolved legs' locked odds multiplied, capped), not credited / stake |
 | 0061 | Cron heartbeat (#149): `cron_heartbeats` (service-role writes, admin reads) and `record_cron_heartbeat`, stamped by `/api/cron/closing-alerts` |
@@ -726,7 +727,7 @@ won't delete can't turn every run red; only a failed listing does. A member, a r
 keeps their profile) and an invitee who hasn't finished signing in are
 never listed.
 
-**Betting through the slip.** An outcome's "Add to slip" writes a cookie
+**Betting through the slip.** An outcome's "Add" writes a cookie
 of picks (`lib/parlays/slip.ts`). `SlipProvider` in the signed-in layout
 holds those picks, each marked Solo or Parlay, with optimistic add, remove
 and mode switches. Stakes live only in client state. The layout also
@@ -764,9 +765,13 @@ submitted through `create_market_v4` as usual.
 b = `markets.liquidity`. The price is the chance: `marketOdds`
 (`lib/markets/pricing.ts`) reads it for the market page and cards,
 `market_sparklines` for charts and sparklines, and `withSeededStart` starts
-the series at an even split. A bet's payout is `floor(shares)`, fixed when
-it's placed; the "× payout per DC" beside an outcome is 1 ÷ its price
-(`lmsrOddsBp`). `effectivePools`, `poolPayout`, `pool_payout()` and the
+the series at an even split. SQL samples a series every k-th bet (200
+points for the market page, 24 for a card); the charts then thin what's
+visible by time to about one point every 3px of plot width
+(`bucketByTime` in `lib/markets/chart-window.ts`, each bucket keeping its
+last value), so a burst of bets draws one step rather than a comb. A bet's payout is `floor(shares)`, fixed when
+it's placed; an outcome row's "10 DC wins N" is `soloPays` (`lib/parlays/solo-pays.ts`),
+the same quote the slip shows. `effectivePools`, `poolPayout`, `pool_payout()` and the
 seed apply to `pool` markets only. A parlay on
 `lmsr` markets (0104) is quoted by `lmsrParlayQuote` and shown by
 `fixedParlay` (`lib/parlays/odds.ts`), BigInt maths in millionths that
@@ -798,7 +803,7 @@ outcome, and every parlay through wins and voids, against the pool rules.
 `pool_payout()` in SQL, which `resolve_market_core` pays with (an override
 of a pool market still does), and `poolPayout` in `lib/markets/odds.ts`,
 which My bets (`betResult`) uses; `tests/db/seeded-odds.test.ts` keeps the
-two equal. A resolved pool market's "× payout per DC" is `legOddsBp`. The seed is display only: each outcome's chance
+two equal. The seed is display only: each outcome's chance
 counts `seed_per_outcome` virtual DC on top of real stakes, so a new
 market shows an even split, through `effectivePools` (mirrored by
 `market_sparklines`). A resolution from before 0074 counted the seed in its
@@ -883,6 +888,13 @@ the cron response, and the step fails, so the heartbeat pings `/fail`, past
   policy lets only invited members join them, and only reviewers and above
   join `reviews`; no client can send on them.
 
+Home shows the feed's three newest rows (Activity, #388) but doesn't follow
+`activity`: every bet pings it, and Home is the page most often open, so
+following it would refresh every open Home on every bet (#68) and add
+thousands of live refreshes a day to the Vercel budget below. Home's
+Activity catches up with its other refreshes (`markets`, the member's own
+bets and parlays) and on the next visit; `/feed` stays live.
+
 **Every channel is private** (`{ config: { private: true } }`), so
 Supabase's "Allow public access to channels" can stay off and nobody
 holding the publishable key can open channels of their own. A private
@@ -944,16 +956,41 @@ header, #251) and static files: a prefetch of a signed-in page is its own
 invocation, the prefetched layout's `requireUser` still guards it, and the
 navigation that follows runs the proxy.
 
-Every signed-in page is dynamic, and a prefetch down to its
-`loading.tsx` isn't cached (Next's `staleTimes.dynamic` is 0), so a link
-prefetched on sight is a render every time it scrolls into view. The nav,
+Every signed-in page is dynamic, so a link prefetched on sight is a
+render every time it scrolls into view. The nav,
 `SubNav` and the dense list rows (market cards, feed rows, leaderboard
 rows, My bets rows) link through `IntentLink`
 (`components/ui/intent-link.tsx`), which prefetches only on intent: a
 pointer over the link or keyboard focus, and a finger coming down for the
 nav and `SubNav` (`prefetchOnTouch`), so a tab tap still gets a head
-start. A list row's tap navigates without one and streams its skeleton
-first.
+start. A list row's tap navigates without one: the row dims while its
+page is on the way (`IntentLink`'s pending marker, or `CardLinkClick`'s
+`data-card-pending` for a card clicked under a mouse), then its skeleton
+streams.
+
+**Client cache** (#384). `experimental.staleTimes.dynamic` is 30 in
+`next.config.ts`, so a page visited in the last 30 seconds comes back from
+the client router's cache: a tab switch back shows the cached copy at
+once, with no skeleton, and then refreshes in place. Each page passes
+`<LiveTables renderedAt={renderStamp()}>` (`lib/live/render-stamp.ts`);
+when a page mounts with a server render older than `STALE_RENDER_MS` (2s),
+it came from the cache, and `LiveRefresh` books one `router.refresh()`
+(through its debounce), which re-reads the route past the cache. A fresh
+navigation mounts well inside 2s and isn't refreshed twice, and the
+document's first page is never refreshed, however slowly it hydrated. The
+check compares the server's clock with the browser's, so a browser clock
+running well ahead costs an extra refresh, never a missed one. Pages
+without `LiveTables` (Settings, Profile, How it works, most admin
+sections) show their cached copy without refreshing it. While you're on a
+page, `LiveRefresh` refreshes it on every live change it follows. Your own
+actions revalidate: every money action, creating a market and most
+others call `revalidatePath`, which clears the whole client cache
+(comments and reactions call `refresh()` for their own page). On the
+budget (#251) a revisit costs the same one render as before, after the
+page shows instead of before it, and nothing is prefetched that wasn't
+before. The nav's pill moves to a tapped tab as the navigation starts
+(`useLinkStatus` through `PendingReporter` in `app-nav.tsx`), before the
+page arrives.
 
 **Free-tier budget at 1,000 members** (#250, #251). A model, not a
 measurement: after merge, read Supabase → Realtime usage and Vercel →
@@ -971,7 +1008,7 @@ following `markets`, 6 on the feed and 3 on each busy market page.
 | Realtime messages, 100 a second | a 150-winner resolution sent 150 rows to every feed tab: 1,500 in a second with 10 tabs | the same resolution sends one ping per topic: about 45. The ceiling is now one topic's subscribers, since one ping reaches them all in the same second: about 90 open `/markets` tabs |
 | Concurrent connections, 200 | one per open tab, hidden ones included | one per visible tab (hidden ones close after 60 s): about 10 to 30 typically; 200 when a fifth of members open the app at once, and past that new tabs poll every 60 s instead of failing silently |
 | Vercel invocations, 1M a month | 7.5k renders + 15k prefetches + about 7.5k live refreshes a day, each with a proxy run: about 60k a day, 1.8M a month | 7.5k renders and 7.5k proxy runs; about 5.4k intent prefetches (1.8k nav taps on phones, 3.6k hovers and focuses on desktop), with no proxy; about 5.5k live refreshes (the 15 s wait on `/markets` and the feed folds about a third of them together) and 5.5k proxy runs: about 31k a day, 0.94M a month |
-| Vercel Data Cache (counted as ISR reads and writes; about 1M reads and 200k writes a month on Hobby, check the current figures) | none | `/markets` sparklines (#252): one read per list per render. About 1.5k `/markets` visits and 4k live refreshes a day, up to 3 lists each on All: at most 16.5k reads a day, about 0.5M a month. A write only when a list's key moves: the open list on a `pools` ping (at most about 1,300 a day), the others on a `markets` ping (about 100): about 1.4k a day, 42k a month |
+| Vercel Data Cache (counted as ISR reads and writes; about 1M reads and 200k writes a month on Hobby, check the current figures) | none | `/markets` sparklines (#252): one read per list per render. About 1.5k `/markets` visits and 4k live refreshes a day, one list each (each tab reads one since #389, where the old All tab read three): about 5.5k reads a day, about 0.17M a month. A write only when a list's key moves: the open list on a `pools` ping (at most about 1,300 a day), the others on a `markets` ping (about 100): about 1.4k a day, 42k a month |
 | Supabase egress, 5 GB a month | about 720 KB of sparkline JSON on every `/markets` render (100 cards), about 4 GB a day | sparklines only on a cache miss: the open list's 50 cards at about 0.85 KB each, about 43 KB, about 1,300 times a day: about 56 MB a day, 1.7 GB a month at most, uncompressed (PostgREST gzips when asked, so likely about a quarter of that; unverified); settled lists are read about once a week |
 | Vercel Active CPU, 4 h a month | about 900k renders a month: 2.5 h at 10 ms of CPU each, 5 h at 20 ms | about 550k renders a month: 1.5 h at 10 ms, 3.1 h at 20 ms; the proxy's local JWT check adds about 0.3 h at 3 ms |
 
@@ -996,10 +1033,19 @@ it installable. On a cold start of the installed app, `LaunchScreen`
 grows the leaves onto the splash's D, using only CSS and a small inline
 script. `public/sw.js` is hand-written. It caches only the content-hashed
 `/_next/static/` files and a precached `/offline` page, which it serves
-when a navigation can't reach the network. Each deploy gets its own cache. It never caches per-member HTML, RSC
-payloads, server actions or Supabase responses. Pages slide in with
-React's `<ViewTransition>`, drill-down pages support a back swipe, and
-each signed-in route has a skeleton. `NavDepthTracker` (`lib/nav/nav-depth.ts`)
+when a navigation can't reach the network; that page's Try again link
+reloads by itself on the `online` event (#401). Each deploy gets its own cache. It never caches per-member HTML, RSC
+payloads, server actions or Supabase responses. In the signed-in layout,
+`OfflineBanner` is a fixed strip under the top bar driven by Next's
+`useOffline`, and `OfflineNavNotice` (`components/offline/offline-nav-notice.tsx`)
+listens for clicks on in-app links in the capture phase and, while
+offline, shows a toast at once, since `experimental.useOffline` otherwise
+holds the navigation silently until the connection returns (#401). Drill-down pages slide in
+with React's `<ViewTransition>` (the old page gone by 120ms,
+`--duration-press`, through `--vt-push-exit`) and support a back swipe; a tab switch (`nav-tab`, the
+nav, `SubNav`) swaps with no transition (#384); a
+skeleton giving way to content fades; and each signed-in route has a
+skeleton. `NavDepthTracker` (`lib/nav/nav-depth.ts`)
 scrolls a pushed page to its top before it paints (#349), since Next scrolls
 only when the new segment starts off screen; back and forward keep the
 browser's restored position, and a `#hash` keeps its target. The viewport's
@@ -1009,6 +1055,16 @@ there after the keyboard goes; `KeyboardViewportReset`
 (`components/app-shell/keyboard-viewport-reset.tsx`) nudges the scroll a
 pixel and back once it has (#350). The `color-scheme` meta lets a full page
 load in dark mode paint a dark canvas before `globals.css` arrives (#353).
+Zoom (D6, #402): the viewport meta leaves pinch-zoom on, so a browser tab
+can zoom (WCAG 1.4.4); `StandaloneZoomLock`
+(`components/app-shell/standalone-zoom-lock.tsx`), an inline script that
+runs before first paint, appends `maximum-scale=1, user-scalable=no` only
+under `display-mode: standalone`, and `body`'s `touch-action: pan-y` is
+scoped to standalone too, because a zoomed installed app leaves the fixed
+top and tab bars displaced with no browser chrome to recover. The back-swipe
+surface is `touch-pan-y touch-pinch-zoom`, so it doesn't block the pinch in
+a browser. The trade-off: in a browser a zoomed page can scroll the fixed
+bars partly out of view until it's zoomed back.
 
 **Push notifications** (#80). Settings' Notifications card
 (`app/(app)/settings/notification-settings.tsx`) asks for permission,
@@ -1078,7 +1134,7 @@ Admin layout shows admins and the owner a warning (`ClosingAlertsWarning`,
 missing. Only this route stamps it: the daily keep-alive doesn't,
 so it can't hide a dead schedule. Without push keys nothing is sent, so the
 warning never shows. The signed-in
-layout reads `getReviewCounts` for the Admin button's badge, follows the
+layout reads `getReviewCounts` for the avatar's red dot and its menu's Admin count, follows the
 `reviews` topic (and `markets` for admins) live, and refreshes at the next
 market close. The wording is `lib/push/messages.ts`: payloads are `{ title,
 body, url }`, with an in-app `url`. The OS already names the app, so the
@@ -1110,29 +1166,39 @@ the bare root `app/not-found.tsx`; signed out, the layout passes the page throug
 `--duration-sheet`), and `lib/ui/motion.ts` mirrors them for Motion and
 WAAPI; `tests/lib/ui/motion.test.ts` keeps the two equal and rejects a
 `cubic-bezier` anywhere else. The sliding pills (the desktop nav's and the
-phone tab bar's, each a Motion `layoutId`, and SubNav's WAAPI one) share one
-slide, `PILL_SLIDE` / `PILL_TRANSITION`: 280ms on the iOS curve.
-The three dialogs share `components/ui/dialog-classes.ts`. `pressable`
-shrinks every control on press and, under a mouse only, grows it; a
-tappable card adds `hover-lift` and lifts onto `--lift-shadow`
-instead, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244; My bets' parlay and bet tiles too, #269), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins).
+phone tab bar's, each a Motion `layoutId`, and `SegmentedControl`'s WAAPI one,
+which slides under all four segmented controls: SubNav, the theme control, the
+slip's Solo/Parlay toggle and the chart's range) share one
+slide, `PILL_SLIDE` / `PILL_TRANSITION`: 280ms on the iOS curve, and the
+nav links they slide under (`pill-label`) cross-fade their colour over the
+same 280ms. The three dialogs share `components/ui/dialog-classes.ts`. `pressable`
+shrinks every control on press and never grows one on hover (#383); a
+standalone tappable card adds `hover-lift` and lifts onto `--lift-shadow`
+under a mouse, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244; My bets' parlay and bet tiles too, #269), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins). `AnimatedNumber` counts
+only when its value changes after mount, so a page load shows final figures.
+Under reduced motion every page transition is a `--duration-fast`
+cross-fade with nothing moving. The sign-in intro's CSS delays are
+`--intro-*-at` properties its pre-paint script writes from
+`INTRO_CSS_DELAYS` (`components/sign-in/intro-timeline.ts`), so they can't
+drift from the script's own timeline.
 
 **Getting started.** Home's onboarding card (`components/home/onboarding-card.tsx`)
 has five steps (four on a browser that can never get push, which
 `useDevicePush` reports as `unsupported`; Safari on an iPhone not yet
-installed and a blocked permission still count as off). Reading How it works is the `read-how-it-works` cookie,
+installed and a blocked permission still count as off). Reading How it works (the short version, `/how-it-works`) is the `read-how-it-works` cookie,
 which that page sets from the browser (`components/docs/mark-how-it-works-read.tsx`).
 Turning on notifications is per device, so the card asks the browser for
 a push subscription itself (`lib/push/use-device-push.ts`). The other three
 come from `my_onboarding()` (`lib/home/onboarding.ts`): a photo
 (`profiles.avatar_path`), any bet or parlay and any task submission. It
 hides itself once all five are done. Dismissing it sets the `onboarding`
-cookie, which skips those reads, so it never flashes back. Once it's
+cookie, which skips those reads, so it never flashes back. It never shows to a member with a
+settled bet and an approved task (`getHomeHistory`, #388). Once it's
 dismissed, the installed app with no push subscription shows
-`NotificationsCard` in its place (InstallCard never shows there), until
-Not now, which is remembered in `localStorage`. At exactly 0 DC the Home
-hero points to Tasks, with what active tasks pay (`getTaskRewardRange`,
-read only at 0 DC).
+`NotificationsCard` in its place, until Not now, which is remembered in
+`localStorage`; in a phone browser, Settings says how to install instead.
+At exactly 0 DC Home's Needs you points to Tasks, with what active tasks pay
+(`getTaskRewardRange`, read only at 0 DC).
 
 **Weekly recap** (0056, #81). On Sundays and Mondays in America/New_York,
 Home shows `components/home/weekly-recap-card.tsx`. `lib/home/recap-week.ts`
@@ -1184,10 +1250,12 @@ value never stops production booting.
   have no token and aren't wrapped. The CSP's `connect-src` allows
   `https://*.sentry.io`.
 - **Raw database errors.** An RPC's own refusals are `raise exception`
-  (SQLSTATE `P0001`, `isDeliberateRaise`) and reach the member as written;
-  any other error from `resolve_market` / `resolve_over_under` /
-  `place_slip_v4` (a timeout, a constraint, an aborted fetch) is reported
-  and shown as "Something went wrong. Try again."
+  (SQLSTATE `P0001`, `isDeliberateRaise`); any other error from
+  `resolve_market` / `resolve_over_under` / `place_slip_v4` (a timeout, a
+  constraint, an aborted fetch) is reported and shown as "Something went
+  wrong. Try again." The slip maps its refusals through `parseSlipError`
+  (`lib/parlays/slip-errors.ts`) into words with a next step, and logs any
+  raise it doesn't recognise and shows `GENERIC_ERROR` instead (#400).
 - **Admin health read.** `readClosingAlertsHealth` returns `{ unknown: true }`
   on a failed read; the banner then says it couldn't check, and every
   Admin page still renders.

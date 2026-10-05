@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
-import { GENERIC_ERROR } from '@/lib/errors/friendly-error'
+import { GENERIC_ERROR, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { isDeliberateRaise } from '@/lib/errors/deliberate-raise'
 import { reportError } from '@/lib/observability/report'
 import { clawbackMessage, parseClawbackError } from '@/lib/markets/clawback'
@@ -24,7 +24,7 @@ export async function resolveMarketAction(
   formData: FormData,
 ): Promise<ActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const outcomeId = String(formData.get('outcome_id') ?? '')
   const actualRaw = formData.get('actual')

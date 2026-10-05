@@ -6,6 +6,7 @@ import { MemberStatsCard } from '@/components/members/member-stats-card'
 import { toMemberStats, type MemberStatsRow } from '@/lib/members/stats'
 
 vi.mock('next/link', () => ({
+  useLinkStatus: () => ({ pending: false }),
   default: ({ transitionTypes: _transitionTypes, ...props }: ComponentProps<'a'> & { transitionTypes?: string[] }) => <a {...props} />,
 }))
 
@@ -53,9 +54,12 @@ describe('MemberStatsCard', () => {
     render(<MemberStatsCard stats={toMemberStats(FULL)} />)
 
     expect(screen.getByRole('region', { name: 'Stats' })).toBeInTheDocument()
-    expect(within(stat('Solo bets')).getByText('4 won · 2 lost')).toBeInTheDocument()
-    expect(within(stat('Solo bets')).getByText('1 refunded')).toBeInTheDocument()
-    expect(within(stat('Parlays')).getByText('1 won · 3 lost')).toBeInTheDocument()
+    // "4–2" on screen (one line at 375px, VIZ-17), the words for a screen reader.
+    expect(within(stat('Solo bets')).getByText('4–2')).toHaveAttribute('aria-hidden', 'true')
+    expect(within(stat('Solo bets')).getByText('4 won, 2 lost')).toHaveClass('sr-only')
+    expect(within(stat('Solo bets')).getByText('67% won · 1 refunded')).toBeInTheDocument()
+    expect(within(stat('Parlays')).getByText('1–3')).toBeInTheDocument()
+    expect(within(stat('Parlays')).getByText('25% won')).toBeInTheDocument()
     expect(within(stat('Parlays')).queryByText(/refunded/)).toBeNull()
     expect(stat('Net profit')).toHaveTextContent('+45 DC')
     expect(stat('Biggest win')).toHaveTextContent('+30 DC')

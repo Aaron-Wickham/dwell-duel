@@ -4,6 +4,7 @@ import { startTransition, useState } from 'react'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TaskRow } from '@/components/tasks/task-row'
+import { buttonVariants } from '@/components/ui/button'
 import { CommitHistory } from './commit-history'
 
 const { submitTaskCompletionAction, uploadProof, discardProof, success } = vi.hoisted(() => ({
@@ -43,7 +44,14 @@ async function openDialog() {
 }
 
 describe('SubmitTaskDialog', () => {
-  it('sends the note and the uploaded proof, then shows Pending review before the server answers', async () => {
+  // #394: one per row, so a primary button on each made twenty equal calls to action.
+  it('opens from a secondary button, labelled Try again after a rejection', () => {
+    render(<SubmitTaskDialog taskId="t1" taskTitle="Read Psalm 23" memberId="m1" proofRequired={false} label="Try again" />)
+    const trigger = screen.getByRole('button', { name: 'Try again, Read Psalm 23' })
+    expect(trigger.className).toBe(buttonVariants({ variant: 'secondary', size: 'sm' }))
+  })
+
+  it('sends the note and the uploaded proof, then says it was sent before the server answers', async () => {
     const answer = deferred<undefined>()
     submitTaskCompletionAction.mockReturnValue(answer.promise)
     renderDialog()
@@ -59,13 +67,13 @@ describe('SubmitTaskDialog', () => {
     const formData = submitTaskCompletionAction.mock.calls[0][2] as FormData
     expect(formData.get('note')).toBe('Read it at breakfast')
     expect(JSON.parse(String(formData.get('attachments')))).toEqual([{ kind: 'link', url: 'https://example.com/notes' }])
-    expect(await screen.findByText('Pending review')).toBeInTheDocument()
+    expect(await screen.findByText('Sent for review')).toBeInTheDocument()
 
     await act(async () => answer.resolve(undefined))
     await waitFor(() => expect(success).toHaveBeenCalledWith('Submitted for review.'))
   })
 
-  it('hands focus to the page heading once the chip replaces the trigger, instead of dropping it on <body>', async () => {
+  it('hands focus to the page heading once "Sent for review" replaces the trigger, instead of dropping it on <body>', async () => {
     const answer = deferred<undefined>()
     submitTaskCompletionAction.mockReturnValue(answer.promise)
     render(
@@ -77,7 +85,7 @@ describe('SubmitTaskDialog', () => {
     await openDialog()
     await userEvent.click(screen.getByRole('button', { name: 'Submit for review' }))
 
-    expect(await screen.findByText('Pending review')).toBeInTheDocument()
+    expect(await screen.findByText('Sent for review')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveFocus())
     expect(screen.queryByRole('button', { name: /I did this/ })).toBeNull()
@@ -118,7 +126,7 @@ describe('SubmitTaskDialog', () => {
     expect(screen.queryByRole('list', { name: 'Attached proof' })).not.toBeInTheDocument()
   })
 
-  it('never shows two Pending review chips for one task while the server state lands', async () => {
+  it('never says a task is both sent and waiting while the server state lands', async () => {
     const history: string[] = []
     const answer = deferred<void>()
 
@@ -134,8 +142,9 @@ describe('SubmitTaskDialog', () => {
           <TaskRow
             title="Read Psalm 23"
             rewardAmount={5}
-            description={`Server says ${pending ? 'pending' : 'available'}`}
-            state={pending ? { kind: 'pending' } : { kind: 'available' }}
+            description={null}
+            cadence="once"
+            state={pending ? { kind: 'waiting', sentAt: new Date().toISOString(), now: Date.now() } : { kind: 'todo' }}
             action={<SubmitTaskDialog taskId="t1" taskTitle="Read Psalm 23" memberId="m1" proofRequired={false} />}
           />
         </ul>
@@ -149,11 +158,11 @@ describe('SubmitTaskDialog', () => {
     )
     await openDialog()
     await userEvent.click(screen.getByRole('button', { name: 'Submit for review' }))
-    await waitFor(() => expect(screen.getAllByText('Pending review')).toHaveLength(1))
+    await waitFor(() => expect(screen.getAllByText('Sent for review')).toHaveLength(1))
 
     answer.resolve()
-    await waitFor(() => expect(screen.getByText('Server says pending')).toBeInTheDocument())
-    expect(screen.getAllByText('Pending review')).toHaveLength(1)
-    for (const text of history) expect(text.split('Pending review').length - 1).toBeLessThanOrEqual(1)
+    await waitFor(() => expect(screen.getByText('today')).toBeInTheDocument())
+    expect(screen.queryByText('Sent for review')).toBeNull()
+    for (const text of history) expect(text.includes('Sent for review') && text.includes('sent today')).toBe(false)
   })
 })

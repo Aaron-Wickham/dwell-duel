@@ -46,6 +46,7 @@ before v0.4.0 used other headings.)
 ### Under the hood
 - **More Claude Code setup.** Hooks that lint each edited file as CI does and refuse hand edits to the generated database types and `.env` files; `new-route` and `pr-ready` skills; `money-path-reviewer` and `conventions-reviewer` agents; and the context7 docs server in `.mcp.json` (#379).
 - **The docs describe the redesigned app.** AGENTS.md, the design handoff, How it works, Architecture, the admin guide and the README match what shipped in #380–#403: the handoff points at the Oct 4 proposal boards and notes where the app departs from them, stale rules and removed components are gone, and the README's screenshots are new (#404).
+- **Admin › Members reads net worth in one call per page.** A new `member_net_worths` function (migration 0111) gives the net worth of up to 50 members at once, removed members included, instead of one `member_standing` call per removed member, which on the Removed tab was every row (#418).
 
 ## v0.10.1-beta — 2026-10-04
 

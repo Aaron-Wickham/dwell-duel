@@ -57,11 +57,11 @@ const NO_ROWS: KeysetPage<MarketSummary> = { rows: [], next: null, windowed: fal
 // Each tab reads one list with its own Show more (#389). The open and waiting lists are the two
 // sides of the close time (#261); resolved and voided markets share the third.
 type ListId = MarketFilter
-type List = { id: ListId; groups: MarketCardStatus[]; description: string }
+type List = { id: ListId; groups: MarketCardStatus[] }
 const LISTS: List[] = [
-  { id: 'open', groups: ['open'], description: 'Open markets' },
-  { id: 'awaiting', groups: ['awaiting'], description: 'Markets waiting for a result' },
-  { id: 'resolved', groups: ['resolved', 'voided'], description: 'Resolved markets' },
+  { id: 'open', groups: ['open'] },
+  { id: 'awaiting', groups: ['awaiting'] },
+  { id: 'resolved', groups: ['resolved', 'voided'] },
 ]
 
 // A search lists its matches as one flat list instead (#264).
@@ -98,16 +98,8 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     countsRead,
   ])
   const pages: Record<ListId, KeysetPage<MarketSummary>> = { open, awaiting, resolved }
-  // A market can resolve or void between the concurrent reads above, and then come back from
-  // two lists. It only ever moves from open to resolved or voided, so the resolved list's copy is
-  // the fresher one: the open copy is dropped rather than rendering the market twice, with
-  // duplicate React keys and DOM/title ids. The open and awaiting lists split at one instant, so
-  // they never share a market.
-  const resolvedIds = new Set(resolved.rows.map((m) => m.id))
   const markets: (readonly [MarketSummary, CardList])[] = [
-    ...LISTS.flatMap(({ id }) =>
-      pages[id].rows.filter((m) => id === 'resolved' || !resolvedIds.has(m.id)).map((m) => [m, id] as const),
-    ),
+    ...pages[filter].rows.map((m) => [m, filter] as const),
     ...matches.rows.map((m) => [m, 'match'] as const),
   ]
   // One sparkline batch per list, so each list's cache entry moves only with its own markets.
@@ -342,7 +334,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
         </EmptyState>
       ) : (
         <>
-          {lists.map(({ id, description, page, groups }) => {
+          {lists.map(({ id, page, groups }) => {
             return (
               <Fragment key={id}>
                 {windowTop(page, id)}
@@ -352,7 +344,6 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
                     href={showMoreHref('/markets', searchParams, id, page.next)}
                     fresh={page.next.kind === 'window'}
                     focusId={rowDomId(rowIdPrefix(id), page.next.firstId)}
-                    description={description}
                   />
                 )}
               </Fragment>

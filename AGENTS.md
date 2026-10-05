@@ -355,8 +355,8 @@ a line to `CHANGELOG.md` under the next release.
   optional `fresh` prop — pass `fresh` when `next.kind === 'window'`, so a
   fresh window scrolls to the top — `focusId`, `rowDomId(prefix,
   next.firstId)`, and an optional `description` for a page that has more
-  than one "Show more" on it. It reads "Loading…" and is `aria-busy`
-  while its navigation is pending (`useLinkStatus`). Each row spreads
+  than one "Show more" on it. While its navigation is pending
+  (`useLinkStatus`) its label reads "Loading…" and is marked `aria-busy`. Each row spreads
   `focusTarget(rowDomId(prefix, row.id))` (`lib/pagination/row-id.ts`); a
   row whose content is long enough to make a verbose accessible name (a
   card) instead passes `focusTarget(domId, labelId)`, naming itself from

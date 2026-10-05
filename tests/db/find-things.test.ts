@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './helpers'
+import { serviceClient, type TestClient } from './helpers'
 import { seedMembers, clientFor, createTestMarket, ensureInvited, giveRole, backLeg, type Member, type TestMarket } from './fixtures'
 import { listMatchingMarkets, listOpenMarkets, listResolvedMarkets } from '@/lib/markets/list-markets'
 import { listFeed } from '@/lib/social/list-feed'
@@ -13,8 +12,8 @@ const NOW = () => new Date().toISOString()
 
 let alice: Member
 let bob: Member
-let aliceClient: SupabaseClient
-let bobClient: SupabaseClient
+let aliceClient: TestClient
+let bobClient: TestClient
 
 beforeEach(async () => {
   ;[alice, bob] = await seedMembers()
@@ -24,10 +23,10 @@ beforeEach(async () => {
   await giveRole(alice, 'admin')
 })
 
-const titles = async (client: SupabaseClient, q: string, categoryId: string | null = null) =>
+const titles = async (client: TestClient, q: string, categoryId: string | null = null) =>
   (await listMatchingMarkets(client, FIRST, { q, categoryId })).rows.map((m) => m.title)
 
-async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex = 0): Promise<void> {
+async function bet(client: TestClient, market: TestMarket, outcomeIndex = 0): Promise<void> {
   const { error } = await client.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[outcomeIndex], p_amount: 5 })
   if (error) throw error
 }

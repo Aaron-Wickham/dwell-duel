@@ -23,9 +23,10 @@ const linkClass = cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'self
 // link itself leaves the page or moves, so focus would otherwise fall back to the document; the
 // page's ShowMoreFocus moves it to that row once it renders.
 // While the next rows load, the label reads "Loading…" (both labels hold their place, so the
-// button doesn't change width) and the link is marked busy, so a second tap isn't the only sign.
-// `description` names the list when a page has more than one "Show more" (the markets list's open
-// and resolved lists), so they're distinguishable out of context while their name stays "Show more".
+// button doesn't change width) and the label is marked busy, so a second tap isn't the only sign.
+// The label ignores the pointer, so the link itself is what a tap or click lands on.
+// `description` names the list when a page has more than one "Show more", so they're
+// distinguishable out of context while their name stays "Show more".
 export function ShowMore({
   href,
   fresh = false,
@@ -63,7 +64,7 @@ export function ShowMore({
 function ShowMoreLabel() {
   const { pending } = useLinkStatus()
   return (
-    <span aria-busy={pending} className="grid">
+    <span aria-busy={pending} className="pointer-events-none grid">
       <span aria-hidden={pending || undefined} className={cn('[grid-area:1/1]', pending && 'invisible')}>
         Show more
       </span>

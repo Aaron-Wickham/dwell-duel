@@ -35,6 +35,22 @@ describe('RaceChart', () => {
     expect(screen.getByText('−3 DC')).toBeInTheDocument()
   })
 
+  it('labels each line’s end in ink, with a dot in the member’s own colour (#391)', () => {
+    render(<RaceChart series={[series('Aaron', [0, 30, 64]), series('Maci', [0, 10, 41])]} />)
+    const label = screen.getByText('Aaron').closest('li')!
+    expect(label).toHaveClass('text-ink')
+    expect(label.querySelector('[class*="bg-s"]')).not.toBeNull()
+  })
+
+  it('colours a member the same whether they lead or trail', () => {
+    const colour = (name: string) => screen.getByText(name).closest('li')!.querySelector('[class*="bg-s"]')!.className
+    const { unmount } = render(<RaceChart series={[series('Aaron', [0, 64]), series('Maci', [0, 41])]} />)
+    const aaron = colour('Aaron')
+    unmount()
+    render(<RaceChart series={[series('Maci', [0, 90]), series('Aaron', [0, 12])]} />)
+    expect(colour('Aaron')).toBe(aaron)
+  })
+
   it('starts the axis at the first settled bet, not the 1st of the month', () => {
     render(<RaceChart series={[series('Ada', [0, 10]), series('Ben', [0, 5])]} />)
     expect(screen.getByText('Sep 3')).toBeInTheDocument()
@@ -123,8 +139,13 @@ describe('RaceChart', () => {
       await user.keyboard('{ArrowLeft}{ArrowLeft}')
       expect(slider).toHaveAttribute('aria-valuenow', '1')
       expect(announcer()).toHaveTextContent('Maci +30 DC, Aaron +10 DC, Py 0 DC')
-      // The same readout hover shows, for sighted keyboard users.
+      // The same readout hover shows, for sighted keyboard users: beside the cursor from md, and
+      // above the plot on a phone, where a box would cover the lines.
       expect(within(screen.getByTestId('race-key-readout')).getByText('+30 DC')).toBeInTheDocument()
+      expect(screen.getByTestId('race-key-readout').querySelector('.md\\:flex')).toHaveClass('hidden')
+      const phoneReadout = document.querySelector('[data-readout]') as HTMLElement
+      expect(phoneReadout.parentElement).toHaveClass('md:hidden')
+      expect(phoneReadout).toHaveTextContent('Maci +30 DC')
 
       await user.keyboard('{ArrowUp}')
       expect(slider).toHaveAttribute('aria-valuenow', '2')

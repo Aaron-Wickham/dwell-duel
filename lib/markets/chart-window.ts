@@ -20,13 +20,35 @@ export type ChartWindow = {
   lineEnd: number
 }
 
+// About one point per this many pixels of plot width: closer steps than that draw a comb.
+export const PX_PER_POINT = 3
+
+// Thins a series to at most `buckets` points by time, not by count, so a burst of bets draws as
+// one step instead of a comb. Each bucket keeps its last point, the chance it ended on; the first
+// point always stays, so the line still starts at the window's left edge.
+export function bucketByTime(points: SeriesPoint[], start: number, end: number, buckets: number): SeriesPoint[] {
+  if (points.length <= 2 || !(buckets >= 1) || !(end > start)) return points
+  const width = (end - start) / Math.floor(buckets)
+  const [first, ...rest] = points
+  const out: SeriesPoint[] = [first]
+  let lastBucket: number | null = null
+  for (const point of rest) {
+    const bucket = Math.floor((point.t - start) / width)
+    if (bucket === lastBucket && out.length > 1) out[out.length - 1] = point
+    else out.push(point)
+    lastBucket = bucket
+  }
+  return out
+}
+
 // The full chart and the card sparkline both plot this window, so a card's line matches the
-// market page's at the same range.
+// market page's at the same range. With `buckets`, the visible points are thinned by time to fit.
 export function chartWindow(
   points: SeriesPoint[],
   range: RangeKey,
   now: number,
   closedMs: number | null,
+  buckets?: number,
 ): ChartWindow | null {
   const last = points.at(-1)
   if (!last) return null
@@ -38,7 +60,7 @@ export function chartWindow(
   let end = now
   if (range === 'All' && closed) end = Math.min(now, lineEnd + ((lineEnd - start) * ZONE_SHARE) / (1 - ZONE_SHARE))
   if (end - start < MIN_SPAN_MS) start = end - MIN_SPAN_MS
-  return { visible, start, end, lineEnd }
+  return { visible: buckets === undefined ? visible : bucketByTime(visible, start, lineEnd, buckets), start, end, lineEnd }
 }
 
 export function xPercent(plot: Pick<ChartWindow, 'start' | 'end'>, t: number): number {

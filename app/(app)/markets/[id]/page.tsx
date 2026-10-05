@@ -328,6 +328,7 @@ async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: 
     <ContentReveal>
       <SectionCard title="Chance over time" titleId="chart-title" className="gap-3">
         <ProbabilityChart
+          kind={market.kind}
           outcomes={chartOutcomes}
           points={chart.points}
           betCount={chart.betCount}

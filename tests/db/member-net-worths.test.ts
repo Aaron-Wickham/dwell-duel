@@ -101,6 +101,8 @@ describe('member_net_worths', () => {
 
     // What Admin › Members reads, through the app's helper.
     expect(await readNetWorths(ownerClient, ids)).toEqual(after)
+    // A member who isn't an admin reads a removed member's net worth as member_standing gives it.
+    expect((await setWorths(bobClient, [carol.id])).get(carol.id)).toBe(await standingWorth(bobClient, carol.id))
   })
 
   it('leaves out an id with no profile, and reads nothing for no ids', async () => {
@@ -114,6 +116,11 @@ describe('member_net_worths', () => {
     expect((await setWorths(bobClient, fifty)).get(bob.id)).toBe(100)
     const { error } = await bobClient.rpc('member_net_worths', { p_ids: [...fifty, owner.id] })
     expectError(error, 'too many members in one read')
+  })
+
+  it('reads nothing for a signed-in caller without an invite', async () => {
+    const eve = await makeMember('Eve')
+    expect((await setWorths(await clientFor(eve), [bob.id, eve.id])).size).toBe(0)
   })
 
   it('refuses a signed-out caller', async () => {

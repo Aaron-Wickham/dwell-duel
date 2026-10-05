@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import { IntentLink } from '@/components/ui/intent-link'
 import type { MemberSummary } from '@/lib/members/list-members'
 import { ROLE_LABELS } from '@/lib/auth/roles'
 import { focusTarget } from '@/lib/pagination/row-id'
@@ -59,14 +59,14 @@ export function MemberRow({ member, domId, netWorth }: { member: MemberSummary; 
     >
       <td role="cell" className={`${cellClass} max-lg:mb-0.5 max-lg:basis-full max-lg:text-base`}>
         <div className="flex min-w-0 flex-col">
-          <Link
+          <IntentLink
             id={titleId}
             href={`/admin/members/${member.id}`}
             transitionTypes={['nav-forward']}
             className="hit-area pressable self-start font-extrabold break-words text-ink"
           >
             {member.displayName}
-          </Link>
+          </IntentLink>
           {/* The only way an admin can match a Google account to a member (#195). */}
           {member.email && <span className="text-sm text-ink2 wrap-anywhere">{member.email}</span>}
         </div>

@@ -47,7 +47,8 @@ a line to `CHANGELOG.md` under the next release.
   gold, `done` and `void` sunk), never `primary`.
 - **Every signed-in page is a `<Page>`.** It lives in `components/ui/page.tsx`
   and has exactly one `<h1>`, from `PageHeader` or `h1Class`. Sections are
-  `SectionCard`s, whose `<h2>` names the region; a line under that heading
+  `SectionCard`s, whose `<h2>` names the region (a page of prose, like How it
+  works' short version, uses plain `<section>`s under `h2Class` instead); a line under that heading
   goes in its `description` slot, never a negative margin. Lists with
   nothing in them render an `EmptyState`: no icon (the prop is optional
   and no list passes one) and, wherever there is one, the next step as

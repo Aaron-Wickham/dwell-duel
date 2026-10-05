@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { IntentLink } from '@/components/ui/intent-link'
 import { useActionState, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
@@ -271,9 +271,9 @@ export function PendingApprovals({
                   )}
                 </td>
                 <td role="cell" className={`${cellClass} max-lg:col-start-2 max-lg:row-start-1 max-lg:pt-2.5`}>
-                  <Link href={`/members/${c.submitterId}`} transitionTypes={['nav-forward']} className="hit-area pressable font-extrabold text-ink">
+                  <IntentLink href={`/members/${c.submitterId}`} transitionTypes={['nav-forward']} className="hit-area pressable font-extrabold text-ink">
                     {c.submitterName}
-                  </Link>
+                  </IntentLink>
                 </td>
                 <td role="cell" className={`${cellClass} max-lg:col-start-2 max-lg:row-start-2`}>
                   {c.taskTitle} · <span className="font-extrabold whitespace-nowrap text-gold">{formatDcAmount(c.rewardAmount)}</span>

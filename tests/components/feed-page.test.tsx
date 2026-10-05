@@ -113,7 +113,8 @@ describe('FeedPage', () => {
     const [first, second] = screen.getAllByRole('group', { name: 'Reactions' })
     expect(within(first).getByRole('button', { name: 'React fire, 3 reactions, you reacted' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(first).getByRole('button', { name: 'React clap, 1 reaction' })).toHaveAttribute('aria-pressed', 'false')
-    expect(within(second).getByRole('button', { name: 'React fire, 0 reactions' })).toHaveAttribute('aria-pressed', 'false')
+    // An item nobody reacted to shows only React (#395).
+    expect(within(second).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['React'])
   })
 
   it('moves focus to the first new row when Show more is clicked', async () => {

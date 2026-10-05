@@ -6,7 +6,7 @@ test('Duplicate opens Create market filled in from the market, a week on, and cr
   close.setSeconds(0, 0)
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill('Who reads the lesson this week?')
-  await page.getByLabel('Description').fill('Whoever the rota says')
+  await page.getByLabel('Details (optional)').fill('Whoever the rota says')
   await page.getByLabel('Multiple choice').check()
   await page.getByRole('textbox', { name: 'Outcome 1' }).fill('Pat')
   await page.getByRole('textbox', { name: 'Outcome 2' }).fill('Sam')
@@ -19,16 +19,18 @@ test('Duplicate opens Create market filled in from the market, a week on, and cr
   const originalUrl = page.url()
   const marketId = originalUrl.split('/').pop()!
 
-  // Edit, Share and Duplicate sit in one row that still fits a 320px screen.
+  // Share, Duplicate and Edit sit behind More actions, so the header fits a 320px screen (#390).
   await page.setViewportSize({ width: 320, height: 720 })
-  await expect(page.getByRole('button', { name: 'Share' })).toBeVisible()
+  await page.getByRole('button', { name: 'More actions' }).click()
+  await expect(page.getByRole('menuitem', { name: 'Share' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Edit', exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
 
-  await page.getByRole('link', { name: 'Duplicate' }).click()
+  await page.getByRole('menuitem', { name: 'Duplicate' }).click()
   await expect(page).toHaveURL(`/markets/new?from=${marketId}`)
   await expect(page.getByRole('heading', { level: 1, name: 'Create market' })).toBeVisible()
   await expect(page.getByLabel('Title')).toHaveValue('Who reads the lesson this week?')
-  await expect(page.getByLabel('Description')).toHaveValue('Whoever the rota says')
+  await expect(page.getByLabel('Details (optional)')).toHaveValue('Whoever the rota says')
   await expect(page.getByLabel('Multiple choice')).toBeChecked()
   // In the order the market shows them: outcomes made together share a timestamp, then sort by label.
   await expect(page.getByRole('textbox', { name: 'Outcome 1' })).toHaveValue('Lee')

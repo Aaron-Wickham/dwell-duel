@@ -45,7 +45,7 @@ test('an override is blocked, naming the member who has spent their winnings', a
   await page.getByLabel('Why did this outcome win?').fill('Checked against the recording')
   await page.getByRole('button', { name: 'Resolve market' }).click()
   await page.getByRole('button', { name: 'Confirm outcome' }).click()
-  await expect(page.getByText('Resolved', { exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Outcomes' }).getByText('Yes won', { exact: true })).toBeVisible()
 
   const { data: afterWin, error: balanceErr } = await db.from('profiles').select('balance').eq('id', bob.id).single()
   if (balanceErr) throw balanceErr
@@ -71,5 +71,5 @@ test('an override is blocked, naming the member who has spent their winnings', a
     ),
   ).toBeVisible()
   await expect(page.getByLabel('Winning outcome')).toHaveAttribute('aria-invalid', 'true')
-  await expect(page.getByText('Winning outcome: Yes')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Outcomes' }).getByText('Yes won', { exact: true })).toBeVisible()
 })

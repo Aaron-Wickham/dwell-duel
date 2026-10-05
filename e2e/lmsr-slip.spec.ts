@@ -33,9 +33,10 @@ test('the slip shows an exact payout on a new market, and its bet is final', asy
   if (error) throw error
   await page.goto(`/markets/${(data as { market_id: string }).market_id}`)
 
-  // A new market opens at even odds.
+  // A new market opens at even odds, and each row quotes 10 DC with the slip's own number (#390).
   const outcomes = page.getByRole('region', { name: 'Outcomes' })
-  await expect(outcomes.getByText('50% (0 DC)')).toHaveCount(2)
+  await expect(outcomes.getByText('50%', { exact: true })).toHaveCount(2)
+  await expect(outcomes.getByText('10 DC wins 18', { exact: true })).toHaveCount(2)
 
   await addToSlip(page, 'Yes')
   const sheet = await openSlip(page)
@@ -56,7 +57,7 @@ test('the slip shows an exact payout on a new market, and its bet is final', asy
   await expect(page.getByRole('button', { name: /^Cancel your/ })).toHaveCount(0)
 
   // The price moved to about 59%.
-  await expect(outcomes.getByText('59% (10 DC)')).toBeVisible()
+  await expect(outcomes.getByText('59%', { exact: true })).toBeVisible()
 })
 
 // 0104 (#334): a parlay of new markets splits its stake across the picks, so the slip shows exactly
@@ -100,5 +101,5 @@ test('the slip shows a parlay’s exact payout on new markets, and placing fixes
   // The market on screen shows the leg with the fixed payout, and the parlay moved its price.
   const position = page.getByRole('region', { name: 'Your position' })
   await expect(position.getByText(`10 DC · 2 picks · pays ${quote.payout} DC if every pick wins.`)).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Outcomes' }).getByText(/^5\d% \(0 DC\)$/)).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Outcomes' }).getByText(/^5\d%$/)).toBeVisible()
 })

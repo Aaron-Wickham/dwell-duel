@@ -104,11 +104,9 @@ test('Your position lists each bet with its fixed payout, and a parlay leg; parl
   await expect(leg.getByText(/^5 DC · 2 picks · pays \d+ DC if every pick wins\./)).toBeVisible()
   await expect(leg.getByRole('link', { name: /^View parlay/ })).toHaveAttribute('href', `/parlays/${parlayId}`)
 
-  // Parlay money shows beside each outcome; its share of the stake bought shares, so it moved the odds.
-  const yes = outcomes.getByRole('listitem').filter({ hasText: /^Yes/ })
-  await expect(yes.getByText('+5 DC riding in parlays')).toBeVisible()
-  await expect(outcomes.getByText('so it moved these odds like a bet', { exact: false })).toBeVisible()
-  await expect(outcomes.getByRole('listitem').filter({ hasText: /^No/ }).getByText(/riding in parlays/)).toHaveCount(0)
+  // Parlay money shows once, under the outcomes, never in a row (#390).
+  await expect(outcomes.getByText(/^Includes 5 DC riding in parlays\./)).toBeVisible()
+  await expect(outcomes.getByRole('listitem').getByText(/riding in parlays/)).toHaveCount(0)
 
   // A solo bet joins the card with the payout fixed when it was placed, and no Cancel.
   await placeSolo(page, 'No', 5)
@@ -117,27 +115,26 @@ test('Your position lists each bet with its fixed payout, and a parlay leg; parl
   await expect(solo.getByRole('button')).toHaveCount(0)
   await expect(position.getByText('5 DC on this market · Bets are final.')).toBeVisible()
 
-  // On a phone the card comes before the chart.
-  const chart = page.getByRole('region', { name: 'Chance over time' })
-  expect((await position.boundingBox())!.y).toBeLessThan((await chart.boundingBox())!.y)
+  // On a phone the outcomes come first, then the chart, then the card (#390).
+  const chart = page.getByRole('region', { name: 'Yes over time' })
+  expect((await outcomes.boundingBox())!.y).toBeLessThan((await chart.boundingBox())!.y)
+  expect((await chart.boundingBox())!.y).toBeLessThan((await position.boundingBox())!.y)
 
   // Backer1's parlay rides on Yes too. The page follows parlay_legs for this market
   // (pageSubscriptions.marketDetail); this checks the figure itself after a refresh.
   const [backer1] = await backers()
   await lmsrParlay(backer1.client, [here.outcome('Yes'), there.outcome('No')], 10)
   await page.reload()
-  await expect(yes.getByText('+15 DC riding in parlays')).toBeVisible()
+  await expect(outcomes.getByText(/^Includes 15 DC riding in parlays\./)).toBeVisible()
 
-  // From lg the card tops the right column, above Place a bet.
+  // From lg the outcomes top the right rail, level with the chart, with the card under them.
   await page.setViewportSize({ width: 1280, height: 900 })
-  const [posBox, chartBox, betBox] = await Promise.all([
-    position.boundingBox(),
-    chart.boundingBox(),
-    page.getByRole('region', { name: 'Place a bet' }).boundingBox(),
-  ])
-  expect(posBox!.x).toBeGreaterThan(chartBox!.x + chartBox!.width)
-  expect(posBox!.y + posBox!.height).toBeLessThanOrEqual(betBox!.y)
-  expect(Math.abs(posBox!.y - chartBox!.y)).toBeLessThanOrEqual(1)
+  const [posBox, chartBox, outcomesBox] = await Promise.all([position.boundingBox(), chart.boundingBox(), outcomes.boundingBox()])
+  expect(outcomesBox!.x).toBeGreaterThan(chartBox!.x + chartBox!.width)
+  expect(Math.abs(outcomesBox!.y - chartBox!.y)).toBeLessThanOrEqual(1)
+  expect(outcomesBox!.y + outcomesBox!.height).toBeLessThanOrEqual(posBox!.y)
+  expect(Math.abs(posBox!.x - outcomesBox!.x)).toBeLessThanOrEqual(1)
+  await expect(page.getByRole('region', { name: 'Place a bet' })).toHaveCount(0)
   await settle(page)
   await page.screenshot({ path: `${SHOTS}/fix1-desktop-with-card.png`, fullPage: true })
 })
@@ -168,9 +165,13 @@ test('once the market resolves, Your position shows each result, the net and the
   await expect(solo.getByRole('button')).toHaveCount(0)
   await expect(position.getByText('Your leg won. The parlay waits on 1 more pick.')).toBeVisible()
 
-  await expect(page.getByRole('region', { name: 'No more bets' }).getByText(/Solo bets have been paid; parlays pay once every pick has settled\./)).toBeVisible()
+  // The result is said once, at the top of the outcomes (#390).
+  const outcomes = page.getByRole('region', { name: 'Outcomes' })
+  await expect(outcomes.getByText('Yes won', { exact: true })).toBeVisible()
+  await expect(outcomes.getByText('Solo bets have been paid; parlays pay once every pick has settled.')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'No more bets' })).toHaveCount(0)
   // A pending parlay still rides on the winning outcome.
-  await expect(page.getByRole('region', { name: 'Outcomes' }).getByText('+5 DC riding in parlays')).toBeVisible()
+  await expect(outcomes.getByText(/^Includes 5 DC riding in parlays\./)).toBeVisible()
 })
 
 test('a member with nothing on the market sees no Your position card', async ({ page }) => {
@@ -180,14 +181,14 @@ test('a member with nothing on the market sees no Your position card', async ({ 
   await expect(page.getByRole('region', { name: 'Outcomes' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Your position' })).toHaveCount(0)
 
-  // From lg the bet column starts level with the chart, with no empty row above it.
+  // From lg the outcomes rail starts level with the chart.
   await page.setViewportSize({ width: 1280, height: 900 })
-  const [chartBox, betBox] = await Promise.all([
-    page.getByRole('region', { name: 'Chance over time' }).boundingBox(),
-    page.getByRole('region', { name: 'Place a bet' }).boundingBox(),
+  const [chartBox, outcomesBox] = await Promise.all([
+    page.getByRole('region', { name: 'Yes over time' }).boundingBox(),
+    page.getByRole('region', { name: 'Outcomes' }).boundingBox(),
   ])
-  expect(betBox!.x).toBeGreaterThan(chartBox!.x + chartBox!.width)
-  expect(Math.abs(betBox!.y - chartBox!.y)).toBeLessThanOrEqual(1)
+  expect(outcomesBox!.x).toBeGreaterThan(chartBox!.x + chartBox!.width)
+  expect(Math.abs(outcomesBox!.y - chartBox!.y)).toBeLessThanOrEqual(1)
   await settle(page)
   await page.screenshot({ path: `${SHOTS}/fix1-desktop-no-card.png`, fullPage: true })
 })

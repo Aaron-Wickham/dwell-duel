@@ -6,7 +6,7 @@ import { serverActionSettled } from './server-action'
 export async function addToSlip(page: Page, outcome: string): Promise<void> {
   const settled = serverActionSettled(page)
   const row = page.getByRole('region', { name: 'Outcomes' }).getByRole('listitem').filter({ hasText: outcome })
-  await row.getByRole('button', { name: `Add to slip ${outcome}` }).click()
+  await row.getByRole('button', { name: `Add ${outcome} to slip` }).click()
   await expect(row.getByText('In your slip')).toBeVisible()
   await settled
 }

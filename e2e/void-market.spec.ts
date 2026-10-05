@@ -36,12 +36,14 @@ test('void a market through the confirmation dialog', async ({ page }) => {
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)
   await expect(trigger).toBeFocused()
-  await expect(page.getByText('Open', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add Yes to slip' })).toBeVisible()
 
   await trigger.click()
   await dialog.getByRole('button', { name: 'Void market', exact: true }).click()
 
-  await expect(page.getByText('Voided', { exact: true })).toBeVisible()
+  const outcomes = page.getByRole('region', { name: 'Outcomes' })
+  await expect(outcomes.getByText('This market was voided. Every bet was refunded, and parlays dropped this pick.')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Void market' })).toHaveCount(0)
   // The void card unmounts on success; the toast must survive that.
   await expect(page.getByText('Market voided.')).toBeVisible()
   await expect(page.getByRole('alertdialog')).toHaveCount(0)

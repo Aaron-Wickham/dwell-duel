@@ -18,13 +18,17 @@ test('a member reacts to a feed item and takes the reaction back', async ({ page
   await createMarket(page, title)
 
   await page.goto('/feed')
-  const item = page.getByRole('listitem').filter({ hasText: `Alice opened ${title}` }).first()
+  const item = page.getByRole('listitem').filter({ hasText: `Alice created ${title}` }).first()
   const reactions = item.getByRole('group', { name: 'Reactions' })
-  await expect(reactions.getByRole('button', { name: 'React fire, 0 reactions' })).toHaveAttribute('aria-pressed', 'false')
+  // Only used reactions show (#395): a new item has just the React button.
+  await expect(reactions.getByRole('button', { name: /^React fire/ })).toHaveCount(0)
 
-  // Optimistic: the button flips at once; wait for the action before moving on.
+  // Optimistic: the pill appears at once; wait for the action before moving on.
   let settled = serverActionSettled(page)
-  await reactions.getByRole('button', { name: 'React fire, 0 reactions' }).click()
+  await reactions.getByRole('button', { name: 'React', exact: true }).click()
+  const picker = page.getByRole('dialog', { name: 'React' })
+  await expect(picker.getByRole('button', { name: 'React fire, 0 reactions' })).toHaveAttribute('aria-pressed', 'false')
+  await picker.getByRole('button', { name: 'React fire, 0 reactions' }).click()
   const reacted = reactions.getByRole('button', { name: 'React fire, 1 reaction, you reacted' })
   await expect(reacted).toHaveAttribute('aria-pressed', 'true')
   await settled
@@ -34,11 +38,12 @@ test('a member reacts to a feed item and takes the reaction back', async ({ page
 
   settled = serverActionSettled(page)
   await reacted.click()
-  await expect(reactions.getByRole('button', { name: 'React fire, 0 reactions' })).toHaveAttribute('aria-pressed', 'false')
+  await expect(reactions.getByRole('button', { name: /^React fire/ })).toHaveCount(0)
   await settled
 
   await page.reload()
-  await expect(reactions.getByRole('button', { name: 'React fire, 0 reactions' })).toHaveAttribute('aria-pressed', 'false')
+  await expect(reactions.getByRole('button', { name: /^React fire/ })).toHaveCount(0)
+  await expect(reactions.getByRole('button', { name: 'React', exact: true })).toBeVisible()
 })
 
 test('a member comments on a market and deletes the comment', async ({ page }) => {

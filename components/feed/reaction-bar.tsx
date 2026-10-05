@@ -1,13 +1,24 @@
 'use client'
 
-import { startTransition, useOptimistic } from 'react'
+import { startTransition, useOptimistic, useState } from 'react'
+import { Popover } from '@base-ui/react/popover'
+import { SmilePlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { haptics } from '@/lib/haptics'
 import { REACTIONS, reactionLabel, toggleReaction, type EventReactions, type ReactionKind } from '@/lib/social/reactions'
 import { setReactionAction } from '@/lib/social/reactions-actions'
 import { cn } from '@/lib/utils'
-import { uiTextClass } from '@/components/ui/page'
 
+const pillClass =
+  'pressable hit-area inline-flex h-8 cursor-pointer items-center gap-1 rounded-full border px-2.5 text-sm font-bold'
+
+// --line-s, not --line: the edge is all that marks an unselected pill as a control (A11Y-07).
+function pillTone(mine: boolean) {
+  return mine ? 'border-acc-text bg-acc-soft text-acc-text' : 'border-line-s bg-surface text-ink2'
+}
+
+// Reactions on demand (#395): only the reactions someone has used show, as pills, beside one React
+// button that opens all four. Four empty buttons under every row drowned the sentences (CR-B03).
 // Reactions are optimistic: they move no coins, so the tap shows at once and gives way to the
 // server's counts when the action's refresh lands. A refused toggle falls back on its own, since
 // the prop it reverts to never changed.
@@ -15,6 +26,7 @@ export function ReactionBar({ eventId, reactions }: { eventId: string; reactions
   const [shown, apply] = useOptimistic(reactions, (current, change: { kind: ReactionKind; on: boolean }) =>
     toggleReaction(current, change.kind, change.on),
   )
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   function toggle(kind: ReactionKind) {
     const on = !shown[kind].mine
@@ -30,8 +42,8 @@ export function ReactionBar({ eventId, reactions }: { eventId: string; reactions
   }
 
   return (
-    <div role="group" aria-label="Reactions" className="flex flex-wrap gap-2">
-      {REACTIONS.map(({ kind, emoji, name }) => {
+    <div role="group" aria-label="Reactions" className="flex flex-wrap items-center gap-1.5">
+      {REACTIONS.filter(({ kind }) => shown[kind].count > 0).map(({ kind, emoji, name }) => {
         const count = shown[kind]
         return (
           <button
@@ -40,16 +52,50 @@ export function ReactionBar({ eventId, reactions }: { eventId: string; reactions
             aria-pressed={count.mine}
             aria-label={reactionLabel(name, count)}
             onClick={() => toggle(kind)}
-            className={cn(
-              `pressable inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-1 rounded-full border-[1.5px] px-2.5 ${uiTextClass} font-bold`,
-              count.mine ? 'border-acc-text bg-acc-soft text-acc-text' : 'border-line bg-surface text-ink2',
-            )}
+            className={cn(pillClass, pillTone(count.mine))}
           >
             <span aria-hidden="true">{emoji}</span>
-            {count.count > 0 && <span aria-hidden="true">{count.count}</span>}
+            <span aria-hidden="true">{count.count}</span>
           </button>
         )
       })}
+      <Popover.Root open={pickerOpen} onOpenChange={setPickerOpen} modal="trap-focus">
+        <Popover.Trigger
+          aria-label="React"
+          className="pressable hit-area inline-flex h-8 w-11 cursor-pointer items-center justify-center rounded-full text-ink2 hover:bg-sunk hover:text-ink"
+        >
+          <SmilePlus aria-hidden="true" className="size-5" />
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Positioner side="top" align="start" sideOffset={6} className="z-40 outline-none">
+            <Popover.Popup className="flex items-center gap-1 rounded-full border border-line bg-surface p-1 shadow-overlay outline-none transition-[opacity,scale] duration-(--duration-fast) data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0 motion-reduce:transition-none">
+              <Popover.Title className="sr-only">React</Popover.Title>
+              {REACTIONS.map(({ kind, emoji, name }) => {
+                const count = shown[kind]
+                return (
+                  <button
+                    key={kind}
+                    type="button"
+                    aria-pressed={count.mine}
+                    aria-label={reactionLabel(name, count)}
+                    onClick={() => {
+                      setPickerOpen(false)
+                      toggle(kind)
+                    }}
+                    className={cn(
+                      'pressable inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-xl',
+                      count.mine ? 'bg-acc-soft' : 'hover:bg-sunk',
+                    )}
+                  >
+                    <span aria-hidden="true">{emoji}</span>
+                  </button>
+                )
+              })}
+              <Popover.Close className="sr-only">Close</Popover.Close>
+            </Popover.Popup>
+          </Popover.Positioner>
+        </Popover.Portal>
+      </Popover.Root>
     </div>
   )
 }

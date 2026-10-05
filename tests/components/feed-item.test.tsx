@@ -20,13 +20,25 @@ describe('FeedItem', () => {
     expect(screen.getByText('5m ago')).toBeInTheDocument()
   })
 
+  // A11Y-06: the names are the row's only tap targets (#187), so each reaches 44px tall; the row
+  // itself never presses.
+  it('gives every link a 44px hit area and leaves the row unpressable', () => {
+    render(
+      <ul>
+        <FeedItem segments={[{ text: 'Alice', href: '/members/1' }, ' created ', { text: 'Will it rain?', href: '/markets/2' }]} age="5m ago" />
+      </ul>,
+    )
+    for (const link of screen.getAllByRole('link')) expect(link).toHaveClass('hit-area')
+    expect(screen.getByRole('listitem')).not.toHaveClass('pressable')
+  })
+
   it('only links the segments that have an href', () => {
     render(
       <ul>
-        <FeedItem segments={[{ text: 'Will it rain?', href: '/markets/2' }, ' resolved: Yes']} age="1h ago" />
+        <FeedItem segments={[{ text: 'Will it rain?', href: '/markets/2' }, ' resolved Yes']} age="1h ago" />
       </ul>,
     )
-    expect(screen.getByRole('listitem')).toHaveTextContent('Will it rain? resolved: Yes')
+    expect(screen.getByRole('listitem')).toHaveTextContent('Will it rain? resolved Yes')
     expect(screen.queryAllByRole('link')).toHaveLength(1)
   })
 

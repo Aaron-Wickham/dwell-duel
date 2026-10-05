@@ -18,7 +18,7 @@ export function FeedItem({
   detail?: string | null
   // A plain fact under it, like what a market's creator had riding on it.
   note?: string | null
-  // The item's reaction buttons (ReactionBar).
+  // The item's reactions (ReactionBar).
   reactions?: ReactNode
   domId?: string
 }) {
@@ -26,9 +26,8 @@ export function FeedItem({
   // button's label too, so a row that takes focus is named by its sentence alone.
   const labelId = domId && reactions ? `${domId}-label` : undefined
   return (
-    // A grid, so the reactions can run under the time as well as the sentence: in the sentence's
-    // column alone, four 44px buttons wrapped onto a second row on a phone. No icon tile before the
-    // sentence (#387): it only named the kind the sentence already says.
+    // No icon tile before the sentence (#387): it only named the kind the sentence already says.
+    // The reactions sit in the sentence's column, under it, now that only the used ones show (#395).
     <li {...focusTarget(domId, labelId)} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 py-3.5">
       <div className="flex min-w-0 grow flex-col gap-1">
         <p id={labelId} className="text-base break-words">
@@ -36,7 +35,9 @@ export function FeedItem({
             typeof segment === 'string' ? (
               <span key={i}>{segment}</span>
             ) : (
-              <IntentLink key={i} href={segment.href} transitionTypes={['nav-forward']}>
+              // The names are the row's only tap targets (#187), so each reaches 44px tall without
+              // growing the row (A11Y-06).
+              <IntentLink key={i} href={segment.href} transitionTypes={['nav-forward']} className="hit-area">
                 {segment.text}
               </IntentLink>
             ),
@@ -44,9 +45,9 @@ export function FeedItem({
         </p>
         {detail && <p className="line-clamp-2 text-sm break-words text-ink2">“{detail}”</p>}
         {note && <p className="text-sm font-bold text-ink2">{note}</p>}
+        {reactions && <div className="pt-1">{reactions}</div>}
       </div>
       <span className="shrink-0 pt-0.5 text-sm whitespace-nowrap text-ink2">{age}</span>
-      {reactions && <div className="col-span-2 pt-1">{reactions}</div>}
     </li>
   )
 }

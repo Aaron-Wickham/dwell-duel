@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { noReactions, type EventReactions } from '@/lib/social/reactions'
 
@@ -24,40 +24,77 @@ function deferred<T>() {
   return { promise, resolve }
 }
 
+const bar = () => screen.getByRole('group', { name: 'Reactions' })
+
+async function openPicker() {
+  await userEvent.click(screen.getByRole('button', { name: 'React' }))
+  return screen.findByRole('dialog', { name: 'React' })
+}
+
 describe('ReactionBar', () => {
-  it('shows all four reactions as toggle buttons named by kind, count and whether you reacted', () => {
+  // #395: four empty buttons under every row drowned the sentences.
+  it('shows only the reactions someone used, named by kind, count and whether you reacted, then React', () => {
     render(<ReactionBar eventId="bet:1" reactions={SOME} />)
 
-    const buttons = screen.getAllByRole('button')
+    const buttons = within(bar()).getAllByRole('button')
     expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual([
+      'React fire, 3 reactions, you reacted',
+      'React laugh, 1 reaction',
+      'React',
+    ])
+    expect(buttons.slice(0, 2).map((b) => b.getAttribute('aria-pressed'))).toEqual(['true', 'false'])
+    expect(buttons.slice(0, 2).map((b) => b.textContent)).toEqual(['🔥3', '😂1'])
+    for (const button of buttons) {
+      expect(button).toHaveAttribute('type', 'button')
+      expect(button).toHaveClass('hit-area')
+    }
+  })
+
+  it('gives an unselected reaction an edge that reads as a control (A11Y-07)', () => {
+    render(<ReactionBar eventId="bet:1" reactions={SOME} />)
+    expect(screen.getByRole('button', { name: 'React laugh, 1 reaction' })).toHaveClass('border-line-s')
+    expect(screen.getByRole('button', { name: 'React laugh, 1 reaction' })).not.toHaveClass('border-line')
+  })
+
+  it('shows only React when nobody has reacted', () => {
+    render(<ReactionBar eventId="bet:1" reactions={noReactions()} />)
+    expect(within(bar()).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['React'])
+  })
+
+  it('opens all four reactions from React, each a toggle, and closes on Escape', async () => {
+    render(<ReactionBar eventId="bet:1" reactions={SOME} />)
+    const picker = await openPicker()
+
+    const choices = within(picker).getAllByRole('button', { name: /^React / })
+    expect(choices.map((b) => b.getAttribute('aria-label'))).toEqual([
       'React fire, 3 reactions, you reacted',
       'React pray, 0 reactions',
       'React laugh, 1 reaction',
       'React clap, 0 reactions',
     ])
-    expect(buttons.map((b) => b.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false', 'false'])
-    expect(buttons.map((b) => b.textContent)).toEqual(['🔥3', '🙏', '😂1', '👏'])
-    for (const button of buttons) {
-      expect(button).toHaveAttribute('type', 'button')
-      expect(button).toHaveClass('min-h-11')
-    }
-    expect(screen.getByRole('group', { name: 'Reactions' })).toBeInTheDocument()
+    expect(choices.map((b) => b.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false', 'false'])
+    for (const choice of choices) expect(choice).toHaveClass('size-11')
+
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'React' })).toBeNull())
   })
 
-  it('adds a reaction at once, before the server answers, and asks the server to add it', async () => {
+  it('adds a reaction from the picker at once, before the server answers, and asks the server to add it', async () => {
     const pending = deferred<{ error?: string }>()
     setReactionAction.mockReturnValue(pending.promise)
     render(<ReactionBar eventId="bet:1" reactions={SOME} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'React pray, 0 reactions' }))
+    const picker = await openPicker()
+    await userEvent.click(within(picker).getByRole('button', { name: 'React pray, 0 reactions' }))
 
-    const pray = await screen.findByRole('button', { name: 'React pray, 1 reaction, you reacted' })
+    const pray = await within(bar()).findByRole('button', { name: 'React pray, 1 reaction, you reacted' })
     expect(pray).toHaveAttribute('aria-pressed', 'true')
     expect(setReactionAction).toHaveBeenCalledWith('bet:1', 'pray', true)
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'React' })).toBeNull())
     pending.resolve({})
   })
 
-  it('takes your own reaction back at once', async () => {
+  it('takes your own reaction back at once from its pill', async () => {
     const pending = deferred<{ error?: string }>()
     setReactionAction.mockReturnValue(pending.promise)
     render(<ReactionBar eventId="bet:1" reactions={SOME} />)
@@ -69,14 +106,26 @@ describe('ReactionBar', () => {
     pending.resolve({})
   })
 
+  it('drops a pill whose last reaction was yours once you take it back', async () => {
+    const pending = deferred<{ error?: string }>()
+    setReactionAction.mockReturnValue(pending.promise)
+    render(<ReactionBar eventId="bet:1" reactions={{ ...noReactions(), clap: { count: 1, mine: true } }} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'React clap, 1 reaction, you reacted' }))
+
+    await waitFor(() => expect(within(bar()).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['React']))
+    pending.resolve({})
+  })
+
   it('falls back to the real counts and says so when the server refuses', async () => {
     setReactionAction.mockResolvedValue({ error: 'Couldn’t add your reaction. Try again.' })
     render(<ReactionBar eventId="bet:1" reactions={SOME} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'React clap, 0 reactions' }))
+    const picker = await openPicker()
+    await userEvent.click(within(picker).getByRole('button', { name: 'React clap, 0 reactions' }))
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('Couldn’t add your reaction. Try again.'))
-    expect(await screen.findByRole('button', { name: 'React clap, 0 reactions' })).toHaveAttribute('aria-pressed', 'false')
+    await waitFor(() => expect(within(bar()).queryByRole('button', { name: /React clap/ })).toBeNull())
   })
 
   it('follows new counts from the server', () => {

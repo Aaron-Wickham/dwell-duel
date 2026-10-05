@@ -34,11 +34,11 @@ describe('describeEvent', () => {
   })
 
   it('describes a created market', () => {
-    expect(describeEvent({ ...base, kind: 'market_created', outcomeLabel: null, amount: null })).toEqual([sarah, ' opened ', market])
+    expect(describeEvent({ ...base, kind: 'market_created', outcomeLabel: null, amount: null })).toEqual([sarah, ' created ', market])
   })
 
   it('describes a resolved market', () => {
-    expect(describeEvent({ ...base, kind: 'market_resolved', amount: null })).toEqual([market, ' resolved: Yes'])
+    expect(describeEvent({ ...base, kind: 'market_resolved', amount: null })).toEqual([market, ' resolved Yes'])
   })
 
   it('describes a voided market by who voided it', () => {

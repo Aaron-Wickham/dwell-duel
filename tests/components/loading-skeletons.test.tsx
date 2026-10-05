@@ -125,11 +125,12 @@ describe('skeletons match their pages', () => {
     expect(container.querySelector('.bg-acc-soft')).toHaveClass('hidden', 'lg:flex')
   })
 
-  it('the feed skeleton draws four reaction pills under every row', () => {
+  // #395: a row shows only the reactions someone used, plus one React button.
+  it('the feed skeleton draws one React button under every row', () => {
     const { container } = render(<FeedLoading />)
     const rows = container.querySelectorAll('[data-skeleton-reactions]')
     expect(rows).toHaveLength(6)
-    for (const row of rows) expect(row.querySelectorAll('.skeleton.rounded-full.h-11')).toHaveLength(4)
+    for (const row of rows) expect(row.querySelectorAll('.skeleton.rounded-full.h-8')).toHaveLength(1)
   })
 
   it('the settings skeleton draws the theme legend and hint, and every notification kind', () => {

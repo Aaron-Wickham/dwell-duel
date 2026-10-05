@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { serviceClient, type TestClient, reconcilePoolTotals } from './helpers'
-import { seedMembers, clientFor, createTestMarket, ensureInvited, type Member, type TestMarket } from './fixtures'
-import { getChartSeries, readChancesAt, CHART_BUCKETS } from '@/lib/markets/chart-series'
+import { seedMembers, clientFor, createTestMarket, ensureInvited, makeMember, giveRole, type Member, type TestMarket } from './fixtures'
+import { pgQuery } from './pg-query'
+import { lmsrParlayQuote } from '@/lib/parlays/odds'
+import { getChartSeries, readChancesAt, readWeekAgoChances, CHART_BUCKETS } from '@/lib/markets/chart-series'
 import { buildProbabilitySeries, withSeededStart, type SeriesPoint } from '@/lib/markets/probability-series'
 import { listSparklines } from '@/lib/markets/sparklines'
 import { lmsrBuy, lmsrPrices } from '@/lib/markets/lmsr'
@@ -154,16 +156,54 @@ describe('getChartSeries (#68, #409)', () => {
     await placeLmsrBet(bobClient, market, 0, 40)
     await placeLmsrBet(aliceClient, market, 2, 15)
     await placeLmsrBet(bobClient, market, 1, 25)
-    const now = Date.now()
-    await backdateMarket(market.marketId, now - 4 * HOUR)
-    await stampBets(market.marketId, [now - 3 * HOUR, now - 2 * HOUR, now - HOUR])
-    const facts = await marketFacts(market.marketId, market.outcomeIds)
+    await expectCardParity(market)
+  })
 
-    const chart = await getChartSeries(bobClient, facts, now)
-    const { data, error } = await bobClient.rpc('market_sparklines', { p_market_ids: [market.marketId], p_points: 200 })
+  it('prices parlay-book legs as its cards do', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true })
+    const other = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true })
+    await placeLmsrBet(bobClient, market, 0, 20)
+    const legs = await Promise.all([market, other].map(async (m) => ({ q: await qOf(m), liquidity: B, index: 1 })))
+    const { error } = await aliceClient.rpc('place_slip_v4', {
+      p_singles: [],
+      p_parlay_outcome_ids: [market.outcomeIds[1], other.outcomeIds[1]],
+      p_parlay_stake: 30,
+      p_parlay_payout: lmsrParlayQuote(legs, 30).payout,
+    })
     if (error) throw error
-    const sampled = (data[0].points as { t: string; shares: Record<string, number> }[]).map((p) => ({ t: Date.parse(p.t), shares: p.shares }))
-    expectSameSeries(chart.series.All, withSeededStart(sampled, facts), market.outcomeIds)
+    await placeLmsrBet(bobClient, market, 0, 10)
+    // Two bets and the parlay's leg.
+    expect((await expectCardParity(market)).length).toBe(3)
+  })
+
+  it('prices a converted market as its cards do, its converted bets at the pool chance they showed', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    await placeBet(aliceClient, market.marketId, market.outcomeIds[0], 10)
+    await placeBet(bobClient, market.marketId, market.outcomeIds[1], 25)
+    await pgQuery('select public.convert_pool_markets_to_lmsr() as result')
+    await placeLmsrBet(bobClient, market, 0, 15)
+    await expectCardParity(market)
+  })
+
+  it('prices a resolved pool market as its cards do', async () => {
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { seed: 20 })
+    await placeBet(aliceClient, market.marketId, market.outcomeIds[0], 10)
+    await placeBet(bobClient, market.marketId, market.outcomeIds[1], 25)
+    await placeBet(aliceClient, market.marketId, market.outcomeIds[0], 5)
+    const { error: closeErr } = await serviceClient()
+      .from('markets')
+      .update({ close_at: new Date(Date.now() - 1000).toISOString() })
+      .eq('id', market.marketId)
+    if (closeErr) throw closeErr
+    const olive = await makeMember('Olive')
+    await giveRole(olive, 'owner')
+    const { error } = await (await clientFor(olive)).rpc('resolve_market', {
+      p_market_id: market.marketId,
+      p_outcome_id: market.outcomeIds[1],
+      p_note: 'Settled by the test',
+    })
+    if (error) throw error
+    await expectCardParity(market)
   })
 
   it('has no points and no bets for an unseeded market nobody has bet on', async () => {
@@ -172,6 +212,48 @@ describe('getChartSeries (#68, #409)', () => {
     expect(chart).toEqual({ series: { '1D': [], '1W': [], All: [] }, betCount: 0 })
   })
 })
+
+// The market maker's q, in outcomeIds order.
+async function qOf(market: TestMarket): Promise<number[]> {
+  const { data, error } = await serviceClient().from('market_outcomes').select('id, shares, q_offset').eq('market_id', market.marketId)
+  if (error) throw error
+  return market.outcomeIds.map((id) => {
+    const row = data.find((o) => o.id === id)!
+    return Number(row.shares) + Number(row.q_offset)
+  })
+}
+
+// Spreads a market's moves (its bets and its parlays' legs) an hour apart, in the order they
+// were made, so each lands in its own bucket; then holds market_series' whole history equal to
+// market_sparklines' every move, which the cards read.
+async function expectCardParity(market: TestMarket): Promise<SeriesPoint[]> {
+  const db = serviceClient()
+  const bets = await betsOf(market.marketId)
+  const { data: legs, error } = await db.from('parlay_legs').select('parlays(id, created_at)').eq('market_id', market.marketId)
+  if (error) throw error
+  const moves = [
+    ...bets.map((b) => ({ table: 'bets' as const, id: String(b.id), at: b.created_at })),
+    ...legs.map((l) => ({ table: 'parlays' as const, id: l.parlays.id, at: l.parlays.created_at })),
+  ].sort((x, y) => Date.parse(x.at) - Date.parse(y.at))
+  const now = Date.now()
+  await backdateMarket(market.marketId, now - (moves.length + 1) * HOUR)
+  for (const [i, move] of moves.entries()) {
+    const at = new Date(now - (moves.length - i) * HOUR).toISOString()
+    const { error: stampErr } =
+      move.table === 'bets'
+        ? await db.from('bets').update({ created_at: at }).eq('id', Number(move.id))
+        : await db.from('parlays').update({ created_at: at }).eq('id', move.id)
+    if (stampErr) throw stampErr
+  }
+  const facts = await marketFacts(market.marketId, market.outcomeIds)
+  const chart = await getChartSeries(bobClient, facts, now)
+  const { data, error: sparkErr } = await bobClient.rpc('market_sparklines', { p_market_ids: [market.marketId], p_points: 200 })
+  if (sparkErr) throw sparkErr
+  const sampled = (data[0].points as { t: string; shares: Record<string, number> }[]).map((p) => ({ t: Date.parse(p.t), shares: p.shares }))
+  expect(sampled).toHaveLength(moves.length)
+  expectSameSeries(chart.series.All, withSeededStart(sampled, facts), market.outcomeIds)
+  return sampled
+}
 
 async function placeLmsrBet(client: TestClient, market: TestMarket, outcome: number, amount: number) {
   const { data, error } = await serviceClient().from('market_outcomes').select('id, shares, q_offset').eq('market_id', market.marketId)
@@ -237,6 +319,21 @@ describe('the cards’ weekly change (#409)', () => {
     expect(weeklyChange(withSeededStart([], oldFacts), old.outcomeIds[0], 61, now)).toBe(61 - 50)
     const freshFacts = await marketFacts(fresh.marketId, fresh.outcomeIds)
     expect(weeklyChange(withSeededStart([], freshFacts), fresh.outcomeIds[0], 61, now)).toBeNull()
+  })
+})
+
+describe('readWeekAgoChances (#409)', () => {
+  it('reads the chance at a week ago rounded down to the hour', async () => {
+    const hourAgo = Math.floor((Date.now() - 7 * DAY) / HOUR) * HOUR
+    const now = hourAgo + 7 * DAY + 30 * 60 * 1000
+    const market = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true })
+    await backdateMarket(market.marketId, now - 20 * DAY)
+    await placeLmsrBet(bobClient, market, 0, 30)
+    await placeLmsrBet(bobClient, market, 1, 60)
+    await stampBets(market.marketId, [hourAgo - 60_000, hourAgo + 60_000])
+
+    const chances = (await readWeekAgoChances(bobClient, [{ id: market.marketId, version: '1' }], now))!
+    expect(chances.get(market.marketId)!.t).toBe(hourAgo - 60_000)
   })
 })
 

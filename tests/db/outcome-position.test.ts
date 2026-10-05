@@ -61,6 +61,13 @@ describe('market_outcomes.position', () => {
     ])
   })
 
+  it('stores a binary market’s Yes first, whatever order it was sent in', async () => {
+    expect(await positions(await createV4('binary', ['No', 'Yes']))).toEqual([
+      ['Yes', 0],
+      ['No', 1],
+    ])
+  })
+
   it('numbers an outcome inserted without one after its market’s others', async () => {
     const market = await createTestMarket(aliceClient, ['Zed', 'Amy', 'Moe'])
     expect((await positions(market.marketId)).map(([, p]) => p)).toEqual([0, 1, 2])

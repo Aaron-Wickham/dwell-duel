@@ -1,4 +1,6 @@
+import { unstable_cache } from 'next/cache'
 import type { DbClient } from '@/lib/supabase/database'
+import { batchKey } from '@/lib/markets/sparklines'
 import { IN_CHUNK, chunk } from '@/lib/pagination/chunk'
 import { RANGE_MS, withSeededStart, type RangeKey, type SeededMarket, type SeriesPoint } from '@/lib/markets/probability-series'
 
@@ -70,11 +72,31 @@ export async function readChancesAt(supabase: DbClient, marketIds: string[], at:
   return chances
 }
 
+const HOUR_MS = 60 * 60 * 1000
+
+// Reading a week ago scans each open market's history, so /markets caches it like the
+// sparklines (#409): one entry per list and hour, keyed by its markets and their versions. The
+// instant read is the week-ago time rounded down to the hour, so the entry holds for that hour.
+async function cachedChancesAt(supabase: DbClient, markets: { id: string; version: string }[], at: number) {
+  const ids = markets.map((m) => m.id)
+  const read = unstable_cache(
+    async (_key: string) => Object.fromEntries(await readChancesAt(supabase, ids, at)),
+    ['market-week-ago-v1'],
+    { revalidate: 2 * 60 * 60 },
+  )
+  return new Map(Object.entries(await read(`${batchKey(markets)}:${at}`)))
+}
+
 // The cards' weekly change is decoration: if its read fails, null, and the cards render without it.
-export async function readWeekAgoChances(supabase: DbClient, marketIds: string[], now: number): Promise<Map<string, SeriesPoint> | null> {
-  if (marketIds.length === 0) return new Map()
+export async function readWeekAgoChances(
+  supabase: DbClient,
+  markets: { id: string; version: string }[],
+  now: number,
+): Promise<Map<string, SeriesPoint> | null> {
+  if (markets.length === 0) return new Map()
+  const weekAgo = now - RANGE_MS['1W']
   try {
-    return await readChancesAt(supabase, marketIds, now - RANGE_MS['1W'])
+    return await cachedChancesAt(supabase, markets, weekAgo - (weekAgo % HOUR_MS))
   } catch (error) {
     console.error('Week-ago chances failed to load', error)
     return null

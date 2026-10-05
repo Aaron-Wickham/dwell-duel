@@ -6,7 +6,8 @@
 --    app shows them today: Yes before No, Over before Under, otherwise insertion time, then label.
 --    A row inserted without a position (create_market_v3, test fixtures) goes after its market's
 --    others, so every path keeps the typed order. Unique per market.
--- 2. create_market_v4 sets position from p_outcome_labels' order, and market_sparks lists a card's
+-- 2. create_market_v4 sets position from p_outcome_labels' order (a binary market's Yes first,
+--    whatever order it was sent in), and market_sparks lists a card's
 --    outcome ids in position order.
 -- 3. market_series(market ids, window starts, buckets): for each market and each window start, the
 --    price at the last move at or before the start (a window's carry-in), then the last move in
@@ -75,7 +76,8 @@ alter table public.market_outcomes
   alter column position set not null,
   add constraint market_outcomes_market_id_position_key unique (market_id, position);
 
--- 0103's, apart from: each outcome's position is its place in p_outcome_labels.
+-- 0103's, apart from: each outcome's position is its place in p_outcome_labels, a binary
+-- market's Yes first.
 create or replace function public.create_market_v4(
   p_title text,
   p_description text,
@@ -127,6 +129,12 @@ begin
 
   if p_kind = 'binary' and array_length(v_labels, 1) <> 2 then
     raise exception 'a binary market must have exactly 2 outcomes';
+  end if;
+
+  -- Yes comes first on every binary market, whatever order a caller sent: the cards and the
+  -- market page list by position.
+  if p_kind = 'binary' and v_labels[2] = 'Yes' then
+    v_labels := array[v_labels[2], v_labels[1]];
   end if;
 
   if array_length(v_labels, 1) > 6 then

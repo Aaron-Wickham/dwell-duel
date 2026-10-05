@@ -235,7 +235,7 @@ describe('MarketsPage', () => {
     readSparklines.mockResolvedValue(new Map([[m.id, [{ t: Date.now() - 9 * DAY_S, shares: { y: 0.3, n: 0.7 } }]]]))
     readWeekAgoChances.mockResolvedValue(new Map([[m.id, { t: Date.now() - 8 * DAY_S, shares: { y: 0.42, n: 0.58 } }]]))
     await renderPage({ rows: [m], next: null, windowed: false }, EMPTY)
-    expect(readWeekAgoChances).toHaveBeenCalledWith(expect.anything(), [m.id], expect.any(Number))
+    expect(readWeekAgoChances).toHaveBeenCalledWith(expect.anything(), [{ id: m.id, version: m.sparkVersion }], expect.any(Number))
     const card = screen.getByRole('article', { name: /Market 1/ })
     expect(card).toHaveTextContent('50%Yes▲ Up 8 this week')
     expect(card).toHaveTextContent('· 42 bets')

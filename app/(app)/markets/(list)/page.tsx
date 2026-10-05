@@ -16,7 +16,7 @@ import { weeklyChange } from '@/lib/markets/chart-summary'
 import { marketCardStatus, type MarketCardStatus } from '@/lib/markets/market-status'
 import { readSparklines } from '@/lib/markets/sparklines'
 import { readWeekAgoChances } from '@/lib/markets/chart-series'
-import { withSeededStart, type SeriesPoint } from '@/lib/markets/probability-series'
+import { withSeededStart } from '@/lib/markets/probability-series'
 import { MARKET_FILTERS, MARKET_FILTER_LABELS, readMarketFilter, type MarketFilter } from '@/lib/markets/status-filter'
 import { newestHref, readPageParams, showMoreHref } from '@/lib/pagination/cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
@@ -70,11 +70,6 @@ const LISTS: List[] = [
 type CardList = ListId | 'match'
 const rowIdPrefix = (list: CardList) => `market-${list}`
 
-function weekAgoPoint(chances: Map<string, SeriesPoint>, marketId: string): SeriesPoint[] {
-  const point = chances.get(marketId)
-  return point ? [point] : []
-}
-
 export default async function MarketsPage(props: PageProps<'/markets'>) {
   const searchParams = await props.searchParams
   const { supabase, user } = await requireUser()
@@ -119,7 +114,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     outcomeIds: m.outcomes.map((o) => o.id),
   })
   // The weekly change reads each open market's chance a week ago directly, not from its sampled
-  // sparkline (#409); it moves with the clock, so it isn't cached with the sparklines.
+  // sparkline (#409), cached per list and hour.
   const [sparklinesByMarket, weekAgo] = await Promise.all([
     readSparklines(
       supabase,
@@ -129,7 +124,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     ),
     readWeekAgoChances(
       supabase,
-      markets.filter(([m]) => m.status === 'open').map(([m]) => m.id),
+      markets.filter(([m]) => m.status === 'open').map(([m]) => ({ id: m.id, version: m.sparkVersion })),
       nowMs,
     ),
   ])
@@ -175,7 +170,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       chart,
       weeklyChange:
         weekAgo && (status === 'open' || status === 'awaiting') && lead?.pct != null
-          ? weeklyChange(withSeededStart(weekAgoPoint(weekAgo, market.id), seeded(market)), lead.id, lead.pct, nowMs)
+          ? weeklyChange(withSeededStart(weekAgo.has(market.id) ? [weekAgo.get(market.id)!] : [], seeded(market)), lead.id, lead.pct, nowMs)
           : null,
       betCount: market.betCount,
       domId: rowDomId(rowIdPrefix(list), market.id),

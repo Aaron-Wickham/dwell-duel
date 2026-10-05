@@ -50,7 +50,7 @@ describe('market_outcomes table', () => {
     expect(first).toBeNull()
 
     const { error: second } = await db.from('market_outcomes').insert({ market_id: market!.id, label: 'Yes', position: 1 })
-    expect(second).not.toBeNull()
+    expectError(second, { code: '23505', message: 'market_outcomes_market_id_label_key' })
   })
 
   it('rejects a negative pool_total', async () => {

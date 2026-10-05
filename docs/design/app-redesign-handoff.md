@@ -19,7 +19,7 @@ The mockup is a Design canvas:
 | Artboards | Route |
 |---|---|
 | P1002-SignIn*, P1002-NotInvited* (Proposals · Oct 2, #329) | `app/(auth)/sign-in`, `app/(auth)/not-invited` |
-| Home | `app/(app)/(home)/page.tsx` |
+| Home; P1004-Home* (Proposals · Oct 4, #388) | `app/(app)/(home)/page.tsx` |
 | Markets | `app/(app)/markets/(list)` |
 | CreateMarket | `app/(app)/markets/new` |
 | Market (open, creator), MarketFull (slip full), MarketResolved (admin override) | `app/(app)/markets/[id]` |
@@ -27,7 +27,7 @@ The mockup is a Design canvas:
 | Settings | `app/(app)/settings` |
 | Launch (System page: launch animation frames) | `components/brand/launch-screen.tsx` |
 | Tasks | `app/(app)/tasks` |
-| Feed | `app/(app)/feed` |
+| Feed; P1004-Activity* (Proposals · Oct 4: Activity, #385) | `app/(app)/feed` |
 | Leaderboard | `app/(app)/leaderboard` |
 | Profile | `app/(app)/members/[id]` |
 | AdminInvites / AdminTasks / AdminMembers / AdminLedger | `app/(app)/admin/(sections)/*` |
@@ -62,10 +62,10 @@ never a raw colour. The groups:
 | `--ink`, `--ink2`, `--line`, `--line-s` | text, secondary text, hairlines, stronger borders |
 | `--primary`, `--on-primary`, `--lime`, `--on-lime`, `--link`, `--focus` | buttons, the lime accent and what sits on it, links, focus rings |
 | `--nav-active`, `--on-nav-active` | the desktop nav's active pill, a chosen filter chip, your avatar's ring on your profile (teal and white in light, near-white and `#021B1F` in dark) |
-| `--tab-active`, `--on-tab-active`, `--tab-active-ring` | the phone tab bar's active pill and the top bar's Admin button when current (lime with a teal ring in light; `#17434A` with a `--line-s` ring in dark) |
+| `--tab-active`, `--on-tab-active`, `--tab-active-ring` | the phone tab bar's active pill (lime with a teal ring in light; `#17434A` with a `--line-s` ring in dark) |
 | `--segment-active` | a segmented control's chosen segment (the surface in light, `#17434A` in dark) |
 | `--acc-soft`, `--acc-text`, `--win`, `--win-soft`, `--loss`, `--loss-soft`, `--gold`, `--gold-soft` | chips, wins, losses and warnings |
-| `--hero`, `--on-hero`, `--hero-2`, `--hero-num`, `--hero-inset` | Home's balance hero |
+| `--hero`, `--on-hero`, `--hero-2`, `--hero-num`, `--hero-inset` | the hero surfaces (Home's balance hero went in #388; its desktop Balance card is `--acc-soft`) |
 | `--s1` … `--s6` | chart series, one per outcome |
 | `--wm-a`, `--wm-b`, `--sym-d`, `--splash`, `--on-splash`, `--status-band` | the wordmark, the launch screen and the iOS status bar |
 | `--shadow`, `--overlay-shadow`, `--lift-shadow`, `--tab-shadow`, `--scrim` | cards, dialogs, hover lift, a chosen segment (`shadow-tab`, with its own dark value), the dialog backdrop |
@@ -84,8 +84,8 @@ Every text pairing passes WCAG AA in both themes, and `--line-s` clears 3:1 on `
 
 - **Targets:** every control is at least 44px tall. Primary buttons are 48px and compact ones 44px.
 - **Focus:** every control gets a visible ring: `:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }`.
-- **Corner radii:** cards and the home hero 18px (`--radius-card`), list cards, sunken panels and segmented tracks 14px (`--radius-tile`), buttons and inputs 12px (`--radius-control`), segments, icon tiles and inline code 10px (`--radius-segment`), chips fully rounded (999px). Every corner is one of these; there's no `rounded-[Npx]`.
-- **Card padding:** 18px on phones and 24px from `md:` (`cardPaddingClass`), for `Card`, `SectionCard` and every card built by hand, the market card and the home hero included.
+- **Corner radii:** cards 18px (`--radius-card`), list cards, sunken panels and segmented tracks 14px (`--radius-tile`), buttons and inputs 12px (`--radius-control`), segments, icon tiles and inline code 10px (`--radius-segment`), chips fully rounded (999px). Every corner is one of these; there's no `rounded-[Npx]`.
+- **Card padding:** 18px on phones and 24px from `md:` (`cardPaddingClass`), for `Card`, `SectionCard` and every card built by hand, the market card included.
 - **Grid gaps:** a `lg:` grid of cards is 20px apart (`lg:gap-5`).
 - **Page padding:** 16px on phone, 80px on desktop with a 1120px max content width.
 - **Page widths:** `<Page width>` picks one of two centred columns, and the page's header, tabs and content always share its edges, so nothing is left-pinned with empty space on the right. See *Desktop layouts* below.
@@ -111,9 +111,9 @@ The sizes live in `components/ui/page.tsx`; nothing else sets a `text-[Npx]` exc
 
 - **Real elements only:** `<button>`, `<a>`, and `<label>` paired with its input. No clickable divs.
 - **Icon-only buttons** get an `aria-label`.
-- **Press and hover (#153, #383):** every control shrinks to 97% on press. Under a mouse (not on touch), buttons, chips, tabs and nav items change colour and don't grow (the 103% grow went in #383: it read as a landing page and fought the sliding pills); standalone tappable cards lift 2px onto a shadow (`hover-lift`). A row or tile inside a card, such as a list card, a podium place, or a member on Admin › Members or a home tile below `lg:`, never lifts: it sits on a flat `--sunk` tint (`hover-tint`), since a card floating inside a card reads as a button inside a button (#244). Reduced motion keeps the colour changes (and the lift's shadow) and drops the movement. Curves and durations come from the motion tokens in `globals.css`.
+- **Press and hover (#153, #383):** every control shrinks to 97% on press. Under a mouse (not on touch), buttons, chips, tabs and nav items change colour and don't grow (the 103% grow went in #383: it read as a landing page and fought the sliding pills); standalone tappable cards lift 2px onto a shadow (`hover-lift`). A row or tile inside a card, such as a list card, a podium place, a member on Admin › Members or a row in Home's Needs you, never lifts: it sits on a flat `--sunk` tint (`hover-tint`), since a card floating inside a card reads as a button inside a button (#244). Reduced motion keeps the colour changes (and the lift's shadow) and drops the movement. Curves and durations come from the motion tokens in `globals.css`.
 - **Section cards:** a `SectionCard`'s `description` slot puts a caption line right under its heading (the weekly recap's date range); the card's body follows at the usual gap.
-- **List cards (#328):** a list item that opens one thing is a `ListCard` (`components/ui/list-card.tsx`); a sentence row (the feed) or a data row (the ledger) stays a divided row. A list card is the My bets parlay card: a `--line` hairline, 14px corners (`--radius-tile`), 14px padding on phones and 16px from `md:`, no shadow, tinting flush to its border under a mouse. Its title link stretches over it; other controls (Resolve, Submit, Approve) sit above the cover. Inside a section card the cards are 8px apart with no dividers. Solo, settled and cancelled bets, parlays, tasks, markets waiting to be resolved, the admin task catalog, pending approvals, the leaderboard, admin members and the home tiles are list cards; the feed, ledger, coin history, invites and a market's bet list are divided rows. Your own leaderboard card keeps the `--acc-soft` tint.
+- **List cards (#328):** a list item that opens one thing is a `ListCard` (`components/ui/list-card.tsx`); a sentence row (the feed) or a data row (the ledger) stays a divided row. A list card is the My bets parlay card: a `--line` hairline, 14px corners (`--radius-tile`), 14px padding on phones and 16px from `md:`, no shadow, tinting flush to its border under a mouse. Its title link stretches over it; other controls (Resolve, Submit, Approve) sit above the cover. Inside a section card the cards are 8px apart with no dividers. Solo, settled and cancelled bets, parlays, tasks, markets waiting to be resolved, the admin task catalog, pending approvals, the leaderboard and admin members are list cards; the feed, Home's Your bets and Activity rows, ledger, coin history, invites and a market's bet list are divided rows. Your own leaderboard card keeps the `--acc-soft` tint.
 - **Sliding pills:** the desktop nav's, the phone tab bar's and every segmented control's active pill all slide to the new tab the same way: 280ms on the iOS curve. On the nav and tab bar, each label's and icon's colour cross-fades over the same 280ms (`pill-label`), so the pill never covers a label still in its old colour; on the tab bar the label's weight also eases from bold to extrabold. Nothing else moves: the icon doesn't pop (#383).
 - **Counting numbers (#383):** an `AnimatedNumber` counts only when its value changes after it's on screen (your balance after a bet, a chance moving live). A page load shows the final figure at once.
 - **Reduced motion (#383):** the device setting or Settings' "Reduce animations" turns every page transition into a 150ms cross-fade (`--duration-fast`) with nothing sliding or rising, rather than a hard cut.
@@ -127,7 +127,7 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 | Markets | wide | Three columns of market cards. |
 | Market | wide | Chart and outcomes (7fr) beside betting, resolution and the rest (5fr). |
 | Leaderboard | wide | Podium across the top; the rankings stay one column of list cards, since rank reads top to bottom. This month: rankings (7fr) beside the race chart, the awards as a 2×2 grid and past champions (5fr). Net worth: rankings (7fr) beside a "Your standing" card (5fr); on a phone that card is hidden, and a compact standing card with Jump to me sits above the list instead. |
-| Feed | reading | One centred stream. |
+| Activity (`/feed`) | reading | One centred stream. |
 | My bets | wide | Open, Settled and Cancelled show bets as list cards in three columns (a solo bet's status sits at the bottom of its card); Coins stays a divided list. |
 | Member | wide | Photo, name, bio and a two-column Stats card (5fr) beside Recent activity (7fr). |
 | Edit profile | wide | Photo and a live preview of the profile (5fr) beside name, bio and Save (7fr). |
@@ -139,7 +139,7 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 | Tasks | wide | Task cards in two columns, each with its action on the right. |
 | Admin › Tasks | wide | Pending approvals as cards in two columns; Create task (5fr) beside the task catalog (7fr), its cards in two columns. |
 | Admin › Markets | wide | Markets waiting to be resolved as cards in three columns. |
-| Home | wide | The tiles as cards of their own in three columns (list cards inside one card on a phone). |
+| Home | wide | The greeting, then Your bets and Activity as cards (7fr) beside a Balance card (`--acc-soft`, the balance in `figureHeroClass`, "Rank N of M · X DC riding on K bets") and Needs you (5fr). On a phone the sections are rows on the page with no card around them, in the order greeting, Needs you, Getting started, Your bets, Activity (#388). |
 
 - **wide** is `max-w-[1280px]`: a 1120px content column inside the 80px padding.
 - **reading** is `max-w-[980px]`: about 820px of content, centred, for a single stream or long text.
@@ -162,14 +162,16 @@ Written for someone who has just been invited: get them oriented, then signed in
 
 ## Navigation (one `<AppNav>` in the signed-in layout)
 
-- **There's no Home tab.** The wordmark links home and is marked current there.
-- **Desktop:** a 72px top bar with the wordmark, then Markets, My bets, Tasks, Feed and Leaderboard, a divider, then Admin (reviewers and above). On the right: the balance chip (a link to My bets) and your avatar (a link to your profile). The active item is a filled pill.
+- **Tabs (D1, #385):** Home, Markets, Bets, Tasks and Leaders. The feed is Home's Activity section, whose See all opens `/feed` (h1 "Activity") as a drill-down from Home, which stays the marked tab there. The wordmark still links home but is never marked current.
+- **Desktop:** a 72px top bar with the wordmark, then Home, Markets, My bets, Tasks and Leaderboard. On the right: the balance chip (a link to My bets) and your avatar. The active item is a filled pill. No Admin link and no BETA badge (the badge stays on sign-in and Not invited).
 - **Phone:**
-  - Top bar (64px): wordmark, balance chip, an Admin shield icon (reviewers and above), avatar.
-- **Admin** opens the first section the role can see: Tasks (the approval queue) for a reviewer, Invites for an admin or the owner. It carries a red count of what waits on the viewer: other members' task submissions (reviewers and above) and closed markets with no result (admins and above), and the Tasks and Markets tabs show their share of it as the same red badge on the label's corner (`AttentionBadge`, `components/ui/attention-badge.tsx`; a `SubNav` item's `badge`), read as the tab's description, "2 waiting" (#351). Inside Admin, the sections are a `SubNav` (Invites, Tasks, Markets, Members, Ledger, each shown by role); a reviewer, with only Tasks, gets no tabs.
-  - Bottom tab bar with 5 tabs: Markets, Bets, Tasks, Feed, Leaders. Bets has `aria-label="My bets"`; Leaders has `aria-label="Leaderboard"`.
+  - Top bar (64px): wordmark, balance chip, avatar, for every role. The balance chip is text only ("4,886 DC", no coin icon).
+  - Bottom tab bar with 5 tabs: Home (lucide `House`), Markets, Bets, Tasks, Leaders. Bets has `aria-label="My bets"`; Leaders has `aria-label="Leaderboard"`.
+- **The avatar is a menu** (`ProfileMenu`, Base UI Menu, `components/app-nav/profile-menu.tsx`): Your profile, Settings, Admin (reviewers and above) and Send feedback, each a 44px link. When work waits on a reviewer or above, the avatar carries a small red dot (`bg-loss`, `ring-surface`), its name says how much ("Your profile and settings, 3 waiting"), and the Admin item says it in words (`AttentionCount`, "3 waiting").
+- **Admin** is reached from Home's Needs you rows and the avatar menu. It opens on the section with work in it: Tasks when task submissions wait, else Markets when markets wait to be resolved, else the first section the role can see (Invites for an admin or the owner, Tasks for a reviewer; `adminHref`). Inside Admin, the sections are a `SubNav` (Invites, Tasks, Markets, Members, Ledger, each shown by role), whose Tasks and Markets tabs carry their share of the count as a red badge on the label's corner (`AttentionBadge`, `components/ui/attention-badge.tsx`), read as the tab's description, "2 waiting" (#351). Below `md:` that row scrolls sideways edge to edge, starting scrolled to the current tab, so nothing clips at 320px. A reviewer, with only Tasks, gets no tabs.
+- **Status band:** the light theme's `--status-band` against the new top bar still needs a check in the installed app (#385); it's unchanged.
 - **The slip** is its own floating button (`SlipSheet`), not a tab badge. It rises 12px and fades in with the first pick (`--duration-enter`, iOS curve) and fades out after the last (`--duration-fast`); a button already there when a page loads just shows. Reduced motion keeps the fades and drops the rise.
-- **Switching tabs (#384)** is an instant swap, as a native tab bar's is: the nav, the tab bar, the balance chip, the wordmark, `SubNav` and Home's tab tiles navigate with the `nav-tab` transition type, which has no fade or rise. A page visited in the last 30 seconds comes back from the client's cache at once, with no skeleton, and then refreshes in place. A drill-down still slides, with the old page gone by 120ms (`--duration-press`) so two titles never show stacked.
+- **Switching tabs (#384)** is an instant swap, as a native tab bar's is: the nav, the tab bar, the balance chip, the wordmark, `SubNav` and Home's See all for My bets navigate with the `nav-tab` transition type, which has no fade or rise. A page visited in the last 30 seconds comes back from the client's cache at once, with no skeleton, and then refreshes in place. A drill-down still slides, with the old page gone by 120ms (`--duration-press`) so two titles never show stacked.
 - **Pending feedback (#384):** the nav's and tab bar's pill moves to the tapped tab on the tap, before the page arrives (`aria-current` stays on the page you're on until it does). A tapped card, row or button that links through `IntentLink`, or a card clicked under a mouse, dims to 70% until its page arrives. Neither shows for a page that was prefetched or cached, so a fast tap never flashes. No spinners.
 
 ## Components (Components page on the canvas)

@@ -6,8 +6,9 @@ coins. The rules every member plays by are in
 [How it works](HOW-IT-WORKS.md) (in the app under Settings → How it works);
 this guide doesn't repeat them except where running the group needs them.
 
-Everything here happens under **Admin**, the shield in the top bar, which
-reviewers and above see, and on market pages.
+Everything here happens under **Admin**, which reviewers and above open
+from their avatar's menu or from Home's **Needs you** (it opens on whatever
+is waiting), and on market pages.
 
 ## Roles at a glance
 

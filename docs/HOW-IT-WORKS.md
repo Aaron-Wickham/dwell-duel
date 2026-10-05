@@ -93,8 +93,7 @@ and **Resolved** (has a result; voided markets are here too, marked
 Voided). Below them, the category chips narrow it to one category:
 **All**, then the eight busiest categories (the most markets still taking
 bets), then **More…** for the rest. The choices are in the page's address,
-so a reload or a shared link keeps them. Home's open-market count is the
-Open tab's: markets still taking bets.
+so a reload or a shared link keeps them.
 
 For a question that comes round every week, **Duplicate** on any market
 opens Create market already filled in with its question, description,
@@ -303,8 +302,8 @@ full ledger) can see it.
   reason and proof show on the market page and in the feed. Before anything is paid, the app asks them to confirm,
   naming the winner ("Yes wins").
 - **Reminders:** bettors' DC and parlays wait on a market awaiting
-  resolution until it's resolved, so Home shows **Markets to resolve** to
-  whoever should do it. A creator sees their own markets as soon as they close
+  resolution until it's resolved, so Home's **Needs you** lists them for
+  whoever should do it (an admin sees how many wait, opening Admin's Markets). A creator sees their own markets as soon as they close
   (unless they have money on one and aren't an admin). Reviewers and admins see any market
   still unresolved 48 hours after closing, and straight away one whose
   creator has money on it, since the creator can't resolve that one.

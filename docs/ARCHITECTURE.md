@@ -54,7 +54,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 
 | Route | What it is |
 |---|---|
-| `/` | Home: greeting, balance hero (balance, rank, At stake, Pending), a new member's Getting started card, Markets to resolve, the weekly recap (Sundays and Mondays), tiles |
+| `/` | Home, a tab (#388): "Hi, {first name}" with rank (once the member has a settled bet, `getHomeHistory`) and what's riding; Needs you, only when something waits (task submissions to review for reviewers and up, markets to resolve for admins and up, each opening its Admin section; a member's own closed markets from `markets_to_resolve()`; the 0 DC nudge to Tasks); Getting started, for newcomers only; Your bets, the three open bets and parlays closing soonest (`getClosingSoon`, `lib/home/closing-soon.ts`: the markets the member has bets on, soonest first through `markets (status, close_at)`, merged with their pending parlays' next close), or the three open markets closing soonest; Notifications; Activity, the feed's three newest rows (`listLatestFeed`) with See all to `/feed`; the weekly recap (Sundays and Mondays). From `lg` a Balance card and Needs you sit in a 5fr column beside the rest |
 | `/markets` | Open markets as cards with sparklines, soonest to close first (a "Closes in 2h" chip inside a day), then those awaiting resolution (oldest close first), then resolved and voided newest first. The All tab reads these as three keyset lists, each with its own Show more (`?open=`, `?awaiting=`, `?resolved=`), so open markets lead page one however many wait on a result (#261); the open and awaiting lists are `listOpenMarkets` split at one `now` (its `bound`). `?status=all|open|awaiting|resolved` (`lib/markets/status-filter.ts`, which also maps the old `pending` and `closed` to awaiting and resolved) reads just one list. `?q=` (a title search, `lib/markets/search.ts`: trimmed, `*` and control characters dropped, 80 characters, then `ilike` with `\`, `%` and `_` escaped, sent as its own filter parameter, backed by a trigram index) switches it to one flat list of matches, newest first and paged under `?match=` (`listMatchingMarkets`), whatever their status, which the status tab still narrows. `?category=<slug>` (0103, #327) narrows every list, search included, to one category: the "Categories" `FilterChips` row (All, the 8 busiest by `category_counts()`, the chosen one if it isn't among them, then a More… dialog, `MoreCategories`, listing the rest) scrolls sideways on a phone and wraps from `md`, with a "Showing … in X · Show all categories" line under it; an unknown or hidden slug, and the old `?mine=` links (whose chips #327 removed; the `i_bet_on` column stays), fall through to All. The search box (`MarketSearch`), the tabs and the chips keep each other in the URL. Card sparklines come from `market_sparks` (0095) through Next's data cache, one entry per list, keyed by a hash of its markets' `sparkVersion`s (the summed `pool_version` while open, `settled` after): a render costs one cache read per list, and a live refresh reads from Supabase only a list whose markets moved (`lib/markets/sparklines.ts`, #252; the budget is below) |
 | `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under. `?from=<id>` pre-fills it from a market (Duplicate) |
 | `/markets/[id]` | A market: the viewer's own position (#262: each solo bet with the payout fixed when it was placed, each parlay leg linking to its parlay, then results and the net once settled; read from `my_market_position`'s keys before anything streams, so a viewer with nothing on the market gets no card and no skeleton), chart, outcomes (with each outcome's "riding in parlays" figure from `market_parlay_riding`, #279, display only), the slip controls, bets, comments, resolve/void/edit, share and duplicate, resolution proof |
@@ -62,13 +62,13 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/parlays` | Redirects to `/bets` (kept for old links) |
 | `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its odds (on a pool market, an estimate from `parlay_leg_odds` until its market closes; on an `lmsr` market, its factor, fixed at placement) and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`: the page checks the parlay exists first (so an unknown id is a real 404), then streams the body behind `<Suspense>` with `ParlayDetailSkeleton` |
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
-| `/feed` | Everyone's activity, with reactions, live; a "Show" `SubNav` (`?show=all|results|mine`, `lib/social/feed-filter.ts`) narrows it to results (`RESULT_KINDS`, voids included) or your own events plus results and voids on markets you have a stake in and voids of markets you created (`my_activity_events()`, 0094, whose `UNION ALL` branches each use an index) |
+| `/feed` | Activity (#385, #388): a drill-down from Home (back-swipe parent `/`), Home's tab marked while it shows. Everyone's activity, with reactions, live; a "Show" `SubNav` (`?show=all|results|mine`, `lib/social/feed-filter.ts`) narrows it to results (`RESULT_KINDS`, voids included) or your own events plus results and voids on markets you have a stake in and voids of markets you created (`my_activity_events()`, 0094, whose `UNION ALL` branches each use an index) |
 | `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`). On a phone the Net worth board has a compact standing card with Jump to me (`?at=me`): `getJumpToMeTop` reads the 10 members above you through `rankedAbove` and the page opens a `readOrdered` window there, with focus on your row; any cursor in the URL overrides it, and Back to the top drops it |
 | `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings. `/members` alone redirects to the leaderboard |
 | `/profile` | Edit your name, photo and bio |
-| `/settings` | Theme, your profile, haptics, reduced motion, notifications, How it works and Your data (How it works' privacy section, `/how-it-works#how-your-data`), sign out |
+| `/settings` | Theme, your profile, haptics, reduced motion, notifications, Install the app (on a phone browser that hasn't installed it, `install-app.tsx`), How it works and Your data (How it works' privacy section, `/how-it-works#how-your-data`), sign out |
 | `/how-it-works` | The rules, rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`). A link to a section from another page (`#how-<slug>`) lands on it through `ScrollToHash`, since a client navigation looks for the id while the skeleton shows |
-| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role, in `app/(app)/admin/(sections)/` under its layout's Admin header (whose description links `docs/ADMIN-GUIDE.md` on GitHub) and tabs; `/admin` alone redirects to the first one the role can see (`adminHref`); Tasks and Markets carry their share of the Admin badge as a count (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243), then a Categories section of `ListCard`s (`CategoryCard`) with Rename, Merge (a panel with a confirm) and Hide or Unhide (`lib/admin/category-actions.ts`, #327); Tasks pages its review queue oldest first with "Show more", signs proof only for the rows shown (an extended range caps at 150 rows, then starts a fresh window), and reads its "waiting" chip from `my_review_counts` (`lib/tasks/list-task-completions.ts`, #255); the ledger opens with the owner's Economy card, and `?member=<id>` narrows it to one member's movements (#254). Members and Invites (#254) each have a search box (`SearchField`, `?q=`) and two tabs (`SubNav`, `?show=`): Members' Active · Removed, paged A–Z by `admin_members` with `NAME_ORDER` (`lib/pagination/name-cursor.ts`), as compact read-only rows; Invites' Waiting · Claimed, paged newest first with `INVITE_ORDER` (`lib/invites/list-invites.ts`) |
+| `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role, in `app/(app)/admin/(sections)/` under its layout's Admin header (whose description links `docs/ADMIN-GUIDE.md` on GitHub) and tabs; `/admin` alone redirects to the section with work waiting, else the first one the role can see (`adminHref(role, counts)`, which the avatar menu's Admin item uses too); Tasks and Markets carry their share of the avatar's waiting count as a badge (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243), then a Categories section of `ListCard`s (`CategoryCard`) with Rename, Merge (a panel with a confirm) and Hide or Unhide (`lib/admin/category-actions.ts`, #327); Tasks pages its review queue oldest first with "Show more", signs proof only for the rows shown (an extended range caps at 150 rows, then starts a fresh window), and reads its "waiting" chip from `my_review_counts` (`lib/tasks/list-task-completions.ts`, #255); the ledger opens with the owner's Economy card, and `?member=<id>` narrows it to one member's movements (#254). Members and Invites (#254) each have a search box (`SearchField`, `?q=`) and two tabs (`SubNav`, `?show=`): Members' Active · Removed, paged A–Z by `admin_members` with `NAME_ORDER` (`lib/pagination/name-cursor.ts`), as compact read-only rows; Invites' Waiting · Claimed, paged newest first with `INVITE_ORDER` (`lib/invites/list-invites.ts`) |
 | `/admin/members/[id]` | One member's Admin page (#254), outside the sections' layout so their name is the `<h1>`: email, join and last sign-in, balance, Coin history (their last five movements and "Open in Ledger"), and for the owner Adjust balance, Role and Access (Remove from DwellDuel, or Invite again for a removed member). No `loading.tsx`: the member is found first (an unknown id is a real 404) and the coin history streams behind `<Suspense>` |
 
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
@@ -379,8 +379,8 @@ spending coins should get a trigger and a `write_limits()` row.
 - `my_wagers`: keys for My bets, solo bets and parlays together
   (`bet:<id>`, `parlay:<uuid>`), bucketed open or settled.
 - `stakes_riding` (0051, security invoker): one row per live stake, solo
-  bets on open markets and pending parlays. `my_at_stake` (Home's At
-  stake) and `leaderboard_net_worth` both read it, so they can't disagree.
+  bets on open markets and pending parlays. `my_at_stake` (what Home says is
+  riding) and `leaderboard_net_worth` both read it, so they can't disagree.
 
 ### The functions that move coins
 
@@ -595,7 +595,7 @@ one already on `origin/main`). They roughly follow the project's history:
 | 0046 | Security: parlay odds without your own stakes, no resolving with a stake, no self-review, a 500 DC task cap, hidden emails |
 | 0047 | Attempt keys, so a retried slip or balance adjustment never acts twice |
 | 0048 | Indexes for the markets list, a market's resolutions, a member's coin history and unindexed foreign keys |
-| 0049 | Closing soon: `markets (status, close_at, id)` for the Open list's close-time order, and `markets_to_resolve()` for Home's nudge |
+| 0049 | Closing soon: `markets (status, close_at, id)` for the Open list's close-time order, and `markets_to_resolve()` for Home's nudge (now its Needs you) |
 | 0050 | `member_activity`: join and last sign-in dates for Admin → Members, admins only |
 | 0051 | Net worth and seasons: `stakes_riding` (shared with `my_at_stake`), `leaderboard_net_worth`, `season_profits`, `leaderboard_month`, `settle_season` and the `season_champion` feed kind |
 | 0052 | `economy_summary`: the owner's economy panel on Admin → Ledger (supply in circulation, and this month's DC added and removed by source) |
@@ -883,6 +883,13 @@ the cron response, and the step fails, so the heartbeat pings `/fail`, past
   policy lets only invited members join them, and only reviewers and above
   join `reviews`; no client can send on them.
 
+Home shows the feed's three newest rows (Activity, #388) but doesn't follow
+`activity`: every bet pings it, and Home is the page most often open, so
+following it would refresh every open Home on every bet (#68) and add
+thousands of live refreshes a day to the Vercel budget below. Home's
+Activity catches up with its other refreshes (`markets`, the member's own
+bets and parlays) and on the next visit; `/feed` stays live.
+
 **Every channel is private** (`{ config: { private: true } }`), so
 Supabase's "Allow public access to channels" can stay off and nobody
 holding the publishable key can open channels of their own. A private
@@ -1025,7 +1032,7 @@ when a navigation can't reach the network. Each deploy gets its own cache. It ne
 payloads, server actions or Supabase responses. Drill-down pages slide in
 with React's `<ViewTransition>` (the old page gone by 120ms,
 `--duration-press`, through `--vt-push-exit`) and support a back swipe; a tab switch (`nav-tab`, the
-nav, `SubNav` and Home's tab tiles) swaps with no transition (#384); a
+nav, `SubNav`) swaps with no transition (#384); a
 skeleton giving way to content fades; and each signed-in route has a
 skeleton. `NavDepthTracker` (`lib/nav/nav-depth.ts`)
 scrolls a pushed page to its top before it paints (#349), since Next scrolls
@@ -1106,7 +1113,7 @@ Admin layout shows admins and the owner a warning (`ClosingAlertsWarning`,
 missing. Only this route stamps it: the daily keep-alive doesn't,
 so it can't hide a dead schedule. Without push keys nothing is sent, so the
 warning never shows. The signed-in
-layout reads `getReviewCounts` for the Admin button's badge, follows the
+layout reads `getReviewCounts` for the avatar's red dot and its menu's Admin count, follows the
 `reviews` topic (and `markets` for admins) live, and refreshes at the next
 market close. The wording is `lib/push/messages.ts`: payloads are `{ title,
 body, url }`, with an in-app `url`. The OS already names the app, so the
@@ -1164,12 +1171,13 @@ a push subscription itself (`lib/push/use-device-push.ts`). The other three
 come from `my_onboarding()` (`lib/home/onboarding.ts`): a photo
 (`profiles.avatar_path`), any bet or parlay and any task submission. It
 hides itself once all five are done. Dismissing it sets the `onboarding`
-cookie, which skips those reads, so it never flashes back. Once it's
+cookie, which skips those reads, so it never flashes back. It never shows to a member with a
+settled bet and an approved task (`getHomeHistory`, #388). Once it's
 dismissed, the installed app with no push subscription shows
-`NotificationsCard` in its place (InstallCard never shows there), until
-Not now, which is remembered in `localStorage`. At exactly 0 DC the Home
-hero points to Tasks, with what active tasks pay (`getTaskRewardRange`,
-read only at 0 DC).
+`NotificationsCard` in its place, until Not now, which is remembered in
+`localStorage`; in a phone browser, Settings says how to install instead.
+At exactly 0 DC Home's Needs you points to Tasks, with what active tasks pay
+(`getTaskRewardRange`, read only at 0 DC).
 
 **Weekly recap** (0056, #81). On Sundays and Mondays in America/New_York,
 Home shows `components/home/weekly-recap-card.tsx`. `lib/home/recap-week.ts`

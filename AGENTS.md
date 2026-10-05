@@ -74,7 +74,7 @@ a line to `CHANGELOG.md` under the next release.
   are its own buttons (a task, a submission to review) passes
   `tappable={false}`. Inside a `SectionCard` the list is `listCardsClass`
   (`flex flex-col gap-2`, no dividers), with its `lg:` grid added at the
-  call site. Something that isn't an `<li>` (a home tile's link) uses
+  call site. Something that isn't an `<li>` uses
   `tappableListCardClass`. The feed, ledger, coin history, invites and a
   market's bet list stay divided rows.
 - **Page widths come from `<Page width>`:** `wide` (default, 1120px of
@@ -134,7 +134,7 @@ a line to `CHANGELOG.md` under the next release.
   also enables the back-swipe; its logical parents live in
   `lib/nav/back-swipe.ts`.
 - **Tab switches swap at once** (#384). A link to a tab (the nav, the tab
-  bar, `SubNav`, Home's tab tiles) passes `transitionTypes={TAB_TRANSITION}`
+  bar, `SubNav`) passes `transitionTypes={TAB_TRANSITION}`
   (`components/nav/page-transition.tsx`), which turns the view transition
   off; a link into a drill-down passes `['nav-forward']`. Pages stay in the
   client router's cache for 30s (`experimental.staleTimes.dynamic` in

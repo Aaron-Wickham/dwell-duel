@@ -119,4 +119,12 @@ describe('MemberActivity', () => {
     fireEvent.click(showMore)
     expect(requestShowMoreFocus).toHaveBeenCalledWith('activity-bet_003a2')
   })
+
+  // A11Y-05: the member's own name doesn't link back to the page you're on; the market still links.
+  it('shows the member’s own name as plain text and keeps other links', async () => {
+    await renderActivity({ rows: [{ ...event('bet:1'), actorId: 'p-bob', actorName: 'Bob' }], next: null, windowed: false })
+    expect(screen.getByText('Bob')).not.toHaveAttribute('href')
+    expect(screen.queryByRole('link', { name: 'Bob' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Social layer market' })).toHaveAttribute('href', '/markets/m1')
+  })
 })

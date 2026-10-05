@@ -40,6 +40,13 @@ describe('a member’s rank on their profile', () => {
     expect(screen.getByText(/80 DC net worth/)).toHaveTextContent('80 DC net worth · Rank 2 of 9')
   })
 
+  // CR-B15: net worth reconciles with the balance the top bar shows.
+  it('splits net worth into balance and what’s riding', async () => {
+    getMemberStanding.mockResolvedValue(STANDING)
+    await renderPage()
+    expect(screen.getByText('60 DC balance + 20 DC riding on open bets')).toBeInTheDocument()
+  })
+
   // #265: a removed member keeps their profile and net worth, but isn't ranked.
   it('says a removed member isn’t ranked', async () => {
     getMemberStanding.mockResolvedValue({ ...STANDING, rank: null })

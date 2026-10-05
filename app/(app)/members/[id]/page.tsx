@@ -42,10 +42,16 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
           <div className="flex min-w-0 flex-col gap-5 md:gap-7">
             <section className="flex flex-col gap-4">
               <MemberProfileHeader name={member.displayName} avatarSrc={member.avatarSrc} bio={member.bio}>
-                <p className={rowTitleClass}>
-                  {formatDcAmount(member.score)} net worth ·{' '}
-                  {member.rank === null ? 'Not ranked' : `Rank ${member.rank} of ${member.memberCount}`}
-                </p>
+                <div className="flex flex-col gap-0.5">
+                  <p className={rowTitleClass}>
+                    {formatDcAmount(member.score)} net worth ·{' '}
+                    {member.rank === null ? 'Not ranked' : `Rank ${member.rank} of ${member.memberCount}`}
+                  </p>
+                  {/* Net worth isn't the balance in the top bar, so say how the two add up (CR-B15). */}
+                  <p className="text-sm text-ink2">
+                    {formatDcAmount(member.balance)} balance + {formatDcAmount(member.score - member.balance)} riding on open bets
+                  </p>
+                </div>
               </MemberProfileHeader>
               {member.id === user.id && (
                 <div className="flex flex-wrap gap-3">

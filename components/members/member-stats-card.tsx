@@ -9,32 +9,57 @@ import { cn } from '@/lib/utils'
 import { figureInlineClass } from '@/components/ui/page'
 import { formatDcAmount, formatSignedDcAmount } from '@/lib/format/dc'
 
-function Stat({ label, children, detail }: { label: string; children: ReactNode; detail?: ReactNode }) {
+function Stat({
+  label,
+  children,
+  detail,
+  wide = false,
+}: {
+  label: string
+  children: ReactNode
+  detail?: ReactNode
+  // Across both columns, for a cell whose detail is a market's title (VIZ-17).
+  wide?: boolean
+}) {
   return (
-    <div className="flex min-w-0 flex-col gap-0.5">
+    <div className={cn('flex min-w-0 flex-col gap-0.5', wide && 'col-span-2')}>
       <dt className="text-sm text-ink2">{label}</dt>
-      <dd className={figureInlineClass}>{children}</dd>
+      <dd className={cn(figureInlineClass, 'whitespace-nowrap')}>{children}</dd>
       {detail && <dd className="text-sm text-ink2 break-words">{detail}</dd>}
     </div>
   )
 }
 
+// "17–12" fits half a phone's card on one line, where "17 won · 12 lost" wrapped (VIZ-17); the
+// words stay for screen readers, and the share won goes under it.
 function Record({ record }: { record: WinLoss }) {
   return (
     <>
-      {record.won} won · {record.lost} lost
+      <span aria-hidden="true">
+        {record.won}–{record.lost}
+      </span>
+      <span className="sr-only">
+        {record.won} won, {record.lost} lost
+      </span>
     </>
   )
 }
 
-const refunded = (record: WinLoss) => (record.refunded > 0 ? `${record.refunded} refunded` : undefined)
+function recordDetail(record: WinLoss): string | undefined {
+  const decided = record.won + record.lost
+  const parts = [
+    decided > 0 ? `${Math.round((record.won / decided) * 100)}% won` : null,
+    record.refunded > 0 ? `${record.refunded} refunded` : null,
+  ].filter(Boolean)
+  return parts.length > 0 ? parts.join(' · ') : undefined
+}
 
 function SignedDc({ value }: { value: number }) {
   if (value === 0) return <>{formatSignedDcAmount(0)}</>
   return <span className={value > 0 ? 'text-win' : 'text-loss'}>{formatSignedDcAmount(value)}</span>
 }
 
-const none = <span className="text-ink2">None yet</span>
+const none = <span className="text-sm font-normal text-ink2">None yet</span>
 
 export function MemberStatsCard({ stats }: { stats: MemberStats }) {
   const hasHistory = stats.settled > 0
@@ -48,17 +73,24 @@ export function MemberStatsCard({ stats }: { stats: MemberStats }) {
       <dl className={cn('grid grid-cols-2 gap-x-4 gap-y-4', !hasHistory && 'border-t border-line pt-3')}>
         {hasHistory && (
           <>
-            <Stat label="Solo bets" detail={refunded(stats.bets)}>
+            <Stat label="Solo bets" detail={recordDetail(stats.bets)}>
               <Record record={stats.bets} />
             </Stat>
-            <Stat label="Parlays" detail={refunded(stats.parlays)}>
+            <Stat label="Parlays" detail={recordDetail(stats.parlays)}>
               <Record record={stats.parlays} />
             </Stat>
             <Stat label="Net profit">
               <SignedDc value={stats.netProfit} />
             </Stat>
             <Stat
+              label="Best parlay"
+              detail={stats.bestParlay && `Paid ${formatDcAmount(stats.bestParlay.payout)}`}
+            >
+              {stats.bestParlay ? `${formatOdds(stats.bestParlay.multiplierBp)}×` : none}
+            </Stat>
+            <Stat
               label="Biggest win"
+              wide
               detail={
                 stats.biggestWin && (
                   <Link
@@ -73,12 +105,6 @@ export function MemberStatsCard({ stats }: { stats: MemberStats }) {
             >
               {stats.biggestWin ? <SignedDc value={stats.biggestWin.amount} /> : none}
             </Stat>
-            <Stat
-              label="Best parlay"
-              detail={stats.bestParlay && `Paid ${formatDcAmount(stats.bestParlay.payout)}`}
-            >
-              {stats.bestParlay ? `${formatOdds(stats.bestParlay.multiplierBp)}×` : none}
-            </Stat>
           </>
         )}
         <Stat label="Markets created">{stats.marketsCreated}</Stat>
@@ -88,17 +114,40 @@ export function MemberStatsCard({ stats }: { stats: MemberStats }) {
   )
 }
 
+// Drawn like a member with history (the taller card), line for line, so the real card doesn't
+// push the page down when it streams in (ST-4).
+function StatSkeleton({ detail = false, wide = false }: { detail?: boolean; wide?: boolean }) {
+  return (
+    <div className={cn('flex flex-col gap-0.5', wide && 'col-span-2')}>
+      <div className="flex h-5 items-center">
+        <Skeleton className="h-3.5 w-20" />
+      </div>
+      <div className="flex h-[25px] items-center">
+        <Skeleton className="h-5 w-16" />
+      </div>
+      {detail && (
+        <div className="flex h-5 items-center">
+          <Skeleton className={cn('h-3.5', wide ? 'w-48 max-w-full' : 'w-16')} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function MemberStatsSkeleton() {
   return (
     <SkeletonCard>
-      <Skeleton className="h-7 w-20" />
-      <div className="grid grid-cols-2 gap-4">
-        {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="flex flex-col gap-1.5">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-7 w-24" />
-          </div>
-        ))}
+      <div className="flex h-6 items-center md:h-[26px]">
+        <Skeleton className="h-5 w-16" />
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+        <StatSkeleton detail />
+        <StatSkeleton detail />
+        <StatSkeleton />
+        <StatSkeleton detail />
+        <StatSkeleton detail wide />
+        <StatSkeleton />
+        <StatSkeleton />
       </div>
     </SkeletonCard>
   )

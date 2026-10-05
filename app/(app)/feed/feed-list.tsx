@@ -37,11 +37,13 @@ export function FeedItems({
   reactions,
   now,
   rowIdPrefix,
+  plainHref,
 }: {
   events: FeedEvent[]
   reactions?: Map<string, EventReactions>
   now: number
   rowIdPrefix?: string
+  plainHref?: string
 }) {
   return knownEvents(events).map((e) => (
     <FeedItem
@@ -52,6 +54,7 @@ export function FeedItems({
       note={e.kind === 'market_resolved' ? e.creatorStake : null}
       reactions={reactions && <ReactionBar eventId={e.id} reactions={reactions.get(e.id) ?? noReactions()} />}
       domId={rowIdPrefix && rowDomId(rowIdPrefix, e.id)}
+      plainHref={plainHref}
     />
   ))
 }
@@ -67,6 +70,7 @@ export function FeedList({
   belowList,
   emptyState,
   rowIdPrefix,
+  plainHref,
 }: {
   events: FeedEvent[]
   // Each event's reactions (getReactions). Without it, the items show no reaction buttons.
@@ -80,6 +84,8 @@ export function FeedList({
   belowList?: ReactNode
   emptyState?: ReactNode
   rowIdPrefix?: string
+  // A link the rows show as plain text instead (FeedItem): the member page's own address.
+  plainHref?: string
 }) {
   const known = knownEvents(events)
   const body =
@@ -87,7 +93,7 @@ export function FeedList({
       emptyState ?? <EmptyState title="Nothing yet.">Bets, new markets, results and finished tasks show up here as they happen.</EmptyState>
     ) : (
       <ul className={dividedRowsClass}>
-        <FeedItems events={known} reactions={reactions} now={now} rowIdPrefix={rowIdPrefix} />
+        <FeedItems events={known} reactions={reactions} now={now} rowIdPrefix={rowIdPrefix} plainHref={plainHref} />
       </ul>
     )
 

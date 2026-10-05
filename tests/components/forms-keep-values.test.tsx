@@ -235,16 +235,11 @@ describe('ProfileForm', () => {
     expect(screen.getByLabelText('Bio')).toHaveValue('Choir and tea')
   })
 
-  it('previews the profile from what is typed, with the name as text, not a second heading', async () => {
+  // #397: one card with one Save for photo, name and bio; the separate preview went.
+  it('is one form with no preview region and no second heading', () => {
     render(<ProfileForm displayName="Ben" bio="Choir" avatarSrc={null} />)
-    const preview = screen.getByRole('region', { name: 'Preview' })
-    expect(preview).toHaveTextContent('Choir')
-
-    await userEvent.clear(screen.getByLabelText('Display name'))
-    await userEvent.type(screen.getByLabelText('Display name'), 'Benji')
-    await userEvent.type(screen.getByLabelText('Bio'), ' and tea')
-    expect(preview).toHaveTextContent('Benji')
-    expect(preview).toHaveTextContent('Choir and tea')
+    expect(screen.queryByRole('region', { name: 'Preview' })).toBeNull()
+    expect(screen.getAllByRole('button', { name: 'Save profile' })).toHaveLength(1)
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull()
   })
 })

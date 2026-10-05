@@ -280,8 +280,11 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
           </Link>
         }
       />
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2 md:gap-3">
+      <MarketSearch
+        key={q}
+        q={q}
+        category={slug}
+        tabs={
           <SubNav
             label="Filter markets"
             className="min-w-0 flex-1 md:flex-none"
@@ -292,14 +295,15 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
               current: !narrowed && f === filter,
             }))}
           />
-          <MarketSearch key={q} q={q} category={slug} />
-        </div>
-        {severalCategories && (
-          <FilterChips scroll label="Categories" items={categoryChips}>
-            {counts.length > busiest.length && <MoreCategories items={counts.map(categoryChip)} />}
-          </FilterChips>
-        )}
-      </div>
+        }
+        filters={
+          severalCategories && (
+            <FilterChips scroll label="Categories" items={categoryChips}>
+              {counts.length > busiest.length && <MoreCategories items={counts.map(categoryChip)} />}
+            </FilterChips>
+          )
+        }
+      />
       {category && (
         <p id="markets-category-caption" className="text-sm text-ink2">
           Showing {narrowed ? '' : STATUS_WORDS[filter]}markets in <strong className="text-ink">{category.name}</strong> ·{' '}

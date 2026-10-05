@@ -363,6 +363,18 @@ describe('MarketsPage: categories (#327)', () => {
     expect(screen.queryByRole('navigation', { name: 'Categories' })).toBeNull()
   })
 
+  it('puts the category chips behind the phone’s search button, so the filters stay one row (#389)', async () => {
+    listCategoryCounts.mockResolvedValue(TEN.slice(0, 3))
+    await renderPage(EMPTY, EMPTY)
+    const button = screen.getByRole('button', { name: 'Search and filter markets' })
+    const chips = screen.getByRole('navigation', { name: 'Categories' }).parentElement!
+    expect(button.getAttribute('aria-controls')?.split(' ')).toContain(chips.id)
+    expect(chips).toHaveClass('hidden', 'md:block')
+    fireEvent.click(button)
+    expect(chips).not.toHaveClass('hidden')
+    expect(screen.getByRole('search')).not.toHaveClass('hidden')
+  })
+
   it('leaves out More… when every category fits', async () => {
     listCategoryCounts.mockResolvedValue(TEN.slice(0, 3))
     await renderPage(EMPTY, EMPTY)

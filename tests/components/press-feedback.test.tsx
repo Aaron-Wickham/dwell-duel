@@ -217,7 +217,7 @@ const CASES: [string, () => ReactElement][] = [
     'CategoryField',
     () => <CategoryField id="c" value="" onChange={() => {}} suggestions={['Weather']} popular={['Weather', 'Arts']} errorId="e" />,
   ],
-  ['MarketSearch', () => <MarketSearch q="" category={null} />],
+  ['MarketSearch', () => <MarketSearch q="" category={null} tabs={null} />],
   ['JumpToMe', () => <JumpToMe href="/leaderboard?at=me" focusId="member-1" />],
   ['MotionSettings', () => <MotionSettings haptics reduceMotion={false} />],
   ['CreateMarketForm', () => <CreateMarketForm />],

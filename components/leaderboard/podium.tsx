@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import { IntentLink } from '@/components/ui/intent-link'
 import { Avatar } from '@/components/ui/avatar'
 import { signedDc } from '@/lib/social/season'
 import { cn } from '@/lib/utils'
@@ -25,9 +25,9 @@ function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean
   return (
     <li className={cn('pressable hover-tint relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-t-segment text-center', PLACE_ORDER[place])}>
       <Avatar name={member.name} src={member.avatarSrc} size={place === 1 ? 'lg' : 'md'} />
-      <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className={`stretched-link max-w-full ${uiTextClass} truncate font-extrabold text-ink no-underline`}>
+      <IntentLink href={`/members/${member.id}`} transitionTypes={['nav-forward']} className={`stretched-link max-w-full ${uiTextClass} truncate font-extrabold text-ink no-underline`}>
         {member.name}
-      </Link>
+      </IntentLink>
       {member.id === meId && <span className="-mt-1 text-xs font-bold text-ink2">you</span>}
       <span className="text-sm font-bold whitespace-nowrap text-ink2">
         {signed ? signedDc(member.score) : formatDcAmount(member.score)}

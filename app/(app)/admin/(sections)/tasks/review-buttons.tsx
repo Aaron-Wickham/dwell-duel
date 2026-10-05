@@ -58,7 +58,7 @@ export function ReviewButtons({
           </FormSubmitButton>
         </form>
         <Button size="sm" variant="quiet" onClick={() => setRejecting(true)}>
-          Reject<span aria-hidden="true">…</span> <span className="sr-only">{submitterName}’s {taskTitle}</span>
+          <span>Reject<span aria-hidden="true">…</span></span> <span className="sr-only">{submitterName}’s {taskTitle}</span>
         </Button>
       </div>
       {approveState?.formError && (

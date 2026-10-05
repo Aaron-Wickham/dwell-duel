@@ -198,19 +198,19 @@ export function PendingApprovals({
         </div>
         {/* The form's own action is the approve, so the confirm dialog's button (which submits through
             its form attribute) runs it. Reject selected opens its own dialog and form. */}
-        <form id={BULK_FORM_ID} action={approveAction} onSubmit={confirm.onSubmit} className="flex flex-wrap gap-2">
+        <form id={BULK_FORM_ID} action={approveAction} onSubmit={confirm.onSubmit} className="flex flex-col gap-2 sm:flex-row">
           <Button
             size="sm"
             variant="secondary"
-            className="grow"
             onClick={startBulkReject}
             aria-describedby={rejectNoneShown ? BULK_REJECT_ERROR_ID : undefined}
           >
-            Reject selected<span aria-hidden="true">…</span>
+            <span>Reject selected<span aria-hidden="true">…</span></span>
           </Button>
+          {/* Quiet until something is ticked, so an empty bar doesn't shout. */}
           <FormSubmitButton
             size="sm"
-            className="grow"
+            variant={selectedCount > 0 ? 'primary' : 'secondary'}
             onClick={() => setLastBulk('approve')}
             aria-describedby={
               lastBulk === 'approve' && !isApprovePending && approveState?.formError ? BULK_APPROVE_ERROR_ID : undefined
@@ -277,7 +277,7 @@ export function PendingApprovals({
                 </td>
                 <td role="cell" className={`${cellClass} max-lg:col-start-2 max-lg:row-start-2`}>
                   {c.taskTitle} · <span className="font-extrabold whitespace-nowrap text-gold">{formatDcAmount(c.rewardAmount)}</span>
-                  <span className="text-sm text-ink2 lg:hidden"> · {c.submittedAge}</span>
+                  <span className="block text-sm text-ink2 lg:hidden">{c.submittedAge}</span>
                 </td>
                 <td role="cell" className={`${cellClass} max-lg:col-start-2 max-lg:row-start-3 lg:py-0.5`}>
                   <Attached row={c} />

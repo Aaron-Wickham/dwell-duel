@@ -26,7 +26,7 @@ const STEPS: {
   href: string
   drillDown?: boolean
 }[] = [
-  { key: 'learn', title: 'Learn how DwellDuel works', hint: 'Two-minute read: Dwell Coin, odds and parlays.', cta: 'Read', href: '/how-it-works', drillDown: true },
+  { key: 'learn', title: 'Learn how DwellDuel works', hint: 'Betting, parlays and earning DC, in short.', cta: 'Read', href: '/how-it-works', drillDown: true },
   // Settings handles every device state (not installed on iOS, unsupported, blocked), so the step
   // only points there.
   { key: 'notify', title: 'Turn on notifications', hint: 'Hear when your markets close and your bets pay.', cta: 'Turn on', href: NOTIFICATIONS_HREF, drillDown: true },

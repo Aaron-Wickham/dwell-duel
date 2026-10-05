@@ -53,7 +53,7 @@ const nextConfig: NextConfig = {
   },
   // /how-it-works and /privacy render docs/HOW-IT-WORKS.md, read from disk (lib/docs/how-it-works.ts).
   outputFileTracingIncludes: {
-    '/how-it-works': ['./docs/HOW-IT-WORKS.md'],
+    '/how-it-works/rules': ['./docs/HOW-IT-WORKS.md'],
     '/privacy': ['./docs/HOW-IT-WORKS.md'],
   },
   env: {

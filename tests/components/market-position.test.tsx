@@ -258,7 +258,7 @@ describe('MarketOutcomes', () => {
     expect(within(card).queryByText(/bought shares here/)).toBeNull()
     expect(within(card).getByRole('link', { name: 'How parlays pay' })).toHaveAttribute(
       'href',
-      '/how-it-works#how-the-slip-solo-bets-and-parlays',
+      '/how-it-works/rules#how-the-slip-solo-bets-and-parlays',
     )
   })
 

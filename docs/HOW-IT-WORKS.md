@@ -1,5 +1,6 @@
-<!-- The app renders this file as its How it works page (/how-it-works), so write it for
-members. Links to other repo files show there as plain text. -->
+<!-- The app renders this file as its full rules (/how-it-works/rules), a tap below How it
+works' short version (/how-it-works), so write it for members. Links to other repo files show
+there as plain text. -->
 
 # How DwellDuel works
 
@@ -7,8 +8,6 @@ DwellDuel is an invite-only app for a church friend group. Members bet
 **Dwell Coin (DC)** on friendly questions ("Will the sermon run past
 noon?") and earn DC by completing Bible-study tasks. DC is play money: it
 can't be bought or cashed out.
-
-This page explains the rules.
 
 ## The short version
 

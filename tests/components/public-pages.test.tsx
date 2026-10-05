@@ -48,6 +48,6 @@ describe('the privacy page', () => {
 
   it('points links to other sections at How it works', () => {
     render(<PrivacyPage />)
-    expect(screen.getAllByRole('link', { name: 'Roles' }).every((a) => a.getAttribute('href') === '/how-it-works#how-roles')).toBe(true)
+    expect(screen.getAllByRole('link', { name: 'Roles' }).every((a) => a.getAttribute('href') === '/how-it-works/rules#how-roles')).toBe(true)
   })
 })

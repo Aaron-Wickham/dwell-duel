@@ -79,7 +79,7 @@ describe('SlipPanel', () => {
   // How it works gives each section the id how-<slug> (components/docs/markdown.tsx).
   it('links How parlays pay to the parlays section of How it works', () => {
     renderPanel(viewOf(pick(1), pick(2)))
-    expect(screen.getByRole('link', { name: 'How parlays pay' })).toHaveAttribute('href', '/how-it-works#how-the-slip-solo-bets-and-parlays')
+    expect(screen.getByRole('link', { name: 'How parlays pay' })).toHaveAttribute('href', '/how-it-works/rules#how-the-slip-solo-bets-and-parlays')
   })
 
   it('gives one pick no Solo/Parlay switch and no parlay link, just a stake and what it wins (#392)', async () => {
@@ -483,7 +483,7 @@ describe('SlipPanel', () => {
 
     it('links How parlays pay to its section’s id on How it works', () => {
       renderPanel(viewOf(pick(1), pick(2)))
-      expect(screen.getByRole('link', { name: 'How parlays pay' })).toHaveAttribute('href', '/how-it-works#how-the-slip-solo-bets-and-parlays')
+      expect(screen.getByRole('link', { name: 'How parlays pay' })).toHaveAttribute('href', '/how-it-works/rules#how-the-slip-solo-bets-and-parlays')
     })
   })
 })

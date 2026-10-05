@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.use({ viewport: { width: 375, height: 812 } })
 
-const ROUTES = ['/', '/markets', '/bets', '/tasks', '/feed', '/leaderboard', '/settings', '/how-it-works']
+const ROUTES = ['/', '/markets', '/bets', '/tasks', '/feed', '/leaderboard', '/settings', '/how-it-works', '/how-it-works/rules']
 
 test.describe('phone shell', () => {
   for (const route of ROUTES) {

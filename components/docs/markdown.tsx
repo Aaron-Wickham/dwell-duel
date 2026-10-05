@@ -13,7 +13,7 @@ function linkKind(href: string): 'app' | 'web' | 'text' {
 }
 
 // The doc's own anchors are GitHub's `#the-leaderboard`; the page gives each section the id
-// `how-<slug>` (app/(app)/how-it-works/page.tsx), so an in-doc link is pointed at that.
+// `how-<slug>` (app/(app)/how-it-works/rules/page.tsx), so an in-doc link is pointed at that.
 export const SECTION_ID_PREFIX = 'how-'
 
 function pageHref(href: string): string {

@@ -20,16 +20,29 @@ test('Getting started opens with How it works, and ticks it off once the page ha
 
   await learn.getByRole('link', { name: 'Read' }).click()
   await expect(page).toHaveURL(/\/how-it-works$/)
-  await expect(page.getByRole('heading', { level: 2, name: 'The short version' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 2, name: 'Betting' })).toBeVisible()
 
   await page.goto('/')
   await expect(learn.getByRole('link')).toHaveCount(0)
   await expect(learn.getByText('Learn how DwellDuel works')).toHaveClass(/line-through/)
 })
 
-test('How it works has a collapsed On this page list on a phone', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 })
+// #398: How it works is the short version; the full rules are a tap away.
+test('How it works answers a question in place and opens the full rules', async ({ page }) => {
   await page.goto('/how-it-works')
+  const question = page.locator('summary', { hasText: 'Can I take a bet back?' })
+  await expect(page.getByText(/Bets and parlays are final once placed/)).toBeHidden()
+  await question.click()
+  await expect(page.getByText(/Bets and parlays are final once placed/)).toBeVisible()
+
+  await page.getByRole('link', { name: 'Read the full rules' }).click()
+  await expect(page).toHaveURL(/\/how-it-works\/rules$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'How DwellDuel works' })).toBeVisible()
+})
+
+test('the full rules have a collapsed On this page list on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/how-it-works/rules')
   await expect(page.getByRole('navigation', { name: 'Contents' })).toBeHidden()
   const list = page.getByRole('navigation', { name: 'On this page' })
   await expect(list).toBeHidden()

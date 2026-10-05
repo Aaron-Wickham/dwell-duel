@@ -15,6 +15,7 @@ import TasksLoading from '@/app/(app)/tasks/loading'
 import ProfileLoading from '@/app/(app)/profile/loading'
 import SettingsLoading from '@/app/(app)/settings/loading'
 import HowItWorksLoading from '@/app/(app)/how-it-works/loading'
+import HowItWorksRulesLoading from '@/app/(app)/how-it-works/rules/loading'
 import FeedLoading from '@/app/(app)/feed/loading'
 import LeaderboardLoading from '@/app/(app)/leaderboard/loading'
 import AdminInvitesLoading from '@/app/(app)/admin/(sections)/invites/loading'
@@ -32,6 +33,7 @@ const SKELETONS: [string, ComponentType][] = [
   ['profile', ProfileLoading],
   ['settings', SettingsLoading],
   ['how-it-works', HowItWorksLoading],
+  ['how-it-works-rules', HowItWorksRulesLoading],
   ['feed', FeedLoading],
   ['leaderboard', LeaderboardLoading],
   ['admin-invites', AdminInvitesLoading],
@@ -68,6 +70,9 @@ describe('skeletons of reading-width pages', () => {
   it.each([
     ['feed', FeedLoading],
     ['how-it-works', HowItWorksLoading],
+    ['how-it-works-rules', HowItWorksRulesLoading],
+    ['settings', SettingsLoading],
+    ['profile', ProfileLoading],
   ] as const)('the %s skeleton is centred at the reading width, like its page', (name, Loading) => {
     const { container } = render(<Loading />)
     expect(container.querySelector(`[data-skeleton="${name}"]`)).toHaveClass('max-w-[980px]', 'mx-auto')
@@ -139,17 +144,25 @@ describe('skeletons match their pages', () => {
     const segmented = cards[0].querySelector('.h-\\[52px\\]')!
     expect(segmented.previousElementSibling).toHaveClass('mb-1.5')
     expect(segmented.nextElementSibling).toHaveClass('h-5')
-    const notifications = cards[3]
+    // Appearance & motion holds the two toggles too (#398).
+    expect(cards[0].querySelectorAll('.size-\\[22px\\]')).toHaveLength(2)
+    const notifications = cards[1]
     expect(notifications.querySelectorAll('.size-\\[22px\\]')).toHaveLength(4)
     // The device status button and the save button.
     expect(notifications.querySelectorAll('.skeleton.h-11')).toHaveLength(2)
   })
 
-  it('the edit-profile skeleton previews a heading, its description and a name as wide as a name', () => {
+  it('the edit-profile skeleton is one card: photo, name, bio and Save (#397)', () => {
     const { container } = render(<ProfileLoading />)
-    const preview = container.querySelectorAll('.rounded-card')[1]
-    expect(preview.querySelector('.h-6')).not.toBeNull()
-    expect(preview.querySelector('.h-5.w-72')).not.toBeNull()
-    expect(preview.querySelector('.size-20 + .h-11.w-56')).not.toBeNull()
+    const cards = container.querySelectorAll('.rounded-card')
+    expect(cards).toHaveLength(1)
+    expect(cards[0].querySelector('.rounded-full + .h-11')).not.toBeNull()
+    expect(cards[0].querySelector('.h-\\[100px\\]')).not.toBeNull()
+  })
+
+  it('the how-it-works skeleton draws four short sections and four questions, with no cards (#398)', () => {
+    const { container } = render(<HowItWorksLoading />)
+    expect(container.querySelectorAll('.rounded-card')).toHaveLength(0)
+    expect(container.querySelector('.divide-y')!.children).toHaveLength(4)
   })
 })

@@ -11,6 +11,20 @@ test('offline: the banner shows and clears live, a tab tap answers at once, a na
   page,
   request,
 }) => {
+  const t0 = Date.now(); const T = () => Date.now() - t0
+  page.on('console', (m) => { if (m.text().startsWith('X ')) console.log('DIAG', T(), m.text()) })
+  page.on('framenavigated', (f) => { if (f === page.mainFrame()) console.log('DIAG', T(), 'FRAMENAV', f.url()) })
+  page.on('request', (r) => { if (r.isNavigationRequest()) console.log('DIAG', T(), 'NAVREQ', r.url(), r.redirectedFrom()?.url() ?? '') })
+  await page.addInitScript(() => {
+    new BroadcastChannel('diag').onmessage = (e) => console.log('X ' + e.data)
+    for (const k of ['pushState', 'replaceState'] as const) {
+      const orig = history[k].bind(history)
+      history[k] = (d: unknown, u: string, url?: string | URL | null) => { console.log('X HIST', k, String(url), location.pathname); return orig(d, u, url) }
+    }
+    ;(window as any).navigation?.addEventListener('navigate', (e: any) => console.log('X NAVAPI', e.navigationType, e.destination.url))
+    addEventListener('online', () => console.log('X ONLINE-EVENT', location.pathname))
+    console.log('X LOAD', location.href, navigator.onLine)
+  })
   const worker = await request.get('/sw.js')
   expect(worker.status()).toBe(200)
   expect(worker.headers()['cache-control']).toBe('no-cache, no-store, must-revalidate')
@@ -57,7 +71,9 @@ test('offline: the banner shows and clears live, a tab tap answers at once, a na
   // are still failing, sometimes lands on "/" again; no member taps that fast.
   await page.waitForLoadState('networkidle')
 
+  console.log('DIAG', T(), '--- goto markets')
   await page.goto('/markets')
+  console.log('DIAG', T(), '--- goto done', await pathname(page))
   await expect(page.getByRole('heading', { level: 1, name: 'You’re offline' })).toBeVisible()
   await expect.poll(() => pathname(page)).toBe('/markets')
 

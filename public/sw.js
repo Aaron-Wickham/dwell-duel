@@ -49,12 +49,20 @@ async function cacheFirst(event) {
 // preload lets the browser start the real request in parallel with the worker's own startup
 // instead of waiting for it; the offline page is the only fallback when neither one answers, and
 // it comes from this deploy's own cache, not the kept older one.
+const DIAG = new BroadcastChannel('diag')
 async function networkFirstNavigation(event) {
+  const u = event.request.url
   try {
-    return (await event.preloadResponse) ?? (await fetch(event.request))
-  } catch {
+    const pre = await event.preloadResponse
+    if (pre) { DIAG.postMessage(`SW ${u} preload ${pre.status} url=${pre.url} redirected=${pre.redirected} type=${pre.type}`); return pre }
+    const r = await fetch(event.request)
+    DIAG.postMessage(`SW ${u} fetch ${r.status} url=${r.url} redirected=${r.redirected}`)
+    return r
+  } catch (e) {
     const cache = await caches.open(CACHE_NAME)
-    return (await cache.match(OFFLINE_URL)) ?? Response.error()
+    const c = await cache.match(OFFLINE_URL)
+    DIAG.postMessage(`SW ${u} fallback ${String(e).slice(0, 80)} cached=${!!c} url=${c && c.url}`)
+    return c ?? Response.error()
   }
 }
 

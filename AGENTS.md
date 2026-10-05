@@ -128,11 +128,15 @@ a line to `CHANGELOG.md` under the next release.
   at the call site. A standalone inline text link that acts as a primary
   tap target — a title link in a row, say — gets the `hit-area` utility:
   a 44px invisible tap area without growing the row. A link inside a
-  sentence doesn't need it.
+  sentence doesn't need it. An action that swaps the pressed control
+  for another (Add for Remove) moves focus to its replacement, and
+  every sheet traps focus while it's open (#392).
 - **Links are underlined by default.** The base `a` rule underlines
   every link, matching the mockup (its links use the browser default
   underline). A link styled as a button, tab, tile, chip or nav item
-  carries `no-underline`.
+  carries `no-underline`. The one exception is a card or row title that
+  is a `stretched-link`: the utility drops its underline until it's
+  hovered or focused (#393), since the whole card is the tap target.
 - **Charts** (#391; the handoff's Charts section). A two-outcome market
   draws one line, Yes or Over (`plottedOutcomes`), in `--s2`. Series
   colours come from `outcomeSeries` (the race's from `memberSeries`, by

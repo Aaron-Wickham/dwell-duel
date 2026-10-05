@@ -120,7 +120,7 @@ pays before you place it, and nothing anyone does afterwards changes it.
   (and lowers the others'), so the chance, the market page's chart and the
   card's chart all show the same number. A bigger bet moves the price more, so each extra
   DC buys a little less.
-- **The slip shows the exact payout** ("Pays 18 DC if it wins"), with no
+- **The slip shows the exact payout** ("Wins 18 DC"), with no
   "~". Each outcome on a market page shows the same figure for 10 DC
   ("10 DC wins 18"), worked out exactly as the slip does. If the price moves between showing it and placing it, so that your bet
   would pay more than 2% less, nothing is placed: the slip says what it
@@ -146,8 +146,8 @@ pays before you place it, and nothing anyone does afterwards changes it.
   panel.
 
 **A worked example.** On a new Yes/No market, both sides show 50%. Alice
-bets 10 DC on Yes. That buys **18.33 shares**, so the slip says "Pays 18 DC
-if it wins", and Yes moves to about **59%**. If Yes wins, Alice gets
+bets 10 DC on Yes. That buys **18.33 shares**, so the slip says "Wins 18 DC",
+and Yes moves to about **59%**. If Yes wins, Alice gets
 **18 DC** (an 8 DC profit), whatever anyone bets after her. If No wins, she
 gets nothing: the house took the other side of her bet. Nobody is refunded
 when nobody backed the winner (bets from before October 2026 aside: see
@@ -194,7 +194,7 @@ expected payout changed**:
   the switch gets its stake back, as the old rules promised, even if
   someone bets on that outcome afterwards. Bets placed after the switch
   are paid like any other: their shares if they win, nothing if they
-  lose. My bets marks such a refund "Refunded · no winners".
+  lose. My bets marks such a refund "refunded, no winners".
 - **Pending parlays were fixed too.** A pick whose odds weren't set yet
   got them from its market's pool as it stood: other members' DC on the
   market ÷ other members' DC on your pick, at most 5×, or 1.00× without
@@ -216,24 +216,30 @@ Every bet goes through the **slip**. Tap "Add" on outcomes from
 any number of markets, then open the slip to set stakes. Type a stake,
 or tap a quick stake: 5, 10, 25 or Max. Max is your balance less the
 other stakes already in the slip, and a chip for more than that is
-greyed out. The top of the slip shows your balance and what's left after
-the slip (or how many DC short it is), and when Place can't be tapped, a
-line under it says why. At 0 DC it points you to Tasks; your picks stay
-in the slip. Each pick is either:
+greyed out. Each pick shows its chance and what its stake wins. The top
+of the slip shows your balance (and how many DC short the slip is, when
+it is), and when Place can't be tapped, a line under it says why. At 0 DC
+it points you to Tasks; your picks stay in the slip. Adding or removing a
+pick doesn't pop up a message: the outcome's row and the slip button's
+count change instead. Once the slip holds two or more picks, each is
+either:
 
 - **Solo:** a normal bet on that outcome, buying shares at a fixed
   payout.
 - **Parlay:** combined with your other Parlay picks into one bet that
   wins only if every pick wins.
 
-"Place" sends everything at once. If any single bet can't be placed, none
-of them are.
+A single pick is always Solo, since a parlay needs two. The button says
+what it places: "Place bet · 10 DC", "Place 3 bets · 30 DC", or "Place
+parlay · 10 DC" when the parlay is all the slip holds. It sends everything
+at once. If any single bet can't be placed, none of them are.
 
 **How parlays pay.** A parlay's payout is **fixed when you place it**,
 like a solo bet's:
 
-- Between 2 and **6** legs, one per market.
-- It's lost as soon as one leg loses, and paid once every leg has won.
+- Between 2 and **6** picks, one per market. (The maths below calls each
+  pick a *leg*.)
+- It's lost as soon as one pick loses, and paid once every pick has won.
 - **Your stake is split evenly across the picks.** Each pick's share buys
   shares in its outcome at that market's price, just as a solo bet of
   that size would, so a parlay **moves each market's chance**. The shares
@@ -244,7 +250,8 @@ like a solo bet's:
   places, rounded down. A leg never counts less than 1.00×.
 - **The multiplier** is the legs' odds multiplied together, and the
   **payout** is the stake × the multiplier, rounded down to a whole DC.
-  The slip shows both exactly ("Pays 49 DC (4.96×) if every pick wins"),
+  The slip shows both exactly ("4.96×" beside "Parlay · 2 picks", and
+  "Wins 49 DC if every pick wins"),
   with no "~". If the payout would be more than 2% lower by the time you
   place it, nothing is placed: the slip shows the new payout and you tap
   Place again.
@@ -280,10 +287,17 @@ October 2026, which never did). It never says whose parlays they are.
 Open, Settled and Cancelled. Only you can see it. Everyone can see who
 bet what on each market, and bets and parlays also appear in the feed.
 
-Tap a parlay to open its **breakdown**: its stake, multiplier and what it
-pays (or paid), each pick with its odds and where its market stands (Open, Awaiting resolution, Won, Lost
-or Voided), and a short sum showing how the multiplier adds
-up. A voided pick is shown as left out, and the rest carry on.
+Each open bet says what it pays if it wins ("10 DC on Yes · pays 18 DC")
+and when its market closes; a settled one says what it did ("won 18 DC",
+"lost", "refunded"). A parlay's card says its stake and what it pays if
+all its picks win, and lists its picks with a word for each: Won, Lost,
+Waiting or Voided.
+
+Tap a parlay to open its **breakdown**: what it pays (or paid, or "Lost"),
+its stake and how many times your stake it pays, each pick with its odds
+and where its market stands (Won, Lost, Waiting or Voided), and a short
+sum showing how the multiplier adds up. A voided pick is shown as left
+out, and the rest carry on.
 
 My bets' **Coins** tab is your coin history: every DC that came in or went
 out, newest first, in plain words ("Won 26 DC on Will it rain?", "Task

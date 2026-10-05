@@ -130,7 +130,7 @@ describe('PositionCard, while the market is open', () => {
     expect(within(card).queryByRole('button')).toBeNull()
   })
 
-  it('shows a parlay leg with its pill and a link to the parlay', () => {
+  it('shows a parlay pick with its pill and a link to the parlay', () => {
     render(<PositionCard position={open} resolvedAt={null} />)
     const row = screen.getByText('Parlay pick: Yes').closest('li')!
     expect(

@@ -87,7 +87,7 @@ async function lmsrParlay(client: TestClient, outcomeIds: string[], stake: numbe
   return (data as { parlay_id: string }).parlay_id
 }
 
-test('Your position lists each bet with its fixed payout, and a parlay leg; parlay money rides on each outcome', async ({ page }) => {
+test('Your position lists each bet with its fixed payout, and a parlay pick; parlay money rides on each outcome', async ({ page }) => {
   const { alice, bob } = await setup()
   const stamp = Date.now()
   const here = await lmsrMarket(bob, `Position open ${stamp}?`)
@@ -139,7 +139,7 @@ test('Your position lists each bet with its fixed payout, and a parlay leg; parl
   await page.screenshot({ path: `${SHOTS}/fix1-desktop-with-card.png`, fullPage: true })
 })
 
-test('once the market resolves, Your position shows each result, the net and the parlay leg’s state', async ({ page }) => {
+test('once the market resolves, Your position shows each result, the net and the parlay pick’s state', async ({ page }) => {
   const { alice, bob } = await setup()
   const stamp = Date.now()
   const here = await backedMarket(bob, `Position settled ${stamp}?`)

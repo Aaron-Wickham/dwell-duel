@@ -270,7 +270,7 @@ move).
   notifications;
 - can no longer resolve, void or edit markets they made, or delete their
   comments;
-- drop off both leaderboards, "Rank X of N", the month's champion and the
+- drop off both leaderboards, the count in a rank like "218th of 502", the month's champion and the
   weekly recap.
 
 Their coins, bets and history stay where they are, and they're listed

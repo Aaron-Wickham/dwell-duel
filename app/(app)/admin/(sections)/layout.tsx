@@ -36,7 +36,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <PageHeader
           title="Admin"
           action={
-            <a href={ADMIN_GUIDE_URL} target="_blank" rel="noreferrer" className="hit-area shrink-0 font-bold">
+            <a href={ADMIN_GUIDE_URL} target="_blank" rel="noreferrer" className="pressable hit-area shrink-0 font-bold">
               Admin guide
             </a>
           }

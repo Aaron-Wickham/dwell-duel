@@ -150,7 +150,8 @@ a line to `CHANGELOG.md` under the next release.
   animation off, and every chart names how its lines moved
   (`describeMovement`).
 - **A `PageHeader` description states a rule the page enforces,** not a
-  summary of the page (#400): Tasks keeps "A reviewer checks each one.";
+  summary of the page (#400): Tasks keeps "Earn DC with Bible study. A reviewer checks each
+  one.";
   most pages have none, and their skeleton draws no description line.
 - **Words we use** (#400). Member-facing text, docs for members and tests
   say: **pick**, never "leg" (leg stays in code and in HOW-IT-WORKS' parlay

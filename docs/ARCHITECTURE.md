@@ -1250,10 +1250,12 @@ value never stops production booting.
   have no token and aren't wrapped. The CSP's `connect-src` allows
   `https://*.sentry.io`.
 - **Raw database errors.** An RPC's own refusals are `raise exception`
-  (SQLSTATE `P0001`, `isDeliberateRaise`) and reach the member as written;
-  any other error from `resolve_market` / `resolve_over_under` /
-  `place_slip_v4` (a timeout, a constraint, an aborted fetch) is reported
-  and shown as "Something went wrong. Try again."
+  (SQLSTATE `P0001`, `isDeliberateRaise`); any other error from
+  `resolve_market` / `resolve_over_under` / `place_slip_v4` (a timeout, a
+  constraint, an aborted fetch) is reported and shown as "Something went
+  wrong. Try again." The slip maps its refusals through `parseSlipError`
+  (`lib/parlays/slip-errors.ts`) into words with a next step, and logs any
+  raise it doesn't recognise and shows `GENERIC_ERROR` instead (#400).
 - **Admin health read.** `readClosingAlertsHealth` returns `{ unknown: true }`
   on a failed read; the banner then says it couldn't check, and every
   Admin page still renders.

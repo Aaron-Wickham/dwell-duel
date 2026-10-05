@@ -31,7 +31,7 @@ describe('VoidForm', () => {
     expect(field).toBeRequired()
     expect(field).toHaveAttribute('maxlength', '500')
     expect(field).toHaveAttribute('aria-describedby', 'void-reason-hint')
-    expect(screen.getByText('Everyone sees this. Every bet is refunded, and parlays drop this pick and carry on.')).toHaveAttribute('id', 'void-reason-hint')
+    expect(screen.getByText('Everyone sees this. Every bet is refunded; parlays drop this pick and carry on with the rest, and a parlay with no picks left is refunded.')).toHaveAttribute('id', 'void-reason-hint')
     expect(screen.queryByRole('alertdialog')).toBeNull()
   })
 
@@ -41,7 +41,7 @@ describe('VoidForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Call off this market' }))
 
     const dialog = await screen.findByRole('alertdialog', { name: 'Call off this market?' })
-    expect(dialog).toHaveAccessibleDescription('Every bet is refunded, and parlays drop this pick and carry on with the rest. This can’t be undone.')
+    expect(dialog).toHaveAccessibleDescription('Every bet is refunded. Parlays drop this pick and carry on with the rest; a parlay with no picks left is refunded. This can’t be undone.')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus())
     expect(screen.getByRole('button', { name: 'Call off market' })).toHaveAttribute('type', 'submit')
     expect(screen.getByRole('button', { name: 'Call off market' })).toHaveAttribute('form', 'void-form')
@@ -76,12 +76,12 @@ describe('VoidForm', () => {
   })
 
   it('points the button at an error that isn’t about the reason', async () => {
-    voidMarketAction.mockResolvedValue({ formError: 'This market has closed, so only an admin can void it.' })
+    voidMarketAction.mockResolvedValue({ formError: 'This market has closed, so only an admin can call it off.' })
     render(<VoidForm marketId="m1" />)
 
     await confirmVoid()
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('This market has closed, so only an admin can void it.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('This market has closed, so only an admin can call it off.')
     expect(reasonField()).toHaveAttribute('aria-invalid', 'false')
     expect(screen.getByRole('button', { name: 'Call off this market' })).toHaveAttribute('aria-describedby', 'void-error')
   })

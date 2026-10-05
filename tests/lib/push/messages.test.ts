@@ -71,7 +71,7 @@ describe('push payloads', () => {
     })
     expect(result({ status: 'voided', outcomeLabel: null, hasSolo: false })).toEqual({
       title: 'Market called off',
-      body: 'Will it rain? was called off. Your parlay carries on without it.',
+      body: 'Will it rain? was called off and dropped from your parlay',
     })
   })
 

@@ -201,6 +201,6 @@ describe('legTally and tallySummary', () => {
   it('counts each state and leaves out the empty ones', () => {
     const tally = legTally([{ status: 'won' }, { status: 'open' }, { status: 'open' }, { status: 'awaiting' }, { status: 'voided' }])
     expect(tally).toEqual({ won: 1, lost: 0, open: 2, awaiting: 1, voided: 1 })
-    expect(tallySummary(tally)).toBe('1 won · 2 open · 1 awaiting · 1 called off')
+    expect(tallySummary(tally)).toBe('1 won · 2 open · 1 waiting · 1 called off')
   })
 })

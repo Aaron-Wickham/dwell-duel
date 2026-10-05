@@ -39,7 +39,7 @@ export function marketResultPayload(marketId: string, row: MarketResultRow): Pus
   const url = `/markets/${marketId}`
   const { title } = row
   if (row.status === 'voided') {
-    const body = row.hasSolo ? `${title}: your stake is refunded` : `${title} was called off. Your parlay carries on without it.`
+    const body = row.hasSolo ? `${title}: your stake is refunded` : `${title} was called off and dropped from your parlay`
     return { title: 'Market called off', body, url }
   }
   const result = row.isOverride ? `${title} changed to ${row.outcomeLabel}` : `${title}: ${row.outcomeLabel}`

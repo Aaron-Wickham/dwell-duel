@@ -42,7 +42,7 @@ export function VoidForm({ marketId }: { marketId: string }) {
   return (
     <div className="flex flex-col gap-2">
       <form id={FORM_ID} action={formAction} onSubmit={confirm.onSubmit} className="flex flex-col gap-4">
-        <Field label="Why call off this market?" htmlFor="void-reason" hint="Everyone sees this. Every bet is refunded, and parlays drop this pick and carry on.">
+        <Field label="Why call off this market?" htmlFor="void-reason" hint="Everyone sees this. Every bet is refunded; parlays drop this pick and carry on with the rest, and a parlay with no picks left is refunded.">
           <Textarea
             id="void-reason"
             name="reason"
@@ -70,7 +70,7 @@ export function VoidForm({ marketId }: { marketId: string }) {
         finalFocus={done ? focusPageHeading : true}
         variant="danger"
         title="Call off this market?"
-        description="Every bet is refunded, and parlays drop this pick and carry on with the rest. This can’t be undone."
+        description="Every bet is refunded. Parlays drop this pick and carry on with the rest; a parlay with no picks left is refunded. This can’t be undone."
         confirmLabel="Call off market"
       />
       {state?.formError && (

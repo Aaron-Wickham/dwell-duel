@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import * as motion from '@/lib/ui/motion'
-import { DURATION, EASE, PILL_SLIDE, PILL_TRANSITION, cssEase } from '@/lib/ui/motion'
+import { DELAY, DURATION, EASE, PILL_SLIDE, PILL_TRANSITION, cssEase } from '@/lib/ui/motion'
 
 const root = path.resolve(import.meta.dirname, '../../..')
 const css = readFileSync(path.join(root, 'app/globals.css'), 'utf8')
@@ -39,6 +39,22 @@ describe('motion tokens', () => {
     for (const [name, ms] of Object.entries(DURATION)) {
       expect(cssToken(`duration-${name}`)).toBe(`${ms}ms`)
     }
+  })
+
+  it('mirrors every delay in lib/ui/motion.ts', () => {
+    const cssDelays = [...tokenBlock.matchAll(/--delay-([\w-]+):/g)].map((m) => m[1]).sort()
+    expect(cssDelays).toEqual(Object.keys(DELAY).sort())
+    for (const [name, ms] of Object.entries(DELAY)) {
+      expect(cssToken(`delay-${name}`)).toBe(`${ms}ms`)
+    }
+  })
+
+  // #418: every duration and delay in globals.css is a token. Zero stays plain: it's an off switch
+  // (reduced motion's `0s`), not a timing.
+  it('keeps every time in globals.css in the token block', () => {
+    const outside = css.replace(tokenBlock, '').replace(/\/\*[\s\S]*?\*\//g, '')
+    const times = [...outside.matchAll(/(?<![\w-])(\d*\.?\d+)(ms|s)\b/g)].map((m) => m[0])
+    expect(times.filter((time) => parseFloat(time) !== 0)).toEqual([])
   })
 
   it('slides every pill the same way, in WAAPI and in Motion', () => {

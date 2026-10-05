@@ -1,3 +1,4 @@
+import { DURATION } from '@/lib/ui/motion'
 import { cn } from '@/lib/utils'
 import { D_PATH, LEAF_ANGLES, LEAF_PATH } from './symbol-paths'
 
@@ -13,7 +14,7 @@ export function LeafLoader({ className }: { className?: string }) {
             d={LEAF_PATH}
             transform={`rotate(${angle} 50 50)`}
             className="leaf-pulse fill-lime"
-            style={{ animationDelay: `${i * 150}ms` }}
+            style={{ animationDelay: `${i * DURATION.fast}ms` }}
           />
         ))}
         <path d={D_PATH} fillRule="evenodd" className="fill-current" />

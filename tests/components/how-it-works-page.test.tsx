@@ -84,8 +84,8 @@ describe('the full rules page', () => {
       expect(target?.tagName).toBe('H2')
     }
     const body = container.querySelector('h2[id^="how-"]')!.closest('[class*="scroll-mt"]')!
-    expect(body.className).toMatch(/(^|\s)\[&_h2\]:scroll-mt-\[calc\(64px\+var\(--safe-top\)\+40px\)\]/)
-    expect(body.className).toMatch(/md:\[&_h2\]:scroll-mt-\[calc\(72px\+var\(--safe-top\)\+48px\)\]/)
+    expect(body.className).toMatch(/(^|\s)\[&_h2\]:scroll-mt-\[calc\(64px\+var\(--safe-top\)\+20px\)\]/)
+    expect(body.className).toMatch(/md:\[&_h2\]:scroll-mt-\[calc\(72px\+var\(--safe-top\)\+24px\)\]/)
     expect(body.className).not.toMatch(/lg:\[&_h2\]:scroll-mt/)
   })
 

@@ -89,7 +89,7 @@ describe('skeletons match their pages', () => {
     const { container } = render(<MarketsLoading />)
     const bar = withClass(container, 'h-[52px]')
     expect(bar).toHaveLength(1)
-    expect(bar[0]).toHaveClass('rounded-tile', 'md:w-80')
+    expect(bar[0]).toHaveClass('rounded-tile', 'md:w-[276px]')
     expect(container.querySelector('.lg\\:grid-cols-3')).not.toBeNull()
   })
 
@@ -142,8 +142,9 @@ describe('skeletons match their pages', () => {
     const { container } = render(<SettingsLoading />)
     const cards = container.querySelectorAll('.rounded-card')
     const segmented = cards[0].querySelector('.h-\\[52px\\]')!
-    expect(segmented.previousElementSibling).toHaveClass('mb-1.5')
-    expect(segmented.nextElementSibling).toHaveClass('h-5')
+    // The legend keeps its own margin and sits outside the gap, as a <fieldset> lays one out.
+    expect(segmented.parentElement!.previousElementSibling).toHaveClass('mb-1.5', 'h-[23px]')
+    expect(segmented.nextElementSibling!.firstElementChild).toHaveClass('h-5')
     // Appearance & motion holds the two toggles too (#398).
     expect(cards[0].querySelectorAll('.size-\\[22px\\]')).toHaveLength(2)
     const notifications = cards[1]
@@ -152,7 +153,9 @@ describe('skeletons match their pages', () => {
     expect(notifications.querySelectorAll('.skeleton.h-11')).toHaveLength(2)
     // A hint is indented by its wrapper's padding, never a margin beside w-full that overflows (ST-6).
     expect(container.querySelector('.skeleton.ml-8')).toBeNull()
-    expect(container.querySelectorAll('.pl-8 > .skeleton.w-full')).toHaveLength(3)
+    expect(container.querySelectorAll('.pl-8')).toHaveLength(6)
+    // Each line of text is a box as tall as the line, so the card is as tall as the page's (#398).
+    for (const line of container.querySelectorAll('.pl-8 .skeleton')) expect(line.parentElement).toHaveClass('h-5')
   })
 
   it('the edit-profile skeleton is one card: photo, name, bio and Save (#397)', () => {

@@ -4,15 +4,15 @@ import { howItWorks } from '@/lib/docs/how-it-works'
 import { inlineText } from '@/lib/docs/markdown'
 import { Blocks, InlineContent, SECTION_ID_PREFIX } from '@/components/docs/markdown'
 import { HistoryBackLink } from '@/components/ui/history-back-link'
-import { eyebrowClass, Page, PageHeader } from '@/components/ui/page'
-import { SectionCard } from '@/components/ui/section-card'
+import { h2Class, Page, PageHeader } from '@/components/ui/page'
 import { cardClass } from '@/components/ui/card'
 import { ScrollToHash } from '@/components/docs/scroll-to-hash'
+import { RulesContents } from '@/components/docs/rules-contents'
 import type { DocSection } from '@/lib/docs/markdown'
 
-// Clears the sticky top bar (64px on a phone, 72px from md) when a link jumps to a heading, with
-// room for the card's own padding above it. The bar is sticky at every width, so this is too.
-const HEADING_OFFSET = '[&_h2]:scroll-mt-[calc(64px+var(--safe-top)+40px)] md:[&_h2]:scroll-mt-[calc(72px+var(--safe-top)+48px)]'
+// Clears the sticky top bar (64px on a phone, 72px from md) when a link jumps to a heading, with a
+// little room above it. The bar is sticky at every width, so this is too.
+const HEADING_OFFSET = '[&_h2]:scroll-mt-[calc(64px+var(--safe-top)+20px)] md:[&_h2]:scroll-mt-[calc(72px+var(--safe-top)+24px)]'
 
 // Below lg, where the sticky contents list has no room, a collapsed list sits after the doc's first
 // section (The short version) and links the ones below it (#260).
@@ -43,7 +43,8 @@ function PhoneContents({ sections }: { sections: DocSection[] }) {
 }
 
 // The full rules, rendered from docs/HOW-IT-WORKS.md so the app and the doc never disagree. How it
-// works (/how-it-works) is the short version, with this a tap away (#398).
+// works (/how-it-works) is the short version, with this a tap away (#398). Each section is prose
+// under its heading, not a card: sixteen stacked cards read as a template, not a document.
 export default function HowItWorksRulesPage() {
   const { title, intro, sections } = howItWorks
   return (
@@ -52,24 +53,8 @@ export default function HowItWorksRulesPage() {
       <ScrollToHash />
       <PageHeader title={<InlineContent nodes={title} />} />
       <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start">
-        <nav
-          aria-labelledby="how-contents"
-          className="hidden lg:sticky lg:top-[calc(72px+var(--safe-top)+24px)] lg:flex lg:flex-col lg:gap-2"
-        >
-          <p id="how-contents" className={eyebrowClass}>
-            Contents
-          </p>
-          <ul className="flex flex-col">
-            {sections.map((section) => (
-              <li key={section.slug}>
-                <a href={`#${SECTION_ID_PREFIX}${section.slug}`} className="pressable flex min-h-11 items-center py-1 font-bold text-ink2 no-underline">
-                  {inlineText(section.title)}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <div className={`flex min-w-0 flex-col gap-5 md:gap-7 ${HEADING_OFFSET}`}>
+        <RulesContents items={sections.map((section) => ({ id: `${SECTION_ID_PREFIX}${section.slug}`, label: inlineText(section.title) }))} />
+        <div className={`flex min-w-0 flex-col gap-8 md:gap-10 ${HEADING_OFFSET}`}>
           {intro.length > 0 && (
             <div className="flex flex-col gap-3">
               <Blocks blocks={intro} />
@@ -77,9 +62,12 @@ export default function HowItWorksRulesPage() {
           )}
           {sections.map((section, index) => (
             <Fragment key={section.slug}>
-              <SectionCard title={<InlineContent nodes={section.title} />} titleId={`${SECTION_ID_PREFIX}${section.slug}`}>
+              <section aria-labelledby={`${SECTION_ID_PREFIX}${section.slug}`} className="flex flex-col gap-3">
+                <h2 id={`${SECTION_ID_PREFIX}${section.slug}`} className={h2Class}>
+                  <InlineContent nodes={section.title} />
+                </h2>
                 <Blocks blocks={section.blocks} />
-              </SectionCard>
+              </section>
               {index === 0 && <PhoneContents sections={sections.slice(1)} />}
             </Fragment>
           ))}

@@ -55,7 +55,8 @@ export function InlineContent({ nodes }: { nodes: Inline[] }): ReactNode {
         }
         if (kind === 'web') {
           return (
-            <a key={i} href={pageHref(node.href)}>
+            // An address has no spaces to wrap at, and would run off a 320px screen (#398).
+            <a key={i} href={pageHref(node.href)} className={node.href.startsWith('mailto:') ? 'wrap-anywhere' : undefined}>
               {children}
             </a>
           )

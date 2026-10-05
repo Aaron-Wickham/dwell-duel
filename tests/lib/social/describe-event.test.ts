@@ -44,7 +44,7 @@ describe('describeEvent', () => {
   it('describes a voided market by who voided it', () => {
     expect(describeEvent({ ...base, kind: 'market_voided', outcomeLabel: null, amount: null, voidReason: 'Rained off' })).toEqual([
       sarah,
-      ' voided ',
+      ' called off ',
       market,
     ])
   })

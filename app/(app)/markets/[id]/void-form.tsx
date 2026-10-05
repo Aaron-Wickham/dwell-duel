@@ -33,7 +33,7 @@ export function VoidForm({ marketId }: { marketId: string }) {
         }
       },
       (s) => Boolean(s?.formError),
-      'Market voided.',
+      'Market called off.',
     ),
     undefined,
   )
@@ -42,7 +42,7 @@ export function VoidForm({ marketId }: { marketId: string }) {
   return (
     <div className="flex flex-col gap-2">
       <form id={FORM_ID} action={formAction} onSubmit={confirm.onSubmit} className="flex flex-col gap-4">
-        <Field label="Why void this market?" htmlFor="void-reason" hint="Everyone sees this. Voiding refunds every bet; parlays drop this leg and carry on with the rest.">
+        <Field label="Why call off this market?" htmlFor="void-reason" hint="Everyone sees this. Every bet is refunded, and parlays drop this pick and carry on.">
           <Textarea
             id="void-reason"
             name="reason"
@@ -59,7 +59,7 @@ export function VoidForm({ marketId }: { marketId: string }) {
           className="self-start"
           aria-describedby={state?.formError && !reasonError ? 'void-error' : undefined}
         >
-          Void this market
+          Call off this market
         </FormSubmitButton>
       </form>
       <ConfirmSubmitDialog
@@ -69,9 +69,9 @@ export function VoidForm({ marketId }: { marketId: string }) {
         pending={isPending}
         finalFocus={done ? focusPageHeading : true}
         variant="danger"
-        title="Void this market?"
-        description="Every bet is refunded. Parlays drop this leg and carry on with the rest (a parlay with no legs left is refunded). This can’t be undone."
-        confirmLabel="Void market"
+        title="Call off this market?"
+        description="Every bet is refunded, and parlays drop this pick and carry on with the rest. This can’t be undone."
+        confirmLabel="Call off market"
       />
       {state?.formError && (
         <Message tone="error" id="void-error">

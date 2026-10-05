@@ -69,7 +69,7 @@ market, a reviewer resolves it (see [Results](#results)).
 
 The creator (or an admin) can also move the closing time, later or
 earlier, as long as the new time is still to come. Once a market has
-closed, and until it's resolved or voided, the same people can
+closed, and until it's resolved or called off, the same people can
 **reopen** it by giving it a new closing time: it takes bets again until
 then. Only reopen a market whose result isn't known yet. A creator who
 has money on their own market, a bet or a parlay pick, can't move its
@@ -83,7 +83,7 @@ The Markets page has three tabs: **Open** (the default: still taking
 bets, **soonest to close first**, so one closing within the hour is at
 the top), **Waiting** (past the close time, waiting for a result, oldest
 close first) and **Resolved** (has a result, most recently settled first;
-voided markets are here too, in their own group). Each card shows the
+called-off markets are here too, in their own group). Each card shows the
 leading outcome's chance (Yes, or Over, on a two-outcome market; the
 favourite of several), how many points it moved this week, a small chart,
 and when it closes ("Closes in 2h" within a day) with how many bets it
@@ -200,7 +200,7 @@ expected payout changed**:
   50 DC from 2 other members or with nobody else on your pick. Picks whose
   odds were already set kept them. The multiplier and payout were then
   fixed under the old caps (20×, and 1,000 DC, or the stake back if a
-  parlay staked more than that), and a pick voided later drops out under
+  parlay staked more than that), and a pick called off later drops out under
   the same caps. These parlays hold no shares, so they never moved any
   chance, just as before.
 - Those bets and parlays are final, like every other.
@@ -257,9 +257,9 @@ like a solo bet's:
 - **No other limits:** your own markets can be legs, a pick needs no
   money from other members first, and there is no cap on the multiplier
   or the payout. Your balance is the limit.
-- **A voided leg** drops out: the payout becomes the stake × the other
+- **A called-off leg** drops out: the payout becomes the stake × the other
   legs' odds, rounded down. With one leg left, it pays at that leg's odds.
-  If every leg is voided, the stake is refunded.
+  If every leg is called off, the stake is refunded.
 - **Bets are final:** a parlay can't be cancelled.
 - Example: market A has just opened, at 50% Yes; on market B, 30 shares
   of Yes have been bought (about 65% Yes, 35% No). A 10 DC parlay on Yes
@@ -268,7 +268,7 @@ like a solo bet's:
   **1.909028×** (and A's Yes moves to about 55%). 5 DC buys 12.995170
   shares of B's No, so that leg is **2.599034×**. The multiplier is
   1.909028 × 2.599034 = **4.96×**, so the parlay pays **49 DC** if both
-  win. If B is voided instead, it pays 10 × 1.909028 = **19 DC** when A's
+  win. If B is called off instead, it pays 10 × 1.909028 = **19 DC** when A's
   Yes wins.
 
 Parlays placed before October 2026 were fixed when their markets switched
@@ -290,17 +290,17 @@ Each open bet says what it pays if it wins ("10 DC on Yes · pays 18 DC")
 and when its market closes; a settled one says what it did ("won 18 DC",
 "lost", "refunded"). A parlay's card says its stake and what it pays if
 all its picks win, and lists its picks with a word for each: Won, Lost,
-Waiting or Voided.
+Waiting or Called off.
 
 Tap a parlay to open its **breakdown**: what it pays (or paid, or "Lost"),
 its stake and how many times your stake it pays, each pick with its odds
-and where its market stands (Won, Lost, Waiting or Voided), and a short
-sum showing how the multiplier adds up. A voided pick is shown as left
+and where its market stands (Won, Lost, Waiting or Called off), and a short
+sum showing how the multiplier adds up. A called-off pick is shown as left
 out, and the rest carry on.
 
 My bets' **Coins** tab is your coin history: every DC that came in or went
 out, newest first, in plain words ("Won 26 DC on Will it rain?", "Task
-reward: Read Ruth", "Refund: market voided"). It includes the reason for
+reward: Read Ruth", "Refund: market called off"). It includes the reason for
 any balance adjustment the owner made. Only you (and admins, through the
 full ledger) can see it.
 
@@ -318,8 +318,8 @@ full ledger) can see it.
   files or links as proof (see **Proof limits and expiry** under Tasks). The
   reason and proof show on the market page and in the feed. Before anything is paid, the app asks them to confirm,
   naming the winner ("Yes wins").
-- **Reminders:** bettors' DC and parlays wait on a market awaiting
-  resolution until it's resolved, so Home's **Needs you** lists them for
+- **Reminders:** bettors' DC and parlays wait on a market waiting for
+  a result until it's resolved, so Home's **Needs you** lists them for
   whoever should do it (an admin sees how many wait, opening Admin's Markets). A creator sees their own markets as soon as they close
   (unless they have money on one and aren't an admin). Reviewers and admins see any market
   still unresolved 48 hours after closing, and straight away one whose
@@ -329,10 +329,11 @@ full ledger) can see it.
   taken back and the new winners paid; the confirmation says so first. If a past winner has already spent
   their winnings, the override is blocked and names who, so an admin can
   sort out balances first.
-- **Voids:** until a market closes, its creator or an admin can void it;
-  once it has closed, only an admin can, the same way nobody with money on a
+- **Calling a market off:** until a market closes, its creator or an admin
+  can call it off (admins and the database call this *voiding*); once it
+  has closed, only an admin can, the same way nobody with money on a
   market settles it. A creator with money on their own market (a bet or a
-  parlay pick) can't void it at all: they ask an admin. Every void **must say why**, and the reason shows on
+  parlay pick) can't call it off at all: they ask an admin. Calling a market off **must say why**, and the reason shows on
   the market page and in the feed. Every bet on it is refunded what it
   cost, and a parlay pick on it drops out.
 - **Paying out:** each winning bet is paid its shares, rounded down to
@@ -413,7 +414,7 @@ isn't shown.
 - **Podium and records:** once three members are ranked, the top three
   of the Net worth board stand on a podium (This month leads with the
   race instead). From tablet width up, each row shows a win-loss record (like 6-3):
-  your settled solo bets and parlays, all time. Bets on a voided market,
+  your settled solo bets and parlays, all time. Bets on a called-off market,
   or refunded because nobody had backed the winner, are refunds and count
   as neither, and open bets don't count yet.
 - **The race** (This month): a step line for each of the month's top five,
@@ -452,7 +453,7 @@ riding on open bets"). It also has a **Stats** card, which any member can
 see:
 
 - **Solo bets** and **Parlays:** the settled record as won–lost ("17–12"),
-  with the share won and how many were refunded under it. A bet on a voided market, or one refunded because nobody
+  with the share won and how many were refunded under it. A bet on a called-off market, or one refunded because nobody
   had backed the winner, counts as refunded. Cancelled bets, and bets
   still open or waiting to be resolved, don't count. After an override,
   a bet counts by the final result.
@@ -462,7 +463,7 @@ see:
 - **Biggest win:** the largest payout minus its stake on a single solo
   bet, with the market. A payout an override took back doesn't count.
 - **Best parlay:** the won parlay with the highest multiplier (the
-  multiplier fixed when it was placed, less any voided picks, and up to its
+  multiplier fixed when it was placed, less any called-off picks, and up to its
   cap for a parlay from before October 2026), and what it paid.
 - **Markets created** and **Tasks completed** (approved submissions only).
 
@@ -498,7 +499,7 @@ choices are greyed out there, with a line saying why:
 | Notification | When | Starts |
 |---|---|---|
 | **Markets to resolve** | A market you made has closed and is waiting for you to resolve it. Admins and the owner also hear about every closed market that has no result, once each. Sent within about a minute of closing, with a daily backup if that's missed | On |
-| **Results** | A market you bet on, solo or as a parlay pick, is resolved ("You won 26 DC", then the market and its result), changed by an override or voided | On |
+| **Results** | A market you bet on, solo or as a parlay pick, is resolved ("You won 26 DC", then the market and its result), changed by an override or called off | On |
 | **Task reviews** | Your task submission is approved or rejected, with the reviewer's reason, if they gave one | On |
 | **Tasks to review** (reviewers and above only) | A member submits a task waiting for review. Never your own | On |
 | **New markets** | Someone else creates a market | Off |
@@ -532,9 +533,9 @@ sign back in. Your other devices keep theirs.
 
 | Role | Can also…
 |---|---|
-| **Member** | Bet, create markets and edit their own (wording, category, and the closing time while they have no money on it), resolve their own once they close and void them before they close (unless they have money on them), submit tasks |
+| **Member** | Bet, create markets and edit their own (wording, category, and the closing time while they have no money on it), resolve their own once they close and call them off before they close (unless they have money on them), submit tasks |
 | **Reviewer** | Approve and reject task submissions (not their own), and resolve closed markets they have no stake in |
-| **Admin** | Invite people, manage tasks, resolve, override or void any market, move any market's closing time or reopen it, change any market's category, rename, merge and hide categories, delete any comment, view members and the full ledger |
+| **Admin** | Invite people, manage tasks, resolve, override or call off any market, move any market's closing time or reopen it, change any market's category, rename, merge and hide categories, delete any comment, view members and the full ledger |
 | **Owner** (exactly one) | Adjust balances, grant and remove roles, remove a member, and delete a market or task that hasn't been used |
 
 Reviewers and above see what is waiting on them: other members' task
@@ -548,7 +549,7 @@ your own markets and comments. The owner can **remove a member**
 from their page under Admin → Members: they go back to plain member, their
 invite is revoked, they're signed out on every device and their devices
 stop getting notifications, straight away. They can no longer resolve,
-void or edit the markets they created, or delete their comments. Their
+call off or edit the markets they created, or delete their comments. Their
 coins, bets and history stay where they are, but they're left out of both
 leaderboards, the count in a rank like "218th of 502", the month's champion and the weekly
 recap's best call and top tasker, and Admin → Members lists them under
@@ -678,13 +679,13 @@ or reach them through
   whoever got there first); and the markets closing in the week ahead.
   A line with nothing to report is left out, and a quiet week shows no
   recap at all.
-- **Activity:** opened from Home's Activity (See all). Everyone's bets, parlays, new markets, results, voids (with
+- **Activity:** opened from Home's Activity (See all). Everyone's bets, parlays, new markets, results, markets called off (with
   their reason), wins, approved tasks and each month's champion, with their
   reactions, updated live. See [Reactions and comments](#reactions-and-comments).
-  The tabs narrow it: **All**, **Results** (markets resolved or voided,
+  The tabs narrow it: **All**, **Results** (markets resolved or called off,
   bets and parlays won, each month's champion) and **Mine** (your own bets,
-  markets and wins, plus the result or void of any market you have a bet or
-  a parlay pick on, and the void of any market you made).
+  markets and wins, plus the result of any market you have a bet or a parlay
+  pick on, or its being called off, and any market you made being called off).
 - **Finding a market:** on Markets, type in the search box to find a market
   whose title contains what you typed (not case-sensitive, up to 80
   characters). It looks in every status, whichever tab you're on, keeps

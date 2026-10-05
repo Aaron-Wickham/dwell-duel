@@ -157,7 +157,10 @@ a line to `CHANGELOG.md` under the next release.
   maths); **submission**, never "completion" (the table's name); **To
   review** for submissions waiting, never "approvals"; a rank as **"218th
   of 502"** (`rankText`, `lib/format/rank.ts`); **created** a market, never
-  "opened"; **Time to resolve** for a closed market without a result.
+  "opened"; **Time to resolve** for a closed market without a result;
+  **called off**, never "voided", and **waiting for a result**, never
+  "awaiting resolution" (D7, #403; the database values `voided` and
+  `awaiting`, RPC names and the admin ledger's labels keep theirs).
 - **Visual source of truth:** `docs/design/app-redesign-handoff.md`, which
   describes the app as it is. The dated specs and plans in `docs/archive/`
   are history: they name things the code no longer has, so don't build

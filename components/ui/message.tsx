@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { ErrorHaptic } from '@/components/ui/error-haptic'
 import { uiTextClass } from '@/components/ui/page'
 
-// Gold marks static notes like "Awaiting resolution", not news, so it is not a live region.
+// Gold marks static notes like "Waiting for a result", not news, so it is not a live region.
 const TONES = {
   error: { className: 'bg-loss-soft text-loss', Icon: CircleAlert, role: 'alert' },
   ok: { className: 'bg-acc-soft text-acc-text', Icon: CircleCheck, role: 'status' },

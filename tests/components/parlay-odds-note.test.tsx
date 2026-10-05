@@ -17,7 +17,7 @@ describe('ParlayOddsNote', () => {
     const note = screen.getByText(/came from the other members’ money/)
     expect(note).toHaveTextContent('fixed by the time DwellDuel switched to fixed payouts in October 2026')
     expect(note).toHaveTextContent('up to a 20× cap, and a win pays at most 1,000 DC: the old caps still apply.')
-    expect(note).toHaveTextContent('1 voided pick was left out')
+    expect(note).toHaveTextContent('1 called-off pick was left out')
     expect(note).not.toHaveTextContent('stake was split')
   })
 

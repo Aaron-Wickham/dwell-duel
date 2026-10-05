@@ -35,7 +35,7 @@ export function ParlayOddsNote({ parlay, dropped }: { parlay: NoteParlay; droppe
           , and they multiply together{caps}
         </>
       )}
-      {dropped > 0 ? ` ${dropped} voided ${dropped === 1 ? 'pick was' : 'picks were'} left out and the rest carried on.` : ''}
+      {dropped > 0 ? ` ${dropped} called-off ${dropped === 1 ? 'pick was' : 'picks were'} left out and the rest carried on.` : ''}
     </p>
   )
 }

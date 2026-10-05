@@ -104,7 +104,7 @@ function MetaWhen({
   if (status === 'voided' && settledAt) {
     return (
       <>
-        Voided <LocalTime iso={settledAt} format="day" />
+        Called off <LocalTime iso={settledAt} format="day" />
       </>
     )
   }
@@ -185,7 +185,7 @@ export function MarketCard({
           {status === 'resolved' && resolvedOutcomeLabel ? (
             <p className={cn(figureInlineClass, 'break-words')}>{resolvedOutcomeLabel} won</p>
           ) : status === 'voided' ? (
-            <p className={cn(figureInlineClass, 'text-ink2')}>Voided</p>
+            <p className={cn(figureInlineClass, 'text-ink2')}>Called off</p>
           ) : (
             lead && (
               <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">

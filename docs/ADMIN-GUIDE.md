@@ -156,19 +156,21 @@ it out first: talk to them, and if the group agrees, the owner adds DC to
 their balance with a reason (see [Adjusting a balance](#adjusting-a-balance)),
 then override again.
 
-### Voiding
+### Voiding (calling a market off)
 
 Void a market that can't be settled fairly: the question was ambiguous,
-the event was cancelled, or it was made in error.
+the event was cancelled, or it was made in error. Members never see the
+word: the app says the market was **called off**, and a market past its
+close with no result is **waiting for a result** (#403).
 
 - **Who:** until it closes, its creator or an admin; once it has closed,
   only an admin. A creator with a bet or parlay pick on their own market
   can't void it; an admin does.
-- **Steps:** in the **Void market** card, its own card below Resolve on
-  the market page, give the reason (required, up to 500 characters;
+- **Steps:** in the **Call off market** card, its own card below Resolve on
+  the market page, tap **Call off this market**, give the reason (required, up to 500 characters;
   everyone sees it on the market page and in the feed), and confirm.
 - **What happens:** every bet is refunded. A parlay with a pick on it drops
-  that leg and carries on with the rest; a parlay with no legs left is
+  that pick and carries on with the rest; a parlay with no picks left is
   refunded. This can't be undone.
 
 ### Categories (admins)

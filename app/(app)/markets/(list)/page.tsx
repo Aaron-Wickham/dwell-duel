@@ -35,7 +35,7 @@ const GROUPS: { id: MarketCardStatus; heading: string }[] = [
   { id: 'open', heading: 'Open' },
   { id: 'awaiting', heading: 'Waiting for a result' },
   { id: 'resolved', heading: 'Resolved' },
-  { id: 'voided', heading: 'Voided' },
+  { id: 'voided', heading: 'Called off' },
 ]
 
 const EMPTY_TITLES: Record<MarketFilter, string> = {
@@ -47,7 +47,7 @@ const EMPTY_TITLES: Record<MarketFilter, string> = {
 const EMPTY_BODIES: Record<MarketFilter, string> = {
   open: 'Nothing is taking bets right now. Create one to get the next duel going.',
   awaiting: 'Markets past their close time show up here until someone resolves them.',
-  resolved: 'Resolved and voided markets show up here.',
+  resolved: 'Resolved and called-off markets show up here.',
 }
 
 const STATUS_WORDS: Record<MarketFilter, string> = { open: 'open ', awaiting: 'waiting ', resolved: 'resolved ' }

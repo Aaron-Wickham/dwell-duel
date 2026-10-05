@@ -133,7 +133,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
       </>
     ) : market.status === 'voided' && market.settledAt ? (
       <>
-        Voided <LocalTime iso={market.settledAt} format="day" />
+        Called off <LocalTime iso={market.settledAt} format="day" />
       </>
     ) : market.status === 'open' ? (
       <>
@@ -173,7 +173,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           {creatorStake && (
             <p className="text-sm font-bold text-ink2">
               {creatorStake}
-              {stakeBlocks && ' A reviewer or an admin resolves it, and only an admin can void it.'}
+              {stakeBlocks && ' A reviewer or an admin resolves it, and only an admin can call it off.'}
             </p>
           )}
           {market.description && <p className="max-w-[68ch] whitespace-pre-line break-words text-ink2">{market.description}</p>}

@@ -16,12 +16,12 @@ beforeEach(() => {
   success.mockReset()
 })
 
-const reasonField = () => screen.getByRole('textbox', { name: 'Why void this market?' })
+const reasonField = () => screen.getByRole('textbox', { name: 'Why call off this market?' })
 
 async function confirmVoid(reason = 'The sermon was cancelled.') {
   await userEvent.type(reasonField(), reason)
-  await userEvent.click(screen.getByRole('button', { name: 'Void this market' }))
-  await userEvent.click(await screen.findByRole('button', { name: 'Void market' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Call off this market' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Call off market' }))
 }
 
 describe('VoidForm', () => {
@@ -31,26 +31,26 @@ describe('VoidForm', () => {
     expect(field).toBeRequired()
     expect(field).toHaveAttribute('maxlength', '500')
     expect(field).toHaveAttribute('aria-describedby', 'void-reason-hint')
-    expect(screen.getByText('Everyone sees this. Voiding refunds every bet; parlays drop this leg and carry on with the rest.')).toHaveAttribute('id', 'void-reason-hint')
+    expect(screen.getByText('Everyone sees this. Every bet is refunded, and parlays drop this pick and carry on.')).toHaveAttribute('id', 'void-reason-hint')
     expect(screen.queryByRole('alertdialog')).toBeNull()
   })
 
   it('opens an alert dialog with the approved copy, focusing Cancel first', async () => {
     render(<VoidForm marketId="m1" />)
     await userEvent.type(reasonField(), 'Duplicate market')
-    await userEvent.click(screen.getByRole('button', { name: 'Void this market' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Call off this market' }))
 
-    const dialog = await screen.findByRole('alertdialog', { name: 'Void this market?' })
-    expect(dialog).toHaveAccessibleDescription('Every bet is refunded. Parlays drop this leg and carry on with the rest (a parlay with no legs left is refunded). This can’t be undone.')
+    const dialog = await screen.findByRole('alertdialog', { name: 'Call off this market?' })
+    expect(dialog).toHaveAccessibleDescription('Every bet is refunded, and parlays drop this pick and carry on with the rest. This can’t be undone.')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus())
-    expect(screen.getByRole('button', { name: 'Void market' })).toHaveAttribute('type', 'submit')
-    expect(screen.getByRole('button', { name: 'Void market' })).toHaveAttribute('form', 'void-form')
+    expect(screen.getByRole('button', { name: 'Call off market' })).toHaveAttribute('type', 'submit')
+    expect(screen.getByRole('button', { name: 'Call off market' })).toHaveAttribute('form', 'void-form')
   })
 
   it('keeps the reason and voids nothing on Cancel', async () => {
     render(<VoidForm marketId="m1" />)
     await userEvent.type(reasonField(), 'Duplicate market')
-    await userEvent.click(screen.getByRole('button', { name: 'Void this market' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Call off this market' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
@@ -83,7 +83,7 @@ describe('VoidForm', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('This market has closed, so only an admin can void it.')
     expect(reasonField()).toHaveAttribute('aria-invalid', 'false')
-    expect(screen.getByRole('button', { name: 'Void this market' })).toHaveAttribute('aria-describedby', 'void-error')
+    expect(screen.getByRole('button', { name: 'Call off this market' })).toHaveAttribute('aria-describedby', 'void-error')
   })
 
   it('toasts once and returns focus to the page heading once the parent stops rendering the form', async () => {
@@ -96,7 +96,7 @@ describe('VoidForm', () => {
     )
 
     await confirmVoid()
-    await waitFor(() => expect(success).toHaveBeenCalledWith('Market voided.'))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Market called off.'))
     expect(success).toHaveBeenCalledTimes(1)
 
     // A real void revalidates the page, which then stops rendering this form.

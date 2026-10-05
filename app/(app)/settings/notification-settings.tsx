@@ -21,7 +21,7 @@ type Device = 'checking' | 'off' | 'on' | 'denied'
 
 const KINDS: { kind: NotificationKind; label: string; hint: string }[] = [
   { kind: 'resolve_reminders', label: 'Markets to resolve', hint: 'When a market you made has closed and is waiting on you. Admins hear about every market that closes with no result.' },
-  { kind: 'results', label: 'Results', hint: 'When a market you bet on is resolved, changed or voided.' },
+  { kind: 'results', label: 'Results', hint: 'When a market you bet on is resolved, changed or called off.' },
   { kind: 'task_reviews', label: 'Task reviews', hint: 'When your task is approved or rejected.' },
   { kind: 'new_markets', label: 'New markets', hint: 'When someone else creates a market.' },
 ]

@@ -58,8 +58,8 @@ const QUESTIONS: { id: string; question: string; answer: ReactNode }[] = [
     question: 'What if a market is called off?',
     answer: (
       <>
-        It’s voided, with a reason everyone can see. Every bet on it gets back what it cost, and a parlay drops that pick
-        and carries on with the rest. If every pick in a parlay is voided, its stake comes back.
+        It’s called off, with a reason everyone can see. Every bet on it gets back what it cost, and a parlay drops that pick
+        and carries on with the rest. If every pick in a parlay is called off, its stake comes back.
       </>
     ),
   },

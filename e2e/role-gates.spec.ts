@@ -73,7 +73,7 @@ test('a plain member sees no admin controls on someone else’s market, and no A
   await expect(bobPage.getByText('Alice has 1 DC on Yes.')).toBeVisible()
   await expect(bobPage.getByRole('region', { name: 'Outcomes' }).getByRole('button', { name: 'Add Yes to slip' })).toBeVisible()
 
-  await expect(bobPage.getByRole('button', { name: 'Void this market' })).toHaveCount(0)
+  await expect(bobPage.getByRole('button', { name: 'Call off this market' })).toHaveCount(0)
   await expect(bobPage.getByRole('button', { name: 'Resolve market' })).toHaveCount(0)
   await expect(bobPage.getByRole('button', { name: 'Delete this market' })).toHaveCount(0)
   await expect(bobPage.getByRole('button', { name: /^Remove / })).toHaveCount(0)

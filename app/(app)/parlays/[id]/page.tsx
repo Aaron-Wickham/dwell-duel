@@ -47,7 +47,7 @@ function summaryOf(parlay: ParlayDetail): { eyebrow: string | null; figure: stri
 }
 
 function legDetail(leg: ParlayLegDetail) {
-  if (leg.marketStatus === 'voided') return 'Market voided. This pick drops out and the rest carry on.'
+  if (leg.marketStatus === 'voided') return 'Market called off. This pick drops out and the rest carry on.'
   if (leg.marketStatus === 'resolved') return `Resolved: ${leg.winningLabel ?? 'unknown'}`
   return null
 }

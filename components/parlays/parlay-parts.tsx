@@ -13,10 +13,10 @@ const LEG_TONE: Record<LegStatus, StatusChipTone> = {
 
 const LEG_LABEL: Record<LegStatus, string> = {
   open: 'Open',
-  awaiting: 'Awaiting resolution',
+  awaiting: 'Waiting for a result',
   won: 'Won',
   lost: 'Lost',
-  voided: 'Voided',
+  voided: 'Called off',
 }
 
 const SEGMENT: Record<LegStatus, string> = {
@@ -42,7 +42,7 @@ const LEG_WORD: Record<LegStatus, { label: string; className: string }> = {
   awaiting: { label: 'Waiting', className: 'text-ink2' },
   won: { label: 'Won', className: 'font-extrabold text-win' },
   lost: { label: 'Lost', className: 'font-extrabold text-loss' },
-  voided: { label: 'Voided', className: 'text-ink2' },
+  voided: { label: 'Called off', className: 'text-ink2' },
 }
 
 export function LegResult({ status }: { status: LegStatus }) {

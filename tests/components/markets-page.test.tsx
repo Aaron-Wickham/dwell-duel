@@ -100,7 +100,7 @@ function outline(): string[] {
   return [...document.querySelectorAll('h2, a:not(nav a)')]
     // Show more holds an invisible "Loading…" beside its label, to keep its width.
     .map((el) => (el.textContent ?? '').replace('Loading…', ''))
-    .filter((text) => ['Open', 'Waiting for a result', 'Resolved', 'Voided', 'Show more', 'Back to newest'].includes(text))
+    .filter((text) => ['Open', 'Waiting for a result', 'Resolved', 'Called off', 'Show more', 'Back to newest'].includes(text))
 }
 
 beforeEach(() => {
@@ -182,8 +182,8 @@ describe('MarketsPage', () => {
     expect(listResolvedMarkets).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('link', { name: 'Resolved' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Resolved' })).toHaveAttribute('href', '/markets?status=resolved')
-    expect(outline()).toEqual(['Resolved', 'Voided', 'Show more'])
-    expect(screen.getByRole('heading', { level: 2, name: 'Voided' })).not.toHaveClass('sr-only')
+    expect(outline()).toEqual(['Resolved', 'Called off', 'Show more'])
+    expect(screen.getByRole('heading', { level: 2, name: 'Called off' })).not.toHaveClass('sr-only')
     const more = screen.getByRole('link', { name: 'Show more' })
     expect(more).toHaveAttribute('href', `/markets?status=${status}&resolved_from=RESOLVED`)
     expect(more).toHaveAttribute('data-scroll', 'true')

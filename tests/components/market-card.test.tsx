@@ -139,8 +139,8 @@ describe('MarketCard (#389)', () => {
         chart: { outcomes: [], points: [{ t: Date.parse('2026-09-30T09:00:00.000Z'), shares: { a: 0.5, b: 0.5 } }], now: Date.parse('2026-10-05T09:00:00.000Z') },
       }),
     )
-    // The lead and the meta line ("Voided <time>") both say it.
-    expect(screen.getAllByText(/^Voided/)).toHaveLength(2)
+    // The lead and the meta line ("Called off <time>") both say it.
+    expect(screen.getAllByText(/^Called off/)).toHaveLength(2)
     expect(container.querySelector('time')).toHaveAttribute('datetime', '2026-10-01T09:00:00.000Z')
     expect(screen.getByTestId('chart')).toHaveAttribute('data-closed-at', '2026-10-01T09:00:00.000Z')
   })

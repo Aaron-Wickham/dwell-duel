@@ -48,7 +48,7 @@ describe('FeedList', () => {
       />,
     )
     const item = screen.getByRole('listitem')
-    expect(item).toHaveTextContent('Alice voided Social layer market')
+    expect(item).toHaveTextContent('Alice called off Social layer market')
     expect(item).toHaveTextContent('The picnic moved indoors.')
   })
 

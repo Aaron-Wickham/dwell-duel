@@ -43,7 +43,7 @@ const TABS: Record<Tab, { label: string; empty: Empty }> = {
     label: 'Settled',
     empty: {
       title: 'Nothing settled yet.',
-      body: 'Solo bets and parlays show up here once their markets resolve or are voided.',
+      body: 'Solo bets and parlays show up here once their markets resolve or are called off.',
     },
   },
   cancelled: {

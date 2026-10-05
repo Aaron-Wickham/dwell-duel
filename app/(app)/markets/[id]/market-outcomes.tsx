@@ -132,9 +132,9 @@ function OutcomesStatus({ market, canBet, resolution }: { market: MarketDetail; 
   if (market.status === 'voided') {
     return (
       <div className={cn(bannerClass, 'bg-sunk')}>
-        <p className="font-bold">This market was voided. Every bet was refunded, and parlays dropped this pick.</p>
+        <p className="font-bold">This market was called off. Every bet was refunded, and parlays dropped this pick.</p>
         {market.voidReason && (
-          <section aria-label="Why it was voided">
+          <section aria-label="Why it was called off">
             <p className="whitespace-pre-line break-words">{market.voidReason}</p>
           </section>
         )}

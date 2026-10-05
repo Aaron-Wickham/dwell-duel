@@ -56,7 +56,7 @@ export function MarketManage({ market, rights, canBet }: { market: MarketDetail;
         </SectionCard>
       )}
       {canVoid && (
-        <SectionCard title="Void market" titleId="void-title">
+        <SectionCard title="Call off market" titleId="void-title">
           <VoidForm marketId={market.id} />
         </SectionCard>
       )}

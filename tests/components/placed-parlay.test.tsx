@@ -110,7 +110,7 @@ describe('PlacedParlay', () => {
     expect(screen.getByText('Won')).toHaveClass('text-win')
     expect(screen.getByText('Won')).not.toHaveClass('rounded-full')
     expect(screen.getByText('Lost')).toHaveClass('text-loss')
-    expect(screen.getByText('Voided')).toHaveClass('text-ink2')
+    expect(screen.getByText('Called off')).toHaveClass('text-ink2')
   })
 
   it('says a pick past its market’s close time is Waiting, like an open one', () => {

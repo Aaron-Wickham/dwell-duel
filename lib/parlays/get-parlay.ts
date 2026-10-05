@@ -143,7 +143,7 @@ export function tallySummary(tally: ReturnType<typeof legTally>): string {
     tally.lost > 0 && `${tally.lost} lost`,
     tally.open > 0 && `${tally.open} open`,
     tally.awaiting > 0 && `${tally.awaiting} awaiting`,
-    tally.voided > 0 && `${tally.voided} voided`,
+    tally.voided > 0 && `${tally.voided} called off`,
   ].filter(Boolean)
   return parts.join(' · ')
 }

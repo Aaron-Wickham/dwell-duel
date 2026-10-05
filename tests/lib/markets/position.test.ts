@@ -103,7 +103,7 @@ describe('legSummary', () => {
   })
 
   it('says a voided leg drops out', () => {
-    expect(legSummary(position({}, leg('m', 'voided'), [leg('a', 'open')]))).toBe('Pick voided; the parlay continues without it.')
+    expect(legSummary(position({}, leg('m', 'voided'), [leg('a', 'open')]))).toBe('Pick called off; the parlay continues without it.')
   })
 
   it('gives the parlay’s own result once it has settled', () => {

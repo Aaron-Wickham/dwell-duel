@@ -66,12 +66,12 @@ describe('push payloads', () => {
 
   it('tells solo bettors a void refunds them, and parlay holders the leg is dropped', () => {
     expect(result({ status: 'voided', outcomeLabel: null })).toEqual({
-      title: 'Market voided',
+      title: 'Market called off',
       body: 'Will it rain?: your stake is refunded',
     })
     expect(result({ status: 'voided', outcomeLabel: null, hasSolo: false })).toEqual({
-      title: 'Market voided',
-      body: 'Will it rain? was dropped from your parlay',
+      title: 'Market called off',
+      body: 'Will it rain? was called off. Your parlay carries on without it.',
     })
   })
 

@@ -56,7 +56,7 @@ export function describeEvent(e: FeedEvent): Segment[] {
       // The title is usually a question, so a colon after "resolved" read badly (COPY-09).
       return [market(e), ` resolved ${e.outcomeLabel}`]
     case 'market_voided':
-      return [actor(e), ' voided ', market(e)]
+      return [actor(e), ' called off ', market(e)]
     case 'bet_won':
       return [actor(e), ` won ${formatDcAmount(e.amount ?? 0)} on `, market(e)]
     case 'parlay_won':

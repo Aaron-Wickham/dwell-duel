@@ -28,7 +28,7 @@ export function coinLabel(type: string, amount: number, meta: EntryMeta, lookups
     case 'bet_won':
       return market ? `Won ${dc} on ${market}` : `Won ${dc}`
     case 'bet_voided_refund':
-      return onMarket('Refund: market voided')
+      return onMarket('Refund: market called off')
     case 'bet_refunded':
       return onMarket('Refund: nobody picked the winner')
     case 'bet_cancelled':
@@ -40,7 +40,7 @@ export function coinLabel(type: string, amount: number, meta: EntryMeta, lookups
     case 'parlay_won':
       return `Won ${dc} on a parlay`
     case 'parlay_refunded':
-      return 'Refund: parlay voided'
+      return 'Refund: parlay called off'
     case 'parlay_reversed':
       return 'Parlay payout taken back: result changed'
     case 'task_completed': {

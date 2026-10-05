@@ -270,8 +270,8 @@ describe('MarketOutcomes', () => {
   // A voided market's legs dropped out of their parlays, though parlay_legs still names them.
   it('says the market was voided and what happened to stakes, with no parlay line, and doesn’t ask', async () => {
     const card = await renderOutcomes(new Map([['o-yes', 45]]), { status: 'voided', voidReason: 'The picnic moved.' })
-    expect(within(card).getByText('This market was voided. Every bet was refunded, and parlays dropped this pick.')).toBeInTheDocument()
-    expect(within(card).getByRole('region', { name: 'Why it was voided' })).toHaveTextContent('The picnic moved.')
+    expect(within(card).getByText('This market was called off. Every bet was refunded, and parlays dropped this pick.')).toBeInTheDocument()
+    expect(within(card).getByRole('region', { name: 'Why it was called off' })).toHaveTextContent('The picnic moved.')
     expect(screen.queryByText(/riding in parlays/)).toBeNull()
     expect(getParlayRiding).not.toHaveBeenCalled()
   })

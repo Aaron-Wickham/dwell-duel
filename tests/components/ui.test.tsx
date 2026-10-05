@@ -135,8 +135,8 @@ describe('Message', () => {
   })
 
   it('keeps gold messages out of live regions, since they are static notes', () => {
-    render(<Message tone="gold">Awaiting resolution</Message>)
-    expect(screen.getByText('Awaiting resolution')).toBeInTheDocument()
+    render(<Message tone="gold">Waiting for a result</Message>)
+    expect(screen.getByText('Waiting for a result')).toBeInTheDocument()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })

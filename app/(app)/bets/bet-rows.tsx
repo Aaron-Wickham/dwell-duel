@@ -12,7 +12,7 @@ import { formatDcAmount } from '@/lib/format/dc'
 
 // List cards on the page (D2), two across at lg, with a parlay spanning both (#393). Each keeps
 // its own height (items-start); full-width parlays leave no holes beside a tall card.
-const betListClass = cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-3')
+const betListClass = cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-5')
 
 function Row({
   domId,

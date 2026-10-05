@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import type { ComponentType } from 'react'
 import { render, screen } from '@testing-library/react'
 
@@ -7,10 +7,18 @@ vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
 )
 
+// My bets' loading state picks its skeleton from the URL's tab.
+const search = vi.hoisted(() => ({ params: null as URLSearchParams | null }))
+vi.mock('next/navigation', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/navigation')>()),
+  useSearchParams: () => search.params,
+}))
+
 import HomeLoading from '@/app/(app)/(home)/loading'
 import MarketsLoading from '@/app/(app)/markets/(list)/loading'
 import CreateMarketLoading from '@/app/(app)/markets/new/loading'
 import BetsLoading from '@/app/(app)/bets/loading'
+import { CoinsSkeleton } from '@/app/(app)/bets/skeletons'
 import TasksLoading from '@/app/(app)/tasks/loading'
 import ProfileLoading from '@/app/(app)/profile/loading'
 import SettingsLoading from '@/app/(app)/settings/loading'
@@ -29,6 +37,7 @@ const SKELETONS: [string, ComponentType][] = [
   ['markets', MarketsLoading],
   ['create-market', CreateMarketLoading],
   ['bets', BetsLoading],
+  ['bets-coins', CoinsSkeleton],
   ['tasks', TasksLoading],
   ['profile', ProfileLoading],
   ['settings', SettingsLoading],
@@ -66,6 +75,28 @@ describe.each(SKELETONS)('the %s skeleton', (name, Loading) => {
   })
 })
 
+describe('the My bets skeleton', () => {
+  afterEach(() => {
+    search.params = null
+  })
+
+  it('draws Coins’ day groups of divided rows at the reading width on the Coins tab (#418)', () => {
+    search.params = new URLSearchParams('tab=coins')
+    const { container } = render(<BetsLoading />)
+    expect(container.querySelector('[data-skeleton="bets"]')).toBeNull()
+    const coins = container.querySelector('[data-skeleton="bets-coins"]')!
+    expect(coins).toHaveClass('max-w-[980px]')
+    expect(coins.querySelectorAll('.divide-y')).toHaveLength(2)
+  })
+
+  it.each(['open', 'settled', 'cancelled'])('draws the bet cards in the wide column on the %s tab', (tab) => {
+    search.params = new URLSearchParams(`tab=${tab}`)
+    const { container } = render(<BetsLoading />)
+    expect(container.querySelector('[data-skeleton="bets-coins"]')).toBeNull()
+    expect(container.querySelector('[data-skeleton="bets"]')).toHaveClass('max-w-[1280px]')
+  })
+})
+
 describe('skeletons of reading-width pages', () => {
   it.each([
     ['feed', FeedLoading],
@@ -73,6 +104,7 @@ describe('skeletons of reading-width pages', () => {
     ['how-it-works-rules', HowItWorksRulesLoading],
     ['settings', SettingsLoading],
     ['profile', ProfileLoading],
+    ['bets-coins', CoinsSkeleton],
   ] as const)('the %s skeleton is centred at the reading width, like its page', (name, Loading) => {
     const { container } = render(<Loading />)
     expect(container.querySelector(`[data-skeleton="${name}"]`)).toHaveClass('max-w-[980px]', 'mx-auto')

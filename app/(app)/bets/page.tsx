@@ -138,7 +138,7 @@ export default async function MyBetsPage(props: PageProps<'/bets'>) {
     const page = await listMyTransactions(supabase, user.id, pageParams)
     section = (
       <TabSection tab={tab} page={page} searchParams={searchParams}>
-        <CoinRows entries={page.rows} rowIdPrefix={tab} />
+        <CoinRows entries={page.rows} rowIdPrefix={tab} now={new Date()} />
       </TabSection>
     )
   } else if (tab === 'cancelled') {
@@ -158,7 +158,9 @@ export default async function MyBetsPage(props: PageProps<'/bets'>) {
   }
 
   return (
-    <Page transition="tab">
+    // Coins is one stream of rows, so it reads at the reading width; the bet tabs' cards take the
+    // wide column. The header and tabs move with it, keeping one pair of edges.
+    <Page transition="tab" width={tab === 'coins' ? 'reading' : 'wide'}>
       <PageHeader title="My bets" />
       <LiveTables subscriptions={tab === 'coins' ? pageSubscriptions.myCoins(user.id) : pageSubscriptions.myBets(user.id)} renderedAt={renderStamp()} />
       <ShowMoreFocus />

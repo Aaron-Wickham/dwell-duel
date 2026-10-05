@@ -208,15 +208,20 @@ back). The owner can also **Delete** a task nobody has submitted yet.
 ### Reviewing submissions (reviewers and above)
 
 **Admin → Tasks → Pending approvals** lists submissions oldest first, 50 at
-a time, with **Show more** for the rest. Each shows who, which task, the
-reward, their note and any proof.
+a time, with **Show more** for the rest. On a computer it's a table (member,
+task and reward, proof, when it was sent); on a phone, one compact row each.
+Tap a row's proof line ("Note · 1 photo") to read their note and open any
+proof.
 
 - **Approve** pays the reward at once. It doesn't ask first.
-- **Reject** takes an optional reason (up to 500 characters). The member
-  sees "Not approved" and the reason, and can submit again.
-- **Select all**, or tick several, then **Approve selected** (it asks
-  first, saying how many it approves and how much it pays) or **Reject
-  selected** with one shared reason.
+- **Reject…** opens a small window asking why, optionally (up to 500
+  characters). The member sees "Not approved" and the reason, and can
+  submit again.
+- The bar at the top of the queue stays in view as you scroll. **Select
+  all**, or tick several, and it says how many are selected and what they
+  pay. **Approve selected** asks first, saying how many it approves and how
+  much it pays; **Reject selected…** asks for one optional reason, sent to
+  each of them.
 - **Your own submissions** are in the list but can't be reviewed by you;
   another reviewer does those.
 
@@ -226,10 +231,13 @@ at it when you review.
 ## Members (owner)
 
 **Admin → Members** lists everyone, A to Z, in two tabs: **Active** and
-**Removed**. Search finds a member by name or email. Each row opens that
-member's Admin page: their email, when they joined and last signed in,
-their balance and their last five coin movements (**Open in Ledger** shows
-all of them). Admins can look; the cards below are the owner's.
+**Removed**: on a computer a table of name and email, role, balance, net
+worth (balance plus DC riding on open bets) and when they joined. Search
+finds a member by name or email. A member's name opens their Admin page:
+their email, when they joined and last signed in, their balance and their
+last five coin movements (**Open in Ledger** shows all of them), then the
+owner's cards below, with Access last. Admins can look; the cards are the
+owner's.
 
 ### Adjusting a balance
 

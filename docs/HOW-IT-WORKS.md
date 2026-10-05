@@ -446,10 +446,13 @@ isn't shown.
 
 ## Profile stats
 
-Every member's profile has a **Stats** card, which any member can see:
+A member's profile shows their net worth and rank, and how the net worth
+splits into balance and DC riding on open bets ("4,886 DC balance + 275 DC
+riding on open bets"). It also has a **Stats** card, which any member can
+see:
 
-- **Solo bets** and **Parlays:** how many settled bets were won, lost
-  and refunded. A bet on a voided market, or one refunded because nobody
+- **Solo bets** and **Parlays:** the settled record as won–lost ("17–12"),
+  with the share won and how many were refunded under it. A bet on a voided market, or one refunded because nobody
   had backed the winner, counts as refunded. Cancelled bets, and bets
   still open or waiting to be resolved, don't count. After an override,
   a bet counts by the final result.
@@ -487,7 +490,10 @@ bets yet." and shows only markets created and tasks completed.
 DwellDuel can send notifications to your phone or computer, even when
 the app is closed. They're off until you turn them on, under **Settings →
 Notifications**, on each device you want them on. You choose what you
-hear about, and your choices apply on every device:
+hear about, and your choices follow your account onto every device. Where a
+device can't get notifications (an iPhone that hasn't added DwellDuel to
+the Home Screen, a browser without them, or notifications blocked), the
+choices are greyed out there, with a line saying why:
 
 | Notification | When | Starts |
 |---|---|---|
@@ -690,9 +696,12 @@ or reach them through
   Tap your avatar (top right) for a menu: **Your profile** (where Edit
   profile lives), **Settings**, **Admin** for reviewers and above, and
   **Send feedback**.
-- **Settings:** theme (System, Light or Dark), vibration on taps (Android),
-  reduced animations, your profile (photo and name), [notifications](#notifications), how to install the app (on a phone browser that hasn't yet), this How it works
-  page, [what DwellDuel keeps about you](#your-data), and sign out. Signing out only signs out the device you're on, and
+- **Settings:** on this device, theme (System, Light or Dark), vibration on
+  taps (Android) and reduced animations; [notifications](#notifications); how
+  to install the app (on a phone browser that hasn't yet); How it works (the
+  short version, which links to these full rules) and
+  [what DwellDuel keeps about you](#your-data); and your account: your
+  profile (photo and name) and sign out. Signing out only signs out the device you're on, and
   stops its notifications; your other devices stay signed in.
 - **Install it:** add DwellDuel to your Home Screen for a full-screen app
   with a launch animation. It shows an offline page when you lose

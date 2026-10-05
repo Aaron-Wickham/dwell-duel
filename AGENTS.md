@@ -120,7 +120,7 @@ a line to `CHANGELOG.md` under the next release.
   form through its `form` attribute. A form with several submit buttons
   passes `useConfirmSubmit` a predicate naming which ones ask. The one
   exception is approving a single task submission from its row, which
-  stays a direct button (the e2e suite clicks the first "Approve");
+  stays a direct button (the e2e specs click a row's own "Approve");
   "Approve selected" confirms, saying how many it approves and what it pays.
 - **Controls.** Every control is a real `<button>`, `<a>` or `<label>`ed
   input, at least 44px tall. Selects and checkboxes stay native. When a

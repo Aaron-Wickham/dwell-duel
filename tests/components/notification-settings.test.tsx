@@ -221,7 +221,7 @@ describe('NotificationSettings', () => {
   })
 
   it('saves the choices, and keeps them as ticked when the save fails', async () => {
-    stubBrowser({ push: false })
+    stubBrowser()
     saveNotificationPrefsAction.mockResolvedValue({ formError: 'Couldn’t save your notification choices.' })
     renderCard()
 
@@ -237,5 +237,35 @@ describe('NotificationSettings', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t save your notification choices.')
     expect(screen.getByRole('checkbox', { name: 'New markets' })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: 'Results' })).not.toBeChecked()
+  })
+
+  // #398: the choices can't be changed where notifications can't work, and say why in one line.
+  it.each([
+    ['the server has no push keys', { publicKey: null }, {}, 'You can choose these on a device that can get notifications.'],
+    ['the browser can’t do push', {}, { push: false }, 'You can choose these on a device that can get notifications.'],
+    ['an iPhone isn’t on the Home Screen yet', {}, { push: false, ua: IPHONE_UA }, 'You can choose these once DwellDuel is on your Home Screen.'],
+  ] as const)('disables the choices when %s', (_case, props, browser, reason) => {
+    stubBrowser(browser)
+    renderCard(props)
+    const newMarkets = screen.getByRole('checkbox', { name: 'New markets' })
+    expect(newMarkets).toBeDisabled()
+    expect(screen.getByRole('group', { name: 'Notify me about' })).toHaveAccessibleDescription(reason)
+    expect(screen.getByRole('button', { name: 'Save choices' })).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('disables the choices while notifications are blocked on this device', async () => {
+    stubBrowser()
+    permission = 'denied'
+    renderCard()
+    expect(await screen.findByText('You can choose these once notifications are allowed.')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'Results' })).toBeDisabled()
+  })
+
+  it('leaves the choices on while this device is off, since they follow the account', async () => {
+    stubBrowser()
+    renderCard()
+    await screen.findByRole('button', { name: 'Turn on notifications' })
+    expect(screen.getByRole('checkbox', { name: 'Results' })).toBeEnabled()
+    expect(screen.getByText(/These choices follow your account/)).toBeInTheDocument()
   })
 })

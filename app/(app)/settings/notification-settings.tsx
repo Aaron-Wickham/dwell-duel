@@ -1,7 +1,6 @@
 'use client'
 
 import { useActionState, useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { BellOff, BellRing } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
@@ -63,8 +62,20 @@ async function readyRegistration(): Promise<ServiceWorkerRegistration> {
   ])
 }
 
-function DeviceStatus({ userId, publicKey, endpoints }: { userId: string; publicKey: string; endpoints: string[] }) {
-  const [device, setDevice] = useState<Device>('checking')
+function DeviceStatus({
+  userId,
+  publicKey,
+  endpoints,
+  device,
+  setDevice,
+}: {
+  userId: string
+  publicKey: string
+  endpoints: string[]
+  // Held by NotificationSettings, which disables the choices while this device is blocked.
+  device: Device
+  setDevice: (device: Device) => void
+}) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Turning on swaps the button for its opposite, so focus follows to the new one; the buttons
@@ -96,7 +107,7 @@ function DeviceStatus({ userId, publicKey, endpoints }: { userId: string; public
     return () => {
       live = false
     }
-  }, [endpoints, userId])
+  }, [endpoints, userId, setDevice])
 
   async function turnOn() {
     if (busy) return
@@ -162,7 +173,7 @@ function DeviceStatus({ userId, publicKey, endpoints }: { userId: string; public
     <div className="flex flex-col items-start gap-3">
       {device === 'checking' && <p className="text-ink2">Checking this device…</p>}
       {device === 'denied' && (
-        <Message tone="gold" icon={BellOff}>
+        <Message tone="gold">
           Notifications are blocked for DwellDuel on this device. Allow them for this site in your browser or phone settings,
           then reload this page.
         </Message>
@@ -171,7 +182,6 @@ function DeviceStatus({ userId, publicKey, endpoints }: { userId: string; public
         <>
           <p className="text-ink2">Notifications are off on this device.</p>
           <Button ref={button} variant="secondary" size="sm" onClick={turnOn} aria-disabled={busy || undefined}>
-            <BellRing aria-hidden="true" className="size-[18px]" />
             Turn on notifications
           </Button>
         </>
@@ -180,7 +190,6 @@ function DeviceStatus({ userId, publicKey, endpoints }: { userId: string; public
         <>
           <p className="text-ink2">Notifications are on for this device.</p>
           <Button ref={button} variant="secondary" size="sm" onClick={turnOff} aria-disabled={busy || undefined}>
-            <BellOff aria-hidden="true" className="size-[18px]" />
             Turn off on this device
           </Button>
         </>
@@ -190,21 +199,40 @@ function DeviceStatus({ userId, publicKey, endpoints }: { userId: string; public
   )
 }
 
-function PrefsForm({ prefs, reviewer }: { prefs: NotificationPrefs; reviewer: boolean }) {
+function PrefsForm({
+  prefs,
+  reviewer,
+  unavailable,
+}: {
+  prefs: NotificationPrefs
+  reviewer: boolean
+  // Why the choices can't be changed here, when they can't (#398).
+  unavailable: string | null
+}) {
   const [values, setValues] = useState(prefs)
   const [state, formAction] = useActionState<PrefsState, FormData>(
     withSuccessToast(saveNotificationPrefsAction, (s) => Boolean(s?.formError), 'Notification choices saved.'),
     undefined,
   )
   const errorId = 'notification-prefs-error'
+  const reasonId = 'notification-prefs-unavailable'
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <fieldset className="flex flex-col gap-3" aria-describedby={state?.formError ? errorId : undefined}>
+      <fieldset
+        className="flex flex-col gap-3"
+        disabled={unavailable !== null}
+        aria-describedby={[unavailable ? reasonId : null, state?.formError ? errorId : null].filter(Boolean).join(' ') || undefined}
+      >
         <legend className={`mb-1.5 ${labelClass}`}>Notify me about</legend>
+        {unavailable && (
+          <p id={reasonId} className="text-sm text-ink2">
+            {unavailable}
+          </p>
+        )}
         {(reviewer ? [...KINDS, REVIEWER_KIND] : KINDS).map(({ kind, label, hint }) => (
           <div key={kind} className="flex flex-col gap-0.5">
-            <label className="pressable inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold">
+            <label className="pressable inline-flex min-h-11 cursor-pointer items-center gap-2.5 self-start font-bold has-disabled:cursor-default has-disabled:text-ink2">
               <input
                 type="checkbox"
                 name={kind}
@@ -224,13 +252,13 @@ function PrefsForm({ prefs, reviewer }: { prefs: NotificationPrefs; reviewer: bo
       </fieldset>
       {/* Not offered to a member, but a save mustn't switch it off for when they become a reviewer. */}
       {!reviewer && <input type="hidden" name="review_alerts" value={values.review_alerts ? 'on' : ''} />}
-      <p className="text-sm text-ink2">These choices apply on every device where notifications are on.</p>
+      {!unavailable && <p className="text-sm text-ink2">These choices follow your account, on every device where notifications are on.</p>}
       {state?.formError && (
         <Message tone="error" id={errorId}>
           {state.formError}
         </Message>
       )}
-      <FormSubmitButton variant="secondary" size="sm" className="self-start">
+      <FormSubmitButton variant="secondary" size="sm" className="self-start" disabled={unavailable !== null}>
         Save choices
       </FormSubmitButton>
     </form>
@@ -251,6 +279,16 @@ export function NotificationSettings({
   reviewer: boolean
 }) {
   const support = useSyncExternalStore(subscribe, detectSupport, () => null)
+  const [device, setDevice] = useState<Device>('checking')
+  // Unknown until the browser answers, so the choices don't flash disabled on every load.
+  const unavailable =
+    !publicKey || support === 'unsupported'
+      ? 'You can choose these on a device that can get notifications.'
+      : support === 'ios-install'
+        ? 'You can choose these once DwellDuel is on your Home Screen.'
+        : support === 'supported' && device === 'denied'
+          ? 'You can choose these once notifications are allowed.'
+          : null
 
   return (
     <div className="flex flex-col gap-5">
@@ -264,9 +302,9 @@ export function NotificationSettings({
       ) : support === 'unsupported' ? (
         <p className="text-ink2">This browser can’t show notifications from DwellDuel.</p>
       ) : support === 'supported' ? (
-        <DeviceStatus userId={userId} publicKey={publicKey} endpoints={endpoints} />
+        <DeviceStatus userId={userId} publicKey={publicKey} endpoints={endpoints} device={device} setDevice={setDevice} />
       ) : null}
-      <PrefsForm prefs={prefs} reviewer={reviewer} />
+      <PrefsForm prefs={prefs} reviewer={reviewer} unavailable={unavailable} />
     </div>
   )
 }

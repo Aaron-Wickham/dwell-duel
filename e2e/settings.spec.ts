@@ -53,33 +53,30 @@ test('Settings is reached from the avatar menu', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible()
 })
 
-test('the Notifications card saves which notifications you want', async ({ page }) => {
+// Saving the choices is covered by tests/components/notification-settings.test.tsx: they can only
+// be changed where notifications can work, and this server has no VAPID keys (#398).
+test('the Notifications card shows your choices, disabled with a reason where push can’t work', async ({ page }) => {
   await page.goto('/settings')
   // exact, since sonner's toast region is labelled "Notifications alt+T".
   const card = page.getByRole('region', { name: 'Notifications', exact: true })
   await expect(card).toBeVisible()
   // Playwright's server runs without the VAPID keys, so this device can't subscribe here.
   await expect(card.getByText(/Notifications aren’t available here/)).toBeVisible()
+  await expect(card.getByText('You can choose these on a device that can get notifications.')).toBeVisible()
 
   const newMarkets = card.getByRole('checkbox', { name: 'New markets' })
   const results = card.getByRole('checkbox', { name: 'Results' })
   await expect(newMarkets).not.toBeChecked()
+  await expect(newMarkets).toBeDisabled()
   await expect(results).toBeChecked()
+  await expect(card.getByRole('button', { name: 'Save choices' })).toHaveAttribute('aria-disabled', 'true')
+})
 
-  await newMarkets.check()
-  await results.uncheck()
-  await card.getByRole('button', { name: 'Save choices' }).click()
-  await expect(page.getByText('Notification choices saved.')).toBeVisible()
-
-  await page.reload()
-  await expect(newMarkets).toBeChecked()
-  await expect(results).not.toBeChecked()
-
-  // Back to the defaults, so a rerun starts from the same place.
-  await newMarkets.uncheck()
-  await results.check()
-  await card.getByRole('button', { name: 'Save choices' }).click()
-  await expect(page.getByText('Notification choices saved.')).toBeVisible()
+test('Settings says which cards apply to this device and which to your account (#398)', async ({ page }) => {
+  await page.goto('/settings')
+  await expect(page.getByRole('region', { name: 'Appearance & motion' })).toContainText('On this device.')
+  await expect(page.getByRole('region', { name: 'Account' })).toContainText('every device you sign in on')
+  await expect(page.getByText('These apply on this device.')).toHaveCount(0)
 })
 
 test('Settings links to How it works and to its Your data section (#286)', async ({ page }) => {
@@ -87,6 +84,6 @@ test('Settings links to How it works and to its Your data section (#286)', async
   const help = page.getByRole('region', { name: 'Help' })
   await expect(help.getByRole('link', { name: 'How it works' })).toHaveAttribute('href', '/how-it-works')
   await help.getByRole('link', { name: 'Your data' }).click()
-  await expect(page).toHaveURL(/\/how-it-works#how-your-data$/)
+  await expect(page).toHaveURL(/\/how-it-works\/rules#how-your-data$/)
   await expect(page.getByRole('heading', { level: 2, name: 'Your data' })).toBeInViewport()
 })

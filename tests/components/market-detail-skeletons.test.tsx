@@ -57,7 +57,7 @@ describe('the market chart skeleton', () => {
 
     const plot = container.querySelector('.skeleton.h-\\[220px\\]')!
     expect(plot).toHaveClass('md:h-[300px]')
-    expect(plot.previousElementSibling).toHaveClass('min-h-11')
+    expect(plot.previousElementSibling).toHaveClass('h-[52px]')
     expect(plot.nextElementSibling).toHaveClass('skeleton', 'h-5')
   })
 })
@@ -78,6 +78,22 @@ describe('the market outcomes skeleton', () => {
     const rows = container.querySelector('[data-skeleton="market-outcomes"] .divide-y')
     expect(rows?.querySelectorAll('.skeleton.h-11')).toHaveLength(0)
     expect(container.querySelector('.skeleton.rounded-tile')).not.toBeNull()
+  })
+
+  // #390: the real card's heights, so the rail under it doesn't move when the outcomes land.
+  it('draws each row at its real height, and the parlay line only when something rides in parlays', () => {
+    const { container, rerender } = render(<MarketOutcomesSkeleton outcomes={2} canBet />)
+    const rows = () => container.querySelector('[data-skeleton="market-outcomes"] .divide-y')!
+    for (const row of rows().children) expect(row).toHaveClass('h-[70px]')
+    expect(container.querySelector('.border-t.pt-3')).toBeNull()
+    rerender(<MarketOutcomesSkeleton outcomes={2} canBet ridingNote />)
+    expect(container.querySelector('.border-t.pt-3')).not.toBeNull()
+  })
+
+  it('opens a market waiting on its result with one plain line, not a banner', () => {
+    const { container } = render(<MarketOutcomesSkeleton outcomes={2} canBet={false} waiting />)
+    expect(container.querySelector('.skeleton.rounded-tile')).toBeNull()
+    expect(container.querySelector('.h-8.pb-2')).not.toBeNull()
   })
 })
 

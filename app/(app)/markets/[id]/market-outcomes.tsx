@@ -29,17 +29,20 @@ export async function MarketOutcomes({
   slip,
   canBet,
   resolution,
+  riding: ridingRead,
 }: {
   market: MarketDetail
   odds: OutcomeOdds[]
   slip: string[]
   canBet: boolean
   resolution: ResolutionProof | null
+  // What's riding in parlays per outcome, when the page has read it already.
+  riding?: Map<string, number>
 }) {
   const { supabase } = await requireUser()
   // A voided market's legs dropped out of their parlays, but parlay_legs has no status of its own,
   // so the read would still count them.
-  const riding = market.status === 'voided' ? new Map<string, number>() : await getParlayRiding(supabase, market.id)
+  const riding = ridingRead ?? (market.status === 'voided' ? new Map<string, number>() : await getParlayRiding(supabase, market.id))
   const ridingTotal = [...riding.values()].reduce((sum, n) => sum + n, 0)
 
   const lmsr = market.pricing === 'lmsr'

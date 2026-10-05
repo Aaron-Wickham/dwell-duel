@@ -2,7 +2,7 @@ import type { MarketDetail } from '@/lib/markets/get-market'
 import { SectionCard } from '@/components/ui/section-card'
 import { DeleteMarketButton } from './delete-market-button'
 import { ResolveForm } from './resolve-form'
-import { VoidForm } from './void-form'
+import { VoidDisclosure } from './void-disclosure'
 
 // What the viewer may do to the market, read before anything streams (page.tsx), so the page
 // knows where these cards go and holds no skeleton for cards that never come.
@@ -24,7 +24,8 @@ export function hasManageCards(rights: ManageRights): boolean {
 }
 
 // Resolve and Void are separate cards (#390), so two forms with two submit buttons never share
-// one, and Void, which refunds everything, sits below and quieter. Each still confirms first.
+// one, and Void, which refunds everything, sits below, quieter and folded behind a button. Each
+// still confirms first.
 export function MarketManage({ market, rights, canBet }: { market: MarketDetail; rights: ManageRights; canBet: boolean }) {
   const { canResolve, canOverride, canVoid, canDelete, hasStake, admin } = rights
   const showResolve = canResolve || canOverride
@@ -57,7 +58,7 @@ export function MarketManage({ market, rights, canBet }: { market: MarketDetail;
       )}
       {canVoid && (
         <SectionCard title="Call off market" titleId="void-title">
-          <VoidForm marketId={market.id} />
+          <VoidDisclosure marketId={market.id} />
         </SectionCard>
       )}
       {canDelete && (

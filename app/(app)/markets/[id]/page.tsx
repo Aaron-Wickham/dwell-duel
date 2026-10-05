@@ -42,6 +42,7 @@ import { describeMarketStake, getCreatorStakes } from '@/lib/markets/creator-sta
 import { hasBetHistory } from '@/lib/markets/bet-history'
 import { listMarketEdits } from '@/lib/markets/market-edits'
 import { listCategoryCounts, mostUsedCategories } from '@/lib/markets/categories'
+import { getParlayRiding } from '@/lib/markets/parlay-riding'
 
 // No loading.tsx for this route (and the markets list's own loading.tsx sits in the (list)
 // group, so it doesn't wrap this one): the market must be found before anything streams, so an
@@ -61,7 +62,9 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // The position keys and the viewer's rights are read before anything streams, so a viewer with
   // nothing on the market gets no card and no skeleton for one, and the resolve and void cards
   // take their place straight away: a placeholder that then vanished would shift the page.
-  const [resolution, edits, role, creatorStakes, positionKeys, categoryCounts, resolvable, voidable, stake] = await Promise.all([
+  // What rides in parlays is read here too, so the outcomes' skeleton knows whether to hold the
+  // line that says so, and the rail below it doesn't move when the outcomes land (#390).
+  const [resolution, edits, role, creatorStakes, positionKeys, categoryCounts, resolvable, voidable, stake, riding] = await Promise.all([
     market.status === 'resolved' ? getResolutionProof(supabase, market.id) : null,
     market.editedAt ? listMarketEdits(supabase, market.id) : [],
     getRole(supabase),
@@ -71,7 +74,10 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
     rpcFlag(supabase.rpc('can_resolve_market', { p_market_id: market.id })),
     rpcFlag(supabase.rpc('can_void_market', { p_market_id: market.id })),
     rpcFlag(supabase.rpc('has_stake_in_market', { p_market_id: market.id, p_profile_id: user.id })),
+    // A called-off market's picks dropped out of their parlays, but parlay_legs keeps them.
+    market.status === 'voided' ? new Map<string, number>() : getParlayRiding(supabase, market.id),
   ])
+  const ridingNote = [...riding.values()].some((dc) => dc > 0)
   const positionRows = positionKeys.betIds.length + positionKeys.parlayIds.length
 
   const odds = marketOdds(market)
@@ -109,8 +115,8 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   }
   const manage = hasManageCards(rights)
   // Waiting on its result, the viewer's one job here is to resolve it, so on a phone the cards come
-  // straight after the outcomes and the position, not under every bet and comment (CR-A12).
-  const manageFirst = market.status === 'open' && isPastClose
+  // straight after the outcomes, before the chart, not under every bet and comment (CR-A12, #390).
+  const manageFirst = market.status === 'open' && isPastClose && rights.canResolve
   // The rail holds still beside a long chart, bets and comments, unless it carries the resolve or
   // void forms, which could be taller than the screen and then never show their bottom.
   const stickyRail = !manage
@@ -186,8 +192,8 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           From lg: the chart, comments and bets on the left; on the right a rail with the outcomes,
           Your position and any resolve or void cards. The rail comes first in the markup, since
           betting is the page's job (#390). On a phone both columns are display: contents, so every
-          section is one flex column, ordered: outcomes, chart, position, (resolve and void while
-          the market waits on a result), comments, bets, then any other cards. */}
+          section is one flex column, ordered: outcomes, (resolve and void while the market waits on
+          a result the viewer can give), chart, position, comments, bets, then any other cards. */}
       <LoadingStatus>
         <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-7">
           <div
@@ -197,25 +203,30 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
             )}
           >
             <div className="order-1 lg:order-none">
-              <Suspense fallback={<MarketOutcomesSkeleton outcomes={market.outcomes.length} canBet={canBet} />}>
-                <MarketOutcomes market={market} odds={odds} slip={slip} canBet={canBet} resolution={resolution} />
+              <Suspense fallback={<MarketOutcomesSkeleton
+                    outcomes={market.outcomes.length}
+                    canBet={canBet}
+                    waiting={market.status === 'open' && !canBet}
+                    ridingNote={ridingNote}
+                  />}>
+                <MarketOutcomes market={market} odds={odds} slip={slip} canBet={canBet} resolution={resolution} riding={riding} />
               </Suspense>
             </div>
             {positionRows > 0 && (
-              <div className="order-3 lg:order-none">
+              <div className={cn('lg:order-none', manageFirst ? 'order-4' : 'order-3')}>
                 <Suspense fallback={<MarketPositionSkeleton rows={positionRows} />}>
                   <MarketPosition market={market} keys={positionKeys} now={now} />
                 </Suspense>
               </div>
             )}
             {manage && (
-              <div className={cn('flex flex-col gap-5 lg:order-none lg:gap-7', manageFirst ? 'order-4' : 'order-7')}>
+              <div className={cn('flex flex-col gap-5 lg:order-none lg:gap-7', manageFirst ? 'order-2' : 'order-7')}>
                 <MarketManage market={market} rights={rights} canBet={canBet} />
               </div>
             )}
           </div>
           <div className="contents lg:col-start-1 lg:row-start-1 lg:flex lg:flex-col lg:gap-7">
-            <div className="order-2 lg:order-none">
+            <div className={cn('lg:order-none', manageFirst ? 'order-3' : 'order-2')}>
               <Suspense fallback={<MarketChartSkeleton />}>
                 <MarketChart market={market} odds={odds} now={now} />
               </Suspense>

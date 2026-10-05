@@ -23,18 +23,20 @@ function marketRow(overrides: Record<string, unknown> = {}) {
       { id: 'o-no', label: 'No', pool_total: 5, pool_version: 2, shares: 0, q_offset: 0 },
       { id: 'o-yes', label: 'Yes', pool_total: 15, pool_version: 3, shares: 0, q_offset: 0 },
     ],
+    bets: [{ count: 7 }],
     ...overrides,
   }
 }
 
 describe('listOpenMarkets', () => {
-  it('reads only open markets, 50 soonest to close first, with the resolution embedded in the same request', async () => {
+  it('reads only open markets, 50 soonest to close first, with the resolution and bet count embedded, Yes first', async () => {
     const { client, queries } = fakeSupabase(() => ({ data: [marketRow({ status: 'open', current_resolution: null, settled_at: null })] }))
 
     const page = await listOpenMarkets(client, { top: null, bottom: null })
 
     expect(queries).toHaveLength(1)
     expect(queries[0].select).toContain(RESOLUTION_EMBED)
+    expect(queries[0].select).toContain('bets(count)')
     expect(queries[0].in).toEqual([['status', ['open']]])
     expect(queries[0].limit).toBe(50)
     expect(queries[0].order.slice(0, 2)).toEqual([
@@ -58,9 +60,10 @@ describe('listOpenMarkets', () => {
         line: null,
         edited: false,
         outcomes: [
-          { id: 'o-no', label: 'No', poolTotal: 5, shares: 0, qOffset: 0 },
           { id: 'o-yes', label: 'Yes', poolTotal: 15, shares: 0, qOffset: 0 },
+          { id: 'o-no', label: 'No', poolTotal: 5, shares: 0, qOffset: 0 },
         ],
+        betCount: 7,
         sparkVersion: '5',
       },
     ])

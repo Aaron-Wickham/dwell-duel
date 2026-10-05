@@ -2,9 +2,9 @@ import { test, expect } from '@playwright/test'
 import { serviceClient } from '../tests/db/helpers'
 import { localDateTimeString } from './local-date-time'
 
-// #261: with more markets waiting on a result than fit on a page, the All tab still opens on the
-// markets taking bets, and each side has its own Show more.
-test('the All tab lists open markets first however many are awaiting resolution', async ({ page }) => {
+// #261, #389: however many markets are waiting on a result, /markets opens on the ones taking
+// bets, and the Waiting tab pages its own list with Show more.
+test('opens on the markets taking bets however many are waiting, and the Waiting tab pages its own', async ({ page }) => {
   const title = `Open first ${Date.now()}`
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill(title)
@@ -34,19 +34,18 @@ test('the All tab lists open markets first however many are awaiting resolution'
 
   try {
     await page.goto('/markets')
-    const headings = page.getByRole('heading', { level: 2 })
-    await expect(headings.first()).toHaveText('Open')
     const open = page.getByRole('region', { name: 'Open', exact: true })
     await expect(open.getByRole('link', { name: title, exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: new RegExp(`^${tag} `) })).toHaveCount(0)
 
-    const awaiting = page.getByRole('region', { name: 'Awaiting resolution' })
-    // The fillers closed days before anything else, so they lead the awaiting list.
+    await page.getByRole('navigation', { name: 'Filter markets' }).getByRole('link', { name: 'Waiting' }).click()
+    const awaiting = page.getByRole('region', { name: 'Waiting for a result' })
+    // The fillers closed days before anything else, so they lead the waiting list.
     await expect(awaiting.getByRole('link', { name: new RegExp(`^${tag} `) })).toHaveCount(50)
     const awaitingMore = page.locator('a[href*="awaiting="]', { hasText: 'Show more' })
     await expect(awaitingMore).toBeVisible()
     await awaitingMore.click()
     await expect(awaiting.getByRole('link', { name: new RegExp(`^${tag} `) })).toHaveCount(55)
-    await expect(page.getByRole('region', { name: 'Open', exact: true }).getByRole('link', { name: title, exact: true })).toBeVisible()
   } finally {
     await serviceClient()
       .from('markets')

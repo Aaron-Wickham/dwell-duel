@@ -351,7 +351,6 @@ function MarketPreview({
         category={normalizeCategoryName(category) || null}
         status="open"
         kind={kind}
-        line={shownLine}
         closeAt={closeDate && !Number.isNaN(closeDate.getTime()) ? closeDate.toISOString() : ''}
         resolvedAt={null}
         outcomes={odds.map((o) => ({

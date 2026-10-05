@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { MarketCard } from '@/components/markets/market-card'
+import { MarketCard, leadingOutcome, type MarketCardProps } from '@/components/markets/market-card'
 
 vi.mock('@/components/markets/market-sparkline', () => ({
   MarketSparkline: (props: {
+    kind: string
     outcomes: { label: string }[]
     points: unknown[]
     now: number
@@ -13,6 +14,7 @@ vi.mock('@/components/markets/market-sparkline', () => ({
   }) => (
     <div
       data-testid="chart"
+      data-kind={props.kind}
       data-now={props.now}
       data-points={props.points.length}
       data-closed-at={props.closedAt}
@@ -23,347 +25,220 @@ vi.mock('@/components/markets/market-sparkline', () => ({
   ),
 }))
 
-describe('MarketCard', () => {
+const yesNo = [
+  { id: 'a', label: 'Yes', pct: 61 },
+  { id: 'b', label: 'No', pct: 39 },
+]
+
+const chart: MarketCardProps['chart'] = {
+  outcomes: [
+    { id: 'a', label: 'Yes', series: 2 },
+    { id: 'b', label: 'No', series: 1 },
+  ],
+  points: [{ t: 1000, shares: { a: 0.61, b: 0.39 } }],
+  now: 2000,
+}
+
+function card(props: Partial<MarketCardProps> = {}) {
+  return (
+    <MarketCard
+      id="m1"
+      title="Will the sermon run past noon?"
+      status="open"
+      kind="binary"
+      closeAt="2026-10-11T16:00:00.000Z"
+      resolvedAt={null}
+      outcomes={yesNo}
+      resolvedOutcomeLabel={null}
+      {...props}
+    />
+  )
+}
+
+describe('MarketCard (#389)', () => {
   it('as a preview, shows its title without a link and says when no close time is set', () => {
-    render(
-      <MarketCard
-        preview
-        id="preview"
-        title="Will it snow?"
-        status="open"
-        kind="binary"
-        closeAt=""
-        resolvedAt={null}
-        outcomes={[
-          { id: 'a', label: 'Yes', pct: 50 },
-          { id: 'b', label: 'No', pct: 50 },
-        ]}
-        resolvedOutcomeLabel={null}
-      />,
-    )
+    render(card({ preview: true, id: 'preview', title: 'Will it snow?', closeAt: '' }))
     expect(screen.getByRole('heading', { level: 3, name: 'Will it snow?' })).toBeInTheDocument()
     expect(screen.queryByRole('link')).toBeNull()
     expect(screen.getByText('No close time yet')).toBeInTheDocument()
   })
 
-  it('shows an open market\'s status, meta line, title link and outcome percentages', () => {
-    const { container } = render(
-      <MarketCard
-        id="m1"
-        title="Who wins the chili cook-off?"
-        status="open"
-        kind="multiple_choice"
-        closeAt="2026-10-04T16:30:00.000Z"
-        resolvedAt={null}
-        outcomes={[
-          { id: 'a', label: 'Tom', pct: 60 },
-          { id: 'b', label: 'Sarah', pct: 40 },
-        ]}
-        resolvedOutcomeLabel={null}
-      />,
-    )
-    expect(screen.getByText('Open')).toBeInTheDocument()
-    expect(container.textContent).toContain('Closes')
-    expect(container.querySelector('time')).toHaveAttribute('datetime', '2026-10-04T16:30:00.000Z')
-    expect(screen.getByRole('link', { name: 'Who wins the chili cook-off?' })).toHaveAttribute('href', '/markets/m1')
-    expect(screen.getByText('60%')).toBeInTheDocument()
-    expect(screen.getByText('40%')).toBeInTheDocument()
-    expect(screen.queryByText('No bets were placed.')).not.toBeInTheDocument()
+  it('leads with Yes’s chance and its weekly change, then the meta line, with no status chip', () => {
+    const { container } = render(card({ weeklyChange: 8, betCount: 42 }))
+    expect(screen.getByRole('link', { name: 'Will the sermon run past noon?' })).toHaveAttribute('href', '/markets/m1')
+    expect(screen.getByText('61%')).toBeInTheDocument()
+    expect(screen.getByText('Yes')).toBeInTheDocument()
+    expect(screen.queryByText('39%')).toBeNull()
+    expect(container.textContent).toContain('▲ Up 8 this week')
+    expect(screen.getByText(/8 this week/).closest('span')).toHaveClass('text-win')
+    expect(container.textContent).toContain(' · 42 bets')
+    expect(container.querySelector('time')).toHaveAttribute('datetime', '2026-10-11T16:00:00.000Z')
+    expect(screen.queryByText('Open')).toBeNull()
   })
 
-  it('stretches the title link over the card, which presses as one', () => {
-    render(
-      <MarketCard
-        id="m1"
-        title="Who wins the chili cook-off?"
-        status="open"
-        kind="multiple_choice"
-        closeAt="2026-10-04T16:30:00.000Z"
-        resolvedAt={null}
-        outcomes={[
-          { id: 'a', label: 'Tom', pct: 60 },
-          { id: 'b', label: 'Sarah', pct: 40 },
-        ]}
-        resolvedOutcomeLabel={null}
-      />,
+  it('leads with Yes even when No is the favourite, as its one-line chart does', () => {
+    render(card({ outcomes: [{ id: 'a', label: 'Yes', pct: 34 }, { id: 'b', label: 'No', pct: 66 }], weeklyChange: -5 }))
+    expect(screen.getByText('34%')).toBeInTheDocument()
+    expect(screen.getByText(/5 this week/).closest('span')).toHaveClass('text-loss')
+    expect(screen.getByText(/5 this week/).closest('span')!.textContent).toBe('▼ Down 5 this week')
+  })
+
+  it('says nothing of a week that didn’t move, or a market without a week of history', () => {
+    const { container, rerender } = render(card({ weeklyChange: 0 }))
+    expect(container.textContent).not.toContain('this week')
+    rerender(card({ weeklyChange: null }))
+    expect(container.textContent).not.toContain('this week')
+  })
+
+  it('names an over/under’s line in its lead label', () => {
+    render(card({ kind: 'over_under', outcomes: [{ id: 'a', label: 'Over 42.5', pct: 57 }, { id: 'b', label: 'Under 42.5', pct: 43 }] }))
+    expect(screen.getByText('Over 42.5')).toBeInTheDocument()
+    expect(screen.getByText('57%')).toBeInTheDocument()
+    expect(screen.queryByText(/Over\/Under/)).toBeNull()
+  })
+
+  it('leads a multiple-choice card with the favourite and lists the top three by chance, then how many more', () => {
+    const outcomes = [
+      { id: 'a', label: 'Eli', pct: 21 },
+      { id: 'b', label: 'Sarah', pct: 34 },
+      { id: 'c', label: 'Ruth', pct: 20 },
+      { id: 'd', label: 'Tom', pct: 15 },
+      { id: 'e', label: 'Ann', pct: 10 },
+    ]
+    const { container } = render(card({ kind: 'multiple_choice', outcomes }))
+    expect(container.querySelector('.text-\\[24px\\]')).toHaveTextContent('34%')
+    expect(container.textContent).toContain('Sarah 34% · Eli 21% · Ruth 20% · +2 more')
+    // Each legend dot keeps its outcome's colour from its place in the list, not its rank.
+    const dots = container.querySelectorAll('p span[aria-hidden="true"].size-2')
+    expect([...dots].map((d) => d.className.match(/bg-s\d/)?.[0])).toEqual(['bg-s3', 'bg-s2', 'bg-s4'])
+  })
+
+  it('shows no legend on a two-outcome card', () => {
+    const { container } = render(card())
+    expect(container.textContent).not.toContain('Yes 61%')
+  })
+
+  it('leads a resolved card with the winner, dated from its resolution', () => {
+    const { container } = render(
+      card({ status: 'resolved', resolvedAt: '2026-09-21T09:05:00.000Z', resolvedOutcomeLabel: 'Yes', weeklyChange: 8, betCount: 1 }),
     )
-    expect(screen.getByRole('link', { name: 'Who wins the chili cook-off?' })).toHaveClass('stretched-link')
-    expect(screen.getByRole('article')).toHaveClass('pressable', 'relative')
+    expect(screen.getByText('Yes won')).toBeInTheDocument()
+    expect(screen.queryByText('61%')).toBeNull()
+    expect(container.textContent).not.toContain('this week')
+    expect(container.textContent).toContain('Resolved')
+    expect(container.textContent).toContain(' · 1 bet')
+    expect(container.querySelector('time')).toHaveAttribute('datetime', '2026-09-21T09:05:00.000Z')
+  })
+
+  it('says a voided market was voided, dated from the void, and ends its chart there (#221)', () => {
+    const { container } = render(
+      card({
+        status: 'voided',
+        closeAt: '2026-10-04T12:00:00.000Z',
+        settledAt: '2026-10-01T09:00:00.000Z',
+        chart: { outcomes: [], points: [{ t: Date.parse('2026-09-30T09:00:00.000Z'), shares: { a: 0.5, b: 0.5 } }], now: Date.parse('2026-10-05T09:00:00.000Z') },
+      }),
+    )
+    // The lead and the meta line ("Voided <time>") both say it.
+    expect(screen.getAllByText(/^Voided/)).toHaveLength(2)
+    expect(container.querySelector('time')).toHaveAttribute('datetime', '2026-10-01T09:00:00.000Z')
+    expect(screen.getByTestId('chart')).toHaveAttribute('data-closed-at', '2026-10-01T09:00:00.000Z')
+  })
+
+  it('says a market past its close is waiting for a result', () => {
+    render(card({ status: 'awaiting', closeAt: '2026-10-01T12:00:00.000Z' }))
+    expect(screen.getByText('Waiting for a result')).toBeInTheDocument()
   })
 
   it('shows outcome pills and says no bets were placed on a market closed before seeding', () => {
     render(
-      <MarketCard
-        id="m2"
-        title="Who brings the best dessert?"
-        status="voided"
-        kind="multiple_choice"
-        closeAt="2026-09-30T12:00:00.000Z"
-        resolvedAt={null}
-        outcomes={[
+      card({
+        status: 'voided',
+        kind: 'multiple_choice',
+        outcomes: [
           { id: 'a', label: 'Grace', pct: null },
           { id: 'b', label: 'Josh', pct: null },
-        ]}
-        resolvedOutcomeLabel={null}
-      />,
+        ],
+      }),
     )
-    expect(screen.getByText('Voided')).toBeInTheDocument()
     expect(screen.getByText('Grace')).toBeInTheDocument()
     expect(screen.getByText('Josh')).toBeInTheDocument()
     expect(screen.getByText('No bets were placed.')).toBeInTheDocument()
   })
 
-  it('dates a void from when it was voided, and ends the chart there when that came before the close (#221)', () => {
-    const { container } = render(
-      <MarketCard
-        id="m2v"
-        title="Who brings the best dessert?"
-        status="voided"
-        kind="binary"
-        closeAt="2026-10-04T12:00:00.000Z"
-        resolvedAt={null}
-        settledAt="2026-10-01T09:00:00.000Z"
-        outcomes={[
-          { id: 'a', label: 'Yes', pct: 50 },
-          { id: 'b', label: 'No', pct: 50 },
-        ]}
-        resolvedOutcomeLabel={null}
-        chart={{ outcomes: [], points: [{ t: Date.parse('2026-09-30T09:00:00.000Z'), shares: { a: 0.5, b: 0.5 } }], now: Date.parse('2026-10-05T09:00:00.000Z') }}
-      />,
-    )
-    // The chip and the meta line ("Voided <time>") both read "Voided" as their own text.
-    expect(screen.getAllByText('Voided')).toHaveLength(2)
-    expect(container.querySelector('time')).toHaveAttribute('datetime', '2026-10-01T09:00:00.000Z')
-    expect(screen.getByTestId('chart')).toHaveAttribute('data-closed-at', '2026-10-01T09:00:00.000Z')
+  it('stretches the title link over the card, which presses as one and skips rendering off screen', () => {
+    render(card())
+    expect(screen.getByRole('link', { name: 'Will the sermon run past noon?' })).toHaveClass('stretched-link')
+    expect(screen.getByRole('article')).toHaveClass('pressable', 'relative', '[content-visibility:auto]')
   })
 
-  it('shows the resolved winner line when the market has a winning outcome', () => {
-    const { container } = render(
-      <MarketCard
-        id="m3"
-        title="Did it rain on the picnic?"
-        status="resolved"
-        kind="binary"
-        closeAt="2026-09-21T09:00:00.000Z"
-        resolvedAt="2026-09-21T09:05:00.000Z"
-        outcomes={[
-          { id: 'a', label: 'Yes', pct: 70 },
-          { id: 'b', label: 'No', pct: 30 },
-        ]}
-        resolvedOutcomeLabel="Yes"
-      />,
-    )
-    // The chip and the meta line ("Resolved <time>") both read "Resolved" as their own text.
-    expect(screen.getAllByText('Resolved')).toHaveLength(2)
-    expect(container.querySelector('time')).toHaveAttribute('datetime', '2026-09-21T09:05:00.000Z')
-    expect(screen.getByText('Winning outcome: Yes')).toBeInTheDocument()
+  it('renders the chart between the lead and the meta line, with the market’s kind', () => {
+    const { container } = render(card({ chart }))
+    const chartEl = screen.getByTestId('chart')
+    expect(chartEl).toHaveAttribute('data-kind', 'binary')
+    expect(chartEl).toHaveAttribute('data-now', '2000')
+    expect(chartEl).toHaveAttribute('data-closed-at', '2026-10-11T16:00:00.000Z')
+    expect(chartEl).toHaveAttribute('data-resolved-label', '')
+    const children = Array.from(container.querySelector('article')!.children)
+    const at = (el: Element) => children.findIndex((c) => c.contains(el))
+    expect(at(screen.getByText('61%'))).toBeLessThan(at(chartEl))
+    expect(at(chartEl)).toBeLessThan(at(container.querySelector('time')!))
   })
 
-  it('draws a colour dot before each outcome, coloured by its series, and hides it from screen readers', () => {
-    const { container } = render(
-      <MarketCard
-        id="m4"
-        title="Did it rain on the picnic?"
-        status="open"
-        kind="binary"
-        closeAt="2026-09-21T09:00:00.000Z"
-        resolvedAt={null}
-        outcomes={[
-          { id: 'a', label: 'Yes', pct: 70 },
-          { id: 'b', label: 'No', pct: 30 },
-        ]}
-        resolvedOutcomeLabel={null}
-      />,
-    )
-    const dots = container.querySelectorAll('li span[aria-hidden="true"].size-2\\.5')
-    expect(dots).toHaveLength(2)
-    // Binary markets always colour Yes as series 2 and No as series 1, regardless of row order.
-    expect(dots[0]).toHaveClass('bg-s2')
-    expect(dots[1]).toHaveClass('bg-s1')
-  })
-
-  it('renders a sparkline above the outcome list when bets exist and chart data is given', () => {
-    const { container } = render(
-      <MarketCard
-        id="m5"
-        title="Will the charts render?"
-        status="open"
-        kind="binary"
-        closeAt="2026-10-04T16:30:00.000Z"
-        resolvedAt={null}
-        outcomes={[
-          { id: 'a', label: 'Yes', pct: 70 },
-          { id: 'b', label: 'No', pct: 30 },
-        ]}
-        resolvedOutcomeLabel={null}
-        chart={{
-          outcomes: [
-            { id: 'a', label: 'Yes', series: 2 as const },
-            { id: 'b', label: 'No', series: 1 as const },
-          ],
-          points: [{ t: 1000, shares: { a: 0.7, b: 0.3 } }],
-          now: 2000,
-        }}
-      />,
-    )
-    const chart = screen.getByTestId('chart')
-    expect(chart).toHaveAttribute('data-now', '2000')
-    expect(chart).toHaveAttribute('data-points', '1')
-    expect(chart).toHaveAttribute('data-closed-at', '2026-10-04T16:30:00.000Z')
-    expect(chart).toHaveAttribute('data-resolved-label', '')
-    expect(chart).toHaveTextContent('Yes,No')
-    // The chart sits before the percentage list, matching MarketCard.html.
-    const article = container.querySelector('article')!
-    const chartIndex = Array.from(article.children).findIndex((el) => el.contains(chart))
-    const listIndex = Array.from(article.children).findIndex((el) => el.tagName === 'UL')
-    expect(chartIndex).toBeLessThan(listIndex)
-  })
-
-  it('passes the close time and winning outcome to a resolved market\'s sparkline', () => {
+  it('passes the resolution time, not the close, and the winner to a market resolved before it closed', () => {
     render(
-      <MarketCard
-        id="m7"
-        title="Did it rain on the picnic?"
-        status="resolved"
-        kind="binary"
-        closeAt="2026-09-21T09:00:00.000Z"
-        resolvedAt="2026-09-21T09:05:00.000Z"
-        outcomes={[
-          { id: 'a', label: 'Yes', pct: 70 },
-          { id: 'b', label: 'No', pct: 30 },
-        ]}
-        resolvedOutcomeLabel="Yes"
-        chart={{
-          outcomes: [
-            { id: 'a', label: 'Yes', series: 2 as const },
-            { id: 'b', label: 'No', series: 1 as const },
-          ],
-          points: [{ t: 1000, shares: { a: 0.7, b: 0.3 } }],
-          now: 2000,
-        }}
-      />,
+      card({
+        status: 'resolved',
+        closeAt: '2026-10-04T12:00:00.000Z',
+        resolvedAt: '2026-10-01T09:00:00.000Z',
+        settledAt: '2026-10-01T09:00:00.000Z',
+        resolvedOutcomeLabel: 'Yes',
+        chart,
+      }),
     )
-    const chart = screen.getByTestId('chart')
-    expect(chart).toHaveAttribute('data-closed-at', '2026-09-21T09:00:00.000Z')
-    expect(chart).toHaveAttribute('data-resolved-label', 'Yes')
-  })
-
-  it('shows the resolution time, not the close time, on a sparkline for a market resolved before it closed', () => {
-    render(
-      <MarketCard
-        id="m8"
-        title="Did the rain stop early?"
-        status="resolved"
-        kind="binary"
-        closeAt="2026-10-04T12:00:00.000Z"
-        resolvedAt="2026-10-01T09:00:00.000Z"
-        settledAt="2026-10-01T09:00:00.000Z"
-        outcomes={[
-          { id: 'a', label: 'Yes', pct: 70 },
-          { id: 'b', label: 'No', pct: 30 },
-        ]}
-        resolvedOutcomeLabel="Yes"
-        chart={{
-          outcomes: [
-            { id: 'a', label: 'Yes', series: 2 as const },
-            { id: 'b', label: 'No', series: 1 as const },
-          ],
-          points: [{ t: 1000, shares: { a: 0.7, b: 0.3 } }],
-          now: 2000,
-        }}
-      />,
-    )
-    const chart = screen.getByTestId('chart')
-    expect(chart).toHaveAttribute('data-closed-at', '2026-10-01T09:00:00.000Z')
-    expect(chart).toHaveAttribute('data-resolved-label', 'Yes')
+    const chartEl = screen.getByTestId('chart')
+    expect(chartEl).toHaveAttribute('data-closed-at', '2026-10-01T09:00:00.000Z')
+    expect(chartEl).toHaveAttribute('data-resolved-label', 'Yes')
   })
 
   it('omits the chart when there is no chart data, even with bets', () => {
-    render(
-      <MarketCard
-        id="m6"
-        title="Will the charts render?"
-        status="open"
-        kind="binary"
-        closeAt="2026-10-04T16:30:00.000Z"
-        resolvedAt={null}
-        outcomes={[
-          { id: 'a', label: 'Yes', pct: 70 },
-          { id: 'b', label: 'No', pct: 30 },
-        ]}
-        resolvedOutcomeLabel={null}
-      />,
-    )
+    render(card())
     expect(screen.queryByTestId('chart')).not.toBeInTheDocument()
   })
 
+  it('shows its category only when given one', () => {
+    const { rerender } = render(card())
+    expect(screen.queryByText(/Category:/)).toBeNull()
+    rerender(card({ category: 'Church' }))
+    expect(screen.getByText('Church')).toBeInTheDocument()
+  })
+
   it('becomes a focus target named from its title alone when given a DOM id', () => {
-    render(
-      <MarketCard
-        id="m7"
-        title="Will the choir sing?"
-        status="resolved"
-        kind="binary"
-        closeAt="2026-10-04T16:30:00.000Z"
-        resolvedAt="2026-10-05T16:30:00.000Z"
-        outcomes={[
-          { id: 'a', label: 'Yes', pct: 70 },
-          { id: 'b', label: 'No', pct: 30 },
-        ]}
-        resolvedOutcomeLabel="Yes"
-        domId="market-resolved-m7"
-      />,
-    )
-    // An exact match: a self-label (the old, wrong behaviour) would also pick up the odds list
-    // and the winning-outcome line, so this fails if the card is ever named from its full content.
-    const card = screen.getByRole('article', { name: 'Will the choir sing?' })
-    expect(card).toHaveAttribute('id', 'market-resolved-m7')
-    expect(card).toHaveAttribute('tabindex', '-1')
-    expect(card).toHaveAttribute('aria-labelledby', 'market-resolved-m7-title')
-    expect(screen.getByText('Will the choir sing?').closest('h3')).toHaveAttribute('id', 'market-resolved-m7-title')
+    render(card({ status: 'resolved', resolvedAt: '2026-10-05T16:30:00.000Z', resolvedOutcomeLabel: 'Yes', domId: 'market-resolved-m7' }))
+    const article = screen.getByRole('article', { name: 'Will the sermon run past noon?' })
+    expect(article).toHaveAttribute('id', 'market-resolved-m7')
+    expect(article).toHaveAttribute('tabindex', '-1')
+    expect(article).toHaveAttribute('aria-labelledby', 'market-resolved-m7-title')
   })
 
   it('is not focusable without a DOM id', () => {
-    render(
-      <MarketCard
-        id="m8"
-        title="Will the choir sing?"
-        status="open"
-        kind="binary"
-        closeAt="2026-10-04T16:30:00.000Z"
-        resolvedAt={null}
-        outcomes={[]}
-        resolvedOutcomeLabel={null}
-      />,
-    )
+    render(card({ outcomes: [] }))
     expect(screen.getByRole('article')).not.toHaveAttribute('tabindex')
     expect(screen.getByRole('article')).not.toHaveAttribute('id')
   })
-  it('adds a "Closes in" chip to an open market closing within a day, and to no other card', () => {
+
+  it('counts down in the meta line for an open market closing within a day', () => {
     const now = Date.parse('2026-10-04T14:00:00.000Z')
-    // The chip's clock takes over from `now` as soon as it mounts.
     vi.useFakeTimers({ now })
-    const card = (status: 'open' | 'awaiting', closeAt: string) => (
-      <MarketCard
-        id="m1"
-        title="Who wins the chili cook-off?"
-        status={status}
-        kind="binary"
-        closeAt={closeAt}
-        resolvedAt={null}
-        outcomes={[]}
-        resolvedOutcomeLabel={null}
-        now={now}
-      />
-    )
-    const { rerender } = render(card('open', '2026-10-04T16:20:00.000Z'))
-    expect(screen.getByText('Closes in 2h')).toBeInTheDocument()
-
-    rerender(card('open', '2026-10-06T16:30:00.000Z'))
-    expect(screen.queryByText(/Closes in/)).toBeNull()
-
-    rerender(card('awaiting', '2026-10-04T13:00:00.000Z'))
-    expect(screen.queryByText(/Closes in/)).toBeNull()
+    render(card({ closeAt: '2026-10-04T16:20:00.000Z', now }))
+    expect(screen.getByText(/Closes in 2h/)).toBeInTheDocument()
     vi.useRealTimers()
+  })
+})
+
+describe('leadingOutcome', () => {
+  it('is Yes or Over on a two-outcome market and the favourite of several, the first on a tie', () => {
+    expect(leadingOutcome('binary', [{ id: 'n', label: 'No', pct: 80 }, { id: 'y', label: 'Yes', pct: 20 }])?.id).toBe('y')
+    expect(leadingOutcome('multiple_choice', [{ id: 'a', label: 'A', pct: 40 }, { id: 'b', label: 'B', pct: 40 }, { id: 'c', label: 'C', pct: 20 }])?.id).toBe('a')
   })
 })

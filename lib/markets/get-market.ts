@@ -3,6 +3,7 @@ import type { Pricing, PricedOutcome } from '@/lib/markets/pricing'
 import type { DbClient } from '@/lib/supabase/database'
 import type { Cursor, PageParams } from '@/lib/pagination/cursor'
 import { avatarUrl } from '@/lib/profile/avatar'
+import { orderOutcomes } from '@/lib/markets/outcome-series'
 import type { MarketCategory } from '@/lib/markets/categories'
 import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 
@@ -58,7 +59,8 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
     .eq('id', marketId)
     // Rows come back with no default order, and colours are assigned by position for
     // multiple-choice markets, so pin a stable order: insertion time, then label to
-    // break the tie (create_market inserts every outcome in one transaction).
+    // break the tie (create_market inserts every outcome in one transaction). orderOutcomes then
+    // puts Yes and Over first.
     .order('created_at', { referencedTable: 'market_outcomes' })
     .order('label', { referencedTable: 'market_outcomes' })
     .maybeSingle()
@@ -66,7 +68,9 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
   if (error) throw error
   if (!data) return null
 
-  const outcomes = (data.market_outcomes ?? []).map((o) => ({
+  // Text column with a CHECK constraint (0043), so the generated type says only string.
+  const kind = data.kind as MarketDetail['kind']
+  const outcomes = orderOutcomes(kind, data.market_outcomes ?? []).map((o) => ({
     id: o.id,
     label: o.label,
     poolTotal: o.pool_total,
@@ -87,8 +91,8 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
     id: data.id,
     title: data.title,
     description: data.description,
-    // Text columns with CHECK constraints (0043, 0001), so the generated types say only string.
-    kind: data.kind as MarketDetail['kind'],
+    kind,
+    // A text column with a CHECK constraint (0001), so the generated type says only string.
     status: data.status as MarketDetail['status'],
     closeAt: data.close_at,
     createdAt: data.created_at,

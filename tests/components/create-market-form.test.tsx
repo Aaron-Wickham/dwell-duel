@@ -24,20 +24,23 @@ describe('CreateMarketForm preview', () => {
 
     await user.type(screen.getByLabelText('Title'), 'Will it snow?')
     expect(within(preview()).getByRole('heading', { level: 3, name: 'Will it snow?' })).toBeInTheDocument()
-    expect(within(preview()).getAllByText('50%')).toHaveLength(2)
+    // A yes/no card leads with Yes's chance (#389).
+    expect(within(preview()).getByText('50%')).toBeInTheDocument()
+    expect(within(preview()).getByText('Yes')).toBeInTheDocument()
     expect(within(preview()).queryByRole('link')).toBeNull()
 
     await user.click(screen.getByRole('radio', { name: 'Multiple choice' }))
     await user.type(screen.getByLabelText('Outcome 1'), 'Red')
     await user.click(screen.getByRole('button', { name: 'Add outcome' }))
-    expect(within(preview()).getByText('Red')).toBeInTheDocument()
-    expect(within(preview()).getByText('Outcome 2')).toBeInTheDocument()
-    expect(within(preview()).getAllByText('33%')).toHaveLength(3)
+    // The favourite leads (the first on a tie), and the legend names each with its chance.
+    expect(within(preview()).getByText('33%')).toBeInTheDocument()
+    expect(preview()).toHaveTextContent('Red 33%')
+    expect(preview()).toHaveTextContent('Outcome 2 33%')
+    expect(preview()).toHaveTextContent('Outcome 3 33%')
 
     await user.click(screen.getByRole('radio', { name: 'Over/Under' }))
     await user.type(screen.getByLabelText('Line'), '3.5')
     expect(within(preview()).getByText('Over 3.5')).toBeInTheDocument()
-    expect(within(preview()).getByText('Under 3.5')).toBeInTheDocument()
   })
 })
 

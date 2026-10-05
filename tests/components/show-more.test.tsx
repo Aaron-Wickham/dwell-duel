@@ -3,14 +3,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 
-const { requestShowMoreFocus } = vi.hoisted(() => ({ requestShowMoreFocus: vi.fn() }))
+const { requestShowMoreFocus, linkStatus } = vi.hoisted(() => ({ requestShowMoreFocus: vi.fn(), linkStatus: { pending: false } }))
 vi.mock('@/components/ui/show-more-focus', () => ({ requestShowMoreFocus }))
 
 // Vitest resolves next/link to the Pages Router Link, which drops scroll and replace before the
 // DOM, so they are written onto the anchor for these assertions. A plain click runs onNavigate,
 // as the App Router's Link does for a client-side navigation.
 vi.mock('next/link', () => ({
-  useLinkStatus: () => ({ pending: false }),
+  useLinkStatus: () => linkStatus,
   default: ({
     href,
     scroll,
@@ -36,6 +36,7 @@ import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 
 beforeEach(() => {
   requestShowMoreFocus.mockReset()
+  linkStatus.pending = false
 })
 
 describe('ShowMore', () => {
@@ -79,6 +80,23 @@ describe('ShowMore', () => {
     render(<ShowMore href="/markets?open=abc" description="Open markets" />)
     const link = screen.getByRole('link', { name: 'Show more' })
     expect(link).toHaveAccessibleDescription('Open markets')
+  })
+})
+
+describe('ShowMore while its rows load (#389)', () => {
+  it('reads Loading… and is busy, keeping the idle label in place so the button holds its width', () => {
+    linkStatus.pending = true
+    render(<ShowMore href="/markets?open=abc" />)
+    const link = screen.getByRole('link', { name: 'Loading…' })
+    expect(link.querySelector('[aria-busy="true"]')).not.toBeNull()
+    expect(screen.getByText('Show more')).toHaveClass('invisible')
+  })
+
+  it('is not busy at rest', () => {
+    render(<ShowMore href="/markets?open=abc" />)
+    const link = screen.getByRole('link', { name: 'Show more' })
+    expect(link.querySelector('[aria-busy="true"]')).toBeNull()
+    expect(screen.getByText('Loading…')).toHaveClass('invisible')
   })
 })
 

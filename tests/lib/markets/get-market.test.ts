@@ -70,6 +70,30 @@ describe('getMarket', () => {
     expect(market?.resolvedAt).toBeNull()
   })
 
+  it('lists Yes before No and Over before Under, whatever order the rows arrive in (#389)', async () => {
+    const read = async (kind: string, labels: string[]) => {
+      const row = {
+        id: 'market-3',
+        title: 'Order',
+        description: null,
+        kind,
+        status: 'open',
+        close_at: '2026-01-01T00:00:00Z',
+        created_by: 'member-1',
+        current_resolution_id: null,
+        creator: { display_name: 'Alice' },
+        market_outcomes: labels.map((label) => ({ id: label, label, pool_total: 0 })),
+        current_resolution: null,
+      }
+      const select = vi.fn(() => chainableBuilder({ data: row, error: null }))
+      const market = await getMarket({ from: vi.fn(() => ({ select })) } as unknown as SupabaseClient, 'market-3')
+      return market?.outcomes.map((o) => o.label)
+    }
+    expect(await read('binary', ['No', 'Yes'])).toEqual(['Yes', 'No'])
+    expect(await read('over_under', ['Over 2.5', 'Under 2.5'])).toEqual(['Over 2.5', 'Under 2.5'])
+    expect(await read('multiple_choice', ['Ruth', 'Eli', 'Sarah'])).toEqual(['Ruth', 'Eli', 'Sarah'])
+  })
+
   it('returns null, with no query at all beyond the one lookup, when the market is missing', async () => {
     const select = vi.fn(() => chainableBuilder({ data: null, error: null }))
     const from = vi.fn(() => ({ select }))

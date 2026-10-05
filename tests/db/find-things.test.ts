@@ -24,8 +24,8 @@ beforeEach(async () => {
   await giveRole(alice, 'admin')
 })
 
-const titles = async (client: SupabaseClient, q: string, categoryId: string | null = null, filter: 'all' | 'open' | 'awaiting' | 'resolved' = 'all') =>
-  (await listMatchingMarkets(client, FIRST, filter, { q, categoryId }, NOW())).rows.map((m) => m.title)
+const titles = async (client: SupabaseClient, q: string, categoryId: string | null = null) =>
+  (await listMatchingMarkets(client, FIRST, { q, categoryId })).rows.map((m) => m.title)
 
 async function bet(client: SupabaseClient, market: TestMarket, outcomeIndex = 0): Promise<void> {
   const { error } = await client.rpc('place_bet', { p_market_id: market.marketId, p_outcome_id: market.outcomeIds[outcomeIndex], p_amount: 5 })
@@ -59,7 +59,7 @@ describe('listMatchingMarkets: search', () => {
     }
   })
 
-  it('splits by the status tab and keeps resolved and voided markets in one list', async () => {
+  it('finds a match in every status (#389)', async () => {
     await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Match open', closeInMs: 3_600_000 })
     const awaiting = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Match awaiting' })
     const done = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Match done' })
@@ -73,9 +73,6 @@ describe('listMatchingMarkets: search', () => {
     if (voidErr) throw voidErr
 
     expect((await titles(bobClient, 'Match')).sort()).toEqual(['Match awaiting', 'Match done', 'Match open', 'Match voided'])
-    expect(await titles(bobClient, 'Match', null, 'open')).toEqual(['Match open'])
-    expect(await titles(bobClient, 'Match', null, 'awaiting')).toEqual(['Match awaiting'])
-    expect((await titles(bobClient, 'Match', null, 'resolved')).sort()).toEqual(['Match done', 'Match voided'])
   })
 
   it('pages with Show more over a flat list', async () => {
@@ -91,7 +88,7 @@ describe('listMatchingMarkets: search', () => {
       })
       if (error) throw error
     }
-    const first = await listMatchingMarkets(bobClient, FIRST, 'all', { q: 'Paged' }, NOW())
+    const first = await listMatchingMarkets(bobClient, FIRST, { q: 'Paged' })
     expect(first.rows).toHaveLength(50)
     expect(first.next?.kind).toBe('extend')
     expect(first.rows[0].title).toBe('Paged 00')

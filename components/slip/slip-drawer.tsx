@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useState, type MouseEvent, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type RefObject } from 'react'
 import { Drawer } from '@base-ui/react/drawer'
 import { X } from 'lucide-react'
 import { useSlip } from '@/components/slip/slip-provider'
@@ -11,6 +11,11 @@ import { useIsDesktop } from '@/lib/ui/use-is-desktop'
 import { cn } from '@/lib/utils'
 
 const EASE = 'transition-transform duration-(--duration-sheet) ease-ios data-swiping:select-none data-swiping:duration-0 data-ending-style:duration-[calc(var(--drawer-swipe-strength)*400ms)] motion-reduce:transition-none'
+
+function unblockShell() {
+  const shell = document.getElementById(APP_SHELL_ID)
+  if (shell) shell.inert = false
+}
 
 // The slip itself, as a bottom sheet on a phone and a panel from the right on desktop. SlipSheet
 // loads it the first time the slip opens, keeping it off every page's first load.
@@ -35,19 +40,36 @@ export function SlipDrawer({
   }, [])
   const count = picks.length
   const shown = open && settled
+  // SlipSheet clears returnFocusTo once the close finishes, which is before Base UI asks where focus
+  // goes, so the target the slip opened with is kept until then.
+  const closingTarget = useRef<HTMLElement | null>(null)
 
   // Base UI's focus guards alone leak under key repeat and in the moment before the popup takes
-  // focus, and only aria-hide the page (#392). A layout effect, so the page is live again before
-  // Base UI hands focus back to the slip button on close.
+  // focus, and only aria-hide the page (#392).
   useLayoutEffect(() => {
     if (!shown) return
     const shell = document.getElementById(APP_SHELL_ID)
     if (!shell) return
+    const target = returnFocusTo.current
     shell.inert = true
-    return () => {
-      shell.inert = false
+    // Focus that was in the page (the slip button, or wherever a quick Tab took it) falls to <body>
+    // once the page is inert, and Base UI may already have placed its initial focus, so the sheet
+    // takes it back: at its first control, as soon as that has mounted.
+    let frame = 0
+    let tries = 0
+    const reclaim = () => {
+      const close = document.getElementById(SLIP_CLOSE_ID)
+      const active = document.activeElement
+      if (close && (!active || active === document.body || shell.contains(active))) close.focus()
+      else if (!close && ++tries < 30) frame = requestAnimationFrame(reclaim)
     }
-  }, [shown])
+    frame = requestAnimationFrame(reclaim)
+    return () => {
+      cancelAnimationFrame(frame)
+      closingTarget.current = target
+      unblockShell()
+    }
+  }, [shown, returnFocusTo])
 
   function handleContentClick(event: MouseEvent<HTMLDivElement>) {
     // A link to the page already on screen doesn't navigate, so it would leave the slip stuck open.
@@ -74,7 +96,11 @@ export function SlipDrawer({
           <Drawer.Viewport className={cn('fixed inset-0 z-40 flex', isDesktop ? 'justify-end' : 'items-end justify-center')}>
             <Drawer.Popup
               aria-labelledby="slip-title"
-              finalFocus={count === 0 ? focusPageHeading : () => returnFocusTo.current ?? true}
+              // The page must be live again before Base UI focuses something in it.
+              finalFocus={() => {
+                unblockShell()
+                return count === 0 ? focusPageHeading() : (closingTarget.current ?? returnFocusTo.current ?? true)
+              }}
               className={cn(
                 'flex flex-col border-line bg-bg text-ink shadow-overlay outline-none',
                 EASE,

@@ -52,11 +52,22 @@ export async function getCreatorStakes(
   return stakes
 }
 
-// "Creator has 40 DC on Yes and a parlay on No." Null when they have no stake.
-export function describeCreatorStake(stake: CreatorStake | undefined, tense: 'has' | 'had'): string | null {
+// "40 DC on Yes and a parlay on No". Null when there's no stake.
+function describeStake(stake: CreatorStake | undefined): string | null {
   if (!stake || (stake.solo.length === 0 && stake.parlayLabels.length === 0)) return null
   const parts = stake.solo.map((s) => `${formatDcAmount(s.amount)} on ${s.label}`)
   if (stake.parlayLabels.length > 0) parts.push(`a parlay on ${stake.parlayLabels.join(' and ')}`)
-  const joined = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0]
-  return `Creator ${tense} ${joined}.`
+  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0]
+}
+
+// "Creator has 40 DC on Yes and a parlay on No." Null when they have no stake.
+export function describeCreatorStake(stake: CreatorStake | undefined, tense: 'has' | 'had'): string | null {
+  const joined = describeStake(stake)
+  return joined && `Creator ${tense} ${joined}.`
+}
+
+// The creator's own line on their market (#390): "You have 40 DC on Yes." Null with no stake.
+export function describeOwnStake(stake: CreatorStake | undefined, tense: 'have' | 'had'): string | null {
+  const joined = describeStake(stake)
+  return joined && `You ${tense} ${joined}.`
 }

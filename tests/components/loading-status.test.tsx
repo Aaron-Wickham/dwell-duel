@@ -9,7 +9,6 @@ vi.mock('react', async (importOriginal) =>
 
 import { LoadingStatus } from '@/components/ui/loading-status'
 import {
-  MarketActionsSkeleton,
   MarketBetsSkeleton,
   MarketChartSkeleton,
   MarketOutcomesSkeleton,
@@ -62,10 +61,9 @@ describe('LoadingStatus', () => {
   it('is the market page cold render’s only status, for as long as any of its fallbacks is showing, and clears once none are', async () => {
     const { rerender } = render(
       <LoadingStatus>
+        <MarketOutcomesSkeleton outcomes={2} canBet />
         <MarketPositionSkeleton rows={2} />
         <MarketChartSkeleton />
-        <MarketOutcomesSkeleton outcomes={2} />
-        <MarketActionsSkeleton hasPosition />
         <MarketBetsSkeleton />
       </LoadingStatus>,
     )
@@ -77,7 +75,7 @@ describe('LoadingStatus', () => {
     // One section resolving (its fallback unmounts) while the others are still pending.
     rerender(
       <LoadingStatus>
-        <MarketActionsSkeleton hasPosition />
+        <MarketChartSkeleton />
         <MarketBetsSkeleton />
       </LoadingStatus>,
     )

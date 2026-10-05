@@ -379,8 +379,9 @@ describe('press feedback', () => {
     }
   })
 
-  it('presses the market page’s edit history disclosure', () => {
-    const page = readFileSync(path.resolve(import.meta.dirname, '../../app/(app)/markets/[id]/page.tsx'), 'utf8')
-    expect(page).toMatch(/<summary className="[^"]*\bpressable\b/)
+  it('presses the market page’s More actions button and its items', () => {
+    const menu = readFileSync(path.resolve(import.meta.dirname, '../../app/(app)/markets/[id]/market-menu.tsx'), 'utf8')
+    expect(menu).toMatch(/aria-label="More actions"\s+className="pressable\b/)
+    expect(menu).toMatch(/const itemClass = `pressable\b/)
   })
 })

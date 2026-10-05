@@ -57,7 +57,7 @@ export function VoidForm({ marketId, className }: { marketId: string; className?
         </Field>
         <FormSubmitButton
           variant="danger"
-          block
+          className="self-start"
           aria-describedby={state?.formError && !reasonError ? 'void-error' : undefined}
         >
           Void this market

@@ -1,9 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Share2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/field'
 
 // Links always point at the www host, even when the app was opened on the bare domain. A
@@ -44,8 +42,9 @@ async function copy(text: string): Promise<boolean> {
   return copyWithTextarea(text)
 }
 
-export function ShareButton({ marketId, title }: { marketId: string; title: string }) {
-  // Shown only when neither sharing nor copying worked, so the member can copy it by hand.
+// Share sheet first, then the clipboard. `manualUrl` is set only when neither worked, so the
+// member can copy the link by hand from ManualShareLink.
+export function useMarketShare(marketId: string, title: string): { share: () => Promise<void>; manualUrl: string | null } {
   const [manualUrl, setManualUrl] = useState<string | null>(null)
 
   async function share() {
@@ -66,20 +65,16 @@ export function ShareButton({ marketId, title }: { marketId: string; title: stri
     }
   }
 
+  return { share, manualUrl }
+}
+
+export function ManualShareLink({ url }: { url: string }) {
   return (
-    <>
-      <Button variant="secondary" size="sm" onClick={share}>
-        <Share2 aria-hidden="true" className="size-[18px]" />
-        Share
-      </Button>
-      {manualUrl && (
-        <div className="flex basis-full flex-col gap-1.5">
-          <label htmlFor="market-share-url" className="text-sm text-ink2">
-            Copy this link to share the market
-          </label>
-          <Input id="market-share-url" readOnly value={manualUrl} autoFocus onFocus={(e) => e.currentTarget.select()} />
-        </div>
-      )}
-    </>
+    <div className="flex basis-full flex-col gap-1.5">
+      <label htmlFor="market-share-url" className="text-sm text-ink2">
+        Copy this link to share the market
+      </label>
+      <Input id="market-share-url" readOnly value={url} autoFocus onFocus={(e) => e.currentTarget.select()} />
+    </div>
   )
 }

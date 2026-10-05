@@ -2,7 +2,7 @@ import { Fragment } from 'react'
 import type { MarketKind } from '@/lib/markets/kind'
 import { IntentLink } from '@/components/ui/intent-link'
 import { cardClass, cardPaddingClass } from '@/components/ui/card'
-import { StatusChip, type StatusChipTone } from '@/components/ui/status-chip'
+import { StatusChip } from '@/components/ui/status-chip'
 import { LocalTime } from '@/components/ui/local-time'
 import { SERIES_BG } from '@/components/markets/series-classes'
 import { MarketSparkline } from '@/components/markets/market-sparkline'
@@ -15,21 +15,6 @@ import { chartClosedAt, type MarketCardStatus } from '@/lib/markets/market-statu
 import { focusTarget } from '@/lib/pagination/row-id'
 import { figureClass, figureInlineClass, rowTitleClass } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
-
-// What a market's state is called on the market page's chip.
-export const STATUS_LABEL: Record<MarketCardStatus, string> = {
-  open: 'Open',
-  awaiting: 'Awaiting resolution',
-  resolved: 'Resolved',
-  voided: 'Voided',
-}
-
-export const STATUS_TONE: Record<MarketCardStatus, StatusChipTone> = {
-  open: 'open',
-  awaiting: 'wait',
-  resolved: 'done',
-  voided: 'void',
-}
 
 // A multiple-choice card's legend names this many outcomes, then "+N more".
 const LEGEND_OUTCOMES = 3

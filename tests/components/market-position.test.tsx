@@ -6,6 +6,9 @@ import type { MarketDetail } from '@/lib/markets/get-market'
 import type { MarketPosition as Position, PositionBet } from '@/lib/markets/position'
 import type { ParlayView } from '@/lib/parlays/list-parlays'
 import { EMPTY_SLIP } from '@/lib/parlays/get-slip'
+import { lmsrState } from '@/lib/markets/pricing'
+import type { ResolutionProof } from '@/lib/markets/resolution-proof'
+import { soloPays } from '@/lib/parlays/solo-pays'
 
 vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
@@ -201,50 +204,92 @@ describe('MarketPosition', () => {
     expect(element).toBeNull()
   })
 
-  it('holds the top of the right column from lg', async () => {
+  // Its place on the page (the rail from lg, after the chart on a phone) is its wrapper's, in page.tsx.
+  it('carries no grid placement of its own', async () => {
     getMarketPosition.mockResolvedValue({ bets: [solo(1, 20, 'Yes', { kind: 'open' }, 26)], legs: [] })
     render((await MarketPosition({ market, keys: { betIds: [1], parlayIds: [] }, now: Date.now() }))!)
-    expect(screen.getByRole('region', { name: 'Your position' })).toHaveClass('lg:col-start-2', 'lg:row-start-1')
+    expect(screen.getByRole('region', { name: 'Your position' }).className).not.toMatch(/lg:(col|row)-/)
   })
 })
 
 describe('MarketOutcomes', () => {
-  async function renderOutcomes(riding: Map<string, number>, status: MarketDetail['status'] = 'open') {
+  // Yes has sold 20 shares, so its payout differs from No's.
+  const lmsrMarket: MarketDetail = {
+    ...market,
+    pricing: 'lmsr',
+    outcomes: [
+      { id: 'o-yes', label: 'Yes', poolTotal: 60, shares: 20, qOffset: 0 },
+      { id: 'o-no', label: 'No', poolTotal: 20, shares: 0, qOffset: 0 },
+    ],
+  }
+  const odds = [
+    { outcomeId: 'o-yes', label: 'Yes', poolTotal: 60, impliedProbability: 0.75 },
+    { outcomeId: 'o-no', label: 'No', poolTotal: 20, impliedProbability: 0.25 },
+  ]
+
+  async function renderOutcomes(
+    riding: Map<string, number>,
+    overrides: Partial<MarketDetail> = {},
+    { canBet = (overrides.status ?? 'open') === 'open', resolution = null }: { canBet?: boolean; resolution?: ResolutionProof | null } = {},
+  ) {
     getParlayRiding.mockResolvedValue(riding)
-    const odds = [
-      { outcomeId: 'o-yes', label: 'Yes', poolTotal: 60, impliedProbability: 0.75 },
-      { outcomeId: 'o-no', label: 'No', poolTotal: 20, impliedProbability: 0.25 },
-    ]
-    render(<SlipProvider view={EMPTY_SLIP}>{await MarketOutcomes({ market: { ...market, status }, odds, slip: [], canBet: status === 'open' })}</SlipProvider>)
+    render(
+      <SlipProvider view={EMPTY_SLIP}>
+        {await MarketOutcomes({ market: { ...lmsrMarket, ...overrides }, odds, slip: [], canBet, resolution })}
+      </SlipProvider>,
+    )
+    return screen.getByRole('region', { name: 'Outcomes' })
   }
 
-  it('shows each outcome’s parlay money and says once that it never moves the odds', async () => {
-    await renderOutcomes(new Map([['o-yes', 45], ['o-no', 15]]))
-    const card = screen.getByRole('region', { name: 'Outcomes' })
-    expect(within(card).getByText('+45 DC riding in parlays')).toBeInTheDocument()
-    expect(within(card).getByText('+15 DC riding in parlays')).toBeInTheDocument()
-    expect(within(card).getAllByText(/Parlays are paid by DwellDuel, not from this pool/)).toHaveLength(1)
+  it('shows each outcome’s chance alone, and what 10 DC on it wins, exactly as the slip would', async () => {
+    const card = await renderOutcomes(new Map())
+    const q = lmsrState(lmsrMarket.outcomes)
+    const yesPays = soloPays({ q, index: 0, liquidity: lmsrMarket.liquidity }, 10)
+    expect(within(card).getByText('75%', { selector: '.sr-only' })).toBeInTheDocument()
+    expect(within(card).getByText(`10 DC wins ${yesPays}`, { selector: '.sr-only' })).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Add Yes to slip' })).toBeInTheDocument()
+    expect(within(card).queryByText(/payout per DC|in the pool|DC bet/)).toBeNull()
+  })
+
+  it('says once, under the rows, how much parlay money rides on the market (#279)', async () => {
+    const card = await renderOutcomes(new Map([['o-yes', 45], ['o-no', 15]]))
+    expect(within(card).getByText(/^Includes 60 DC riding in parlays\./)).toBeInTheDocument()
+    expect(within(card).queryByText(/\+45 DC/)).toBeNull()
+    expect(within(card).queryByText(/bought shares here/)).toBeNull()
     expect(within(card).getByRole('link', { name: 'How parlays pay' })).toHaveAttribute(
       'href',
       '/how-it-works#how-the-slip-solo-bets-and-parlays',
     )
-    // The pool, the chance and the payout per DC are the real pool's alone.
-    expect(within(card).getByText('80 DC in the pool')).toBeInTheDocument()
-    expect(within(card).getByText('75% (60 DC)', { selector: '.sr-only' })).toBeInTheDocument()
-    expect(within(card).getByText('1.33× payout per DC', { selector: '.sr-only' })).toBeInTheDocument()
   })
 
-  it('shows neither the figure nor the note when no pending parlay rides on the market', async () => {
+  it('shows no parlay line when no pending parlay rides on the market', async () => {
     await renderOutcomes(new Map())
     expect(screen.queryByText(/riding in parlays/)).toBeNull()
-    expect(screen.queryByText(/Parlays are paid by DwellDuel/)).toBeNull()
   })
 
   // A voided market's legs dropped out of their parlays, though parlay_legs still names them.
-  it('shows neither the figure nor the note on a voided market, and doesn’t ask', async () => {
-    await renderOutcomes(new Map([['o-yes', 45]]), 'voided')
+  it('says the market was voided and what happened to stakes, with no parlay line, and doesn’t ask', async () => {
+    const card = await renderOutcomes(new Map([['o-yes', 45]]), { status: 'voided', voidReason: 'The picnic moved.' })
+    expect(within(card).getByText('This market was voided. Every bet was refunded, and parlays dropped this pick.')).toBeInTheDocument()
+    expect(within(card).getByRole('region', { name: 'Why it was voided' })).toHaveTextContent('The picnic moved.')
     expect(screen.queryByText(/riding in parlays/)).toBeNull()
-    expect(screen.queryByText(/Parlays are paid by DwellDuel/)).toBeNull()
     expect(getParlayRiding).not.toHaveBeenCalled()
+  })
+
+  it('states a result once, marks the winner, and offers no Add', async () => {
+    const card = await renderOutcomes(new Map(), { status: 'resolved', resolvedOutcomeLabel: 'Yes', resolvedOutcomeId: 'o-yes' }, {
+      resolution: { note: 'It poured.', proof: [], previous: null },
+    })
+    expect(within(card).getAllByText(/Yes won/)).toHaveLength(1)
+    expect(within(card).getByText('Won')).toBeInTheDocument()
+    expect(within(card).getByRole('region', { name: 'Why it resolved this way' })).toHaveTextContent('It poured.')
+    expect(within(card).queryByRole('button')).toBeNull()
+    expect(within(card).queryByText(/wins \d/)).toBeNull()
+  })
+
+  it('says a closed market is waiting for its result', async () => {
+    const card = await renderOutcomes(new Map(), {}, { canBet: false })
+    expect(within(card).getByText('Betting has closed. Waiting for a result.')).toBeInTheDocument()
+    expect(within(card).queryByRole('button')).toBeNull()
   })
 })

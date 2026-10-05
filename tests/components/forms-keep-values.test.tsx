@@ -36,7 +36,7 @@ vi.mock('@/lib/tasks/review-task-completion', () => ({
 }))
 
 import { SubmitTaskDialog } from '@/app/(app)/tasks/submit-task-dialog'
-import { EditMarketDialog } from '@/app/(app)/markets/[id]/edit-market-dialog'
+import { EditMarketDialog } from './edit-market-dialog-harness'
 
 import { CreateTaskForm } from '@/app/(app)/admin/(sections)/tasks/create-task-form'
 import { EditTaskForm } from '@/app/(app)/admin/(sections)/tasks/edit-task-form'

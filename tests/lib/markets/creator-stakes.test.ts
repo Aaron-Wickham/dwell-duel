@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getCreatorStakes } from '@/lib/markets/creator-stakes'
+import { describeCreatorStake, describeOwnStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
 import { IN_CHUNK } from '@/lib/pagination/chunk'
 import { fakeSupabase } from '../fake-supabase'
 
@@ -29,5 +29,20 @@ describe('getCreatorStakes', () => {
     await getCreatorStakes(client, markets)
 
     expect(queries[0].in).toContainEqual(['profile_id', ['c-1']])
+  })
+})
+
+describe('describeCreatorStake and describeOwnStake', () => {
+  const stake = { solo: [{ label: 'Yes', amount: 1200 }], parlayLabels: ['No'] }
+
+  it('says what the creator has riding, to everyone and, on the market page, to the creator (#390)', () => {
+    expect(describeCreatorStake(stake, 'has')).toBe('Creator has 1,200 DC on Yes and a parlay on No.')
+    expect(describeOwnStake(stake, 'have')).toBe('You have 1,200 DC on Yes and a parlay on No.')
+    expect(describeOwnStake(stake, 'had')).toBe('You had 1,200 DC on Yes and a parlay on No.')
+  })
+
+  it('says nothing when there is no stake', () => {
+    expect(describeOwnStake(undefined, 'have')).toBeNull()
+    expect(describeOwnStake({ solo: [], parlayLabels: [] }, 'have')).toBeNull()
   })
 })

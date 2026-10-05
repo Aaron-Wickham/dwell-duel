@@ -7,7 +7,7 @@ const { updateMarketAction } = vi.hoisted(() => ({ updateMarketAction: vi.fn() }
 vi.mock('@/lib/markets/update-market', () => ({ updateMarketAction }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 
-import { EditMarketDialog } from '@/app/(app)/markets/[id]/edit-market-dialog'
+import { EditMarketDialog } from './edit-market-dialog-harness'
 import { localInputValue } from '@/lib/markets/weekly-close'
 import { formatDateTime } from '@/lib/markets/format-date'
 

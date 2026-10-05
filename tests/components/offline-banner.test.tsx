@@ -28,7 +28,7 @@ describe('OfflineBanner', () => {
     expect(screen.getByRole('status')).toHaveTextContent(COPY)
   })
 
-  it('overlays just below the phone and desktop top bars, out of flow so it moves nothing (ST-7)', () => {
+  it('sits just below the phone and desktop top bars, fixed so it stays in view as the page scrolls (ST-7)', () => {
     useOffline.mockReturnValue(true)
     render(<OfflineBanner />)
     expect(screen.getByRole('status')).toHaveClass(
@@ -37,6 +37,18 @@ describe('OfflineBanner', () => {
       'top-[calc(4rem+var(--safe-top))]',
       'md:top-[calc(72px+var(--safe-top))]',
     )
+  })
+
+  it('reserves its own height in the page while it shows, so it never covers the title (#401)', () => {
+    useOffline.mockReturnValue(false)
+    const { container, rerender } = render(<OfflineBanner />)
+    expect(container.querySelector('[data-slot="offline-spacer"]')).toBeNull()
+    useOffline.mockReturnValue(true)
+    rerender(<OfflineBanner />)
+    const spacer = container.querySelector('[data-slot="offline-spacer"]')!
+    expect(spacer).toHaveAttribute('aria-hidden', 'true')
+    expect(spacer).toHaveClass('invisible')
+    expect(spacer.className.replace(' invisible', '')).toBe(screen.getByRole('status').firstElementChild!.className)
   })
 
   it('announces going offline and clears when the connection returns', () => {

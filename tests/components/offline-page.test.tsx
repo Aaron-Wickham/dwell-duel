@@ -24,6 +24,11 @@ describe('OfflinePage', () => {
     expect(retry).toHaveClass('no-underline')
   })
 
+  it('offers Go to Home too, so it is never a dead end (#401)', () => {
+    render(<OfflinePage />)
+    expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/')
+  })
+
   it('reloads by itself when the connection comes back (ST-12)', () => {
     const reload = vi.fn()
     vi.stubGlobal('location', { ...window.location, reload })

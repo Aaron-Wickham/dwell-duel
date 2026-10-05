@@ -22,14 +22,16 @@ test('offline: the banner shows and clears live, a tab tap answers at once, a na
     )
     .toBe(true)
 
-  const banner = page.getByText('Offline. Reconnecting…')
+  const banner = page.getByRole('status').getByText('Offline. Reconnecting…')
   const heading = page.getByRole('heading', { level: 1 })
   await expect(banner).toHaveCount(0)
   const headingTop = (await heading.boundingBox())!.y
   await context.setOffline(true)
   await expect(banner).toBeVisible()
-  // The banner overlays the page instead of pushing it down (ST-7).
-  expect((await heading.boundingBox())!.y).toBe(headingTop)
+  // The banner never covers the page's title (#401): the page moves down by exactly its height.
+  const bannerBox = (await banner.locator('xpath=..').boundingBox())!
+  await expect.poll(async () => (await heading.boundingBox())!.y).toBeCloseTo(headingTop + bannerBox.height, 0)
+  expect((await heading.boundingBox())!.y).toBeGreaterThanOrEqual(bannerBox.y + bannerBox.height)
 
   // useOffline() flips back live, with no navigation: proves the banner isn't stuck once the
   // browser's own connectivity events say the connection is back.
@@ -46,6 +48,8 @@ test('offline: the banner shows and clears live, a tab tap answers at once, a na
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1, name: 'You’re offline' })).toBeVisible()
   await expect(page).toHaveURL(/\/$/)
+  // Never a dead end: Home is a tap away as well as Try again.
+  await expect(page.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/')
 
   await page.goto('/markets')
   await expect(page.getByRole('heading', { level: 1, name: 'You’re offline' })).toBeVisible()

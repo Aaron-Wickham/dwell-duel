@@ -5,7 +5,7 @@ import { LiveTables } from '@/components/live/live-tables'
 import { renderStamp } from '@/lib/live/render-stamp'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { ParlayDetailSkeleton } from '@/components/parlays/parlay-detail-skeleton'
-import { LegPill, ParlayProgress, ParlayStatusChip, outcomeFigure } from '@/components/parlays/parlay-parts'
+import { LegResult, ParlayProgress } from '@/components/parlays/parlay-parts'
 import { BackLink } from '@/components/ui/back-link'
 import { LoadingStatus } from '@/components/ui/loading-status'
 import { LocalTime } from '@/components/ui/local-time'
@@ -13,7 +13,7 @@ import { Page, PageHeader, figureHeroClass } from '@/components/ui/page'
 import { SectionCard } from '@/components/ui/section-card'
 import { requireUser } from '@/lib/auth/require-user'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { getParlayDetail, getParlayHead, type ParlayLegDetail } from '@/lib/parlays/get-parlay'
+import { getParlayDetail, getParlayHead, type ParlayDetail, type ParlayLegDetail } from '@/lib/parlays/get-parlay'
 import { formatOdds } from '@/lib/parlays/odds'
 import { ParlayOddsNote } from '@/components/parlays/parlay-odds-note'
 import { cardClass, cardPaddingClass } from '@/components/ui/card'
@@ -27,6 +27,23 @@ import { formatDcAmount } from '@/lib/format/dc'
 // A leg's odds once they're set; before its market closes, what its pool would give it now.
 function legOdds(leg: ParlayLegDetail): string {
   return leg.oddsKnown ? `${formatOdds(leg.oddsBp)}×` : `~${formatOdds(leg.oddsBp)}×`
+}
+
+// The summary's headline and the last line of How it adds up. Only a win sits on a tinted panel;
+// a loss is said once, in loss red on the plain card (#393).
+function summaryOf(parlay: ParlayDetail): { eyebrow: string | null; figure: string; tone: string; result: [string, string] } {
+  switch (parlay.status) {
+    case 'pending': {
+      const pays = `${parlay.estimated ? '~' : ''}${formatDcAmount(parlay.potentialPayout)}`
+      return { eyebrow: 'Pays if every pick wins', figure: pays, tone: 'text-win', result: ['Pays if every pick wins', pays] }
+    }
+    case 'won':
+      return { eyebrow: 'Won', figure: formatDcAmount(parlay.credited), tone: 'text-win', result: ['Won', formatDcAmount(parlay.credited)] }
+    case 'lost':
+      return { eyebrow: null, figure: 'Lost', tone: 'text-loss', result: ['Paid', 'Nothing'] }
+    case 'refunded':
+      return { eyebrow: 'Returned', figure: formatDcAmount(parlay.stake), tone: 'text-ink', result: ['Returned', formatDcAmount(parlay.stake)] }
+  }
 }
 
 function legDetail(leg: ParlayLegDetail) {
@@ -81,28 +98,28 @@ export async function ParlayBody({ id }: { id: string }) {
   // The head read found it a moment ago; only a delete in between gets here.
   if (!parlay) notFound()
 
-  const figure = outcomeFigure(parlay)
+  const summary = summaryOf(parlay)
   const counted = parlay.legs.filter((leg) => leg.status !== 'voided')
   const dropped = parlay.legs.length - counted.length
   const multiplier = `${parlay.estimated ? '~' : ''}${formatOdds(parlay.multiplierBp)}×`
 
   return (
     <ContentReveal>
-      <section aria-labelledby="parlay-summary" className={cn(cardClass, `flex flex-col gap-4 bg-hero text-on-hero ${cardPaddingClass} lg:col-start-2 lg:row-start-1`)}>
+      <section
+        aria-labelledby="parlay-summary"
+        className={cn(cardClass, `flex flex-col gap-4 ${cardPaddingClass} lg:col-start-2 lg:row-start-1`, parlay.status === 'won' && 'bg-win-soft')}
+      >
         <h2 id="parlay-summary" className="sr-only">
           Summary
         </h2>
-        <div className="flex items-center justify-between gap-3">
-          <ParlayStatusChip parlay={parlay} className="bg-surface text-ink" />
-        </div>
         <div className="flex flex-col gap-1">
-          <span className="text-sm text-hero-2">{figure.label}</span>
-          <span className={cn(figureHeroClass, figure.tone === 'win' && 'text-hero-num')}>
-            {figure.value}
-          </span>
-          <span className="text-sm text-hero-2">
-            {formatDcAmount(parlay.stake)} stake · {multiplier} multiplier
-            {parlay.capped ? ` (capped at ${parlay.maxMultiplier}×)` : ''}
+          {summary.eyebrow && <span className="text-sm text-ink2">{summary.eyebrow}</span>}
+          <span className={cn(figureHeroClass, summary.tone)}>{summary.figure}</span>
+          <span className="text-sm text-ink2">
+            {formatDcAmount(parlay.stake)} stake ·{' '}
+            {parlay.status === 'lost'
+              ? `would have paid ${formatDcAmount(parlay.potentialPayout)}`
+              : `pays ${multiplier} your stake${parlay.capped ? ` (capped at ${parlay.maxMultiplier}×)` : ''}`}
           </span>
         </div>
         <ParlayProgress legs={parlay.legs} />
@@ -122,7 +139,7 @@ export async function ParlayBody({ id }: { id: string }) {
                   >
                     {leg.marketTitle}
                   </Link>
-                  <LegPill status={leg.status} />
+                  <LegResult status={leg.status} />
                 </div>
                 <p className="text-sm text-ink2">
                   Pick: <strong className="text-ink">{leg.outcomeLabel}</strong> · {legOdds(leg)}
@@ -151,8 +168,8 @@ export async function ParlayBody({ id }: { id: string }) {
             <dd className="shrink-0 font-bold whitespace-nowrap">= {multiplier}</dd>
           </div>
           <div className="flex justify-between gap-3 border-t border-line pt-2">
-            <dt className="font-bold">{parlay.status === 'pending' ? 'Pays if every pick wins' : figure.label}</dt>
-            <dd className="font-bold">{parlay.status === 'lost' ? 'Nothing' : figure.value}</dd>
+            <dt className="font-bold">{summary.result[0]}</dt>
+            <dd className="font-bold">{summary.result[1]}</dd>
           </div>
         </dl>
         <ParlayOddsNote parlay={parlay} dropped={dropped} />

@@ -167,6 +167,7 @@ const CASES: [string, () => ReactElement][] = [
               amount: 5,
               placedAt: '2026-09-25T12:00:00Z',
               closeAt: '2026-10-01T12:00:00Z',
+              pays: 9,
               result: { kind: 'open' },
             },
           },

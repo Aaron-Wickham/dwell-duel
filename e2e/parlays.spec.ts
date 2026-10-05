@@ -51,10 +51,10 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   await page.goto('/parlays')
   await expect(page).toHaveURL(/\/bets$/)
   const placed = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: titles[0] }).first()
-  await expect(placed.getByText(multiplier, { exact: true })).toBeVisible()
-  await expect(placed.getByText(`${quote.payout} DC`, { exact: true })).toBeVisible()
-  // Both legs; the Open tab already says the parlay is open, so it carries no chip of its own (#387).
-  await expect(placed.getByText('Open', { exact: true })).toHaveCount(2)
+  // The card says what it pays (#393), and each pick's result as a word; no chip, no multiplier.
+  await expect(placed.getByText(`5 DC · pays ${quote.payout} DC if all win`, { exact: true })).toBeVisible()
+  await expect(placed.getByText('Waiting', { exact: true })).toHaveCount(2)
+  await expect(placed.getByText(multiplier, { exact: true })).toHaveCount(0)
 
   // The card opens the parlay's breakdown, and the way back is My bets.
   await placed.getByRole('link', { name: 'Parlay · 2 picks' }).click()
@@ -80,9 +80,13 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   await page.getByRole('navigation', { name: 'My bets sections' }).getByRole('link', { name: 'Settled' }).click()
   await expect(page).toHaveURL(/\/bets\?tab=settled$/)
   const won = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: titles[0] }).first()
-  await expect(won.getByText(`Won ${quote.payout} DC`)).toBeVisible()
+  await expect(won.getByText(`5 DC · won ${quote.payout} DC`, { exact: true })).toBeVisible()
+  await expect(won.getByText('Won', { exact: true })).toHaveCount(2)
   await won.getByRole('link', { name: 'Parlay · 2 picks' }).click()
-  await expect(page.getByRole('region', { name: 'Summary' })).toContainText(`Won ${quote.payout} DC`)
+  const summary = page.getByRole('region', { name: 'Summary' })
+  await expect(summary.getByText('Won', { exact: true })).toBeVisible()
+  await expect(summary.getByText(`${quote.payout} DC`, { exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'How it adds up' }).getByText('Won', { exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Picks' }).getByText('Resolved: Yes')).toHaveCount(2)
   await expect(page.getByRole('region', { name: 'How it adds up' }).getByText(`= ${multiplier}`)).toBeVisible()
 })

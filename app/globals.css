@@ -420,8 +420,17 @@
 
 /* A card or row that one link makes tappable as a whole: the link's ::after covers its nearest
    positioned ancestor, the card, which is `relative pressable`. Another control inside the card
-   sits above the cover in a `relative z-[1]` wrapper. */
+   sits above the cover in a `relative z-[1]` wrapper. The link is the card's title, so it isn't
+   underlined until it's hovered or focused (#393): the whole card is the tap target, and a line
+   under every title in a list is noise. */
 @utility stretched-link {
+  text-decoration-line: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration-line: underline;
+  }
+
   &::after {
     content: '';
     position: absolute;

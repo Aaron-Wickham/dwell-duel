@@ -35,55 +35,46 @@ function renderParlay(p: ParlayView) {
   )
 }
 
+// The card's line under its title, which splits its figure into its own span.
+const line = (text: string) => screen.getByText((_, el) => el?.tagName === 'P' && el.textContent === text)
+
 describe('PlacedParlay', () => {
-  it('shows an open parlay’s stake, multiplier and what it pays if every pick wins', () => {
+  it('says what an open parlay pays if all win, in the line under its title (#393)', () => {
     renderParlay(parlay({}))
     expect(screen.getByRole('link', { name: 'Parlay · 2 picks' })).toHaveAttribute('href', '/parlays/p1')
-    expect(screen.getByText('5 DC')).toBeInTheDocument()
-    expect(screen.getByText('16.00×')).toBeInTheDocument()
-    expect(screen.getByText('Pays if all win')).toBeInTheDocument()
-    expect(screen.getByText('80 DC')).toHaveClass('text-acc-text')
-    // Only the Open tab lists an open parlay, so the card carries no "Open" chip (#387): every
-    // "Open" left is a pick's pill.
-    const pills = screen.getAllByText('Open')
-    expect(pills).toHaveLength(2)
-    expect(pills.every((el) => el.className.includes('h-6'))).toBe(true)
+    expect(line('5 DC · pays 80 DC if all win')).toBeInTheDocument()
+    expect(screen.getByText('80 DC')).toHaveClass('text-win')
+    // No chip and no multiplier on the card: only the picks' words.
+    expect(screen.queryByText('Open')).toBeNull()
+    expect(screen.queryByText(/×/)).toBeNull()
+    expect(screen.getAllByText('Waiting')).toHaveLength(2)
   })
 
-  it('shows a won parlay’s payout in the figure and the chip', () => {
+  it('says what a won parlay paid', () => {
     renderParlay(parlay({ status: 'won', credited: 80 }))
-    expect(screen.getByText('Won 80 DC')).toBeInTheDocument()
-    expect(screen.getByText('Won')).toBeInTheDocument()
-    expect(screen.getByText('80 DC')).toHaveClass('text-acc-text')
+    expect(line('5 DC · won 80 DC')).toBeInTheDocument()
+    expect(screen.getByText('80 DC')).toHaveClass('text-win')
   })
 
-  it('shows a lost parlay as lost', () => {
+  it('says a lost parlay lost, once', () => {
     renderParlay(parlay({ status: 'lost' }))
-    expect(screen.getAllByText('Lost')[0]).toHaveClass('bg-loss-soft', 'text-loss')
-    expect(screen.getAllByText('Lost').at(-1)).toHaveClass('text-loss')
+    expect(line('5 DC · lost')).toBeInTheDocument()
+    expect(screen.getByText('lost')).toHaveClass('text-loss')
   })
 
-  it('shows a refunded parlay’s stake as returned', () => {
+  it('says a refunded parlay was refunded', () => {
     renderParlay(parlay({ status: 'refunded', credited: 5, multiplierBp: 10_000, potentialPayout: 5 }))
-    expect(screen.getByText('Returned')).toBeInTheDocument()
-    expect(screen.getByText('Refunded')).toHaveClass('bg-sunk', 'text-ink2')
+    expect(line('5 DC · refunded')).toBeInTheDocument()
   })
 
-  it('notes when the multiplier was capped, at the parlay’s own cap', () => {
-    renderParlay(parlay({ multiplierBp: 200_000, capped: true, potentialPayout: 100 }))
-    expect(screen.getByText('Multiplier (max 20×)')).toBeInTheDocument()
-    expect(screen.getByText('20.00×')).toBeInTheDocument()
-  })
-
-  it('keeps the 100× cap of a parlay placed before 0074', () => {
-    renderParlay(parlay({ maxMultiplier: 100, multiplierBp: 1_000_000, capped: true, potentialPayout: 500 }))
-    expect(screen.getByText('Multiplier (max 100×)')).toBeInTheDocument()
-  })
-
-  it('marks the multiplier and payout as estimates while a pick’s odds aren’t set', () => {
+  it('marks the payout as an estimate while a pick’s odds aren’t set', () => {
     renderParlay(parlay({ estimated: true }))
-    expect(screen.getByText('~16.00×')).toBeInTheDocument()
-    expect(screen.getByText('~80 DC')).toBeInTheDocument()
+    expect(line('5 DC · pays ~80 DC if all win')).toBeInTheDocument()
+  })
+
+  it('shows the day it was placed beside the title', () => {
+    renderParlay(parlay({}))
+    expect(screen.getByText('Placed').parentElement).toHaveTextContent('Placed Sep 25')
   })
 
   it('is a Show more focus target named by its heading when given a row id', () => {
@@ -97,38 +88,12 @@ describe('PlacedParlay', () => {
     expect(row).toHaveAttribute('tabindex', '-1')
   })
 
-  it('summarises how the picks stand, with one progress segment per pick', () => {
-    renderParlay(
-      parlay({
-        legs: [
-          { marketId: 'm1', marketTitle: 'A?', outcomeLabel: 'Yes', oddsBp: 40_000, oddsKnown: true, status: 'won' },
-          { marketId: 'm2', marketTitle: 'B?', outcomeLabel: 'No', oddsBp: 40_000, oddsKnown: true, status: 'open' },
-          { marketId: 'm3', marketTitle: 'C?', outcomeLabel: 'No', oddsBp: 40_000, oddsKnown: true, status: 'open' },
-        ],
-      }),
-    )
-    // The summary is the visible line; the bar only repeats it, so it is hidden from readers.
-    const summary = screen.getByText('1 won · 2 open')
-    const bar = summary.previousElementSibling!
-    expect(bar).toHaveAttribute('aria-hidden', 'true')
-    expect(bar.children).toHaveLength(3)
-    expect(screen.queryByRole('img', { name: '1 won · 2 open' })).toBeNull()
+  it('spans both columns of the desktop grid', () => {
+    renderParlay(parlay({}))
+    expect(screen.getByRole('link').closest('li')).toHaveClass('lg:col-span-full')
   })
 
-  it('says a pick whose market is past its close time is awaiting resolution, like a solo bet', () => {
-    renderParlay(
-      parlay({
-        legs: [
-          { marketId: 'm1', marketTitle: 'A?', outcomeLabel: 'Yes', oddsBp: 40_000, oddsKnown: true, status: 'awaiting' },
-          { marketId: 'm2', marketTitle: 'B?', outcomeLabel: 'No', oddsBp: 40_000, oddsKnown: true, status: 'open' },
-        ],
-      }),
-    )
-    expect(screen.getByText('Awaiting resolution')).toHaveClass('h-6', 'rounded-full')
-    expect(screen.getByText('1 open · 1 awaiting')).toBeInTheDocument()
-  })
-
-  it('lists the picks as plain text with the picked outcome and a status pill, so the whole card is one link', () => {
+  it('lists the picks as plain lines, "Market · Pick", with a word for each result, so the whole card is one link', () => {
     renderParlay(
       parlay({
         status: 'lost',
@@ -140,10 +105,24 @@ describe('PlacedParlay', () => {
       }),
     )
     expect(screen.getAllByRole('link')).toHaveLength(1)
-    expect(screen.getByText(/Will it rain\?/)).toBeInTheDocument()
+    expect(screen.getByText(/Will it rain\? ·/)).toBeInTheDocument()
     expect(screen.getByText('Grace').tagName).toBe('STRONG')
-    expect(screen.getByText('Won')).toHaveClass('bg-win-soft', 'text-win', 'h-6', 'rounded-full')
-    expect(screen.getByText('Voided')).toHaveClass('bg-sunk', 'text-ink2')
+    expect(screen.getByText('Won')).toHaveClass('text-win')
+    expect(screen.getByText('Won')).not.toHaveClass('rounded-full')
+    expect(screen.getByText('Lost')).toHaveClass('text-loss')
+    expect(screen.getByText('Voided')).toHaveClass('text-ink2')
+  })
+
+  it('says a pick past its market’s close time is Waiting, like an open one', () => {
+    renderParlay(
+      parlay({
+        legs: [
+          { marketId: 'm1', marketTitle: 'A?', outcomeLabel: 'Yes', oddsBp: 40_000, oddsKnown: true, status: 'awaiting' },
+          { marketId: 'm2', marketTitle: 'B?', outcomeLabel: 'No', oddsBp: 40_000, oddsKnown: true, status: 'open' },
+        ],
+      }),
+    )
+    expect(screen.getAllByText('Waiting')).toHaveLength(2)
   })
 
   it('previews three picks and says how many more the breakdown holds', () => {
@@ -157,7 +136,7 @@ describe('PlacedParlay', () => {
     renderParlay(parlay({ legs }))
     expect(screen.getByText(/Market 2\?/)).toBeInTheDocument()
     expect(screen.queryByText(/Market 3\?/)).toBeNull()
-    expect(screen.getByText('+2 more picks · View breakdown')).toBeInTheDocument()
+    expect(screen.getByText('+2 more picks')).toBeInTheDocument()
   })
 
   it('stretches its one link over the card so the whole card is the tap target', () => {

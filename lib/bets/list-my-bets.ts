@@ -21,6 +21,9 @@ export interface MyBet {
   amount: number
   placedAt: string
   closeAt: string
+  // What it pays if it wins, fixed when placed: floor(shares) on an lmsr market (0102), the "Pays ~"
+  // a pool bet was converted at (0105). Null for a pool bet, whose payout was never fixed.
+  pays: number | null
   result: MyBetResult
 }
 
@@ -91,6 +94,7 @@ export function toMyBet(b: BetRow, now: number): MyBet {
     amount: b.amount,
     placedAt: b.created_at,
     closeAt: b.markets.close_at,
+    pays: b.shares === null ? null : Math.floor(Number(b.shares)),
     result: betResult({ outcomeId: b.outcome_id, amount: b.amount, shares: b.shares, refundOutcomes: b.refund_outcomes }, b.markets, now),
   }
 }

@@ -116,7 +116,7 @@ describe('a page-level list is ListCards', () => {
 
   it('sit on the page per the approved grid, spaced with no dividers or card around them', () => {
     const lists: [string, RegExp][] = [
-      ['app/(app)/bets/bet-rows.tsx', /lg:grid-cols-3/],
+      ['app/(app)/bets/bet-rows.tsx', /lg:grid-cols-2/],
       ['app/(app)/tasks/page.tsx', /lg:grid-cols-2/],
       ['app/(app)/admin/(sections)/members/page.tsx', /lg:grid-cols-3/],
     ]

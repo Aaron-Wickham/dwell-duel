@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { Line, LineChart, ReferenceArea, ReferenceLine, XAxis, YAxis } from 'recharts'
 import { Toggle } from '@base-ui/react/toggle'
 import { ToggleGroup } from '@base-ui/react/toggle-group'
@@ -149,6 +149,8 @@ export function ProbabilityChart({
   const closedMs = closedAt ? Date.parse(closedAt) : null
   const closed = closedMs !== null && closedMs <= now
   const [picked, setPicked] = useState<RangeKey>(() => initialRange(ranges, closed))
+  // The plotted point the keyboard is on, or null while nobody has stepped (the chart then reads as now).
+  const [keyStep, setKeyStep] = useState<number | null>(null)
   const range = ranges.includes(picked) ? picked : initialRange(ranges, closed)
 
   const gridLines = GRID.map((p) => (
@@ -243,6 +245,37 @@ export function ProbabilityChart({
     if (drawn.length === 1) return { name: resolvedLabel, figure: 'won', quiet: false }
     return outcome.label === resolvedLabel ? { name: outcome.label, figure: 'won', quiet: false } : { name: outcome.label, figure: pct, quiet: true }
   })
+  // For the keyboard the plot is a slider over the plotted points, as the race chart is (#418):
+  // arrow keys, Page Up/Down, Home and End step through them, each step shows a readout like the
+  // hover's, and a polite live region reads out every line's chance there.
+  const lastStep = Math.max(0, rows.length - 1)
+  // A live refresh can shorten the series under the keyboard.
+  const active = keyStep === null ? null : Math.min(keyStep, lastStep)
+  const pageStep = Math.max(1, Math.round(lastStep / 10))
+  function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    const from = active ?? lastStep
+    const moves: Partial<Record<string, number>> = {
+      ArrowLeft: from - 1,
+      ArrowDown: from - 1,
+      ArrowRight: from + 1,
+      ArrowUp: from + 1,
+      PageDown: from - pageStep,
+      PageUp: from + pageStep,
+      Home: 0,
+      End: lastStep,
+    }
+    const to = moves[e.key]
+    // Leave the browser's and the screen reader's own shortcuts alone.
+    if (to === undefined || e.altKey || e.ctrlKey || e.metaKey || rows.length === 0) return
+    e.preventDefault()
+    setKeyStep(Math.max(0, Math.min(lastStep, to)))
+  }
+  const chancesAt = (step: number) =>
+    drawn
+      .map((outcome, index) => ({ outcome, value: Math.round(rows[step][keys[index]]) }))
+      .sort((a, b) => b.value - a.value)
+  const activeRow = active === null ? null : rows[active]
+
   const phoneTargets = drawn.map((o) => (1 - (ended.shares[o.id] ?? 0)) * PHONE.height)
   const desktopTargets = drawn.map((o) => (1 - (ended.shares[o.id] ?? 0)) * DESKTOP.height)
   const compactPhone = !labelsFit(drawn.length, PHONE.height, PHONE.gap)
@@ -264,7 +297,10 @@ export function ProbabilityChart({
               aria-label="Time range"
               value={[range]}
               onValueChange={(value) => {
-                if (value[0]) setPicked(value[0])
+                if (value[0]) {
+                  setPicked(value[0])
+                  setKeyStep(null)
+                }
               }}
               className="contents"
             >
@@ -278,7 +314,22 @@ export function ProbabilityChart({
         )}
       </div>
       <div className="relative h-[220px] md:h-[300px]">
-        <div ref={plotRef} role="img" aria-label={summary} className="absolute inset-y-0 right-[76px] left-0 cursor-crosshair md:right-[128px]">
+        <div
+          ref={plotRef}
+          role="slider"
+          tabIndex={0}
+          aria-label={summary}
+          aria-valuemin={0}
+          aria-valuemax={lastStep}
+          aria-valuenow={active ?? lastStep}
+          aria-valuetext={rows.length > 0 ? formatHover(rows[active ?? lastStep].t) : undefined}
+          onKeyDown={onKeyDown}
+          onBlur={() => setKeyStep(null)}
+          // The pointer's own tooltip takes over from the keyboard's readout.
+          onPointerMove={() => setKeyStep(null)}
+          onPointerDown={() => setKeyStep(null)}
+          className="absolute inset-y-0 right-[76px] left-0 cursor-crosshair rounded-control md:right-[128px]"
+        >
           {gridLines}
           {Y_TICKS.map((p) => (
             <span
@@ -333,7 +384,48 @@ export function ProbabilityChart({
               style={{ left: `${xPercent(lineEnd)}%`, top: `${100 - (ended.shares[outcome.id] ?? 0) * 100}%` }}
             />
           ))}
+          {activeRow !== null && active !== null && (
+            <div aria-hidden="true" data-testid="chart-key-readout">
+              <div className="absolute inset-y-0 w-[1.5px] -translate-x-1/2 bg-line-s" style={{ left: `${xPercent(activeRow.t)}%` }} />
+              {drawn.map((outcome, index) => (
+                <span
+                  key={outcome.id}
+                  className={cn(
+                    'absolute size-3 -translate-1/2 rounded-full border-2 border-surface',
+                    muted(outcome) ? 'bg-line-s' : SERIES_BG[outcome.series],
+                  )}
+                  style={{ left: `${xPercent(activeRow.t)}%`, top: `${100 - activeRow[keys[index]]}%` }}
+                />
+              ))}
+              {/* The tooltip's look, beside the cursor while there's room to its right and pinned to
+                  the plot's right edge once there isn't. A phone's plot is too narrow for it, as in
+                  the race; the live region still reads each step. */}
+              <div
+                className={cn(
+                  'absolute top-2 hidden min-w-[140px] flex-col gap-1.5 rounded-control border border-line bg-surface px-3 py-2.5 text-ink shadow-card md:flex',
+                  xPercent(activeRow.t) > 50 ? 'right-0' : 'ml-3.5',
+                )}
+                style={xPercent(activeRow.t) > 50 ? undefined : { left: `${xPercent(activeRow.t)}%` }}
+              >
+                <span className="whitespace-nowrap text-xs font-bold text-ink2">{formatHover(activeRow.t)}</span>
+                {chancesAt(active).map(({ outcome, value }) => (
+                  <div key={outcome.id} className="flex items-center gap-2 text-sm">
+                    <span className={cn('size-2 shrink-0 rounded-full', muted(outcome) ? 'bg-line-s' : SERIES_BG[outcome.series])} />
+                    <span className="grow">{outcome.label}</span>
+                    <strong className="tabular-nums">{value}%</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+        <p aria-live="polite" className="sr-only" data-testid="chart-announcer">
+          {active === null
+            ? ''
+            : `${formatHover(rows[active].t)}: ${chancesAt(active)
+                .map(({ outcome, value }) => `${outcome.label} ${value}%`)
+                .join(', ')}`}
+        </p>
         <div aria-hidden="true" className="absolute inset-y-0 right-0 w-[76px] md:w-[128px]">
           <Leaders targets={phoneTargets} tops={phoneTops} height={PHONE.height} className="md:hidden" />
           <Leaders targets={desktopTargets} tops={desktopTops} height={DESKTOP.height} className="hidden md:block" />

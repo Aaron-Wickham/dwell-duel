@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import type { MemberSummary } from '@/lib/members/list-members'
+import type { MemberOrder } from '@/lib/members/member-sort'
 import { MemberRow, MembersTableHead } from '@/app/(app)/admin/members/member-row'
 
 const BEN: MemberSummary = {
@@ -16,10 +17,18 @@ const BEN: MemberSummary = {
   removed: false,
 }
 
+const BY_NAME: MemberOrder = { sort: 'name', dir: 'asc' }
+const HREFS = {
+  name: { href: '/admin/members', next: 'asc' as const },
+  balance: { href: '/admin/members?sort=balance', next: 'desc' as const },
+  net_worth: { href: '/admin/members?sort=net_worth', next: 'desc' as const },
+  joined: { href: '/admin/members?sort=joined', next: 'desc' as const },
+}
+
 function renderRow(member: MemberSummary = BEN, netWorth: number | null = 5161) {
   render(
     <table>
-      <MembersTableHead />
+      <MembersTableHead order={BY_NAME} sortHrefs={HREFS} />
       <tbody>
         <MemberRow member={member} domId="member-p-ben" netWorth={netWorth ?? undefined} />
       </tbody>
@@ -34,8 +43,8 @@ describe('MemberRow', () => {
     renderRow()
     const headers = screen.getAllByRole('columnheader')
     expect(headers.map((h) => h.textContent)).toEqual(['Member', 'Role', 'Balance', 'Net worth', 'Joined'])
-    expect(headers[2]).toHaveClass('text-right')
-    expect(headers[3]).toHaveClass('text-right')
+    expect(headers[2]).toHaveClass('lg:text-right')
+    expect(headers[3]).toHaveClass('lg:text-right')
   })
 
   it('links the name to the member’s Admin page, with no forms or buttons', () => {
@@ -72,5 +81,35 @@ describe('MemberRow', () => {
   it('shows a dash for a net worth it couldn’t read', () => {
     const row = renderRow(BEN, null)
     expect(within(row).getAllByRole('cell')[3]).toHaveTextContent('— net worth')
+  })
+})
+
+// #418: the headers sort the table, through links that keep the order in the URL.
+describe('MembersTableHead', () => {
+  it('marks the sorted column with aria-sort, and every sortable header is a link saying what it does', () => {
+    render(
+      <table>
+        <MembersTableHead order={{ sort: 'balance', dir: 'desc' }} sortHrefs={{ ...HREFS, balance: { href: '/admin/members?sort=balance&dir=asc', next: 'asc' } }} />
+      </table>,
+    )
+    const balance = screen.getByRole('columnheader', { name: /^Balance/ })
+    expect(balance).toHaveAttribute('aria-sort', 'descending')
+    expect(screen.getByRole('columnheader', { name: /^Member/ })).not.toHaveAttribute('aria-sort')
+    expect(within(balance).getByRole('link', { name: 'Balance, sort lowest balance first' })).toHaveAttribute(
+      'href',
+      '/admin/members?sort=balance&dir=asc',
+    )
+    expect(screen.getByRole('link', { name: 'Joined, sort newest first' })).toHaveAttribute('href', '/admin/members?sort=joined')
+    expect(within(screen.getByRole('columnheader', { name: 'Role' })).queryByRole('link')).toBeNull()
+  })
+
+  it('leaves a column it can’t sort as plain text', () => {
+    render(
+      <table>
+        <MembersTableHead order={BY_NAME} sortHrefs={{ name: HREFS.name, balance: HREFS.balance, joined: HREFS.joined }} />
+      </table>,
+    )
+    expect(screen.getByRole('columnheader', { name: /^Member/ })).toHaveAttribute('aria-sort', 'ascending')
+    expect(within(screen.getByRole('columnheader', { name: 'Net worth' })).queryByRole('link')).toBeNull()
   })
 })

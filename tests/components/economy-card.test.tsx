@@ -25,9 +25,11 @@ vi.mock('@/lib/auth/roles', async (importOriginal) => ({
   getRole: async () => role.current,
 }))
 
-vi.mock('@/lib/ledger/list-transactions', () => ({
+vi.mock('@/lib/ledger/list-transactions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/ledger/list-transactions')>()),
   listAllTransactions: async () => ({ rows: [], next: null, windowed: false }),
 }))
+vi.mock('@/lib/members/list-members', () => ({ listMemberNames: async () => [] }))
 
 const { readEconomySummary } = vi.hoisted(() => ({ readEconomySummary: vi.fn() }))
 vi.mock('@/lib/economy/summary', async (importOriginal) => ({

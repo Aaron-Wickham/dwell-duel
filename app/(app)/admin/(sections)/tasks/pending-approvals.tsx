@@ -22,6 +22,7 @@ import { eyebrowClass } from '@/components/ui/page'
 import { ReviewButtons } from './review-buttons'
 import { RejectDialog } from './reject-dialog'
 import { formatDcAmount } from '@/lib/format/dc'
+import { cn } from '@/lib/utils'
 
 export const PENDING_ROW_ID_PREFIX = 'pending'
 const BULK_FORM_ID = 'bulk-review-form'
@@ -46,19 +47,24 @@ export function attachedSummary(note: string | null, proof: ProofView[]): string
 }
 
 // One table at every width (#399): from lg it lays out as columns under its headers; below lg
-// each row is a grid (checkbox, then member, task and attachments stacked, then the buttons), and
-// the headers are hidden. The roles are explicit because the phone layout changes the elements'
-// display, which can drop their implicit table roles.
-const rowClass = 'max-lg:grid max-lg:grid-cols-[44px_minmax(0,1fr)_auto] max-lg:gap-x-2 max-lg:py-3'
+// each row is a grid of three lines (the member and when they sent it; the task and its reward;
+// what's attached, with the buttons on the right), and the headers are hidden, so a phone screen
+// holds five rows (#418). The checkbox spans the first two lines, which its 44px sets the height
+// of. The roles are explicit because the phone layout changes the elements' display, which can
+// drop their implicit table roles.
+const rowClass = 'max-lg:grid max-lg:grid-cols-[44px_minmax(0,1fr)_auto] max-lg:gap-x-2 max-lg:py-1'
 const cellClass = 'lg:py-3 lg:pr-3 lg:align-top'
 const headClass = `${eyebrowClass} py-2.5 pr-3 text-left`
 
 function Attached({ row }: { row: PendingRow }) {
   const summary = attachedSummary(row.note, row.proof)
-  if (!summary) return <span className="text-sm text-ink2">Nothing attached</span>
+  // Below lg the row's buttons sit over the right of this line, so its text stops short of them.
+  if (!summary) {
+    return <span className="text-sm text-ink2 max-lg:inline-flex max-lg:min-h-11 max-lg:max-w-[calc(100%-11rem)] max-lg:items-center">Nothing attached</span>
+  }
   return (
     <details className="group">
-      <summary className="pressable inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-ink2 underline decoration-[1.5px] underline-offset-[3px]">
+      <summary className="pressable inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-ink2 underline decoration-[1.5px] underline-offset-[3px] max-lg:max-w-[calc(100%-11rem)]">
         {summary}
       </summary>
       <div className="flex flex-col gap-2 pb-2">
@@ -173,9 +179,10 @@ export function PendingApprovals({
   return (
     <div className="flex flex-col gap-3">
       {/* At the top and sticky under the top bar, so it's in reach however far down the queue you
-          are (#399). */}
-      <div className="sticky top-[calc(64px+var(--safe-top)+8px)] z-[2] flex flex-col gap-2 rounded-tile border border-line bg-surface px-3.5 py-2 md:top-[calc(72px+var(--safe-top)+8px)] lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-x-4">
+          are (#399). Below lg it's one line until something is ticked, when its buttons join it, so
+          a phone screen holds five submissions under it (#418). */}
+      <div className="sticky top-[calc(64px+var(--safe-top)+8px)] z-[2] flex flex-col gap-1 rounded-tile border border-line bg-surface px-3.5 py-0.5 md:top-[calc(72px+var(--safe-top)+8px)] lg:flex-row lg:items-center lg:justify-between lg:gap-2 lg:py-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 lg:justify-start">
           <label className="pressable inline-flex min-h-11 cursor-pointer items-center gap-2.5 font-bold">
             <input
               type="checkbox"
@@ -192,25 +199,38 @@ export function PendingApprovals({
             />
             Select all
           </label>
-          <p aria-live="polite" className="font-extrabold">
+          <p aria-live="polite" className="font-extrabold max-lg:text-sm">
             {selectedCount} selected · pays <span className="whitespace-nowrap">{formatDcAmount(selectedDc)}</span>
           </p>
         </div>
         {/* The form's own action is the approve, so the confirm dialog's button (which submits through
             its form attribute) runs it. Reject selected opens its own dialog and form. */}
-        <form id={BULK_FORM_ID} action={approveAction} onSubmit={confirm.onSubmit} className="flex flex-col gap-2 sm:flex-row">
+        <form
+          id={BULK_FORM_ID}
+          action={approveAction}
+          onSubmit={confirm.onSubmit}
+          className={cn('flex gap-2 max-lg:pb-1.5', selectedCount === 0 && !rejectNoneShown && 'max-lg:hidden')}
+        >
           <Button
             size="sm"
             variant="secondary"
+            className="max-lg:grow"
             onClick={startBulkReject}
             aria-describedby={rejectNoneShown ? BULK_REJECT_ERROR_ID : undefined}
           >
-            <span>Reject selected<span aria-hidden="true">…</span></span>
+            {/* "Reject…" below lg, so both buttons fit one line beside each other. */}
+            <span aria-hidden="true" className="lg:hidden">
+              Reject…
+            </span>
+            <span className="max-lg:sr-only">
+              Reject selected<span aria-hidden="true">…</span>
+            </span>
           </Button>
           {/* Quiet until something is ticked, so an empty bar doesn't shout. */}
           <FormSubmitButton
             size="sm"
             variant={selectedCount > 0 ? 'primary' : 'secondary'}
+            className="max-lg:grow"
             onClick={() => setLastBulk('approve')}
             aria-describedby={
               lastBulk === 'approve' && !isApprovePending && approveState?.formError ? BULK_APPROVE_ERROR_ID : undefined
@@ -252,7 +272,7 @@ export function PendingApprovals({
             const own = c.submitterId === viewerId
             return (
               <tr key={c.id} role="row" {...focusTarget(rowDomId(PENDING_ROW_ID_PREFIX, c.id))} className={rowClass}>
-                <td role="cell" className={`${cellClass} max-lg:row-span-3 lg:w-11 lg:py-0.5`}>
+                <td role="cell" className={`${cellClass} max-lg:row-span-2 lg:w-11 lg:py-0.5`}>
                   {!own && (
                     <label className="pressable inline-flex min-h-11 min-w-11 cursor-pointer items-center">
                       {/* Outside the bulk form (row forms can't nest inside it), so the form attribute joins it. */}
@@ -270,22 +290,26 @@ export function PendingApprovals({
                     </label>
                   )}
                 </td>
-                <td role="cell" className={`${cellClass} max-lg:col-start-2 max-lg:row-start-1 max-lg:pt-2.5`}>
+                <td role="cell" className={`${cellClass} max-lg:col-start-2 max-lg:row-start-1`}>
                   <IntentLink href={`/members/${c.submitterId}`} transitionTypes={['nav-forward']} className="hit-area pressable font-extrabold text-ink">
                     {c.submitterName}
                   </IntentLink>
                 </td>
-                <td role="cell" className={`${cellClass} max-lg:col-start-2 max-lg:row-start-2`}>
-                  {c.taskTitle} · <span className="font-extrabold whitespace-nowrap text-gold">{formatDcAmount(c.rewardAmount)}</span>
-                  <span className="block text-sm text-ink2 lg:hidden">{c.submittedAge}</span>
+                {/* One line below lg, the title giving way to the reward; the full title is in the
+                    row's button names and at lg. */}
+                <td role="cell" className={`${cellClass} max-lg:col-span-2 max-lg:col-start-2 max-lg:row-start-2 max-lg:flex max-lg:min-w-0 max-lg:text-sm`}>
+                  <span className="max-lg:min-w-0 max-lg:truncate">{c.taskTitle}</span>
+                  <span className="whitespace-pre"> · </span>
+                  <span className="font-extrabold whitespace-nowrap text-gold">{formatDcAmount(c.rewardAmount)}</span>
                 </td>
-                <td role="cell" className={`${cellClass} max-lg:col-start-2 max-lg:row-start-3 lg:py-0.5`}>
+                <td role="cell" className={`${cellClass} max-lg:col-span-2 max-lg:col-start-2 max-lg:row-start-3 lg:py-0.5`}>
                   <Attached row={c} />
                 </td>
-                <td role="cell" className={`${cellClass} text-sm whitespace-nowrap text-ink2 max-lg:hidden`}>
+                <td role="cell" className={`${cellClass} text-sm whitespace-nowrap text-ink2 max-lg:col-start-3 max-lg:row-start-1 max-lg:text-right`}>
                   {c.submittedAge}
                 </td>
-                <td role="cell" className={`${cellClass} max-lg:col-start-3 max-lg:row-span-3 max-lg:row-start-1 lg:py-0.5 lg:pr-0`}>
+                {/* Over the right of the third line below lg, beside what's attached. */}
+                <td role="cell" className={`${cellClass} max-lg:col-start-3 max-lg:row-start-3 max-lg:justify-self-end lg:py-0.5 lg:pr-0`}>
                   {own ? (
                     <p className="max-w-40 pt-2.5 text-right text-sm font-bold text-ink2">Yours: another reviewer reviews it.</p>
                   ) : (

@@ -5,13 +5,17 @@ import { focusTarget } from '@/lib/pagination/row-id'
 import { LocalTime } from '@/components/ui/local-time'
 import { eyebrowClass } from '@/components/ui/page'
 import { formatDcAmount } from '@/lib/format/dc'
+import { ArrowDown, ArrowUp } from 'lucide-react'
+import { orderLabel, type MemberOrder, type MemberSort, type SortDir } from '@/lib/members/member-sort'
+import { cn } from '@/lib/utils'
 
 // Admin › Members is one table at every width (#399): columns under their headers from lg; below
 // lg each row is the name and email, then one line of role, balance, net worth and when they
-// joined, so the headers are hidden and each figure says what it is. The roles are explicit
-// because the phone layout changes the elements' display, which can drop their implicit roles.
+// joined, so each figure says what it is, and the header row is a line of sort links over the
+// list (#418). The roles are explicit because the phone layout changes the elements' display,
+// which can drop their implicit roles.
 export const membersTableClass = 'w-full border-collapse max-lg:block'
-const headClass = `${eyebrowClass} py-2.5 pr-3 text-left last:pr-0`
+const headClass = `${eyebrowClass} h-11 text-left align-middle max-lg:block max-lg:h-auto lg:pr-3 lg:last:pr-0`
 const cellClass = 'lg:py-3 lg:pr-3 lg:align-top lg:last:pr-0'
 const numberClass = 'lg:text-right lg:tabular-nums'
 // Separates the phone line's figures; the table's columns do that from lg.
@@ -21,25 +25,73 @@ const dot = (
   </span>
 )
 
-export function MembersTableHead() {
+const ARIA_SORT = { asc: 'ascending', desc: 'descending' } as const
+// A column header that sorts the table by its column: a link, since the order lives in the URL,
+// saying what a tap does next. The sorted column carries aria-sort and an arrow.
+function SortHeader({
+  sort,
+  label,
+  order,
+  href,
+  next,
+  className,
+}: {
+  sort: MemberSort
+  label: string
+  order: MemberOrder
+  href: string
+  next: SortDir
+  className?: string
+}) {
+  const current = order.sort === sort
+  const Arrow = order.dir === 'asc' ? ArrowUp : ArrowDown
   return (
-    <thead role="rowgroup" className="max-lg:hidden">
-      <tr role="row" className="border-b border-line">
-        <th role="columnheader" scope="col" className={headClass}>
-          Member
-        </th>
-        <th role="columnheader" scope="col" className={headClass}>
+    <th role="columnheader" scope="col" aria-sort={current ? ARIA_SORT[order.dir] : undefined} className={cn(headClass, className)}>
+      <IntentLink
+        href={href}
+        aria-label={`${label}, sort ${orderLabel({ sort, dir: next })}`}
+        replace
+        scroll={false}
+        className={cn(
+          'pressable inline-flex min-h-11 items-center gap-1 no-underline hover:text-ink',
+          current && 'text-ink',
+        )}
+      >
+        {label}
+        {current && <Arrow aria-hidden="true" className="size-3.5 shrink-0" />}
+      </IntentLink>
+    </th>
+  )
+}
+
+// `sortHrefs` holds a link for each column that can sort this tab; Net worth can't on Removed.
+export function MembersTableHead({
+  order,
+  sortHrefs,
+}: {
+  order: MemberOrder
+  sortHrefs: Partial<Record<MemberSort, { href: string; next: SortDir }>>
+}) {
+  const header = (sort: MemberSort, label: string, className?: string) => {
+    const link = sortHrefs[sort]
+    return link ? (
+      <SortHeader sort={sort} label={label} order={order} href={link.href} next={link.next} className={className} />
+    ) : (
+      <th role="columnheader" scope="col" className={cn(headClass, 'max-lg:hidden', className)}>
+        {label}
+      </th>
+    )
+  }
+  return (
+    <thead role="rowgroup" className="max-lg:block">
+      <tr role="row" className="border-b border-line max-lg:flex max-lg:flex-wrap max-lg:gap-x-4">
+        {header('name', 'Member')}
+        <th role="columnheader" scope="col" className={cn(headClass, 'max-lg:hidden')}>
           Role
         </th>
-        <th role="columnheader" scope="col" className={`${headClass} text-right`}>
-          Balance
-        </th>
-        <th role="columnheader" scope="col" className={`${headClass} text-right`}>
-          Net worth
-        </th>
-        <th role="columnheader" scope="col" className={headClass}>
-          Joined
-        </th>
+        {header('balance', 'Balance', 'lg:text-right')}
+        {header('net_worth', 'Net worth', 'lg:text-right')}
+        {header('joined', 'Joined')}
       </tr>
     </thead>
   )

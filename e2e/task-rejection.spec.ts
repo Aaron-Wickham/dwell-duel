@@ -14,7 +14,7 @@ test('reject a task submission with a reason the member then sees', async ({ pag
   const member = await browser.newContext({ storageState: MEMBER_STORAGE_STATE_PATH })
   const bobPage = await member.newPage()
   await bobPage.goto('/')
-  const balance = bobPage.getByRole('region', { name: 'Your balance' }).getByText(/^\d+ DC$/).first()
+  const balance = bobPage.getByRole('region', { name: 'Balance' }).getByText(/^[\d,]+ DC$/).first()
   const startingBalance = await balance.textContent()
 
   await bobPage.goto('/tasks')

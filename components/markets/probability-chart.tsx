@@ -28,9 +28,13 @@ const TICK_FRACTIONS = [0, 0.25, 0.5, 0.75, 1]
 const GRID = [100, 75, 50, 25, 0]
 // The y ticks sit inside the plot's left edge, clear of the end labels in the right gutter.
 const Y_TICKS = [75, 50, 25]
-// Plot heights and label spacing per breakpoint, from the phone and desktop artboards.
-const PHONE = { height: 220, gap: 40 }
-const DESKTOP = { height: 300, gap: 48 }
+// Plot heights per breakpoint, from the phone and desktop artboards, and the least distance
+// between two end labels' centres: a label's height plus 4px (#391). A label is the name line
+// (13px at 1.05) over its figure (24px, 28px from md, at 1.25): 44px on a phone, 49px from md.
+const PHONE = { height: 220, gap: 48 }
+const DESKTOP = { height: 300, gap: 53 }
+// When the full labels can't all fit, each folds to its one name line with the figure beside it.
+const COMPACT_GAP = 18
 const LABEL_PAD = 20
 // An end label moved further than this from its line's end gets a leader back to it.
 const LEADER_MIN_PX = 4
@@ -52,6 +56,11 @@ function formatWeekday(t: number, timeZone?: string): string {
 
 function percent(share: number | undefined): number {
   return Math.round((share ?? 0) * 100)
+}
+
+// Whether `count` end labels fit the plot's height at full size.
+export function labelsFit(count: number, height: number, gap: number): boolean {
+  return count <= 1 || (count - 1) * gap <= height - 2 * LABEL_PAD
 }
 
 // Pushes end labels apart so they never overlap, keeping each as close to its line as it can.
@@ -231,8 +240,10 @@ export function ProbabilityChart({
   })
   const phoneTargets = drawn.map((o) => (1 - (ended.shares[o.id] ?? 0)) * PHONE.height)
   const desktopTargets = drawn.map((o) => (1 - (ended.shares[o.id] ?? 0)) * DESKTOP.height)
-  const phoneTops = spreadLabels(phoneTargets, PHONE.height, PHONE.gap)
-  const desktopTops = spreadLabels(desktopTargets, DESKTOP.height, DESKTOP.gap)
+  const compactPhone = !labelsFit(drawn.length, PHONE.height, PHONE.gap)
+  const compactDesktop = !labelsFit(drawn.length, DESKTOP.height, DESKTOP.gap)
+  const phoneTops = spreadLabels(phoneTargets, PHONE.height, compactPhone ? COMPACT_GAP : PHONE.gap)
+  const desktopTops = spreadLabels(desktopTargets, DESKTOP.height, compactDesktop ? COMPACT_GAP : DESKTOP.gap)
 
   return (
     <div className="flex flex-col gap-3">
@@ -268,7 +279,7 @@ export function ProbabilityChart({
             <span
               key={p}
               aria-hidden="true"
-              className={`absolute left-0 -translate-y-full rounded-sm bg-surface/85 px-0.5 ${microTextClass} font-bold text-ink2`}
+              className={`absolute left-0 -translate-y-full rounded-segment bg-surface/85 px-0.5 ${microTextClass} font-bold text-ink2`}
               style={{ top: `${100 - p}%` }}
             >
               {p}%
@@ -335,8 +346,13 @@ export function ProbabilityChart({
               <div className={`flex w-[62px] items-center gap-1 ${chipTextClass} font-bold md:w-[114px]`}>
                 <span className={cn('size-2 shrink-0 rounded-full', muted(outcome) ? 'bg-line-s' : SERIES_BG[outcome.series])} />
                 <span className="min-w-0 truncate">{endLabels[index].name}</span>
+                {(compactPhone || compactDesktop) && (
+                  <span className={cn('shrink-0', !compactPhone && 'max-md:hidden', !compactDesktop && 'md:hidden')}>{endLabels[index].figure}</span>
+                )}
               </div>
-              <div className={figureClass}>{endLabels[index].figure}</div>
+              {!(compactPhone && compactDesktop) && (
+                <div className={cn(figureClass, compactPhone && 'max-md:hidden', compactDesktop && 'md:hidden')}>{endLabels[index].figure}</div>
+              )}
             </div>
           ))}
         </div>

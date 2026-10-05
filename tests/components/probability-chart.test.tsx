@@ -5,7 +5,7 @@ import { render, screen, within, fireEvent } from '@testing-library/react'
 import { renderToString } from 'react-dom/server'
 import { hydrateRoot } from 'react-dom/client'
 import userEvent from '@testing-library/user-event'
-import { ProbabilityChart, spreadLabels, type ChartOutcome } from '@/components/markets/probability-chart'
+import { ProbabilityChart, labelsFit, spreadLabels, type ChartOutcome } from '@/components/markets/probability-chart'
 import { formatDay } from '@/lib/markets/format-date'
 import type { SeriesPoint } from '@/lib/markets/probability-series'
 
@@ -372,6 +372,22 @@ describe('spreadLabels', () => {
       expect(top).toBeGreaterThanOrEqual(20)
       expect(top).toBeLessThanOrEqual(280)
     }
+  })
+})
+
+describe('labelsFit', () => {
+  // #391: labels sit at least a label's height plus 4px apart, 48px on a phone's 220px plot and
+  // 53px on a desktop's 300px one; past that the labels fold to one line.
+  it('fits four full labels on a phone and five on a desktop', () => {
+    expect(labelsFit(4, 220, 48)).toBe(true)
+    expect(labelsFit(5, 220, 48)).toBe(false)
+    expect(labelsFit(5, 300, 53)).toBe(true)
+    expect(labelsFit(6, 300, 53)).toBe(false)
+  })
+
+  it('never lets two folded labels of six overlap on a phone', () => {
+    const tops = [...spreadLabels([60, 61, 62, 63, 64, 65], 220, 18)].sort((a, b) => a - b)
+    for (let i = 1; i < tops.length; i++) expect(tops[i] - tops[i - 1]).toBeGreaterThanOrEqual(18)
   })
 })
 

@@ -20,8 +20,9 @@ export type ChartWindow = {
   lineEnd: number
 }
 
-// About one point per this many pixels of plot width: closer steps than that draw a comb.
-export const PX_PER_POINT = 3
+// About one point per this many pixels of plot width (at most width ÷ 4, #391): closer steps than
+// that draw a comb.
+export const PX_PER_POINT = 4
 
 // Thins a series to at most `buckets` points by time, not by count, so a burst of bets draws as
 // one step instead of a comb. Each bucket keeps its last point, the chance it ended on; the first

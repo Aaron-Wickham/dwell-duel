@@ -71,7 +71,7 @@ describe('text limits on form inputs', () => {
   it('caps the market title, description, category and every outcome label', async () => {
     render(<CreateMarketForm />)
     expect(screen.getByLabelText('Title')).toHaveAttribute('maxlength', '120')
-    expect(screen.getByLabelText('Description')).toHaveAttribute('maxlength', '1000')
+    expect(screen.getByLabelText('Details (optional)')).toHaveAttribute('maxlength', '1000')
     expect(screen.getByLabelText('Category')).toHaveAttribute('maxlength', '24')
 
     await userEvent.click(screen.getByRole('radio', { name: 'Multiple choice' }))
@@ -135,7 +135,7 @@ describe('the profile form', () => {
 
 describe('too-long errors point at their field', () => {
   it('ties a market description error to the description only', async () => {
-    actions.createMarketAction.mockResolvedValue({ formError: 'Description can be at most 1000 characters.', field: 'description' })
+    actions.createMarketAction.mockResolvedValue({ formError: 'Details can be at most 1000 characters.', field: 'description' })
     render(<CreateMarketForm />)
 
     await userEvent.type(screen.getByLabelText('Title'), 'Will it rain?')
@@ -143,9 +143,9 @@ describe('too-long errors point at their field', () => {
     await userEvent.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await userEvent.click(screen.getByRole('button', { name: 'Create market' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Description can be at most 1000 characters.')
-    expect(screen.getByLabelText('Description')).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getByLabelText('Description')).toHaveAccessibleDescription('Description can be at most 1000 characters.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Details can be at most 1000 characters.')
+    expect(screen.getByLabelText('Details (optional)')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Details (optional)')).toHaveAccessibleDescription('Details can be at most 1000 characters.')
     expect(screen.getByLabelText('Title')).toHaveAttribute('aria-invalid', 'false')
   })
 

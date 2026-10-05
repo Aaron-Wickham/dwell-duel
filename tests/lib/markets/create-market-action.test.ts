@@ -72,7 +72,7 @@ describe('createMarketAction length limits', () => {
   it('refuses a description over 1000 characters without creating anything', async () => {
     const state = await createMarketAction(undefined, binaryForm('Will it rain?', 'd'.repeat(1001)))
 
-    expect(state).toEqual({ formError: 'Description can be at most 1000 characters.', field: 'description' })
+    expect(state).toEqual({ formError: 'Details can be at most 1000 characters.', field: 'description' })
     expect(supabase.rpc).not.toHaveBeenCalled()
   })
 

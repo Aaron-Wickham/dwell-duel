@@ -36,7 +36,7 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
   if (!title) return { formError: 'Enter a title.', field: 'title' }
   if (title.length > TEXT_LIMITS.marketTitle) return { formError: tooLong('Title', TEXT_LIMITS.marketTitle), field: 'title' }
   if (description.length > TEXT_LIMITS.marketDescription) {
-    return { formError: tooLong('Description', TEXT_LIMITS.marketDescription), field: 'description' }
+    return { formError: tooLong('Details', TEXT_LIMITS.marketDescription), field: 'description' }
   }
   if (!category) return { formError: 'Choose a category.', field: 'category' }
   if (category.length > TEXT_LIMITS.category) return { formError: tooLong('Category', TEXT_LIMITS.category), field: 'category' }

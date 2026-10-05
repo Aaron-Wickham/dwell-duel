@@ -44,23 +44,32 @@ describe('CreateMarketForm preview', () => {
   })
 })
 
-const CLOSE_HINT = 'Betting stops at this time, so set it before the answer is known. The outcomes can’t be changed later; you can move the close time while the market is open, unless you bet on it.'
+const CLOSE_HINT = 'Betting stops here, so pick a time before anyone knows the answer.'
+const RULES = 'The outcomes can’t be changed later. You can move the close time while it’s open, unless you bet on it.'
 
 describe('CreateMarketForm', () => {
-  it('says what the close time does and what can never change, line included for an over/under (#266)', async () => {
+  it('says what the close time does, and beside Create market what can never change, line included for an over/under (#266)', async () => {
     const user = userEvent.setup()
     render(<CreateMarketForm />)
     expect(screen.getByLabelText('Close time')).toHaveAccessibleDescription(CLOSE_HINT)
+    expect(screen.getByText(new RegExp(`^${RULES} If you bet on it, a reviewer resolves it\\.$`))).toBeInTheDocument()
     await user.click(screen.getByRole('radio', { name: 'Over/Under' }))
-    expect(screen.getByLabelText('Close time')).toHaveAccessibleDescription(
-      'Betting stops at this time, so set it before the answer is known. The line and outcomes can’t be changed later; you can move the close time while the market is open, unless you bet on it.',
-    )
-    expect(screen.getByRole('region', { name: 'Preview' })).toHaveTextContent('If you bet on it, a reviewer resolves it.')
+    expect(screen.getByText(/^The line and outcomes can’t be changed later\./)).toBeInTheDocument()
   })
 
   it('leaves the reviewer note out for an admin, who may resolve a market they bet on', () => {
     render(<CreateMarketForm admin />)
-    expect(screen.getByRole('region', { name: 'Preview' })).not.toHaveTextContent('a reviewer resolves it')
+    expect(screen.getByText(RULES)).toBeInTheDocument()
+    expect(screen.queryByText(/a reviewer resolves it/)).toBeNull()
+  })
+
+  it('asks for the question first, then the type, outcomes, close time, category and details (#390)', () => {
+    render(<CreateMarketForm />)
+    const order = ['Title', 'Yes/No', 'Close time', 'Category', 'Details (optional)'].map((label) => screen.getByLabelText(label))
+    for (let i = 1; i < order.length; i++) {
+      expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    }
+    expect(screen.getByLabelText('Title')).toHaveAttribute('placeholder', 'Will the sermon run past noon?')
   })
 
   it('labels the title and close time fields, and defaults to a binary market', () => {
@@ -215,14 +224,14 @@ describe('CreateMarketForm keeps what was filled in (#63)', () => {
     const { container } = render(<CreateMarketForm />)
 
     await user.type(screen.getByLabelText('Title'), 'Will it rain?')
-    await user.type(screen.getByLabelText('Description'), 'At the picnic')
+    await user.type(screen.getByLabelText('Details (optional)'), 'At the picnic')
     await user.type(screen.getByLabelText('Category'), 'Weather')
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await user.click(screen.getByRole('button', { name: 'Create market' }))
     await screen.findByRole('alert')
 
     expect(screen.getByLabelText('Title')).toHaveValue('Will it rain?')
-    expect(screen.getByLabelText('Description')).toHaveValue('At the picnic')
+    expect(screen.getByLabelText('Details (optional)')).toHaveValue('At the picnic')
     expect(screen.getByLabelText('Close time')).toHaveValue('2030-01-01T10:00')
     const closeAt = container.querySelector<HTMLInputElement>('input[name="close_at"]')!
     expect(closeAt.value).toBe(new Date('2030-01-01T10:00').toISOString())
@@ -256,7 +265,7 @@ describe('CreateMarketForm category (#327)', () => {
     const field = screen.getByLabelText('Category')
     expect(field).toHaveAttribute('maxLength', '24')
     expect(field).toBeRequired()
-    expect(field).toHaveAccessibleDescription('Pick one, or type a new one of up to 24 characters.')
+    expect(field).toHaveAccessibleDescription('Pick one or type your own.')
     const options = container.querySelectorAll(`datalist#${field.getAttribute('list')} option`)
     expect([...options].map((o) => o.getAttribute('value'))).toEqual(['Weather', 'Sports', 'Bible Study'])
 
@@ -287,7 +296,7 @@ describe('CreateMarketForm category (#327)', () => {
     expect(screen.getByLabelText('Category')).toHaveValue('Winter')
     expect(screen.getByLabelText('Category')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByLabelText('Category')).toHaveAccessibleDescription(
-      'Pick one, or type a new one of up to 24 characters. Category can be at most 24 characters.',
+      'Pick one or type your own. Category can be at most 24 characters.',
     )
   })
 })
@@ -307,7 +316,7 @@ describe('CreateMarketForm duplicating a market (#88)', () => {
       <CreateMarketForm initial={{ ...base, kind: 'over_under', outcomes: ['Over 42.5', 'Under 42.5'], line: '42.5' }} />,
     )
     expect(screen.getByLabelText('Title')).toHaveValue('Minutes the sermon runs')
-    expect(screen.getByLabelText('Description')).toHaveValue('This Sunday')
+    expect(screen.getByLabelText('Details (optional)')).toHaveValue('This Sunday')
     expect(screen.getByRole('radio', { name: 'Over/Under' })).toBeChecked()
     expect(screen.getByLabelText('Line')).toHaveValue(42.5)
 

@@ -31,7 +31,8 @@ test('the review queue pages oldest first, with Show more, and the waiting count
 
     await page.goto('/admin/tasks')
     const queue = page.getByRole('region', { name: 'Pending approvals' })
-    const row = (n: string) => queue.getByRole('listitem').filter({ hasText: `Queue check ${n}` })
+    // The queue is a table (#399), and each note sits in its row's Proof cell.
+    const row = (n: string) => queue.getByRole('row').filter({ hasText: `Queue check ${n}` })
     await expect(row('00')).toBeVisible()
     await expect(row(String(PAGE_SIZE - 1))).toBeVisible()
     await expect(row(String(PAGE_SIZE))).toHaveCount(0)

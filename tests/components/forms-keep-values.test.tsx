@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
 import type { PendingRow } from '@/app/(app)/admin/(sections)/tasks/pending-approvals'
@@ -310,49 +310,71 @@ describe('PendingApprovals Select all (#65)', () => {
   })
 })
 
+// The reason is asked for in a dialog once Reject is pressed (COPY-13, #399).
+const REASON = 'Why not? (optional)'
+
+async function openRowReject() {
+  await userEvent.click(screen.getByRole('button', { name: /^Reject/ }))
+  return screen.findByRole('dialog')
+}
+
+async function openBulkReject() {
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Select Alice’s submission' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }))
+  return screen.findByRole('dialog')
+}
+
 describe('Reject reasons (#200)', () => {
   it('keeps a row’s reason after the server refuses the reject', async () => {
     actions.rejectTaskCompletionAction.mockResolvedValue({ formError: 'Could not reject that submission.' })
     render(<ReviewButtons completionId="c1" submitterName="Alice" taskTitle="Read Genesis 1-3" />)
-    await userEvent.type(screen.getByLabelText('Reason for rejecting (optional)'), 'Needs a photo')
-    await userEvent.click(screen.getByRole('button', { name: /^Reject/ }))
+    const dialog = await openRowReject()
+    await userEvent.type(within(dialog).getByLabelText(REASON), 'Needs a photo')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Reject' }))
 
-    await screen.findByRole('alert')
-    expect(screen.getByLabelText('Reason for rejecting (optional)')).toHaveValue('Needs a photo')
+    await within(dialog).findByRole('alert')
+    expect(within(dialog).getByLabelText(REASON)).toHaveValue('Needs a photo')
     expect(success).not.toHaveBeenCalled()
   })
 
   it('clears a row’s reason once the reject goes through', async () => {
     actions.rejectTaskCompletionAction.mockResolvedValue(undefined)
     render(<ReviewButtons completionId="c1" submitterName="Alice" taskTitle="Read Genesis 1-3" />)
-    await userEvent.type(screen.getByLabelText('Reason for rejecting (optional)'), 'Needs a photo')
-    await userEvent.click(screen.getByRole('button', { name: /^Reject/ }))
+    let dialog = await openRowReject()
+    await userEvent.type(within(dialog).getByLabelText(REASON), 'Needs a photo')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Reject' }))
 
     await waitFor(() => expect(success).toHaveBeenCalledWith('Submission rejected.'))
     expect((actions.rejectTaskCompletionAction.mock.calls[0][2] as FormData).get('reason')).toBe('Needs a photo')
-    await waitFor(() => expect(screen.getByLabelText('Reason for rejecting (optional)')).toHaveValue(''))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    dialog = await openRowReject()
+    expect(within(dialog).getByLabelText(REASON)).toHaveValue('')
   })
 
   it('keeps the shared reason after a bulk reject fails', async () => {
-    actions.bulkRejectTaskCompletionsAction.mockResolvedValue({ formError: 'Select at least one completion.' })
+    actions.bulkRejectTaskCompletionsAction.mockResolvedValue({ formError: 'Could not reject those submissions.' })
     render(<PendingApprovals viewerId="viewer-1" pending={[pendingRow('c1', 'p-alice', 'Alice')]} />)
-    await userEvent.type(screen.getByLabelText('Shared reason (optional)'), 'Try again next week')
-    await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }))
+    const dialog = await openBulkReject()
+    await userEvent.type(within(dialog).getByLabelText(REASON), 'Try again next week')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Reject' }))
 
-    await screen.findByRole('alert')
-    expect(screen.getByLabelText('Shared reason (optional)')).toHaveValue('Try again next week')
+    await within(dialog).findByRole('alert')
+    expect(within(dialog).getByLabelText(REASON)).toHaveValue('Try again next week')
   })
 
   it('clears the shared reason once a bulk reject goes through', async () => {
     actions.bulkRejectTaskCompletionsAction.mockResolvedValue({ summary: '1 rejected.' })
     render(<PendingApprovals viewerId="viewer-1" pending={[pendingRow('c1', 'p-alice', 'Alice')]} />)
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Alice’s submission' }))
-    await userEvent.type(screen.getByLabelText('Shared reason (optional)'), 'Try again next week')
-    await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }))
+    let dialog = await openBulkReject()
+    await userEvent.type(within(dialog).getByLabelText(REASON), 'Try again next week')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Reject' }))
 
     await screen.findByRole('status')
     expect((actions.bulkRejectTaskCompletionsAction.mock.calls[0][1] as FormData).get('reason')).toBe('Try again next week')
-    await waitFor(() => expect(screen.getByLabelText('Shared reason (optional)')).toHaveValue(''))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }))
+    dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByLabelText(REASON)).toHaveValue('')
   })
 })
 

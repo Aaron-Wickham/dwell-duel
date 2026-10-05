@@ -39,7 +39,9 @@ test('create a proof-required task, submit it with proof, and approve it as admi
   await expect(waiting.getByText(/sent today · 1 attachment/)).toBeVisible()
 
   await page.goto('/admin/tasks')
-  const pending = page.getByRole('listitem').filter({ hasText: 'Read Genesis 1-3' })
+  // The queue is a table (#399); a row's note and proof open from its Proof cell.
+  const pending = page.getByRole('row').filter({ hasText: 'Read Genesis 1-3' })
+  await pending.getByText('Note · 1 link').click()
   await expect(pending.getByText('“Read it with my small group”')).toBeVisible()
   await expect(pending.getByRole('link', { name: 'example.com/genesis-notes' })).toBeVisible()
   await pending.getByRole('button', { name: 'Approve' }).click()

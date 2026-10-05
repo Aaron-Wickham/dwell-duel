@@ -27,10 +27,14 @@ test('reject a task submission with a reason the member then sees', async ({ pag
   await expect(group('Waiting for review')).toBeVisible()
 
   await page.goto('/admin/tasks')
-  const pending = page.getByRole('listitem').filter({ hasText: title })
-  await pending.getByLabel('Reason for rejecting (optional)').fill('Say it to your small group leader first')
+  // A row's Reject asks for its optional reason in a dialog (#399).
+  const pending = page.getByRole('row').filter({ hasText: title })
   await pending.getByRole('button', { name: `Reject Bob’s ${title}` }).click()
+  const dialog = page.getByRole('dialog', { name: `Reject Bob’s ${title}?` })
+  await dialog.getByLabel('Why not? (optional)').fill('Say it to your small group leader first')
+  await dialog.getByRole('button', { name: 'Reject', exact: true }).click()
   await expect(page.getByText('Submission rejected.').first()).toBeVisible()
+  await expect(dialog).toBeHidden()
   await expect(page.getByText('Nothing pending.')).toBeVisible()
 
   await bobPage.goto('/tasks')

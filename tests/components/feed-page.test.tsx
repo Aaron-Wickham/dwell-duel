@@ -110,10 +110,12 @@ describe('FeedPage', () => {
 
     expect(getReactions).toHaveBeenCalledTimes(1)
     expect(getReactions).toHaveBeenCalledWith({}, ['bet:1', 'bet:2'])
-    const [first, second] = screen.getAllByRole('group', { name: 'Reactions' })
+    const [first, second] = screen.getAllByRole('listitem')
+    expect(within(first).getAllByRole('group', { name: 'Reactions' })).toHaveLength(1)
     expect(within(first).getByRole('button', { name: 'React fire, 3 reactions, you reacted' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(first).getByRole('button', { name: 'React clap, 1 reaction' })).toHaveAttribute('aria-pressed', 'false')
     // An item nobody reacted to shows only React (#395).
+    expect(within(second).queryByRole('group', { name: 'Reactions' })).toBeNull()
     expect(within(second).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['React'])
   })
 

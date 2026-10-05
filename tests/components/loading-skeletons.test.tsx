@@ -126,11 +126,11 @@ describe('skeletons match their pages', () => {
   })
 
   // #395: a row shows only the reactions someone used, plus one React button.
-  it('the feed skeleton draws one React button under every row', () => {
+  it('the feed skeleton draws one React button under every row’s age', () => {
     const { container } = render(<FeedLoading />)
     const rows = container.querySelectorAll('[data-skeleton-reactions]')
     expect(rows).toHaveLength(6)
-    for (const row of rows) expect(row.querySelectorAll('.skeleton.rounded-full.h-8')).toHaveLength(1)
+    for (const row of rows) expect(row.querySelectorAll('.skeleton.rounded-full.size-6')).toHaveLength(1)
   })
 
   it('the settings skeleton draws the theme legend and hint, and every notification kind', () => {

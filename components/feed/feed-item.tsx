@@ -27,9 +27,10 @@ export function FeedItem({
   const labelId = domId && reactions ? `${domId}-label` : undefined
   return (
     // No icon tile before the sentence (#387): it only named the kind the sentence already says.
-    // The reactions sit in the sentence's column, under it, now that only the used ones show (#395).
+    // ReactionBar's two parts take this grid's other cells (#395): React under the age, in row 2,
+    // beside the sentence, which spans rows 1 and 2; used reactions under the sentence, in row 3.
     <li {...focusTarget(domId, labelId)} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 py-3.5">
-      <div className="flex min-w-0 grow flex-col gap-1">
+      <div className="col-start-1 row-span-2 row-start-1 flex min-w-0 flex-col gap-1">
         <p id={labelId} className="text-base break-words">
           {segments.map((segment, i) =>
             typeof segment === 'string' ? (
@@ -45,9 +46,9 @@ export function FeedItem({
         </p>
         {detail && <p className="line-clamp-2 text-sm break-words text-ink2">“{detail}”</p>}
         {note && <p className="text-sm font-bold text-ink2">{note}</p>}
-        {reactions && <div className="pt-1">{reactions}</div>}
       </div>
-      <span className="shrink-0 pt-0.5 text-sm whitespace-nowrap text-ink2">{age}</span>
+      <span className="col-start-2 row-start-1 justify-self-end pt-0.5 text-sm whitespace-nowrap text-ink2">{age}</span>
+      {reactions}
     </li>
   )
 }

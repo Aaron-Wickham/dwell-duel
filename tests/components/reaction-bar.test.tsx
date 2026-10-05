@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { ReactElement } from 'react'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { noReactions, type EventReactions } from '@/lib/social/reactions'
@@ -24,7 +25,9 @@ function deferred<T>() {
   return { promise, resolve }
 }
 
-const bar = () => screen.getByRole('group', { name: 'Reactions' })
+// ReactionBar renders two cells of FeedItem's grid, so the whole row stands in for it here.
+const renderBar = (ui: ReactElement) => render(<li data-testid="row">{ui}</li>, { container: document.body.appendChild(document.createElement('ul')) })
+const bar = () => screen.getByTestId('row')
 
 async function openPicker() {
   await userEvent.click(screen.getByRole('button', { name: 'React' }))
@@ -34,7 +37,7 @@ async function openPicker() {
 describe('ReactionBar', () => {
   // #395: four empty buttons under every row drowned the sentences.
   it('shows only the reactions someone used, named by kind, count and whether you reacted, then React', () => {
-    render(<ReactionBar eventId="bet:1" reactions={SOME} />)
+    renderBar(<ReactionBar eventId="bet:1" reactions={SOME} />)
 
     const buttons = within(bar()).getAllByRole('button')
     expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual([
@@ -51,20 +54,35 @@ describe('ReactionBar', () => {
     }
   })
 
+  // The pills go under the sentence and React under the age, so a row nobody reacted to is no taller.
+  it('puts the used reactions in a group under the sentence and React under the age', () => {
+    renderBar(<ReactionBar eventId="bet:1" reactions={SOME} />)
+    const group = screen.getByRole('group', { name: 'Reactions' })
+    expect(group).toHaveClass('col-start-1', 'row-start-3')
+    const react = screen.getByRole('button', { name: 'React' })
+    expect(react).toHaveClass('col-start-2', 'row-start-2', 'size-11')
+    expect(group).not.toContainElement(react)
+  })
+
+  it('renders no Reactions group when nobody has reacted', () => {
+    renderBar(<ReactionBar eventId="bet:1" reactions={noReactions()} />)
+    expect(screen.queryByRole('group', { name: 'Reactions' })).toBeNull()
+  })
+
   it('gives an unselected reaction an edge that reads as a control (A11Y-07)', () => {
-    render(<ReactionBar eventId="bet:1" reactions={SOME} />)
+    renderBar(<ReactionBar eventId="bet:1" reactions={SOME} />)
     const pill = screen.getByRole('button', { name: 'React laugh, 1 reaction' }).firstElementChild
     expect(pill).toHaveClass('border-line-s')
     expect(pill).not.toHaveClass('border-line')
   })
 
   it('shows only React when nobody has reacted', () => {
-    render(<ReactionBar eventId="bet:1" reactions={noReactions()} />)
+    renderBar(<ReactionBar eventId="bet:1" reactions={noReactions()} />)
     expect(within(bar()).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['React'])
   })
 
   it('opens all four reactions from React, each a toggle, and closes on Escape', async () => {
-    render(<ReactionBar eventId="bet:1" reactions={SOME} />)
+    renderBar(<ReactionBar eventId="bet:1" reactions={SOME} />)
     const picker = await openPicker()
 
     const choices = within(picker).getAllByRole('button', { name: /^React / })
@@ -84,7 +102,7 @@ describe('ReactionBar', () => {
   it('adds a reaction from the picker at once, before the server answers, and asks the server to add it', async () => {
     const pending = deferred<{ error?: string }>()
     setReactionAction.mockReturnValue(pending.promise)
-    render(<ReactionBar eventId="bet:1" reactions={SOME} />)
+    renderBar(<ReactionBar eventId="bet:1" reactions={SOME} />)
 
     const picker = await openPicker()
     await userEvent.click(within(picker).getByRole('button', { name: 'React pray, 0 reactions' }))
@@ -99,7 +117,7 @@ describe('ReactionBar', () => {
   it('takes your own reaction back at once from its pill', async () => {
     const pending = deferred<{ error?: string }>()
     setReactionAction.mockReturnValue(pending.promise)
-    render(<ReactionBar eventId="bet:1" reactions={SOME} />)
+    renderBar(<ReactionBar eventId="bet:1" reactions={SOME} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'React fire, 3 reactions, you reacted' }))
 
@@ -111,7 +129,7 @@ describe('ReactionBar', () => {
   it('drops a pill whose last reaction was yours once you take it back', async () => {
     const pending = deferred<{ error?: string }>()
     setReactionAction.mockReturnValue(pending.promise)
-    render(<ReactionBar eventId="bet:1" reactions={{ ...noReactions(), clap: { count: 1, mine: true } }} />)
+    renderBar(<ReactionBar eventId="bet:1" reactions={{ ...noReactions(), clap: { count: 1, mine: true } }} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'React clap, 1 reaction, you reacted' }))
 
@@ -121,7 +139,7 @@ describe('ReactionBar', () => {
 
   it('falls back to the real counts and says so when the server refuses', async () => {
     setReactionAction.mockResolvedValue({ error: 'Couldn’t add your reaction. Try again.' })
-    render(<ReactionBar eventId="bet:1" reactions={SOME} />)
+    renderBar(<ReactionBar eventId="bet:1" reactions={SOME} />)
 
     const picker = await openPicker()
     await userEvent.click(within(picker).getByRole('button', { name: 'React clap, 0 reactions' }))
@@ -131,7 +149,7 @@ describe('ReactionBar', () => {
   })
 
   it('follows new counts from the server', () => {
-    const { rerender } = render(<ReactionBar eventId="bet:1" reactions={noReactions()} />)
+    const { rerender } = renderBar(<ReactionBar eventId="bet:1" reactions={noReactions()} />)
     rerender(<ReactionBar eventId="bet:1" reactions={{ ...noReactions(), clap: { count: 4, mine: false } }} />)
     expect(screen.getByRole('button', { name: 'React clap, 4 reactions' })).toBeInTheDocument()
   })

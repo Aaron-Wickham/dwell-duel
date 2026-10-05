@@ -19,13 +19,15 @@ test('a member reacts to a feed item and takes the reaction back', async ({ page
 
   await page.goto('/feed')
   const item = page.getByRole('listitem').filter({ hasText: `Alice created ${title}` }).first()
+  // The used reactions are a group under the sentence; React sits apart, under the age (#395).
   const reactions = item.getByRole('group', { name: 'Reactions' })
-  // Only used reactions show (#395): a new item has just the React button.
-  await expect(reactions.getByRole('button', { name: /^React fire/ })).toHaveCount(0)
+  const react = item.getByRole('button', { name: 'React', exact: true })
+  // Only used reactions show: a new item has just the React button.
+  await expect(item.getByRole('button', { name: /^React fire/ })).toHaveCount(0)
 
   // Optimistic: the pill appears at once; wait for the action before moving on.
   let settled = serverActionSettled(page)
-  await reactions.getByRole('button', { name: 'React', exact: true }).click()
+  await react.click()
   const picker = page.getByRole('dialog', { name: 'React' })
   await expect(picker.getByRole('button', { name: 'React fire, 0 reactions' })).toHaveAttribute('aria-pressed', 'false')
   await picker.getByRole('button', { name: 'React fire, 0 reactions' }).click()
@@ -38,12 +40,14 @@ test('a member reacts to a feed item and takes the reaction back', async ({ page
 
   settled = serverActionSettled(page)
   await reacted.click()
-  await expect(reactions.getByRole('button', { name: /^React fire/ })).toHaveCount(0)
+  await expect(item.getByRole('button', { name: /^React fire/ })).toHaveCount(0)
+  // Its pill went with the focus on it, so focus moves to React.
+  await expect(react).toBeFocused()
   await settled
 
   await page.reload()
-  await expect(reactions.getByRole('button', { name: /^React fire/ })).toHaveCount(0)
-  await expect(reactions.getByRole('button', { name: 'React', exact: true })).toBeVisible()
+  await expect(item.getByRole('button', { name: /^React fire/ })).toHaveCount(0)
+  await expect(react).toBeVisible()
 })
 
 test('a member comments on a market and deletes the comment', async ({ page }) => {

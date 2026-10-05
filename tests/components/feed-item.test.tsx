@@ -42,6 +42,18 @@ describe('FeedItem', () => {
     expect(screen.queryAllByRole('link')).toHaveLength(1)
   })
 
+  // #395: ReactionBar's React goes under the age in row 2, beside the sentence spanning rows 1-2, so
+  // a row nobody reacted to is its sentence and age alone.
+  it('lays the sentence beside the age, leaving the cell under the age for React', () => {
+    render(
+      <ul>
+        <FeedItem segments={['Alice bet 5 DC on Yes']} age="5m ago" />
+      </ul>,
+    )
+    expect(screen.getByText('Alice bet 5 DC on Yes').closest('div')).toHaveClass('col-start-1', 'row-start-1', 'row-span-2')
+    expect(screen.getByText('5m ago')).toHaveClass('col-start-2', 'row-start-1')
+  })
+
   // #387: the tile only named the kind the sentence already says.
   it('starts with the sentence, no icon tile', () => {
     const { container } = render(

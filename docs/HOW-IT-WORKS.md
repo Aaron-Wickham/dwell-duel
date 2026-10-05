@@ -365,9 +365,11 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   riding on open bets**: solo bets on markets that haven't resolved yet
   and parlays not yet settled. Placing a bet doesn't move you down; losing
   it does. Your profile shows your rank on this board, and so does Home
-  once you've had a bet or parlay settled. On a phone
-  a small card shows your rank and net worth, with **Jump to me**, which
-  opens the list ten places above you instead of paging down from the top.
+  once you've had a bet or parlay settled. Your own row is highlighted
+  and stays pinned to the bottom of the screen until you scroll to it.
+  When you're further down than the list shows, a bar with your rank and
+  net worth stands in for it on a phone, with **Jump to me**, which opens
+  the list ten places above you instead of paging down from the top.
 - **This month** ranks **net betting profit** for the calendar month, on
   Eastern time (America/New_York): winnings, refunds and cancelled-bet
   refunds, minus stakes, and minus any winnings an override took back.
@@ -381,10 +383,11 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   off both boards and out of "Rank X of N"; their profile still shows
   their net worth, marked "Not ranked".
 - **Your standing** (Net worth, wide screens only): a card beside the
-  rankings shows your rank, net worth, record and how far you are behind
-  the member above you.
+  rankings, under the podium, shows your rank, net worth, record and how
+  far you are behind the member above you, with Jump to me.
 - **Podium and records:** once three members are ranked, the top three
-  of either board stand on a podium above the list. Each row shows a win-loss record (like 6-3):
+  of the Net worth board stand on a podium (This month leads with the
+  race instead). From tablet width up, each row shows a win-loss record (like 6-3):
   your settled solo bets and parlays, all time. Bets on a voided market,
   or refunded because nobody had backed the winner, are refunds and count
   as neither, and open bets don't count yet.

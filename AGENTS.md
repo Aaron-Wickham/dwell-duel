@@ -49,12 +49,14 @@ a line to `CHANGELOG.md` under the next release.
   and has exactly one `<h1>`, from `PageHeader` or `h1Class`. Sections are
   `SectionCard`s, whose `<h2>` names the region; a line under that heading
   goes in its `description` slot, never a negative margin. Lists with
-  nothing in them render an `EmptyState`. The title of a row or tile in a
+  nothing in them render an `EmptyState`: no icon (the prop is optional
+  and no list passes one) and, wherever there is one, the next step as
+  its `action` (#387). The title of a row or tile in a
   list is `rowTitleClass`, beside `h1Class`, `h2Class` and `eyebrowClass`;
   a figure is `figureHeroClass`, `figureClass` or `figureInlineClass`, and
   the sizes between body and caption are `uiTextClass`, `chipTextClass` and
-  `microTextClass`. Don't add a `text-[Npx]` of your own (the sign-in page, the
-  404 and the brand mark (the wordmark and the beta badge) are the only
+  `microTextClass`. Don't add a `text-[Npx]` of your own (the sign-in page
+  and the brand mark (the wordmark and the beta badge) are the only
   exceptions), nor a `rounded-[Npx]`: radii are
   `rounded-segment` (10px), `-control`, `-tile`, `-card` or `-full`. A card
   built by hand takes `cardPaddingClass` from `components/ui/card.tsx`.
@@ -64,20 +66,38 @@ a line to `CHANGELOG.md` under the next release.
   `whitespace-nowrap`. `tabular-nums` only where numbers line up in a
   column (the leaderboard's scores, the ledger, coin history, tooltips),
   never on a lone figure.
-- **A list item that opens one thing is a `ListCard`; a sentence row
-  (feed) or data row (ledger) stays a divided row** (#328).
+- **One container per list** (D2, #386; this supersedes #328's list
+  cards "inside a SectionCard"). A list that is a page's only content
+  drops the outer card: its `ListCard`s or rows sit straight on the page,
+  in a `ListSection` (`components/ui/list-section.tsx`) whose `h2` names
+  the region, visibly, or `titleHidden` only where a visible heading
+  would repeat the `h1` or the current tab. A list inside a real
+  `SectionCard` (a page with several sections) is divided rows
+  (`dividedRowsClass` / `dividedRowClass`), a row that opens one thing
+  taking `pressable hover-tint relative` and a `stretched-link` title:
+  never bordered cards inside the card.
+- **`ListCard` is for a standalone list on the page.**
   `components/ui/list-card.tsx`'s `ListCard` is the My bets parlay card: a
   `border-line` hairline, `rounded-tile` (`--radius-tile`, 14px), `p-3.5`
   / `md:p-4`, no shadow, tinting flush (`hover-tint [--tint-inset:0]`)
   rather than lifting. Its title link is a `stretched-link` and any other
   control sits in a `relative z-[1]` wrapper; a card whose only controls
-  are its own buttons (a task, a submission to review) passes
-  `tappable={false}`. Inside a `SectionCard` the list is `listCardsClass`
-  (`flex flex-col gap-2`, no dividers), with its `lg:` grid added at the
-  call site. Something that isn't an `<li>` uses
-  `tappableListCardClass`. The feed, ledger, coin history, invites, a
-  market's bet list and Home's Your bets and Needs you stay divided rows.
-- **Home is the one uncarded page on a phone** (#388, D1/D2). Its sections
+  are its own buttons (a task) passes `tappable={false}`. The list is
+  `listCardsClass` (`flex flex-col gap-2`, no dividers), with its `lg:`
+  grid added at the call site. Something that isn't an `<li>` uses
+  `tappableListCardClass`. My bets, Tasks and Admin › Members are list
+  cards on the page; the leaderboard and Activity are divided rows on the
+  page; the admin queues, task catalog and categories, the ledger, coin
+  history, invites, a market's bet list and Home's Your bets and Needs
+  you are divided rows.
+- **A chip only when it adds information the context doesn't** (#387).
+  A list filtered to one status shows no status chip on its items; a
+  category chip shows only while more than one category holds markets
+  and the list isn't narrowed to one. No emoji in chrome. An icon stays
+  only where it carries meaning (the tab bar, the close X, `Message`'s
+  error and ok marks, the Needs you chevrons, the Google G); secondary
+  buttons are text only.
+- **Home's sections are uncarded on a phone** (#388, D1/D2). Its sections
   (`HomeSection`, `components/home/home-section.tsx`) are rows on the page
   under an `<h2>` below `lg:`, and cards like a `SectionCard` from `lg:`.
 - **Page widths come from `<Page width>`:** `wide` (default, 1120px of

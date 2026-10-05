@@ -152,7 +152,7 @@ export function PendingApprovals({
       {lastBulk === 'approve' && !isApprovePending && approveState?.summary && <Message tone="ok">{approveState.summary}</Message>}
       {rejectNoneShown && (
         <Message tone="error" id={BULK_REJECT_ERROR_ID}>
-          Select at least one completion.
+          Select at least one submission.
         </Message>
       )}
       {lastBulk === 'reject' && !nothingToReject && !isRejectPending && rejectState?.summary && (
@@ -165,7 +165,7 @@ export function PendingApprovals({
     return (
       <div className="flex flex-col gap-3">
         {results}
-        {emptyState ?? <EmptyState title="Nothing pending." />}
+        {emptyState ?? <EmptyState title="No tasks to review." />}
       </div>
     )
   }

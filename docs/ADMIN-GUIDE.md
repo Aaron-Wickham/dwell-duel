@@ -207,7 +207,7 @@ back). The owner can also **Delete** a task nobody has submitted yet.
 
 ### Reviewing submissions (reviewers and above)
 
-**Admin → Tasks → Pending approvals** lists submissions oldest first, 50 at
+**Admin → Tasks → To review** lists submissions oldest first, 50 at
 a time, with **Show more** for the rest. On a computer it's a table (member,
 task and reward, proof, when it was sent); on a phone, one compact row each.
 Tap a row's proof line ("Note · 1 photo") to read their note and open any

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { rewardError } from './limits'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
-import { friendlyError } from '@/lib/errors/friendly-error'
+import { friendlyError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { isUuid } from '@/lib/uuid'
 import { CREATE_TASK_ERRORS } from './task-errors'
 
@@ -16,7 +16,7 @@ const PERIODS = ['daily', 'weekly', 'monthly', 'yearly'] as const
 
 export async function createTaskAction(_prevState: ActionState, formData: FormData): Promise<ActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const title = String(formData.get('title') ?? '').trim()
   // A textarea's newlines arrive as CRLF once the browser serialises the form, doubling up
@@ -38,7 +38,7 @@ export async function createTaskAction(_prevState: ActionState, formData: FormDa
   const rewardProblem = rewardError(rewardAmount)
   if (rewardProblem) return { formError: rewardProblem, field: 'reward_amount' }
   if (isRepeatable && !PERIODS.includes(period as (typeof PERIODS)[number])) {
-    return { formError: 'Choose a cadence for a repeatable task.', field: 'period' }
+    return { formError: 'Choose how often it repeats.', field: 'period' }
   }
 
   const { error } = await supabase.from('tasks').insert({

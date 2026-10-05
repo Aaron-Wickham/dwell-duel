@@ -34,7 +34,7 @@ test('create an over/under, reword it, and resolve it from the actual number', a
   await page.getByLabel('Why did this outcome win?').fill('Timed it from the livestream')
   await page.getByRole('button', { name: 'Resolve market' }).click()
   await expect(page.getByRole('alertdialog', { name: 'Resolve this market?' })).toContainText('Over 42.5 wins.')
-  await page.getByRole('button', { name: 'Confirm outcome' }).click()
+  await page.getByRole('button', { name: /^(Resolve as|Change to) / }).click()
 
   await expect(outcomes.getByText('Over 42.5 won', { exact: true })).toBeVisible()
   await expect(outcomes.getByText('Actual: 47', { exact: true })).toBeVisible()

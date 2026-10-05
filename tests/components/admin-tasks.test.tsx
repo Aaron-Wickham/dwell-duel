@@ -189,11 +189,11 @@ describe('PendingApprovals', () => {
   })
 
   it('does not ask before an Approve selected with nothing ticked', async () => {
-    bulkApproveTaskCompletionsAction.mockResolvedValue({ formError: 'Select at least one completion.' })
+    bulkApproveTaskCompletionsAction.mockResolvedValue({ formError: 'Select at least one submission.' })
     render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Select at least one completion.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Select at least one submission.')
     expect(screen.queryByRole('alertdialog')).toBeNull()
   })
 
@@ -220,8 +220,8 @@ describe('PendingApprovals', () => {
     render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
     await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }))
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(screen.getByRole('alert')).toHaveTextContent('Select at least one completion.')
-    expect(screen.getByRole('button', { name: 'Reject selected' })).toHaveAccessibleDescription('Select at least one completion.')
+    expect(screen.getByRole('alert')).toHaveTextContent('Select at least one submission.')
+    expect(screen.getByRole('button', { name: 'Reject selected' })).toHaveAccessibleDescription('Select at least one submission.')
     expect(bulkRejectTaskCompletionsAction).not.toHaveBeenCalled()
   })
 
@@ -241,7 +241,7 @@ describe('PendingApprovals', () => {
 
   it('shows the empty state, and no bulk controls, when nothing is pending', () => {
     render(<PendingApprovals viewerId="viewer-1" pending={[]} />)
-    expect(screen.getByText('Nothing pending.')).toBeInTheDocument()
+    expect(screen.getByText('No tasks to review.')).toBeInTheDocument()
     expect(screen.queryByRole('checkbox')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Approve selected' })).toBeNull()
   })
@@ -260,15 +260,15 @@ describe('PendingApprovals', () => {
   })
 
   it('ties a bulk approve error to the Approve selected button as its accessible description', async () => {
-    bulkApproveTaskCompletionsAction.mockResolvedValue({ formError: 'Select at least one completion.' })
+    bulkApproveTaskCompletionsAction.mockResolvedValue({ formError: 'Select at least one submission.' })
     render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Select at least one completion.')
+    expect(alert).toHaveTextContent('Select at least one submission.')
     expect(screen.getByRole('button', { name: 'Approve selected' })).toHaveAccessibleDescription(
-      'Select at least one completion.',
+      'Select at least one submission.',
     )
   })
 

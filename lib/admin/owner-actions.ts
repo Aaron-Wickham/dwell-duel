@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { isRole } from '@/lib/auth/roles'
-import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
+import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import type { ConfirmActionState } from '@/components/ui/confirm-action-button'
 import type { Database } from '@/lib/supabase/database'
 
@@ -32,7 +32,7 @@ const OWNER_ERRORS: readonly KnownError<never>[] = [
 // word the answer. Refreshing the whole layout keeps balances, lists and the nav current.
 async function run<F extends keyof Fns>(fn: F, args: Fns[F]['Args']): Promise<ConfirmActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
   const { error } = await supabase.rpc(fn, args)
   if (error) return friendlyError(error, OWNER_ERRORS, `${fn} failed`)
   revalidatePath('/', 'layout')

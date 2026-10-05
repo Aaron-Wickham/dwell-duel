@@ -20,7 +20,7 @@ export function taskAlertPayload(row: { taskTitle: string; submitterName: string
 }
 
 export function marketAlertPayload(market: { marketId: string; title: string }): PushPayload {
-  return { title: 'Market needs a result', body: `${market.title} has closed`, url: `/markets/${market.marketId}` }
+  return { title: 'Time to resolve', body: `${market.title} has closed`, url: `/markets/${market.marketId}` }
 }
 
 export interface MarketResultRow {

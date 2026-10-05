@@ -8,7 +8,7 @@ export default function Loading() {
       <div className="flex min-h-11 items-center">
         <Skeleton className="h-5 w-28" />
       </div>
-      <SkeletonPageHeader description />
+      <SkeletonPageHeader />
       <SkeletonCard className="gap-5">
         <div className="flex flex-col gap-3">
           <Skeleton className="h-5 w-14" />

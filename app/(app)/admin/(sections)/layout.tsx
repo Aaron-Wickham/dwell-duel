@@ -35,14 +35,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       <div className="flex flex-col gap-4">
         <PageHeader
           title="Admin"
-          description={
-            <>
-              How to invite, resolve, void, review and more:{' '}
-              <a href={ADMIN_GUIDE_URL} target="_blank" rel="noreferrer">
-                the Admin guide
-              </a>
-              .
-            </>
+          action={
+            <a href={ADMIN_GUIDE_URL} target="_blank" rel="noreferrer" className="hit-area shrink-0 font-bold">
+              Admin guide
+            </a>
           }
         />
         <AdminNav role={role} counts={counts} />

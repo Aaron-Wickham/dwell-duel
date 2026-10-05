@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { h1Class } from '@/components/ui/page'
 import { buttonVariants } from '@/components/ui/button'
-import { Message } from '@/components/ui/message'
 import { SignInFrame } from '@/components/sign-in/sign-in-frame'
 import { GoogleMark } from '@/components/sign-in/google-mark'
 import { safeNextPath } from '@/lib/auth/next-path'
@@ -18,7 +17,6 @@ export default async function NotInvitedPage({ searchParams }: PageProps<'/not-i
 
   return (
     <SignInFrame dimmed>
-      <Message tone="gold">This Google account isn’t on the invite list.</Message>
       <h1 className={h1Class}>You’re not on the list yet</h1>
       <RefusedEmail email={email} />
       <p className="text-ink2">

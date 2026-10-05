@@ -74,7 +74,7 @@ export function PositionCard({
         {position.legs.map(({ parlay, leg }) => (
           <Row
             key={`parlay-${parlay.id}`}
-            title={`Parlay leg: ${leg.outcomeLabel}`}
+            title={`Parlay pick: ${leg.outcomeLabel}`}
             detail={legSummary({ parlay, leg })}
             aside={
               <>

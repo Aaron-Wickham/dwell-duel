@@ -35,7 +35,7 @@ test('reject a task submission with a reason the member then sees', async ({ pag
   await dialog.getByRole('button', { name: 'Reject', exact: true }).click()
   await expect(page.getByText('Submission rejected.').first()).toBeVisible()
   await expect(dialog).toBeHidden()
-  await expect(page.getByText('Nothing pending.')).toBeVisible()
+  await expect(page.getByText('No tasks to review.')).toBeVisible()
 
   await bobPage.goto('/tasks')
   const rejected = group('Not approved')

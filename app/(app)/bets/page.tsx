@@ -159,10 +159,7 @@ export default async function MyBetsPage(props: PageProps<'/bets'>) {
 
   return (
     <Page transition="tab">
-      <PageHeader
-        title="My bets"
-        description="Your solo bets, parlays and coin history. Only you can see this page."
-      />
+      <PageHeader title="My bets" />
       <LiveTables subscriptions={tab === 'coins' ? pageSubscriptions.myCoins(user.id) : pageSubscriptions.myBets(user.id)} renderedAt={renderStamp()} />
       <ShowMoreFocus />
       <SubNav
@@ -173,6 +170,7 @@ export default async function MyBetsPage(props: PageProps<'/bets'>) {
           current: t === tab,
         }))}
       />
+      {tab === 'coins' && <p className="text-sm text-ink2">Only you can see your coin history.</p>}
       {section}
     </Page>
   )

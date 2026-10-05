@@ -16,6 +16,6 @@ export const TASK_ERRORS: readonly KnownError<'title' | 'description' | 'reward_
 // Only a new task sets its cadence.
 export const CREATE_TASK_ERRORS: readonly KnownError<'title' | 'description' | 'reward_amount' | 'period'>[] = [
   ...TASK_ERRORS,
-  { match: 'tasks_period_check', formError: 'Choose a cadence for a repeatable task.', field: 'period' },
-  { match: 'period_matches_repeatable', formError: 'Choose a cadence for a repeatable task.', field: 'period' },
+  { match: 'tasks_period_check', formError: 'Choose how often it repeats.', field: 'period' },
+  { match: 'period_matches_repeatable', formError: 'Choose how often it repeats.', field: 'period' },
 ]

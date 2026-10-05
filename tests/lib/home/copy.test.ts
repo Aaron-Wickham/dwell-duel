@@ -20,13 +20,13 @@ describe('ridingText', () => {
 
 describe('standingLine', () => {
   it('gives rank, then what is riding on how many bets', () => {
-    expect(standingLine({ rank: 218, memberCount: 502, dc: 275, wagers: 30 })).toBe('Rank 218 of 502 · 275 DC riding on 30 bets')
-    expect(standingLine({ rank: 3, memberCount: 8, dc: 10, wagers: 1 })).toBe('Rank 3 of 8 · 10 DC riding on 1 bet')
+    expect(standingLine({ rank: 218, memberCount: 502, dc: 275, wagers: 30 })).toBe('218th of 502 · 275 DC riding on 30 bets')
+    expect(standingLine({ rank: 3, memberCount: 8, dc: 10, wagers: 1 })).toBe('3rd of 8 · 10 DC riding on 1 bet')
   })
 
   it('drops the rank until there is one, and says when nothing is riding', () => {
     expect(standingLine({ rank: null, memberCount: 502, dc: 0, wagers: 0 })).toBe('No open bets')
-    expect(standingLine({ rank: 4, memberCount: 9, dc: 0, wagers: 0 })).toBe('Rank 4 of 9 · No open bets')
+    expect(standingLine({ rank: 4, memberCount: 9, dc: 0, wagers: 0 })).toBe('4th of 9 · No open bets')
   })
 })
 

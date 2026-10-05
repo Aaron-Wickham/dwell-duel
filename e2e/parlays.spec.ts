@@ -72,7 +72,7 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
     await page.getByRole('combobox').last().selectOption({ label: 'Yes' })
     await page.getByLabel('Why did this outcome win?').fill('Checked against the recording')
     await page.getByRole('button', { name: 'Resolve market' }).click()
-    await page.getByRole('button', { name: 'Confirm outcome' }).click()
+    await page.getByRole('button', { name: /^(Resolve as|Change to) / }).click()
     await expect(page.getByRole('region', { name: 'Outcomes' }).getByText('Yes won', { exact: true })).toBeVisible()
   }
 

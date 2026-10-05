@@ -90,7 +90,7 @@ describe('useMarketShare', () => {
     setNavigator('clipboard', { writeText })
 
     await click()
-    await waitFor(() => expect(success).toHaveBeenCalledWith('Link copied'))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Link copied.'))
     expect(writeText).toHaveBeenCalledWith(URL_ON_LOCALHOST)
   })
 
@@ -102,7 +102,7 @@ describe('useMarketShare', () => {
     setNavigator('clipboard', { writeText })
 
     await click()
-    await waitFor(() => expect(success).toHaveBeenCalledWith('Link copied'))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Link copied.'))
   })
 
   it('falls back to a hidden textarea when there is no Clipboard API', async () => {
@@ -116,7 +116,7 @@ describe('useMarketShare', () => {
     })
 
     await click()
-    await waitFor(() => expect(success).toHaveBeenCalledWith('Link copied'))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Link copied.'))
     expect(document.execCommand).toHaveBeenCalledWith('copy')
     expect(copied).toBe(URL_ON_LOCALHOST)
     expect(document.querySelector('textarea')).toBeNull()

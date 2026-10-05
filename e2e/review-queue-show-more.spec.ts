@@ -30,7 +30,7 @@ test('the review queue pages oldest first, with Show more, and the waiting count
     if (insertErr) throw insertErr
 
     await page.goto('/admin/tasks')
-    const queue = page.getByRole('region', { name: 'Pending approvals' })
+    const queue = page.getByRole('region', { name: 'To review' })
     // The queue is a table (#399), and each note sits in its row's Proof cell.
     const row = (n: string) => queue.getByRole('row').filter({ hasText: `Queue check ${n}` })
     await expect(row('00')).toBeVisible()

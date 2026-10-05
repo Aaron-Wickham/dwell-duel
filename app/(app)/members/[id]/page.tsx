@@ -19,6 +19,7 @@ import { MemberStatsSkeleton } from '@/components/members/member-stats-card'
 import { MemberActivity } from './member-activity'
 import { MemberStats } from './member-stats'
 import { formatDcAmount } from '@/lib/format/dc'
+import { rankText } from '@/lib/format/rank'
 
 // No loading.tsx for this route: the member must be found before anything streams, so an
 // unknown id still gets a real 404 status. The stats and the activity list stream in behind
@@ -45,7 +46,7 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
                 <div className="flex flex-col gap-0.5">
                   <p className={rowTitleClass}>
                     {formatDcAmount(member.score)} net worth ·{' '}
-                    {member.rank === null ? 'Not ranked' : `Rank ${member.rank} of ${member.memberCount}`}
+                    {member.rank === null ? 'Not ranked' : rankText(member.rank, member.memberCount)}
                   </p>
                   {/* Net worth isn't the balance in the top bar, so say how the two add up (CR-B15). */}
                   <p className="text-sm text-ink2">

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
-import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
+import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { afterAction, notifyMarketResult } from '@/lib/push/notify'
@@ -27,7 +27,7 @@ export async function voidMarketAction(
   formData: FormData,
 ): Promise<ActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const reason = String(formData.get('reason') ?? '')
     .replace(/\r\n/g, '\n')

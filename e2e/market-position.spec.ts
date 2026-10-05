@@ -100,7 +100,7 @@ test('Your position lists each bet with its fixed payout, and a parlay leg; parl
   const position = page.getByRole('region', { name: 'Your position' })
   const outcomes = page.getByRole('region', { name: 'Outcomes' })
 
-  const leg = position.getByRole('listitem').filter({ hasText: 'Parlay leg: Yes' })
+  const leg = position.getByRole('listitem').filter({ hasText: 'Parlay pick: Yes' })
   await expect(leg.getByText(/^5 DC · 2 picks · pays \d+ DC if every pick wins\./)).toBeVisible()
   await expect(leg.getByRole('link', { name: /^View parlay/ })).toHaveAttribute('href', `/parlays/${parlayId}`)
 
@@ -163,7 +163,7 @@ test('once the market resolves, Your position shows each result, the net and the
   const solo = position.getByRole('listitem').filter({ hasText: '10 DC on Yes' })
   await expect(solo.getByText('Won 18 DC')).toBeVisible()
   await expect(solo.getByRole('button')).toHaveCount(0)
-  await expect(position.getByText('Your leg won. The parlay waits on 1 more pick.')).toBeVisible()
+  await expect(position.getByText('Your pick won. The parlay waits on 1 more pick.')).toBeVisible()
 
   // The result is said once, at the top of the outcomes (#390).
   const outcomes = page.getByRole('region', { name: 'Outcomes' })

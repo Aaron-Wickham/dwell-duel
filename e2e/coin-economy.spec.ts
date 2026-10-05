@@ -45,7 +45,7 @@ test('create a proof-required task, submit it with proof, and approve it as admi
   await expect(pending.getByText('“Read it with my small group”')).toBeVisible()
   await expect(pending.getByRole('link', { name: 'example.com/genesis-notes' })).toBeVisible()
   await pending.getByRole('button', { name: 'Approve' }).click()
-  await expect(page.getByText('Nothing pending.')).toBeVisible()
+  await expect(page.getByText('No tasks to review.')).toBeVisible()
 
   await bobPage.goto('/')
   await expect(balance).toHaveText(`${(startingBalance + 10).toLocaleString('en-US')} DC`)

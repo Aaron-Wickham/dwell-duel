@@ -163,10 +163,10 @@ line.
 card at the top (above the chart on a phone, at the top of the right-hand
 column on a computer). Only you see it. While the market is open it lists
 each of your bets with exactly what it pays if it wins, and each parlay
-that has a leg on the market, linking to the parlay. Once the market
+that has a pick on the market, linking to the parlay. Once the market
 settles, each bet shows Won, Lost or Refunded, the card says what you won
 or lost on the market overall (left out when it comes to 0), and each
-parlay leg says where it and its parlay stand.
+parlay pick says where it and its parlay stand.
 
 ## Markets from before October 2026
 
@@ -308,8 +308,8 @@ full ledger) can see it.
 
 - **Who resolves:** once a market has closed, its creator or any
   reviewer, or an admin at any time. **Nobody but an admin resolves a
-  market they have money on** (a bet or a parlay leg), so a creator who bet
-  leaves it to a reviewer. A parlay leg counts even after its parlay has
+  market they have money on** (a bet or a parlay pick), so a creator who bet
+  leaves it to a reviewer. A parlay pick counts even after its parlay has
   been settled on another market, since an override there could bring it
   back. A market whose creator has money on it shows
   what, bets and parlay picks alike ("Ben has 40 DC on Yes"), and its
@@ -332,9 +332,9 @@ full ledger) can see it.
 - **Voids:** until a market closes, its creator or an admin can void it;
   once it has closed, only an admin can, the same way nobody with money on a
   market settles it. A creator with money on their own market (a bet or a
-  parlay leg) can't void it at all: they ask an admin. Every void **must say why**, and the reason shows on
+  parlay pick) can't void it at all: they ask an admin. Every void **must say why**, and the reason shows on
   the market page and in the feed. Every bet on it is refunded what it
-  cost, and a parlay leg on it drops out.
+  cost, and a parlay pick on it drops out.
 - **Paying out:** each winning bet is paid its shares, rounded down to
   whole DC. Nobody is refunded when nobody backed the winner, apart from
   bets placed before October 2026 (see
@@ -405,7 +405,7 @@ isn't shown.
   or been paid this month appear.
 - **Ties share a rank** on both boards ("1, 1, 3").
 - **Only current members are ranked.** Someone the owner has removed drops
-  off both boards and out of "Rank X of N"; their profile still shows
+  off both boards and out of the count in a rank like "218th of 502"; their profile still shows
   their net worth, marked "Not ranked".
 - **Your standing** (Net worth, wide screens only): a card beside the
   rankings, under the podium, shows your rank, net worth, record and how
@@ -462,7 +462,7 @@ see:
 - **Biggest win:** the largest payout minus its stake on a single solo
   bet, with the market. A payout an override took back doesn't count.
 - **Best parlay:** the won parlay with the highest multiplier (the
-  multiplier fixed when it was placed, less any voided legs, and up to its
+  multiplier fixed when it was placed, less any voided picks, and up to its
   cap for a parlay from before October 2026), and what it paid.
 - **Markets created** and **Tasks completed** (approved submissions only).
 
@@ -498,13 +498,13 @@ choices are greyed out there, with a line saying why:
 | Notification | When | Starts |
 |---|---|---|
 | **Markets to resolve** | A market you made has closed and is waiting for you to resolve it. Admins and the owner also hear about every closed market that has no result, once each. Sent within about a minute of closing, with a daily backup if that's missed | On |
-| **Results** | A market you bet on, solo or as a parlay leg, is resolved ("You won 26 DC", then the market and its result), changed by an override or voided | On |
+| **Results** | A market you bet on, solo or as a parlay pick, is resolved ("You won 26 DC", then the market and its result), changed by an override or voided | On |
 | **Task reviews** | Your task submission is approved or rejected, with the reviewer's reason, if they gave one | On |
 | **Tasks to review** (reviewers and above only) | A member submits a task waiting for review. Never your own | On |
 | **New markets** | Someone else creates a market | Off |
 
-A parlay only pays once all its legs are settled, so if your only stake
-in a market is a parlay leg, the notification just gives the result. A
+A parlay only pays once all its picks are settled, so if your only stake
+in a market is a parlay pick, the notification just gives the result. A
 cancelled bet gets no notification. Tapping a notification opens the
 market, your tasks, or (for Task to review) the review queue.
 
@@ -550,7 +550,7 @@ invite is revoked, they're signed out on every device and their devices
 stop getting notifications, straight away. They can no longer resolve,
 void or edit the markets they created, or delete their comments. Their
 coins, bets and history stay where they are, but they're left out of both
-leaderboards, the "Rank X of N" count, the month's champion and the weekly
+leaderboards, the count in a rank like "218th of 502", the month's champion and the weekly
 recap's best call and top tasker, and Admin → Members lists them under
 **Removed**. If they sign in again they land on the not-invited page. The
 owner's **Invite again** on their page (it asks first) brings them back as
@@ -684,7 +684,7 @@ or reach them through
   The tabs narrow it: **All**, **Results** (markets resolved or voided,
   bets and parlays won, each month's champion) and **Mine** (your own bets,
   markets and wins, plus the result or void of any market you have a bet or
-  a parlay leg on, and the void of any market you made).
+  a parlay pick on, and the void of any market you made).
 - **Finding a market:** on Markets, type in the search box to find a market
   whose title contains what you typed (not case-sensitive, up to 80
   characters). It looks in every status, whichever tab you're on, keeps

@@ -44,7 +44,7 @@ test('an override is blocked, naming the member who has spent their winnings', a
   await page.getByLabel('Winning outcome').selectOption({ label: 'Yes' })
   await page.getByLabel('Why did this outcome win?').fill('Checked against the recording')
   await page.getByRole('button', { name: 'Resolve market' }).click()
-  await page.getByRole('button', { name: 'Confirm outcome' }).click()
+  await page.getByRole('button', { name: /^(Resolve as|Change to) / }).click()
   await expect(page.getByRole('region', { name: 'Outcomes' }).getByText('Yes won', { exact: true })).toBeVisible()
 
   const { data: afterWin, error: balanceErr } = await db.from('profiles').select('balance').eq('id', bob.id).single()
@@ -63,7 +63,7 @@ test('an override is blocked, naming the member who has spent their winnings', a
   await page.getByLabel('Why did this outcome win?').fill('Checked against the recording')
   await page.getByRole('button', { name: 'Override resolution' }).click()
   await expect(page.getByRole('alertdialog', { name: 'Override the resolution?' })).toContainText('previous payouts are reversed')
-  await page.getByRole('button', { name: 'Confirm outcome' }).click()
+  await page.getByRole('button', { name: /^(Resolve as|Change to) / }).click()
 
   await expect(
     page.getByText(

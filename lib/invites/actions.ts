@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
 import { addInvite } from './add-invite'
 import { revokeInvite } from './revoke-invite'
+import { SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 
 export interface AddInviteFormState {
   formError?: string
@@ -15,7 +16,7 @@ export async function addInviteAction(
   formData: FormData,
 ): Promise<AddInviteFormState | undefined> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
   const email = String(formData.get('email') ?? '')
   const result = await addInvite(supabase, user.id, email)
   revalidatePath('/admin/invites')
@@ -32,10 +33,10 @@ export async function revokeInviteAction(
   formData: FormData,
 ): Promise<RevokeInviteFormState | undefined> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
   const email = String(formData.get('email') ?? '')
   const result = await revokeInvite(supabase, email)
   revalidatePath('/admin/invites')
-  if (!result.ok) return { formError: 'Could not revoke that invite.' }
+  if (!result.ok) return { formError: 'Couldn’t revoke that invite. It may already be used. Refresh and check.' }
   return undefined
 }

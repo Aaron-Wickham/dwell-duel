@@ -24,6 +24,7 @@ import { BalanceCard } from '@/components/home/balance-card'
 import { firstName, ridingText } from '@/lib/home/copy'
 import { getTaskRewardRange } from '@/lib/tasks/list-tasks'
 import { formatDcAmount } from '@/lib/format/dc'
+import { rankText } from '@/lib/format/rank'
 
 const ACTIVITY_ROWS = 3
 
@@ -78,7 +79,7 @@ export default async function Home() {
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 max-lg:order-1">
             <h1 className={h1Class}>Hi, {firstName(standing?.displayName)}</h1>
             <p className="text-sm text-ink2 lg:hidden">
-              {rank !== null && `Rank ${rank} · `}
+              {rank !== null && `${rankText(rank, memberCount)} · `}
               {atStake.wagers === 0 ? (
                 ridingText(0, 0)
               ) : (

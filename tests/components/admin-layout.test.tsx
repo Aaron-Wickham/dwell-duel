@@ -39,7 +39,7 @@ describe('the Admin layout', () => {
   it('links every reviewer and above to the Admin guide, docs/ADMIN-GUIDE.md on GitHub (#283)', async () => {
     render(await AdminLayout({ children: null }))
 
-    const link = screen.getByRole('link', { name: 'the Admin guide' })
+    const link = screen.getByRole('link', { name: 'Admin guide' })
     const href = link.getAttribute('href')!
     expect(href).toBe('https://github.com/Aaron-Wickham/dwell-duel/blob/main/docs/ADMIN-GUIDE.md')
     expect(link).toHaveAttribute('target', '_blank')

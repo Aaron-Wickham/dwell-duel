@@ -104,15 +104,15 @@ describe('InviteListItem', () => {
   })
 
   it('ties a server error to the Revoke button', async () => {
-    revokeInviteAction.mockResolvedValue({ formError: 'Could not revoke that invite.' })
+    revokeInviteAction.mockResolvedValue({ formError: 'Couldn’t revoke that invite. It may already be used. Refresh and check.' })
     renderItem({ email: 'newfriend@example.com', claimed: false, createdAt: '2026-09-01T00:00:00Z' })
     await userEvent.click(screen.getByRole('button', { name: 'Revoke newfriend@example.com' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Revoke invite' }))
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Could not revoke that invite.')
+    expect(alert).toHaveTextContent('Couldn’t revoke that invite. It may already be used. Refresh and check.')
     expect(screen.getByRole('button', { name: 'Revoke newfriend@example.com' })).toHaveAccessibleDescription(
-      'Could not revoke that invite.',
+      'Couldn’t revoke that invite. It may already be used. Refresh and check.',
     )
   })
 })

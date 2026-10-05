@@ -194,7 +194,7 @@ export function ResolveForm({
               : 'Winning solo bets are paid straight away. A parlay with a pick here is lost if that pick lost, and pays once every pick has won.'}
           </>
         }
-        confirmLabel="Confirm outcome"
+        confirmLabel={override ? `Change to ${winner}` : `Resolve as ${winner}`}
       />
       {state?.formError && (
         <Message tone="error" id="resolve-error">

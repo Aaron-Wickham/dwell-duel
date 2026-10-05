@@ -132,9 +132,9 @@ describe('PositionCard, while the market is open', () => {
 
   it('shows a parlay leg with its pill and a link to the parlay', () => {
     render(<PositionCard position={open} resolvedAt={null} />)
-    const row = screen.getByText('Parlay leg: Yes').closest('li')!
+    const row = screen.getByText('Parlay pick: Yes').closest('li')!
     expect(
-      within(row).getByText('5 DC · 3 picks · pays ~80 DC if every pick wins. Leg odds are set when this market closes.'),
+      within(row).getByText('5 DC · 3 picks · pays ~80 DC if every pick wins. This pick’s odds are set when this market closes.'),
     ).toBeInTheDocument()
     expect(within(row).getByText('Open')).toBeInTheDocument()
     const link = within(row).getByRole('link', { name: /^View parlay/ })
@@ -173,7 +173,7 @@ describe('PositionCard, once settled', () => {
     expect(screen.getByText('Won 36 DC')).toBeInTheDocument()
     expect(screen.getByText('Lost')).toBeInTheDocument()
     expect(screen.getByText(/^Paid/)).toBeInTheDocument()
-    expect(screen.getByText('Your leg won. The parlay waits on 2 more picks.')).toBeInTheDocument()
+    expect(screen.getByText('Your pick won. The parlay waits on 2 more picks.')).toBeInTheDocument()
     expect(screen.queryByRole('button')).toBeNull()
     expect(screen.queryByText(/Pays ~/)).toBeNull()
   })

@@ -123,7 +123,7 @@ describe('push payloads', () => {
 
   it('tells an admin a market needs a result, linking to it', () => {
     expect(marketAlertPayload({ marketId: 'm-1', title: 'Will it rain?' })).toEqual({
-      title: 'Market needs a result',
+      title: 'Time to resolve',
       body: 'Will it rain? has closed',
       url: '/markets/m-1',
     })

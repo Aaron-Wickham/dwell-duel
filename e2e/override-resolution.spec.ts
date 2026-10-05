@@ -42,7 +42,7 @@ test('an admin overrides a resolved market through the confirmation dialog', asy
   await page.getByLabel('Winning outcome').selectOption({ label: 'Yes' })
   await page.getByLabel('Why did this outcome win?').fill('They answered the last question first')
   await page.getByRole('button', { name: 'Resolve market' }).click()
-  await page.getByRole('alertdialog', { name: 'Resolve this market?' }).getByRole('button', { name: 'Confirm outcome' }).click()
+  await page.getByRole('alertdialog', { name: 'Resolve this market?' }).getByRole('button', { name: /^(Resolve as|Change to) / }).click()
   await expect(page.getByRole('region', { name: 'Outcomes' }).getByText('Yes won', { exact: true })).toBeVisible()
   await expect.poll(bobBalance).toBeGreaterThan(start - 10)
 
@@ -61,7 +61,7 @@ test('an admin overrides a resolved market through the confirmation dialog', asy
   await expect(page.getByRole('region', { name: 'Outcomes' }).getByText('Yes won', { exact: true })).toBeVisible()
 
   await manage.getByRole('button', { name: 'Override resolution' }).click()
-  await dialog.getByRole('button', { name: 'Confirm outcome' }).click()
+  await dialog.getByRole('button', { name: /^(Resolve as|Change to) / }).click()
   await expect(page.getByText('Resolution overridden.').first()).toBeVisible()
   await expect(page.getByRole('region', { name: 'Outcomes' }).getByText('No won', { exact: true })).toBeVisible()
   const why = page.getByRole('region', { name: 'Why it resolved this way' })

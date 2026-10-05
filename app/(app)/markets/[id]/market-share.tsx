@@ -59,7 +59,7 @@ export function useMarketShare(marketId: string, title: string): { share: () => 
     }
     if (await copy(url)) {
       setManualUrl(null)
-      toast.success('Link copied')
+      toast.success('Link copied.')
     } else {
       setManualUrl(url)
     }

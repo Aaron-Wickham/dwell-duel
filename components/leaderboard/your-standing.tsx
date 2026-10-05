@@ -4,12 +4,7 @@ import { eyebrowClass, rowTitleClass } from '@/components/ui/page'
 import type { YourStanding } from '@/lib/social/leaderboard'
 import type { MemberRecord } from '@/lib/social/leaderboard-extras'
 import { formatDcAmount } from '@/lib/format/dc'
-
-function ordinal(n: number): string {
-  const teen = n % 100 >= 11 && n % 100 <= 13
-  const suffix = teen ? 'th' : (({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th')
-  return `${n}${suffix}`
-}
+import { ordinal } from '@/lib/format/rank'
 
 export function gapLine({ rank, tiedWith, above }: YourStanding): string {
   if (rank === 1) return tiedWith > 0 ? 'Tied for the top.' : 'You’re top of the board.'

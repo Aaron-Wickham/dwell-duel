@@ -26,7 +26,7 @@ test('create a market, place a bet, and resolve it as admin', async ({ page }) =
   await page.getByRole('button', { name: 'Add link' }).click()
   await page.getByRole('button', { name: 'Resolve market' }).click()
   await expect(page.getByRole('alertdialog', { name: 'Resolve this market?' })).toContainText('Yes wins.')
-  await page.getByRole('button', { name: 'Confirm outcome' }).click()
+  await page.getByRole('button', { name: /^(Resolve as|Change to) / }).click()
 
   await expect(page.getByRole('region', { name: 'Outcomes' }).getByText('Yes won', { exact: true })).toBeVisible()
   const why = page.getByRole('region', { name: 'Why it resolved this way' })

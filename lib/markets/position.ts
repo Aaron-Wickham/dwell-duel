@@ -154,9 +154,9 @@ export function legSummary({ parlay, leg }: PositionLeg): string {
   }
   if (leg.status === 'won') {
     const waiting = parlay.legs.filter((l) => l.status === 'open' || l.status === 'awaiting').length
-    return `Your leg won. The parlay waits on ${waiting} more ${waiting === 1 ? 'pick' : 'picks'}.`
+    return `Your pick won. The parlay waits on ${waiting} more ${waiting === 1 ? 'pick' : 'picks'}.`
   }
-  if (leg.status === 'voided') return 'Leg voided; the parlay continues without it.'
+  if (leg.status === 'voided') return 'Pick voided; the parlay continues without it.'
   const pays = `${formatDcAmount(parlay.stake)} · ${picks(parlay.legs.length)} · pays ${parlay.estimated ? '~' : ''}${formatDcAmount(parlay.potentialPayout)} if every pick wins.`
-  return leg.oddsKnown ? pays : `${pays} Leg odds are set when this market closes.`
+  return leg.oddsKnown ? pays : `${pays} This pick’s odds are set when this market closes.`
 }

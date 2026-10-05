@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
-import { GENERIC_ERROR } from '@/lib/errors/friendly-error'
+import { GENERIC_ERROR, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { isDeliberateRaise } from '@/lib/errors/deliberate-raise'
 import { reportError } from '@/lib/observability/report'
 import { insufficientBalanceMessage, isBalanceCheckViolation } from '@/lib/errors/balance-error'
@@ -51,7 +51,7 @@ function stakeOf(value: FormDataEntryValue | null): number | null {
 // the cookie, means a place right after a Solo / Parlay switch uses what the member saw.
 export async function placeSlipAction(_prevState: PlaceSlipState, formData: FormData): Promise<PlaceSlipState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const inSlip = new Set((await readSlip()).map((e) => e.outcomeId))
   const picks = formData
@@ -95,13 +95,13 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
   if (error) {
     if (isBalanceCheckViolation(error)) {
       const { data: profile } = await supabase.from('profiles').select('balance').eq('id', user.id).maybeSingle()
-      if (profile) return { formError: insufficientBalanceMessage(profile.balance) }
+      if (profile) return { formError: insufficientBalanceMessage(profile.balance, singles.reduce((sum, s) => sum + s.amount, parlayStake)) }
     }
     if (!isDeliberateRaise(error)) {
       reportError('place_slip failed', error)
       return { formError: GENERIC_ERROR }
     }
-    const refused = parseSlipError(error.message)
+    const refused = parseSlipError(error.message, () => reportError('place_slip refused with unmapped text', error))
     if (!refused.priceMoved) return refused
     // The slip re-reads its picks, so it shows (and next sends) the payout the price gives now.
     revalidatePath('/', 'layout')

@@ -151,7 +151,7 @@ describe('BalanceCard (#388)', () => {
     const card = screen.getByRole('region', { name: 'Balance' })
     expect(card).toHaveClass('hidden', 'lg:flex')
     expect(card).toHaveTextContent('4,886 DC')
-    expect(card).toHaveTextContent('Rank 218 of 502 · 275 DC riding on 30 bets')
+    expect(card).toHaveTextContent('218th of 502 · 275 DC riding on 30 bets')
   })
 
   it('leaves the rank out until there is one', () => {

@@ -36,5 +36,5 @@ test('bulk-approve two pending task completions from the admin queue', async ({ 
   await page.getByRole('alertdialog').getByRole('button', { name: 'Approve and pay' }).click()
 
   await expect(page.getByText('2 approved.')).toBeVisible()
-  await expect(page.getByText('Nothing pending.')).toBeVisible()
+  await expect(page.getByText('No tasks to review.')).toBeVisible()
 })

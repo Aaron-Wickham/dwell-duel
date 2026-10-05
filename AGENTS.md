@@ -149,6 +149,15 @@ a line to `CHANGELOG.md` under the next release.
   value, points thinned by time (`chartWindow`'s `buckets`), Recharts
   animation off, and every chart names how its lines moved
   (`describeMovement`).
+- **A `PageHeader` description states a rule the page enforces,** not a
+  summary of the page (#400): Tasks keeps "A reviewer checks each one.";
+  most pages have none, and their skeleton draws no description line.
+- **Words we use** (#400). Member-facing text, docs for members and tests
+  say: **pick**, never "leg" (leg stays in code and in HOW-IT-WORKS' parlay
+  maths); **submission**, never "completion" (the table's name); **To
+  review** for submissions waiting, never "approvals"; a rank as **"218th
+  of 502"** (`rankText`, `lib/format/rank.ts`); **created** a market, never
+  "opened"; **Time to resolve** for a closed market without a result.
 - **Visual source of truth:** `docs/design/app-redesign-handoff.md`, which
   describes the app as it is. The dated specs and plans in `docs/archive/`
   are history: they name things the code no longer has, so don't build
@@ -417,6 +426,11 @@ a line to `CHANGELOG.md` under the next release.
 - **A new member-entered text column** gets a length CHECK in a
   migration, a `TEXT_LIMITS` entry in `lib/forms/limits.ts`, `maxLength`
   on its input, and a `tooLong` check in its server action.
+- **Every member-facing error says what to do next,** and nothing from
+  Postgres reaches a member unmapped (#400): an action maps known raises
+  through `friendlyError` or its own table (the slip's is
+  `parseSlipError`), logs anything else and shows `GENERIC_ERROR`. A
+  signed-out action returns `SIGNED_OUT_ERROR` (`lib/errors/friendly-error.ts`).
 - **A new required env var** goes in `lib/env/required.ts`. A
   production-only one must be set in Vercel before merging, or
   production won't boot. Supabase keys are the publishable and secret

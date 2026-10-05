@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireUser } from '@/lib/auth/require-user'
-import { friendlyError, type KnownError } from '@/lib/errors/friendly-error'
+import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { chunk, IN_CHUNK } from '@/lib/pagination/chunk'
 import type { DbClient } from '@/lib/supabase/database'
@@ -33,7 +33,7 @@ async function reviewedByMe(supabase: DbClient, message: string, completionId: s
 
 export async function approveTaskCompletionAction(completionId: string, _prevState: ActionState, _formData: FormData): Promise<ActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const { error } = await supabase.rpc('approve_task_completion', { p_completion_id: completionId })
   if (error && (await reviewedByMe(supabase, error.message, completionId, user.id, 'approved'))) {
@@ -50,7 +50,7 @@ export async function approveTaskCompletionAction(completionId: string, _prevSta
 
 export async function rejectTaskCompletionAction(completionId: string, _prevState: ActionState, formData: FormData): Promise<ActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const reason = String(formData.get('reason') ?? '').trim()
   if (reason.length > TEXT_LIMITS.reviewNote) return { formError: tooLong('Reason', TEXT_LIMITS.reviewNote), field: 'reason' }
@@ -115,10 +115,10 @@ async function countReplayedAsDone(supabase: DbClient, rows: ReviewRow[] | null,
 
 export async function bulkApproveTaskCompletionsAction(_prevState: BulkActionState | undefined, formData: FormData): Promise<BulkActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const completionIds = formData.getAll('completionIds').map(String)
-  if (completionIds.length === 0) return { formError: 'Select at least one completion.' }
+  if (completionIds.length === 0) return { formError: 'Select at least one submission.' }
 
   const { data, error } = await supabase.rpc('review_task_completions', { p_ids: completionIds, p_approve: true })
   const { succeeded, failed, firstError } = tally(completionIds.length, await countReplayedAsDone(supabase, data, user.id, 'approved'), error)
@@ -132,10 +132,10 @@ export async function bulkApproveTaskCompletionsAction(_prevState: BulkActionSta
 
 export async function bulkRejectTaskCompletionsAction(_prevState: BulkActionState | undefined, formData: FormData): Promise<BulkActionState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const completionIds = formData.getAll('completionIds').map(String)
-  if (completionIds.length === 0) return { formError: 'Select at least one completion.' }
+  if (completionIds.length === 0) return { formError: 'Select at least one submission.' }
 
   const reason = String(formData.get('reason') ?? '').trim()
   if (reason.length > TEXT_LIMITS.reviewNote) return { formError: tooLong('Reason', TEXT_LIMITS.reviewNote), field: 'reason' }

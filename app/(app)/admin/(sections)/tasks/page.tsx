@@ -47,8 +47,8 @@ export default async function AdminTasksPage(props: PageProps<'/admin/tasks'>) {
       <div className="flex flex-col gap-5 md:gap-7">
         <LiveTables subscriptions={pageSubscriptions.adminTasks()} renderedAt={renderStamp()} />
         <SectionCard
-          title="Pending approvals"
-          titleId="pending-approvals"
+          title="To review"
+          titleId="to-review"
           className="gap-4"
           action={waiting > 0 ? <StatusChip tone="wait">{waiting} waiting</StatusChip> : undefined}
         >

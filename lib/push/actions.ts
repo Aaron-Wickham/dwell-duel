@@ -4,12 +4,13 @@ import { headers } from 'next/headers'
 import { requireUser } from '@/lib/auth/require-user'
 import { NOTIFICATION_KINDS } from './prefs'
 import { SUBSCRIPTION_LIMITS, validSubscription } from './subscription'
+import { SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 
 export type SubscriptionResult = { error?: string }
 
 export async function savePushSubscriptionAction(input: unknown): Promise<SubscriptionResult> {
   const { supabase, user } = await requireUser()
-  if (!user) return { error: 'Not signed in.' }
+  if (!user) return { error: SIGNED_OUT_ERROR }
 
   const subscription = validSubscription(input)
   if (!subscription) return { error: 'This browser’s notification service isn’t supported.' }
@@ -30,7 +31,7 @@ export async function savePushSubscriptionAction(input: unknown): Promise<Subscr
 
 export async function deletePushSubscriptionAction(endpoint: string): Promise<SubscriptionResult> {
   const { supabase, user } = await requireUser()
-  if (!user) return { error: 'Not signed in.' }
+  if (!user) return { error: SIGNED_OUT_ERROR }
 
   const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', String(endpoint))
   if (error) {
@@ -44,7 +45,7 @@ export type PrefsState = { formError?: string } | undefined
 
 export async function saveNotificationPrefsAction(_prev: PrefsState, formData: FormData): Promise<PrefsState> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: 'Not signed in.' }
+  if (!user) return { formError: SIGNED_OUT_ERROR }
 
   const choices = Object.fromEntries(NOTIFICATION_KINDS.map((kind) => [kind, formData.get(kind) === 'on']))
   const { error } = await supabase

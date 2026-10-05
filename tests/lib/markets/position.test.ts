@@ -83,7 +83,7 @@ function position(overrides: Partial<ParlayView>, here: ParlayLegView, others: P
 describe('legSummary', () => {
   it('describes the parlay while its leg here is open, and says when the odds are set', () => {
     expect(legSummary(position({}, leg('m', 'open'), [leg('a', 'open'), leg('b', 'open')]))).toBe(
-      '5 DC · 3 picks · pays ~80 DC if every pick wins. Leg odds are set when this market closes.',
+      '5 DC · 3 picks · pays ~80 DC if every pick wins. This pick’s odds are set when this market closes.',
     )
   })
 
@@ -95,15 +95,15 @@ describe('legSummary', () => {
 
   it('says how many picks the parlay still waits on after its leg here won', () => {
     expect(legSummary(position({}, leg('m', 'won', true), [leg('a', 'open'), leg('b', 'awaiting')]))).toBe(
-      'Your leg won. The parlay waits on 2 more picks.',
+      'Your pick won. The parlay waits on 2 more picks.',
     )
     expect(legSummary(position({}, leg('m', 'won', true), [leg('a', 'open'), leg('b', 'won', true)]))).toBe(
-      'Your leg won. The parlay waits on 1 more pick.',
+      'Your pick won. The parlay waits on 1 more pick.',
     )
   })
 
   it('says a voided leg drops out', () => {
-    expect(legSummary(position({}, leg('m', 'voided'), [leg('a', 'open')]))).toBe('Leg voided; the parlay continues without it.')
+    expect(legSummary(position({}, leg('m', 'voided'), [leg('a', 'open')]))).toBe('Pick voided; the parlay continues without it.')
   })
 
   it('gives the parlay’s own result once it has settled', () => {

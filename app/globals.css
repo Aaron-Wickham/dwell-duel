@@ -75,12 +75,14 @@
   --lift-shadow: 0 2px 6px rgba(3, 39, 45, 0.06), 0 12px 28px rgba(3, 39, 45, 0.12);
   --tab-shadow: 0 1px 3px rgba(3, 39, 45, 0.12);
   --scrim: rgba(3, 39, 45, 0.45);
+  /* Chart series, validated for colour-vision deficiency as a set (tests/lib/ui/contrast.test.ts):
+     change one and re-run the dataviz palette validator. A sixth outcome is the grey line. */
   --s1: #03272D;
   --s2: #2A6E0B;
-  --s3: #855600;
-  --s4: #3155B8;
-  --s5: #7B3FA8;
-  --s6: #B0306F;
+  --s3: #3155B8;
+  --s4: #B0306F;
+  --s5: #C77700;
+  --s6: var(--line-s);
   --status-band: #03272D;
   /* The launch screen matches the static iOS splash, teal with a white D, in both themes. */
   --splash: #03272D;
@@ -157,10 +159,10 @@
   --scrim: rgba(0, 8, 10, 0.72);
   --s1: #EAF4EE;
   --s2: #8BE651;
-  --s3: #F0C15A;
-  --s4: #9DB0FF;
-  --s5: #D2A8FF;
-  --s6: #FF8FC4;
+  --s3: #9DB0FF;
+  --s4: #FF8FC4;
+  --s5: #D9822B;
+  --s6: var(--line-s);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -209,10 +211,10 @@
     --scrim: rgba(0, 8, 10, 0.72);
     --s1: #EAF4EE;
     --s2: #8BE651;
-    --s3: #F0C15A;
-    --s4: #9DB0FF;
-    --s5: #D2A8FF;
-    --s6: #FF8FC4;
+    --s3: #9DB0FF;
+    --s4: #FF8FC4;
+    --s5: #D9822B;
+    --s6: var(--line-s);
   }
 }
 

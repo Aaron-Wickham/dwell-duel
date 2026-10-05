@@ -61,6 +61,8 @@ const EDGE_PAIRS: [string, string][] = [
   ['line-s', 'acc-soft'],
 ]
 
+const SERIES = ['s1', 's2', 's3', 's4', 's5']
+
 // Dark inherits what it doesn't redeclare (lime, on-lime) from :root.
 describe.each([
   ['light', light],
@@ -74,6 +76,26 @@ describe.each([
 
   it.each(EDGE_PAIRS)('%s on %s clears 3:1', (fg, bg) => {
     expect(contrast(theme.get(fg)!, theme.get(bg)!)).toBeGreaterThanOrEqual(3)
+  })
+
+  // A chart line is a graphical object: 3:1 against the card it's drawn on. The sixth is
+  // --line-s, held to the same bar as an edge above.
+  it.each(SERIES)('%s on surface clears 3:1', (series) => {
+    expect(contrast(theme.get(series)!, theme.get('surface')!)).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('chart series', () => {
+  // These five were checked as a set with the dataviz palette validator (adjacent and all pairs,
+  // under protan, deutan and tritan simulation). Changing one means validating the set again,
+  // then updating this test.
+  it('are the validated palette', () => {
+    expect(SERIES.map((name) => light.get(name))).toEqual(['#03272D', '#2A6E0B', '#3155B8', '#B0306F', '#C77700'])
+    expect(SERIES.map((name) => dark.get(name))).toEqual(['#EAF4EE', '#8BE651', '#9DB0FF', '#FF8FC4', '#D9822B'])
+  })
+
+  it('draw a sixth outcome in the grey line colour', () => {
+    expect(css.match(/--s6: var\(--line-s\);/g)).toHaveLength(3)
   })
 })
 

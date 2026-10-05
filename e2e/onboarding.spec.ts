@@ -71,7 +71,7 @@ test('a member at 0 DC is pointed to Tasks on Home and in the slip, which keeps 
     await expect(sheet.getByText('You have 0 DC. Earn more with Tasks, then come back to this slip.')).toBeVisible()
     await sheet.getByLabel('Stake (DC)').fill('5')
     await expect(sheet.getByText('5 DC short')).toBeVisible()
-    const place = sheet.getByRole('button', { name: 'Place 1 bet · 5 DC' })
+    const place = sheet.getByRole('button', { name: 'Place bet · 5 DC' })
     await expect(place).toHaveAttribute('aria-disabled', 'true')
     await expect(place).toHaveAccessibleDescription('You have 0 DC. Earn more with Tasks, then come back to this slip.')
     await expect(sheet.getByText('Will Bob find the Tasks page?')).toBeVisible()

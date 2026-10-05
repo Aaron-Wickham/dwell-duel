@@ -34,9 +34,13 @@ test('the slip button follows the member everywhere, and one tap places every so
   let sheet = await openSlip(page)
   // Any pick can be switched to Parlay; one that can't be a leg yet says why once it is (0074).
   await expect(sheet.getByRole('button', { name: 'Parlay' }).first()).toBeEnabled()
-  for (let i = 0; i < 8; i++) {
-    await page.keyboard.press('Tab')
-    await expect(sheet.locator(':focus')).toHaveCount(1)
+  // The sheet is modal (A11Y-01): Tab and Shift+Tab cycle inside it, past its last control and back
+  // round, never into the page behind.
+  for (const key of ['Tab', 'Shift+Tab']) {
+    for (let i = 0; i < 40; i++) {
+      await page.keyboard.press(key)
+      await expect(sheet.locator(':focus')).toHaveCount(1)
+    }
   }
   await page.keyboard.press('Escape')
   await expect(sheet).toHaveCount(0)

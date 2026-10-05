@@ -23,7 +23,7 @@ export async function placeSolo(page: Page, outcome: string, amount: number): Pr
   await addToSlip(page, outcome)
   const sheet = await openSlip(page)
   await sheet.getByLabel('Stake (DC)').fill(String(amount))
-  await sheet.getByRole('button', { name: `Place 1 bet · ${amount} DC` }).click()
+  await sheet.getByRole('button', { name: `Place bet · ${amount} DC` }).click()
   await expect(page.getByText('Placed 1 solo bet.').first()).toBeVisible()
   await expect(sheet).toHaveCount(0)
 }

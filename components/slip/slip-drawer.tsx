@@ -4,7 +4,7 @@ import { useEffect, useState, type MouseEvent, type RefObject } from 'react'
 import { Drawer } from '@base-ui/react/drawer'
 import { X } from 'lucide-react'
 import { useSlip } from '@/components/slip/slip-provider'
-import { SlipPanel } from '@/components/slip/slip-panel'
+import { SLIP_CLOSE_ID, SlipPanel } from '@/components/slip/slip-panel'
 import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import { useIsDesktop } from '@/lib/ui/use-is-desktop'
 import { cn } from '@/lib/utils'
@@ -40,7 +40,9 @@ export function SlipDrawer({
   }
 
   return (
+    // Modal: Tab and Shift+Tab stay inside the sheet while it's open (A11Y-01), and Escape closes it.
     <Drawer.Root
+      modal
       open={open && settled}
       swipeDirection={isDesktop ? 'right' : 'down'}
       onOpenChange={(next) => {
@@ -71,6 +73,7 @@ export function SlipDrawer({
                   <span aria-hidden="true" className="absolute top-2.5 left-1/2 h-1.5 w-12 -translate-x-1/2 rounded-full bg-line-s" />
                 )}
                 <Drawer.Close
+                  id={SLIP_CLOSE_ID}
                   aria-label="Close slip"
                   className="pressable inline-flex size-11 cursor-pointer items-center justify-center rounded-control text-ink hover:bg-sunk"
                 >

@@ -62,6 +62,9 @@ function renderPanel(view: SlipView, balance?: number) {
   return render(<Layout initial={view} balance={balance} />)
 }
 
+// A line whose text is split by an emphasised figure, like "Wins <strong>18 DC</strong>".
+const line = (text: string) => (_: string, el: Element | null) => el?.tagName === 'P' && el.textContent === text
+
 beforeEach(() => {
   for (const fn of [placeSlipAction, setPickModeAction, removeFromSlipAction, success]) fn.mockReset()
 })
@@ -75,20 +78,33 @@ describe('SlipPanel', () => {
 
   // How it works gives each section the id how-<slug> (components/docs/markdown.tsx).
   it('links How parlays pay to the parlays section of How it works', () => {
-    renderPanel(viewOf(pick(1)))
+    renderPanel(viewOf(pick(1), pick(2)))
     expect(screen.getByRole('link', { name: 'How parlays pay' })).toHaveAttribute('href', '/how-it-works#how-the-slip-solo-bets-and-parlays')
   })
 
-  it('starts each pick as Solo, with its own stake and payout', async () => {
+  it('gives one pick no Solo/Parlay switch and no parlay link, just a stake and what it wins (#392)', async () => {
     renderPanel(viewOf(pick(1)))
-    const group = screen.getByRole('group', { name: 'Bet type for Outcome 1, Market 1' })
-    expect(within(group).getByRole('button', { name: 'Solo' })).toHaveAttribute('aria-pressed', 'true')
-    const place = screen.getByRole('button', { name: 'Place 1 bet' })
+    expect(screen.queryByRole('group', { name: /^Bet type for/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'How parlays pay' })).not.toBeInTheDocument()
+    expect(screen.getByText('Bets are final once placed.')).toBeInTheDocument()
+    const place = screen.getByRole('button', { name: 'Place bet' })
     expect(place).toHaveAttribute('aria-disabled', 'true')
 
     await userEvent.type(screen.getByLabelText('Stake (DC)'), '10')
-    expect(screen.getByText('Pays 18 DC if it wins')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Place 1 bet · 10 DC' })).not.toHaveAttribute('aria-disabled')
+    expect(screen.getByText(line('Wins 18 DC'))).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Place bet · 10 DC' })).not.toHaveAttribute('aria-disabled')
+  })
+
+  it('starts each of two picks as Solo, with the switch and its own stake', async () => {
+    renderPanel(viewOf(pick(1), pick(2)))
+    const group = screen.getByRole('group', { name: 'Bet type for Outcome 1, Market 1' })
+    expect(within(group).getByRole('button', { name: 'Solo' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getAllByLabelText('Stake (DC)')).toHaveLength(2)
+  })
+
+  it('keeps the switch on a lone Parlay pick, so it can go back to Solo', () => {
+    renderPanel(viewOf(pick(1, { parlay: true })))
+    expect(screen.getByRole('group', { name: 'Bet type for Outcome 1, Market 1' })).toBeInTheDocument()
   })
 
   it('moves picks into one parlay with a shared stake, and needs two of them', async () => {
@@ -103,8 +119,9 @@ describe('SlipPanel', () => {
     const two = screen.getByRole('region', { name: 'Parlay · 2 picks' })
     await userEvent.type(within(two).getByLabelText('Stake (DC)'), '5')
     const quote = lmsrParlayQuote([pick(1).lmsr!, pick(2).lmsr!], 5)
-    expect(within(two).getByText(`Pays ${quote.payout} DC (${formatOdds(quote.multiplierBp)}×) if every pick wins`)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Place 1 bet · 5 DC' })).not.toHaveAttribute('aria-disabled')
+    expect(within(two).getByText(line(`Wins ${quote.payout} DC if every pick wins`))).toBeInTheDocument()
+    expect(within(two).getByText(`${formatOdds(quote.multiplierBp)}×`)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Place parlay · 5 DC' })).not.toHaveAttribute('aria-disabled')
   })
 
   it('blocks placing while a pick is no longer available', () => {
@@ -128,7 +145,7 @@ describe('SlipPanel', () => {
     expect(data.getAll('pick')).toEqual([`${pick(1).outcomeId}:solo`, `${pick(2).outcomeId}:parlay`, `${pick(3).outcomeId}:parlay`])
     expect(data.get(`stake:${pick(1).outcomeId}`)).toBe('10')
     expect(data.get('parlay_stake')).toBe('5')
-    await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet and a 2-leg parlay paying 20 DC (4.00×). Bets are final.'))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet and a 2-pick parlay paying 20 DC (4.00×). Bets are final.'))
   })
 
   describe('a pick on an lmsr market (0102)', () => {
@@ -138,16 +155,16 @@ describe('SlipPanel', () => {
     it('shows the exact payout, sends it with the stake, and says bets are final', async () => {
       placeSlipAction.mockResolvedValue({ placed: { solos: 1, parlay: null } })
       renderPanel(viewOf(lmsr(1)))
-      // A share at 50% pays 2× a DC at the margin.
-      expect(screen.getByText('2.00×')).toBeInTheDocument()
-      expect(screen.getByText('Bets are final: once placed, they can’t be cancelled.')).toBeInTheDocument()
+      // A new market's outcome is at 50%, shown as the market page shows it.
+      expect(screen.getByText('· 50%')).toBeInTheDocument()
+      expect(screen.getByText('Bets are final once placed.')).toBeInTheDocument()
 
       await userEvent.type(screen.getByLabelText('Stake (DC)'), '10')
       // The spec's worked example: 10 DC buys 18.33 shares.
-      expect(screen.getByText('Pays 18 DC if it wins')).toBeInTheDocument()
-      expect(screen.queryByText(/Pays ~/)).not.toBeInTheDocument()
+      expect(screen.getByText(line('Wins 18 DC'))).toBeInTheDocument()
+      expect(screen.queryByText(/~/)).not.toBeInTheDocument()
 
-      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 10 DC' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Place bet · 10 DC' }))
       await waitFor(() => expect(placeSlipAction).toHaveBeenCalled())
       const data = placeSlipAction.mock.calls[0][1] as FormData
       expect(data.get(`payout:${lmsr(1).outcomeId}`)).toBe('18')
@@ -157,26 +174,25 @@ describe('SlipPanel', () => {
     it('makes a parlay of lmsr picks with its exact payout, sends it, and toasts the fixed figures (0104)', async () => {
       placeSlipAction.mockResolvedValue({ placed: { solos: 0, parlay: { legs: 2, multiplierBp: 33_611, potentialPayout: 33 } } })
       renderPanel(viewOf(lmsr(1, { parlay: true }), lmsr(2, { parlay: true })))
-      expect(screen.getByText(/Your stake is split evenly across these picks/)).toBeInTheDocument()
       await userEvent.type(screen.getByLabelText('Stake (DC)'), '10')
       const quote = lmsrParlayQuote([{ q: [0, 0], index: 0, liquidity: 50 }, { q: [0, 0], index: 0, liquidity: 50 }], 10)
       const multiplier = `${formatOdds(quote.multiplierBp)}×`
-      expect(screen.getByText(`Pays ${quote.payout} DC (${multiplier}) if every pick wins`)).toBeInTheDocument()
+      expect(screen.getByText(line(`Wins ${quote.payout} DC if every pick wins`))).toBeInTheDocument()
       expect(screen.getByText(multiplier)).toBeInTheDocument()
       expect(screen.queryByText(/~/)).not.toBeInTheDocument()
 
-      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 10 DC' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Place parlay · 10 DC' }))
       await waitFor(() => expect(placeSlipAction).toHaveBeenCalled())
       const data = placeSlipAction.mock.calls[0][1] as FormData
       expect(data.get('parlay_payout')).toBe(String(quote.payout))
-      await waitFor(() => expect(success).toHaveBeenCalledWith('Placed a 2-leg parlay paying 33 DC (3.36×). Bets are final.'))
+      await waitFor(() => expect(success).toHaveBeenCalledWith('Placed a 2-pick parlay paying 33 DC (3.36×). Bets are final.'))
     })
 
     it('takes a parlay stake over 1,000 DC, since nothing caps a fixed parlay', async () => {
       renderPanel(viewOf(lmsr(1, { parlay: true }), lmsr(2, { parlay: true })), 5000)
       await userEvent.type(screen.getByLabelText('Stake (DC)'), '1200')
-      expect(screen.getByText(/^Pays [\d,]+ DC \(.+×\) if every pick wins$/)).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Place 1 bet · 1,200 DC' })).toBeEnabled()
+      expect(screen.getByText((_, el) => el?.tagName === 'P' && /^Wins [\d,]+ DC if every pick wins$/.test(el.textContent ?? ''))).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Place parlay · 1,200 DC' })).toBeEnabled()
     })
 
     it('shows a moved price on the pick and keeps the slip to place again', async () => {
@@ -186,7 +202,7 @@ describe('SlipPanel', () => {
       })
       renderPanel(viewOf(lmsr(1)))
       await userEvent.type(screen.getByLabelText('Stake (DC)'), '10')
-      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 10 DC' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Place bet · 10 DC' }))
       const stake = await screen.findByLabelText('Stake (DC)')
       await waitFor(() => expect(stake).toHaveAccessibleDescription(/now pays 17 DC/))
       expect(stake).toHaveValue(10)
@@ -201,11 +217,11 @@ describe('SlipPanel', () => {
       })
       renderPanel(viewOf(lmsr(1)))
       await userEvent.type(screen.getByLabelText('Stake (DC)'), '10')
-      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 10 DC' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Place bet · 10 DC' }))
       expect(await screen.findByText(/now pays 17 DC/)).toBeInTheDocument()
       await userEvent.type(screen.getByLabelText('Stake (DC)'), '0')
       expect(screen.queryByText(/now pays 17 DC/)).not.toBeInTheDocument()
-      expect(screen.getByText(/^Pays \d+ DC if it wins$/)).toBeInTheDocument()
+      expect(screen.getByText((_, el) => el?.tagName === 'P' && /^Wins \d+ DC$/.test(el.textContent ?? ''))).toBeInTheDocument()
     })
   })
 
@@ -214,7 +230,7 @@ describe('SlipPanel', () => {
     renderPanel(viewOf(pick(1)))
 
     await userEvent.type(screen.getAllByLabelText('Stake (DC)')[0], '10')
-    await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 10 DC' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Place bet · 10 DC' }))
 
     await waitFor(() => expect(success).toHaveBeenCalledWith('Your earlier attempt already went through: 1 solo bet.'))
   })
@@ -224,7 +240,7 @@ describe('SlipPanel', () => {
     renderPanel(viewOf(pick(1)))
 
     await userEvent.type(screen.getByLabelText('Stake (DC)'), '3')
-    await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 3 DC' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Place bet · 3 DC' }))
 
     const stake = await screen.findByLabelText('Stake (DC)')
     await waitFor(() => expect(stake).toHaveAttribute('aria-invalid', 'true'))
@@ -241,6 +257,16 @@ describe('SlipPanel', () => {
     expect(placeSlipAction).not.toHaveBeenCalled()
   })
 
+  it('moves focus to the next pick’s Remove when a focused Remove takes its pick away, with no toast', async () => {
+    removeFromSlipAction.mockResolvedValue(true)
+    renderPanel(viewOf(pick(1), pick(2)))
+
+    screen.getByRole('button', { name: 'Remove Outcome 1, Market 1' }).focus()
+    await userEvent.keyboard('{Enter}')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Remove Outcome 2, Market 2' })).toHaveFocus())
+    expect(success).not.toHaveBeenCalled()
+  })
+
   describe('a lost response (#61, #192)', () => {
     it('says so, and a retry sends the same attempt key', async () => {
       placeSlipAction.mockRejectedValueOnce(new Error('Failed to fetch'))
@@ -248,14 +274,14 @@ describe('SlipPanel', () => {
       renderPanel(viewOf(pick(1)))
 
       await userEvent.type(screen.getByLabelText('Stake (DC)'), '7')
-      const place = screen.getByRole('button', { name: 'Place 1 bet · 7 DC' })
+      const place = screen.getByRole('button', { name: 'Place bet · 7 DC' })
       await userEvent.click(place)
       const alert = await screen.findByRole('alert')
       expect(alert).toHaveTextContent(/couldn’t confirm your bets/)
       expect(place).toHaveAccessibleDescription(/Nothing will be placed twice/)
       expect(screen.getByLabelText('Stake (DC)')).toHaveValue(7)
 
-      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 7 DC' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Place bet · 7 DC' }))
       await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet. Bets are final.'))
       expect(placeSlipAction).toHaveBeenCalledTimes(2)
       const keys = placeSlipAction.mock.calls.map((c) => (c[1] as FormData).get('idempotency_key'))
@@ -269,7 +295,7 @@ describe('SlipPanel', () => {
       renderPanel(viewOf(pick(1)))
 
       await userEvent.type(screen.getByLabelText('Stake (DC)'), '7')
-      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 7 DC' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Place bet · 7 DC' }))
       await screen.findByRole('alert')
 
       await userEvent.click(screen.getByRole('button', { name: 'Toggle sheet' }))
@@ -278,7 +304,7 @@ describe('SlipPanel', () => {
 
       expect(screen.getByRole('alert')).toHaveTextContent(/couldn’t confirm your bets/)
       expect(screen.getByLabelText('Stake (DC)')).toHaveValue(7)
-      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 7 DC' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Place bet · 7 DC' }))
       await waitFor(() => expect(success).toHaveBeenCalledWith('Placed 1 solo bet. Bets are final.'))
       const keys = placeSlipAction.mock.calls.map((c) => (c[1] as FormData).get('idempotency_key'))
       expect(keys).toHaveLength(2)
@@ -293,16 +319,16 @@ describe('SlipPanel', () => {
       renderPanel(viewOf(pick(1)))
 
       await userEvent.type(screen.getByLabelText('Stake (DC)'), '7')
-      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 7 DC' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Place bet · 7 DC' }))
       await screen.findByRole('alert')
-      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 7 DC' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Place bet · 7 DC' }))
       await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Your slip is empty.'))
 
-      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 7 DC' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Place bet · 7 DC' }))
       await waitFor(() => expect(success).toHaveBeenCalledTimes(1))
       // The stakes are cleared on success; a fresh stake starts a fresh attempt.
       await userEvent.type(screen.getByLabelText('Stake (DC)'), '3')
-      await userEvent.click(screen.getByRole('button', { name: 'Place 1 bet · 3 DC' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Place bet · 3 DC' }))
       await waitFor(() => expect(success).toHaveBeenCalledTimes(2))
       const keys = placeSlipAction.mock.calls.map((c) => (c[1] as FormData).get('idempotency_key'))
       expect(keys[1]).toBe(keys[0])
@@ -319,7 +345,7 @@ describe('SlipPanel', () => {
 
       await userEvent.click(within(chips).getByRole('button', { name: '25' }))
       expect(screen.getByLabelText('Stake (DC)')).toHaveValue(25)
-      expect(screen.getByRole('button', { name: 'Place 1 bet · 25 DC' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Place bet · 25 DC' })).toBeInTheDocument()
     })
 
     it('makes Max the balance less the slip’s other stakes', async () => {
@@ -388,12 +414,12 @@ describe('SlipPanel', () => {
   describe('the balance and why Place is held back (#260)', () => {
     const stakeOf = (n: number) => screen.getByLabelText('Stake (DC)', { selector: `#slip-stake-${pick(n).outcomeId}` })
 
-    it('shows the balance and what the slip leaves, as stakes change', async () => {
+    it('shows the balance beside the heading, and only says more once the slip is short', async () => {
       renderPanel(viewOf(pick(1), pick(2)), 120)
-      expect(screen.getByText('Balance', { exact: false })).toHaveTextContent('Balance 120 DC')
-      expect(screen.getByText('120 DC left after this slip')).toBeInTheDocument()
+      expect(screen.getByText(line('Balance 120 DC'))).toBeInTheDocument()
       await userEvent.type(stakeOf(1), '20')
-      expect(screen.getByText('100 DC left after this slip')).toBeInTheDocument()
+      expect(screen.getByText(line('Balance 120 DC'))).toBeInTheDocument()
+      expect(screen.queryByText(/short/)).not.toBeInTheDocument()
     })
 
     it('says to enter a stake for each Solo pick, and the button points to it', async () => {
@@ -428,25 +454,25 @@ describe('SlipPanel', () => {
       await userEvent.type(parlay.getByLabelText('Stake (DC)'), '15')
       expect(screen.getByText('5 DC short')).toBeInTheDocument()
       expect(parlay.getByLabelText('Stake (DC)')).toHaveAttribute('aria-invalid', 'true')
-      expect(screen.getByRole('button', { name: 'Place 1 bet · 15 DC' })).toHaveAttribute('aria-disabled', 'true')
+      expect(screen.getByRole('button', { name: 'Place parlay · 15 DC' })).toHaveAttribute('aria-disabled', 'true')
     })
 
     it('asks for the parlay’s stake when that’s all that is missing', () => {
       renderPanel(viewOf(pick(1, { parlay: true }), pick(2, { parlay: true })), 50)
-      expect(screen.getByRole('button', { name: 'Place 1 bet' })).toHaveAccessibleDescription('Enter a stake for the parlay.')
+      expect(screen.getByRole('button', { name: 'Place parlay' })).toHaveAccessibleDescription('Enter a stake for the parlay.')
     })
 
     it('says nothing under a slip that is ready to place', async () => {
       renderPanel(viewOf(pick(1)), 50)
       await userEvent.type(stakeOf(1), '10')
-      const place = screen.getByRole('button', { name: 'Place 1 bet · 10 DC' })
+      const place = screen.getByRole('button', { name: 'Place bet · 10 DC' })
       expect(place).not.toHaveAttribute('aria-disabled')
       expect(place).not.toHaveAttribute('aria-describedby')
     })
 
     it('points a member at 0 DC to Tasks, keeping the picks', async () => {
       renderPanel(viewOf(pick(1), pick(2)), 0)
-      expect(screen.getByText('Balance', { exact: false })).toHaveTextContent('Balance 0 DC')
+      expect(screen.getByText(line('Balance 0 DC'))).toBeInTheDocument()
       const place = screen.getByRole('button', { name: 'Place 2 bets' })
       expect(place).toHaveAccessibleDescription('You have 0 DC. Earn more with Tasks, then come back to this slip.')
       expect(screen.getByRole('link', { name: 'Tasks' })).toHaveAttribute('href', '/tasks')
@@ -456,7 +482,7 @@ describe('SlipPanel', () => {
     })
 
     it('links How parlays pay to its section’s id on How it works', () => {
-      renderPanel(viewOf(pick(1)))
+      renderPanel(viewOf(pick(1), pick(2)))
       expect(screen.getByRole('link', { name: 'How parlays pay' })).toHaveAttribute('href', '/how-it-works#how-the-slip-solo-bets-and-parlays')
     })
   })

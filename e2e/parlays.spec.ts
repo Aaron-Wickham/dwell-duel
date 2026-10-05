@@ -43,9 +43,9 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   const even = { q: [0, 0], liquidity: 50, index: 0 }
   const quote = lmsrParlayQuote([even, even], 5)
   const multiplier = `${formatOdds(quote.multiplierBp)}×`
-  await expect(parlay.getByText(`Pays ${quote.payout} DC (${multiplier}) if every pick wins`)).toBeVisible()
-  await sheet.getByRole('button', { name: 'Place 1 bet · 5 DC' }).click()
-  await expect(page.getByText(`Placed a 2-leg parlay paying ${quote.payout} DC (${multiplier}). Bets are final.`).first()).toBeVisible()
+  await expect(parlay.getByText(`Wins ${quote.payout} DC if every pick wins`, { exact: true })).toBeVisible()
+  await sheet.getByRole('button', { name: 'Place parlay · 5 DC' }).click()
+  await expect(page.getByText(`Placed a 2-pick parlay paying ${quote.payout} DC (${multiplier}). Bets are final.`).first()).toBeVisible()
 
   // The old Parlays page lands on My bets, where the parlay sits beside solo bets.
   await page.goto('/parlays')

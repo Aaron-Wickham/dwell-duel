@@ -97,8 +97,45 @@ describe('OutcomeSlipControl, in its row', () => {
     expect(screen.getByLabelText('Slip')).toHaveTextContent('Picks 1')
     expect(success).not.toHaveBeenCalled()
 
+    // The row's change and the slip button say it; no toast (#392).
     await act(async () => answer.resolve(true))
-    await waitFor(() => expect(success).toHaveBeenCalledWith('Added to your slip.'))
+    expect(success).not.toHaveBeenCalled()
+  })
+
+  it('keeps keyboard focus on the control that replaces Add (A11Y-02)', async () => {
+    const answer = deferred<boolean>()
+    render(
+      <SlipProvider view={viewOf()}>
+        <Row pick={YES} state="add" addAction={() => answer.promise} removeAction={vi.fn()} />
+      </SlipProvider>,
+    )
+    screen.getByRole('button', { name: 'Add Yes to slip' }).focus()
+    await userEvent.keyboard('{Enter}')
+    expect(screen.getByRole('button', { name: 'Remove Yes from slip' })).toHaveFocus()
+    await act(async () => answer.resolve(true))
+  })
+
+  it('gives focus back to the row’s control when the server’s refresh remounts the row', async () => {
+    const answer = deferred<void>()
+    function Page() {
+      const [view, setView] = useState(viewOf())
+      async function addAction() {
+        await answer.promise
+        startTransition(() => setView(viewOf(YES)))
+        return true
+      }
+      // A new key stands in for a refresh that rebuilds the outcome list.
+      return (
+        <SlipProvider view={view}>
+          <Row key={view.picks.length} pick={YES} state="add" addAction={addAction} removeAction={vi.fn()} />
+        </SlipProvider>
+      )
+    }
+    render(<Page />)
+    screen.getByRole('button', { name: 'Add Yes to slip' }).focus()
+    await userEvent.keyboard('{Enter}')
+    await act(async () => answer.resolve())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Remove Yes from slip' })).toHaveFocus())
   })
 
   it('flips back when the server makes no change', async () => {

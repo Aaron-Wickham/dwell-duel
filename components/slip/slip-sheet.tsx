@@ -91,8 +91,11 @@ export function SlipSheet() {
   )
 }
 
-// Room at the bottom of the page, so the floating button never covers its last content.
+// Room at the bottom of the page, so its last control can always scroll clear of the floating
+// button. Enough on its own, whatever the page's own bottom padding: on a phone <main> already
+// clears the 82px tab bar and the button's 48px rises from 94px, so 72px clears its top by 24px;
+// on desktop the button rises from 32px, so 88px clears it by 8px.
 export function SlipSpacer() {
   const { picks } = useSlip()
-  return picks.length > 0 ? <div aria-hidden="true" className="h-16 shrink-0" /> : null
+  return picks.length > 0 ? <div aria-hidden="true" className="h-[72px] shrink-0 md:h-[88px]" /> : null
 }

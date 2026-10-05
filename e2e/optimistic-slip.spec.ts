@@ -47,7 +47,9 @@ test('Add flips the row and shows the slip button before the server answers', as
   })
   release()
 
-  await expect(page.getByText('Added to your slip.')).toBeVisible()
+  // The row and the slip button are the confirmation; adding a pick never toasts (#392).
+  await expect(page.getByRole('button', { name: 'Remove Yes from slip' })).toBeVisible()
+  await expect(page.getByText('Added to your slip.')).toHaveCount(0)
   await expect(outcomes.getByText('In your slip')).toHaveCount(1)
   await expect(page.getByRole('button', { name: 'Slip (1)', exact: true })).toBeVisible()
   expect(await page.evaluate(() => (window as unknown as { flashedBack: boolean }).flashedBack)).toBe(false)

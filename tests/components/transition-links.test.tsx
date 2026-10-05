@@ -2,7 +2,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import type { ComponentProps } from 'react'
-import { Target } from 'lucide-react'
 
 // Vitest resolves next/link to the Pages Router Link, which drops transitionTypes before the DOM,
 // so the prop is written onto the anchor for these assertions.
@@ -46,7 +45,7 @@ describe('transition types on links', () => {
           <LeaderboardRow rank={1} name="Bob" score={120} isMe={false} href="/members/b" />
         </ol>
         <ul>
-          <FeedItem icon={Target} segments={[{ text: 'Carol', href: '/members/c' }]} age="1m ago" />
+          <FeedItem segments={[{ text: 'Carol', href: '/members/c' }]} age="1m ago" />
         </ul>
       </>,
     )

@@ -23,7 +23,8 @@ function Figure({ label, value, className }: { label: string; value: string; cla
 }
 
 // A parlay in My bets' list: one card, tappable as a whole (the title link stretches over it),
-// leading to its breakdown. Its picks are plain text here, so no link sits inside another.
+// leading to its breakdown. Its picks are plain text here, so no link sits inside another. Only the
+// Open tab shows an open parlay, so it carries no "Open" chip.
 export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: string }) {
   const titleId = domId ? `${domId}-title` : undefined
   const figure = outcomeFigure(parlay)
@@ -48,7 +49,7 @@ export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: st
           </p>
         </div>
         <div className="shrink-0">
-          <ParlayStatusChip parlay={parlay} />
+          <ParlayStatusChip parlay={parlay} hideOpen />
         </div>
       </div>
 

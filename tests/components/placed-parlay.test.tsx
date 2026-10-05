@@ -43,9 +43,11 @@ describe('PlacedParlay', () => {
     expect(screen.getByText('16.00×')).toBeInTheDocument()
     expect(screen.getByText('Pays if all win')).toBeInTheDocument()
     expect(screen.getByText('80 DC')).toHaveClass('text-acc-text')
-    const [chip, ...legPills] = screen.getAllByText('Open')
-    expect(chip).toHaveClass('bg-acc-soft', 'text-acc-text', 'h-7')
-    expect(legPills.filter((el) => el.className.includes('h-6'))).toHaveLength(2)
+    // Only the Open tab lists an open parlay, so the card carries no "Open" chip (#387): every
+    // "Open" left is a pick's pill.
+    const pills = screen.getAllByText('Open')
+    expect(pills).toHaveLength(2)
+    expect(pills.every((el) => el.className.includes('h-6'))).toBe(true)
   })
 
   it('shows a won parlay’s payout in the figure and the chip', () => {

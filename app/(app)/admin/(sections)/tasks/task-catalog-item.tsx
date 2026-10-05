@@ -6,7 +6,7 @@ import type { TaskSummary } from '@/lib/tasks/list-tasks'
 import { PERIOD_LABEL } from '@/lib/tasks/period-label'
 import { Button } from '@/components/ui/button'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
-import { ListCard } from '@/components/ui/list-card'
+import { dividedRowClass } from '@/components/ui/list-card'
 import { Message } from '@/components/ui/message'
 import { StatusChip } from '@/components/ui/status-chip'
 import { cn } from '@/lib/utils'
@@ -30,7 +30,7 @@ export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary
   const toggleErrorId = `toggle-${task.id}-error`
 
   return (
-    <ListCard tappable={false} className="flex flex-col gap-2">
+    <li className={cn(dividedRowClass, 'flex flex-col gap-2')}>
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
         <p className={cn(rowTitleClass, 'min-w-0 break-words', !task.isActive && 'text-ink2')}>
           {task.title} — {formatDcAmount(task.rewardAmount)}
@@ -100,6 +100,6 @@ export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary
           }}
         />
       )}
-    </ListCard>
+    </li>
   )
 }

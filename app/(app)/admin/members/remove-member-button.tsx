@@ -1,6 +1,5 @@
 'use client'
 
-import { UserRoundX } from 'lucide-react'
 import type { MemberSummary } from '@/lib/members/list-members'
 import { removeMemberAction } from '@/lib/admin/owner-actions'
 import { ConfirmActionButton } from '@/components/ui/confirm-action-button'
@@ -10,12 +9,7 @@ export function RemoveMemberButton({ member }: { member: MemberSummary }) {
   return (
     <ConfirmActionButton
       id={`remove-member-${member.id}`}
-      trigger={
-        <>
-          <UserRoundX aria-hidden="true" className="size-[18px]" />
-          Remove from DwellDuel
-        </>
-      }
+      trigger="Remove from DwellDuel"
       triggerLabel={`Remove ${member.displayName} from DwellDuel`}
       triggerVariant="danger"
       block

@@ -4,10 +4,11 @@ import { cn } from '@/lib/utils'
 
 const ROW_WIDTHS = ['w-4/5', 'w-3/5', 'w-2/3', 'w-3/4']
 
-// Below the Admin header and section tabs: one card listing every coin movement.
+// Below the Admin header and section tabs: one card, headed, listing every coin movement.
 export default function Loading() {
   return (
     <SkeletonScreen name="admin-ledger" className={cn(cardClass, 'px-[18px] py-1 md:px-6')}>
+      <Skeleton className="mt-[18px] mb-1 h-6 w-48 md:mt-6" />
       <div className="flex flex-col divide-y divide-line">
         {Array.from({ length: 8 }, (_, i) => (
           <div key={i} className="flex items-start gap-3 py-3.5">

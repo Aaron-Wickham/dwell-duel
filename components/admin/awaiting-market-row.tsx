@@ -3,18 +3,18 @@ import type { AwaitingMarket } from '@/lib/admin/markets-awaiting'
 import { relativeTime } from '@/lib/social/relative-time'
 import { LocalTime } from '@/components/ui/local-time'
 import { buttonVariants } from '@/components/ui/button'
-import { ListCard } from '@/components/ui/list-card'
+import { dividedRowClass } from '@/components/ui/list-card'
 import { rowTitleClass } from '@/components/ui/page'
 import { focusTarget } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
 import { formatDcAmount } from '@/lib/format/dc'
 
-// A card the title opens (its link stretches over it); the creator's name and Resolve sit above
-// the cover, so each still goes where it says.
+// A divided row in its Waiting to be resolved card (D2) that the title opens (its link stretches
+// over it); the creator's name and Resolve sit above the cover, so each still goes where it says.
 export function AwaitingMarketRow({ market, now, domId }: { market: AwaitingMarket; now: number; domId?: string }) {
   const titleId = domId ? `${domId}-title` : undefined
   return (
-    <ListCard {...focusTarget(domId, titleId)} className="flex flex-col gap-3">
+    <li {...focusTarget(domId, titleId)} className={cn(dividedRowClass, 'pressable hover-tint relative flex flex-col gap-3')}>
       <div className="flex min-w-0 flex-col gap-0.5">
         <Link
           id={titleId}
@@ -44,6 +44,6 @@ export function AwaitingMarketRow({ market, now, domId }: { market: AwaitingMark
           Resolve
         </Link>
       </div>
-    </ListCard>
+    </li>
   )
 }

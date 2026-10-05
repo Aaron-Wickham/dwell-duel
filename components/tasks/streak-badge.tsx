@@ -5,8 +5,7 @@ import { StatusChip } from '@/components/ui/status-chip'
 export function StreakBadge({ period, count }: { period: NonNullable<TaskSummary['period']>; count: number }) {
   if (count < MIN_STREAK_SHOWN) return null
   return (
-    <StatusChip tone="wait" size="sm" className="gap-1">
-      <span aria-hidden="true">🔥</span>
+    <StatusChip tone="wait" size="sm">
       {streakLabel(period, count)}
     </StatusChip>
   )

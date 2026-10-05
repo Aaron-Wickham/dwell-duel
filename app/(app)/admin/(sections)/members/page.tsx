@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import { UserRoundX, Users } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { countMembers, listMembersPage } from '@/lib/members/list-members'
@@ -10,7 +9,7 @@ import { readSearchQuery } from '@/lib/search/query'
 import { EmptyState } from '@/components/ui/empty-state'
 import { listCardsClass } from '@/components/ui/list-card'
 import { NothingOlder } from '@/components/ui/nothing-older'
-import { SectionCard } from '@/components/ui/section-card'
+import { ListSection } from '@/components/ui/list-section'
 import { SearchField } from '@/components/ui/search-field'
 import { SearchSummary } from '@/components/ui/search-summary'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
@@ -78,13 +77,12 @@ export default async function AdminMembersPage(props: PageProps<'/admin/members'
           <SearchSummary count={tabCount} noun={['member', 'members']} query={query} clearHref={hrefWith(searchParams, { q: null })} />
         )}
         <ShowMoreFocus />
-        {/* One card of member cards on a phone; at lg, the section's card falls away and each member is a card of its own in a grid. */}
-        <SectionCard
+        {/* The section's only content, so the member cards sit on the page (D2), three across at lg. */}
+        <ListSection
           title={removed ? 'Removed members' : 'Members'}
           titleId="members-title"
           description={removed ? 'They can’t sign in and aren’t ranked. Their coins, bets and history stay.' : undefined}
           action={removed ? undefined : <span className="text-sm text-ink2">A–Z</span>}
-          className={cn(list.rows.length > 0 && 'lg:gap-4 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none')}
         >
           {list.windowed && list.rows.length > 0 && (
             <div className="flex flex-col">
@@ -96,13 +94,13 @@ export default async function AdminMembersPage(props: PageProps<'/admin/members'
               {list.windowed ? (
                 <NothingOlder href={backToStartHref} />
               ) : query ? (
-                <EmptyState icon={Users} title={`No ${removed ? 'removed members' : 'members'} match “${query}”.`}>
+                <EmptyState title={`No ${removed ? 'removed members' : 'members'} match “${query}”.`}>
                   Try part of their name or email.
                 </EmptyState>
               ) : removed ? (
-                <EmptyState icon={UserRoundX} title="Nobody has been removed." />
+                <EmptyState title="Nobody has been removed." />
               ) : (
-                <EmptyState icon={Users} title="No members yet." />
+                <EmptyState title="No members yet." />
               )}
             </div>
           ) : (
@@ -121,7 +119,7 @@ export default async function AdminMembersPage(props: PageProps<'/admin/members'
               />
             </div>
           )}
-        </SectionCard>
+        </ListSection>
       </div>
     </ContentReveal>
   )

@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useActionState, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Check } from 'lucide-react'
 import {
   bulkApproveTaskCompletionsAction,
   bulkRejectTaskCompletionsAction,
@@ -14,7 +13,7 @@ import { Input } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { EmptyState } from '@/components/ui/empty-state'
-import { ListCard, listCardsClass } from '@/components/ui/list-card'
+import { dividedRowClass, dividedRowsClass } from '@/components/ui/list-card'
 import { ConfirmSubmitDialog, useConfirmSubmit } from '@/components/ui/confirm-submit-dialog'
 import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
 import { keepCheckedOnReset } from '@/lib/forms/keep-on-reset'
@@ -104,14 +103,15 @@ export function PendingApprovals({
       {lastBulk === 'reject' && !isRejectPending && rejectState?.summary && <Message tone="ok">{rejectState.summary}</Message>}
 
       {pending.length === 0 ? (
-        emptyState ?? <EmptyState icon={Check} title="Nothing pending." />
+        emptyState ?? <EmptyState title="Nothing pending." />
       ) : (
         <>
-          <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-5')}>
+          {/* Divided rows, not cards: the queue sits inside its Pending approvals card (D2). */}
+          <ul className={dividedRowsClass}>
             {pending.map((c) => {
               const own = c.submitterId === viewerId
               return (
-              <ListCard key={c.id} tappable={false} {...focusTarget(rowDomId(PENDING_ROW_ID_PREFIX, c.id))} className="flex flex-col gap-3">
+              <li key={c.id} {...focusTarget(rowDomId(PENDING_ROW_ID_PREFIX, c.id))} className={cn(dividedRowClass, 'flex flex-col gap-3')}>
                 <div className="flex items-start gap-2">
                   {own ? (
                     <span aria-hidden="true" className="min-w-11 shrink-0" />
@@ -150,7 +150,7 @@ export function PendingApprovals({
                 ) : (
                   <ReviewButtons completionId={c.id} submitterName={c.submitterName} taskTitle={c.taskTitle} />
                 )}
-              </ListCard>
+              </li>
               )
             })}
           </ul>

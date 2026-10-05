@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import { Mail } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { countInvites, listInvitesPage, readInvitePageParams } from '@/lib/invites/list-invites'
@@ -85,13 +84,13 @@ export default async function AdminInvitesPage(props: PageProps<'/admin/invites'
               {list.windowed ? (
                 <NothingOlder href={backToNewestHref} />
               ) : query ? (
-                <EmptyState icon={Mail} title={`No ${claimed ? 'claimed' : 'waiting'} invites match “${query}”.`} />
+                <EmptyState title={`No ${claimed ? 'claimed' : 'waiting'} invites match “${query}”.`} />
               ) : claimed ? (
-                <EmptyState icon={Mail} title="No claimed invites yet.">
+                <EmptyState title="No claimed invites yet.">
                   An invite moves here once its member signs in.
                 </EmptyState>
               ) : (
-                <EmptyState icon={Mail} title="No invites waiting.">
+                <EmptyState title="No invites waiting.">
                   Add an email to invite someone.
                 </EmptyState>
               )}

@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
-import { Ban, CircleDot, Coins, History } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { renderStamp } from '@/lib/live/render-stamp'
@@ -16,7 +14,10 @@ import { cn } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
 import { NothingOlder } from '@/components/ui/nothing-older'
 import { Page, PageHeader } from '@/components/ui/page'
-import { SectionCard } from '@/components/ui/section-card'
+import { ListSection } from '@/components/ui/list-section'
+import { buttonVariants } from '@/components/ui/button'
+import { IntentLink } from '@/components/ui/intent-link'
+import { TAB_TRANSITION } from '@/components/nav/page-transition'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { SubNav } from '@/components/ui/sub-nav'
@@ -27,29 +28,34 @@ const PATH = '/bets'
 
 type Tab = 'open' | 'settled' | 'cancelled' | 'coins'
 
-const TABS: Record<Tab, { label: string; empty: { icon: LucideIcon; title: string; body: string } }> = {
+type Empty = { title: string; body: string; action?: { href: string; label: string } }
+
+const TABS: Record<Tab, { label: string; empty: Empty }> = {
   open: {
     label: 'Open',
-    empty: { icon: CircleDot, title: 'No open bets.', body: 'Solo bets and parlays waiting on a result show up here.' },
+    empty: {
+      title: 'No open bets.',
+      body: 'Solo bets and parlays waiting on a result show up here.',
+      action: { href: '/markets', label: 'Browse markets' },
+    },
   },
   settled: {
     label: 'Settled',
     empty: {
-      icon: History,
       title: 'Nothing settled yet.',
       body: 'Solo bets and parlays show up here once their markets resolve or are voided.',
     },
   },
   cancelled: {
     label: 'Cancelled',
-    empty: { icon: Ban, title: 'No cancelled bets.', body: 'Bets are final. Bets cancelled before October 2026, when that was allowed, show up here.' },
+    empty: { title: 'No cancelled bets.', body: 'Bets are final. Bets cancelled before October 2026, when that was allowed, show up here.' },
   },
   coins: {
     label: 'Coins',
     empty: {
-      icon: Coins,
       title: 'No coin movements yet.',
       body: 'Every coin you gain or spend shows up here: bets, winnings, refunds and task rewards.',
+      action: { href: '/tasks', label: 'See tasks' },
     },
   },
 }
@@ -71,17 +77,14 @@ function TabSection<Row>({
 }) {
   const { label, empty } = TABS[tab]
   const backToNewestHref = newestHref(PATH, searchParams, tab)
-  // Coins is a divided list, so it sits closer to the heading and Show more takes a hairline;
-  // the bet tabs are list cards, spaced on their own.
+  // Coins is a divided list, so Show more takes a hairline; the bet tabs are list cards, spaced on
+  // their own. Either way the list sits on the page (D2): the tabs already name it, so its heading
+  // is for a screen reader only.
   const divided = tab === 'coins'
   return (
-    <SectionCard
-      title={label}
-      titleId={`${tab}-bets-title`}
-      className={divided && page.rows.length > 0 ? 'gap-1' : undefined}
-    >
+    <ListSection title={label} titleId={`${tab}-bets-title`} titleHidden>
       {page.windowed && page.rows.length > 0 && (
-        <div className="flex flex-col py-2">
+        <div className="flex flex-col">
           <BackToNewest href={backToNewestHref} />
         </div>
       )}
@@ -90,7 +93,20 @@ function TabSection<Row>({
       ) : page.windowed ? (
         <NothingOlder href={backToNewestHref} />
       ) : (
-        <EmptyState icon={empty.icon} title={empty.title}>
+        <EmptyState
+          title={empty.title}
+          action={
+            empty.action && (
+              <IntentLink
+                href={empty.action.href}
+                transitionTypes={TAB_TRANSITION}
+                className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'self-start no-underline')}
+              >
+                {empty.action.label}
+              </IntentLink>
+            )
+          }
+        >
           {empty.body}
         </EmptyState>
       )}
@@ -103,7 +119,7 @@ function TabSection<Row>({
           />
         </div>
       )}
-    </SectionCard>
+    </ListSection>
   )
 }
 

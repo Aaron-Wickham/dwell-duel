@@ -12,8 +12,8 @@ import { cn } from '@/lib/utils'
 import { rowTitleClass } from '@/components/ui/page'
 import { formatDcAmount } from '@/lib/format/dc'
 
-// List cards, three across at lg. Each keeps its own height (items-start), so a tall parlay
-// doesn't leave blank space in its neighbours.
+// List cards on the page (D2), three across at lg. Each keeps its own height (items-start), so a
+// tall parlay doesn't leave blank space in its neighbours.
 const betListClass = cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-5')
 
 function Row({
@@ -27,7 +27,7 @@ function Row({
   marketId: string
   marketTitle: string
   detail: ReactNode
-  aside: ReactNode
+  aside?: ReactNode
 }) {
   const titleId = `${domId}-title`
   return (
@@ -46,9 +46,11 @@ function Row({
         </IntentLink>
         <p className="text-sm text-ink2">{detail}</p>
       </div>
-      <div className="flex min-w-0 max-w-full shrink-0 flex-col items-end gap-2 lg:mt-auto lg:w-full lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
-        {aside}
-      </div>
+      {aside && (
+        <div className="flex min-w-0 max-w-full shrink-0 flex-col items-end gap-2 lg:mt-auto lg:w-full lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+          {aside}
+        </div>
+      )}
     </ListCard>
   )
 }
@@ -72,7 +74,8 @@ export function WagerRows({ wagers, rowIdPrefix }: { wagers: Wager[]; rowIdPrefi
                 <LocalTime iso={b.result.kind === 'open' ? b.closeAt : b.placedAt} format="dateTime" />
               </>
             }
-            aside={<ResultChip result={b.result} />}
+            // The Open tab lists only open bets, so an "Open" chip on each would say nothing (#387).
+            aside={b.result.kind === 'open' ? undefined : <ResultChip result={b.result} />}
           />
         )
       })}

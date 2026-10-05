@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { ConfirmSubmitDialog, useConfirmSubmit } from '@/components/ui/confirm-submit-dialog'
 import { Field, Input, Select } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
-import { ListCard } from '@/components/ui/list-card'
+import { dividedRowClass } from '@/components/ui/list-card'
 import { Message } from '@/components/ui/message'
 import { rowTitleClass } from '@/components/ui/page'
 import { StatusChip } from '@/components/ui/status-chip'
@@ -18,7 +18,7 @@ const failed = (s: CategoryActionState) => Boolean(s?.formError)
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`
 
 // One category in Admin › Markets › Categories (0103): Rename and Merge open their panel inside the
-// card; Hide and Unhide act straight away, since a hidden category keeps its markets and comes back
+// row; Hide and Unhide act straight away, since a hidden category keeps its markets and comes back
 // the moment someone makes a market in it. Other can be renamed but never hidden or merged away:
 // every market made without a category lands in it.
 export function CategoryCard({ category, targets, fixed }: { category: CategoryCount; targets: CategoryCount[]; fixed: boolean }) {
@@ -32,7 +32,7 @@ export function CategoryCard({ category, targets, fixed }: { category: CategoryC
   )
 
   return (
-    <ListCard tappable={false} className="flex flex-col gap-3" aria-labelledby={`${base}-title`}>
+    <li className={`${dividedRowClass} flex flex-col gap-3`} aria-labelledby={`${base}-title`}>
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
           <h3 id={`${base}-title`} className={`${rowTitleClass} break-words`}>
@@ -66,7 +66,7 @@ export function CategoryCard({ category, targets, fixed }: { category: CategoryC
       {panel === null && hideState?.formError && <Message tone="error">{hideState.formError}</Message>}
       {panel === 'rename' && <RenamePanel category={category} onDone={() => setPanel(null)} />}
       {panel === 'merge' && <MergePanel category={category} targets={targets} onDone={() => setPanel(null)} />}
-    </ListCard>
+    </li>
   )
 }
 

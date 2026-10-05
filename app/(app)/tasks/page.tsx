@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import { BookOpen } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { renderStamp } from '@/lib/live/render-stamp'
@@ -8,7 +7,7 @@ import { listTasks } from '@/lib/tasks/list-tasks'
 import { listMyTaskCompletions } from '@/lib/tasks/list-task-completions'
 import { getMyTaskStreaks } from '@/lib/tasks/streaks'
 import { Page, PageHeader } from '@/components/ui/page'
-import { SectionCard } from '@/components/ui/section-card'
+import { ListSection } from '@/components/ui/list-section'
 import { EmptyState } from '@/components/ui/empty-state'
 import { listCardsClass } from '@/components/ui/list-card'
 import { cn } from '@/lib/utils'
@@ -32,11 +31,12 @@ export default async function TasksPage() {
       <PageHeader title="Tasks" description="Earn DC with Bible study. A reviewer checks each one before the coins land." />
       <LiveTables subscriptions={pageSubscriptions.tasks(user.id)} renderedAt={renderStamp()} />
       {activeTasks.length === 0 ? (
-        <EmptyState icon={BookOpen} title="No tasks yet.">
+        <EmptyState title="No tasks yet.">
           Admins add Bible-study tasks here.
         </EmptyState>
       ) : (
-        <SectionCard title={<span className="sr-only">Task catalog</span>} titleId="task-catalog" className="gap-0">
+        // The page's only content, so its cards sit on the page (D2); "Tasks" already names it.
+        <ListSection title="Task catalog" titleId="task-catalog" titleHidden>
           <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:gap-5')}>
             {activeTasks.map((task) => {
               const current = myCompletions.find((c) => c.taskId === task.id)
@@ -62,7 +62,7 @@ export default async function TasksPage() {
               )
             })}
           </ul>
-        </SectionCard>
+        </ListSection>
       )}
     </Page>
   )

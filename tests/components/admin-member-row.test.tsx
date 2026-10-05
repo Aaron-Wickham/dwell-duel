@@ -34,7 +34,9 @@ describe('MemberRow', () => {
     const link = within(row).getByRole('link', { name: 'Ben' })
     expect(link).toHaveAttribute('href', '/admin/members/p-ben')
     expect(link).toHaveClass('stretched-link', 'no-underline', ...rowTitleClass.split(' '))
-    expect(row).toHaveClass('relative', 'pressable', 'hover-tint', 'lg:hover-lift')
+    // A list card on the page (D2): it tints flush and never lifts, at every width.
+    expect(row).toHaveClass('relative', 'pressable', 'hover-tint')
+    expect(row).not.toHaveClass('lg:hover-lift')
     expect(within(row).queryByRole('button')).toBeNull()
     expect(within(row).queryByRole('textbox')).toBeNull()
   })

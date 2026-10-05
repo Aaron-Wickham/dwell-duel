@@ -42,16 +42,19 @@ export function LegPill({ status }: { status: LegStatus }) {
 export function ParlayStatusChip({
   parlay,
   className,
+  hideOpen = false,
 }: {
   parlay: Pick<ParlayView, 'status' | 'credited'> & { legs?: { status: LegStatus }[] }
   className?: string
+  // For a list already filtered to open bets, where "Open" on every card says nothing (#387).
+  hideOpen?: boolean
 }) {
   switch (parlay.status) {
     case 'pending': {
       const awaiting = parlay.legs !== undefined && parlay.legs.length > 0 && parlay.legs.every((leg) => leg.status !== 'open')
       return awaiting ? (
         <StatusChip tone="wait" className={className}>Awaiting resolution</StatusChip>
-      ) : (
+      ) : hideOpen ? null : (
         <StatusChip tone="open" className={className}>Open</StatusChip>
       )
     }

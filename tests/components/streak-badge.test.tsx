@@ -5,10 +5,10 @@ import { StreakBadge } from '@/components/tasks/streak-badge'
 import { TaskRow } from '@/components/tasks/task-row'
 
 describe('StreakBadge', () => {
-  it('reads "5-week streak", with the flame hidden from screen readers', () => {
+  it('reads "5-week streak", in words with no emoji (#387)', () => {
     const { container } = render(<StreakBadge period="weekly" count={5} />)
     expect(screen.getByText('5-week streak')).toBeInTheDocument()
-    expect(container.querySelector('[aria-hidden="true"]')?.textContent).toBe('🔥')
+    expect(container).toHaveTextContent(/^5-week streak$/)
   })
 
   it.each([

@@ -1,11 +1,9 @@
 import type { ReactNode } from 'react'
 import { IntentLink } from '@/components/ui/intent-link'
-import type { LucideIcon } from 'lucide-react'
 import type { Segment } from '@/lib/social/describe-event'
 import { focusTarget } from '@/lib/pagination/row-id'
 
 export function FeedItem({
-  icon: Icon,
   segments,
   age,
   detail,
@@ -13,7 +11,6 @@ export function FeedItem({
   reactions,
   domId,
 }: {
-  icon: LucideIcon
   segments: Segment[]
   // "5m ago" while it's recent, a date once it isn't (isOldEntry).
   age: ReactNode
@@ -30,12 +27,10 @@ export function FeedItem({
   const labelId = domId && reactions ? `${domId}-label` : undefined
   return (
     // A grid, so the reactions can run under the time as well as the sentence: in the sentence's
-    // column alone, four 44px buttons wrapped onto a second row on a phone.
-    <li {...focusTarget(domId, labelId)} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 py-3.5">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-segment bg-sunk text-ink">
-        <Icon aria-hidden="true" className="size-5" />
-      </span>
-      <div className="flex min-w-0 grow flex-col gap-1 pt-[5px]">
+    // column alone, four 44px buttons wrapped onto a second row on a phone. No icon tile before the
+    // sentence (#387): it only named the kind the sentence already says.
+    <li {...focusTarget(domId, labelId)} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 py-3.5">
+      <div className="flex min-w-0 grow flex-col gap-1">
         <p id={labelId} className="text-base break-words">
           {segments.map((segment, i) =>
             typeof segment === 'string' ? (
@@ -50,8 +45,8 @@ export function FeedItem({
         {detail && <p className="line-clamp-2 text-sm break-words text-ink2">“{detail}”</p>}
         {note && <p className="text-sm font-bold text-ink2">{note}</p>}
       </div>
-      <span className="shrink-0 pt-[7px] text-sm whitespace-nowrap text-ink2">{age}</span>
-      {reactions && <div className="col-span-2 col-start-2 pt-1">{reactions}</div>}
+      <span className="shrink-0 pt-0.5 text-sm whitespace-nowrap text-ink2">{age}</span>
+      {reactions && <div className="col-span-2 pt-1">{reactions}</div>}
     </li>
   )
 }

@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import { Gavel } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { listAwaitingMarkets } from '@/lib/admin/markets-awaiting'
@@ -7,8 +6,7 @@ import { newestHref, readPageParams, showMoreHref } from '@/lib/pagination/curso
 import { rowDomId } from '@/lib/pagination/row-id'
 import { SectionCard } from '@/components/ui/section-card'
 import { EmptyState } from '@/components/ui/empty-state'
-import { listCardsClass } from '@/components/ui/list-card'
-import { cn } from '@/lib/utils'
+import { dividedRowsClass } from '@/components/ui/list-card'
 import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
@@ -54,12 +52,12 @@ export default async function AdminMarketsPage(props: PageProps<'/admin/markets'
             markets.windowed ? (
               <NothingOlder href={backToNewestHref} />
             ) : (
-              <EmptyState icon={Gavel} title="Nothing to resolve.">
+              <EmptyState title="Nothing to resolve.">
                 A market shows up here once it closes, until someone resolves it.
               </EmptyState>
             )
           ) : (
-            <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-5')}>
+            <ul className={dividedRowsClass}>
               {markets.rows.map((m) => (
                 <AwaitingMarketRow key={m.id} market={m} now={now} domId={rowDomId(ROW_ID_PREFIX, m.id)} />
               ))}
@@ -78,7 +76,7 @@ export default async function AdminMarketsPage(props: PageProps<'/admin/markets'
           titleId="categories-title"
           description="Members make these when they create a market. Rename a misspelt one, merge two that mean the same, or hide one nobody should pick."
         >
-          <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-5')}>
+          <ul className={dividedRowsClass}>
             {categories.map((c) => (
               <CategoryCard key={c.id} category={c} fixed={c.id === OTHER_CATEGORY_ID} targets={visible.filter((t) => t.id !== c.id)} />
             ))}

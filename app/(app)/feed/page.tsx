@@ -15,14 +15,17 @@ import { ShowMore, BackToNewest } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { SubNav } from '@/components/ui/sub-nav'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Flag, UserRound } from 'lucide-react'
+import { buttonVariants } from '@/components/ui/button'
+import { IntentLink } from '@/components/ui/intent-link'
+import { TAB_TRANSITION } from '@/components/nav/page-transition'
+import { cn } from '@/lib/utils'
 import { FeedList } from './feed-list'
 
 const ROW_ID_PREFIX = 'feed'
 
-const EMPTY: Record<Exclude<FeedShow, 'all'>, { title: string; body: string; icon: typeof Flag }> = {
-  results: { title: 'No results yet.', body: 'Resolved markets and winning bets show up here.', icon: Flag },
-  mine: { title: 'Nothing of yours yet.', body: 'Your bets, your markets and results on markets you’re in show up here.', icon: UserRound },
+const EMPTY: Record<Exclude<FeedShow, 'all'>, { title: string; body: string }> = {
+  results: { title: 'No results yet.', body: 'Resolved markets and winning bets show up here.' },
+  mine: { title: 'Nothing of yours yet.', body: 'Your bets, your markets and results on markets you’re in show up here.' },
 }
 
 export default async function FeedPage(props: PageProps<'/feed'>) {
@@ -64,7 +67,20 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
           feed.windowed ? (
             <NothingOlder href={backToNewestHref} />
           ) : show !== 'all' ? (
-            <EmptyState icon={EMPTY[show].icon} title={EMPTY[show].title}>
+            <EmptyState
+              title={EMPTY[show].title}
+              action={
+                show === 'mine' && (
+                  <IntentLink
+                    href="/markets"
+                    transitionTypes={TAB_TRANSITION}
+                    className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'self-start no-underline')}
+                  >
+                    Browse markets
+                  </IntentLink>
+                )
+              }
+            >
               {EMPTY[show].body}
             </EmptyState>
           ) : undefined
@@ -72,14 +88,14 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
         aboveList={
           feed.windowed &&
           feed.rows.length > 0 && (
-            <div className="px-[18px] pt-3 md:px-6">
+            <div className="pt-3">
               <BackToNewest href={backToNewestHref} />
             </div>
           )
         }
         belowList={
           feed.next && (
-            <div className="px-[18px] pb-3 md:px-6">
+            <div className="pb-3">
               <ShowMore
                 href={showMoreHref('/feed', searchParams, 'before', feed.next)}
                 fresh={feed.next.kind === 'window'}

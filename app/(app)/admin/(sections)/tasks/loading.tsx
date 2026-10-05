@@ -1,17 +1,17 @@
 import { Skeleton, SkeletonCard, SkeletonField, SkeletonScreen } from '@/components/ui/skeleton'
-import { listCardClass, listCardsClass } from '@/components/ui/list-card'
+import { dividedRowClass, dividedRowsClass } from '@/components/ui/list-card'
 import { cn } from '@/lib/utils'
 
 // Below the Admin header and section tabs: pending approvals, then Create task beside the task
-// catalog from lg (5 : 7); both lists are cards, two across at lg.
+// catalog from lg (5 : 7); both lists are divided rows inside their card (D2).
 export default function Loading() {
   return (
     <SkeletonScreen name="admin-tasks" className="flex flex-col gap-5 md:gap-7">
       <SkeletonCard className="gap-4">
         <Skeleton className="h-6 w-48" />
-        <div className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-5')}>
+        <div className={dividedRowsClass}>
           {Array.from({ length: 2 }, (_, i) => (
-            <div key={i} className={cn(listCardClass, 'flex flex-col gap-3')}>
+            <div key={i} className={cn(dividedRowClass, 'flex flex-col gap-3')}>
               <div className="flex items-start gap-2">
                 <Skeleton className="size-[22px] shrink-0 rounded-segment" />
                 <div className="flex grow flex-col gap-2">
@@ -37,9 +37,9 @@ export default function Loading() {
         </SkeletonCard>
         <SkeletonCard>
           <Skeleton className="h-6 w-32" />
-          <div className={cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-5')}>
+          <div className={dividedRowsClass}>
             {Array.from({ length: 3 }, (_, i) => (
-              <div key={i} className={cn(listCardClass, 'flex flex-col gap-2')}>
+              <div key={i} className={cn(dividedRowClass, 'flex flex-col gap-2')}>
                 <div className="flex items-center justify-between gap-3">
                   <Skeleton className="h-5 w-3/5" />
                   <Skeleton className="h-6 w-16 shrink-0 rounded-full" />

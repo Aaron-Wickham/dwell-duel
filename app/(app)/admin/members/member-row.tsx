@@ -10,15 +10,14 @@ import { MemberActivity } from './member-activity'
 import { MemberChip } from './member-chip'
 import { formatDcAmount } from '@/lib/format/dc'
 
-// One member on Admin › Members, read-only: the row opens their Admin page, where the forms are
-// (#254). A list card in the section's card below lg, so it tints under a mouse; a card of its own
-// in the lg grid, so it lifts there. Named by its title, so "Show more" focus announces the name.
+// One member on Admin › Members, read-only: the card opens their Admin page, where the forms are
+// (#254). A list card on the page (D2). Named by its title, so "Show more" focus announces the name.
 export function MemberRow({ member, domId, now }: { member: MemberSummary; domId: string; now: number }) {
   const titleId = `${domId}-name`
   return (
     <ListCard
       {...focusTarget(domId, titleId)}
-      className="flex items-start gap-3 lg:hover-lift lg:before:hidden lg:rounded-card lg:bg-surface lg:p-5 lg:shadow-card"
+      className="flex items-start gap-3"
     >
       <Avatar name={member.displayName} src={member.avatarSrc} />
       <div className="flex min-w-0 grow flex-col">

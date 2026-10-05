@@ -262,7 +262,7 @@ describe('market_sparklines', () => {
     const fillers = others.map((m) => m.id as string)
     const { data: outcomes, error: outcomesErr } = await db
       .from('market_outcomes')
-      .insert(fillers.flatMap((id) => [{ market_id: id, label: 'Yes' }, { market_id: id, label: 'No' }]))
+      .insert(fillers.flatMap((id) => [{ market_id: id, label: 'Yes', position: 0 }, { market_id: id, label: 'No', position: 1 }]))
       .select('id, market_id')
     if (outcomesErr) throw outcomesErr
     const outcomesOf = new Map<string, string[]>()
@@ -312,7 +312,7 @@ describe('market_sparklines', () => {
     const marketIds = markets.map((m) => m.id as string)
     const { data: outcomes, error: outcomesErr } = await db
       .from('market_outcomes')
-      .insert(marketIds.flatMap((id) => [{ market_id: id, label: 'Yes' }, { market_id: id, label: 'No' }]))
+      .insert(marketIds.flatMap((id) => [{ market_id: id, label: 'Yes', position: 0 }, { market_id: id, label: 'No', position: 1 }]))
       .select('id, market_id')
     if (outcomesErr) throw outcomesErr
     const outcomesOf = new Map<string, string[]>()
@@ -434,11 +434,10 @@ describe('market_sparks (0095)', () => {
 
     const [row] = await sparks(bobClient, [market.marketId])
     const verbose = await pointsOf(bobClient, market, 24)
-    const { data: outcomes } = await serviceClient().from('market_outcomes').select('id, label').eq('market_id', market.marketId).order('label')
-    const order = outcomes!.map((o) => o.id as string)
+    // The order the creator typed them in (0110), as the list reads them.
+    const order = market.outcomeIds
 
     expect(row.market_id).toBe(market.marketId)
-    // Created together, so the tie falls to the label, as the list's own order does.
     expect(row.outcome_ids).toEqual(order)
     expect(row.points).toHaveLength(24)
     row.points.forEach(([t, ...shares], i) => {

@@ -3,7 +3,6 @@ import type { Pricing, PricedOutcome } from '@/lib/markets/pricing'
 import type { DbClient } from '@/lib/supabase/database'
 import { WINDOW_CAP, type Cursor, type PageParams } from '@/lib/pagination/cursor'
 import { avatarUrl } from '@/lib/profile/avatar'
-import { orderOutcomes } from '@/lib/markets/outcome-series'
 import type { MarketCategory } from '@/lib/markets/categories'
 import { isBigintId, readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/keyset'
 
@@ -57,12 +56,9 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
       'id, title, description, kind, status, close_at, created_at, settled_at, void_reason, created_by, current_resolution_id, seed_per_outcome, pricing, liquidity, line, edited_at, category:market_categories(id, name, slug), creator:profiles(display_name), market_outcomes(id, label, pool_total, shares, q_offset), current_resolution:market_resolutions!markets_current_resolution_id_fkey(outcome_id, resolved_at, actual_value, payout_seed)',
     )
     .eq('id', marketId)
-    // Rows come back with no default order, and colours are assigned by position for
-    // multiple-choice markets, so pin a stable order: insertion time, then label to
-    // break the tie (create_market inserts every outcome in one transaction). orderOutcomes then
-    // puts Yes and Over first.
-    .order('created_at', { referencedTable: 'market_outcomes' })
-    .order('label', { referencedTable: 'market_outcomes' })
+    // Rows come back with no default order, and colours are assigned by place for
+    // multiple-choice markets, so read them in the order the creator typed them (0110).
+    .order('position', { referencedTable: 'market_outcomes' })
     .maybeSingle()
 
   if (error) throw error
@@ -70,7 +66,7 @@ export async function getMarket(supabase: DbClient, marketId: string): Promise<M
 
   // Text column with a CHECK constraint (0043), so the generated type says only string.
   const kind = data.kind as MarketDetail['kind']
-  const outcomes = orderOutcomes(kind, data.market_outcomes ?? []).map((o) => ({
+  const outcomes = (data.market_outcomes ?? []).map((o) => ({
     id: o.id,
     label: o.label,
     poolTotal: o.pool_total,

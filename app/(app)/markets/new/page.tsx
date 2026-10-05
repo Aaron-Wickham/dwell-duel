@@ -19,8 +19,7 @@ async function readPrefill(supabase: DbClient, from: string | string[] | undefin
     .select('title, description, kind, close_at, line, category:market_categories(name), market_outcomes(label)')
     .eq('id', from)
     // The same outcome order as the market page.
-    .order('created_at', { referencedTable: 'market_outcomes' })
-    .order('label', { referencedTable: 'market_outcomes' })
+    .order('position', { referencedTable: 'market_outcomes' })
     .maybeSingle()
   if (error) throw error
   if (!data) return undefined

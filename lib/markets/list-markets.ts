@@ -6,7 +6,6 @@ import { readKeyset, type KeyColumns, type KeysetPage } from '@/lib/pagination/k
 import { isUuid } from '@/lib/uuid'
 import { likePattern } from '@/lib/markets/search'
 import type { MarketCategory } from '@/lib/markets/categories'
-import { orderOutcomes } from '@/lib/markets/outcome-series'
 
 export interface MarketSummary {
   id: string
@@ -64,7 +63,7 @@ function sparkVersion(m: SummaryRow): string {
 }
 
 function toSummary(m: SummaryRow): MarketSummary {
-  const outcomes = orderOutcomes(m.kind, m.market_outcomes ?? []).map((o) => ({
+  const outcomes = (m.market_outcomes ?? []).map((o) => ({
     id: o.id,
     label: o.label,
     poolTotal: o.pool_total,
@@ -148,11 +147,9 @@ async function listMarkets(
     keys,
     async (filter, limit) => {
       const { data, error } = await marketsQuery(supabase, statuses, keys, SUMMARY_SELECT, filter, limit, bound, narrow)
-        // Same tiebreak as getMarket: insertion time, then label, so outcome order (and
-        // therefore colour assignment) is stable across requests; orderOutcomes then puts Yes
-        // and Over first.
-        .order('created_at', { referencedTable: 'market_outcomes' })
-        .order('label', { referencedTable: 'market_outcomes' })
+        // The order the creator typed them in (0110), as getMarket reads them, so a card's
+        // outcomes (and their colours) match the market page's.
+        .order('position', { referencedTable: 'market_outcomes' })
       if (error) throw error
       return (data ?? []) as unknown as SummaryRow[]
     },

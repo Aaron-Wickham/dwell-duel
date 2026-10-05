@@ -32,10 +32,3 @@ export function chartTitle(kind: MarketKind, outcomes: { label: string }[]): str
   if (kind === 'multiple_choice' || outcomes.length === 0) return 'Chance over time'
   return `${plottedOutcomes(kind, outcomes)[0].label} over time`
 }
-
-// Yes before No and Over before Under, whatever order the rows arrive in. Multiple choice keeps
-// the order it's read in (insertion time, then label).
-export function orderOutcomes<T extends { label: string }>(kind: MarketKind, outcomes: T[]): T[] {
-  if (kind === 'multiple_choice') return outcomes
-  return [...outcomes].sort((a, b) => Number(isPositiveOutcome(kind, b.label)) - Number(isPositiveOutcome(kind, a.label)))
-}

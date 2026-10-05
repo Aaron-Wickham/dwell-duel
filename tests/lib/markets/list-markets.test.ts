@@ -29,7 +29,7 @@ function marketRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe('listOpenMarkets', () => {
-  it('reads only open markets, 50 soonest to close first, with the resolution and bet count embedded, Yes first', async () => {
+  it('reads only open markets, 50 soonest to close first, with the resolution and bet count embedded, outcomes as read', async () => {
     const { client, queries } = fakeSupabase(() => ({ data: [marketRow({ status: 'open', current_resolution: null, settled_at: null })] }))
 
     const page = await listOpenMarkets(client, { top: null, bottom: null })
@@ -59,9 +59,10 @@ describe('listOpenMarkets', () => {
         liquidity: 50,
         line: null,
         edited: false,
+        // In position order from the query (0110), never reordered here.
         outcomes: [
-          { id: 'o-yes', label: 'Yes', poolTotal: 15, shares: 0, qOffset: 0 },
           { id: 'o-no', label: 'No', poolTotal: 5, shares: 0, qOffset: 0 },
+          { id: 'o-yes', label: 'Yes', poolTotal: 15, shares: 0, qOffset: 0 },
         ],
         betCount: 7,
         sparkVersion: '5',
@@ -163,8 +164,7 @@ describe('listResolvedMarkets', () => {
     ])
     expect(read.order).toEqual([
       ...probe.order,
-      ['created_at', { referencedTable: 'market_outcomes' }],
-      ['label', { referencedTable: 'market_outcomes' }],
+      ['position', { referencedTable: 'market_outcomes' }],
     ])
     expect(page.next).toMatchObject({ kind: 'extend', firstId: '0b9c3f5e-8a1d-4c2b-9e7f-000000000001' })
   })

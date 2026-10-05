@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { chartTitle, orderOutcomes, outcomeSeries, plottedOutcomes } from '@/lib/markets/outcome-series'
+import { chartTitle, outcomeSeries, plottedOutcomes } from '@/lib/markets/outcome-series'
 
 describe('outcomeSeries', () => {
   it('always colours a yes/no market the same way, whatever order the outcomes arrive in', () => {
@@ -30,17 +30,6 @@ describe('plottedOutcomes', () => {
   it('draws every multiple-choice outcome', () => {
     const three = [{ label: 'A' }, { label: 'B' }, { label: 'C' }]
     expect(plottedOutcomes('multiple_choice', three)).toEqual(three)
-  })
-})
-
-describe('orderOutcomes', () => {
-  it('puts Yes before No and Over before Under (#389)', () => {
-    expect(orderOutcomes('binary', [{ label: 'No' }, { label: 'Yes' }]).map((o) => o.label)).toEqual(['Yes', 'No'])
-    expect(orderOutcomes('over_under', [{ label: 'Over 1.5' }, { label: 'Under 1.5' }]).map((o) => o.label)).toEqual(['Over 1.5', 'Under 1.5'])
-  })
-
-  it('keeps a multiple-choice market’s order as read', () => {
-    expect(orderOutcomes('multiple_choice', [{ label: 'Ruth' }, { label: 'Eli' }]).map((o) => o.label)).toEqual(['Ruth', 'Eli'])
   })
 })
 

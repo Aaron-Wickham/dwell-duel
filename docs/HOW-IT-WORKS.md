@@ -78,22 +78,23 @@ resolve a reopened market before it closes again, and its creator and
 admins are reminded about it again when it does. Every move shows under
 "Edited".
 
-The Markets page lists open markets **soonest to close first**, so one
-closing within the hour is at the top. A market closing within a day
-says so ("Closes in 2h"). Markets past their close time with no result
-yet are grouped under Awaiting resolution, after the open ones however
-many there are (open and awaiting markets each have their own Show more), and Resolved and Voided markets
-follow as two groups, each most recently settled first: the order they were resolved or
-voided in, not the order they were created in. A voided market shows the
-day it was voided.
+The Markets page has three tabs: **Open** (the default: still taking
+bets, **soonest to close first**, so one closing within the hour is at
+the top), **Waiting** (past the close time, waiting for a result, oldest
+close first) and **Resolved** (has a result, most recently settled first;
+voided markets are here too, in their own group). Each card shows the
+leading outcome's chance (Yes, or Over, on a two-outcome market; the
+favourite of several), how many points it moved this week, a small chart,
+and when it closes ("Closes in 2h" within a day) with how many bets it
+has. A resolved card says who won ("Yes won"). When more than one category
+holds markets, chips under the tabs narrow the list to one: **All**, then
+the eight busiest categories (the most markets still taking bets), then
+**More…** for the rest. The choices are in the page's address, so a reload
+or a shared link keeps them.
 
-The tabs above the list narrow it: **All** (the default), **Open** (still
-taking bets), **Awaiting** (past the close time, waiting to be resolved)
-and **Resolved** (has a result; voided markets are here too, marked
-Voided). Below them, the category chips narrow it to one category:
-**All**, then the eight busiest categories (the most markets still taking
-bets), then **More…** for the rest. The choices are in the page's address,
-so a reload or a shared link keeps them.
+A yes/no chart draws one line, Yes's chance (an over/under draws Over's):
+No is the same line read from the top. A multiple-choice chart draws a
+line per outcome.
 
 For a question that comes round every week, **Duplicate** on any market
 opens Create market already filled in with its question, description,
@@ -114,8 +115,8 @@ pays before you place it, and nothing anyone does afterwards changes it.
 - **A market opens at even odds:** 50% / 50% for Yes/No, 25% each for
   four outcomes. Nobody has to bet first.
 - **The price is the chance.** Buying an outcome's shares raises its price
-  (and lowers the others'), so the chance, the chart and the sparkline all
-  show the same number. A bigger bet moves the price more, so each extra
+  (and lowers the others'), so the chance, the market page's chart and the
+  card's chart all show the same number. A bigger bet moves the price more, so each extra
   DC buys a little less.
 - **The slip shows the exact payout** ("Pays 18 DC if it wins"), with no
   "~". If the price moves between showing it and placing it, so that your bet
@@ -655,9 +656,9 @@ or reach them through
   a parlay leg on, and the void of any market you made).
 - **Finding a market:** on Markets, type in the search box to find a market
   whose title contains what you typed (not case-sensitive, up to 80
-  characters). It
-  combines with the Open, Awaiting and Resolved tabs and the category chips,
-  and lists every match in one list, newest first, rather than in sections.
+  characters). It looks in every status, whichever tab you're on, keeps
+  the category chip, and lists every match in one list, newest first,
+  rather than in sections.
   Your own bets are under My bets.
 - **Leaderboard and profiles:** see [The leaderboard](#the-leaderboard)
   and [Profile stats](#profile-stats).

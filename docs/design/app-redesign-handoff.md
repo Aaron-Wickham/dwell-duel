@@ -66,7 +66,7 @@ never a raw colour. The groups:
 | `--segment-active` | a segmented control's chosen segment (the surface in light, `#17434A` in dark) |
 | `--acc-soft`, `--acc-text`, `--win`, `--win-soft`, `--loss`, `--loss-soft`, `--gold`, `--gold-soft` | chips, wins, losses and warnings |
 | `--hero`, `--on-hero`, `--hero-2`, `--hero-num`, `--hero-inset` | the hero surfaces (Home's balance hero went in #388; its desktop Balance card is `--acc-soft`) |
-| `--s1` … `--s6` | chart series, one per outcome |
+| `--s1` … `--s6` | chart series: five hues validated as a set for colour-vision deficiency (ink, green, blue, magenta, orange), and `--s6` is `--line-s`, the grey for a sixth outcome |
 | `--wm-a`, `--wm-b`, `--sym-d`, `--splash`, `--on-splash`, `--status-band` | the wordmark, the launch screen and the iOS status bar |
 | `--shadow`, `--overlay-shadow`, `--lift-shadow`, `--tab-shadow`, `--scrim` | cards, dialogs, hover lift, a chosen segment (`shadow-tab`, with its own dark value), the dialog backdrop |
 | `--safe-top`, `--safe-bottom` | the iPhone's safe areas, non-zero only in the installed app |
@@ -128,7 +128,7 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 
 | Page | Width | At `lg:` |
 |---|---|---|
-| Markets | wide | Three columns of market cards. |
+| Markets | wide | One filter row: the Open / Waiting / Resolved tabs, then the search field at the right (on a phone, a 44px search icon beside the tabs that opens the field below them). Category chips under it only while more than one category holds markets. Then three columns of market cards, each row's cards one height with their meta line at the bottom. |
 | Market | wide | Chart and outcomes (7fr) beside betting, resolution and the rest (5fr). |
 | Leaderboard | wide | The rankings are divided rows on the page (#396): a plain rank number (a lime badge only for first), a 32px avatar, the name on one line (truncated, never broken), the score right-aligned in tabular figures with no unit shown, and the win–loss chip from `md:`. A line under them says what the score is. Your own row is `--acc-soft` and sticks to the bottom of the viewport (above the tab bar) until you scroll to it; when it's further down than the page shows, a sticky "You" bar with Jump to me stands in for it on a phone. Net worth: rankings (7fr) beside a side column (5fr) that sticks below the top bar, holding the podium (no card, so it never stretches across the page) and Your standing with Jump to me; on a phone the podium sits above the rankings. This month has no podium: the race chart leads, full width, then rankings (7fr) beside the awards and past champions (5fr), which follow the rankings on a phone. |
 | Activity (`/feed`) | reading | One centred stream. |
@@ -184,8 +184,8 @@ Written for someone who has just been invited: get them oriented, then signed in
 | Component | Props (see each artboard's `renderVals`) | Build with |
 |---|---|---|
 | `AppNav` (TopBar + TabBar) | size, theme, current tab | lucide-react icons, motion `layoutId` for the active pill |
-| `ProbabilityChart` (the market page only, loaded lazily) | per range: one series per outcome, with times | Recharts v3 through `components/ui/chart.tsx` (adapted from shadcn/ui's chart and copied in): one `<Line type="stepAfter">` per outcome, a crosshair tooltip, and end-of-line labels showing name and % |
-| `MarketCard` | market, sparkline, outcomes with % and weekly change | `MarketSparkline` (`components/markets/market-sparkline.tsx`): the same window and colours as `ProbabilityChart`, drawn as plain SVG so the list server-renders it and ships no chart library |
+| `ProbabilityChart` (the market page only, loaded lazily) | per range: the plotted outcomes' series, with times | Recharts v3 through `components/ui/chart.tsx` (adapted from shadcn/ui's chart and copied in): one `<Line type="stepAfter">` per plotted outcome, a crosshair tooltip, end labels, and a screen-reader table of the plotted points (see Charts) |
+| `MarketCard` | title, leading chance and weekly change, chart, legend, meta | The title (a stretched link); the leading outcome's chance as a figure with its label and "▲ 8 this week" (`text-win`) or "▼ 5 this week" (`text-loss`), left out when it's 0 or there's no week of history; a resolved card leads with "Yes won", a voided one with "Voided"; then `MarketSparkline` (`components/markets/market-sparkline.tsx`, 64px, the same window and colours as `ProbabilityChart`, plain SVG so the list server-renders it and ships no chart library); for multiple choice a one-line legend of the top three by chance ("● Sarah 44% · ● Eli 31% · ● Ruth 25%", then "+N more"); then the meta line ("Closes Sun 12:00 PM · 42 bets", "Closes in 3h" within a day, "Waiting for a result" past the close). No status, closes-soon or over/under chips: an over/under's line is in its label ("Over 42.5"). The leading outcome is Yes (or Over) on a two-outcome market and the favourite of several. |
 | `OutcomeRow` | label, % and pool, bar, payout multiplier, state `add` / `inslip` / `disabled` / `none`, winner | Button variants with cva |
 | `SlipPick` | market, outcome, odds or stale | — |
 
@@ -193,12 +193,23 @@ The shared primitives are in `components/ui/`: Button (primary / secondary / dan
 
 `SegmentedControl` (`components/ui/segmented-control.tsx`, #381) is every segmented control: a `--sunk` track with the tile radius and 4px padding, 44px segments with the segment radius, and one `--segment-active` pill with an `--ink2` border (the 3:1 indicator) and `shadow-tab` that slides on `PILL_SLIDE` (still under reduced motion). `SubNav` is its link form, with tab state in the URL and `aria-current`; the theme control (radios), the slip's Solo/Parlay toggle (pressed buttons) and the chart's range (a Base UI toggle group) are its local forms.
 
-### Chart data
+### Charts
 
-- **Data points:** an outcome's chance at a moment is the market maker's price then (shares sold, parlay legs included), so a new market starts at an even split; an older pool market's history uses its seeded pools (`effectivePools`). SQL samples the series, so no page reads every bet: `market_sparklines` gives the market page's chart 200 points (`lib/markets/chart-series.ts`), and `market_sparks` gives each card at most 24 compact points, cached per list in Next's data cache and keyed by its markets' pool versions (`lib/markets/sparklines.ts`). Both prepend the even opening split (`withSeededStart`).
+The market page's `ProbabilityChart`, the cards' `MarketSparkline` and the leaderboard's race (#391):
+
+- **One line for two outcomes.** A yes/no market draws only Yes and an over/under only Over, in `--s2` (green); the other side is the same line read from the top. Multiple choice draws one line per outcome.
+- **Colours.** `outcomeSeries` gives Yes and Over `--s2`, No and Under `--s1`, and multiple choice `--s2`, `--s3`, `--s4`, `--s5`, `--s1` in its order, a sixth outcome `--s6` (grey). The race colours each member from their id (`memberSeries`), so a colour follows the member, not their rank, and nobody is special-cased.
+- **Labels.** End labels are ink text (`--ink2` for a losing line) beside a small dot in the series colour, pushed apart so they never overlap and joined to their line by a `--line-s` leader when moved. The market page's y ticks (25%, 50%, 75%) sit inside the plot's left edge, clear of the end labels. The close date goes in the caption above the plot ("12 bets · Closed Oct 4"), never in the shaded zone.
+- **Gridlines.** Solid `--line` hairlines, the 50% line included. The close line is the only dashed line.
+- **Resolved.** The winning line stays at full strength and the others turn `--line-s`; the winner's end label reads "Yes won". A two-outcome chart's one line keeps its colour and carries the winner's name.
+- **Tooltip.** Outcomes sorted by chance, highest first, following the pointer. On a phone the race's readout sits above the plot instead, so it never covers the lines.
+- **Time bucketing.** Points are thinned by time, not by count: about one point every 3px of plot width (`bucketByTime`, `PX_PER_POINT`), each bucket keeping its last value, so a burst of bets is one step rather than a comb. Cards draw at most 24. Lines stay `stepAfter`.
+- **Text alternative.** Each chart is an image named for how its lines moved over the visible range ("Yes rose from 46% to 61% this week", `describeMovement`). The market page adds a visually hidden table of the plotted points for the chosen range; the race keeps its keyboard slider and live region.
+- **Data points:** an outcome's chance at a moment is the market maker's price then (shares sold, parlay legs included), so a new market starts at an even split; an older pool market's history uses its seeded pools (`effectivePools`). SQL samples the series, so no page reads every bet: `market_sparklines` gives the market page's chart 200 points (`lib/markets/chart-series.ts`), and `market_sparks` gives each card at most 24 compact points, cached per list in Next's data cache and keyed by its markets' pool versions (`lib/markets/sparklines.ts`). Both prepend the even opening split (`withSeededStart`). The weekly change on a card is read from those points: the leading outcome's chance now against the last point at least a week old.
 - **Ranges:** 1D, 1W and All, each offered only when the data spans it; hide the range buttons when there's only one.
-- **Closed markets:** shade the area after the close time and label it "Closed {date}" or "Resolved: {outcome}".
+- **Closed markets:** shade the area after the close time.
 - **No bets:** "No bets were placed on this market."
+- **No animation.** Recharts animation stays off.
 
 ## History
 

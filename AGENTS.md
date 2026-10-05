@@ -133,6 +133,16 @@ a line to `CHANGELOG.md` under the next release.
   every link, matching the mockup (its links use the browser default
   underline). A link styled as a button, tab, tile, chip or nav item
   carries `no-underline`.
+- **Charts** (#391; the handoff's Charts section). A two-outcome market
+  draws one line, Yes or Over (`plottedOutcomes`), in `--s2`. Series
+  colours come from `outcomeSeries` (the race's from `memberSeries`, by
+  member id), and `--s1`…`--s5` are a palette validated as a set: change
+  one only after re-running the dataviz validator, then update the test in
+  `tests/lib/ui/contrast.test.ts`; `--s6` is `--line-s`. End labels are ink
+  with a series-coloured dot, gridlines solid `--line`, tooltips sorted by
+  value, points thinned by time (`chartWindow`'s `buckets`), Recharts
+  animation off, and every chart names how its lines moved
+  (`describeMovement`).
 - **Visual source of truth:** `docs/design/app-redesign-handoff.md`, which
   describes the app as it is. The dated specs and plans in `docs/archive/`
   are history: they name things the code no longer has, so don't build
@@ -345,7 +355,8 @@ a line to `CHANGELOG.md` under the next release.
   optional `fresh` prop — pass `fresh` when `next.kind === 'window'`, so a
   fresh window scrolls to the top — `focusId`, `rowDomId(prefix,
   next.firstId)`, and an optional `description` for a page that has more
-  than one "Show more" on it. Each row spreads
+  than one "Show more" on it. It reads "Loading…" and is `aria-busy`
+  while its navigation is pending (`useLinkStatus`). Each row spreads
   `focusTarget(rowDomId(prefix, row.id))` (`lib/pagination/row-id.ts`); a
   row whose content is long enough to make a verbose accessible name (a
   card) instead passes `focusTarget(domId, labelId)`, naming itself from

@@ -236,7 +236,12 @@ describe('the title search index', () => {
        alter table public.activity_events alter column actor_id set statistics -1;`,
     )
     const rows = await pgQuery<{ 'QUERY PLAN': string }>(
+      // A creator's market count is estimated as markets / distinct creators, and the suite's
+      // earlier tests leave hundreds of markets from a few creators, so a Seq Scan of the void
+      // branch could win on cost alone. Ruling seq scans out asks only whether every branch has
+      // an index path: a branch with none still plans a Seq Scan and fails.
       `set local request.jwt.claims = '{"sub":"${alice.id}","role":"authenticated"}';
+       set local enable_seqscan = off;
        explain select id from public.my_activity_events()
          where hidden_at is null and occurred_at <= now() + interval '1 day'
          order by occurred_at desc, id desc limit 51`,

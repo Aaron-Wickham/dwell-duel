@@ -6,12 +6,9 @@ import { usePathname } from 'next/navigation'
 import { useCallback, useLayoutEffect, useState } from 'react'
 import { LazyMotion, MotionConfig } from 'motion/react'
 import * as m from 'motion/react-m'
-import { BookOpen, ChartColumn, CircleDot, MessageSquareText, ShieldCheck, Ticket, Trophy, type LucideIcon } from 'lucide-react'
-import { BetaBadge } from '@/components/brand/beta-badge'
+import { BookOpen, ChartColumn, House, Ticket, Trophy, type LucideIcon } from 'lucide-react'
 import { Wordmark } from '@/components/brand/wordmark'
 import { AnimatedText } from '@/components/ui/animated-text'
-import { AttentionBadge, AttentionNote } from '@/components/ui/attention-badge'
-import { Avatar } from '@/components/ui/avatar'
 import { NavPendingHint } from '@/components/nav/nav-pending-hint'
 import { TAB_TRANSITION } from '@/components/nav/page-transition'
 import { haptics } from '@/lib/haptics'
@@ -20,18 +17,18 @@ import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
 import { BalanceNumber } from './balance-number'
 import { NAV_ITEMS, activeNavId, tabAriaLabel, type NavId } from './nav-items'
+import { ProfileMenu, type NavMember } from './profile-menu'
 import { uiTextClass } from '@/components/ui/page'
 import { formatDcAmount } from '@/lib/format/dc'
 
 const loadMotionFeatures = () => import('@/lib/ui/motion-features').then((mod) => mod.default)
 
 const ICONS: Record<NavId, LucideIcon> = {
+  home: House,
   markets: ChartColumn,
   bets: Ticket,
   tasks: BookOpen,
-  feed: MessageSquareText,
   leaderboard: Trophy,
-  admin: ShieldCheck,
 }
 
 type ReportPending = (href: string, pending: boolean) => void
@@ -48,6 +45,7 @@ function PendingReporter({ href, onPending }: { href: string; onPending: ReportP
 }
 
 // Tapping your balance shows where your coins are. The chip keeps its 36px look inside a 44px link.
+// The gold "4,886 DC" says what it is, so it has no coin icon (#385).
 function BalanceChip({ balance, active, onPending }: { balance: number; active: boolean; onPending: ReportPending }) {
   return (
     <IntentLink
@@ -59,8 +57,7 @@ function BalanceChip({ balance, active, onPending }: { balance: number; active: 
       className="pressable inline-flex min-h-11 shrink-0 items-center rounded-full no-underline"
     >
       <PendingReporter href="/bets" onPending={onPending} />
-      <span className={`inline-flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-gold-soft pr-2.5 pl-1.5 ${uiTextClass} font-extrabold text-gold md:gap-1.5 md:pr-3 md:pl-2`}>
-        <CircleDot aria-hidden="true" className="size-4 md:size-[18px]" />
+      <span className={`inline-flex h-9 items-center whitespace-nowrap rounded-full bg-gold-soft px-3 ${uiTextClass} font-extrabold text-gold`}>
         <AnimatedText plainText={`Balance ${formatDcAmount(balance)}, view my bets`}>
           <BalanceNumber value={balance} />
         </AnimatedText>
@@ -69,36 +66,11 @@ function BalanceChip({ balance, active, onPending }: { balance: number; active: 
   )
 }
 
-export type NavMember = { id: string; name: string; avatarSrc: string | null }
+export type { NavMember }
 
-function ProfileLink({ me, active }: { me: NavMember; active: boolean }) {
-  return (
-    <IntentLink
-      prefetchOnTouch
-      pendingMarker={false}
-      href={`/members/${me.id}`}
-      aria-label="Your profile"
-      aria-current={active ? 'page' : undefined}
-      className="pressable relative inline-flex size-11 shrink-0 items-center justify-center rounded-full no-underline"
-    >
-      <span
-        className={cn(
-          'flex size-9 items-center justify-center rounded-full',
-          active && 'ring-2 ring-nav-active ring-offset-2 ring-offset-surface',
-        )}
-      >
-        <Avatar name={me.name} src={me.avatarSrc} size="nav" />
-      </span>
-      <NavPendingHint className="inset-x-3 bottom-0 h-0.5" />
-    </IntentLink>
-  )
-}
-
-// Below xl every label won't fit beside the wordmark, balance and avatar (an admin's row needs
-// ~1180px), so each link is a 44px icon until then, its label kept for assistive tech and as a
-// hover tooltip. `iconWithLabel` keeps the icon beside the label from xl too, as Admin's does.
-// `active` is the page you're on; `shown` is where the pill sits, which moves to a tapped link
-// before its page arrives.
+// Below xl every label won't fit beside the wordmark, balance and avatar, so each link is a 44px
+// icon until then, its label kept for assistive tech and as a hover tooltip. `active` is the page
+// you're on; `shown` is where the pill sits, which moves to a tapped link before its page arrives.
 function DesktopLink({
   href,
   label,
@@ -106,9 +78,6 @@ function DesktopLink({
   shown,
   onPending,
   icon: Icon,
-  iconWithLabel = false,
-  transitionTypes = TAB_TRANSITION,
-  attention = 0,
 }: {
   href: string
   label: string
@@ -116,19 +85,15 @@ function DesktopLink({
   shown: boolean
   onPending: ReportPending
   icon: LucideIcon
-  iconWithLabel?: boolean
-  transitionTypes?: string[]
-  attention?: number
 }) {
   return (
     <IntentLink
       prefetchOnTouch
       pendingMarker={false}
       href={href}
-      transitionTypes={transitionTypes}
+      transitionTypes={TAB_TRANSITION}
       aria-current={active ? 'page' : undefined}
       aria-label={label}
-      aria-describedby={attention > 0 ? 'admin-attention-desktop' : undefined}
       title={label}
       className={cn(
         `pressable pill-label relative isolate inline-flex min-h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap rounded-full ${uiTextClass} font-bold no-underline xl:px-3.5`,
@@ -144,16 +109,15 @@ function DesktopLink({
           transition={PILL_TRANSITION}
         />
       )}
-      <Icon aria-hidden="true" className={cn('size-5 xl:size-[18px]', !iconWithLabel && 'xl:hidden')} />
+      <Icon aria-hidden="true" className="size-5 xl:hidden" />
       <span className="max-xl:sr-only">{label}</span>
-      <AttentionNote id="admin-attention-desktop" count={attention} />
-      <AttentionBadge count={attention} className="-top-1 -right-1" />
       <NavPendingHint className="inset-x-3.5 bottom-1 h-0.5" />
     </IntentLink>
   )
 }
 
-// adminHref is null for members; reviewers land on the approval queue, admins on invites.
+// adminHref is null for members; for a reviewer or above it opens the section with work in it.
+// adminAttention is what waits on the viewer there, shown on the avatar.
 export function AppNav({
   balance,
   adminHref,
@@ -167,8 +131,9 @@ export function AppNav({
 }) {
   const pathname = usePathname()
   const motionReduced = useMotionSettingReduced()
-  // Your own profile belongs to the avatar, not the Leaderboard tab.
+  // Your own profile and Settings belong to the avatar, not the Leaderboard tab.
   const onMyProfile = pathname === `/members/${me.id}`
+  const avatarActive = onMyProfile || pathname === '/settings'
   const active = onMyProfile ? null : activeNavId(pathname)
   // The link the member last tapped, while its page is on the way. Only the last tap's link is
   // pending, and it stops being pending as the new page commits.
@@ -192,10 +157,7 @@ export function AppNav({
           style={{ viewTransitionName: 'app-header' }}
           className="no-callout sticky top-(--safe-top) z-30 hidden h-[72px] shrink-0 items-center gap-3 border-b border-line bg-surface px-6 md:flex xl:gap-5 xl:px-10"
         >
-          <div className="flex shrink-0 items-center gap-2">
-            <Wordmark symbolBelowLg current={pathname === '/'} />
-            <BetaBadge />
-          </div>
+          <Wordmark symbolBelowLg />
           <nav aria-label="Primary" className="flex items-center gap-0.5">
             {NAV_ITEMS.map((item) => (
               <DesktopLink
@@ -208,68 +170,20 @@ export function AppNav({
                 onPending={onPending}
               />
             ))}
-            {adminHref && (
-              <>
-                <span aria-hidden="true" className="mx-1.5 h-6 w-px bg-line" />
-                <DesktopLink
-                  href={adminHref}
-                  label="Admin"
-                  active={active === 'admin'}
-                  shown={shown === 'admin'}
-                  onPending={onPending}
-                  icon={ShieldCheck}
-                  iconWithLabel
-                  transitionTypes={['nav-forward']}
-                  attention={adminAttention}
-                />
-              </>
-            )}
           </nav>
           <span className="grow" />
           <BalanceChip balance={balance} active={active === 'bets'} onPending={onPending} />
-          <ProfileLink me={me} active={onMyProfile} />
+          <ProfileMenu me={me} active={avatarActive} adminHref={adminHref} attention={adminAttention} />
         </header>
 
         <header
           style={{ viewTransitionName: 'app-topbar' }}
           className="no-callout sticky top-(--safe-top) z-30 flex h-16 shrink-0 items-center gap-1 border-b border-line bg-surface pr-2 pl-3 md:hidden"
         >
-          {/* At 375px with a five-digit balance there's no width to spare beside the wordmark, so the
-              badge tucks under its right end instead. It's decorative, so taps pass through to the link.
-              Below 360px an admin's extra button leaves room only for the symbol, and the badge goes too. */}
-          <div className="relative shrink-0">
-            <Wordmark size="sm" current={pathname === '/'} symbolOnNarrow={Boolean(adminHref)} />
-            <BetaBadge
-              className={cn(
-                'pointer-events-none absolute right-1 -bottom-1.5 h-3.5 px-1.5 text-[9px]',
-                adminHref && 'max-[359px]:hidden',
-              )}
-            />
-          </div>
+          <Wordmark size="sm" />
           <span className="grow" />
           <BalanceChip balance={balance} active={active === 'bets'} onPending={onPending} />
-          {adminHref && (
-            <IntentLink
-              prefetchOnTouch
-              pendingMarker={false}
-              href={adminHref}
-              transitionTypes={['nav-forward']}
-              aria-label="Admin"
-              aria-describedby={adminAttention > 0 ? 'admin-attention-mobile' : undefined}
-              aria-current={active === 'admin' ? 'page' : undefined}
-              className={cn(
-                'pressable relative inline-flex size-11 shrink-0 items-center justify-center rounded-control no-underline',
-                shown === 'admin' ? 'border-[1.5px] border-tab-active-ring bg-tab-active text-on-tab-active' : 'text-ink hover:bg-sunk',
-              )}
-            >
-              <PendingReporter href={adminHref} onPending={onPending} />
-              <ShieldCheck aria-hidden="true" className="size-[22px]" />
-              <AttentionNote id="admin-attention-mobile" count={adminAttention} />
-              <AttentionBadge count={adminAttention} className="top-1 right-1" />
-              <NavPendingHint className="inset-x-3 bottom-1 h-0.5" />
-            </IntentLink>
-          )}
-          <ProfileLink me={me} active={onMyProfile} />
+          <ProfileMenu me={me} active={avatarActive} adminHref={adminHref} attention={adminAttention} />
         </header>
 
         <nav

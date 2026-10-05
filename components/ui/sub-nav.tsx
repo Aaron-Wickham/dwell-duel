@@ -14,12 +14,12 @@ export type SubNavItem = { href: string; label: string; current: boolean; badge?
 // The mockup's segmented `.subnav`: full width on a phone, hugging its tabs from md. A
 // SegmentedControl of links, with the tab state in the URL; its pill slides between tabs like the
 // main nav's does.
-export function SubNav({ label, items }: { label: string; items: SubNavItem[] }) {
+export function SubNav({ label, items, className }: { label: string; items: SubNavItem[]; className?: string }) {
   const currentHref = items.find((item) => item.current)?.href
   const noteId = useId()
 
   return (
-    <SegmentedControl as="nav" aria-label={label} activeKey={currentHref} memoryKey={label} className="md:self-start">
+    <SegmentedControl as="nav" aria-label={label} activeKey={currentHref} memoryKey={label} className={cn('md:self-start', className)}>
       {items.map(({ href, label: itemLabel, current, badge = 0 }, index) => (
         <Fragment key={href}>
           <IntentLink

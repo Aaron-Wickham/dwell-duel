@@ -44,10 +44,10 @@ test('haptics and reduced motion are saved as cookies and put on the page before
   await expect.poll(async () => (await page.context().cookies()).find((c) => c.name === 'motion')).toBeUndefined()
 })
 
-test('Settings is reached from your own profile', async ({ page }) => {
+test('Settings is reached from the avatar menu', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('banner').getByRole('link', { name: 'Your profile' }).first().click()
-  await page.getByRole('link', { name: 'Settings' }).click()
+  await page.getByRole('banner').getByRole('button', { name: /^Your profile and settings/ }).first().click()
+  await page.getByRole('menu').getByRole('menuitem', { name: /Settings/ }).click()
   await expect(page).toHaveURL(/\/settings$/)
   await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible()

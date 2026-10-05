@@ -53,11 +53,11 @@ describe('the nav pills (#154)', () => {
 
   it('moves the same pill to the next tab rather than drawing a second', () => {
     const { rerender } = render(<Nav />)
-    pathname = '/feed'
+    pathname = '/tasks'
     rerender(<Nav />)
     const found = tabBar().querySelectorAll('[data-layout-id="tabbar-pill"]')
     expect(found).toHaveLength(1)
-    expect(found[0].closest('a')).toHaveAttribute('href', '/feed')
+    expect(found[0].closest('a')).toHaveAttribute('href', '/tasks')
     expect(within(tabBar()).getByRole('link', { name: 'Markets' }).querySelector('.bg-tab-active')).toBeNull()
   })
 
@@ -90,11 +90,11 @@ describe('the nav pills (#154)', () => {
     render(<Nav />)
     const label = within(within(tabBar()).getByRole('link', { name: 'Markets' })).getByText('Markets')
     expect(label).toHaveClass('font-extrabold', 'transition-[font-weight]', 'motion-reduce:transition-none')
-    expect(within(within(tabBar()).getByRole('link', { name: 'Feed' })).getByText('Feed')).toHaveClass('font-bold')
+    expect(within(within(tabBar()).getByRole('link', { name: 'Tasks' })).getByText('Tasks')).toHaveClass('font-bold')
   })
 
   it('draws no pill on a page outside every tab', () => {
-    pathname = '/members/me-1'
+    pathname = '/settings'
     render(<Nav />)
     expect(tabBar().querySelector('[data-layout-id="tabbar-pill"]')).toBeNull()
   })

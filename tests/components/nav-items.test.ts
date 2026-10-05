@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { activeNavId, NAV_ITEMS } from '@/components/app-nav/nav-items'
 
 describe('activeNavId', () => {
-  it('matches no tab on Home, which the wordmark covers', () => {
-    expect(activeNavId('/')).toBeNull()
+  it('matches Home on Home and on Activity, which opens from it', () => {
+    expect(activeNavId('/')).toBe('home')
+    expect(activeNavId('/feed')).toBe('home')
   })
 
   it('matches each section and anything beneath it', () => {
@@ -12,9 +13,7 @@ describe('activeNavId', () => {
     expect(activeNavId('/markets/3f2a')).toBe('markets')
     expect(activeNavId('/bets')).toBe('bets')
     expect(activeNavId('/tasks')).toBe('tasks')
-    expect(activeNavId('/feed')).toBe('feed')
     expect(activeNavId('/leaderboard')).toBe('leaderboard')
-    expect(activeNavId('/admin/ledger')).toBe('admin')
   })
 
   it('treats a member profile as part of the leaderboard', () => {
@@ -24,16 +23,19 @@ describe('activeNavId', () => {
   it('matches nothing for other paths', () => {
     expect(activeNavId('/sign-in')).toBeNull()
     expect(activeNavId('/marketsx')).toBeNull()
+    expect(activeNavId('/settings')).toBeNull()
+    // Admin has no tab (#385): it opens from Home's Needs you and the avatar menu.
+    expect(activeNavId('/admin/ledger')).toBeNull()
   })
 })
 
 describe('NAV_ITEMS', () => {
   it('lists the five destinations in order, with the short Leaderboard label', () => {
     expect(NAV_ITEMS.map((i) => [i.label, i.shortLabel, i.href])).toEqual([
+      ['Home', 'Home', '/'],
       ['Markets', 'Markets', '/markets'],
       ['My bets', 'Bets', '/bets'],
       ['Tasks', 'Tasks', '/tasks'],
-      ['Feed', 'Feed', '/feed'],
       ['Leaderboard', 'Leaders', '/leaderboard'],
     ])
   })

@@ -7,26 +7,32 @@ test.describe('desktop', () => {
   test('the top bar reaches every destination and marks the current one', async ({ page }) => {
     await page.goto('/markets')
     const nav = page.getByRole('navigation', { name: 'Primary' })
-    for (const name of ['Markets', 'My bets', 'Tasks', 'Feed', 'Leaderboard', 'Admin']) {
+    for (const name of ['Home', 'Markets', 'My bets', 'Tasks', 'Leaderboard']) {
       await expect(nav.getByRole('link', { name, exact: true })).toBeVisible()
     }
-    await expect(nav.getByRole('link', { name: 'Home', exact: true })).toHaveCount(0)
+    // D1 (#385): the feed is Home's Activity, and Admin opens from the avatar menu.
+    await expect(nav.getByRole('link', { name: 'Feed', exact: true })).toHaveCount(0)
+    await expect(nav.getByRole('link', { name: 'Admin', exact: true })).toHaveCount(0)
     await expect(nav.getByRole('link', { name: 'Markets', exact: true })).toHaveAttribute('aria-current', 'page')
 
     await page.getByRole('banner').getByRole('link', { name: 'DwellDuel home' }).click()
     await expect(page).toHaveURL(/\/$/)
-    await expect(page.getByRole('banner').getByRole('link', { name: 'DwellDuel home' })).toHaveAttribute('aria-current', 'page')
+    await expect(nav.getByRole('link', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'page')
   })
 
-  test('the balance opens My bets and the avatar opens your profile', async ({ page }) => {
+  test('the balance opens My bets and the avatar menu opens your profile, Settings and Admin', async ({ page }) => {
     await page.goto('/markets')
     const banner = page.getByRole('banner')
-    await banner.getByRole('link', { name: /^Balance \d+ DC, view my bets$/ }).click()
+    await banner.getByRole('link', { name: /^Balance [\d,]+ DC, view my bets$/ }).click()
     await expect(page).toHaveURL(/\/bets$/)
 
-    await banner.getByRole('link', { name: 'Your profile' }).click()
+    await banner.getByRole('button', { name: /^Your profile and settings/ }).click()
+    const menu = page.getByRole('menu')
+    await expect(menu.getByRole('menuitem', { name: /Settings/ })).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: /Admin/ })).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: /Send feedback/ })).toHaveAttribute('href', /^mailto:/)
+    await menu.getByRole('menuitem', { name: /Your profile/ }).click()
     await expect(page).toHaveURL(/\/members\/[0-9a-f-]+$/)
-    await expect(banner.getByRole('link', { name: 'Your profile' })).toHaveAttribute('aria-current', 'page')
     await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible()
   })
 })
@@ -37,12 +43,14 @@ test.describe('phone', () => {
   test('the tab bar and top bar reach every destination', async ({ page }) => {
     await page.goto('/')
     const tabs = page.getByRole('navigation', { name: 'Primary' })
-    for (const name of ['Markets', 'My bets', 'Tasks', 'Feed', 'Leaders, leaderboard']) {
+    for (const name of ['Home', 'Markets', 'My bets', 'Tasks', 'Leaders, leaderboard']) {
       await expect(tabs.getByRole('link', { name, exact: true })).toBeVisible()
     }
+    await expect(tabs.getByRole('link', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'page')
     const banner = page.getByRole('banner')
-    await expect(banner.getByRole('link', { name: 'Admin', exact: true })).toBeVisible()
-    await expect(banner.getByRole('link', { name: 'Your profile' })).toBeVisible()
+    // The top bar holds the wordmark, the balance and the avatar, for every role (#385).
+    await expect(banner.getByRole('link', { name: 'Admin', exact: true })).toHaveCount(0)
+    await expect(banner.getByRole('button', { name: /^Your profile and settings/ })).toBeVisible()
 
     await tabs.getByRole('link', { name: 'Leaders, leaderboard', exact: true }).click()
     await expect(page).toHaveURL(/\/leaderboard$/)

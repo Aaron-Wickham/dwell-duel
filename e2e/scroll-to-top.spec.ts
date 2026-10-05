@@ -25,8 +25,8 @@ test('a new page opens at its top, even from a page scrolled only a little (#349
   await expect.poll(() => scrollY(page)).toBe(0)
 
   await scrollTo(page, 900)
-  await page.getByRole('navigation', { name: 'Primary' }).last().getByRole('link', { name: 'Feed' }).click()
-  await expect(page).toHaveURL(/\/feed$/)
+  await page.getByRole('navigation', { name: 'Primary' }).last().getByRole('link', { name: 'Tasks' }).click()
+  await expect(page).toHaveURL(/\/tasks$/)
   await expect.poll(() => scrollY(page)).toBe(0)
 })
 

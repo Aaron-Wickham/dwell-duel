@@ -4,7 +4,7 @@ import { localDateTimeString } from './local-date-time'
 
 test.use({ viewport: { width: 375, height: 812 } })
 
-test('the Admin button shows a badge once a market has closed with no result', async ({ page }) => {
+test('the avatar shows what waits once a market has closed with no result', async ({ page }) => {
   const title = `Badge check ${Date.now()}`
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill(title)
@@ -14,14 +14,11 @@ test('the Admin button shows a badge once a market has closed with no result', a
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+$/)
   const marketId = page.url().split('/').pop()!
 
-  const admin = page.getByRole('banner').getByRole('link', { name: 'Admin', exact: true })
+  // #385: the avatar carries the count in its name ("…, 3 waiting") and a red dot.
+  const avatar = page.getByRole('banner').getByRole('button', { name: /^Your profile and settings/ })
   // Compared with the count before, not with no badge: a retry, or another spec, can leave markets
   // already waiting, and then "no badge yet" could never hold.
-  const waiting = () =>
-    admin.evaluate((el) => {
-      const id = el.getAttribute('aria-describedby')
-      return Number(/\d+/.exec((id && document.getElementById(id)?.textContent) || '0')?.[0] ?? 0)
-    })
+  const waiting = async () => Number(/(\d+) waiting/.exec((await avatar.getAttribute('aria-label')) ?? '')?.[1] ?? 0)
   const before = await waiting()
 
   // Closing is only the clock passing, but the market row changing reaches the open page live.
@@ -43,6 +40,7 @@ test('the Admin button shows a badge once a market has closed with no result', a
       { timeout: 20_000, intervals: [1_000, 2_000, 3_000] },
     )
     .toBeGreaterThan(before)
-  await expect(admin).toHaveAccessibleDescription(/\d+ waiting/)
-  await expect(admin).toHaveText(/\d/)
+  await expect(avatar.locator('.bg-loss')).toBeVisible()
+  await avatar.click()
+  await expect(page.getByRole('menu').getByRole('menuitem', { name: /Admin/ })).toHaveText(/\d+ waiting/)
 })

@@ -60,13 +60,13 @@ beforeEach(() => {
 // #384: a tab tap moves the pill at once, before the page arrives.
 describe('the nav while a tab is on the way', () => {
   it('moves both pills to the tapped tab, and leaves aria-current on the page you are on', () => {
-    state.pendingHref = '/feed'
+    state.pendingHref = '/tasks'
     render(<Nav />)
-    expect(pillIn(tabBar(), 'tabbar-pill')).toHaveAttribute('href', '/feed')
-    expect(pillIn(desktop(), 'nav-pill')).toHaveAttribute('href', '/feed')
-    expect(within(tabBar()).getByRole('link', { name: 'Feed' })).not.toHaveAttribute('aria-current')
+    expect(pillIn(tabBar(), 'tabbar-pill')).toHaveAttribute('href', '/tasks')
+    expect(pillIn(desktop(), 'nav-pill')).toHaveAttribute('href', '/tasks')
+    expect(within(tabBar()).getByRole('link', { name: 'Tasks' })).not.toHaveAttribute('aria-current')
     expect(within(tabBar()).getByRole('link', { name: 'Markets' })).toHaveAttribute('aria-current', 'page')
-    expect(within(within(tabBar()).getByRole('link', { name: 'Feed' })).getByText('Feed')).toHaveClass('font-extrabold')
+    expect(within(within(tabBar()).getByRole('link', { name: 'Tasks' })).getByText('Tasks')).toHaveClass('font-extrabold')
   })
 
   it('moves the pill to My bets when the balance chip is tapped', () => {
@@ -81,19 +81,18 @@ describe('the nav while a tab is on the way', () => {
   })
 
   it('never dims a nav link: the pill is its pending state', () => {
-    state.pendingHref = '/feed'
+    state.pendingHref = '/tasks'
     render(<Nav />)
     expect(document.querySelector('[data-link-pending]')).toBeNull()
   })
 })
 
-// #384: a tab switch swaps at once; Admin is a drill-down and slides.
+// #384: a tab switch swaps at once.
 describe('nav transition types', () => {
-  it('tags every tab, the balance chip and the wordmark nav-tab, and Admin nav-forward', () => {
+  it('tags every tab, the balance chip and the wordmark nav-tab', () => {
     render(<Nav />)
     for (const link of within(tabBar()).getAllByRole('link')) expect(link).toHaveAttribute('data-transition-types', 'nav-tab')
-    expect(within(desktop()).getByRole('link', { name: 'Markets' })).toHaveAttribute('data-transition-types', 'nav-tab')
-    expect(within(desktop()).getByRole('link', { name: 'Admin' })).toHaveAttribute('data-transition-types', 'nav-forward')
+    for (const link of within(desktop()).getAllByRole('link')) expect(link).toHaveAttribute('data-transition-types', 'nav-tab')
     for (const chip of screen.getAllByRole('link', { name: /^Balance/ })) expect(chip).toHaveAttribute('data-transition-types', 'nav-tab')
     for (const home of screen.getAllByRole('link', { name: 'DwellDuel home' })) expect(home).toHaveAttribute('data-transition-types', 'nav-tab')
   })

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 type NumberFlowProps = { value: number; suffix?: string; locales?: unknown; format?: { useGrouping?: boolean } }
 const { numberFlowCalls } = vi.hoisted(() => ({ numberFlowCalls: [] as NumberFlowProps[] }))
@@ -69,11 +70,8 @@ describe('AppNav', () => {
 
   it('gives every nav link a hidden pending hint that adds nothing to its name', () => {
     render(<Nav balance={120} isAdmin />)
-    const links = [
-      ...screen.getAllByRole('navigation', { name: 'Primary' }).flatMap((nav) => within(nav).getAllByRole('link')),
-      within(screen.getAllByRole('banner')[1]).getByRole('link', { name: 'Admin' }),
-    ]
-    expect(links).toHaveLength(12)
+    const links = screen.getAllByRole('navigation', { name: 'Primary' }).flatMap((nav) => within(nav).getAllByRole('link'))
+    expect(links).toHaveLength(10)
     for (const link of links) {
       const hint = link.querySelector('.nav-pending-hint')
       expect(hint).toHaveAttribute('aria-hidden', 'true')
@@ -84,33 +82,31 @@ describe('AppNav', () => {
   it('links every destination in both navs', () => {
     render(<Nav balance={120} isAdmin={false} />)
     const [desktop, phone] = screen.getAllByRole('navigation', { name: 'Primary' })
-    for (const name of ['Markets', 'My bets', 'Tasks', 'Feed', 'Leaderboard']) {
+    for (const name of ['Home', 'Markets', 'My bets', 'Tasks', 'Leaderboard']) {
       expect(within(desktop).getByRole('link', { name })).toBeInTheDocument()
       expect(within(phone).getByRole('link', { name: name === 'Leaderboard' ? 'Leaders, leaderboard' : name })).toBeInTheDocument()
     }
-    // Home is the wordmark's job; parlays live on My bets.
+    // D1 (#385): the feed is Home's Activity, Admin opens from the avatar, parlays live on My bets.
     for (const nav of [desktop, phone]) {
-      expect(within(nav).queryByRole('link', { name: 'Home' })).toBeNull()
-      expect(within(nav).queryByRole('link', { name: 'Parlays' })).toBeNull()
+      for (const name of ['Feed', 'Admin', 'Parlays']) expect(within(nav).queryByRole('link', { name })).toBeNull()
     }
+    expect(within(desktop).getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
     expect(phone).toHaveClass('grid-cols-5')
   })
 
-  // jsdom applies no CSS, so these pin the classes that make the desktop row fit from 768px: an
-  // admin's full-label row needs ~1180px, so labels and the wordmark's name only show from xl / lg.
+  // jsdom applies no CSS, so these pin the classes that make the desktop row fit from 768px:
+  // labels and the wordmark's name only show from xl / lg.
   it('keeps every desktop link a 44px icon until xl, still named by its label', () => {
     render(<Nav balance={120} isAdmin />)
     const desktop = screen.getAllByRole('navigation', { name: 'Primary' })[0]
-    for (const name of ['Markets', 'My bets', 'Tasks', 'Feed', 'Leaderboard', 'Admin']) {
+    for (const name of ['Home', 'Markets', 'My bets', 'Tasks', 'Leaderboard']) {
       const link = within(desktop).getByRole('link', { name })
       expect(link).toHaveClass('min-h-11', 'min-w-11')
       expect(link).toHaveAttribute('title', name)
       expect(within(link).getByText(name)).toHaveClass('max-xl:sr-only')
       expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+      expect(link.querySelector('svg')).toHaveClass('xl:hidden')
     }
-    // Admin keeps its icon beside the label from xl; the section links drop theirs.
-    expect(within(desktop).getByRole('link', { name: 'Markets' }).querySelector('svg')).toHaveClass('xl:hidden')
-    expect(within(desktop).getByRole('link', { name: 'Admin' }).querySelector('svg')).not.toHaveClass('xl:hidden')
   })
 
   it("drops the desktop wordmark's name below lg, but not the phone's, keeping both links named", () => {
@@ -139,25 +135,43 @@ describe('AppNav', () => {
     }
   })
 
-  it('marks the wordmark current on Home, where no tab is', () => {
-    pathname = '/'
-    render(<Nav balance={120} isAdmin={false} />)
-    for (const link of screen.getAllByRole('link', { name: 'DwellDuel home' })) {
-      expect(link).toHaveAttribute('aria-current', 'page')
-    }
-    for (const nav of screen.getAllByRole('navigation', { name: 'Primary' })) {
-      expect(within(nav).queryAllByRole('link').filter((l) => l.hasAttribute('aria-current'))).toEqual([])
+  it('marks the Home tab current on Home and on Activity, and never the wordmark', () => {
+    for (const path of ['/', '/feed']) {
+      pathname = path
+      const { unmount } = render(<Nav balance={120} isAdmin={false} />)
+      for (const nav of screen.getAllByRole('navigation', { name: 'Primary' })) {
+        expect(within(nav).getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
+      }
+      for (const link of screen.getAllByRole('link', { name: 'DwellDuel home' })) expect(link).not.toHaveAttribute('aria-current')
+      unmount()
     }
   })
 
+  it('keeps the phone top bar to the wordmark, balance and avatar, for every role', () => {
+    render(<Nav balance={120} isAdmin attention={3} />)
+    const phoneBar = screen.getAllByRole('banner')[1]
+    const links = within(phoneBar).getAllByRole('link')
+    expect(links).toHaveLength(2)
+    expect(links[0]).toHaveAccessibleName('DwellDuel home')
+    expect(links[1]).toHaveAccessibleName(/^Balance/)
+    expect(within(phoneBar).getAllByRole('button')).toHaveLength(1)
+  })
 
-  it('shows Admin only to admins', () => {
-    const { rerender } = render(<Nav balance={120} isAdmin={false} />)
-    expect(screen.queryByRole('link', { name: 'Admin' })).toBeNull()
-    rerender(<Nav balance={120} isAdmin />)
-    const adminLinks = screen.getAllByRole('link', { name: 'Admin' })
-    expect(adminLinks.length).toBeGreaterThanOrEqual(2)
-    for (const link of adminLinks) expect(link).toHaveAttribute('href', '/admin/invites')
+  it('offers Admin in the avatar menu only to reviewers and above', async () => {
+    const { unmount } = render(<Nav balance={120} isAdmin={false} />)
+    await userEvent.click(screen.getAllByRole('button', { name: 'Your profile and settings' })[1])
+    const menu = await screen.findByRole('menu')
+    expect(within(menu).getByRole('menuitem', { name: /Your profile/ })).toHaveAttribute('href', '/members/me-1')
+    expect(within(menu).getByRole('menuitem', { name: /Settings/ })).toHaveAttribute('href', '/settings')
+    expect(within(menu).getByRole('menuitem', { name: /Send feedback/ }).getAttribute('href')).toMatch(/^mailto:/)
+    expect(within(menu).queryByRole('menuitem', { name: /Admin/ })).toBeNull()
+    for (const item of within(menu).getAllByRole('menuitem')) expect(item).toHaveClass('min-h-11')
+    unmount()
+
+    render(<Nav balance={120} isAdmin />)
+    await userEvent.click(screen.getAllByRole('button', { name: 'Your profile and settings' })[1])
+    const adminMenu = await screen.findByRole('menu')
+    expect(within(adminMenu).getByRole('menuitem', { name: /Admin/ })).toHaveAttribute('href', '/admin/invites')
   })
 
   it('makes the balance a link to My bets in both top bars, marked current there', () => {
@@ -177,31 +191,30 @@ describe('AppNav', () => {
     }
   })
 
-  it('links your photo, or your initial, to your profile in both top bars', () => {
+  it('shows your photo, or your initial, on a 44px menu button in both top bars', () => {
     const { unmount } = render(<Nav balance={120} isAdmin={false} />)
-    const links = screen.getAllByRole('link', { name: 'Your profile' })
-    expect(links).toHaveLength(2)
-    for (const link of links) {
-      expect(link).toHaveAttribute('href', '/members/me-1')
-      expect(link).toHaveClass('size-11')
-      expect(link).toHaveTextContent('G')
+    const buttons = screen.getAllByRole('button', { name: 'Your profile and settings' })
+    expect(buttons).toHaveLength(2)
+    for (const button of buttons) {
+      expect(button).toHaveClass('size-11', 'pressable')
+      expect(button).toHaveTextContent('G')
     }
     unmount()
     render(<Nav balance={120} isAdmin={false} avatarSrc="https://example.com/grace.jpg" />)
-    for (const link of screen.getAllByRole('link', { name: 'Your profile' })) {
-      expect(link.querySelector('img')).toHaveAttribute('src', 'https://example.com/grace.jpg')
+    for (const button of screen.getAllByRole('button', { name: 'Your profile and settings' })) {
+      expect(button.querySelector('img')).toHaveAttribute('src', 'https://example.com/grace.jpg')
     }
   })
 
-  it('marks the avatar, not the Leaderboard tab, on your own profile', () => {
+  it('rings the avatar, not the Leaderboard tab, on your own profile', () => {
     pathname = '/members/me-1'
     const { unmount } = render(<Nav balance={120} isAdmin={false} />)
-    for (const link of screen.getAllByRole('link', { name: 'Your profile' })) expect(link).toHaveAttribute('aria-current', 'page')
+    for (const button of screen.getAllByRole('button', { name: 'Your profile and settings' })) expect(button.firstElementChild).toHaveClass('ring-2')
     for (const link of screen.getAllByRole('link', { name: /^(Leaders, leaderboard|Leaderboard)$/ })) expect(link).not.toHaveAttribute('aria-current')
     unmount()
     pathname = '/members/someone-else'
     render(<Nav balance={120} isAdmin={false} />)
-    for (const link of screen.getAllByRole('link', { name: 'Your profile' })) expect(link).not.toHaveAttribute('aria-current')
+    for (const button of screen.getAllByRole('button', { name: 'Your profile and settings' })) expect(button.firstElementChild).not.toHaveClass('ring-2')
     for (const link of screen.getAllByRole('link', { name: /^(Leaders, leaderboard|Leaderboard)$/ })) expect(link).toHaveAttribute('aria-current', 'page')
   })
 
@@ -243,7 +256,7 @@ describe('AppNav', () => {
     for (const link of [...within(desktop).getAllByRole('link'), ...within(phone).getAllByRole('link')]) {
       expect(link).toHaveClass('pressable')
     }
-    for (const link of screen.getAllByRole('link', { name: 'Your profile' })) expect(link).toHaveClass('pressable')
+    for (const button of screen.getAllByRole('button', { name: /^Your profile and settings/ })) expect(button).toHaveClass('pressable')
   })
 
   it('offers a skip-to-content link as the first link on the page', () => {
@@ -254,12 +267,19 @@ describe('AppNav', () => {
   })
 
 
-  it('shows the Beta badge beside the wordmark in both headers, without changing the home link name', () => {
+  // #385 (A11Y-12): the beta sticker stays on sign-in, not in the signed-in shell.
+  it('shows no Beta badge in the signed-in shell', () => {
     render(<Nav balance={120} isAdmin={false} />)
-    const homeLinks = screen.getAllByRole('link', { name: 'DwellDuel home' })
-    expect(homeLinks).toHaveLength(2)
-    for (const link of homeLinks) expect(link).not.toHaveTextContent('Beta')
-    expect(screen.getAllByText('Beta')).toHaveLength(2)
+    expect(screen.getAllByRole('link', { name: 'DwellDuel home' })).toHaveLength(2)
+    expect(screen.queryByText('Beta')).toBeNull()
+  })
+
+  it('shows the balance as text, with no coin icon', () => {
+    render(<Nav balance={4886} isAdmin={false} />)
+    for (const chip of screen.getAllByRole('link', { name: /^Balance/ })) {
+      expect(chip).toHaveTextContent('4,886 DC')
+      expect(chip.querySelector('svg')).toBeNull()
+    }
   })
 
   it('taps on a phone tab press, and not on a desktop link', () => {
@@ -278,34 +298,29 @@ describe('AppNav', () => {
     }
   })
 
-  it('badges Admin with what is waiting, describing it without changing the button’s name', () => {
+  it('dots the avatar when work waits on a reviewer, with the count in its name', () => {
     render(<Nav balance={120} isAdmin attention={3} />)
-    const phoneBar = screen.getAllByRole('banner')[1]
-    const admin = within(phoneBar).getByRole('link', { name: 'Admin' })
-    expect(admin).toHaveAccessibleDescription('3 waiting')
-    expect(admin).toHaveTextContent('3')
-  })
-
-  it('keeps the desktop Admin link’s name plain too, with the count as its description', () => {
-    render(<Nav balance={120} isAdmin attention={3} />)
-    const desktop = within(screen.getAllByRole('banner')[0]).getByRole('link', { name: 'Admin' })
-    expect(desktop).toHaveAccessibleDescription('3 waiting')
-  })
-
-  it('caps the badge at 9+', () => {
-    render(<Nav balance={120} isAdmin attention={14} />)
-    const admin = within(screen.getAllByRole('banner')[1]).getByRole('link', { name: 'Admin' })
-    expect(admin).toHaveTextContent('9+')
-    expect(admin).toHaveAccessibleDescription('14 waiting')
-  })
-
-  it('shows no badge and no description when nothing is waiting', () => {
-    render(<Nav balance={120} isAdmin attention={0} />)
-    for (const bar of screen.getAllByRole('banner')) {
-      const admin = within(bar).queryByRole('link', { name: 'Admin' })
-      if (!admin) continue
-      expect(admin).not.toHaveAttribute('aria-describedby')
-      expect(admin).not.toHaveTextContent(/\d/)
+    const buttons = screen.getAllByRole('button', { name: 'Your profile and settings, 3 waiting' })
+    expect(buttons).toHaveLength(2)
+    for (const button of buttons) {
+      const dot = button.querySelector('.bg-loss')
+      expect(dot).toHaveAttribute('aria-hidden', 'true')
+      expect(dot).toHaveClass('ring-surface')
     }
+  })
+
+  it('says how much waits on the Admin item', async () => {
+    render(<Nav balance={120} isAdmin attention={14} />)
+    await userEvent.click(screen.getAllByRole('button', { name: 'Your profile and settings, 14 waiting' })[0])
+    const menu = await screen.findByRole('menu')
+    expect(within(menu).getByRole('menuitem', { name: /Admin/ })).toHaveTextContent('14 waiting')
+  })
+
+  it('shows no dot when nothing is waiting, or to a member', () => {
+    const { unmount } = render(<Nav balance={120} isAdmin attention={0} />)
+    for (const button of screen.getAllByRole('button', { name: 'Your profile and settings' })) expect(button.querySelector('.bg-loss')).toBeNull()
+    unmount()
+    render(<Nav balance={120} isAdmin={false} attention={3} />)
+    for (const button of screen.getAllByRole('button', { name: 'Your profile and settings' })) expect(button.querySelector('.bg-loss')).toBeNull()
   })
 })

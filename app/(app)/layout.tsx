@@ -59,7 +59,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
         {/* A missing profile row still gets the nav and <main>, so the page isn't stranded without them. */}
         <AppNav
           balance={profile?.balance ?? 0}
-          adminHref={adminHref(role)}
+          adminHref={adminHref(role, reviewCounts)}
           adminAttention={reviewCounts.tasks + reviewCounts.markets}
           me={{
             id: user.id,

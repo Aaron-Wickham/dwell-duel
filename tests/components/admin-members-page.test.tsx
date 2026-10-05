@@ -30,6 +30,8 @@ vi.mock('@/lib/auth/roles', async (importOriginal) => ({
 
 const { listMembersPage, countMembers } = vi.hoisted(() => ({ listMembersPage: vi.fn(), countMembers: vi.fn() }))
 vi.mock('@/lib/members/list-members', () => ({ listMembersPage, countMembers }))
+const { readNetWorths } = vi.hoisted(() => ({ readNetWorths: vi.fn() }))
+vi.mock('@/lib/members/net-worth', () => ({ readNetWorths }))
 
 import AdminMembersPage from '@/app/(app)/admin/(sections)/members/page'
 
@@ -52,17 +54,27 @@ async function renderPage(searchParams: Record<string, string> = {}) {
 beforeEach(() => {
   listMembersPage.mockReset().mockResolvedValue({ rows: [BEN], next: null, windowed: false })
   countMembers.mockReset().mockResolvedValue({ active: 1038, removed: 12 })
+  readNetWorths.mockReset().mockResolvedValue(new Map([[BEN.id, 85]]))
 })
 
 describe('AdminMembersPage (#254)', () => {
   it('lists compact rows, each opening the member’s page, with no forms on the list', async () => {
     await renderPage()
     const section = screen.getByRole('region', { name: 'Members' })
-    const row = within(section).getByRole('listitem')
+    const row = within(section).getByRole('row', { name: /Ben/ })
     expect(within(row).getByRole('link', { name: 'Ben' })).toHaveAttribute('href', `/admin/members/${BEN.id}`)
     expect(screen.queryByLabelText('Amount')).toBeNull()
     expect(screen.queryByRole('button', { name: /Remove/ })).toBeNull()
     expect(listMembersPage).toHaveBeenCalledWith({}, { query: '', removed: false, page: { top: null, bottom: null } })
+  })
+
+  // #399: a table of the page's members, with each one's net worth beside their balance.
+  it('shows the members as a table, with net worth read for the page’s members', async () => {
+    await renderPage()
+    const table = within(screen.getByRole('region', { name: 'Members' })).getByRole('table')
+    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Member', 'Role', 'Balance', 'Net worth', 'Joined'])
+    expect(within(table).getByRole('row', { name: /Ben/ })).toHaveTextContent('85 DC net worth')
+    expect(readNetWorths).toHaveBeenCalledWith({}, [BEN.id])
   })
 
   it('searches by name or email from a search box', async () => {

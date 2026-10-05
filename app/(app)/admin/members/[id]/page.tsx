@@ -1,12 +1,11 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { CircleDot } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { getAdminMember } from '@/lib/members/list-members'
 import { isUuid } from '@/lib/uuid'
-import { Page, uiTextClass } from '@/components/ui/page'
+import { Page } from '@/components/ui/page'
 import { BackLink } from '@/components/ui/back-link'
 import { SectionCard } from '@/components/ui/section-card'
 import { SkeletonScreen } from '@/components/ui/skeleton'
@@ -43,63 +42,59 @@ export default async function AdminMemberPage(props: PageProps<'/admin/members/[
   const now = Date.now()
 
   return (
-    <Page transition="drill-down">
+    // One column, in the order an admin needs it (CR-B12): who they are, what their coins have done,
+    // then the owner's controls, with Access, the one that removes them, last.
+    <Page width="reading" transition="drill-down">
       <BackLink href="/admin/members">Members</BackLink>
-      <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
-        <div className="flex min-w-0 flex-col gap-5 md:gap-7">
-          <MemberProfileHeader name={member.displayName} avatarSrc={member.avatarSrc} bio={null}>
-            <p className="text-sm text-ink2 wrap-anywhere">
-              {member.email}
-              {' · '}
-              <MemberActivity joinedAt={member.joinedAt} lastSignInAt={member.lastSignInAt} now={now} />
-            </p>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span className={`inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-gold-soft pr-3 pl-2 ${uiTextClass} font-extrabold text-gold`}>
-                <CircleDot aria-hidden="true" className="size-[18px]" />
-                {formatDcAmount(member.balance)}
-              </span>
-              <MemberChip member={member} />
-              <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="hit-area text-sm font-bold">
-                Public profile
-              </Link>
-            </div>
-          </MemberProfileHeader>
-          {isOwner && (
-            <SectionCard title="Adjust balance" titleId="adjust-balance" description="Owner only. Shows in the ledger with your reason.">
-              <AdjustBalanceForm member={member} />
-            </SectionCard>
-          )}
-          {isOwner && member.role !== 'owner' && !member.removed && (
-            <SectionCard title="Role" titleId="role">
-              <RoleForm member={member} />
-            </SectionCard>
-          )}
+      <MemberProfileHeader name={member.displayName} avatarSrc={member.avatarSrc} bio={null}>
+        <p className="text-sm text-ink2 wrap-anywhere">
+          {member.email}
+          {' · '}
+          <MemberActivity joinedAt={member.joinedAt} lastSignInAt={member.lastSignInAt} now={now} />
+        </p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {/* Plain text, not a copy of the top bar's balance chip, which shows the viewer's own. */}
+          <p>
+            <strong className="font-extrabold whitespace-nowrap">{formatDcAmount(member.balance)}</strong> balance
+          </p>
+          <MemberChip member={member} />
+          <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className="hit-area text-sm font-bold">
+            Public profile
+          </Link>
         </div>
-        <div className="flex min-w-0 flex-col gap-5 md:gap-7">
-          <Suspense
-            fallback={
-              <SkeletonScreen name="admin-member-coins">
-                <CoinHistorySkeleton />
-              </SkeletonScreen>
-            }
-          >
-            <CoinHistory memberId={member.id} />
-          </Suspense>
-          {canChangeAccess && (
-            <SectionCard
-              title="Access"
-              titleId="access"
-              description={
-                member.removed
-                  ? 'Removed: they can’t sign in and aren’t ranked. Inviting them again brings them back as a Member.'
-                  : 'Removing takes away their invite and any role straight away. Their coins, bets and history stay.'
-              }
-            >
-              {member.removed ? <ReinviteMemberButton member={member} /> : <RemoveMemberButton member={member} />}
-            </SectionCard>
-          )}
-        </div>
-      </div>
+      </MemberProfileHeader>
+      <Suspense
+        fallback={
+          <SkeletonScreen name="admin-member-coins">
+            <CoinHistorySkeleton />
+          </SkeletonScreen>
+        }
+      >
+        <CoinHistory memberId={member.id} />
+      </Suspense>
+      {isOwner && member.role !== 'owner' && !member.removed && (
+        <SectionCard title="Role" titleId="role">
+          <RoleForm member={member} />
+        </SectionCard>
+      )}
+      {isOwner && (
+        <SectionCard title="Adjust balance" titleId="adjust-balance" description="Owner only. Shows in the ledger with your reason.">
+          <AdjustBalanceForm member={member} />
+        </SectionCard>
+      )}
+      {canChangeAccess && (
+        <SectionCard
+          title="Access"
+          titleId="access"
+          description={
+            member.removed
+              ? 'Removed: they can’t sign in and aren’t ranked. Inviting them again brings them back as a Member.'
+              : 'Removing takes away their invite and any role straight away. Their coins, bets and history stay.'
+          }
+        >
+          {member.removed ? <ReinviteMemberButton member={member} /> : <RemoveMemberButton member={member} />}
+        </SectionCard>
+      )}
     </Page>
   )
 }

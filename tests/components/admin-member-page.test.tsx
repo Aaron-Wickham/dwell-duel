@@ -39,7 +39,11 @@ vi.mock('@/lib/admin/owner-actions', () => ({ removeMemberAction: vi.fn(), reinv
 vi.mock('@/lib/members/adjust-balance', () => ({ adjustBalanceAction: vi.fn() }))
 // The coin history is its own streamed server component.
 vi.mock('@/app/(app)/admin/members/[id]/coin-history', () => ({
-  CoinHistory: ({ memberId }: { memberId: string }) => <a href={`/admin/ledger?member=${memberId}`}>Open in Ledger</a>,
+  CoinHistory: ({ memberId }: { memberId: string }) => (
+    <section aria-label="Coin history">
+      <a href={`/admin/ledger?member=${memberId}`}>Open in Ledger</a>
+    </section>
+  ),
   CoinHistorySkeleton: () => null,
 }))
 
@@ -74,10 +78,21 @@ describe('AdminMemberPage (#254)', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
     expect(screen.getByRole('link', { name: 'Members' })).toHaveAttribute('href', '/admin/members')
     expect(screen.getByText(/ben@example\.com/)).toHaveTextContent('ben@example.com · Joined')
-    expect(screen.getByText('60 DC')).toBeInTheDocument()
+    // Plain bold text, not a copy of the top bar's chip (CR-B12).
+    expect(screen.getByText('60 DC')).toHaveClass('font-extrabold')
+    expect(screen.getByText('60 DC').closest('p')).toHaveTextContent('60 DC balance')
     expect(screen.getByText('Reviewer', { selector: 'span' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Public profile' })).toHaveAttribute('href', `/members/${ID}`)
     expect(screen.getByRole('link', { name: 'Open in Ledger' })).toHaveAttribute('href', `/admin/ledger?member=${ID}`)
+  })
+
+  // CR-B12: who they are, their coin history, then the owner's controls with Access last.
+  it('puts the coin history before every control, and Access last', async () => {
+    await renderPage()
+    const order = ['Coin history', 'Role', 'Adjust balance', 'Access'].map((name) => screen.getByRole('region', { name }))
+    for (let i = 1; i < order.length; i++) {
+      expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    }
   })
 
   it('gives the owner the balance, role and access controls', async () => {

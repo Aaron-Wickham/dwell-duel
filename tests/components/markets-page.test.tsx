@@ -10,17 +10,19 @@ vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
 )
 
-const { listOpenMarkets, listResolvedMarkets, listMatchingMarkets, listCategoryCounts, readSparklines, requestShowMoreFocus, push } = vi.hoisted(() => ({
+const { listOpenMarkets, listResolvedMarkets, listMatchingMarkets, listCategoryCounts, readSparklines, readWeekAgoChances, requestShowMoreFocus, push } = vi.hoisted(() => ({
   listOpenMarkets: vi.fn(),
   listCategoryCounts: vi.fn(),
   listMatchingMarkets: vi.fn(),
   push: vi.fn(),
   listResolvedMarkets: vi.fn(),
   readSparklines: vi.fn(),
+  readWeekAgoChances: vi.fn(),
   requestShowMoreFocus: vi.fn(),
 }))
 vi.mock('@/lib/markets/list-markets', () => ({ listOpenMarkets, listResolvedMarkets, listMatchingMarkets }))
 vi.mock('@/lib/markets/sparklines', () => ({ readSparklines }))
+vi.mock('@/lib/markets/chart-series', () => ({ readWeekAgoChances }))
 vi.mock('@/lib/markets/categories', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/markets/categories')>()),
   listCategoryCounts,
@@ -110,6 +112,8 @@ beforeEach(() => {
   push.mockReset()
   readSparklines.mockReset()
   readSparklines.mockResolvedValue(new Map())
+  readWeekAgoChances.mockReset()
+  readWeekAgoChances.mockResolvedValue(new Map())
   listCategoryCounts.mockReset()
   listCategoryCounts.mockResolvedValue([])
   requestShowMoreFocus.mockReset()
@@ -227,8 +231,11 @@ describe('MarketsPage', () => {
         { id: 'n', label: 'No', poolTotal: 0, shares: 0, qOffset: 0 },
       ],
     }
-    readSparklines.mockResolvedValue(new Map([[m.id, [{ t: Date.now() - 9 * DAY_S, shares: { y: 0.42, n: 0.58 } }]]]))
+    // The week-ago chance is read at that instant (#409), not from the card's sampled sparkline.
+    readSparklines.mockResolvedValue(new Map([[m.id, [{ t: Date.now() - 9 * DAY_S, shares: { y: 0.3, n: 0.7 } }]]]))
+    readWeekAgoChances.mockResolvedValue(new Map([[m.id, { t: Date.now() - 8 * DAY_S, shares: { y: 0.42, n: 0.58 } }]]))
     await renderPage({ rows: [m], next: null, windowed: false }, EMPTY)
+    expect(readWeekAgoChances).toHaveBeenCalledWith(expect.anything(), [{ id: m.id, version: m.sparkVersion }], expect.any(Number))
     const card = screen.getByRole('article', { name: /Market 1/ })
     expect(card).toHaveTextContent('50%Yes▲ Up 8 this week')
     expect(card).toHaveTextContent('· 42 bets')

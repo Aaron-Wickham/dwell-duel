@@ -272,7 +272,7 @@ async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: 
     pricing: market.pricing,
     createdAt: market.createdAt,
     outcomeIds: chartOutcomes.map((o) => o.id),
-  })
+  }, now)
 
   return (
     <ContentReveal>
@@ -280,7 +280,8 @@ async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: 
         <ProbabilityChart
           kind={market.kind}
           outcomes={chartOutcomes}
-          points={chart.points}
+          points={chart.series.All}
+          rangeSeries={chart.series}
           betCount={chart.betCount}
           now={now}
           closedAt={chartClosedAt(market.status, market.closeAt, market.settledAt)}

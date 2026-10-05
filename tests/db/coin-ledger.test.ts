@@ -90,7 +90,7 @@ describe('assertLedgerConsistent', () => {
       .select('id')
       .single()
     expect(error).toBeNull()
-    const { error: outcomeErr } = await serviceClient().from('market_outcomes').insert({ market_id: market!.id, label: 'Yes', pool_total: 5 })
+    const { error: outcomeErr } = await serviceClient().from('market_outcomes').insert({ market_id: market!.id, label: 'Yes', position: 0, pool_total: 5 })
     expect(outcomeErr).toBeNull()
     await expect(assertLedgerConsistent()).rejects.toThrow(/ledger invariants/)
   })

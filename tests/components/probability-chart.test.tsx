@@ -75,6 +75,14 @@ describe('ProbabilityChart', () => {
     expect(screen.getByRole('img', { name: 'Yes fell from 100% to 75% this week.' })).toBeInTheDocument()
   })
 
+  it('draws a range from its own series when it has one (#409)', async () => {
+    // The week's own series has an intraday move the whole history's buckets dropped.
+    const week = [point(NOW - 8 * DAY, 1, 0), point(NOW - 3 * DAY, 0.5, 0.5), point(NOW - 5 * HOUR, 0.6, 0.4), point(NOW - 2 * HOUR, 0.75, 0.25)]
+    render(<ProbabilityChart kind="binary" outcomes={yesNo} points={spread} rangeSeries={{ '1W': week, All: spread }} now={NOW} />)
+    expect(screen.getByRole('img', { name: 'Yes fell from 100% to 75% this week.' })).toBeInTheDocument()
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toContain('60%')
+  })
+
   it('draws one green stepped line for a yes/no market (#391)', () => {
     const { container } = render(<ProbabilityChart kind="binary" outcomes={yesNo} points={spread} now={NOW} />)
     const lines = container.querySelectorAll('.recharts-line-curve')

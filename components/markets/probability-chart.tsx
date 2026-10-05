@@ -124,6 +124,7 @@ export function ProbabilityChart({
   kind,
   outcomes,
   points,
+  rangeSeries,
   now,
   closedAt = null,
   resolvedLabel = null,
@@ -131,7 +132,11 @@ export function ProbabilityChart({
 }: {
   kind: MarketKind
   outcomes: ChartOutcome[]
+  // The whole history: it decides which ranges are offered, and draws any range without its own series.
   points: SeriesPoint[]
+  // Each range's own series, bucketed by time in SQL (market_series, 0110), so a day reads at a
+  // day's resolution rather than as a slice of the whole history's points.
+  rangeSeries?: Partial<Record<RangeKey, SeriesPoint[]>>
   now: number
   closedAt?: string | null
   resolvedLabel?: string | null
@@ -154,7 +159,7 @@ export function ProbabilityChart({
   // Ticks that would repeat a minute-precise label are dropped below, instead of padding a young
   // market's span out with empty time.
   const buckets = plotWidth > 0 ? Math.floor(plotWidth / PX_PER_POINT) : UNMEASURED_BUCKETS
-  const plot = chartWindow(points, range, now, closedMs, buckets)
+  const plot = chartWindow(rangeSeries?.[range] ?? points, range, now, closedMs, buckets)
   if (!last || !plot) {
     return (
       <div className="relative h-[220px] md:h-[300px]">

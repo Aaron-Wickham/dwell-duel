@@ -32,10 +32,10 @@ test('Duplicate opens Create market filled in from the market, a week on, and cr
   await expect(page.getByLabel('Title')).toHaveValue('Who reads the lesson this week?')
   await expect(page.getByLabel('Details (optional)')).toHaveValue('Whoever the rota says')
   await expect(page.getByLabel('Multiple choice')).toBeChecked()
-  // In the order the market shows them: outcomes made together share a timestamp, then sort by label.
-  await expect(page.getByRole('textbox', { name: 'Outcome 1' })).toHaveValue('Lee')
-  await expect(page.getByRole('textbox', { name: 'Outcome 2' })).toHaveValue('Pat')
-  await expect(page.getByRole('textbox', { name: 'Outcome 3' })).toHaveValue('Sam')
+  // In the order they were typed, as the market shows them (0110), not by label.
+  await expect(page.getByRole('textbox', { name: 'Outcome 1' })).toHaveValue('Pat')
+  await expect(page.getByRole('textbox', { name: 'Outcome 2' })).toHaveValue('Sam')
+  await expect(page.getByRole('textbox', { name: 'Outcome 3' })).toHaveValue('Lee')
   // The same local time, one week on.
   const nextWeek = new Date(close)
   nextWeek.setDate(nextWeek.getDate() + 7)

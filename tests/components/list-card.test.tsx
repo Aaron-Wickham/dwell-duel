@@ -106,9 +106,9 @@ describe('a page-level list is ListCards', () => {
     expect(row).not.toHaveClass('hover-lift')
   })
 
-  it('sit on the page in the approved two columns, spaced with no dividers or card around them', () => {
+  it('sit on the page two to a row, stretched to one height per row, spaced with no dividers or card around them', () => {
     const lists: [string, RegExp][] = [
-      ['app/(app)/bets/bet-rows.tsx', /lg:columns-2/],
+      ['app/(app)/bets/bet-rows.tsx', /lg:grid-cols-2 lg:items-stretch/],
     ]
     for (const [file, grid] of lists) {
       const text = source(file)

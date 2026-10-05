@@ -5,7 +5,7 @@ import { betListClass } from './bet-rows'
 import { Skeleton, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
 
 // Mirrors My bets: the tabs (three bet statuses and Coins), then one tab's list cards straight on
-// the page (D2), in two columns at lg. A title with its day, then the stake line.
+// the page (D2), two to a row at lg. A title with its day, then the stake line.
 export default function Loading() {
   return (
     <SkeletonScreen name="bets" className={pageClass}>
@@ -18,7 +18,7 @@ export default function Loading() {
             className={cn(
               listCardClass,
               'flex flex-col gap-2',
-              // A phone shows four cards; lg fills two columns of three.
+              // A phone shows four cards; lg fills three rows of two.
               i >= 4 && 'hidden lg:flex',
             )}
           >

@@ -52,7 +52,7 @@ export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: st
   const hidden = parlay.legs.length - shown.length
 
   return (
-    <ListCard {...focusTarget(domId, titleId)} className="flex flex-col gap-2 lg:[column-span:all]">
+    <ListCard {...focusTarget(domId, titleId)} className="flex flex-col gap-2 lg:col-span-full">
       <div className="flex items-start justify-between gap-3">
         <IntentLink
           id={titleId}

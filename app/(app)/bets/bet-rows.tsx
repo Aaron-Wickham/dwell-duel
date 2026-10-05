@@ -10,10 +10,11 @@ import { cn } from '@/lib/utils'
 import { rowTitleClass } from '@/components/ui/page'
 import { formatDcAmount } from '@/lib/format/dc'
 
-// List cards on the page (D2), in two newspaper columns at lg, with a parlay spanning both (#393).
-// Columns rather than a grid: each card keeps its own height and the next one sits right under it,
-// so a tall card leaves no hole beside it. They read down the first column, then the second.
-export const betListClass = cn(listCardsClass, 'lg:block lg:columns-2 lg:gap-5 lg:*:mb-5 lg:*:break-inside-avoid')
+// List cards on the page (D2), two to a row at lg, with a parlay spanning both (#393). The cards in
+// a row stretch to one height, so a tall card leaves no hole beside the short one; they read left to
+// right, top to bottom, and Show more appends rows without moving a card already on screen, as
+// balanced CSS columns would (ST-5).
+export const betListClass = cn(listCardsClass, 'lg:grid lg:grid-cols-2 lg:items-stretch lg:gap-5')
 
 function Row({
   domId,

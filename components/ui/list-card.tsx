@@ -19,7 +19,7 @@ export const dividedRowClass = 'py-3.5'
 
 // A list item that opens one thing: its title is a `stretched-link`, and any other control sits in
 // a `relative z-[1]` wrapper. `tappable={false}` is a card that opens nothing, only holding its own
-// controls (a task's Submit), so it doesn't press.
+// controls (a pick in the slip), so it doesn't press.
 export function ListCard({ tappable = true, className, ...props }: LiHTMLAttributes<HTMLLIElement> & { tappable?: boolean }) {
   return <li className={cn(tappable ? tappableListCardClass : listCardClass, className)} {...props} />
 }

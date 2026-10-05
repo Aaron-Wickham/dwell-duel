@@ -344,14 +344,20 @@ full ledger) can see it.
 ## Tasks
 
 Admins keep a catalogue of Bible-study tasks, each with a DC reward.
+Tasks groups them by what you can do with each: **To do** (tasks you can
+submit now), **Waiting for review**, **Not approved** and **Done this
+week** (approved in the current period). A group with nothing in it
+isn't shown.
 
 - A task is **one-off** or **repeats** daily, weekly (Monday–Sunday
   weeks), monthly or yearly. Periods run on US Eastern time, so a daily
   task resets at **midnight Eastern**, a weekly one at midnight going into
   Monday, and so on. Once a repeating task is approved, its row says when
-  you can do it again ("Again Monday, midnight ET").
-- You submit a task once per period, with an optional note. Some tasks
-  **require proof**: a photo, file or link.
+  you can do it again ("Again Monday, midnight ET"), and it moves back to
+  To do then.
+- You submit a task once per period with **I did this**, adding an
+  optional note. Some tasks **require proof**: a photo, file or link (their
+  row says "Photo, file or link needed").
 - **Proof limits and expiry.** Proof is a photo, a PDF or a text file, or a
   link: up to 5 attachments, no more than 3 of them files, 3 MB a file and
   6 MB of files together. Photos are shrunk on your device before they upload.
@@ -364,11 +370,12 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   expiry the row still says how many attachments there were and that they've
   expired; links aren't files and stay.
 - A **reviewer** approves it, which pays the reward, or rejects it,
-  optionally saying why. Your row then says "Not approved", with the
-  reason if they gave one, and you can submit again. Nobody reviews their
+  optionally saying why. The task then moves to Not approved, with the
+  reason if they gave one, and **Try again** submits it again. Nobody reviews their
   own submission, and a task can reward at most 500 DC.
-- On Tasks, a submission waiting for review says **Pending review** until
-  it's approved, and its reward is paid then.
+- A submission waiting for review sits under **Waiting for review**,
+  saying when you sent it, until it's approved, and its reward is paid
+  then.
 - **Streaks:** do a repeating task in back-to-back periods and its row
   shows your streak, like "5-week streak", from two in a row. Only
   approved submissions count: one waiting for review joins the streak
@@ -462,9 +469,10 @@ bets yet." and shows only markets created and tasks completed.
 ## Reactions and comments
 
 - **Reactions:** on any item in the feed or in a member's activity, tap
-  🔥 🙏 😂 or 👏 to react, and tap it again to take it back. You can
-  give each of the four once per item. Everyone sees the counts, and
-  your own reactions are highlighted.
+  **React** (the smiley) and pick 🔥 🙏 😂 or 👏. You can give each of the
+  four once per item. An item shows only the reactions someone has given,
+  each with its count, and your own are highlighted; tap one of those to
+  add yours, or to take yours back.
 - **Comments:** every market has a short comment thread under its bets.
   A comment is up to 280 characters and shows its author and when it was
   posted, newest at the bottom. The latest 50 show first; "Show more"

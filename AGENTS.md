@@ -82,12 +82,12 @@ a line to `CHANGELOG.md` under the next release.
   / `md:p-4`, no shadow, tinting flush (`hover-tint [--tint-inset:0]`)
   rather than lifting. Its title link is a `stretched-link` and any other
   control sits in a `relative z-[1]` wrapper; a card whose only controls
-  are its own buttons (a task) passes `tappable={false}`. The list is
+  are its own controls (a pick in the slip) passes `tappable={false}`. The list is
   `listCardsClass` (`flex flex-col gap-2`, no dividers), with its `lg:`
   grid added at the call site. Something that isn't an `<li>` uses
-  `tappableListCardClass`. My bets, Tasks and Admin › Members are list
-  cards on the page; the leaderboard and Activity are divided rows on the
-  page; the admin queues, task catalog and categories, the ledger, coin
+  `tappableListCardClass`. My bets and Admin › Members are list cards on
+  the page; the leaderboard, Activity and Tasks' groups are divided rows
+  on the page; the admin queues, task catalog and categories, the ledger, coin
   history, invites, a market's bet list and Home's Your bets and Needs
   you are divided rows.
 - **A chip only when it adds information the context doesn't** (#387).
@@ -128,7 +128,8 @@ a line to `CHANGELOG.md` under the next release.
   at the call site. A standalone inline text link that acts as a primary
   tap target — a title link in a row, say — gets the `hit-area` utility:
   a 44px invisible tap area without growing the row. A link inside a
-  sentence doesn't need it. An action that swaps the pressed control
+  sentence doesn't need it, unless the sentence is the row's only tap
+  target, as a feed row's names are (#395). An action that swaps the pressed control
   for another (Add for Remove) moves focus to its replacement, and
   every sheet traps focus while it's open (#392).
 - **Links are underlined by default.** The base `a` rule underlines
@@ -437,7 +438,7 @@ a line to `CHANGELOG.md` under the next release.
   on its own. `FeedList` skips a kind it doesn't know, so a new kind reaches
   the database before the build that renders it without breaking the feed. No trigger watches `market_resolutions`. A feed
   row is a sentence, not a card: its member and market names are its links
-  and tap targets, and the row itself doesn't press, lift or open anything
+  and tap targets (each with `hit-area`), and the row itself doesn't press, lift or open anything
   (decided in #187), since one row can name two destinations.
 - **Members can't select `activity_feed`** since 0036. It stays only as
   the DB tests' equivalence oracle, and tests read it through the service

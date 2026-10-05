@@ -395,7 +395,7 @@ export function SlipPanel() {
       </ul>
       {(picks.length >= 2 || legs.length > 0) && (
         <p className="text-sm">
-          <Link href="/how-it-works#how-the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']}>
+          <Link href="/how-it-works#how-the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']} className="hit-area">
             How parlays pay
           </Link>
         </p>

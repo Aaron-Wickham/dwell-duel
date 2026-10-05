@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import { IntentLink } from '@/components/ui/intent-link'
 import { ListCard } from '@/components/ui/list-card'
 import { LocalTime } from '@/components/ui/local-time'
 import type { ParlayView } from '@/lib/parlays/list-parlays'
@@ -54,14 +54,14 @@ export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: st
   return (
     <ListCard {...focusTarget(domId, titleId)} className="flex flex-col gap-2 lg:col-span-full">
       <div className="flex items-start justify-between gap-3">
-        <Link
+        <IntentLink
           id={titleId}
           href={`/parlays/${parlay.id}`}
           transitionTypes={['nav-forward']}
           className={cn(rowTitleClass, 'stretched-link text-ink')}
         >
           Parlay · {parlay.legs.length} picks
-        </Link>
+        </IntentLink>
         <span className="shrink-0 text-sm whitespace-nowrap text-ink2">
           <span className="sr-only">Placed </span>
           <LocalTime iso={parlay.createdAt} format="day" />

@@ -88,25 +88,27 @@ describe('a page-level list is ListCards', () => {
     expect(container.querySelector('ul')).not.toHaveClass('divide-y')
   })
 
-  it('admin members, the same card at every width', () => {
+  // #399: admin members are data, so a table (divided rows on a phone), not cards.
+  it('admin members are table rows, not cards', () => {
     const { container: members } = render(
-      <ul>
-        <MemberRow
-          domId="member-m1"
-          now={Date.parse('2026-09-28T12:00:00Z')}
-          member={{ id: 'm1', displayName: 'Grace', avatarSrc: null, email: 'g@example.com', balance: 90, role: 'member', joinedAt: null, lastSignInAt: null, removed: false }}
-        />
-      </ul>,
+      <table>
+        <tbody>
+          <MemberRow
+            domId="member-m1"
+            netWorth={120}
+            member={{ id: 'm1', displayName: 'Grace', avatarSrc: null, email: 'g@example.com', balance: 90, role: 'member', joinedAt: null, lastSignInAt: null, removed: false }}
+          />
+        </tbody>
+      </table>,
     )
-    const card = members.querySelector('li')
-    expectListCard(card)
-    expect(card).not.toHaveClass('lg:rounded-card', 'lg:shadow-card', 'lg:hover-lift')
+    const row = members.querySelector('tr')!
+    expect(row).not.toHaveClass('rounded-tile')
+    expect(row).not.toHaveClass('hover-lift')
   })
 
   it('sit on the page per the approved grid, spaced with no dividers or card around them', () => {
     const lists: [string, RegExp][] = [
       ['app/(app)/bets/bet-rows.tsx', /lg:grid-cols-2/],
-      ['app/(app)/admin/(sections)/members/page.tsx', /lg:grid-cols-3/],
     ]
     for (const [file, grid] of lists) {
       const text = source(file)
@@ -150,7 +152,8 @@ describe('a list inside a SectionCard is divided rows', () => {
     expectDividedRow(container.querySelector('li'))
   })
 
-  it('pending approvals, with a row’s Approve still the first one', () => {
+  // #399: a table (divided rows on a phone), with the bulk bar above it.
+  it('pending approvals, as divided table rows, each with its own Approve', () => {
     const { container } = render(
       <PendingApprovals
         viewerId="p-me"
@@ -169,9 +172,9 @@ describe('a list inside a SectionCard is divided rows', () => {
         ]}
       />,
     )
-    expectDividedRow(container.querySelector('li'))
-    expect(container.querySelector('ul')).toHaveClass('divide-y')
-    expect(screen.getAllByRole('button', { name: /^Approve/ })[0]).toHaveAccessibleName('Approve Alice’s Read Genesis 1-3')
+    expect(container.querySelector('tbody')).toHaveClass('divide-y')
+    expect(container.querySelector('tbody tr')).not.toHaveClass('rounded-tile')
+    expect(screen.getAllByRole('button', { name: /^Approve(?! selected)/ })[0]).toHaveAccessibleName('Approve Alice’s Read Genesis 1-3')
   })
 
 

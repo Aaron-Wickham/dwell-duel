@@ -187,13 +187,15 @@ const CASES: [string, () => ReactElement][] = [
   [
     'MemberRow',
     () => (
-      <ul>
-        <MemberRow
-          domId="member-m1"
-          now={Date.parse('2026-09-28T12:00:00Z')}
-          member={{ id: 'm1', displayName: 'Grace', avatarSrc: null, email: 'g@example.com', balance: 90, role: 'member', joinedAt: null, lastSignInAt: null, removed: false }}
-        />
-      </ul>
+      <table>
+        <tbody>
+          <MemberRow
+            domId="member-m1"
+            netWorth={120}
+            member={{ id: 'm1', displayName: 'Grace', avatarSrc: null, email: 'g@example.com', balance: 90, role: 'member', joinedAt: null, lastSignInAt: null, removed: false }}
+          />
+        </tbody>
+      </table>
     ),
   ],
   [

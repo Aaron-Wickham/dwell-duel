@@ -134,7 +134,7 @@ export default function HowItWorksPage() {
           ))}
         </div>
       </section>
-      <Link href="/how-it-works/rules" transitionTypes={['nav-forward']} className="hit-area self-start font-bold">
+      <Link href="/how-it-works/rules" transitionTypes={['nav-forward']} className="hit-area pressable self-start font-bold">
         Read the full rules
       </Link>
     </Page>

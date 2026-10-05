@@ -271,7 +271,7 @@ export function PendingApprovals({
                   )}
                 </td>
                 <td role="cell" className={`${cellClass} max-lg:col-start-2 max-lg:row-start-1 max-lg:pt-2.5`}>
-                  <Link href={`/members/${c.submitterId}`} transitionTypes={['nav-forward']} className="hit-area font-extrabold text-ink">
+                  <Link href={`/members/${c.submitterId}`} transitionTypes={['nav-forward']} className="hit-area pressable font-extrabold text-ink">
                     {c.submitterName}
                   </Link>
                 </td>

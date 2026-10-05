@@ -63,7 +63,7 @@ export function MemberRow({ member, domId, netWorth }: { member: MemberSummary; 
             id={titleId}
             href={`/admin/members/${member.id}`}
             transitionTypes={['nav-forward']}
-            className="hit-area self-start font-extrabold break-words text-ink"
+            className="hit-area pressable self-start font-extrabold break-words text-ink"
           >
             {member.displayName}
           </Link>

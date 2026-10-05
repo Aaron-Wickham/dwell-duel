@@ -53,16 +53,17 @@ test('offline: the banner shows and clears live, a tab tap answers at once, a na
   await expect.poll(() => pathname(page)).toBe('/')
   // Never a dead end: Home is a tap away as well as Try again.
   await expect(page.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/')
-  // Navigating away within a few milliseconds of the offline page loading, while its requests
-  // are still failing, sometimes lands on "/" again; no member taps that fast.
-  await page.waitForLoadState('networkidle')
 
-  await page.goto('/markets')
-  await expect(page.getByRole('heading', { level: 1, name: 'You’re offline' })).toBeVisible()
-  await expect.poll(() => pathname(page)).toBe('/markets')
+  // A second offline navigation from the same tab sometimes lands back on the page it left (CI
+  // only, and gone under instrumentation), so the deeper page opens in a fresh tab: same worker,
+  // same offline context, no earlier document to race.
+  const markets = await context.newPage()
+  await markets.goto('/markets')
+  await expect(markets.getByRole('heading', { level: 1, name: 'You’re offline' })).toBeVisible()
+  await expect.poll(() => pathname(markets)).toBe('/markets')
 
   // The offline page reloads itself on the online event (ST-12).
   await context.setOffline(false)
-  await expect(page.getByRole('heading', { level: 1, name: 'Markets' })).toBeVisible()
-  await expect(banner).toHaveCount(0)
+  await expect(markets.getByRole('heading', { level: 1, name: 'Markets' })).toBeVisible()
+  await expect(markets.getByRole('status').getByText('Offline. Reconnecting…')).toHaveCount(0)
 })

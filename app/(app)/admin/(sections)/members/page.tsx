@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
-import { countMembers, listMembersPage } from '@/lib/members/list-members'
+import { countMembers, listMembersByNetWorth, listMembersByValue, listMembersPage } from '@/lib/members/list-members'
+import { MEMBER_SORTS, canSort, nextOrder, orderLabel, orderParams, readMemberOrder, type MemberOrder } from '@/lib/members/member-sort'
 import { readNetWorths } from '@/lib/members/net-worth'
+import { readValuePageParams } from '@/lib/pagination/value-cursor'
+import type { DbClient } from '@/lib/supabase/database'
 import { newestHref, showMoreHref, type SearchParams } from '@/lib/pagination/cursor'
 import { readNamePageParams } from '@/lib/pagination/name-cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
@@ -21,15 +24,31 @@ import { MemberRow, MembersTableHead, membersBodyClass, membersTableClass } from
 const PATH = '/admin/members'
 const ROW_ID_PREFIX = 'member'
 
-// The page's own URL with some of its params changed: a tab or search starts its list from the top.
+// The page's own URL with some of its params changed: a tab, search or sort starts its list from the top.
 function hrefWith(searchParams: SearchParams, changes: Record<string, string | null>): string {
   const query = new URLSearchParams()
-  for (const key of ['q', 'show']) {
+  for (const key of ['q', 'show', 'sort', 'dir']) {
     const value = key in changes ? changes[key] : searchParams[key]
     if (typeof value === 'string' && value !== '') query.set(key, value)
   }
   const search = query.toString()
   return search ? `${PATH}?${search}` : PATH
+}
+
+async function readPage(supabase: DbClient, searchParams: SearchParams, query: string, removed: boolean, order: MemberOrder) {
+  if (order.sort === 'name') {
+    const list = await listMembersPage(supabase, { query, removed, page: readNamePageParams(searchParams, 'after') })
+    return { list, netWorths: await readNetWorths(supabase, list.rows.map((m) => m.id)) }
+  }
+  const ascending = order.dir === 'asc'
+  if (order.sort === 'net_worth') {
+    const list = await listMembersByNetWorth(supabase, { query, ascending, page: readValuePageParams(searchParams, 'after', 'integer') })
+    return { list, netWorths: list.netWorths }
+  }
+  const column = order.sort === 'balance' ? 'balance' : 'joined_at'
+  const page = readValuePageParams(searchParams, 'after', column === 'balance' ? 'integer' : 'timestamp')
+  const list = await listMembersByValue(supabase, { query, removed, column, ascending, page })
+  return { list, netWorths: await readNetWorths(supabase, list.rows.map((m) => m.id)) }
 }
 
 export default async function AdminMembersPage(props: PageProps<'/admin/members'>) {
@@ -40,16 +59,18 @@ export default async function AdminMembersPage(props: PageProps<'/admin/members'
 
   const query = readSearchQuery(searchParams.q)
   const removed = searchParams.show === 'removed'
-  const [list, counts] = await Promise.all([
-    listMembersPage(supabase, { query, removed, page: readNamePageParams(searchParams, 'after') }),
-    countMembers(supabase, query),
-  ])
-  const netWorths = await readNetWorths(
-    supabase,
-    list.rows.map((m) => m.id),
-  )
+  const order = readMemberOrder(searchParams, removed)
+  const [{ list, netWorths }, counts] = await Promise.all([readPage(supabase, searchParams, query, removed, order), countMembers(supabase, query)])
   const backToStartHref = newestHref(PATH, searchParams, 'after')
   const tabCount = removed ? counts.removed : counts.active
+  const sortHrefs = Object.fromEntries(
+    MEMBER_SORTS.filter((sort) => canSort(sort, removed)).map((sort) => {
+      const next = nextOrder(order, sort)
+      return [sort, { href: hrefWith(searchParams, orderParams(next)), next: next.dir }]
+    }),
+  )
+  const keep: Record<string, string> = {}
+  for (const [key, value] of Object.entries({ show: removed ? 'removed' : null, ...orderParams(order) })) if (value) keep[key] = value
 
   return (
     <ContentReveal>
@@ -61,7 +82,7 @@ export default async function AdminMembersPage(props: PageProps<'/admin/members'
               label="Search members"
               placeholder="Name or email"
               value={query}
-              keep={removed ? { show: 'removed' } : {}}
+              keep={keep}
             />
           </div>
           <SubNav
@@ -81,7 +102,6 @@ export default async function AdminMembersPage(props: PageProps<'/admin/members'
           title={removed ? 'Removed members' : 'Members'}
           titleId="members-title"
           description={removed ? 'They can’t sign in and aren’t ranked. Their coins, bets and history stay.' : undefined}
-          action={removed ? undefined : <span className="text-sm text-ink2">A–Z</span>}
         >
           {list.windowed && list.rows.length > 0 && (
             <div className="flex flex-col">
@@ -104,8 +124,10 @@ export default async function AdminMembersPage(props: PageProps<'/admin/members'
             </div>
           ) : (
             <table role="table" className={membersTableClass}>
-              <caption className="sr-only">{removed ? 'Removed members' : 'Members'}, A–Z</caption>
-              <MembersTableHead />
+              <caption className="sr-only">
+                {removed ? 'Removed members' : 'Members'}, {orderLabel(order)}
+              </caption>
+              <MembersTableHead order={order} sortHrefs={sortHrefs} />
               <tbody role="rowgroup" className={membersBodyClass}>
                 {list.rows.map((m) => (
                   <MemberRow key={m.id} member={m} domId={rowDomId(ROW_ID_PREFIX, m.id)} netWorth={netWorths.get(m.id)} />

@@ -89,3 +89,22 @@ test('Show more on the admin ledger appends older rows in place, and a reload ke
   await expect(row('09')).toBeVisible()
   await expect(row('00')).toBeVisible()
 })
+
+// #418: the ledger's filters live in the URL and narrow the query.
+test('the ledger filters by member and kind', async ({ page }) => {
+  await page.goto('/admin/ledger')
+  const ledger = page.getByRole('region', { name: 'Every coin movement' })
+  await ledger.getByRole('combobox', { name: 'Member' }).selectOption({ label: 'Bob' })
+  await ledger.getByRole('combobox', { name: 'Kind' }).selectOption({ label: 'Starting grant' })
+  await ledger.getByRole('button', { name: 'Filter' }).click()
+  await expect(page).toHaveURL(/\/admin\/ledger\?member=[0-9a-f-]+&kind=starting_grant$/)
+  const bob = page.getByRole('region', { name: 'Bob’s coin movements' })
+  await expect(bob.getByRole('listitem')).toHaveCount(1)
+  await expect(bob.getByRole('listitem')).toContainText('Starting grant')
+
+  await bob.getByRole('combobox', { name: 'Kind' }).selectOption({ label: 'Bet cancelled' })
+  await bob.getByRole('button', { name: 'Filter' }).click()
+  await expect(page.getByText('No “Bet cancelled” movements for Bob.')).toBeVisible()
+  await page.getByRole('link', { name: 'Show every kind' }).click()
+  await expect(bob.getByRole('combobox', { name: 'Kind' })).toHaveValue('')
+})

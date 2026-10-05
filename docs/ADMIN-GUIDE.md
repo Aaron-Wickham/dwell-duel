@@ -213,7 +213,8 @@ back). The owner can also **Delete** a task nobody has submitted yet.
 
 **Admin → Tasks → To review** lists submissions oldest first, 50 at
 a time, with **Show more** for the rest. On a computer it's a table (member,
-task and reward, proof, when it was sent); on a phone, one compact row each.
+task and reward, proof, when it was sent); on a phone, one compact row each,
+about five to a screen.
 Tap a row's proof line ("Note · 1 photo") to read their note and open any
 proof.
 
@@ -223,7 +224,7 @@ proof.
   submit again.
 - The bar at the top of the queue stays in view as you scroll. **Select
   all**, or tick several, and it says how many are selected and what they
-  pay. **Approve selected** asks first, saying how many it approves and how
+  pay. On a phone its buttons appear once something is ticked. **Approve selected** asks first, saying how many it approves and how
   much it pays; **Reject selected…** asks for one optional reason, sent to
   each of them.
 - **Your own submissions** are in the list but can't be reviewed by you;
@@ -236,8 +237,11 @@ at it when you review.
 
 **Admin → Members** lists everyone, A to Z, in two tabs: **Active** and
 **Removed**: on a computer a table of name and email, role, balance, net
-worth (balance plus DC riding on open bets) and when they joined. Search
-finds a member by name or email. A member's name opens their Admin page:
+worth (balance plus DC riding on open bets) and when they joined. Tap
+**Balance**, **Net worth** or **Joined** above the list to sort by it
+(highest or newest first; tap again for the other way), and **Member** to go
+back to A to Z. Net worth sorts the Active tab only. Search finds a member by
+name or email, and keeps the sort. A member's name opens their Admin page:
 their email, when they joined and last signed in, their balance and their
 last five coin movements (**Open in Ledger** shows all of them), then the
 owner's cards below, with Access last. Admins can look; the cards are the
@@ -286,8 +290,9 @@ Removing a member doesn't erase their data. If someone asks for that, see
 ## Ledger and the Economy card
 
 **Admin → Ledger** lists every DC movement, newest first: starting grants,
-bets, payouts, refunds, parlays, task rewards and adjustments. From a
-member's page, **Open in Ledger** narrows it to them.
+bets, payouts, refunds, parlays, task rewards and adjustments. Pick a
+**Member** and a **Kind** above the list and tap **Filter** to see only
+those; from a member's page, **Open in Ledger** narrows it to them.
 
 The **Economy card** above it (owner only) shows the DC in circulation
 (balances plus stakes still riding) and this month's DC added and removed,

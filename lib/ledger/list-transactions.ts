@@ -13,7 +13,7 @@ export interface LedgerEntry {
   createdAt: string
 }
 
-const TYPE_LABELS: Record<string, string> = {
+export const TYPE_LABELS: Record<string, string> = {
   bet_placed: 'Bet placed',
   bet_won: 'Bet won',
   bet_refunded: 'Bet refunded',
@@ -141,12 +141,21 @@ type TransactionRecord = {
 
 const ledgerKey = (t: { id: number; created_at: string }): Cursor => ({ ts: t.created_at, id: String(t.id) })
 
+// Admin › Ledger's filters (#418): one member's movements, one kind of movement, or both.
+export type LedgerFilters = { memberId?: string; type?: string }
+
+export function isLedgerType(type: unknown): type is string {
+  return typeof type === 'string' && Object.hasOwn(TYPE_LABELS, type)
+}
+
 // The range read and its key probe share one builder, so the two can't drift apart on order. Its column list is a runtime string, so
 // the generated types can't follow it, and each reader casts its rows. A member filter reads
-// through coin_transactions_profile_created_idx (0048), the same index a member's own history uses.
-function ledgerQuery(supabase: DbClient, columns: string, filter: string | null, limit: number, memberId?: string) {
+// through coin_transactions_profile_created_idx (0048), the same index a member's own history uses;
+// a kind alone walks coin_transactions_created_idx, newest first, until a page of it turns up.
+function ledgerQuery(supabase: DbClient, columns: string, filter: string | null, limit: number, filters: LedgerFilters = {}) {
   let query = supabase.from('coin_transactions').select(columns)
-  if (memberId) query = query.eq('profile_id', memberId)
+  if (filters.memberId) query = query.eq('profile_id', filters.memberId)
+  if (filters.type) query = query.eq('type', filters.type)
   if (filter) query = query.or(filter)
   return query.order('created_at', { ascending: false }).order('id', { ascending: false }).limit(limit)
 }
@@ -165,23 +174,23 @@ async function toEntries(supabase: DbClient, rows: TransactionRecord[]): Promise
   }))
 }
 
-// Every coin movement, or one member's when `memberId` is given (Admin › Ledger's ?member=).
+// Every coin movement, or those `filters` narrow it to (Admin › Ledger's ?member= and ?kind=).
 export async function listAllTransactions(
   supabase: DbClient,
   page: PageParams,
-  memberId?: string,
+  filters: LedgerFilters = {},
 ): Promise<KeysetPage<LedgerEntry>> {
   const result = await readKeyset(
     page,
     LEDGER_KEYS,
     async (filter, limit) => {
-      const { data, error } = await ledgerQuery(supabase, LEDGER_COLUMNS, filter, limit, memberId)
+      const { data, error } = await ledgerQuery(supabase, LEDGER_COLUMNS, filter, limit, filters)
       if (error) throw error
       return (data ?? []) as unknown as TransactionRecord[]
     },
     ledgerKey,
     async (filter, limit) => {
-      const { data, error } = await ledgerQuery(supabase, 'id, created_at', filter, limit, memberId)
+      const { data, error } = await ledgerQuery(supabase, 'id, created_at', filter, limit, filters)
       if (error) throw error
       return ((data ?? []) as unknown as { id: number; created_at: string }[]).map(ledgerKey)
     },
@@ -191,7 +200,7 @@ export async function listAllTransactions(
 
 // A member's latest few movements, for their Admin page.
 export async function listMemberTransactions(supabase: DbClient, memberId: string, limit: number): Promise<LedgerEntry[]> {
-  const { data, error } = await ledgerQuery(supabase, LEDGER_COLUMNS, null, limit, memberId)
+  const { data, error } = await ledgerQuery(supabase, LEDGER_COLUMNS, null, limit, { memberId })
   if (error) throw error
   return toEntries(supabase, (data ?? []) as unknown as TransactionRecord[])
 }

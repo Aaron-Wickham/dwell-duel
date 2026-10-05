@@ -97,6 +97,22 @@ describe('listAllTransactions', () => {
     expect(rows).toContainEqual(expect.objectContaining({ context: 'Bet won: Will it rain?' }))
   })
 
+  // #418: Admin › Ledger's filter by member and by kind, applied in the query and kept while paging.
+  it('narrows to one kind, one member, or both, and pages within the filter', async () => {
+    await insertLedgerRows(60)
+    const grants = await listAllTransactions(adminClient, FIRST, { type: 'starting_grant' })
+    expect(grants.rows.map((r) => r.profileId).sort()).toEqual([admin.id, bob.id].sort())
+    expect((await listAllTransactions(adminClient, FIRST, { memberId: admin.id, type: 'admin_adjustment' })).rows).toEqual([])
+
+    const filters = { memberId: bob.id, type: 'admin_adjustment' }
+    const first = await listAllTransactions(adminClient, FIRST, filters)
+    expect(first.rows).toHaveLength(50)
+    expect(first.rows.every((r) => r.type === 'Admin adjustment' && r.profileId === bob.id)).toBe(true)
+    const rest = await listAllTransactions(adminClient, readPageParams(follow(first, { member: bob.id, kind: 'admin_adjustment' }), 'before'), filters)
+    expect(rest.rows).toHaveLength(60)
+    expect(rest.next).toBeNull()
+  })
+
   it('pages 50 at a time, and each Show more extends the range with nothing skipped or repeated', async () => {
     await insertLedgerRows(120)
     const everything = await allIdsNewestFirst()

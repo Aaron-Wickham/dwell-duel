@@ -48,10 +48,11 @@ export function newerThanFilter(cols: KeyColumns, cursor: Cursor): string {
 
 // How a list's keys become PostgREST filters. `range` is every row from `bottom` (where an
 // extended range ends) up to `top` (where a fresh window starts), both inclusive and either
-// optional; `after` is every row strictly after a key in the list's order.
-export type KeysetOrder<Key> = {
-  range: (page: { top: Key | null; bottom: Key | null }) => string | null
-  after: (key: Key) => string
+// optional; `after` is every row strictly after a key in the list's order. A list sorted in memory
+// (value-cursor.ts) passes predicates as its Filter instead of filter strings.
+export type KeysetOrder<Key, Filter = string> = {
+  range: (page: { top: Key | null; bottom: Key | null }) => Filter | null
+  after: (key: Key) => Filter
   encode: (key: Key) => string
 }
 
@@ -59,12 +60,12 @@ export type KeysetOrder<Key> = {
 // nothing else, and the full row select can carry embeds that cost a join per row. Without it
 // the probe falls back to fetchRows. pageSize is how many rows the first page and each "Show
 // more" add; a section that sits above others on its page can ask for fewer.
-export async function readOrdered<Row, Key extends { id: string }>(
+export async function readOrdered<Row, Key extends { id: string }, Filter = string>(
   page: { top: Key | null; bottom: Key | null },
-  order: KeysetOrder<Key>,
-  fetchRows: (filter: string | null, limit: number) => Promise<Row[]>,
+  order: KeysetOrder<Key, Filter>,
+  fetchRows: (filter: Filter | null, limit: number) => Promise<Row[]>,
   keyOf: (row: Row) => Key,
-  fetchKeys?: (filter: string, limit: number) => Promise<Key[]>,
+  fetchKeys?: (filter: Filter, limit: number) => Promise<Key[]>,
   windowCap: number = WINDOW_CAP,
   pageSize: number = PAGE_SIZE,
 ): Promise<KeysetPage<Row>> {

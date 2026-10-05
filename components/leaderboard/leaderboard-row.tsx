@@ -4,6 +4,7 @@ import { focusTarget } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
 import { StatusChip } from '@/components/ui/status-chip'
 import { formatDc } from '@/lib/format/dc'
+import { rowTitleClass } from '@/components/ui/page'
 
 // Your own row, and the bar standing in for it, stick to the bottom of the viewport, above the
 // phone's tab bar, until the page scrolls them into their place.
@@ -62,7 +63,7 @@ export function LeaderboardRow({
     >
       <RankNumber rank={rank} />
       <Avatar name={name} src={avatarSrc} size="sm" />
-      <span className="flex min-w-0 grow items-baseline gap-1 font-extrabold">
+      <span className={cn(rowTitleClass, 'flex min-w-0 grow items-baseline gap-1')}>
         <IntentLink href={href} transitionTypes={['nav-forward']} className="stretched-link min-w-0 truncate text-ink no-underline">
           {name}
         </IntentLink>

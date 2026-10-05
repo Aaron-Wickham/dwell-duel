@@ -352,7 +352,7 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
 - On Tasks, a submission waiting for review says **Pending review** until
   it's approved, and its reward is paid then.
 - **Streaks:** do a repeating task in back-to-back periods and its row
-  shows your streak, like "🔥 5-week streak", from two in a row. Only
+  shows your streak, like "5-week streak", from two in a row. Only
   approved submissions count: one waiting for review joins the streak
   once it's approved. The streak lasts until the end of the current
   period, so a daily streak survives today until midnight even if you

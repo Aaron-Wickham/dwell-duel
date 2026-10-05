@@ -3,6 +3,7 @@ import { gapLine } from '@/components/leaderboard/your-standing'
 import { RankNumber, scoreText, stickyMineClass } from '@/components/leaderboard/leaderboard-row'
 import type { YourStanding } from '@/lib/social/leaderboard'
 import { cn } from '@/lib/utils'
+import { rowTitleClass } from '@/components/ui/page'
 
 // The phone's stand-in for your own row while it's further down the board than the page shows: it
 // sits after the rankings and sticks to the bottom of the viewport (#396), with "Jump to me" to
@@ -16,7 +17,7 @@ export function StandingCompact({ standing, jump }: { standing: YourStanding; ju
       </h2>
       <RankNumber rank={standing.rank} label={`Rank ${standing.rank} of ${standing.memberCount}`} />
       <div className="flex min-w-0 grow flex-col">
-        <span className="font-extrabold">You</span>
+        <span className={rowTitleClass}>You</span>
         {gap && <span className="truncate text-sm text-ink2">{gap}</span>}
       </div>
       <span className="shrink-0 font-extrabold whitespace-nowrap tabular-nums">

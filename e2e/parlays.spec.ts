@@ -53,8 +53,8 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   const placed = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: titles[0] }).first()
   await expect(placed.getByText(multiplier, { exact: true })).toBeVisible()
   await expect(placed.getByText(`${quote.payout} DC`, { exact: true })).toBeVisible()
-  // The parlay's chip and both of its legs.
-  await expect(placed.getByText('Open', { exact: true })).toHaveCount(3)
+  // Both legs; the Open tab already says the parlay is open, so it carries no chip of its own (#387).
+  await expect(placed.getByText('Open', { exact: true })).toHaveCount(2)
 
   // The card opens the parlay's breakdown, and the way back is My bets.
   await placed.getByRole('link', { name: 'Parlay · 2 picks' }).click()

@@ -46,7 +46,8 @@ test('markets search by title, narrow to a category, and clear', async ({ page }
   await expect(page).toHaveURL(new RegExp(`q=${word}&category=${category.toLowerCase().replace(' ', '-')}$`))
   await expect(chips.getByRole('link', { name: category })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByText(`Showing markets in ${category}`)).toBeVisible()
-  await expect(page.getByRole('article').filter({ hasText: title })).toContainText(category)
+  // Filtered to a category, the card drops its category chip: the filter already says it (#387).
+  await expect(page.getByRole('article').filter({ hasText: title })).toBeVisible()
   await chips.getByRole('link', { name: 'All', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`/markets\\?q=${word}$`))
 

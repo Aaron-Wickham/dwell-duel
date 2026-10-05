@@ -327,7 +327,7 @@ spending coins should get a trigger and a `write_limits()` row.
   keyed `void:<market id>`, with the reason read from `markets.void_reason`.
   Neither has a row in `activity_feed`, so the DB tests' equivalence check
   leaves them out. `actor_id` cascades, so a champion's events go with
-  their profile. `FeedList` skips any kind missing from its `EVENT_ICONS`,
+  their profile. `FeedList` skips any kind missing from its `KNOWN_KINDS`,
   so a kind added by a migration can't break a build that predates it.
 - `feed_reactions` (0053): one row per member, event and kind (`fire`,
   `pray`, `laugh`, `clap`), keyed `(event_id, profile_id, kind)` and
@@ -499,7 +499,7 @@ a failed push is due again next run.
 members' pending task submissions for a reviewer and above, closed unresolved
 markets for an admin and above.
 
-The leaderboard's extras (0059, `lib/social/leaderboard-extras.ts`) sit on the This month tab and the rows: `leaderboard_race_steps(p_top)` (0062: the top members' running profit from the month's first settled bet, one step per moment a total moved, capped at 120 steps; drawn by `RaceChart` as step lines, with `race-layout.ts` choosing the scale, clipping a runaway leader or last place and placing the end labels; the chart is a keyboard slider over the moments with a polite live region reading out the totals), `leaderboard_awards()` (four awards for the month), `member_records(ids)` (the W-L chip, read for the page's rows in chunks) and the past champions from the `season_champion` events. The top of either board also shows a `Podium`.
+The leaderboard's extras (0059, `lib/social/leaderboard-extras.ts`) sit on the This month tab and the rows: `leaderboard_race_steps(p_top)` (0062: the top members' running profit from the month's first settled bet, one step per moment a total moved, capped at 120 steps; drawn by `RaceChart` as step lines, with `race-layout.ts` choosing the scale, clipping a runaway leader or last place and placing the end labels; the chart is a keyboard slider over the moments with a polite live region reading out the totals), `leaderboard_awards()` (four awards for the month), `member_records(ids)` (the W-L chip, read for the page's rows in chunks) and the past champions from the `season_champion` events. The top of the Net worth board also shows a `Podium`; This month leads with the race.
 
 The leaderboard (0051) reads two boards through `rpc()`, each returning
 `id, display_name, avatar_path, score, rank` with a competition rank over

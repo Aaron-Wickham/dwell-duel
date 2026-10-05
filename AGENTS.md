@@ -363,7 +363,9 @@ a line to `CHANGELOG.md` under the next release.
   its title. The page renders one `<ShowMoreFocus />`, and a window that
   comes back empty renders `NothingOlder` instead of the list's empty
   state. A reader whose row select carries embeds passes `readKeyset` a
-  keys-only `fetchKeys` for its probe. An order that isn't
+  keys-only `fetchKeys` for its probe. A page is 50 rows (`PAGE_SIZE`); a
+  list with sections under it on the same page can pass a smaller page
+  size, as a market's bets do (10, #390). An order that isn't
   `(timestamp, id)` — the leaderboard's rank — reads through
   `readOrdered` with its own `KeysetOrder`, `lib/pagination/rank-cursor.ts`'s
   `RANK_ORDER`, instead of `readKeyset`.

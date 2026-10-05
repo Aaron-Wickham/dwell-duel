@@ -22,7 +22,7 @@ The mockup is a Design canvas:
 | Home; P1004-Home* (Proposals · Oct 4, #388) | `app/(app)/(home)/page.tsx` |
 | Markets | `app/(app)/markets/(list)` |
 | CreateMarket | `app/(app)/markets/new` |
-| Market (open, creator), MarketFull (slip full), MarketResolved (admin override) | `app/(app)/markets/[id]` |
+| Market (open, creator), MarketFull (slip full), MarketResolved (admin override); P1004-Market* (Proposals · Oct 4, #390) | `app/(app)/markets/[id]` |
 | MyBets (solo bets and parlays, Open · Settled · Cancelled) | `app/(app)/bets` (`/parlays` redirects here) |
 | Settings | `app/(app)/settings` |
 | Launch (System page: launch animation frames) | `components/brand/launch-screen.tsx` |
@@ -129,7 +129,7 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 | Page | Width | At `lg:` |
 |---|---|---|
 | Markets | wide | One filter row: the Open / Waiting / Resolved tabs, then the search field at the right (on a phone, a 44px search icon beside the tabs that opens the field below them). Category chips under it only while more than one category holds markets. Then three columns of market cards, each row's cards one height with their meta line at the bottom. |
-| Market | wide | Chart and outcomes (7fr) beside betting, resolution and the rest (5fr). |
+| Market | wide | The chart, then Comments, then Bets (7fr) beside a rail (5fr) holding the outcomes, Your position and, for whoever may, the Resolve, Void and Delete cards. The rail sticks below the top bar unless it holds those cards, which could be taller than the screen. See *Market page* below. |
 | Leaderboard | wide | The rankings are divided rows on the page (#396): a plain rank number (a lime badge only for first), a 32px avatar, the name on one line (truncated, never broken), the score right-aligned in tabular figures with no unit shown, and the win–loss chip from `md:`. A line under them says what the score is. Your own row is `--acc-soft` and sticks to the bottom of the viewport (above the tab bar) until you scroll to it; when it's further down than the page shows, a sticky "You" bar with Jump to me stands in for it on a phone. Net worth: rankings (7fr) beside a side column (5fr) that sticks below the top bar, holding the podium (no card, so it never stretches across the page) and Your standing with Jump to me; on a phone the podium sits above the rankings. This month has no podium: the race chart leads, full width, then rankings (7fr) beside the awards and past champions (5fr), which follow the rankings on a phone. |
 | Activity (`/feed`) | reading | One centred stream. |
 | My bets | wide | Open, Settled and Cancelled show bets as list cards on the page in three columns, with no card around them (D2); Settled and Cancelled show each bet's result at the bottom of its card, and Open shows none. Coins is divided rows on the page. |
@@ -137,7 +137,7 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 | Edit profile | wide | Photo and a live preview of the profile (5fr) beside name, bio and Save (7fr). |
 | Settings | wide | Two columns of section cards: Appearance, Profile, Haptics & motion; then Notifications, Help, Account. |
 | How it works | reading | A sticky contents list (200px) beside the rules (about 68 characters a line). |
-| Create market | wide | The form (7fr) beside a live preview of its market card (5fr). The type is three option cards, Yes/No, Multiple choice and Over/Under, each with a line saying what it asks: stacked on a phone, in a row from `lg:`. The chosen card is `acc-soft` with an `acc-text` border and dot; the native radio covers each card, transparent (#352). |
+| Create market | wide | The form (7fr) beside a live preview of its market card (5fr). The fields run Title (with an example placeholder), Type, Outcomes or Line, Close time, Category, then Details (optional); under them, beside Create market, one line says what can't change later (#390). The type is three option cards, Yes/No, Multiple choice and Over/Under, each with a line saying what it asks: stacked on a phone, in a row from `lg:`. The chosen card is `acc-soft` with an `acc-text` border and dot; the native radio covers each card, transparent (#352). |
 | Parlay | wide | Picks (7fr) beside the summary and How it adds up (5fr). |
 | Admin › Members | wide | The Members heading, then a list card per member on the page in three columns (D2). |
 | Tasks | wide | Task cards on the page, with no card around them (D2), in two columns, each with its action on the right. |
@@ -148,8 +148,16 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 
 - **wide** is `max-w-[1280px]`: a 1120px content column inside the 80px padding.
 - **reading** is `max-w-[980px]`: about 820px of content, centred, for a single stream or long text.
-- Side-by-side columns are `minmax(0,7fr)` / `minmax(0,5fr)` (or the reverse), `items-start`, so each card is as tall as its content. Where the phone order differs from the columns, the grid places items (`lg:col-start-*`, `lg:row-start-*`) rather than reordering the markup.
+- Side-by-side columns are `minmax(0,7fr)` / `minmax(0,5fr)` (or the reverse), `items-start`, so each card is as tall as its content. Where the phone order differs from the columns, the grid places items (`lg:col-start-*`, `lg:row-start-*`) rather than reordering the markup. The market page is the one exception: its sticky rail needs a single box, so the markup is rail first and, on a phone, both columns are `display: contents` and each section's wrapper takes an `order-*`.
 - A route's `loading.tsx` skeleton follows the same width and columns.
+
+## Market page (#390)
+
+- **Header:** the back link, and on the right a 44px "More actions" button (Base UI Menu, like the avatar's) holding Share, Duplicate, Edit (or Edit category), Reopen when the market can be reopened, and Edit history when it has been edited (a dialog listing every past version). Then the `h1` and one meta line: "Closes Sun 12:00 PM · by Ben Turner", "Closed…", "Resolved Oct 4" or "Voided Oct 4", plus " · Church" while more than one category holds markets. The creator alone sees their own stake under it ("You have 40 DC on Yes."), with who resolves it when that stake stops them. The description follows. No status or over/under chips.
+- **Outcomes** come first on a phone and top the rail from `lg:`. Each row is the name, "10 DC wins 16" under it (the slip's own `soloPays` quote, so the two never differ), the chance as a figure on the right, and Add (named "Add Yes to slip"); in the slip, the line reads "In your slip" and the button Remove. No pool DC, no multiplier, no per-row parlay line. When parlays ride on the market, one muted line under the rows: "Includes 14 DC riding in parlays. How parlays pay".
+- **Settled:** a resolved market says "Yes won" once, in a `--win-soft` block at the top of the outcomes, with the actual number for an over/under, when bets are paid, the resolver's note and proof, and "Changed from No" after an override; the winning row carries a Won chip and the rest are muted at their final chance. A voided market says "This market was voided. Every bet was refunded, and parlays dropped this pick." with the reason. A closed market waiting on its result says so in one line. No "No more bets" card.
+- **Phone order:** outcomes, chart ("Yes over time" for two outcomes, "Chance over time" otherwise), Your position (its 2px ink border kept), then the Resolve and Void cards while the market waits on a result, Comments, Bets (the latest 10, then Show more; names are links in `--ink2`), and any Resolve, Void or Delete card on a market that hasn't closed yet.
+- **Resolve and Void** are separate cards, Void below and quieter (the danger outline button at its own width); each confirms before anything moves. Delete (the owner, on a market nobody bet on) is its own card after them.
 
 ## Sign in and Not invited (#329)
 
@@ -186,7 +194,7 @@ Written for someone who has just been invited: get them oriented, then signed in
 | `AppNav` (TopBar + TabBar) | size, theme, current tab | lucide-react icons, motion `layoutId` for the active pill |
 | `ProbabilityChart` (the market page only, loaded lazily) | per range: the plotted outcomes' series, with times | Recharts v3 through `components/ui/chart.tsx` (adapted from shadcn/ui's chart and copied in): one `<Line type="stepAfter">` per plotted outcome, a crosshair tooltip, end labels, and a screen-reader table of the plotted points (see Charts) |
 | `MarketCard` | title, leading chance and weekly change, chart, legend, meta | The title (a stretched link); the leading outcome's chance as a figure with its label and "▲ 8 this week" (`text-win`) or "▼ 5 this week" (`text-loss`), left out when it's 0 or there's no week of history; a resolved card leads with "Yes won", a voided one with "Voided"; then `MarketSparkline` (`components/markets/market-sparkline.tsx`, 64px, the same window and colours as `ProbabilityChart`, plain SVG so the list server-renders it and ships no chart library); for multiple choice a one-line legend of the top three by chance ("● Sarah 44% · ● Eli 31% · ● Ruth 25%", then "+N more"); then the meta line ("Closes Sun 12:00 PM · 42 bets", "Closes in 3h" within a day, "Waiting for a result" past the close). No status, closes-soon or over/under chips: an over/under's line is in its label ("Over 42.5"). The leading outcome is Yes (or Over) on a two-outcome market and the favourite of several. |
-| `OutcomeRow` | label, % and pool, bar, payout multiplier, state `add` / `inslip` / `disabled` / `none`, winner | Button variants with cva |
+| `OutcomeRow` | label, chance, what 10 DC wins (`soloPays`), state `add` / `inslip` / `disabled` / `none`, result `won` / `lost` | The name (`rowTitleClass`) over "10 DC wins 16" or "In your slip", the chance right-aligned (`figureInlineClass`, tabular), then Add or Remove (secondary, `sm`). A multiple-choice row keys its name to its chart colour with a dot. |
 | `SlipPick` | market, outcome, odds or stale | — |
 
 The shared primitives are in `components/ui/`: Button (primary / secondary / danger / quiet; md and sm), Field (label, hint and inline error), StatusChip (six tones; md and sm), Card, Message (error / ok / gold), `SectionCard`, `ListSection`, `ListCard`, `EmptyState`, `SegmentedControl`, `SubNav`, `ShowMore`, `SearchField`, `FilterChips`, the confirm dialogs and the skeletons. Every repeated piece comes from these.

@@ -63,20 +63,26 @@ an optional description, a category, a closing time, and its kind.
 - **Set the closing time before the answer is known.** Betting stops then.
   The outcomes and the line can never change afterwards; the closing time
   can be moved (see Editing and deleting).
-- **Duplicate** on any market opens the form already filled in, a week (or
-  more) later, for a question that comes round every week.
+- **Duplicate** (in a market's **More actions** menu, the ⋯ button at the
+  top right) opens the form already filled in, a week (or more) later, for
+  a question that comes round every week.
 
 A member can create up to 20 markets a day; admins and the owner aren't
 limited.
 
 ### Editing and deleting
 
+Edit, Reopen and Edit history are in the market's **More actions** menu
+(the ⋯ button at the top right of the market page), beside Share and
+Duplicate.
+
 - **Edit** (the creator or an admin, until the market closes) changes the
   description, and the title only until someone else has bet on it, solo
-  or as a parlay pick. Every version is kept under "Edited", which every
-  member can read.
+  or as a parlay pick. Every version is kept under **Edit history**, which
+  every member can read.
 - **Category:** the creator can change it until the market closes, and an
-  admin at any time. It's logged under "Edited" too.
+  admin at any time (**Edit category** once it has closed). It's logged in
+  Edit history too.
 - **Close time and Reopen:** the creator or an admin can move the close
   time, later or earlier as long as it's still to come. A market that has
   closed without a result shows **Reopen**, which takes bets again until
@@ -84,8 +90,8 @@ limited.
   anyone could otherwise buy the known winner cheaply. A creator with a
   bet or parlay pick on their own market can't move its close time; an
   admin does it for them.
-- **Delete** (the owner only) removes a market nobody has ever bet on,
-  cancelled a bet on, or picked in a parlay. Anything with money on it
+- **Delete** (the owner only, its own card on the market page) removes a
+  market nobody has ever bet on, cancelled a bet on, or picked in a parlay. Anything with money on it
   can't be deleted: void it instead, which refunds everyone and keeps the
   record.
 
@@ -108,7 +114,10 @@ resolve any market at any time. If the Resolve form isn't on a market page
 for you, you can't resolve it: the database decides
 (`can_resolve_market`), and the app only shows what it allows.
 
-**Steps.** On the market page:
+**Steps.** On the market page, in the **Resolve market** card: on a phone
+it comes straight after the outcomes and your position once the market has
+closed (before then, for an admin resolving early, it's near the bottom);
+from a laptop it's in the right-hand column, under the outcomes.
 
 1. Pick the **winning outcome**. For an Over/Under, type the **actual
    number** instead; it can't equal the line, and the app picks Over or
@@ -133,8 +142,9 @@ loses the parlay, and a parlay pays once every pick has won.
 
 Admins only, for a result that was wrong.
 
-1. On the resolved market, choose a **different** outcome (the current
-   one can't be picked again) and say why.
+1. On the resolved market, in the **Override resolution** card, choose a
+   **different** outcome (the current one can't be picked again) and say
+   why.
 2. The confirmation warns that earlier payouts are reversed. Confirm.
 
 The app takes back every original payout, pays the new winners, and
@@ -154,9 +164,9 @@ the event was cancelled, or it was made in error.
 - **Who:** until it closes, its creator or an admin; once it has closed,
   only an admin. A creator with a bet or parlay pick on their own market
   can't void it; an admin does.
-- **Steps:** Void market on the market page, give the reason (required, up
-  to 500 characters; everyone sees it on the market page and in the feed),
-  and confirm.
+- **Steps:** in the **Void market** card, its own card below Resolve on
+  the market page, give the reason (required, up to 500 characters;
+  everyone sees it on the market page and in the feed), and confirm.
 - **What happens:** every bet is refunded. A parlay with a pick on it drops
   that leg and carries on with the rest; a parlay with no legs left is
   refunded. This can't be undone.
@@ -170,7 +180,7 @@ markets it has:
 - **Rename** fixes a name. It can't clash with another category's name
   (capitals and spacing don't count as different).
 - **Merge** moves every market in one category into another, logs each
-  move under the market's "Edited", and hides the old category.
+  move in the market's Edit history, and hides the old category.
 - **Hide** takes a category out of the filter chips and suggestions
   without touching its markets. Typing a hidden category's name for a
   market brings it back.

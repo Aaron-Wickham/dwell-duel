@@ -38,8 +38,8 @@ This page explains the rules.
 
 ## Markets
 
-Any member can create a market. It has a question, an optional
-description, a category and a closing time, and it comes in one of three
+Any member can create a market. It has a question, a kind, a closing
+time, a category and optional details, and it comes in one of three
 kinds:
 
 | Kind | Outcomes |
@@ -61,7 +61,9 @@ While a market is open, its creator (or an admin) can edit the
 description and the category, and can reword the title until someone else
 has bet on it, solo or as a parlay pick. An admin can change a market's
 category at any time, even after it closes. Everyone can see every past
-version under "Edited". The outcomes and the line can never change,
+version under Edit history, in the market's More actions menu (the ⋯
+button at its top right, beside Share and Duplicate). The outcomes and
+the line can never change,
 because changing them would change the bet. Betting stops at the closing
 time, so set it before the answer is known, and if you bet on your own
 market, a reviewer resolves it (see [Results](#results)).
@@ -75,8 +77,8 @@ has money on their own market, a bet or a parlay pick, can't move its
 closing time; an admin can. Bets already placed stay exactly as they are, since every payout
 and parlay multiplier is fixed when it's placed. Only an admin can
 resolve a reopened market before it closes again, and its creator and
-admins are reminded about it again when it does. Every move shows under
-"Edited".
+admins are reminded about it again when it does. Every move shows in
+Edit history.
 
 The Markets page has three tabs: **Open** (the default: still taking
 bets, **soonest to close first**, so one closing within the hour is at
@@ -96,14 +98,14 @@ A yes/no chart draws one line, Yes's chance (an over/under draws Over's):
 No is the same line read from the top. A multiple-choice chart draws a
 line per outcome.
 
-For a question that comes round every week, **Duplicate** on any market
-opens Create market already filled in with its question, description,
+For a question that comes round every week, **Duplicate** (in any
+market's More actions menu) opens Create market already filled in with its question, description,
 category, kind and outcomes (or line). The closing time moves on by one or more
 whole weeks, keeping the same local time, until it's in the future. Nothing is created until
 you tap Create market, so you can change anything first.
 
-**Share** sends a market's link through your phone's share sheet, or
-copies it where there isn't one. Only signed-in members can open it.
+**Share** (in the same menu) sends a market's link through your phone's
+share sheet, or copies it where there isn't one. Only signed-in members can open it.
 
 ## Betting: fixed payouts
 
@@ -119,7 +121,8 @@ pays before you place it, and nothing anyone does afterwards changes it.
   card's chart all show the same number. A bigger bet moves the price more, so each extra
   DC buys a little less.
 - **The slip shows the exact payout** ("Pays 18 DC if it wins"), with no
-  "~". If the price moves between showing it and placing it, so that your bet
+  "~". Each outcome on a market page shows the same figure for 10 DC
+  ("10 DC wins 18"), worked out exactly as the slip does. If the price moves between showing it and placing it, so that your bet
   would pay more than 2% less, nothing is placed: the slip says what it
   pays now, and you tap Place again to accept.
 - **Bets are final.** A bet can't be cancelled, and the owner can't remove
@@ -209,7 +212,7 @@ payouts).
 
 ## The slip, solo bets and parlays
 
-Every bet goes through the **slip**. Tap "Add to slip" on outcomes from
+Every bet goes through the **slip**. Tap "Add" on outcomes from
 any number of markets, then open the slip to set stakes. Type a stake,
 or tap a quick stake: 5, 10, 25 or Max. Max is your balance less the
 other stakes already in the slip, and a chip for more than that is
@@ -265,10 +268,10 @@ like a solo bet's:
 Parlays placed before October 2026 were fixed when their markets switched
 over: see [Markets from before October 2026](#markets-from-before-october-2026).
 
-**Riding in parlays.** So a busy parlay market doesn't look empty, each
-outcome on a market page shows the DC in parlays still pending that ride
-on it, as "+45 DC riding in parlays". Each parlay's full stake is counted
-on every pick it rides on. The figure itself is for information only: it
+**Riding in parlays.** So a busy parlay market doesn't look empty, a
+market page says under its outcomes how much DC rides on the market in
+parlays still pending, as "Includes 45 DC riding in parlays". Each
+parlay's full stake is counted. The figure itself is for information only: it
 isn't the chance or anyone's payout (the parlay's share of its stake has
 already moved the chance like any bet, apart from a parlay from before
 October 2026, which never did). It never says whose parlays they are.
@@ -295,9 +298,10 @@ full ledger) can see it.
   market they have money on** (a bet or a parlay leg), so a creator who bet
   leaves it to a reviewer. A parlay leg counts even after its parlay has
   been settled on another market, since an override there could bring it
-  back. A market whose creator has money on it shows
-  what, bets and parlay picks alike ("Creator has 40 DC on Yes"), and so does
-  its result in the feed. The resolver picks the winner (or, for an Over/Under,
+  back. A market's result in the feed says what its creator had on it,
+  bets and parlay picks alike ("Creator had 40 DC on Yes"), and the
+  creator sees their own stake on the market page ("You have 40 DC on
+  Yes."); everyone can see each bet in the market's Bets list. The resolver picks the winner (or, for an Over/Under,
   types the actual number) and **must say why**. They can attach photos,
   files or links as proof (see **Proof limits and expiry** under Tasks). The
   reason and proof show on the market page and in the feed. Before anything is paid, the app asks them to confirm,

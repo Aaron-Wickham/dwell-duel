@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
@@ -25,12 +26,30 @@ const GROUP_TITLES: Record<Group, string> = {
   done: 'Done',
 }
 
+// Done shows this many; the rest wait behind a native disclosure (#394).
+const DONE_SHOWN = 3
+
 // One group of tasks under its visible heading, shown only when it has rows.
 function TaskGroup({ group, rows }: { group: Group; rows: ReactNode[] }) {
   if (rows.length === 0) return null
+  const folded = group === 'done' && rows.length > DONE_SHOWN
   return (
     <ListSection title={GROUP_TITLES[group]} titleId={`tasks-${group}`} className="gap-1">
-      <ul className={dividedRowsClass}>{rows}</ul>
+      <ul className={dividedRowsClass}>{folded ? rows.slice(0, DONE_SHOWN) : rows}</ul>
+      {folded && (
+        <details className="group border-t border-line">
+          {/* flex drops the browser's disclosure marker, so the chevron says this opens. */}
+          <summary className="pressable flex min-h-11 cursor-pointer items-center gap-2 font-bold">
+            <span className="group-open:hidden">Show all {rows.length} done</span>
+            <span className="hidden group-open:inline">Show fewer</span>
+            <ChevronDown
+              aria-hidden="true"
+              className="size-5 shrink-0 text-ink2 transition-transform duration-(--duration-fast) group-open:rotate-180 motion-reduce:transition-none"
+            />
+          </summary>
+          <ul className={dividedRowsClass}>{rows.slice(DONE_SHOWN)}</ul>
+        </details>
+      )}
     </ListSection>
   )
 }

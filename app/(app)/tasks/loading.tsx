@@ -3,7 +3,7 @@ import { dividedRowClass, dividedRowsClass } from '@/components/ui/list-card'
 import { cn } from '@/lib/utils'
 import { Skeleton, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
 
-function Group({ rows, action }: { rows: number; action: boolean }) {
+function Group({ rows }: { rows: number }) {
   return (
     <div className="flex flex-col gap-1">
       <Skeleton className="h-6 w-40" />
@@ -14,7 +14,7 @@ function Group({ rows, action }: { rows: number; action: boolean }) {
               <Skeleton className="h-5 w-3/5" />
               <Skeleton className="h-4 w-2/5" />
             </div>
-            {action && <Skeleton className="h-11 w-28 shrink-0" />}
+            <Skeleton className="h-11 w-28 shrink-0" />
           </div>
         ))}
       </div>
@@ -22,16 +22,14 @@ function Group({ rows, action }: { rows: number; action: boolean }) {
   )
 }
 
-// Mirrors Tasks: header with its description, then To do as divided rows on the page (D2), beside a
-// column for what's waiting at lg (#394).
+// Mirrors Tasks: header with its description, then To do as divided rows on the page (D2), full
+// width. The side column for what's waiting, turned down and done shows only when it has rows, so
+// it's left out, and To do lands where it was drawn (#386, #394).
 export default function Loading() {
   return (
     <SkeletonScreen name="tasks" className={pageClass}>
       <SkeletonPageHeader description />
-      <div className="flex flex-col gap-7 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
-        <Group rows={4} action />
-        <Group rows={1} action={false} />
-      </div>
+      <Group rows={4} />
     </SkeletonScreen>
   )
 }

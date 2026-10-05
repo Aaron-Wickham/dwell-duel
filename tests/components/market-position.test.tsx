@@ -28,6 +28,7 @@ vi.mock('@/lib/parlays/slip-actions', () => ({
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 vi.mock('next/link', () => ({
+  useLinkStatus: () => ({ pending: false }),
   default: ({ href, transitionTypes: _t, ...props }: ComponentProps<'a'> & { href: string; transitionTypes?: string[] }) => (
     <a href={href} {...props} />
   ),

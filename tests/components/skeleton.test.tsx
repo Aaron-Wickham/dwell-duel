@@ -43,7 +43,7 @@ describe('SkeletonScreen', () => {
       </SkeletonScreen>,
     )
     expect(viewTransitionCalls).toHaveLength(1)
-    expect(viewTransitionCalls[0].exit).toEqual({ 'nav-forward': 'nav-forward', 'nav-back': 'nav-back', default: 'page-exit' })
+    expect(viewTransitionCalls[0].exit).toEqual({ 'nav-forward': 'nav-forward', 'nav-back': 'nav-back', 'nav-tab': 'none', default: 'page-exit' })
     expect(viewTransitionCalls[0].default).toBe('none')
     const screenEl = container.firstElementChild!
     expect(screenEl).toHaveAttribute('data-skeleton', 'feed')

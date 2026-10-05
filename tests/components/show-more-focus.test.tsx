@@ -12,6 +12,7 @@ vi.mock('next/navigation', () => ({
 // A plain click runs onNavigate, as the App Router's Link does for a client-side navigation. The
 // tests then play the router's part: change the URL and render the page it returns.
 vi.mock('next/link', () => ({
+  useLinkStatus: () => ({ pending: false }),
   default: ({
     href,
     scroll: _scroll,

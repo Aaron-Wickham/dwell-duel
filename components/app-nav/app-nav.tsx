@@ -1,7 +1,9 @@
 'use client'
 
 import { IntentLink } from '@/components/ui/intent-link'
+import { useLinkStatus } from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useCallback, useLayoutEffect, useState } from 'react'
 import { LazyMotion, MotionConfig } from 'motion/react'
 import * as m from 'motion/react-m'
 import { BookOpen, ChartColumn, CircleDot, MessageSquareText, ShieldCheck, Ticket, Trophy, type LucideIcon } from 'lucide-react'
@@ -11,6 +13,7 @@ import { AnimatedText } from '@/components/ui/animated-text'
 import { AttentionBadge, AttentionNote } from '@/components/ui/attention-badge'
 import { Avatar } from '@/components/ui/avatar'
 import { NavPendingHint } from '@/components/nav/nav-pending-hint'
+import { TAB_TRANSITION } from '@/components/nav/page-transition'
 import { haptics } from '@/lib/haptics'
 import { PILL_TRANSITION } from '@/lib/ui/motion'
 import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
@@ -31,15 +34,31 @@ const ICONS: Record<NavId, LucideIcon> = {
   admin: ShieldCheck,
 }
 
+type ReportPending = (href: string, pending: boolean) => void
+
+// Tells AppNav which of its links is navigating, so the pill can move on the tap rather than when
+// the page arrives (#384). The pill is UI state, not data, so this isn't an optimistic update.
+// A layout effect, so the pill moves in the same frame as the tap's own commit.
+function PendingReporter({ href, onPending }: { href: string; onPending: ReportPending }) {
+  const { pending } = useLinkStatus()
+  useLayoutEffect(() => {
+    onPending(href, pending)
+  }, [href, pending, onPending])
+  return null
+}
+
 // Tapping your balance shows where your coins are. The chip keeps its 36px look inside a 44px link.
-function BalanceChip({ balance, active }: { balance: number; active: boolean }) {
+function BalanceChip({ balance, active, onPending }: { balance: number; active: boolean; onPending: ReportPending }) {
   return (
     <IntentLink
       prefetchOnTouch
+      pendingMarker={false}
       href="/bets"
+      transitionTypes={TAB_TRANSITION}
       aria-current={active ? 'page' : undefined}
       className="pressable inline-flex min-h-11 shrink-0 items-center rounded-full no-underline"
     >
+      <PendingReporter href="/bets" onPending={onPending} />
       <span className={`inline-flex h-9 items-center gap-1 whitespace-nowrap rounded-full bg-gold-soft pr-2.5 pl-1.5 ${uiTextClass} font-extrabold text-gold md:gap-1.5 md:pr-3 md:pl-2`}>
         <CircleDot aria-hidden="true" className="size-4 md:size-[18px]" />
         <AnimatedText plainText={`Balance ${formatDcAmount(balance)}, view my bets`}>
@@ -56,6 +75,7 @@ function ProfileLink({ me, active }: { me: NavMember; active: boolean }) {
   return (
     <IntentLink
       prefetchOnTouch
+      pendingMarker={false}
       href={`/members/${me.id}`}
       aria-label="Your profile"
       aria-current={active ? 'page' : undefined}
@@ -77,18 +97,24 @@ function ProfileLink({ me, active }: { me: NavMember; active: boolean }) {
 // Below xl every label won't fit beside the wordmark, balance and avatar (an admin's row needs
 // ~1180px), so each link is a 44px icon until then, its label kept for assistive tech and as a
 // hover tooltip. `iconWithLabel` keeps the icon beside the label from xl too, as Admin's does.
+// `active` is the page you're on; `shown` is where the pill sits, which moves to a tapped link
+// before its page arrives.
 function DesktopLink({
   href,
   label,
   active,
+  shown,
+  onPending,
   icon: Icon,
   iconWithLabel = false,
-  transitionTypes,
+  transitionTypes = TAB_TRANSITION,
   attention = 0,
 }: {
   href: string
   label: string
   active: boolean
+  shown: boolean
+  onPending: ReportPending
   icon: LucideIcon
   iconWithLabel?: boolean
   transitionTypes?: string[]
@@ -97,6 +123,7 @@ function DesktopLink({
   return (
     <IntentLink
       prefetchOnTouch
+      pendingMarker={false}
       href={href}
       transitionTypes={transitionTypes}
       aria-current={active ? 'page' : undefined}
@@ -105,10 +132,11 @@ function DesktopLink({
       title={label}
       className={cn(
         `pressable pill-label relative isolate inline-flex min-h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap rounded-full ${uiTextClass} font-bold no-underline xl:px-3.5`,
-        active ? 'text-on-nav-active' : 'text-ink2 hover:bg-sunk hover:text-ink',
+        shown ? 'text-on-nav-active' : 'text-ink2 hover:bg-sunk hover:text-ink',
       )}
     >
-      {active && (
+      <PendingReporter href={href} onPending={onPending} />
+      {shown && (
         <m.span
           layoutId="nav-pill"
           aria-hidden="true"
@@ -142,6 +170,14 @@ export function AppNav({
   // Your own profile belongs to the avatar, not the Leaderboard tab.
   const onMyProfile = pathname === `/members/${me.id}`
   const active = onMyProfile ? null : activeNavId(pathname)
+  // The link the member last tapped, while its page is on the way. Only the last tap's link is
+  // pending, and it stops being pending as the new page commits.
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
+  const onPending = useCallback<ReportPending>(
+    (href, pending) => setPendingHref((current) => (pending ? href : current === href ? null : current)),
+    [],
+  )
+  const shown = pendingHref ? activeNavId(pendingHref) : active
 
   return (
     <LazyMotion features={loadMotionFeatures} strict>
@@ -168,6 +204,8 @@ export function AppNav({
                 label={item.label}
                 icon={ICONS[item.id]}
                 active={active === item.id}
+                shown={shown === item.id}
+                onPending={onPending}
               />
             ))}
             {adminHref && (
@@ -177,6 +215,8 @@ export function AppNav({
                   href={adminHref}
                   label="Admin"
                   active={active === 'admin'}
+                  shown={shown === 'admin'}
+                  onPending={onPending}
                   icon={ShieldCheck}
                   iconWithLabel
                   transitionTypes={['nav-forward']}
@@ -186,7 +226,7 @@ export function AppNav({
             )}
           </nav>
           <span className="grow" />
-          <BalanceChip balance={balance} active={active === 'bets'} />
+          <BalanceChip balance={balance} active={active === 'bets'} onPending={onPending} />
           <ProfileLink me={me} active={onMyProfile} />
         </header>
 
@@ -207,10 +247,11 @@ export function AppNav({
             />
           </div>
           <span className="grow" />
-          <BalanceChip balance={balance} active={active === 'bets'} />
+          <BalanceChip balance={balance} active={active === 'bets'} onPending={onPending} />
           {adminHref && (
             <IntentLink
               prefetchOnTouch
+              pendingMarker={false}
               href={adminHref}
               transitionTypes={['nav-forward']}
               aria-label="Admin"
@@ -218,9 +259,10 @@ export function AppNav({
               aria-current={active === 'admin' ? 'page' : undefined}
               className={cn(
                 'pressable relative inline-flex size-11 shrink-0 items-center justify-center rounded-control no-underline',
-                active === 'admin' ? 'border-[1.5px] border-tab-active-ring bg-tab-active text-on-tab-active' : 'text-ink hover:bg-sunk',
+                shown === 'admin' ? 'border-[1.5px] border-tab-active-ring bg-tab-active text-on-tab-active' : 'text-ink hover:bg-sunk',
               )}
             >
+              <PendingReporter href={adminHref} onPending={onPending} />
               <ShieldCheck aria-hidden="true" className="size-[22px]" />
               <AttentionNote id="admin-attention-mobile" count={adminAttention} />
               <AttentionBadge count={adminAttention} className="top-1 right-1" />
@@ -238,29 +280,33 @@ export function AppNav({
           {NAV_ITEMS.map((item) => {
             const Icon = ICONS[item.id]
             const isActive = active === item.id
+            const isShown = shown === item.id
             return (
               <IntentLink
                 prefetchOnTouch
+                pendingMarker={false}
                 key={item.id}
                 href={item.href}
+                transitionTypes={TAB_TRANSITION}
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={tabAriaLabel(item)}
                 onClick={haptics.tap}
                 className={cn(
                   'pressable pill-label relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-tile text-xs leading-[1.1] no-underline',
-                  isActive ? 'text-ink' : 'text-ink2',
+                  isShown ? 'text-ink' : 'text-ink2',
                 )}
               >
+                <PendingReporter href={item.href} onPending={onPending} />
                 <span
                   className={cn(
                     'relative isolate flex h-[30px] w-[52px] items-center justify-center rounded-full transition-colors duration-(--duration-slide) ease-ios motion-reduce:transition-none',
-                    isActive && 'text-on-tab-active',
+                    isShown && 'text-on-tab-active',
                   )}
                 >
                   {/* One pill that slides between tabs, like the desktop nav's. The tab bar stays
                       pinned through page transitions, and its new snapshot is live, so the slide
                       shows while the page moves under it. */}
-                  {isActive && (
+                  {isShown && (
                     <m.span
                       layoutId="tabbar-pill"
                       aria-hidden="true"
@@ -275,7 +321,7 @@ export function AppNav({
                 <span
                   className={cn(
                     'transition-[font-weight] duration-(--duration-slide) ease-ios motion-reduce:transition-none',
-                    isActive ? 'font-extrabold' : 'font-bold',
+                    isShown ? 'font-extrabold' : 'font-bold',
                   )}
                 >
                   {item.shortLabel}

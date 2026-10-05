@@ -7,6 +7,7 @@ import { Target } from 'lucide-react'
 // Vitest resolves next/link to the Pages Router Link, which drops transitionTypes before the DOM,
 // so the prop is written onto the anchor for these assertions.
 vi.mock('next/link', () => ({
+  useLinkStatus: () => ({ pending: false }),
   default: ({ transitionTypes, href, ...props }: ComponentProps<'a'> & { href: string; transitionTypes?: string[] }) => (
     <a href={href} data-transition-types={transitionTypes?.join(' ')} {...props} />
   ),
@@ -53,7 +54,7 @@ describe('transition types on links', () => {
     expect(types('Carol')).toBe('nav-forward')
   })
 
-  it('slides into Admin from Home, and leaves tab tiles to the crossfade', () => {
+  it('slides into Admin from Home, and swaps tab tiles at once (#384)', () => {
     render(
       <HomeTiles
         tiles={[
@@ -63,6 +64,6 @@ describe('transition types on links', () => {
       />,
     )
     expect(types(/^Admin/)).toBe('nav-forward')
-    expect(types(/^Markets/)).toBeNull()
+    expect(types(/^Markets/)).toBe('nav-tab')
   })
 })

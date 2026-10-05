@@ -76,6 +76,32 @@ describe('motion tokens', () => {
     expect(offenders).toEqual([])
   })
 
+  // #384: on a drill-down the old page is gone by about 100ms, before the new one fades in.
+  it('clears the old page fast on a drill-down, before the new one fades in', () => {
+    expect(css).toMatch(/--vt-push-exit: var\(--duration-press\);/)
+    for (const dir of ['nav-forward', 'nav-back']) {
+      const rule = (side: string) => new RegExp(`::view-transition-${side}\\(\\.${dir}\\) \\{([^}]*)\\}`).exec(css)?.[1] ?? ''
+      expect(rule('old')).toContain('var(--vt-push-exit) ease-in both vt-fade reverse')
+      expect(rule('new')).toContain('var(--vt-enter) ease-out var(--vt-push-exit) both vt-fade')
+    }
+  })
+
+  // #384: a tapped card or control dims while its page is on the way.
+  it('dims a pending link’s card or control', () => {
+    expect(css).toContain(
+      '.pressable:is([data-card-pending], :has(> [data-link-pending], .stretched-link > [data-link-pending])) {\n  opacity: 0.7;',
+    )
+  })
+
+  // #384: the slip's button rises in and fades out; reduced motion keeps only the fade.
+  it('moves the slip button in and out on the motion tokens', () => {
+    expect(css).toContain('.slip-fab[data-enter] {\n  animation: slip-fab-in var(--duration-enter) var(--ease-ios) both;')
+    expect(css).toContain('.slip-fab[data-leaving] {\n  animation: slip-fab-out var(--duration-fast) ease-in forwards;')
+    expect(css).toMatch(/@keyframes slip-fab-in \{\s*from \{\s*opacity: 0;\s*translate: 0 12px;/)
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\.slip-fab\[data-enter\]:not\(\[data-leaving\]\) \{\s*animation-name: vt-fade;/)
+    expect(css).toMatch(/:root\[data-motion="reduce"\] \.slip-fab\[data-enter\]:not\(\[data-leaving\]\) \{\s*animation-name: vt-fade;/)
+  })
+
   // Sonner's stylesheet only listens to the device setting.
   it("stills Sonner's toasts for Settings' Reduce animations too", () => {
     const rule = /:root\[data-motion="reduce"\] :is\(([^)]*)\)\s*\{([^}]*)\}/.exec(css)

@@ -313,7 +313,8 @@
     background-color var(--duration-hover) ease-out,
     border-color var(--duration-hover) ease-out,
     text-decoration-color var(--duration-hover) ease-out,
-    text-decoration-thickness var(--duration-hover) ease-out;
+    text-decoration-thickness var(--duration-hover) ease-out,
+    opacity var(--duration-fast) ease-out;
 
   /* A control inside a pressable card presses alone; the card stays put. */
   &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
@@ -430,6 +431,13 @@
       content: none;
     }
   }
+}
+
+/* A tapped link's card or control while its page is on the way (#384): IntentLink's marker inside
+   the link, or the attribute CardLinkClick puts on a clicked card. Only a navigation that wasn't
+   prefetched or cached is ever pending, so a fast one never dims. */
+.pressable:is([data-card-pending], :has(> [data-link-pending], .stretched-link > [data-link-pending])) {
+  opacity: 0.7;
 }
 
 /* With the cover off under a mouse, components/ui/card-link-click.tsx opens the card on click. */
@@ -560,10 +568,13 @@
 }
 
 /* Page transitions. React's <ViewTransition> (components/nav/page-transition.tsx) adds these
-   classes: nav-forward / nav-back from a link's transitionTypes, page-enter / page-exit for
-   everything else. */
+   classes: nav-forward / nav-back from a link's transitionTypes, page-enter / page-exit for a
+   skeleton giving way to content. A tab switch (nav-tab) gets none and swaps at once (#384).
+   On a drill-down the old page is gone by about 100ms, before the new one fades in, so two titles
+   never show stacked. */
 :root {
   --vt-exit: var(--duration-fast);
+  --vt-push-exit: var(--duration-press);
   --vt-enter: var(--duration-enter);
   --vt-move: var(--duration-page);
 }
@@ -591,25 +602,25 @@
 ::view-transition-old(.nav-forward) {
   --vt-offset: -60px;
   animation:
-    var(--vt-exit) ease-in both vt-fade reverse,
+    var(--vt-push-exit) ease-in both vt-fade reverse,
     var(--vt-move) var(--ease-ios) both vt-slide-x reverse;
 }
 ::view-transition-new(.nav-forward) {
   --vt-offset: 60px;
   animation:
-    var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
+    var(--vt-enter) ease-out var(--vt-push-exit) both vt-fade,
     var(--vt-move) var(--ease-ios) both vt-slide-x;
 }
 ::view-transition-old(.nav-back) {
   --vt-offset: 60px;
   animation:
-    var(--vt-exit) ease-in both vt-fade reverse,
+    var(--vt-push-exit) ease-in both vt-fade reverse,
     var(--vt-move) var(--ease-ios) both vt-slide-x reverse;
 }
 ::view-transition-new(.nav-back) {
   --vt-offset: -60px;
   animation:
-    var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
+    var(--vt-enter) ease-out var(--vt-push-exit) both vt-fade,
     var(--vt-move) var(--ease-ios) both vt-slide-x;
 }
 
@@ -701,6 +712,34 @@
 @keyframes vt-hint-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
+}
+
+/* The slip's floating button (components/slip/slip-sheet.tsx) rises in with the first pick and
+   fades out after the last (#384); reduced motion fades it without the rise. */
+.slip-fab[data-enter] {
+  animation: slip-fab-in var(--duration-enter) var(--ease-ios) both;
+}
+.slip-fab[data-leaving] {
+  animation: slip-fab-out var(--duration-fast) ease-in forwards;
+}
+@keyframes slip-fab-in {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+  }
+}
+@keyframes slip-fab-out {
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slip-fab[data-enter]:not([data-leaving]) {
+    animation-name: vt-fade;
+  }
+}
+:root[data-motion="reduce"] .slip-fab[data-enter]:not([data-leaving]) {
+  animation-name: vt-fade;
 }
 
 /* Launch screen (components/brand/launch-screen.tsx). Hidden unless the cold-start script set

@@ -43,6 +43,13 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   experimental: {
     useOffline: true,
+    // A page visited in the last 30s comes back from the client router's cache instead of a
+    // skeleton and a server render (#384): a tab switch is instant, and there are fewer renders,
+    // not more (#251). LiveRefresh's router.refresh() still re-reads the page on a live change, and
+    // an action that revalidates (every money action does) clears the cache.
+    staleTimes: {
+      dynamic: 30,
+    },
   },
   // /how-it-works and /privacy render docs/HOW-IT-WORKS.md, read from disk (lib/docs/how-it-works.ts).
   outputFileTracingIncludes: {

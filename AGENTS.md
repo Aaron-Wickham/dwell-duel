@@ -133,11 +133,26 @@ a line to `CHANGELOG.md` under the next release.
 - **Drill-down pages** pass `Page`'s `transition="drill-down"`, which
   also enables the back-swipe; its logical parents live in
   `lib/nav/back-swipe.ts`.
+- **Tab switches swap at once** (#384). A link to a tab (the nav, the tab
+  bar, `SubNav`, Home's tab tiles) passes `transitionTypes={TAB_TRANSITION}`
+  (`components/nav/page-transition.tsx`), which turns the view transition
+  off; a link into a drill-down passes `['nav-forward']`. Pages stay in the
+  client router's cache for 30s (`experimental.staleTimes.dynamic` in
+  `next.config.ts`), so a revisited tab shows at once; `LiveRefresh`'s
+  `router.refresh()` and any revalidating action still re-read it. This
+  fits #251: a cached revisit is one server render fewer, and nothing
+  prefetches more than before.
+- **Pending state is UI, not data.** The nav's pill moves to a tapped tab
+  as its navigation starts (`useLinkStatus`), and `IntentLink` marks a
+  pending link so `globals.css` dims its card or control (`pendingMarker`;
+  the nav passes `false`). That isn't an optimistic update, so it doesn't
+  break "Never optimistic".
 - **Prefetch on intent.** The nav, `SubNav` and dense list rows link
   through `IntentLink`, which prefetches on hover or focus (and on touch
   for the nav and `SubNav`) instead of on sight: every signed-in page is
   dynamic, so each viewport prefetch is a server render on Vercel's
-  budget (#251).
+  budget (#251). The 30s client cache (above) keeps a visited page, not a
+  prefetch on sight, so it doesn't reopen #251.
 - **Signed-out redirects** live in `proxy.ts`, and a new `(app)` section
   must be added to `lib/auth/app-paths.ts` (a test guards the drift).
 - **The brand mark's art** lives in `components/brand/symbol-paths.ts`.

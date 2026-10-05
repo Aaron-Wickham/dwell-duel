@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { TAB_TRANSITION } from '@/components/nav/page-transition'
 import { Check } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cardClass, cardPaddingClass } from '@/components/ui/card'
@@ -92,7 +93,7 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
               {!stepDone && (
                 <Link
                   href={step.href}
-                  transitionTypes={step.drillDown ? ['nav-forward'] : undefined}
+                  transitionTypes={step.drillDown ? ['nav-forward'] : TAB_TRANSITION}
                   className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'shrink-0 no-underline')}
                 >
                   {step.cta}

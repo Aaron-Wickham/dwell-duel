@@ -6,6 +6,7 @@ import { MemberStatsCard } from '@/components/members/member-stats-card'
 import { toMemberStats, type MemberStatsRow } from '@/lib/members/stats'
 
 vi.mock('next/link', () => ({
+  useLinkStatus: () => ({ pending: false }),
   default: ({ transitionTypes: _transitionTypes, ...props }: ComponentProps<'a'> & { transitionTypes?: string[] }) => <a {...props} />,
 }))
 

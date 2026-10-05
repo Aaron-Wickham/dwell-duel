@@ -2,6 +2,7 @@
 
 import { Fragment, useId } from 'react'
 import { AttentionBadge, AttentionNote } from '@/components/ui/attention-badge'
+import { TAB_TRANSITION } from '@/components/nav/page-transition'
 import { IntentLink } from '@/components/ui/intent-link'
 import { uiTextClass } from '@/components/ui/page'
 import { SegmentedControl, segmentClass, segmentMarker } from '@/components/ui/segmented-control'
@@ -24,6 +25,7 @@ export function SubNav({ label, items }: { label: string; items: SubNavItem[] })
           <IntentLink
             prefetchOnTouch
             href={href}
+            transitionTypes={TAB_TRANSITION}
             aria-current={current ? 'page' : undefined}
             aria-describedby={badge > 0 ? `${noteId}-${index}` : undefined}
             {...segmentMarker(current)}

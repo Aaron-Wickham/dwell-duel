@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
+import { TAB_TRANSITION } from '@/components/nav/page-transition'
 import { ChevronRight } from 'lucide-react'
 import { listCardsClass, tappableListCardClass } from '@/components/ui/list-card'
 import { rowTitleClass } from '@/components/ui/page'
@@ -55,7 +56,7 @@ export function HomeTiles({ tiles }: { tiles: HomeTile[] }) {
             <Link
               key={tile.id}
               href={tile.href}
-              transitionTypes={DRILL_DOWN_TILES.has(tile.id) ? ['nav-forward'] : undefined}
+              transitionTypes={DRILL_DOWN_TILES.has(tile.id) ? ['nav-forward'] : TAB_TRANSITION}
               className={TILE_CLASS}
             >
               <TileBody icon={tile.icon} title={tile.title} subtitle={tile.subtitle} />

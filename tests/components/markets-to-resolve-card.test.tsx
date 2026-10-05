@@ -5,6 +5,7 @@ import type { ComponentProps } from 'react'
 import { MarketsToResolveCard } from '@/components/home/markets-to-resolve-card'
 
 vi.mock('next/link', () => ({
+  useLinkStatus: () => ({ pending: false }),
   default: ({ href, transitionTypes: _transitionTypes, ...props }: ComponentProps<'a'> & { href: string; transitionTypes?: string[] }) => (
     <a href={href} {...props} />
   ),

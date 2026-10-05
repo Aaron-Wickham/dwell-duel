@@ -27,7 +27,7 @@ describe('route transitions', () => {
     ['TabTransition', TabTransition],
     ['SkeletonReveal', SkeletonReveal],
     ['ContentReveal', ContentReveal],
-  ])('%s slides for nav-forward and nav-back, fades otherwise, and stays still on updates', (_name, Wrapper) => {
+  ])('%s slides for nav-forward and nav-back, swaps at once for a tab, fades otherwise, and stays still on updates', (_name, Wrapper) => {
     render(
       <Wrapper>
         <p>Page content</p>
@@ -36,8 +36,8 @@ describe('route transitions', () => {
 
     expect(screen.getByText('Page content')).toBeInTheDocument()
     expect(calls).toHaveLength(1)
-    expect(calls[0].enter).toEqual({ 'nav-forward': 'nav-forward', 'nav-back': 'nav-back', default: 'page-enter' })
-    expect(calls[0].exit).toEqual({ 'nav-forward': 'nav-forward', 'nav-back': 'nav-back', default: 'page-exit' })
+    expect(calls[0].enter).toEqual({ 'nav-forward': 'nav-forward', 'nav-back': 'nav-back', 'nav-tab': 'none', default: 'page-enter' })
+    expect(calls[0].exit).toEqual({ 'nav-forward': 'nav-forward', 'nav-back': 'nav-back', 'nav-tab': 'none', default: 'page-exit' })
     expect(calls[0].default).toBe('none')
     expect(calls[0].name).toBeUndefined()
     expect(calls[0].share).toBeUndefined()

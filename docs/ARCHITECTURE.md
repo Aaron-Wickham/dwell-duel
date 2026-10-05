@@ -944,16 +944,32 @@ header, #251) and static files: a prefetch of a signed-in page is its own
 invocation, the prefetched layout's `requireUser` still guards it, and the
 navigation that follows runs the proxy.
 
-Every signed-in page is dynamic, and a prefetch down to its
-`loading.tsx` isn't cached (Next's `staleTimes.dynamic` is 0), so a link
-prefetched on sight is a render every time it scrolls into view. The nav,
+Every signed-in page is dynamic, so a link prefetched on sight is a
+render every time it scrolls into view. The nav,
 `SubNav` and the dense list rows (market cards, feed rows, leaderboard
 rows, My bets rows) link through `IntentLink`
 (`components/ui/intent-link.tsx`), which prefetches only on intent: a
 pointer over the link or keyboard focus, and a finger coming down for the
 nav and `SubNav` (`prefetchOnTouch`), so a tab tap still gets a head
-start. A list row's tap navigates without one and streams its skeleton
-first.
+start. A list row's tap navigates without one: the row dims while its
+page is on the way (`IntentLink`'s pending marker, or `CardLinkClick`'s
+`data-card-pending` for a card clicked under a mouse), then its skeleton
+streams.
+
+**Client cache** (#384). `experimental.staleTimes.dynamic` is 30 in
+`next.config.ts`, so a page visited (or prefetched on intent) in the last
+30 seconds renders from the client router's cache: a tab switch back is
+instant, with no skeleton and no server render. That lowers Vercel
+invocations rather than raising them, since nothing is prefetched that
+wasn't before (#251). Freshness: `LiveRefresh` calls `router.refresh()`,
+which re-reads the current route past the cache, on every live change
+the page follows; every money action, and most others, call
+`revalidatePath`, which clears the whole client cache (comments and
+reactions call `refresh()` for their own page). A change someone else made
+while you were on another page shows on a cached page when its next live
+change or refresh arrives, at most 30s after you left it otherwise. The
+nav's pill moves to a tapped tab as the navigation starts (`useLinkStatus`
+through `PendingReporter` in `app-nav.tsx`), before the page arrives.
 
 **Free-tier budget at 1,000 members** (#250, #251). A model, not a
 measurement: after merge, read Supabase → Realtime usage and Vercel →
@@ -997,9 +1013,12 @@ grows the leaves onto the splash's D, using only CSS and a small inline
 script. `public/sw.js` is hand-written. It caches only the content-hashed
 `/_next/static/` files and a precached `/offline` page, which it serves
 when a navigation can't reach the network. Each deploy gets its own cache. It never caches per-member HTML, RSC
-payloads, server actions or Supabase responses. Pages slide in with
-React's `<ViewTransition>`, drill-down pages support a back swipe, and
-each signed-in route has a skeleton. `NavDepthTracker` (`lib/nav/nav-depth.ts`)
+payloads, server actions or Supabase responses. Drill-down pages slide in
+with React's `<ViewTransition>` (the old page gone by about 100ms,
+`--vt-push-exit`) and support a back swipe; a tab switch (`nav-tab`, the
+nav, `SubNav` and Home's tab tiles) swaps with no transition (#384); a
+skeleton giving way to content fades; and each signed-in route has a
+skeleton. `NavDepthTracker` (`lib/nav/nav-depth.ts`)
 scrolls a pushed page to its top before it paints (#349), since Next scrolls
 only when the new segment starts off screen; back and forward keep the
 browser's restored position, and a `#hash` keeps its target. The viewport's

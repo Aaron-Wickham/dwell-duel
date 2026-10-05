@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { TAB_TRANSITION } from '@/components/nav/page-transition'
 import { cn } from '@/lib/utils'
 import { D_PATH, LEAF_ANGLES, LEAF_PATH } from './symbol-paths'
 
@@ -46,6 +47,7 @@ export function Wordmark({
   return (
     <Link
       href={href}
+      transitionTypes={TAB_TRANSITION}
       aria-label="DwellDuel home"
       aria-current={current ? 'page' : undefined}
       className="pressable inline-flex min-h-11 shrink-0 items-center gap-2 rounded-segment pr-1 no-underline"

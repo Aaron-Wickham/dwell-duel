@@ -10,6 +10,7 @@ vi.mock('@/components/ui/show-more-focus', () => ({ requestShowMoreFocus }))
 // DOM, so they are written onto the anchor for these assertions. A plain click runs onNavigate,
 // as the App Router's Link does for a client-side navigation.
 vi.mock('next/link', () => ({
+  useLinkStatus: () => ({ pending: false }),
   default: ({
     href,
     scroll,

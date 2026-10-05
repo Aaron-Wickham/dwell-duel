@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import { NotificationSettings } from './notification-settings'
 import { MotionSettings, ThemeSetting } from './settings-controls'
 import { SignOutButton } from './sign-out-button'
+import { InstallApp } from './install-app'
 
 export default async function SettingsPage() {
   const { supabase, user } = await requireUser()
@@ -78,6 +79,7 @@ export default async function SettingsPage() {
               reviewer={atLeast(role, 'reviewer')}
             />
           </SectionCard>
+          <InstallApp />
           <SectionCard title="Help" titleId="settings-help">
             <p className="text-ink2">Odds, payouts, parlays, results and tasks, explained, and what DwellDuel keeps about you.</p>
             <div className="flex flex-wrap gap-2">

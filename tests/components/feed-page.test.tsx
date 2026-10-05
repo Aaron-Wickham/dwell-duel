@@ -25,7 +25,7 @@ vi.mock('@/lib/social/reactions-actions', () => ({ setReactionAction: vi.fn() })
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase: {}, user: { id: 'p-me' } }) }))
 vi.mock('@/components/live/live-tables', () => ({ LiveTables: () => null }))
 vi.mock('@/components/ui/show-more-focus', () => ({ ShowMoreFocus: () => null, requestShowMoreFocus }))
-vi.mock('next/navigation', () => ({ redirect: vi.fn() }))
+vi.mock('next/navigation', () => ({ redirect: vi.fn(), usePathname: () => '/feed', useRouter: () => ({ back: vi.fn(), push: vi.fn() }) }))
 // A plain click runs onNavigate, as the App Router's Link does for a client-side navigation.
 vi.mock('next/link', () => ({
   useLinkStatus: () => ({ pending: false }),

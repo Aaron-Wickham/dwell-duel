@@ -109,11 +109,14 @@ describe('skeletons match their pages', () => {
     expect(grid.children[1]).toHaveClass('hidden', 'lg:flex')
   })
 
-  it('the home skeleton draws one stat tile and the six tiles every member sees', () => {
+  // #388: only what every member sees, so nothing conditional: Your bets' and Activity's three
+  // rows each, and the Balance card, shown from lg.
+  it('the home skeleton draws Your bets and Activity with three rows each, and the desktop Balance card', () => {
     const { container } = render(<HomeLoading />)
-    expect(container.querySelector('.grid-cols-1')?.children).toHaveLength(1)
-    expect(container.querySelector('.grid-cols-2')).toBeNull()
-    expect(container.querySelectorAll('.min-h-\\[72px\\]')).toHaveLength(6)
+    const lists = container.querySelectorAll('.divide-y')
+    expect(lists).toHaveLength(2)
+    for (const list of lists) expect(list.children).toHaveLength(3)
+    expect(container.querySelector('.bg-acc-soft')).toHaveClass('hidden', 'lg:flex')
   })
 
   it('the feed skeleton draws four reaction pills under every row', () => {

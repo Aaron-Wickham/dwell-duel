@@ -5,7 +5,6 @@ import path from 'node:path'
 import type { ReactElement } from 'react'
 import Link from 'next/link'
 import { render } from '@testing-library/react'
-import { ChartColumn } from 'lucide-react'
 
 vi.mock('@/lib/markets/create-market', () => ({ createMarketAction: vi.fn() }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
@@ -22,7 +21,8 @@ import { JumpToMe } from '@/components/leaderboard/jump-to-me'
 import { Wordmark } from '@/components/brand/wordmark'
 import { MarketCard } from '@/components/markets/market-card'
 import { PlacedParlay } from '@/components/parlays/placed-parlay'
-import { HomeTiles } from '@/components/home/home-tiles'
+import { NeedsYou } from '@/components/home/needs-you'
+import { YourBets } from '@/components/home/your-bets'
 import { LeaderboardRow } from '@/components/leaderboard/leaderboard-row'
 import { Podium } from '@/components/leaderboard/podium'
 import { Awards } from '@/components/leaderboard/awards'
@@ -98,8 +98,34 @@ const CASES: [string, () => ReactElement][] = [
     ),
   ],
   [
-    'HomeTiles',
-    () => <HomeTiles tiles={[{ id: 'markets', href: '/markets', icon: ChartColumn, title: 'Markets', subtitle: 'Bet on it' }]} />,
+    'NeedsYou',
+    () => (
+      <NeedsYou
+        counts={{ tasks: 2, markets: 1 }}
+        showReviews
+        showAdminMarkets
+        marketsToResolve={{ total: 0, markets: [] }}
+        balance={0}
+        taskRewards={null}
+      />
+    ),
+  ],
+  [
+    'YourBets',
+    () => (
+      <YourBets
+        openCount={4}
+        markets={[]}
+        now={Date.parse('2026-10-04T12:00:00Z')}
+        wagers={[
+          { kind: 'bet', key: 'bet:1', marketId: 'k1', marketTitle: 'Will it rain?', outcomeLabel: 'Yes', amount: 10, payout: 18, closeAt: '2026-10-06T12:00:00Z' },
+        ]}
+      />
+    ),
+  ],
+  [
+    'YourBets (none open)',
+    () => <YourBets openCount={0} wagers={[]} now={0} markets={[{ id: 'k1', title: 'Will it rain?', closeAt: '2026-10-06T12:00:00Z' }]} />,
   ],
   [
     'LeaderboardRow',
@@ -274,11 +300,11 @@ describe('press feedback', () => {
     for (const label of kinds) expect(label).toHaveClass('pressable')
   })
 
-  it('tints the home tiles as rows of one card on a phone, and lifts them as cards of their own from lg', () => {
+  it('tints a Needs you row rather than lifting it', () => {
     const { container } = render(
-      <HomeTiles tiles={[{ id: 'markets', href: '/markets', icon: ChartColumn, title: 'Markets', subtitle: 'Bet on it' }]} />,
+      <NeedsYou counts={{ tasks: 2, markets: 0 }} showReviews showAdminMarkets={false} marketsToResolve={{ total: 0, markets: [] }} balance={5} taskRewards={null} />,
     )
-    expect(container.querySelector('a')).toHaveClass('pressable', 'relative', 'hover-tint', 'lg:hover-lift', 'lg:before:hidden')
+    expect(container.querySelector('a')).toHaveClass('pressable', 'hover-tint')
     expect(container.querySelector('a')).not.toHaveClass('hover-lift')
   })
 

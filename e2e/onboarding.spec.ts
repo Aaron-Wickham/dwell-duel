@@ -59,9 +59,10 @@ test('a member at 0 DC is pointed to Tasks on Home and in the slip, which keeps 
     await db.from('profiles').update({ balance: 0 }).eq('id', bob.id)
 
     await page.goto('/')
-    const hero = page.getByRole('region', { name: 'Your balance' })
-    await expect(hero.getByText(/You’re out of Dwell Coin\. Earn more with Tasks/)).toBeVisible()
-    await expect(hero.getByRole('link', { name: 'Tasks' })).toHaveAttribute('href', '/tasks')
+    // Home's Needs you (#388).
+    const earn = page.getByRole('region', { name: 'Needs you' }).getByRole('link', { name: /You’re out of Dwell Coin\. Earn more with Tasks/ })
+    await expect(earn).toBeVisible()
+    await expect(earn).toHaveAttribute('href', '/tasks')
 
     await page.goto(`/markets/${marketId}`)
     await addToSlip(page, 'Yes')

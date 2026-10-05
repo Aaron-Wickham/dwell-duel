@@ -58,6 +58,8 @@ describe('logicalParent', () => {
     ['/markets/new', '/markets'],
     ['/members/3f2a0c1e-8d8b-4c43-9f0f-0a7c5b1d2e3f', '/leaderboard'],
     ['/parlays/3f2a0c1e-8d8b-4c43-9f0f-0a7c5b1d2e3f', '/bets'],
+    // Activity (D1) is a drill-down from Home.
+    ['/feed', '/'],
     ['/admin/invites', '/'],
     ['/admin/tasks', '/'],
     ['/admin/members', '/'],

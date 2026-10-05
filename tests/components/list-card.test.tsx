@@ -19,11 +19,9 @@ import { TaskRow } from '@/components/tasks/task-row'
 import { AwaitingMarketRow } from '@/components/admin/awaiting-market-row'
 import { LeaderboardRow } from '@/components/leaderboard/leaderboard-row'
 import { MemberRow } from '@/app/(app)/admin/members/member-row'
-import { HomeTiles } from '@/components/home/home-tiles'
 import { PendingApprovals } from '@/app/(app)/admin/(sections)/tasks/pending-approvals'
 import { TaskCatalogItem } from '@/app/(app)/admin/(sections)/tasks/task-catalog-item'
 import { CancelledBetRows } from '@/app/(app)/bets/bet-rows'
-import { ChartColumn } from 'lucide-react'
 
 const root = path.resolve(import.meta.dirname, '../..')
 const source = (file: string) => readFileSync(path.join(root, file), 'utf8')
@@ -156,7 +154,7 @@ describe('lists that open one thing are ListCards (#328)', () => {
     expect(card).toHaveClass('bg-acc-soft', 'pressable', 'hover-tint')
   })
 
-  it('admin members and home tiles gain the border below lg, and stay lifted cards from lg', () => {
+  it('admin members gain the border below lg, and stay lifted cards from lg', () => {
     const { container: members } = render(
       <ul>
         <MemberRow
@@ -166,13 +164,9 @@ describe('lists that open one thing are ListCards (#328)', () => {
         />
       </ul>,
     )
-    const { container: home } = render(
-      <HomeTiles tiles={[{ id: 'markets', href: '/markets', icon: ChartColumn, title: 'Markets', subtitle: 'Bet on it' }]} />,
-    )
-    for (const card of [members.querySelector('li'), home.querySelector('a')]) {
-      expectListCard(card)
-      expect(card).toHaveClass('lg:rounded-card', 'lg:shadow-card', 'lg:hover-lift')
-    }
+    const card = members.querySelector('li')
+    expectListCard(card)
+    expect(card).toHaveClass('lg:rounded-card', 'lg:shadow-card', 'lg:hover-lift')
   })
 
   it('lay out per the approved grid, with no dividers', () => {

@@ -13,7 +13,7 @@ test('a plain member is sent home from every admin page', async ({ browser }) =>
   for (const path of ADMIN_PAGES) {
     await page.goto(path)
     await expect(page).toHaveURL(/\/$/)
-    await expect(page.getByRole('heading', { level: 1, name: /^Welcome, / })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: /^Hi, / })).toBeVisible()
   }
   await member.close()
 })
@@ -78,11 +78,15 @@ test('a plain member sees no admin controls on someone else’s market, and no A
   await expect(bobPage.getByRole('button', { name: /^Cancel / })).toHaveCount(0)
   await expect(bobPage.getByLabel('Winning outcome')).toHaveCount(0)
 
-  // Every place the Admin link could show: the top bar, the tab bar and the home tiles.
+  // Every place the Admin link could show: the avatar menu and Home's Needs you.
   for (const path of [marketPath, '/']) {
     await bobPage.goto(path)
     await expect(bobPage.getByRole('link', { name: 'Admin', exact: true })).toHaveCount(0)
     await expect(bobPage.locator('a[href^="/admin"]')).toHaveCount(0)
+    await bobPage.getByRole('banner').getByRole('button', { name: /^Your profile and settings/ }).click()
+    await expect(bobPage.getByRole('menu').getByRole('menuitem', { name: /Settings/ })).toBeVisible()
+    await expect(bobPage.getByRole('menu').getByRole('menuitem', { name: /Admin/ })).toHaveCount(0)
+    await bobPage.keyboard.press('Escape')
   }
   await member.close()
 })

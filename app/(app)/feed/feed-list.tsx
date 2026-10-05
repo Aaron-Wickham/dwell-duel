@@ -23,6 +23,39 @@ const EVENT_ICONS: Record<FeedKind, LucideIcon> = {
   season_champion: Crown,
 }
 
+// A kind this build doesn't know (one added later, or read after a rollback) is left out rather
+// than rendered without a sentence, so a new kind can never take the feed down.
+export function knownEvents(events: FeedEvent[]): FeedEvent[] {
+  return events.filter((e) => Object.hasOwn(EVENT_ICONS, e.kind))
+}
+
+// The rows of a feed list, for a list of the caller's own: the feed and member activity's, or
+// Home's Activity (#388), which shows the newest few with no reactions.
+export function FeedItems({
+  events,
+  reactions,
+  now,
+  rowIdPrefix,
+}: {
+  events: FeedEvent[]
+  reactions?: Map<string, EventReactions>
+  now: number
+  rowIdPrefix?: string
+}) {
+  return knownEvents(events).map((e) => (
+    <FeedItem
+      key={e.id}
+      icon={EVENT_ICONS[e.kind]}
+      segments={describeEvent(e)}
+      age={isOldEntry(e.occurredAt, now) ? <LocalTime iso={e.occurredAt} format="day" /> : relativeTime(e.occurredAt, now)}
+      detail={e.kind === 'market_resolved' ? e.resolutionNote : e.kind === 'market_voided' ? e.voidReason : null}
+      note={e.kind === 'market_resolved' ? e.creatorStake : null}
+      reactions={reactions && <ReactionBar eventId={e.id} reactions={reactions.get(e.id) ?? noReactions()} />}
+      domId={rowIdPrefix && rowDomId(rowIdPrefix, e.id)}
+    />
+  ))
+}
+
 export function FeedList({
   events,
   reactions,
@@ -48,9 +81,7 @@ export function FeedList({
   emptyState?: ReactNode
   rowIdPrefix?: string
 }) {
-  // A kind this build doesn't know (one added later, or read after a rollback) is left out rather
-  // than rendered without a sentence, so a new kind can never take the feed down.
-  const known = events.filter((e) => Object.hasOwn(EVENT_ICONS, e.kind))
+  const known = knownEvents(events)
   const body =
     known.length === 0 ? (
       emptyState ?? (
@@ -60,18 +91,7 @@ export function FeedList({
       )
     ) : (
       <ul className={cn('flex flex-col divide-y divide-line', headingHidden && 'px-[18px] md:px-6')}>
-        {known.map((e) => (
-          <FeedItem
-            key={e.id}
-            icon={EVENT_ICONS[e.kind]}
-            segments={describeEvent(e)}
-            age={isOldEntry(e.occurredAt, now) ? <LocalTime iso={e.occurredAt} format="day" /> : relativeTime(e.occurredAt, now)}
-            detail={e.kind === 'market_resolved' ? e.resolutionNote : e.kind === 'market_voided' ? e.voidReason : null}
-            note={e.kind === 'market_resolved' ? e.creatorStake : null}
-            reactions={reactions && <ReactionBar eventId={e.id} reactions={reactions.get(e.id) ?? noReactions()} />}
-            domId={rowIdPrefix && rowDomId(rowIdPrefix, e.id)}
-          />
-        ))}
+        <FeedItems events={known} reactions={reactions} now={now} rowIdPrefix={rowIdPrefix} />
       </ul>
     )
 

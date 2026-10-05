@@ -38,7 +38,7 @@ const TURN_ON_FAILED = 'Couldn’t turn on notifications. Check your connection 
 const TURN_OFF_FAILED = 'Couldn’t turn off notifications. Check your connection and try again.'
 
 // Support never changes without a reload; the external store only reads it without a hydration
-// mismatch, as InstallCard does.
+// mismatch, as InstallApp does.
 const subscribe = () => () => {}
 
 // iPhones and iPads only offer web push to an app added to the Home Screen (iOS 16.4 and later),

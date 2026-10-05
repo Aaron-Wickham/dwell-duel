@@ -18,7 +18,8 @@ import { BackLink } from '@/components/ui/back-link'
 import { MarketCard } from '@/components/markets/market-card'
 import { LeaderboardRow } from '@/components/leaderboard/leaderboard-row'
 import { FeedItem } from '@/components/feed/feed-item'
-import { HomeTiles } from '@/components/home/home-tiles'
+import { NeedsYou } from '@/components/home/needs-you'
+import { HomeActivity } from '@/components/home/home-activity'
 
 const types = (name: string | RegExp) => screen.getByRole('link', { name }).getAttribute('data-transition-types')
 
@@ -54,16 +55,16 @@ describe('transition types on links', () => {
     expect(types('Carol')).toBe('nav-forward')
   })
 
-  it('slides into Admin from Home, and swaps tab tiles at once (#384)', () => {
+  it('slides into Admin from Home’s Needs you, and swaps to Tasks at once (#384, #388)', () => {
     render(
-      <HomeTiles
-        tiles={[
-          { id: 'markets', href: '/markets', icon: Target, title: 'Markets', subtitle: '2 open' },
-          { id: 'admin', href: '/admin/invites', icon: Target, title: 'Admin', subtitle: 'All clear' },
-        ]}
-      />,
+      <NeedsYou counts={{ tasks: 2, markets: 0 }} showReviews showAdminMarkets marketsToResolve={{ total: 0, markets: [] }} balance={0} taskRewards={null} />,
     )
-    expect(types(/^Admin/)).toBe('nav-forward')
-    expect(types(/^Markets/)).toBe('nav-tab')
+    expect(types(/task submissions to review/)).toBe('nav-forward')
+    expect(types(/Earn more with Tasks/)).toBe('nav-tab')
+  })
+
+  it('slides into Activity from Home', () => {
+    render(<HomeActivity events={[]} now={0} />)
+    expect(types('See all')).toBe('nav-forward')
   })
 })

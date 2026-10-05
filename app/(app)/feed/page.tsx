@@ -9,6 +9,7 @@ import { getReactions } from '@/lib/social/reactions'
 import { readPageParams, showMoreHref, newestHref } from '@/lib/pagination/cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
 import { Page, PageHeader } from '@/components/ui/page'
+import { BackLink } from '@/components/ui/back-link'
 import { NothingOlder } from '@/components/ui/nothing-older'
 import { ShowMore, BackToNewest } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
@@ -41,8 +42,10 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
   const backToNewestHref = newestHref('/feed', searchParams, 'before')
 
   return (
-    <Page transition="tab" width="reading">
-      <PageHeader title="Feed" description="Everything that’s happened in DwellDuel, newest first." />
+    // D1 (#385, #388): the feed is Home's Activity, and this is its See all, a drill-down from Home.
+    <Page transition="drill-down" width="reading">
+      <BackLink href="/">Home</BackLink>
+      <PageHeader title="Activity" />
       <SubNav
         label="Show"
         items={FEED_SHOWS.map((s) => ({ href: feedShowHref(s), label: FEED_SHOW_LABELS[s], current: s === show }))}

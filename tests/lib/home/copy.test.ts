@@ -1,66 +1,39 @@
 import { describe, it, expect } from 'vitest'
-import {
-  atStakeDetail,
-  pendingDetail,
-  marketsTileSubtitle,
-  leaderboardTileSubtitle,
-  adminTileSubtitle,
-  adminTileHref,
-  taskRewardsDetail,
-} from '@/lib/home/copy'
+import { countNoun, firstName, ridingText, standingLine, taskRewardsDetail } from '@/lib/home/copy'
 
-describe('atStakeDetail', () => {
-  it('counts bets, and says so when nothing is riding', () => {
-    expect(atStakeDetail(0)).toBe('Nothing riding')
-    expect(atStakeDetail(1)).toBe('on 1 bet')
-    expect(atStakeDetail(4)).toBe('on 4 bets')
+describe('firstName', () => {
+  it('greets by the first word of the display name, or the fallback', () => {
+    expect(firstName('Ruth Newman')).toBe('Ruth')
+    expect(firstName('  Ben  ')).toBe('Ben')
+    expect(firstName('')).toBe('Member')
+    expect(firstName(null)).toBe('Member')
   })
 })
 
-describe('pendingDetail', () => {
-  it('counts reviews', () => {
-    expect(pendingDetail(1)).toBe('in 1 review')
-    expect(pendingDetail(2)).toBe('in 2 reviews')
+describe('ridingText', () => {
+  it('says what is riding, or that nothing is', () => {
+    expect(ridingText(275, 3)).toBe('275 DC riding')
+    expect(ridingText(1250, 1)).toBe('1,250 DC riding')
+    expect(ridingText(0, 0)).toBe('No open bets')
   })
 })
 
-describe('marketsTileSubtitle', () => {
-  it('handles zero, one and many', () => {
-    expect(marketsTileSubtitle(0)).toBe('No open markets')
-    expect(marketsTileSubtitle(1)).toBe('1 open market')
-    expect(marketsTileSubtitle(3)).toBe('3 open markets')
+describe('standingLine', () => {
+  it('gives rank, then what is riding on how many bets', () => {
+    expect(standingLine({ rank: 218, memberCount: 502, dc: 275, wagers: 30 })).toBe('Rank 218 of 502 · 275 DC riding on 30 bets')
+    expect(standingLine({ rank: 3, memberCount: 8, dc: 10, wagers: 1 })).toBe('Rank 3 of 8 · 10 DC riding on 1 bet')
+  })
+
+  it('drops the rank until there is one, and says when nothing is riding', () => {
+    expect(standingLine({ rank: null, memberCount: 502, dc: 0, wagers: 0 })).toBe('No open bets')
+    expect(standingLine({ rank: 4, memberCount: 9, dc: 0, wagers: 0 })).toBe('Rank 4 of 9 · No open bets')
   })
 })
 
-describe('leaderboardTileSubtitle', () => {
-  it('states the rank', () => {
-    expect(leaderboardTileSubtitle(3, 8)).toBe('You’re ranked 3 of 8')
-  })
-
-  it('drops the rank when there is none, as for a member with no profile row', () => {
-    expect(leaderboardTileSubtitle(0, 0)).toBe('See who’s leading')
-  })
-})
-
-describe('adminTileSubtitle', () => {
-  it('counts approvals: zero, one and many', () => {
-    expect(adminTileSubtitle({ tasks: 0, markets: 0 })).toBe('Nothing waiting')
-    expect(adminTileSubtitle({ tasks: 1, markets: 0 })).toBe('1 approval waiting')
-    expect(adminTileSubtitle({ tasks: 3, markets: 0 })).toBe('3 approvals waiting')
-  })
-
-  it('counts markets to resolve too, as the Admin badge does (#266)', () => {
-    expect(adminTileSubtitle({ tasks: 0, markets: 1 })).toBe('1 market to resolve')
-    expect(adminTileSubtitle({ tasks: 0, markets: 3 })).toBe('3 markets to resolve')
-    expect(adminTileSubtitle({ tasks: 2, markets: 3 })).toBe('2 approvals, 3 markets to resolve')
-  })
-})
-
-describe('adminTileHref', () => {
-  it('opens the queue with work in it, approvals first, else the usual start', () => {
-    expect(adminTileHref({ tasks: 2, markets: 3 }, '/admin/invites')).toBe('/admin/tasks')
-    expect(adminTileHref({ tasks: 0, markets: 3 }, '/admin/invites')).toBe('/admin/markets')
-    expect(adminTileHref({ tasks: 0, markets: 0 }, '/admin/invites')).toBe('/admin/invites')
+describe('countNoun', () => {
+  it('handles one and many', () => {
+    expect(countNoun(1, 'task submission', 'task submissions')).toBe('1 task submission')
+    expect(countNoun(12, 'task submission', 'task submissions')).toBe('12 task submissions')
   })
 })
 

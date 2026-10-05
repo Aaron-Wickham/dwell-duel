@@ -23,7 +23,7 @@ function wasDismissed(): boolean {
   }
 }
 
-// The installed app's counterpart to InstallCard, which never shows there: once installed, what's
+// The installed app's nudge (a browser tab gets Settings' Install the app instead): once installed, what's
 // left is turning on push, which Markets to resolve depends on (#260). While Getting started is up,
 // its own step asks instead, so this waits until that card has been dismissed.
 function shouldNudge(): boolean {

@@ -59,37 +59,60 @@ function toFeedEvent(r: FeedRow): FeedEvent {
   }
 }
 
+type FeedFilters = { actorId?: string; show?: FeedShow }
+
+// The range read and its key probe share one builder, so the two can't drift apart on filters. Its column
+// list is a runtime string, so the generated types can't follow it, and each reader casts its rows.
+function feedQuery(supabase: DbClient, opts: FeedFilters, columns: string, filter: string | null, limit: number) {
+  // "Mine" reads my_activity_events() (0094), whose UNION ALL branches each use an index, as the
+  // leaderboard reads its board functions; the filters below reach both. It returns the table's own
+  // rows, so the select and the embeds are the same.
+  const table = () => supabase.from('activity_events').select(columns)
+  const source = opts.show === 'mine' ? (supabase.rpc('my_activity_events').select(columns) as unknown as ReturnType<typeof table>) : table()
+  let query = source
+    .is('hidden_at', null)
+    .order('occurred_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(limit)
+  if (opts.actorId) query = query.eq('actor_id', opts.actorId)
+  if (opts.show === 'results') query = query.in('kind', [...RESULT_KINDS])
+  if (filter) query = query.or(filter)
+  return query
+}
+
+// A result says what its market's creator had riding on it (#84), fetched for these rows only.
+async function toFeedEvents(supabase: DbClient, rows: FeedRow[]): Promise<FeedEvent[]> {
+  const resolved = rows.flatMap((r) =>
+    r.kind === 'market_resolved' && r.market_id && r.market ? [{ id: r.market_id, createdBy: r.market.created_by }] : [],
+  )
+  const stakes = await getCreatorStakes(supabase, resolved)
+  return rows.map((r) => {
+    const event = toFeedEvent(r)
+    if (r.kind === 'market_resolved' && r.market_id) event.creatorStake = describeCreatorStake(stakes.get(r.market_id), 'had')
+    return event
+  })
+}
+
+// The newest few events, for Home's Activity (#388): one small read, with no paging probe.
+export async function listLatestFeed(supabase: DbClient, limit: number): Promise<FeedEvent[]> {
+  const { data, error } = await feedQuery(supabase, {}, FEED_COLUMNS, null, limit)
+  if (error) throw error
+  return toFeedEvents(supabase, (data ?? []) as unknown as FeedRow[])
+}
+
 // `alongside` runs with the page's ids as soon as the rows are read, in parallel with the creator
-// stake lookup below (#210): the feed's reactions don't depend on the stakes, so they no longer
-// wait for them. Its result comes back on the page as `alongside`.
+// stake lookup (#210): the feed's reactions don't depend on the stakes, so they no longer wait for
+// them. Its result comes back on the page as `alongside`.
 export async function listFeed<T = undefined>(
   supabase: DbClient,
-  opts: { actorId?: string; show?: FeedShow; page: PageParams; alongside?: (eventIds: string[]) => Promise<T> },
+  opts: FeedFilters & { page: PageParams; alongside?: (eventIds: string[]) => Promise<T> },
 ): Promise<KeysetPage<FeedEvent> & { alongside: T }> {
-  // The range read and its key probe share one builder, so the two can't drift apart on filters. Its column
-  // list is a runtime string, so the generated types can't follow it, and each reader casts its rows.
-  const feedQuery = (columns: string, filter: string | null, limit: number) => {
-    // "Mine" reads my_activity_events() (0094), whose UNION ALL branches each use an index, as the
-    // leaderboard reads its board functions; the filters below reach both. It returns the table's own
-    // rows, so the select and the embeds are the same.
-    const table = () => supabase.from('activity_events').select(columns)
-    const source = opts.show === 'mine' ? (supabase.rpc('my_activity_events').select(columns) as unknown as ReturnType<typeof table>) : table()
-    let query = source
-      .is('hidden_at', null)
-      .order('occurred_at', { ascending: false })
-      .order('id', { ascending: false })
-      .limit(limit)
-    if (opts.actorId) query = query.eq('actor_id', opts.actorId)
-    if (opts.show === 'results') query = query.in('kind', [...RESULT_KINDS])
-    if (filter) query = query.or(filter)
-    return query
-  }
 
   const { rows, next, windowed } = await readKeyset<FeedRow>(
     opts.page,
     FEED_KEY_COLUMNS,
     async (filter, limit) => {
-      const { data, error } = await feedQuery(FEED_COLUMNS, filter, limit)
+      const { data, error } = await feedQuery(supabase, opts, FEED_COLUMNS, filter, limit)
       if (error) throw error
       return (data ?? []) as unknown as FeedRow[]
     },
@@ -98,24 +121,12 @@ export async function listFeed<T = undefined>(
     // is_invited(), and actor_id is a not-null foreign key, so the `!inner` join above never
     // drops a row this probe counts.
     async (filter, limit) => {
-      const { data, error } = await feedQuery('id, occurred_at', filter, limit)
+      const { data, error } = await feedQuery(supabase, opts, 'id, occurred_at', filter, limit)
       if (error) throw error
       return ((data ?? []) as unknown as { id: string; occurred_at: string }[]).map(feedKey)
     },
   )
 
-  // A result says what its market's creator had riding on it (#84), fetched for this page only.
-  const resolved = rows.flatMap((r) =>
-    r.kind === 'market_resolved' && r.market_id && r.market ? [{ id: r.market_id, createdBy: r.market.created_by }] : [],
-  )
-  const [stakes, alongside] = await Promise.all([
-    getCreatorStakes(supabase, resolved),
-    opts.alongside?.(rows.map((r) => r.id)),
-  ])
-  const events = rows.map((r) => {
-    const event = toFeedEvent(r)
-    if (r.kind === 'market_resolved' && r.market_id) event.creatorStake = describeCreatorStake(stakes.get(r.market_id), 'had')
-    return event
-  })
+  const [events, alongside] = await Promise.all([toFeedEvents(supabase, rows), opts.alongside?.(rows.map((r) => r.id))])
   return { rows: events, next, windowed, alongside: alongside as T }
 }

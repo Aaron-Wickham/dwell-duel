@@ -7,9 +7,9 @@ test('create a proof-required task, submit it with proof, and approve it as admi
   const member = await browser.newContext({ storageState: MEMBER_STORAGE_STATE_PATH })
   const bobPage = await member.newPage()
   await bobPage.goto('/')
-  // The hero's first "N DC" is the balance; its stat tiles come after it.
-  const balance = bobPage.getByRole('region', { name: 'Your balance' }).getByText(/^\d+ DC$/).first()
-  const startingBalance = Number((await balance.textContent())!.match(/\d+/)![0])
+  // The desktop Balance card's first "N DC" is the balance (#388).
+  const balance = bobPage.getByRole('region', { name: 'Balance' }).getByText(/^[\d,]+ DC$/).first()
+  const startingBalance = Number((await balance.textContent())!.replace(/,/g, '').match(/\d+/)![0])
 
   await page.goto('/admin/tasks')
   await page.getByLabel('Title').fill('Read Genesis 1-3')
@@ -45,6 +45,6 @@ test('create a proof-required task, submit it with proof, and approve it as admi
   await expect(page.getByText('Nothing pending.')).toBeVisible()
 
   await bobPage.goto('/')
-  await expect(balance).toHaveText(`${startingBalance + 10} DC`)
+  await expect(balance).toHaveText(`${(startingBalance + 10).toLocaleString('en-US')} DC`)
   await member.close()
 })

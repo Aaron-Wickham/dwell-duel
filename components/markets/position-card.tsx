@@ -65,7 +65,8 @@ export function PositionCard({
                   {b.paysIfWins !== null && (
                     <span className="font-extrabold">{`Pays ${formatDcAmount(b.paysIfWins)}`}</span>
                   )}
-                  <ResultChip result={b.result} />
+                  {/* Every bet in an open market is open, so only a result earns a chip (#387). */}
+                  {b.result.kind !== 'open' && <ResultChip result={b.result} />}
                 </>
               }
             />

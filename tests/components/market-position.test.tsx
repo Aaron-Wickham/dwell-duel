@@ -127,6 +127,8 @@ describe('PositionCard, while the market is open', () => {
     expect(within(rows[0]).getByText('20 DC on Yes')).toBeInTheDocument()
     expect(within(rows[0]).getByText('Pays 26 DC')).toBeInTheDocument()
     expect(within(rows[1]).getByText('Pays 31 DC')).toBeInTheDocument()
+    // Every bet in an open market is open, so none carries an Open chip (#387).
+    expect(within(rows[0]).queryByText('Open')).toBeNull()
     expect(within(card).queryByRole('button')).toBeNull()
   })
 

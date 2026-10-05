@@ -31,18 +31,31 @@ test('the slip button follows the member everywhere, and one tap places every so
   await expect(trigger).toBeVisible()
   await page.setViewportSize({ width: 375, height: 812 })
 
-  let sheet = await openSlip(page)
-  // Any pick can be switched to Parlay; one that can't be a leg yet says why once it is (0074).
-  await expect(sheet.getByRole('button', { name: 'Parlay' }).first()).toBeEnabled()
-  // The sheet is modal (A11Y-01): Tab and Shift+Tab cycle inside it, past its last control and back
-  // round, never into the page behind.
+  // The sheet is modal (A11Y-01, #392): the page behind is inert while it's open, so Tab pressed
+  // the moment it opens, before it has taken focus, and Tab at key-repeat speed both stay inside it.
+  await trigger.click()
+  for (let i = 0; i < 10; i++) await page.keyboard.press('Tab')
+  let sheet = page.getByRole('dialog', { name: 'Your slip' })
+  await expect(sheet).toBeVisible()
+  await expect(sheet.locator(':focus')).toHaveCount(1)
+  await expect(page.locator('#app-shell')).toHaveAttribute('inert', '')
   for (const key of ['Tab', 'Shift+Tab']) {
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 40; i++) await page.keyboard.press(key)
+    await expect(sheet.locator(':focus')).toHaveCount(1)
+    for (let i = 0; i < 15; i++) {
       await page.keyboard.press(key)
       await expect(sheet.locator(':focus')).toHaveCount(1)
     }
   }
+  // Any pick can be switched to Parlay; one that can't be a leg yet says why once it is (0074).
+  await expect(sheet.getByRole('button', { name: 'Parlay' }).first()).toBeEnabled()
+  // Every Remove control is a full 44px target.
+  for (const remove of await sheet.getByRole('button', { name: /^Remove / }).all()) {
+    const box = await remove.boundingBox()
+    expect(box!.width).toBeGreaterThanOrEqual(44)
+  }
   await page.keyboard.press('Escape')
+  await expect(page.locator('#app-shell')).not.toHaveAttribute('inert')
   await expect(sheet).toHaveCount(0)
   await expect(trigger).toBeFocused()
 

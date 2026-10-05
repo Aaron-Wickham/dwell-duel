@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState, type MouseEvent, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useState, type MouseEvent, type RefObject } from 'react'
 import { Drawer } from '@base-ui/react/drawer'
 import { X } from 'lucide-react'
 import { useSlip } from '@/components/slip/slip-provider'
 import { SLIP_CLOSE_ID, SlipPanel } from '@/components/slip/slip-panel'
 import { focusPageHeading } from '@/lib/ui/focus-page-heading'
+import { APP_SHELL_ID } from '@/lib/ui/app-shell'
 import { useIsDesktop } from '@/lib/ui/use-is-desktop'
 import { cn } from '@/lib/utils'
 
@@ -33,6 +34,20 @@ export function SlipDrawer({
     return () => cancelAnimationFrame(frame)
   }, [])
   const count = picks.length
+  const shown = open && settled
+
+  // Base UI's focus guards alone leak under key repeat and in the moment before the popup takes
+  // focus, and only aria-hide the page (#392). A layout effect, so the page is live again before
+  // Base UI hands focus back to the slip button on close.
+  useLayoutEffect(() => {
+    if (!shown) return
+    const shell = document.getElementById(APP_SHELL_ID)
+    if (!shell) return
+    shell.inert = true
+    return () => {
+      shell.inert = false
+    }
+  }, [shown])
 
   function handleContentClick(event: MouseEvent<HTMLDivElement>) {
     // A link to the page already on screen doesn't navigate, so it would leave the slip stuck open.
@@ -43,7 +58,7 @@ export function SlipDrawer({
     // Modal: Tab and Shift+Tab stay inside the sheet while it's open (A11Y-01), and Escape closes it.
     <Drawer.Root
       modal
-      open={open && settled}
+      open={shown}
       swipeDirection={isDesktop ? 'right' : 'down'}
       onOpenChange={(next) => {
         setOpen(next)

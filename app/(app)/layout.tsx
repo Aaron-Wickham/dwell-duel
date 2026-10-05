@@ -20,6 +20,7 @@ import { OfflineBanner } from '@/components/offline/offline-banner'
 import { OfflineNavNotice } from '@/components/offline/offline-nav-notice'
 import { FALLBACK_NAME } from '@/lib/profile/fallback-name'
 import { KeyboardViewportReset } from '@/components/app-shell/keyboard-viewport-reset'
+import { APP_SHELL_ID } from '@/lib/ui/app-shell'
 
 export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   const { supabase, user } = await requireUser()
@@ -57,23 +58,26 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
         {alertTables.length > 0 && <LiveTables subscriptions={alertTables} />}
         {/* A market closing changes nothing in the database, so an admin's badge refreshes at the next close. */}
         {isAdmin && <RefreshAt at={nextClose} />}
-        {/* A missing profile row still gets the nav and <main>, so the page isn't stranded without them. */}
-        <AppNav
-          balance={profile?.balance ?? 0}
-          adminHref={adminHref(role, reviewCounts)}
-          adminAttention={reviewCounts.tasks + reviewCounts.markets}
-          me={{
-            id: user.id,
-            name: profile?.display_name ?? FALLBACK_NAME,
-            avatarSrc: avatarUrl(profile?.avatar_path),
-          }}
-        />
-        <main id="main" className="flex flex-1 flex-col pb-[calc(82px+var(--safe-bottom))] md:pb-0">
-          <OfflineBanner />
-          {children}
-          <SlipSpacer />
-        </main>
-        <SlipSheet />
+        {/* The slip makes this inert while it's open; its sheet is portalled outside it. */}
+        <div id={APP_SHELL_ID} className="contents">
+          {/* A missing profile row still gets the nav and <main>, so the page isn't stranded without them. */}
+          <AppNav
+            balance={profile?.balance ?? 0}
+            adminHref={adminHref(role, reviewCounts)}
+            adminAttention={reviewCounts.tasks + reviewCounts.markets}
+            me={{
+              id: user.id,
+              name: profile?.display_name ?? FALLBACK_NAME,
+              avatarSrc: avatarUrl(profile?.avatar_path),
+            }}
+          />
+          <main id="main" className="flex flex-1 flex-col pb-[calc(82px+var(--safe-bottom))] md:pb-0">
+            <OfflineBanner />
+            {children}
+            <SlipSpacer />
+          </main>
+          <SlipSheet />
+        </div>
         {vapid && <PushResync userId={user.id} publicKey={vapid.publicKey} />}
         <Toaster />
         <OfflineNavNotice />

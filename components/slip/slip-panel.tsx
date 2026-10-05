@@ -180,7 +180,7 @@ function PickRow({
           size="sm"
           aria-label={`Remove ${name}`}
           aria-disabled={removing || undefined}
-          className="-mt-1.5 -mr-1.5 px-2.5"
+          className="-mt-1.5 -mr-1.5 min-w-11 px-2.5"
           onClick={handleRemove}
         >
           <X aria-hidden="true" className="size-5" />

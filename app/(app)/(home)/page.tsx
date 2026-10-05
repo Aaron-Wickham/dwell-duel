@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
@@ -5,7 +6,9 @@ import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { getAtStake } from '@/lib/home/at-stake'
-import { getOnboarding } from '@/lib/home/onboarding'
+import type { DbClient } from '@/lib/supabase/database'
+import type { Role } from '@/lib/auth/roles'
+import { getOnboarding, onboardingDismissed } from '@/lib/home/onboarding'
 import { getClosingSoon, getHomeHistory, getMarketsClosingSoon } from '@/lib/home/closing-soon'
 import { OnboardingCard } from '@/components/home/onboarding-card'
 import { getMarketsToResolve, nextResolveCheckAt } from '@/lib/markets/markets-to-resolve'
@@ -28,6 +31,33 @@ import { rankText } from '@/lib/format/rank'
 
 const ACTIVITY_ROWS = 3
 
+// Needs you and Getting started show only when they apply, which the skeleton can't know, so they
+// stream in behind boundaries that draw nothing while they wait: the rest of the page lands where
+// its skeleton drew it, without waiting on their reads (#388).
+async function HomeNeedsYou({ supabase, role, balance }: { supabase: DbClient; role: Role; balance: number }) {
+  const [reviewCounts, marketsToResolve, taskRewards] = await Promise.all([
+    // The same counts as the avatar's dot: other members' submissions, never the viewer's own (#221).
+    getReviewCounts(supabase, role),
+    getMarketsToResolve(supabase),
+    // Only a member with nothing left sees what tasks pay, so only they pay for that read.
+    balance === 0 ? getTaskRewardRange(supabase) : null,
+  ])
+  return (
+    <NeedsYou
+      counts={reviewCounts}
+      showReviews={atLeast(role, 'reviewer')}
+      showAdminMarkets={atLeast(role, 'admin')}
+      marketsToResolve={marketsToResolve}
+      balance={balance}
+      taskRewards={taskRewards}
+    />
+  )
+}
+
+async function HomeOnboarding({ supabase }: { supabase: DbClient }) {
+  return <OnboardingCard steps={await getOnboarding(supabase)} />
+}
+
 // #388: a greeting, then what needs you, your bets closing soonest and the newest activity. On a
 // phone it's one column of rows in that order; from lg, your bets and activity sit on the left
 // (7fr) and the balance and Needs you on the right (5fr). Below lg each column is
@@ -38,21 +68,16 @@ export default async function Home() {
 
   const role = await getRole(supabase)
   const reviewer = atLeast(role, 'reviewer')
-  const admin = atLeast(role, 'admin')
-  const [standing, reviewCounts, atStake, marketsToResolve, nextResolveCheck, onboarding, weeklyRecap, history, wagers, activity] =
-    await Promise.all([
-      getMemberStanding(supabase, user.id),
-      // The same counts as the avatar's dot: other members' submissions, never the viewer's own (#221).
-      getReviewCounts(supabase, role),
-      getAtStake(supabase),
-      getMarketsToResolve(supabase),
-      nextResolveCheckAt(supabase, user.id, reviewer),
-      getOnboarding(supabase),
-      getWeeklyRecap(supabase),
-      getHomeHistory(supabase, user.id),
-      getClosingSoon(supabase, user.id),
-      listLatestFeed(supabase, ACTIVITY_ROWS),
-    ])
+  const [standing, atStake, nextResolveCheck, dismissed, weeklyRecap, history, wagers, activity] = await Promise.all([
+    getMemberStanding(supabase, user.id),
+    getAtStake(supabase),
+    nextResolveCheckAt(supabase, user.id, reviewer),
+    onboardingDismissed(),
+    getWeeklyRecap(supabase),
+    getHomeHistory(supabase, user.id),
+    getClosingSoon(supabase, user.id),
+    listLatestFeed(supabase, ACTIVITY_ROWS),
+  ])
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now()
 
@@ -60,15 +85,11 @@ export default async function Home() {
   // A newcomer's rank says only that they're last (CR-A14), so it waits for a settled bet.
   const rank = history.settledBet ? (standing?.rank ?? null) : null
   const memberCount = standing?.memberCount ?? 0
-  // Only a member with nothing left sees what tasks pay, and only one with nothing open sees the
-  // markets closing soonest, so only they pay for those reads.
-  const [taskRewards, closingMarkets] = await Promise.all([
-    balance === 0 ? getTaskRewardRange(supabase) : null,
-    wagers.length === 0 ? getMarketsClosingSoon(supabase, 3, now) : [],
-  ])
-  // Getting started retires once a member has a settled bet and an approved task.
+  // Only a member with nothing open sees the markets closing soonest, so only they pay for that read.
+  const closingMarkets = wagers.length === 0 ? await getMarketsClosingSoon(supabase, 3, now) : []
+  // Getting started retires once a member has a settled bet and an approved task, or dismisses it.
   const veteran = history.settledBet && history.approvedTask
-  const onboardingSteps = veteran ? null : onboarding
+  const onboardingShown = !veteran && !dismissed
 
   return (
     <Page transition="tab">
@@ -90,13 +111,17 @@ export default async function Home() {
             </p>
           </div>
           <div className="contents max-lg:[&>*]:order-3">
-            <OnboardingCard steps={onboardingSteps} />
+            {onboardingShown && (
+              <Suspense fallback={null}>
+                <HomeOnboarding supabase={supabase} />
+              </Suspense>
+            )}
           </div>
           <div className="contents max-lg:[&>*]:order-4">
             <YourBets wagers={wagers} openCount={atStake.wagers} markets={closingMarkets} now={now} />
           </div>
           <div className="contents max-lg:[&>*]:order-5">
-            <NotificationsCard onboardingShown={onboardingSteps !== null} />
+            <NotificationsCard onboardingShown={onboardingShown} />
           </div>
           <div className="contents max-lg:[&>*]:order-6">
             <HomeActivity events={activity} now={now} />
@@ -114,14 +139,9 @@ export default async function Home() {
             ridingWagers={atStake.wagers}
           />
           <div className="contents max-lg:[&>*]:order-2">
-            <NeedsYou
-              counts={reviewCounts}
-              showReviews={reviewer}
-              showAdminMarkets={admin}
-              marketsToResolve={marketsToResolve}
-              balance={balance}
-              taskRewards={taskRewards}
-            />
+            <Suspense fallback={null}>
+              <HomeNeedsYou supabase={supabase} role={role} balance={balance} />
+            </Suspense>
           </div>
         </div>
       </div>

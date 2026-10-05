@@ -15,9 +15,10 @@ import { SegmentedControl, segmentClass, segmentMarker } from '@/components/ui/s
 import { StatusChip } from '@/components/ui/status-chip'
 import type { SlipPick } from '@/lib/parlays/get-slip'
 import { lmsrPrices } from '@/lib/markets/lmsr'
-import { lmsrOddsBp, lmsrQuote } from '@/lib/markets/pricing'
+import { lmsrOddsBp } from '@/lib/markets/pricing'
 import { formatOdds, lmsrParlayQuote, MAX_PICKS } from '@/lib/parlays/odds'
 import { placeSlipAction, type PlaceSlipState } from '@/lib/parlays/place-slip'
+import { soloPays } from '@/lib/parlays/solo-pays'
 import { removeFromSlipAction } from '@/lib/parlays/slip-actions'
 import { haptics } from '@/lib/haptics'
 import { cn } from '@/lib/utils'
@@ -97,11 +98,6 @@ function StakeChips({ label, available, onPick }: { label: string; available: nu
 
 const modeClass = (on: boolean) => cn(segmentClass(on), uiTextClass, 'disabled:cursor-not-allowed disabled:opacity-50')
 
-// What a Solo stake pays if it wins, exactly as place_lmsr_bet will (0102).
-function lmsrPays(pick: SlipPick, stake: number): number | null {
-  return pick.lmsr ? lmsrQuote(pick.lmsr.q, pick.lmsr.liquidity, pick.lmsr.index, stake).payout : null
-}
-
 // What each DC on the pick would pay now, at its price.
 function pickOdds(pick: SlipPick): string | null {
   if (!pick.lmsr) return null
@@ -116,7 +112,7 @@ function PickRow({ pick, error }: { pick: SlipPick; error?: string }) {
   const stakeId = `slip-stake-${pick.outcomeId}`
   const errorId = `slip-pick-error-${pick.outcomeId}`
   const stake = wholeDc(stakes[pick.outcomeId])
-  const pays = stake !== null ? lmsrPays(pick, stake) : null
+  const pays = stake !== null ? soloPays(pick.lmsr, stake) : null
   const name = `${pick.outcomeLabel}, ${pick.marketTitle}`
   const odds = pickOdds(pick)
   // Every stake counts toward the shortfall, so each filled one is marked and points to the why.

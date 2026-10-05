@@ -1,9 +1,9 @@
 import { cn } from '@/lib/utils'
 import { chipTextClass, microTextClass } from '@/components/ui/page'
 
-// A count of what waits on the viewer (tasks to review, markets to resolve), on the top bar's
-// Admin button and on the admin section tabs that make up its number (#243, #351). Decorative to
-// assistive tech: an AttentionNote beside it carries the number.
+// A count of what waits on the viewer (tasks to review, markets to resolve), on the admin section
+// tabs that make up the avatar's waiting count (#243, #351, #385). Decorative to assistive tech: an
+// AttentionNote beside it carries the number.
 export function AttentionBadge({ count, className }: { count: number; className?: string }) {
   if (count <= 0) return null
   return (

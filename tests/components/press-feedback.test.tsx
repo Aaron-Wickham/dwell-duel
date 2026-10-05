@@ -304,7 +304,7 @@ describe('press feedback', () => {
     const { container } = render(
       <NeedsYou counts={{ tasks: 2, markets: 0 }} showReviews showAdminMarkets={false} marketsToResolve={{ total: 0, markets: [] }} balance={5} taskRewards={null} />,
     )
-    expect(container.querySelector('a')).toHaveClass('pressable', 'hover-tint')
+    expect(container.querySelector('a')).toHaveClass('pressable', 'relative', 'hover-tint')
     expect(container.querySelector('a')).not.toHaveClass('hover-lift')
   })
 

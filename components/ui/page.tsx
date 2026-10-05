@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 export const h1Class = 'text-[28px] font-extrabold leading-[1.12] tracking-[-0.025em] text-balance md:text-[40px]'
 export const h2Class = 'text-[19px] font-extrabold leading-[1.25] tracking-[-0.01em] md:text-[21px]'
 export const eyebrowClass = 'text-xs font-extrabold uppercase tracking-[0.09em] text-ink2'
-// The title of a row or tile in a list: home tiles, task rows, leaderboard rows and the like.
+// The title of a row or tile in a list: task rows, bet rows, leaderboard rows and the like.
 export const rowTitleClass = 'text-[17px] font-extrabold leading-[1.3] tracking-[-0.01em]'
 // The name of a form field: a <label> above its control, or a <legend> over a group of them.
 export const labelClass = 'text-[15px] font-bold'

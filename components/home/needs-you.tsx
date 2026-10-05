@@ -17,7 +17,7 @@ function NeedsYouRow({ href, drillDown, tone, children }: { href: string; drillD
         href={href}
         transitionTypes={drillDown ? ['nav-forward'] : TAB_TRANSITION}
         className={cn(
-          'pressable hover-tint flex min-h-11 items-center justify-between gap-3 py-3 no-underline',
+          'pressable hover-tint relative flex min-h-11 items-center justify-between gap-3 py-3 no-underline',
           tone === 'gold' ? 'font-bold text-gold' : 'text-ink',
         )}
       >

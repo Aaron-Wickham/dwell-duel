@@ -1,25 +1,25 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import Link from 'next/link'
 import { Menu } from '@base-ui/react/menu'
 import { Mail, Settings, ShieldCheck, UserRound, type LucideIcon } from 'lucide-react'
 import { AttentionCount } from '@/components/ui/attention-badge'
 import { Avatar } from '@/components/ui/avatar'
+import { IntentLink } from '@/components/ui/intent-link'
 import { uiTextClass } from '@/components/ui/page'
 import { feedbackHref } from '@/lib/app-shell/feedback'
 import { cn } from '@/lib/utils'
 
 export type NavMember = { id: string; name: string; avatarSrc: string | null }
 
-const itemClass = `flex min-h-11 items-center gap-3 rounded-segment px-3 ${uiTextClass} font-bold text-ink no-underline outline-none select-none data-highlighted:bg-sunk`
+const itemClass = `pressable flex min-h-11 items-center gap-3 rounded-segment px-3 ${uiTextClass} font-bold text-ink no-underline outline-none select-none data-highlighted:bg-sunk`
 
 function Item({ href, icon: Icon, external = false, children }: { href: string; icon: LucideIcon; external?: boolean; children: ReactNode }) {
   return (
     <Menu.LinkItem
       closeOnClick
       className={itemClass}
-      render={external ? <a href={href} /> : <Link href={href} transitionTypes={['nav-forward']} />}
+      render={external ? <a href={href} /> : <IntentLink prefetchOnTouch pendingMarker={false} href={href} transitionTypes={['nav-forward']} />}
     >
       <Icon aria-hidden="true" className="size-5 shrink-0 text-ink2" />
       {children}

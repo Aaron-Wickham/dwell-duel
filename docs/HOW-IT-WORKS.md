@@ -349,7 +349,8 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
   optionally saying why. Your row then says "Not approved", with the
   reason if they gave one, and you can submit again. Nobody reviews their
   own submission, and a task can reward at most 500 DC.
-- Your Home screen shows DC that's **Pending** review.
+- On Tasks, a submission waiting for review says **Pending review** until
+  it's approved, and its reward is paid then.
 - **Streaks:** do a repeating task in back-to-back periods and its row
   shows your streak, like "🔥 5-week streak", from two in a row. Only
   approved submissions count: one waiting for review joins the streak
@@ -363,7 +364,8 @@ Admins keep a catalogue of Bible-study tasks, each with a DC reward.
 - **Net worth** (the main board) ranks everyone by **balance plus the DC
   riding on open bets**: solo bets on markets that haven't resolved yet
   and parlays not yet settled. Placing a bet doesn't move you down; losing
-  it does. Home and your profile show your rank on this board. On a phone
+  it does. Your profile shows your rank on this board, and so does Home
+  once you've had a bet or parlay settled. On a phone
   a small card shows your rank and net worth, with **Jump to me**, which
   opens the list ten places above you instead of paging down from the top.
 - **This month** ranks **net betting profit** for the calendar month, on
@@ -500,11 +502,11 @@ sign back in. Your other devices keep theirs.
 | **Admin** | Invite people, manage tasks, resolve, override or void any market, move any market's closing time or reopen it, change any market's category, rename, merge and hide categories, delete any comment, view members and the full ledger |
 | **Owner** (exactly one) | Adjust balances, grant and remove roles, remove a member, and delete a market or task that hasn't been used |
 
-Reviewers and above get a red count on the **Admin** button for what is
-waiting on them: other members' task submissions (reviewers and above) and
-closed markets with no result (admins and above). It disappears at zero.
-Home's Admin tile counts the same things and opens the queue that has
-work in it.
+Reviewers and above see what is waiting on them: other members' task
+submissions (reviewers and above) and closed markets with no result (admins
+and above). Their avatar gets a red dot, its menu's **Admin** item says
+"N waiting", and Home's **Needs you** lists each queue with its count; all
+of it disappears at zero. Admin opens on the queue that has work in it.
 
 A role only counts while you're invited, and so does what you can do with
 your own markets and comments. The owner can **remove a member**
@@ -617,13 +619,18 @@ or reach them through
 
 ## Around the app
 
-- **Home:** your balance, rank, DC at stake and pending rewards, plus
-  links to everything else. At 0 DC it points you to Tasks, the way to
-  earn more. New members also get a **Getting started** card: read this
-  page, turn on notifications on this device (left out on a browser that
-  can't get them), add your photo, place your first bet and try a task.
-  It goes away once you've done them all, or
-  when you dismiss it. After that, the installed app without
+- **Home:** a greeting with your rank (once you've had a bet settled) and
+  the DC riding on your open bets; your balance is in the top bar, and on
+  a computer in a Balance card too. **Needs you** appears when something
+  does: submissions to review and markets to resolve, and at 0 DC a pointer
+  to Tasks, the way to earn more. **Your bets** lists the three closing
+  soonest (or, with none open, the markets closing soonest), and
+  **Activity** the latest from the feed, with See all. New members also get
+  a **Getting started** card: read this page, turn on notifications on this
+  device (left out on a browser that can't get them), add your photo, place
+  your first bet and try a task. It goes away once you've done them all,
+  when you dismiss it, or once you've had a bet settled and a task
+  approved. After that, the installed app without
   notifications asks once to turn them on, until you tap Not now.
 - **Weekly recap:** on Sundays and Mondays (Eastern time), Home recaps
   the week, Monday to Sunday. On Sunday it's the week so far; on Monday
@@ -636,7 +643,7 @@ or reach them through
   whoever got there first); and the markets closing in the week ahead.
   A line with nothing to report is left out, and a quiet week shows no
   recap at all.
-- **Feed:** everyone's bets, parlays, new markets, results, voids (with
+- **Activity:** opened from Home's Activity (See all). Everyone's bets, parlays, new markets, results, voids (with
   their reason), wins, approved tasks and each month's champion, with their
   reactions, updated live. See [Reactions and comments](#reactions-and-comments).
   The tabs narrow it: **All**, **Results** (markets resolved or voided,
@@ -651,13 +658,14 @@ or reach them through
   Your own bets are under My bets.
 - **Leaderboard and profiles:** see [The leaderboard](#the-leaderboard)
   and [Profile stats](#profile-stats).
-  Tap your avatar (top right) for your profile, where Edit profile and
-  Settings live.
+  Tap your avatar (top right) for a menu: **Your profile** (where Edit
+  profile lives), **Settings**, **Admin** for reviewers and above, and
+  **Send feedback**.
 - **Settings:** theme (System, Light or Dark), vibration on taps (Android),
-  reduced animations, your profile (photo and name), [notifications](#notifications), this How it works
+  reduced animations, your profile (photo and name), [notifications](#notifications), how to install the app (on a phone browser that hasn't yet), this How it works
   page, [what DwellDuel keeps about you](#your-data), and sign out. Signing out only signs out the device you're on, and
   stops its notifications; your other devices stay signed in.
 - **Install it:** add DwellDuel to your Home Screen for a full-screen app
   with a launch animation. It shows an offline page when you lose
   connection, and on iPhone and iPad it's how you get notifications.
-- **Feedback:** use "Send feedback" on Home.
+- **Feedback:** use "Send feedback" in your avatar's menu.

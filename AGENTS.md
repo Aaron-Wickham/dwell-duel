@@ -75,8 +75,11 @@ a line to `CHANGELOG.md` under the next release.
   `tappable={false}`. Inside a `SectionCard` the list is `listCardsClass`
   (`flex flex-col gap-2`, no dividers), with its `lg:` grid added at the
   call site. Something that isn't an `<li>` uses
-  `tappableListCardClass`. The feed, ledger, coin history, invites and a
-  market's bet list stay divided rows.
+  `tappableListCardClass`. The feed, ledger, coin history, invites, a
+  market's bet list and Home's Your bets and Needs you stay divided rows.
+- **Home is the one uncarded page on a phone** (#388, D1/D2). Its sections
+  (`HomeSection`, `components/home/home-section.tsx`) are rows on the page
+  under an `<h2>` below `lg:`, and cards like a `SectionCard` from `lg:`.
 - **Page widths come from `<Page width>`:** `wide` (default, 1120px of
   content) or `reading` (about 820px, centred), and a skeleton uses
   `pageClassFor(width)`. Don't cap a card's width inside a page; fill the

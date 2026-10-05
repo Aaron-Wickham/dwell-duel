@@ -16,7 +16,7 @@ import { CardLinkClick } from '@/components/ui/card-link-click'
 import { PushResync } from '@/components/push/push-resync'
 import { vapidKeys } from '@/lib/push/config'
 import { Toaster } from '@/components/ui/toaster'
-import { OfflineBanner } from '@/components/offline/offline-banner'
+import { OfflineBanner, OfflineSpacer } from '@/components/offline/offline-banner'
 import { OfflineNavNotice } from '@/components/offline/offline-nav-notice'
 import { FALLBACK_NAME } from '@/lib/profile/fallback-name'
 import { KeyboardViewportReset } from '@/components/app-shell/keyboard-viewport-reset'
@@ -72,12 +72,14 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
             }}
           />
           <main id="main" className="flex flex-1 flex-col pb-[calc(82px+var(--safe-bottom))] md:pb-0">
-            <OfflineBanner />
+            <OfflineSpacer />
             {children}
             <SlipSpacer />
           </main>
           <SlipSheet />
         </div>
+        {/* Outside the shell, so it isn't inert under the slip (#401). */}
+        <OfflineBanner />
         {vapid && <PushResync userId={user.id} publicKey={vapid.publicKey} />}
         <Toaster />
         <OfflineNavNotice />

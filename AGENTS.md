@@ -181,7 +181,9 @@ a line to `CHANGELOG.md` under the next release.
 
 - **A transient banner never covers the page** (#401): the offline
   banner is `fixed` under the top bar, and an invisible copy in the
-  page's flow reserves its height while it shows.
+  page's flow (`OfflineSpacer`) reserves its height while it shows. The
+  banner itself renders outside `#app-shell` with an explicit
+  `aria-live`, so it stays announced while the slip makes the page inert.
 - **Skeletons, or a streamed Suspense.** Every signed-in route gets a
   `loading.tsx` skeleton (`SkeletonScreen`), unless a real 404 must
   survive the initial load, in which case it streams behind `<Suspense>`

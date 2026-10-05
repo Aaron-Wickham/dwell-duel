@@ -273,12 +273,15 @@ a line to `CHANGELOG.md` under the next release.
   with a padded row that sets `[--tint-inset:0]`. The lift drops its
   movement under reduced motion, and `pressable` carries the transition,
   so a colour hover on a `pressable` eases on its own.
-- **Motion tokens.** Curves and durations are the `--ease-*` /
-  `--duration-*` tokens in `globals.css`'s `@theme static` block (`ease-ios`,
-  `duration-(--duration-fast)` in markup), mirrored for script by
-  `lib/ui/motion.ts` (`EASE`, `DURATION`, `PILL_SLIDE`, `PILL_TRANSITION`);
-  a test keeps them equal and fails on a `cubic-bezier` anywhere else.
-  Every sliding pill uses the pill slide, and a nav or tab-bar link it
+- **Motion tokens.** Curves, durations and delays are the `--ease-*` /
+  `--duration-*` / `--delay-*` tokens in `globals.css`'s `@theme static`
+  block (`ease-ios`, `duration-(--duration-fast)` in markup), mirrored for
+  script by `lib/ui/motion.ts` (`EASE`, `DURATION`, `DELAY`, `PILL_SLIDE`,
+  `PILL_TRANSITION`); a test keeps them equal and fails on a `cubic-bezier`
+  anywhere else or a raw `ms`/`s` in `globals.css` outside the block (zero
+  aside). Every sliding pill uses the pill slide and animates transforms
+  only, never `left` or `width` (`SegmentedControl` splits its pill into
+  caps that move and a middle that stretches, #418), and a nav or tab-bar link it
   slides under takes `pill-label`, so its colour cross-fades over the same
   280ms; every
   dialog takes `components/ui/dialog-classes.ts`. Reduced motion turns page

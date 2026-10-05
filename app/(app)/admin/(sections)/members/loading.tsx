@@ -1,8 +1,9 @@
 import { Skeleton, SkeletonScreen } from '@/components/ui/skeleton'
 
 // Below the Admin header and section tabs: the search box and the Active/Removed tabs (side by
-// side from lg), then the Members heading over the table on the page (D2): from lg, a header row
-// and a row per member across five columns; on a phone, divided rows of name, email and one line.
+// side from lg), then the Members heading over the table on the page (D2): a header row of sort links
+// (#418), then from lg a row per member across five columns; on a phone, divided rows of name, email
+// and one line.
 export default function Loading() {
   return (
     <SkeletonScreen name="admin-members" className="flex flex-col gap-4">
@@ -16,9 +17,9 @@ export default function Loading() {
       <div className="flex flex-col gap-3">
         <Skeleton className="h-6 w-28" />
         <div className="flex flex-col divide-y divide-line">
-          <div className="hidden gap-6 py-2.5 lg:flex">
-            {['w-20', 'w-12', 'w-16', 'w-20', 'w-14'].map((width, i) => (
-              <Skeleton key={i} className={`h-3.5 ${width} ${i === 0 ? 'grow-[3]' : ''}`} />
+          <div className="flex h-11 items-center gap-4 lg:gap-6">
+            {['w-16', 'w-12', 'w-16', 'w-20', 'w-14'].map((width, i) => (
+              <Skeleton key={i} className={`h-3.5 ${width} ${i === 0 ? 'lg:grow-[3]' : ''} ${i === 1 ? 'max-lg:hidden' : ''}`} />
             ))}
           </div>
           {Array.from({ length: 8 }, (_, i) => (

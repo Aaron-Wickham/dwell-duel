@@ -3,10 +3,11 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { reconcileBalances, serviceClient, setBalanceViaLedger } from './helpers'
 import { pgQuery } from './pg-query'
 import { seedMembers, makeMember, makeAuthUserWithoutProfile, clientFor, ensureInvited, giveRole, type Member } from './fixtures'
-import { countMembers, getAdminMember, listMembersPage } from '@/lib/members/list-members'
+import { countMembers, getAdminMember, listMembersByNetWorth, listMembersByValue, listMembersPage } from '@/lib/members/list-members'
 import { getLeaderboardPage, getMemberStanding } from '@/lib/social/leaderboard'
 import { PAGE_SIZE, showMoreHref, type SearchParams } from '@/lib/pagination/cursor'
 import { readNamePageParams } from '@/lib/pagination/name-cursor'
+import { readValuePageParams } from '@/lib/pagination/value-cursor'
 
 // 0093 (#254, #265): Admin › Members at scale, and removed members out of the rankings.
 let owner: Member
@@ -101,6 +102,106 @@ describe('admin_members', () => {
     const expected = await pgQuery<{ id: string }>(`select id from public.profiles order by display_name, id`)
     expect(all.rows.map((m) => m.id)).toEqual(expected.map((r) => r.id))
     expect(first.next!.firstId).toBe(expected[PAGE_SIZE].id)
+  })
+})
+
+// #418: Admin › Members sorted by balance, net worth or when they joined, in either direction.
+describe('sorted Admin › Members', () => {
+  // Past one page, most on the starting 100 DC, so ties on the figure span the page boundary.
+  async function seedPaged(): Promise<string[]> {
+    const db = serviceClient()
+    const ids: string[] = []
+    for (let i = 0; i < PAGE_SIZE + 4; i += 10) {
+      const batch = await Promise.all(
+        Array.from({ length: Math.min(10, PAGE_SIZE + 4 - i) }, async (_, j) => {
+          const k = i + j
+          const email = `sorted${k}@example.com`
+          const id = await makeAuthUserWithoutProfile(email)
+          const { error } = await db.from('profiles').insert({ id, email, display_name: `Sorted ${String(k % 20).padStart(2, '0')}` })
+          if (error) throw error
+          await db.from('allowed_emails').insert({ email })
+          if (k % 7 === 0) await setBalanceViaLedger(id, 100 + k * 3)
+          return id
+        }),
+      )
+      ids.push(...batch)
+    }
+    return ids
+  }
+
+  function showMoreParams(next: { kind: 'extend' | 'window'; cursor: string }): SearchParams {
+    return Object.fromEntries(new URL(showMoreHref('/admin/members', {}, 'after', next), 'http://x').searchParams) as SearchParams
+  }
+
+  for (const ascending of [false, true]) {
+    it(`pages by balance, ${ascending ? 'lowest' : 'highest'} first, ties A–Z then by id`, async () => {
+      await seedPaged()
+      const options = { query: '', removed: false, column: 'balance' as const, ascending }
+      const first = await listMembersByValue(ownerClient, { ...options, page: FIRST })
+      expect(first.rows).toHaveLength(PAGE_SIZE)
+      const params = showMoreParams(first.next!)
+      const all = await listMembersByValue(ownerClient, { ...options, page: readValuePageParams(params, 'after', 'integer') })
+      expect(all.next).toBeNull()
+      const expected = await pgQuery<{ id: string }>(
+        `select p.id from public.profiles p where p.id in (select id from public.invited_member_ids())
+         order by p.balance ${ascending ? 'asc' : 'desc'}, p.display_name, p.id`,
+      )
+      expect(all.rows.map((m) => m.id)).toEqual(expected.map((r) => r.id))
+    })
+  }
+
+  it('pages by when they joined, on either tab', async () => {
+    const db = serviceClient()
+    await db.from('profiles').update({ created_at: '2026-01-01T00:00:00Z' }).eq('id', carol.id)
+    const newest = await listMembersByValue(ownerClient, { query: '', removed: false, column: 'joined_at', ascending: false, page: FIRST })
+    expect(newest.rows.at(-1)?.id).toBe(carol.id)
+    const oldest = await listMembersByValue(ownerClient, { query: '', removed: false, column: 'joined_at', ascending: true, page: FIRST })
+    expect(oldest.rows[0].id).toBe(carol.id)
+    await remove(carol)
+    const removed = await listMembersByValue(ownerClient, { query: '', removed: true, column: 'joined_at', ascending: true, page: FIRST })
+    expect(removed.rows.map((m) => m.id)).toEqual([carol.id])
+  })
+
+  it('sorts the Active tab by net worth, counting DC riding, and pages through it', async () => {
+    await seedPaged()
+    await setBalanceViaLedger(bob.id, 40)
+    const first = await listMembersByNetWorth(ownerClient, { query: '', ascending: false, page: FIRST })
+    expect(first.rows).toHaveLength(PAGE_SIZE)
+    const all = await listMembersByNetWorth(ownerClient, {
+      query: '',
+      ascending: false,
+      page: readValuePageParams(showMoreParams(first.next!), 'after', 'integer'),
+    })
+    expect(all.next).toBeNull()
+    const board = await pgQuery<{ id: string; score: string }>(
+      `select id, score from public.leaderboard_net_worth() order by score desc, display_name, id`,
+    )
+    expect(all.rows.map((m) => m.id)).toEqual(board.map((r) => r.id))
+    expect(all.rows.map((m) => all.netWorths.get(m.id))).toEqual(board.map((r) => Number(r.score)))
+    expect(all.rows.at(-1)?.id).toBe(bob.id)
+    expect(all.rows[0]).toMatchObject({ email: expect.any(String), removed: false })
+  })
+
+  it('searches names and emails when sorted by net worth, paging the matches in order', async () => {
+    await seedPaged()
+    await remove(carol)
+    const first = await listMembersByNetWorth(ownerClient, { query: 'SORTED', ascending: true, page: FIRST })
+    expect(first.rows).toHaveLength(PAGE_SIZE)
+    const all = await listMembersByNetWorth(ownerClient, {
+      query: 'SORTED',
+      ascending: true,
+      page: readValuePageParams(showMoreParams(first.next!), 'after', 'integer'),
+    })
+    expect(all.next).toBeNull()
+    expect(all.rows).toHaveLength(PAGE_SIZE + 4)
+    const worths = all.rows.map((m) => all.netWorths.get(m.id)!)
+    expect(worths).toEqual([...worths].sort((a, b) => a - b))
+    expect(new Set(all.rows.map((m) => m.id)).size).toBe(PAGE_SIZE + 4)
+
+    const byEmail = await listMembersByNetWorth(ownerClient, { query: 'bob@exam', ascending: false, page: FIRST })
+    expect(byEmail.rows.map((m) => m.id)).toEqual([bob.id])
+    // Removed members aren't on the board, so a search for one finds nobody in this order.
+    expect((await listMembersByNetWorth(ownerClient, { query: 'carol', ascending: false, page: FIRST })).rows).toEqual([])
   })
 })
 

@@ -2,37 +2,52 @@ import { Skeleton, SkeletonCard, SkeletonField, SkeletonScreen } from '@/compone
 import { dividedRowClass, dividedRowsClass } from '@/components/ui/list-card'
 import { cn } from '@/lib/utils'
 
-// Below the Admin header and section tabs: pending approvals (the bulk bar, then a row per
-// submission: checkbox, member, task and attachments, Approve), then Create task beside the task
-// catalog from lg (5 : 7), divided rows inside its card (D2).
+// Below the Admin header and section tabs: pending approvals (the bulk bar, one line below lg until
+// something is ticked, then a row per submission: on a phone the member and when, the task, then
+// what's attached beside Approve and Reject, #418), then Create task beside the task catalog from lg
+// (5 : 7), divided rows inside its card (D2).
 export default function Loading() {
   return (
     <SkeletonScreen name="admin-tasks" className="flex flex-col gap-5 md:gap-7">
       <SkeletonCard className="gap-4">
         <Skeleton className="h-6 w-48" />
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-2 rounded-tile border border-line px-3.5 py-2 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-h-11 items-center gap-4">
+          {/* One line below lg, until something is ticked (#418). */}
+          <div className="flex flex-col gap-2 rounded-tile border border-line px-3.5 py-0.5 lg:flex-row lg:items-center lg:justify-between lg:py-2">
+            <div className="flex min-h-11 items-center justify-between gap-4 lg:justify-start">
               <Skeleton className="h-5 w-24" />
-              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-4 w-32 lg:h-5 lg:w-36" />
             </div>
-            <div className="flex gap-2">
-              <Skeleton className="h-11 grow lg:w-36" />
-              <Skeleton className="h-11 grow lg:w-36" />
+            <div className="flex gap-2 max-lg:hidden">
+              <Skeleton className="h-11 w-36" />
+              <Skeleton className="h-11 w-36" />
             </div>
           </div>
           <div className={dividedRowsClass}>
-            {Array.from({ length: 3 }, (_, i) => (
-              <div key={i} className="flex items-start gap-2 py-3">
-                <div className="flex size-11 shrink-0 items-center">
+            {Array.from({ length: 5 }, (_, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-[44px_minmax(0,1fr)_auto] gap-x-2 py-1 lg:flex lg:items-center lg:gap-2 lg:py-3"
+              >
+                <div className="row-span-2 flex size-11 items-center">
                   <Skeleton className="size-[22px] rounded-segment" />
                 </div>
-                <div className="flex grow flex-col gap-2 pt-2.5 lg:flex-row lg:items-center lg:gap-6 lg:pt-0">
+                <div className="flex h-6 items-center lg:h-auto lg:w-32">
                   <Skeleton className="h-5 w-24" />
-                  <Skeleton className="h-5 w-3/5 lg:w-48" />
-                  <Skeleton className="h-4 w-28" />
                 </div>
-                <Skeleton className="h-11 w-24 shrink-0" />
+                <div className="flex h-6 items-center justify-end lg:order-last lg:hidden">
+                  <Skeleton className="h-4 w-12" />
+                </div>
+                <div className="col-span-2 flex h-5 items-center lg:h-auto lg:grow">
+                  <Skeleton className="h-4 w-3/5 lg:h-5 lg:w-48" />
+                </div>
+                <div className="col-span-2 col-start-2 flex min-h-11 items-center justify-between gap-2">
+                  <Skeleton className="h-4 w-20" />
+                  <div className="flex gap-1">
+                    <Skeleton className="h-11 w-[88px]" />
+                    <Skeleton className="h-11 w-16" />
+                  </div>
+                </div>
               </div>
             ))}
           </div>

@@ -1,3 +1,4 @@
+import { DURATION } from '@/lib/ui/motion'
 import { LEAF_ANGLES, LEAF_PATH, D_PATH } from './symbol-paths'
 
 // Runs while the HTML is still parsing, before the first paint: only an installed app's cold start
@@ -16,7 +17,7 @@ export function LaunchScreen() {
           <g transform="translate(50 50) translate(-55.5 -41.5)">
             {LEAF_ANGLES.map((angle, i) => (
               <g key={angle} transform={`rotate(${angle} 50 50)`}>
-                <path d={LEAF_PATH} className="launch-leaf fill-lime" style={{ animationDelay: `${150 + i * 120}ms` }} />
+                <path d={LEAF_PATH} className="launch-leaf fill-lime" style={{ animationDelay: `${DURATION.fast + i * DURATION.press}ms` }} />
               </g>
             ))}
             <path d={D_PATH} fillRule="evenodd" className="fill-on-splash" />

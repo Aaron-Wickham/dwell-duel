@@ -72,14 +72,14 @@ afterAll(() => {
 describe('ProbabilityChart', () => {
   it('names the chart with how its line moved across the range (#391)', () => {
     render(<ProbabilityChart kind="binary" outcomes={yesNo} points={spread} now={NOW} />)
-    expect(screen.getByRole('img', { name: 'Yes fell from 100% to 75% this week.' })).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Yes fell from 100% to 75% this week.' })).toBeInTheDocument()
   })
 
   it('draws a range from its own series when it has one (#409)', async () => {
     // The week's own series has an intraday move the whole history's buckets dropped.
     const week = [point(NOW - 8 * DAY, 1, 0), point(NOW - 3 * DAY, 0.5, 0.5), point(NOW - 5 * HOUR, 0.6, 0.4), point(NOW - 2 * HOUR, 0.75, 0.25)]
     render(<ProbabilityChart kind="binary" outcomes={yesNo} points={spread} rangeSeries={{ '1W': week, All: spread }} now={NOW} />)
-    expect(screen.getByRole('img', { name: 'Yes fell from 100% to 75% this week.' })).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Yes fell from 100% to 75% this week.' })).toBeInTheDocument()
     expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toContain('60%')
   })
 
@@ -122,9 +122,9 @@ describe('ProbabilityChart', () => {
 
   it('draws solid gridlines and puts the y ticks inside the plot, clear of the end labels', () => {
     render(<ProbabilityChart kind="binary" outcomes={yesNo} points={spread} now={NOW} />)
-    const img = screen.getByRole('img')
-    expect(img.querySelectorAll('.border-dashed')).toHaveLength(0)
-    expect(within(img).getByText('50%')).toHaveClass('left-0')
+    const plot = screen.getByRole('slider')
+    expect(plot.querySelectorAll('.border-dashed')).toHaveLength(0)
+    expect(within(plot).getByText('50%')).toHaveClass('left-0')
   })
 
   it('lists the plotted points in a table for screen readers', () => {
@@ -283,7 +283,7 @@ describe('ProbabilityChart', () => {
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('d')).toMatch(/L51[56](\.\d+)?,180$/)
     expect(screen.queryByRole('group', { name: 'Time range' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('img', { name: 'Yes fell from 100% to 40% since it opened.' })).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Yes fell from 100% to 40% since it opened.' })).toBeInTheDocument()
   })
 
   it('labels a resolved market’s one line with the winner, whichever side won', () => {
@@ -308,10 +308,10 @@ describe('ProbabilityChart', () => {
     expect(screen.queryByText(/Closed/)).not.toBeInTheDocument()
   })
 
-  it('says so when there are no bets, with no chart, ranges or summary image', () => {
+  it('says so when there are no bets, with no chart, ranges or slider', () => {
     const { container } = render(<ProbabilityChart kind="binary" outcomes={yesNo} points={[]} now={NOW} />)
     expect(screen.getByText('No bets were placed on this market.')).toBeInTheDocument()
-    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument()
     expect(screen.queryByRole('group')).not.toBeInTheDocument()
     expect(container.querySelector('.recharts-wrapper')).not.toBeInTheDocument()
   })
@@ -353,11 +353,82 @@ describe('ProbabilityChart', () => {
     }
   })
 
-  it('never puts a focusable element inside the summary image', () => {
+  describe('by keyboard (#418)', () => {
+    const announcer = () => screen.getByTestId('chart-announcer')
+    // The range buttons come first in tab order; the plot follows them.
+    const focusPlot = () => act(() => screen.getByRole('slider').focus())
+
+    it('is a named slider over the plotted points that starts at now and says nothing until stepped', async () => {
+      render(<ProbabilityChart kind="binary" outcomes={yesNo} points={spread} now={NOW} />)
+      focusPlot()
+      const slider = screen.getByRole('slider', { name: 'Yes fell from 100% to 75% this week.' })
+      expect(slider).toHaveFocus()
+      // The week's points: its opening value, the bet 3 days ago, the one 2 hours ago, and now.
+      expect(slider).toHaveAttribute('aria-valuemin', '0')
+      expect(slider).toHaveAttribute('aria-valuemax', '3')
+      expect(slider).toHaveAttribute('aria-valuenow', '3')
+      expect(slider).toHaveAttribute('aria-valuetext', 'Now')
+      expect(announcer()).toHaveAttribute('aria-live', 'polite')
+      expect(announcer()).toHaveTextContent(/^$/)
+      expect(screen.queryByTestId('chart-key-readout')).toBeNull()
+    })
+
+    it('steps through the points on arrow keys, Home and End, announcing the time and chance', async () => {
+      render(<ProbabilityChart kind="binary" outcomes={yesNo} points={spread} now={NOW} />)
+      focusPlot()
+      const slider = screen.getByRole('slider')
+
+      await userEvent.keyboard('{ArrowLeft}{ArrowLeft}')
+      expect(slider).toHaveAttribute('aria-valuenow', '1')
+      const threeDaysAgo = `${formatDay(new Date(NOW - 3 * DAY).toISOString())}`
+      expect(slider.getAttribute('aria-valuetext')).toMatch(new RegExp(`^${threeDaysAgo}, `))
+      expect(announcer().textContent).toMatch(new RegExp(`^${threeDaysAgo}, .+: Yes 50%$`))
+      expect(screen.getByTestId('chart-key-readout')).toHaveTextContent('Yes50%')
+
+      await userEvent.keyboard('{Home}')
+      expect(slider).toHaveAttribute('aria-valuenow', '0')
+      expect(announcer()).toHaveTextContent(/: Yes 100%$/)
+
+      await userEvent.keyboard('{ArrowDown}')
+      expect(slider).toHaveAttribute('aria-valuenow', '0')
+
+      await userEvent.keyboard('{End}')
+      expect(slider).toHaveAttribute('aria-valuenow', '3')
+      expect(slider).toHaveAttribute('aria-valuetext', 'Now')
+      expect(announcer()).toHaveTextContent('Now: Yes 75%')
+    })
+
+    it('reads every line of a multiple-choice chart, highest first', async () => {
+      render(<ProbabilityChart kind="multiple_choice" outcomes={threeWay} points={threeSpread} now={NOW} />)
+      focusPlot()
+      await userEvent.keyboard('{End}')
+      expect(announcer()).toHaveTextContent('Now: Eli 60%, Sarah 20%, Ruth 20%')
+    })
+
+    it('leaves modified keys to the browser, and hands back to the pointer and to a new range', async () => {
+      render(<ProbabilityChart kind="binary" outcomes={yesNo} points={spread} now={NOW} />)
+      focusPlot()
+      const slider = screen.getByRole('slider')
+      fireEvent.keyDown(slider, { key: 'ArrowLeft', altKey: true })
+      expect(slider).toHaveAttribute('aria-valuenow', '3')
+
+      await userEvent.keyboard('{ArrowLeft}')
+      expect(screen.getByTestId('chart-key-readout')).toBeInTheDocument()
+      fireEvent.pointerMove(slider)
+      expect(screen.queryByTestId('chart-key-readout')).toBeNull()
+
+      await userEvent.keyboard('{ArrowLeft}')
+      await userEvent.click(screen.getByRole('button', { name: 'All' }))
+      expect(screen.queryByTestId('chart-key-readout')).toBeNull()
+      expect(announcer()).toHaveTextContent(/^$/)
+    })
+  })
+
+  it('never puts a focusable element inside the slider', () => {
     render(<ProbabilityChart kind="binary" outcomes={yesNo} points={spread} now={NOW} />)
-    const img = screen.getByRole('img')
-    expect(img.querySelector('[tabindex="0"]')).toBeNull()
-    expect(img.querySelector('button, a, input, [tabindex]:not([tabindex="-1"])')).toBeNull()
+    const plot = screen.getByRole('slider')
+    expect(plot.querySelector('[tabindex="0"]')).toBeNull()
+    expect(plot.querySelector('button, a, input, [tabindex]:not([tabindex="-1"])')).toBeNull()
   })
 })
 

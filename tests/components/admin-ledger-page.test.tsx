@@ -27,7 +27,16 @@ vi.mock('@/lib/auth/roles', async (importOriginal) => ({
 }))
 
 const { listAllTransactions } = vi.hoisted(() => ({ listAllTransactions: vi.fn() }))
-vi.mock('@/lib/ledger/list-transactions', () => ({ listAllTransactions }))
+vi.mock('@/lib/ledger/list-transactions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/ledger/list-transactions')>()),
+  listAllTransactions,
+}))
+vi.mock('@/lib/members/list-members', () => ({
+  listMemberNames: async () => [
+    { id: '00000000-0000-4000-8000-0000000000b1', name: 'Ben' },
+    { id: '00000000-0000-4000-8000-0000000000c1', name: 'Cara' },
+  ],
+}))
 
 import AdminLedgerPage from '@/app/(app)/admin/(sections)/ledger/page'
 
@@ -61,7 +70,7 @@ describe('AdminLedgerPage', () => {
 
     render(await AdminLedgerPage({ searchParams: Promise.resolve({ member: id }) } as never))
 
-    expect(listAllTransactions).toHaveBeenLastCalledWith(supabase, { top: null, bottom: null }, id)
+    expect(listAllTransactions).toHaveBeenLastCalledWith(supabase, { top: null, bottom: null }, { memberId: id, type: undefined })
     expect(screen.getByText(/Showing Ben’s coin movements\./)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open Ben' })).toHaveAttribute('href', `/admin/members/${id}`)
     expect(screen.getByRole('link', { name: 'Show everyone’s' })).toHaveAttribute('href', '/admin/ledger')
@@ -72,7 +81,39 @@ describe('AdminLedgerPage', () => {
   it('ignores a malformed member id', async () => {
     listAllTransactions.mockResolvedValue({ rows: [], next: null, windowed: false })
     render(await AdminLedgerPage({ searchParams: Promise.resolve({ member: 'nope' }) } as never))
-    expect(listAllTransactions).toHaveBeenLastCalledWith(supabase, { top: null, bottom: null }, undefined)
+    expect(listAllTransactions).toHaveBeenLastCalledWith(supabase, { top: null, bottom: null }, { memberId: undefined, type: undefined })
     expect(screen.queryByText(/Showing/)).toBeNull()
+  })
+
+  // #418: a filter control by member and by kind, kept in the URL.
+  it('filters by member and kind with native selects that show the current filter', async () => {
+    const id = '00000000-0000-4000-8000-0000000000b1'
+    profile.current = { id, display_name: 'Ben' }
+    listAllTransactions.mockResolvedValue({ rows: [], next: null, windowed: false })
+
+    render(await AdminLedgerPage({ searchParams: Promise.resolve({ member: id, kind: 'task_completed' }) } as never))
+
+    expect(listAllTransactions).toHaveBeenLastCalledWith(supabase, { top: null, bottom: null }, { memberId: id, type: 'task_completed' })
+    const form = screen.getByRole('form', { name: 'Filter the ledger' })
+    expect(form).toHaveAttribute('action', '/admin/ledger')
+    const memberSelect = screen.getByRole('combobox', { name: 'Member' })
+    expect(memberSelect).toHaveValue(id)
+    expect(memberSelect).toHaveAttribute('name', 'member')
+    expect(screen.getByRole('combobox', { name: 'Kind' })).toHaveValue('task_completed')
+    expect(screen.getByRole('option', { name: 'Everyone' })).toHaveValue('')
+    expect(screen.getByRole('option', { name: 'Task reward' })).toHaveValue('task_completed')
+    expect(screen.getByText('No “Task reward” movements for Ben.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Show every kind' })).toHaveAttribute('href', `/admin/ledger?member=${id}`)
+    expect(screen.getByRole('link', { name: 'Show everyone’s' })).toHaveAttribute('href', '/admin/ledger?kind=task_completed')
+    profile.current = null
+  })
+
+  it('ignores an unknown kind, and leaves an unset filter out of the URL', async () => {
+    listAllTransactions.mockResolvedValue({ rows: [], next: null, windowed: false })
+    render(await AdminLedgerPage({ searchParams: Promise.resolve({ kind: 'nope' }) } as never))
+    expect(listAllTransactions).toHaveBeenLastCalledWith(supabase, { top: null, bottom: null }, { memberId: undefined, type: undefined })
+    expect(screen.getByRole('combobox', { name: 'Kind' })).toHaveValue('')
+    expect(screen.getByRole('combobox', { name: 'Kind' })).not.toHaveAttribute('name')
+    expect(screen.getByText('No coin movements yet.')).toBeInTheDocument()
   })
 })

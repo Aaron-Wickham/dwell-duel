@@ -42,7 +42,7 @@ test('a member’s row opens their Admin page, which links to their movements in
   await page.getByRole('region', { name: 'Coin history' }).getByRole('link', { name: 'Open in Ledger' }).click()
   await expect(page).toHaveURL(new RegExp(`/admin/ledger\\?member=${id}$`))
   await expect(page.getByText('Showing Bob’s coin movements.')).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Bob’s coin movements' }).getByText('Starting grant')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Bob’s coin movements' }).getByRole('listitem').getByText('Starting grant')).toBeVisible()
 })
 
 test('an unknown member id is a real 404', async ({ page }) => {
@@ -82,4 +82,23 @@ test('a removed member is marked, left off the leaderboard, and can be invited a
   await page.getByRole('alertdialog', { name: `Invite ${name} again?` }).getByRole('button', { name: 'Invite again' }).click()
   await expect(page.getByRole('region', { name: 'Access' }).getByRole('button', { name: `Remove ${name} from DwellDuel` })).toBeVisible()
   await expect(page.getByText('Removed', { exact: true })).toHaveCount(0)
+})
+
+// #418: the headers sort the table, and the order lives in the URL.
+test('the owner sorts members by balance, both ways, from the column header', async ({ page }) => {
+  await page.goto('/admin/members')
+  const members = page.getByRole('region', { name: 'Members' })
+  const balanceHeader = members.locator('th', { has: page.getByRole('link', { name: /^Balance, sort/ }) })
+  await members.getByRole('link', { name: 'Balance, sort highest balance first' }).click()
+  await expect(page).toHaveURL(/\/admin\/members\?sort=balance$/)
+  await expect(balanceHeader).toHaveAttribute('aria-sort', 'descending')
+
+  await members.getByRole('link', { name: 'Balance, sort lowest balance first' }).click()
+  await expect(page).toHaveURL(/\/admin\/members\?sort=balance&dir=asc$/)
+  await expect(balanceHeader).toHaveAttribute('aria-sort', 'ascending')
+  const balances = await members
+    .getByRole('row')
+    .evaluateAll((rows) => rows.slice(1).map((row) => Number(row.querySelectorAll('[role="cell"]')[2]?.textContent?.replace(/[^\d-]/g, ''))))
+  expect(balances.length).toBeGreaterThan(1)
+  expect(balances).toEqual([...balances].sort((a, b) => a - b))
 })

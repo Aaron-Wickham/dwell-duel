@@ -29,6 +29,28 @@ export function segmentMarker(active: boolean): { 'data-segment-active'?: '' } {
   return active ? { 'data-segment-active': '' } : {}
 }
 
+// The pill slides on transforms alone (ST-8): animating left and width ran layout every frame, and
+// scaling one rounded, bordered box squashes its corners. So its fill is three pieces: two caps,
+// each a whole rounded box clipped to its outer half (a box with only two corners rounded draws a
+// different curve), which only move, and a middle carrying just the top and bottom borders, which
+// scaleX stretches without thickening. The shadow is one box under them all, stretched with the
+// pill: only its soft edge shows, and it's exact again when the slide ends.
+const CAP = 'absolute inset-y-0 w-[calc(var(--radius-segment)*2)] rounded-segment border border-ink2 bg-segment-active'
+
+function slide(pill: HTMLElement, from: Rect, to: Rect) {
+  const end = pill.querySelector<HTMLElement>('[data-pill-end]')!
+  const middle = pill.querySelector<HTMLElement>('[data-pill-middle]')!
+  const shadow = pill.querySelector<HTMLElement>('[data-pill-shadow]')!
+  const translateX = (by: number) => [{ transform: `translateX(${by}px)` }, { transform: 'translateX(0)' }]
+  const scaleX = (fromWidth: number, toWidth: number) => [{ transform: `scaleX(${fromWidth / toWidth})` }, { transform: 'scaleX(1)' }]
+  pill.animate(translateX(from.left - to.left), PILL_SLIDE)
+  end.animate(translateX(from.width - to.width), PILL_SLIDE)
+  // The middle runs a pixel under each cap, so no seam opens between them mid-slide.
+  const capsInset = end.offsetWidth - 2
+  middle.animate(scaleX(from.width - capsInset, to.width - capsInset), PILL_SLIDE)
+  shadow.animate(scaleX(from.width, to.width), PILL_SLIDE)
+}
+
 // One segmented control: a `sunk` track with one outer radius, segments with the inner one, and a
 // pill that slides to the chosen segment on PILL_SLIDE. The semantics stay the caller's: SubNav's
 // links carry aria-current, the theme control's segments are radio labels, and the slip's and the
@@ -86,13 +108,7 @@ export function SegmentedControl({
     }
     remember(to)
     if (from && (from.left !== to.left || from.width !== to.width) && typeof pill.animate === 'function' && !reducedMotion()) {
-      pill.animate(
-        [
-          { left: `${from.left}px`, width: `${from.width}px` },
-          { left: `${to.left}px`, width: `${to.width}px` },
-        ],
-        PILL_SLIDE,
-      )
+      slide(pill, from, to)
     }
 
     // A rotation or a resize moves the segments without changing which is chosen: follow in place.
@@ -110,8 +126,16 @@ export function SegmentedControl({
       <span
         ref={pillRef}
         aria-hidden="true"
-        className="pointer-events-none absolute top-1 bottom-1 rounded-segment border border-ink2 bg-segment-active opacity-0 shadow-tab group-data-[ready]/segmented:opacity-100"
-      />
+        className="pointer-events-none absolute top-1 bottom-1 opacity-0 group-data-[ready]/segmented:opacity-100"
+      >
+        <span data-pill-shadow="" className="absolute inset-0 origin-left rounded-segment shadow-tab" />
+        <span
+          data-pill-middle=""
+          className="absolute inset-y-0 right-[calc(var(--radius-segment)-1px)] left-[calc(var(--radius-segment)-1px)] origin-left border-y border-ink2 bg-segment-active"
+        />
+        <span className={cn(CAP, 'left-0 [clip-path:inset(-1px_50%_-1px_-1px)]')} />
+        <span data-pill-end="" className={cn(CAP, 'right-0 [clip-path:inset(-1px_-1px_-1px_50%)]')} />
+      </span>
       {children}
     </Tag>
   )

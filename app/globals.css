@@ -292,6 +292,16 @@
   --duration-slide: 280ms;
   --duration-page: 360ms;
   --duration-sheet: 450ms;
+  /* The launch screen: the leaves start at --duration-fast, one every --duration-press
+     (launch-screen.tsx), each growing over --duration-leaf; the overlay waits until --delay-launch
+     and fades over --duration-launch. */
+  --duration-leaf: 420ms;
+  --duration-launch: 300ms;
+  --delay-launch: 900ms;
+  /* Loops: the nav's pending hint pulses, LeafLoader's leaves pulse, a skeleton shimmers. */
+  --duration-pulse: 1000ms;
+  --duration-loader: 1200ms;
+  --duration-shimmer: 1600ms;
 }
 
 /* Chrome that is tapped, never read: a long press shouldn't select it or open iOS's callout menu.
@@ -563,7 +573,7 @@
     );
     background-repeat: no-repeat;
     background-size: 200% 100%;
-    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+    animation: skeleton-shimmer var(--duration-shimmer) ease-in-out infinite;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -708,23 +718,23 @@
   animation: var(--duration-fast) ease-out both vt-fade;
 }
 
-/* The nav's pending hint (components/nav/nav-pending-hint.tsx) waits 120ms before showing, so
-   a prefetched navigation never flashes it. */
+/* The nav's pending hint (components/nav/nav-pending-hint.tsx) waits 120ms (--duration-press)
+   before showing, so a prefetched navigation never flashes it, and pulses once it has faded in. */
 .nav-pending-hint {
   opacity: 0;
 }
 .nav-pending-hint[data-pending] {
   animation:
-    vt-hint-in var(--duration-fast) ease-out 120ms forwards,
-    vt-hint-pulse 1s ease-in-out 270ms infinite;
+    vt-hint-in var(--duration-fast) ease-out var(--duration-press) forwards,
+    vt-hint-pulse var(--duration-pulse) ease-in-out calc(var(--duration-press) + var(--duration-fast)) infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .nav-pending-hint[data-pending] {
-    animation: vt-hint-in 0s linear 120ms forwards;
+    animation: vt-hint-in 0s linear var(--duration-press) forwards;
   }
 }
 :root[data-motion="reduce"] .nav-pending-hint[data-pending] {
-  animation: vt-hint-in 0s linear 120ms forwards;
+  animation: vt-hint-in 0s linear var(--duration-press) forwards;
 }
 @keyframes vt-hint-in {
   to { opacity: 1; }
@@ -782,14 +792,14 @@
   align-items: center;
   justify-content: center;
   background-color: var(--splash);
-  animation: launch-out 300ms ease-in 900ms forwards;
+  animation: launch-out var(--duration-launch) ease-in var(--delay-launch) forwards;
 }
 .launch-leaf {
   transform-box: fill-box;
   transform-origin: 50% 100%;
   scale: 0;
   rotate: -25deg;
-  animation: launch-leaf 420ms var(--ease-pop) forwards;
+  animation: launch-leaf var(--duration-leaf) var(--ease-pop) forwards;
 }
 @keyframes launch-leaf {
   to {
@@ -811,7 +821,7 @@
     rotate: 0deg;
   }
   :root[data-launch] .launch-screen {
-    animation: launch-out 150ms ease-in 150ms forwards;
+    animation: launch-out var(--duration-fast) ease-in var(--duration-fast) forwards;
   }
 }
 :root[data-motion="reduce"] .launch-leaf {
@@ -820,7 +830,7 @@
   rotate: 0deg;
 }
 :root[data-motion="reduce"][data-launch] .launch-screen {
-  animation: launch-out 150ms ease-in 150ms forwards;
+  animation: launch-out var(--duration-fast) ease-in var(--duration-fast) forwards;
 }
 
 /* Sign-in intro (components/sign-in/sign-in-intro.tsx). Plays only while the pre-paint script's
@@ -915,7 +925,7 @@
 
 /* LeafLoader (components/brand/leaf-loader.tsx): the leaves pulse in turn. */
 .leaf-pulse {
-  animation: leaf-pulse 1.2s ease-in-out infinite;
+  animation: leaf-pulse var(--duration-loader) ease-in-out infinite;
 }
 @keyframes leaf-pulse {
   0%, 60%, 100% { opacity: 1; }

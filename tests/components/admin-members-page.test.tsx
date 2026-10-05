@@ -28,8 +28,13 @@ vi.mock('@/lib/auth/roles', async (importOriginal) => ({
   getRole: async () => 'owner',
 }))
 
-const { listMembersPage, countMembers } = vi.hoisted(() => ({ listMembersPage: vi.fn(), countMembers: vi.fn() }))
-vi.mock('@/lib/members/list-members', () => ({ listMembersPage, countMembers }))
+const { listMembersPage, listMembersByValue, listMembersByNetWorth, countMembers } = vi.hoisted(() => ({
+  listMembersPage: vi.fn(),
+  listMembersByValue: vi.fn(),
+  listMembersByNetWorth: vi.fn(),
+  countMembers: vi.fn(),
+}))
+vi.mock('@/lib/members/list-members', () => ({ listMembersPage, listMembersByValue, listMembersByNetWorth, countMembers }))
 const { readNetWorths } = vi.hoisted(() => ({ readNetWorths: vi.fn() }))
 vi.mock('@/lib/members/net-worth', () => ({ readNetWorths }))
 
@@ -53,6 +58,8 @@ async function renderPage(searchParams: Record<string, string> = {}) {
 
 beforeEach(() => {
   listMembersPage.mockReset().mockResolvedValue({ rows: [BEN], next: null, windowed: false })
+  listMembersByValue.mockReset().mockResolvedValue({ rows: [BEN], next: null, windowed: false })
+  listMembersByNetWorth.mockReset().mockResolvedValue({ rows: [BEN], next: null, windowed: false, netWorths: new Map([[BEN.id, 90]]) })
   countMembers.mockReset().mockResolvedValue({ active: 1038, removed: 12 })
   readNetWorths.mockReset().mockResolvedValue(new Map([[BEN.id, 85]]))
 })
@@ -72,7 +79,13 @@ describe('AdminMembersPage (#254)', () => {
   it('shows the members as a table, with net worth read for the page’s members', async () => {
     await renderPage()
     const table = within(screen.getByRole('region', { name: 'Members' })).getByRole('table')
-    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Member', 'Role', 'Balance', 'Net worth', 'Joined'])
+    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual([
+      'Member',
+      'Role',
+      'Balance',
+      'Net worth',
+      'Joined',
+    ])
     expect(within(table).getByRole('row', { name: /Ben/ })).toHaveTextContent('85 DC net worth')
     expect(readNetWorths).toHaveBeenCalledWith({}, [BEN.id])
   })
@@ -131,5 +144,63 @@ describe('AdminMembersPage (#254)', () => {
     listMembersPage.mockResolvedValue({ rows: [], next: null, windowed: false })
     await renderPage({ show: 'removed' })
     expect(screen.getByText('Nobody has been removed.')).toBeInTheDocument()
+  })
+
+  // #418: sortable by balance, net worth and joined date, with the order in the URL.
+  it('sorts A–Z by default, with headers that sort by each figure', async () => {
+    await renderPage({ q: 'an' })
+    const table = screen.getByRole('table')
+    expect(within(table).getByRole('columnheader', { name: /^Member/ })).toHaveAttribute('aria-sort', 'ascending')
+    expect(within(table).getByRole('link', { name: 'Balance, sort highest balance first' })).toHaveAttribute(
+      'href',
+      '/admin/members?q=an&sort=balance',
+    )
+    expect(within(table).getByRole('link', { name: 'Net worth, sort highest net worth first' })).toHaveAttribute(
+      'href',
+      '/admin/members?q=an&sort=net_worth',
+    )
+    expect(within(table).getByRole('link', { name: 'Joined, sort newest first' })).toHaveAttribute('href', '/admin/members?q=an&sort=joined')
+    expect(within(table).getByText(/Members, A–Z/)).toBeInTheDocument()
+  })
+
+  it('sorts by balance from ?sort=, turning round on a second tap and keeping the sort across tabs and searches', async () => {
+    await renderPage({ sort: 'balance', after: 'abc' })
+    expect(listMembersByValue).toHaveBeenCalledWith(
+      {},
+      { query: '', removed: false, column: 'balance', ascending: false, page: { top: null, bottom: null } },
+    )
+    expect(listMembersPage).not.toHaveBeenCalled()
+    expect(readNetWorths).toHaveBeenCalledWith({}, [BEN.id])
+    const table = screen.getByRole('table')
+    expect(within(table).getByRole('columnheader', { name: /^Balance/ })).toHaveAttribute('aria-sort', 'descending')
+    expect(within(table).getByRole('link', { name: 'Balance, sort lowest balance first' })).toHaveAttribute(
+      'href',
+      '/admin/members?sort=balance&dir=asc',
+    )
+    expect(within(table).getByRole('link', { name: 'Member, sort A–Z' })).toHaveAttribute('href', '/admin/members')
+    const tabs = screen.getByRole('navigation', { name: 'Show members' })
+    expect(within(tabs).getByRole('link', { name: 'Removed (12)' })).toHaveAttribute('href', '/admin/members?show=removed&sort=balance')
+    expect(screen.getByRole('search').querySelector('input[type="hidden"][name="sort"]')).toHaveAttribute('value', 'balance')
+  })
+
+  it('sorts by when they joined, oldest first', async () => {
+    await renderPage({ sort: 'joined', dir: 'asc', show: 'removed' })
+    expect(listMembersByValue).toHaveBeenCalledWith({}, expect.objectContaining({ removed: true, column: 'joined_at', ascending: true }))
+    expect(screen.getByRole('columnheader', { name: /^Joined/ })).toHaveAttribute('aria-sort', 'ascending')
+  })
+
+  it('sorts the Active tab by net worth, using the net worths it read', async () => {
+    await renderPage({ sort: 'net_worth' })
+    expect(listMembersByNetWorth).toHaveBeenCalledWith({}, { query: '', ascending: false, page: { top: null, bottom: null } })
+    expect(readNetWorths).not.toHaveBeenCalled()
+    expect(screen.getByRole('row', { name: /Ben/ })).toHaveTextContent('90 DC net worth')
+  })
+
+  it('can’t sort the Removed tab by net worth, falling back to A–Z', async () => {
+    listMembersPage.mockResolvedValue({ rows: [{ ...BEN, removed: true }], next: null, windowed: false })
+    await renderPage({ sort: 'net_worth', show: 'removed' })
+    expect(listMembersByNetWorth).not.toHaveBeenCalled()
+    expect(listMembersPage).toHaveBeenCalled()
+    expect(within(screen.getByRole('columnheader', { name: 'Net worth' })).queryByRole('link')).toBeNull()
   })
 })

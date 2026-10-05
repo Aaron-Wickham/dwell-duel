@@ -46,7 +46,7 @@ export function ReviewButtons({
 
   return (
     <div className="flex flex-col items-end gap-2">
-      <div className="flex flex-col items-stretch gap-1 lg:flex-row lg:items-center">
+      <div className="flex items-center gap-1">
         <form action={approveAction} className="flex">
           <FormSubmitButton
             size="sm"

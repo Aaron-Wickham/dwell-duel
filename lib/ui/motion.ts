@@ -17,6 +17,16 @@ export const DURATION = {
   slide: 280,
   page: 360,
   sheet: 450,
+  leaf: 420,
+  launch: 300,
+  pulse: 1000,
+  loader: 1200,
+  shimmer: 1600,
+} as const
+
+// Milliseconds.
+export const DELAY = {
+  launch: 900,
 } as const
 
 export type EaseName = keyof typeof EASE

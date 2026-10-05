@@ -229,6 +229,13 @@ Written for someone who has just been invited: get them oriented, then signed in
   The times are `INTRO` in `components/sign-in/intro-timeline.ts`; the pre-paint script that starts the intro writes its CSS delays onto `<html>` as `--intro-*-at` properties (`INTRO_CSS_DELAYS`), so the CSS ("Sign-in intro" in `globals.css`) holds no time of its own beyond the motion tokens. In the installed app the launch screen plays over the first 0.9s and fades as the symbol starts to move. Reduced motion (the device or Settings) starts on the final frame.
 - **Not invited:** the same frame with the sample card at 35% opacity, the `h1` "You're not on the list yet", the refused account's email when the callback passed it, a line about checking with the friend who invited them, and "Try another account" as a primary button with the G mark, back through sign-in with `next` kept.
 
+## Loading, offline and error states (#401)
+
+- **Skeletons** draw only blocks that always render, at real text height: a header description is 24px lines, two below `md:` and one from it (`SkeletonPageHeader description`), and a `SubNav` skeleton is the real tab track's width at `md:` (My bets 357px, Activity 223px, Leaderboard 232px). An indented skeleton line takes its indent from its wrapper's padding, so a full-width line never overflows its card.
+- **Offline banner:** a one-line gold strip, "Offline. Reconnecting…" with the wifi-off icon, `fixed` just under the top bar (phone and desktop, below `--safe-top`), so going offline or coming back moves nothing; no animation. A tap on an in-app link while offline answers at once with a toast, "You're offline. That page opens once you're back online.", and the navigation completes on reconnect.
+- **Error card** (`ErrorCard`, every error boundary): a 440px card with an `h1` at the `h2` size, "This page didn't load", one line ("Something went wrong on our side. Try again, or go back to Home."), Try again (primary, Next 16's `retry()`) and Go to Home (secondary, a plain link), then the error code when there is one. No icon.
+- **Offline page** (`/offline`, served by the service worker): the same card, "You're offline", "This page loads by itself as soon as you're back online." and Try again; it reloads on the browser's `online` event.
+
 ## Navigation (one `<AppNav>` in the signed-in layout)
 
 - **Tabs (D1, #385):** Home, Markets, Bets, Tasks and Leaders. The feed is Home's Activity section, whose See all opens `/feed` (h1 "Activity") as a drill-down from Home, which stays the marked tab there. The wordmark still links home but is never marked current.

@@ -150,6 +150,9 @@ describe('skeletons match their pages', () => {
     expect(notifications.querySelectorAll('.size-\\[22px\\]')).toHaveLength(4)
     // The device status button and the save button.
     expect(notifications.querySelectorAll('.skeleton.h-11')).toHaveLength(2)
+    // A hint is indented by its wrapper's padding, never a margin beside w-full that overflows (ST-6).
+    expect(container.querySelector('.skeleton.ml-8')).toBeNull()
+    expect(container.querySelectorAll('.pl-8 > .skeleton.w-full')).toHaveLength(3)
   })
 
   it('the edit-profile skeleton is one card: photo, name, bio and Save (#397)', () => {

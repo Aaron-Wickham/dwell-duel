@@ -16,7 +16,7 @@ export default function Loading() {
   return (
     <SkeletonScreen name="leaderboard" className={pageClass}>
       <SkeletonPageHeader />
-      <Skeleton className="h-[52px] w-full rounded-tile md:w-72" />
+      <Skeleton className="h-[52px] w-full rounded-tile md:w-[232px]" />
       <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
         <div className="flex flex-col gap-5 lg:col-start-2 lg:row-start-1 lg:gap-7">
           <div className="flex items-end justify-center gap-3 md:gap-6">

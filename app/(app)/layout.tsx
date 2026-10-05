@@ -17,6 +17,7 @@ import { PushResync } from '@/components/push/push-resync'
 import { vapidKeys } from '@/lib/push/config'
 import { Toaster } from '@/components/ui/toaster'
 import { OfflineBanner } from '@/components/offline/offline-banner'
+import { OfflineNavNotice } from '@/components/offline/offline-nav-notice'
 import { FALLBACK_NAME } from '@/lib/profile/fallback-name'
 import { KeyboardViewportReset } from '@/components/app-shell/keyboard-viewport-reset'
 
@@ -75,6 +76,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
         <SlipSheet />
         {vapid && <PushResync userId={user.id} publicKey={vapid.publicKey} />}
         <Toaster />
+        <OfflineNavNotice />
         <LiveRefresh />
       </SlipProvider>
     </LiveTablesProvider>

@@ -9,7 +9,10 @@ function SkeletonToggle({ hintWidth }: { hintWidth: string }) {
         <Skeleton className="size-[22px] rounded-segment" />
         <Skeleton className="h-5 w-36" />
       </div>
-      <Skeleton className={`ml-8 h-5 ${hintWidth}`} />
+      {/* The indent is the wrapper's padding, so a full-width hint stays inside the card (ST-6). */}
+      <div className="pl-8">
+        <Skeleton className={`h-5 ${hintWidth}`} />
+      </div>
     </div>
   )
 }

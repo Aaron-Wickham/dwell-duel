@@ -7,7 +7,7 @@ export default function Loading() {
     <SkeletonScreen name="feed" className={pageClassFor('reading')}>
       <Skeleton className="h-11 w-24" />
       <SkeletonPageHeader />
-      <Skeleton className="h-[52px] w-full rounded-tile md:w-72" />
+      <Skeleton className="h-[52px] w-full rounded-tile md:w-[223px]" />
       <FeedListSkeleton headingHidden reactions />
     </SkeletonScreen>
   )

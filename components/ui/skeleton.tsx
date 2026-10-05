@@ -45,7 +45,18 @@ export function SkeletonPageHeader({ description = false, action = false }: { de
     <div className="flex items-center justify-between gap-3">
       <div className="flex min-w-0 grow flex-col gap-2">
         <Skeleton className="h-8 w-44 md:h-11 md:w-64" />
-        {description && <Skeleton className="h-5 w-full max-w-[420px]" />}
+        {/* A description is body text, 24px a line: two lines on a phone, where every one left
+            wraps, and one from md, so the content under it lands where the skeleton drew it (ST-3). */}
+        {description && (
+          <div className="flex flex-col">
+            <div className="flex h-6 items-center">
+              <Skeleton className="h-4 w-full max-w-[420px]" />
+            </div>
+            <div className="flex h-6 items-center md:hidden">
+              <Skeleton className="h-4 w-3/5" />
+            </div>
+          </div>
+        )}
       </div>
       {action && <Skeleton className="h-11 w-36 shrink-0 md:h-12 md:w-44" />}
     </div>

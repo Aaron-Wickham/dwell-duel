@@ -5,12 +5,14 @@ import userEvent from '@testing-library/user-event'
 import { ErrorCard } from '@/components/ui/error-card'
 
 describe('ErrorCard', () => {
-  it('shows the heading and body copy, and a 44px button that calls retry', async () => {
+  it('shows a card-sized heading, copy that says what to do, a 44px Try again and a way home (ST-11)', async () => {
     const retry = vi.fn()
     render(<ErrorCard retry={retry} />)
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Something went wrong' })).toBeInTheDocument()
-    expect(screen.getByText('We couldn’t load this page. Try again in a moment.')).toBeInTheDocument()
+    const heading = screen.getByRole('heading', { level: 1, name: 'This page didn’t load' })
+    expect(heading).not.toHaveClass('md:text-[40px]')
+    expect(screen.getByText('Something went wrong on our side. Try again, or go back to Home.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/')
 
     const button = screen.getByRole('button', { name: 'Try again' })
     expect(button).toHaveClass('min-h-12')

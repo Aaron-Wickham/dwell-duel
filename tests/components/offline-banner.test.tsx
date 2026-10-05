@@ -7,7 +7,7 @@ vi.mock('next/offline', () => ({ useOffline }))
 
 import { OfflineBanner } from '@/components/offline/offline-banner'
 
-const COPY = 'You’re offline — changes will send when you reconnect.'
+const COPY = 'Offline. Reconnecting…'
 
 beforeEach(() => {
   useOffline.mockReset()
@@ -28,11 +28,12 @@ describe('OfflineBanner', () => {
     expect(screen.getByRole('status')).toHaveTextContent(COPY)
   })
 
-  it('sticks below the phone and desktop top bars, including the installed app\'s status band', () => {
+  it('overlays just below the phone and desktop top bars, out of flow so it moves nothing (ST-7)', () => {
     useOffline.mockReturnValue(true)
     render(<OfflineBanner />)
     expect(screen.getByRole('status')).toHaveClass(
-      'sticky',
+      'fixed',
+      'inset-x-0',
       'top-[calc(4rem+var(--safe-top))]',
       'md:top-[calc(72px+var(--safe-top))]',
     )

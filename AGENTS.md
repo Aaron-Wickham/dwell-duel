@@ -168,6 +168,10 @@ a line to `CHANGELOG.md` under the next release.
 
 ## Native feel and speed
 
+- **No transient banner pushes content** (#401): the offline banner is
+  `fixed` under the top bar, and anything like it overlays the page too.
+  A skeleton draws only blocks that always render, at real phone text
+  height (a header description is 24px lines, two below `md:`).
 - **Skeletons, or a streamed Suspense.** Every signed-in route gets a
   `loading.tsx` skeleton (`SkeletonScreen`), unless a real 404 must
   survive the initial load, in which case it streams behind `<Suspense>`
@@ -432,7 +436,7 @@ a line to `CHANGELOG.md` under the next release.
 - **Every level has an error page** — `app/(app)/error.tsx`,
   `app/error.tsx` and `app/global-error.tsx` — rendering
   `components/ui/error-card.tsx`'s `ErrorCard`, whose "Try again" calls
-  Next 16's `retry()`.
+  Next 16's `retry()`, beside a plain "Go to Home" link (#401).
 - **A new member-entered text column** gets a length CHECK in a
   migration, a `TEXT_LIMITS` entry in `lib/forms/limits.ts`, `maxLength`
   on its input, and a `tooLong` check in its server action.

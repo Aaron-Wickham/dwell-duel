@@ -1033,8 +1033,14 @@ it installable. On a cold start of the installed app, `LaunchScreen`
 grows the leaves onto the splash's D, using only CSS and a small inline
 script. `public/sw.js` is hand-written. It caches only the content-hashed
 `/_next/static/` files and a precached `/offline` page, which it serves
-when a navigation can't reach the network. Each deploy gets its own cache. It never caches per-member HTML, RSC
-payloads, server actions or Supabase responses. Drill-down pages slide in
+when a navigation can't reach the network; that page's Try again link
+reloads by itself on the `online` event (#401). Each deploy gets its own cache. It never caches per-member HTML, RSC
+payloads, server actions or Supabase responses. In the signed-in layout,
+`OfflineBanner` is a fixed strip under the top bar driven by Next's
+`useOffline`, and `OfflineNavNotice` (`components/offline/offline-nav-notice.tsx`)
+listens for clicks on in-app links in the capture phase and, while
+offline, shows a toast at once, since `experimental.useOffline` otherwise
+holds the navigation silently until the connection returns (#401). Drill-down pages slide in
 with React's `<ViewTransition>` (the old page gone by 120ms,
 `--duration-press`, through `--vt-push-exit`) and support a back swipe; a tab switch (`nav-tab`, the
 nav, `SubNav`) swaps with no transition (#384); a

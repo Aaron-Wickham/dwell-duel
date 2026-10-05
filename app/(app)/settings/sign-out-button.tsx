@@ -1,6 +1,5 @@
 'use client'
 
-import { LogOut } from 'lucide-react'
 import { signOut } from '@/lib/auth/sign-out'
 import { deletePushSubscriptionAction } from '@/lib/push/actions'
 import { clearAllPushMemory } from '@/lib/push/client'
@@ -41,7 +40,6 @@ export function SignOutButton() {
   return (
     <form action={signOutThisDevice}>
       <FormSubmitButton variant="secondary" block className="md:w-auto">
-        <LogOut aria-hidden="true" className="size-5" />
         Sign out
       </FormSubmitButton>
     </form>

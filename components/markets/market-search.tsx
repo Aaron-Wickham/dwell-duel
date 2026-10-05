@@ -2,7 +2,6 @@
 
 import { useId, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/field'
 import { Button } from '@/components/ui/button'
 import { MARKET_SEARCH_MAX, marketsHref } from '@/lib/markets/search'
@@ -41,7 +40,6 @@ export function MarketSearch({ q, status, category }: { q: string; status: Marke
         className="min-w-0 flex-1"
       />
       <Button type="submit" variant="secondary" className="min-h-12 shrink-0">
-        <Search aria-hidden="true" className="size-5" />
         Search
       </Button>
     </form>

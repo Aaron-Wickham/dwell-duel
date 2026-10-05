@@ -414,8 +414,24 @@ describe('MarketsPage: categories (#327)', () => {
     expect(document.getElementById('markets-category-caption')).toHaveTextContent('Showing markets in Weather · Show all categories')
     expect(screen.getByRole('link', { name: 'Show all categories' })).toHaveAttribute('href', '/markets')
     expect(screen.getByRole('link', { name: 'Resolved' })).toHaveAttribute('href', '/markets?status=resolved&category=weather')
-    expect(screen.getByRole('article', { name: /Market 1/ })).toHaveTextContent('Category: Weather')
+    // The list is already narrowed to Weather, so no card repeats it (#387).
+    expect(screen.getByRole('article', { name: /Market 1/ })).not.toHaveTextContent('Category:')
     expect(document.querySelector('input[type="hidden"][name="category"]')).toHaveValue('weather')
+  })
+
+  // #387: a category chip only while it tells markets apart.
+  it('shows each card’s category under All while more than one category holds markets', async () => {
+    listCategoryCounts.mockResolvedValue(TEN)
+    const weather = { ...market(1, 'open'), category: { name: 'Weather', slug: 'weather' } }
+    await renderPage({ rows: [weather], next: null, windowed: false }, EMPTY)
+    expect(screen.getByRole('article', { name: /Market 1/ })).toHaveTextContent('Category: Weather')
+  })
+
+  it('shows no category chip while only one category holds markets', async () => {
+    listCategoryCounts.mockResolvedValue([cat(9, 'Other'), cat(1, 'Sports', 0)])
+    const other = { ...market(1, 'open'), category: { name: 'Other', slug: 'other' } }
+    await renderPage({ rows: [other], next: null, windowed: false }, EMPTY)
+    expect(screen.getByRole('article', { name: /Market 1/ })).not.toHaveTextContent('Category:')
   })
 
   it('adds a chosen category from beyond the busiest to the row', async () => {

@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { BookOpenText, ShieldCheck, UserRound } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { resolvePreferences } from '@/lib/preferences/preferences'
@@ -54,7 +53,6 @@ export default async function SettingsPage() {
                   transitionTypes={['nav-forward']}
                   className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
                 >
-                  <UserRound aria-hidden="true" className="size-[18px]" />
                   Edit profile
                 </Link>
               </div>
@@ -88,7 +86,6 @@ export default async function SettingsPage() {
                 transitionTypes={['nav-forward']}
                 className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
               >
-                <BookOpenText aria-hidden="true" className="size-[18px]" />
                 How it works
               </Link>
               {/* The privacy note is How it works' Your data section (docs/HOW-IT-WORKS.md), so it renders in the app. */}
@@ -97,7 +94,6 @@ export default async function SettingsPage() {
                 transitionTypes={['nav-forward']}
                 className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
               >
-                <ShieldCheck aria-hidden="true" className="size-[18px]" />
                 Your data
               </Link>
             </div>

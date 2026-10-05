@@ -69,12 +69,12 @@ test('not-invited names the refused account once, and Try another account keeps 
   await expect(page.getByText(/You signed in as/)).toHaveCount(0)
 })
 
-// #329: an iPhone SE's viewport. The facts drop out so the sign-in button is on screen without
+// #329: an iPhone SE's viewport. The intro sentence drops out so the sign-in button is on screen without
 // scrolling, once the intro (if any) has settled.
 test('on a short phone the sign-in button stays above the fold', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 667 })
   await page.goto('/sign-in')
-  await expect(page.getByRole('list', { name: 'What DwellDuel is' })).toBeHidden()
+  await expect(page.getByText(/^Bet on friendly questions/)).toBeHidden()
   const button = page.getByRole('button', { name: 'Sign in with Google' })
   await expect(button).toBeInViewport({ ratio: 1 })
 })

@@ -1,4 +1,3 @@
-import { MessageCircle } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { listMarketComments } from '@/lib/social/comments'
@@ -60,7 +59,7 @@ export async function MarketComments({
         {comments.windowed && thread.length === 0 ? (
           <NothingOlder href={backToNewestHref} />
         ) : thread.length === 0 ? (
-          <EmptyState icon={MessageCircle} title="No comments yet.">
+          <EmptyState title="No comments yet.">
             Say what you think, or ask how it’ll be decided.
           </EmptyState>
         ) : (

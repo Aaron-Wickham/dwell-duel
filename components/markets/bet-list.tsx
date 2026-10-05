@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { CircleDot } from 'lucide-react'
 import { Avatar } from '@/components/ui/avatar'
 import { EmptyState } from '@/components/ui/empty-state'
 import type { MarketBet } from '@/lib/markets/get-market'
@@ -21,11 +20,11 @@ export function BetList({
 }) {
   if (bets.length === 0) {
     return canBet ? (
-      <EmptyState icon={CircleDot} title="No bets yet.">
+      <EmptyState title="No bets yet.">
         Be the first to back an outcome.
       </EmptyState>
     ) : (
-      <EmptyState icon={CircleDot} title="No bets yet." />
+      <EmptyState title="No bets yet." />
     )
   }
 

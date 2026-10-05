@@ -1,4 +1,3 @@
-import { MessageSquareText } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { FeedItems, knownEvents } from '@/app/(app)/feed/feed-list'
 import type { FeedEvent } from '@/lib/social/describe-event'
@@ -11,7 +10,7 @@ export function HomeActivity({ events, now }: { events: FeedEvent[]; now: number
     <HomeSection title="Activity" titleId="home-activity-title" action={<SeeAll href="/feed" drillDown />}>
       {knownEvents(events).length === 0 ? (
         <div className="pt-2">
-          <EmptyState icon={MessageSquareText} title="Nothing yet.">
+          <EmptyState title="Nothing yet.">
             Bets, new markets, results and finished tasks show up here as they happen.
           </EmptyState>
         </div>

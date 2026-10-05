@@ -7,13 +7,13 @@ describe('NotFoundBody', () => {
   it('names the page and offers a way back home', () => {
     render(<NotFoundBody />)
     expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
-    expect(screen.getByText(/This page wandered off/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Back home' })).toHaveAttribute('href', '/')
+    expect(screen.getByText('The link may be old, or what it pointed to was removed.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Go home' })).toHaveAttribute('href', '/')
   })
 
-  it('hides the decorative 404 numeral from assistive tech', () => {
+  // #387: the giant numeral was decoration that pushed the words down.
+  it('draws no 404 numeral', () => {
     const { container } = render(<NotFoundBody />)
-    const numeral = container.querySelector('[aria-hidden="true"]')
-    expect(numeral).toHaveTextContent('404')
+    expect(container).not.toHaveTextContent('404')
   })
 })

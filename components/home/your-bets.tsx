@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { Ticket } from 'lucide-react'
 import { IntentLink } from '@/components/ui/intent-link'
 import { LocalTime } from '@/components/ui/local-time'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -72,7 +71,7 @@ export function YourBets({
       <HomeSection title="Your bets" titleId="your-bets-title">
         {markets.length === 0 ? (
           <div className="pt-2">
-            <EmptyState icon={Ticket} title="No open bets." action={browse}>
+            <EmptyState title="No open bets." action={browse}>
               New markets show up on Markets.
             </EmptyState>
           </div>

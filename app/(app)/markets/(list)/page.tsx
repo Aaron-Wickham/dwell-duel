@@ -1,7 +1,7 @@
 import { Fragment } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ChartColumn, Plus, SearchX } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { renderStamp } from '@/lib/live/render-stamp'
@@ -130,6 +130,9 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     ),
   )
 
+  // A category chip tells markets apart only while more than one category holds markets, and never
+  // in a list already narrowed to one (#387).
+  const showCategory = category === null && counts.filter((c) => c.markets > 0).length > 1
   const cards = markets.map(([market, list]) => {
     const odds = marketOdds(market)
     const points = sparklinesByMarket.get(market.id) ?? []
@@ -152,7 +155,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       kind: market.kind,
       line: market.line,
       edited: market.edited,
-      category: market.category?.name ?? null,
+      category: showCategory ? (market.category?.name ?? null) : null,
       closeAt: market.closeAt,
       resolvedAt: market.resolvedAt,
       settledAt: market.settledAt,
@@ -213,7 +216,6 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     if (matchCards.length === 0 && !matches.windowed) {
       return (
         <EmptyState
-          icon={q ? SearchX : ChartColumn}
           title={`No ${STATUS_WORDS[filter]}${subject}${inCategory} match “${q}”.`}
           action={
             <div className="flex flex-wrap gap-2">
@@ -316,7 +318,6 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
         renderMatches()
       ) : nothing ? (
         <EmptyState
-          icon={ChartColumn}
           title={category ? `No ${STATUS_WORDS[filter]}markets in ${category.name}.` : EMPTY_TITLES[filter]}
           action={
             <div className="flex flex-wrap gap-2">

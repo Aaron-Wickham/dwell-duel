@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { ChartColumn } from 'lucide-react'
 import { SectionCard } from '@/components/ui/section-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton'
@@ -42,7 +41,7 @@ export function MemberStatsCard({ stats }: { stats: MemberStats }) {
   return (
     <SectionCard title="Stats" titleId="member-stats-title">
       {!hasHistory && (
-        <EmptyState icon={ChartColumn} title="No settled bets yet.">
+        <EmptyState title="No settled bets yet.">
           Wins, losses and profit show here once a bet or parlay settles.
         </EmptyState>
       )}

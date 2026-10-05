@@ -18,7 +18,7 @@ describe('the sign-in page', () => {
   it('says what DwellDuel is, and links to the privacy page', () => {
     render(<SignInPage />)
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Friendly bets. Faithful study.')
-    expect(screen.getByText('Play money, invite-only')).toBeInTheDocument()
+    expect(screen.getByText(/Play money, invite-only\.$/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy')
   })
 

@@ -2,7 +2,7 @@
 
 import { useActionState, useTransition } from 'react'
 import Link from 'next/link'
-import { Ticket, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSlip } from '@/components/slip/slip-provider'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -262,7 +262,6 @@ export function SlipPanel() {
           Your slip
         </h2>
         <EmptyState
-          icon={Ticket}
           title="Your slip is empty."
           action={
             <Link href="/markets" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>

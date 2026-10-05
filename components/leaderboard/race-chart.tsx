@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type CSSProperties, type KeyboardEvent } from 'react'
-import { ArrowDown, ArrowUp, Flag } from 'lucide-react'
+import { ArrowDown, ArrowUp } from 'lucide-react'
 import { Line, LineChart, ReferenceLine, XAxis, YAxis } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -52,7 +52,7 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
   if (series.length === 0) {
     return (
       <SectionCard title="The race" titleId="leaderboard-race">
-        <EmptyState icon={Flag} title="The race starts once bets settle.">
+        <EmptyState title="The race starts once bets settle.">
           Then each of the month’s top five gets a line that steps up or down as their bets pay out.
         </EmptyState>
       </SectionCard>

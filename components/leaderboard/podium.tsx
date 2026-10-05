@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { Avatar } from '@/components/ui/avatar'
-import { cardClass } from '@/components/ui/card'
 import { signedDc } from '@/lib/social/season'
 import { cn } from '@/lib/utils'
 import { uiTextClass } from '@/components/ui/page'
@@ -26,7 +25,7 @@ function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean
   return (
     <li className={cn('pressable hover-tint relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-t-segment text-center', PLACE_ORDER[place])}>
       <Avatar name={member.name} src={member.avatarSrc} size={place === 1 ? 'lg' : 'md'} />
-      <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className={`stretched-link max-w-full ${uiTextClass} font-extrabold text-ink line-clamp-3 wrap-break-word`}>
+      <Link href={`/members/${member.id}`} transitionTypes={['nav-forward']} className={`stretched-link max-w-full ${uiTextClass} truncate font-extrabold text-ink no-underline`}>
         {member.name}
       </Link>
       {member.id === meId && <span className="-mt-1 text-xs font-bold text-ink2">you</span>}
@@ -43,11 +42,12 @@ function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean
   )
 }
 
-// The top three, second and third flanking the winner. Only for the top of a board of at least
-// three: a window that starts mid-board has no podium.
+// The top three, second and third flanking the winner, straight on the page (#396): in the side
+// column at lg, so it never stretches across the whole width. Only for the top of the net-worth
+// board: a window that starts mid-board has no podium, and This month leads with the race.
 export function Podium({ members, signed, meId }: { members: PodiumMember[]; signed: boolean; meId: string }) {
   return (
-    <section aria-labelledby="podium-heading" className={cn(cardClass, 'p-4 md:p-6')}>
+    <section aria-labelledby="podium-heading">
       <h2 id="podium-heading" className="sr-only">
         Top three
       </h2>

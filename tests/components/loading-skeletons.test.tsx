@@ -99,14 +99,20 @@ describe('skeletons match their pages', () => {
       expect.stringContaining('order-3'),
     ])
     expect(withClass(container, 'h-[72px]')).toHaveLength(1)
-    expect(container.querySelectorAll('.rounded-tile.border-line')).toHaveLength(6)
+    // The rankings are divided rows on the page (D2), not list cards.
+    expect(container.querySelectorAll('.rounded-tile.border-line')).toHaveLength(0)
+    expect(container.querySelector('.divide-y')!.children).toHaveLength(8)
   })
 
-  it('the leaderboard skeleton puts a side card beside the rankings at lg', () => {
+  it('the leaderboard skeleton puts the podium and Your standing in a side column at lg', () => {
     const { container } = render(<LeaderboardLoading />)
     const grid = container.querySelector('[class*="lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]"]')!
     expect(grid.children).toHaveLength(2)
-    expect(grid.children[1]).toHaveClass('hidden', 'lg:flex')
+    const [side, rankings] = [...grid.children]
+    expect(side).toHaveClass('lg:col-start-2')
+    expect(side.querySelector('.items-end.justify-center')).not.toBeNull()
+    expect(side.lastElementChild).toHaveClass('hidden', 'lg:flex')
+    expect(rankings).toHaveClass('divide-y', 'lg:col-start-1')
   })
 
   // #388: only what every member sees, so nothing conditional: Your bets' and Activity's three

@@ -110,7 +110,7 @@ test.describe('Jump to me', () => {
     await page.goto('/leaderboard')
     const card = page.getByRole('region', { name: 'Your rank' })
     await expect(card).toBeVisible()
-    await expect(card.getByText(/^You · /)).toBeVisible()
+    await expect(card.getByText('You', { exact: true })).toBeVisible()
     // Alice is behind all fifty-six, so her row is past the first page.
     await expect(page.getByRole('listitem').filter({ hasText: '(you)' })).toHaveCount(0)
 

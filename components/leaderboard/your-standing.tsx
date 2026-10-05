@@ -26,9 +26,19 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-// The net-worth board's side card at lg. A phone doesn't get it: the list already marks "(you)",
-// and a card stacked under a long list would sit below the fold.
-export function YourStandingCard({ standing, record, className }: { standing: YourStanding | null; record?: MemberRecord; className?: string }) {
+// The net-worth board's side card at lg, under the podium, with "Jump to me" when your row is further
+// down than the page shows. A phone has the sticky bar (StandingCompact) instead.
+export function YourStandingCard({
+  standing,
+  record,
+  jump,
+  className,
+}: {
+  standing: YourStanding | null
+  record?: MemberRecord
+  jump?: ReactNode
+  className?: string
+}) {
   const settled = record !== undefined && record.won + record.lost > 0
   return (
     <SectionCard title="Your standing" titleId="leaderboard-standing" className={className}>
@@ -45,6 +55,7 @@ export function YourStandingCard({ standing, record, className }: { standing: Yo
             {gapLine(standing)}
             {!settled && ' No settled bets yet.'}
           </p>
+          {jump && <div className="flex">{jump}</div>}
         </>
       ) : (
         <p className="text-sm text-ink2">You’re not ranked yet. Your place shows up once you’re on the board.</p>

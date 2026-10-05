@@ -129,12 +129,13 @@ describe('LeaderboardPage', () => {
 
   it('ranks by net worth by default, says so, and marks its tab current', async () => {
     await renderPage({ rows: [member(1, 50, 1), member(2, 40, 2)], next: null, windowed: false })
-    expect(screen.getByText('Ranked by net worth: balance plus DC riding on open bets. Ties share a rank.')).toBeInTheDocument()
+    // Said once, under the rankings (#396).
+    expect(screen.getByText('Net worth is your balance plus DC riding on open bets.')).toBeInTheDocument()
     const tabs = screen.getByRole('navigation', { name: 'Ranking' })
     expect(within(tabs).getByRole('link', { name: 'Net worth' })).toHaveAttribute('aria-current', 'page')
     expect(within(tabs).getByRole('link', { name: 'Net worth' })).toHaveAttribute('href', '/leaderboard')
     expect(within(tabs).getByRole('link', { name: 'This month' })).toHaveAttribute('href', '/leaderboard?tab=month')
-    expect(screen.getByText('50 DC')).toBeInTheDocument()
+    expect(screen.getByRole('listitem', { name: /Member 1/ })).toHaveTextContent(/50 DC$/)
   })
 
   it("reads This month from ?tab=month, with signed profits, and pages with the tab kept", async () => {
@@ -147,13 +148,13 @@ describe('LeaderboardPage', () => {
       { tab: 'month' },
     )
     expect(getLeaderboardPage).toHaveBeenCalledWith({}, 'month', { top: null, bottom: null })
-    expect(screen.getByText(/^Ranked by net betting profit in \w+: winnings and refunds minus stakes\./)).toBeInTheDocument()
+    expect(screen.getByText(/^Profit is winnings and refunds minus stakes on bets in \w+\.$/)).toBeInTheDocument()
     expect(within(screen.getByRole('navigation', { name: 'Ranking' })).getByRole('link', { name: 'This month' })).toHaveAttribute(
       'aria-current',
       'page',
     )
-    expect(screen.getByText('+140 DC')).toBeInTheDocument()
-    expect(screen.getByText('−30 DC')).toBeInTheDocument()
+    expect(screen.getByRole('listitem', { name: /Member 1/ })).toHaveTextContent(/\+140 DC$/)
+    expect(screen.getByRole('listitem', { name: /Member 2/ })).toHaveTextContent(/−30 DC$/)
     expect(screen.getByRole('link', { name: 'Show more' })).toHaveAttribute('href', '/leaderboard?tab=month&before=NEXT')
   })
 
@@ -165,7 +166,32 @@ describe('LeaderboardPage', () => {
 
   it('shows a month board of one, since one bettor is still a board', async () => {
     await renderPage({ rows: [member(1, 12, 1)], next: null, windowed: false }, { tab: 'month' })
-    expect(screen.getByText('+12 DC')).toBeInTheDocument()
+    expect(screen.getByRole('listitem', { name: /Member 1/ })).toHaveTextContent(/\+12 DC$/)
+  })
+
+  // #396: This month leads with the race; the podium is Net worth's alone.
+  it('stands no podium on This month, leading with the race above the rankings', async () => {
+    await renderPage({ rows: [member(1, 90, 1), member(2, 80, 2), member(3, 70, 3), member(4, 60, 4)], next: null, windowed: false }, { tab: 'month' })
+    expect(screen.queryByRole('region', { name: 'Top three' })).toBeNull()
+    expect(screen.getAllByRole('listitem', { name: /Member/ })).toHaveLength(4)
+    const race = screen.getByTestId('race')
+    const rankings = screen.getByRole('region', { name: 'This month’s rankings' })
+    expect(race.compareDocumentPosition(rankings) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('sits the rankings on the page, with no card around them', async () => {
+    await renderPage({ rows: [member(1, 90, 1), member(2, 80, 2)], next: null, windowed: false })
+    const rankings = screen.getByRole('region', { name: 'Net worth rankings' })
+    expect(rankings).not.toHaveClass('bg-surface')
+    expect(rankings).not.toHaveClass('border')
+    expect(rankings.querySelector('ol')).toHaveClass('divide-y')
+  })
+
+  it('pins your own row to the bottom of the screen until it scrolls into place', async () => {
+    await renderPage({ rows: [member(1, 90, 1), member(2, 80, 2), { ...member(3, 70, 3), id: 'p-me', displayName: 'Me' }], next: null, windowed: true })
+    const mine = screen.getByRole('listitem', { name: /^Rank 3/ })
+    expect(mine).toHaveClass('sticky', 'bg-acc-soft', 'bottom-[calc(82px+var(--safe-bottom))]', 'md:bottom-0')
+    expect(screen.getByRole('listitem', { name: /Member 1/ })).not.toHaveClass('sticky')
   })
 
   it('stands the top three on a podium, winner in the middle, and lists the rest', async () => {
@@ -235,9 +261,14 @@ describe('LeaderboardPage', () => {
     expect(getYourStanding).toHaveBeenCalledWith({}, 'p-me')
     const card = screen.getByRole('region', { name: 'Your standing' })
     expect(card.className).toContain('hidden')
-    expect(card.className).toContain('lg:col-start-2')
     expect(within(card).getByText(/10 DC behind Member 4\./)).toBeInTheDocument()
-    expect(card.parentElement?.className).toContain('lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]')
+    expect(within(card).getByRole('link', { name: 'Jump to me' })).toHaveAttribute('href', '/leaderboard?at=me')
+    // Under the podium, in a side column that sticks below the top bar (#396).
+    const side = card.parentElement!
+    expect(side.className).toContain('lg:col-start-2')
+    expect(side.className).toContain('lg:sticky')
+    expect(within(side).getByRole('region', { name: 'Top three' })).toBeInTheDocument()
+    expect(side.parentElement?.className).toContain('lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]')
   })
 
   it('leaves the standing card off This month', async () => {
@@ -266,11 +297,14 @@ describe('LeaderboardPage', () => {
     const FIVE = [member(1, 90, 1), member(2, 80, 2), member(3, 70, 3), member(4, 60, 4), member(5, 50, 5)]
     const me = { ...member(7, 40, 612), id: 'p-me', displayName: 'Me' }
 
-    it('shows a compact standing card, for phones only, with a Jump to me link that focuses your row', async () => {
+    it('shows a sticky standing bar after the rankings, for phones only, with a Jump to me link that focuses your row', async () => {
       await renderPage({ rows: FIVE, next: null, windowed: false })
       const card = screen.getByRole('region', { name: 'Your rank' })
       expect(card.className).toContain('lg:hidden')
-      expect(within(card).getByText('You · 50 DC')).toBeInTheDocument()
+      expect(card).toHaveClass('sticky', 'bg-acc-soft')
+      expect(card.closest('section[aria-labelledby="leaderboard-rankings"]')).not.toBeNull()
+      expect(within(card).getByText('You')).toBeInTheDocument()
+      expect(card).toHaveTextContent('50 DC')
       expect(within(card).getByText('10 DC behind Member 4.')).toBeInTheDocument()
       const jump = within(card).getByRole('link', { name: 'Jump to me' })
       expect(jump).toHaveAttribute('href', '/leaderboard?at=me')

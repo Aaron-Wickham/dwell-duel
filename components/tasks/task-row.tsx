@@ -1,30 +1,25 @@
 import type { ReactNode } from 'react'
-import { Check, Clock } from 'lucide-react'
-import { ListCard } from '@/components/ui/list-card'
+import { Check } from 'lucide-react'
+import { dividedRowClass } from '@/components/ui/list-card'
 import { rowTitleClass } from '@/components/ui/page'
-import { StatusChip } from '@/components/ui/status-chip'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
-import { MIN_STREAK_SHOWN } from '@/lib/tasks/streak-label'
-import { cn } from '@/lib/utils'
-import { StreakBadge } from './streak-badge'
+import { MIN_STREAK_SHOWN, streakLabel } from '@/lib/tasks/streak-label'
 import { formatDcAmount } from '@/lib/format/dc'
+import { cn } from '@/lib/utils'
+import { SentDay } from './sent-day'
 
-export function PendingReviewChip() {
-  return (
-    <StatusChip tone="wait">
-      <Clock aria-hidden="true" className="size-4" />
-      Pending review
-    </StatusChip>
-  )
-}
-
+// Which of Tasks' groups the row is in (#394), with what that group says about it.
 export type TaskRowState =
-  | { kind: 'pending'; proofCount?: number }
-  // again: when a repeating task can be done again, from its period; null for a one-off.
-  | { kind: 'approved'; again?: string | null }
-  // rejection: the latest submission was turned down; the reason is optional (#200).
-  | { kind: 'available'; rejection?: { note: string | null } | null }
+  | { kind: 'todo' }
+  // sentAt is null only for the moment between the submission and the read that dates it.
+  | { kind: 'waiting'; sentAt: string | null; now: number; proofCount?: number }
+  // note: the reviewer's reason, which is optional (#200).
+  | { kind: 'rejected'; note: string | null }
+  // again: when a repeating task can be done again, from its period; null for a one-off (#266).
+  | { kind: 'done'; again?: string | null }
 
+// A divided row on the page (D2): no card and no chips. The reward leads in gold, then the cadence;
+// only a fact that changes what you do (proof needed, a rejection's reason) gets a line of its own.
 export function TaskRow({
   title,
   rewardAmount,
@@ -38,67 +33,70 @@ export function TaskRow({
   title: string
   rewardAmount: number
   description: string | null
-  cadence?: string | null
+  // "weekly", "once" (cadenceWord).
+  cadence: string
   streak?: { period: NonNullable<TaskSummary['period']>; count: number } | null
   state: TaskRowState
   proofRequired?: boolean
+  // The submit dialog, for a task to do or to try again.
   action?: ReactNode
 }) {
-  return (
-    // A card that opens nothing: its only control is the action, which sits on its right from md.
-    <ListCard tappable={false} className="flex flex-col gap-3 md:flex-row md:items-center md:gap-5">
-      <div className="flex min-w-0 grow flex-col gap-1">
-        <p className={cn(rowTitleClass, 'break-words')}>
-          {title} — <span className="text-gold">{formatDcAmount(rewardAmount)}</span>
-        </p>
-        {(description || cadence || proofRequired || (streak && streak.count >= MIN_STREAK_SHOWN)) && (
-          <p className="flex flex-wrap items-center gap-1 text-sm text-ink2">
-            {description}
-            {cadence && (
-              <StatusChip tone="void" size="sm">
-                {cadence}
-              </StatusChip>
-            )}
-            {streak && <StreakBadge period={streak.period} count={streak.count} />}
-            {proofRequired && (
-              <StatusChip tone="void" size="sm">
-                Proof required
-              </StatusChip>
-            )}
+  const streakText = streak && streak.count >= MIN_STREAK_SHOWN ? streakLabel(streak.period, streak.count) : null
+
+  if (state.kind === 'done') {
+    const detail = [streakText, state.again].filter(Boolean).join(' · ')
+    return (
+      <li className={cn(dividedRowClass, 'flex items-center justify-between gap-3 text-ink2')}>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <p className="break-words">
+            {title} · {formatDcAmount(rewardAmount)}
           </p>
+          {detail && <p className="text-sm">{detail}</p>}
+        </div>
+        <Check aria-hidden="true" className="size-5 shrink-0 text-win" />
+      </li>
+    )
+  }
+
+  const attachments =
+    state.kind === 'waiting' && state.proofCount
+      ? `${state.proofCount} ${state.proofCount === 1 ? 'attachment' : 'attachments'}`
+      : null
+
+  return (
+    <li className={cn(dividedRowClass, 'flex items-center justify-between gap-3')}>
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className={cn(rowTitleClass, 'break-words')}>{title}</p>
+        <p className="text-sm">
+          <span className="font-bold text-gold">{formatDcAmount(rewardAmount)}</span>
+          <span className="text-ink2">
+            {state.kind === 'waiting' ? (
+              <>
+                {state.sentAt && (
+                  <>
+                    {' · sent '}
+                    <SentDay iso={state.sentAt} now={state.now} />
+                  </>
+                )}
+                {attachments && ` · ${attachments}`}
+              </>
+            ) : (
+              <>
+                {` · ${cadence}`}
+                {streakText && ` · ${streakText}`}
+              </>
+            )}
+          </span>
+        </p>
+        {state.kind === 'todo' && description && <p className="line-clamp-1 text-sm break-words text-ink2">{description}</p>}
+        {state.kind !== 'waiting' && proofRequired && <p className="text-sm text-ink2">Photo, file or link needed</p>}
+        {state.kind === 'rejected' && (
+          <p className="text-sm break-words text-loss">{state.note ? `“${state.note}”` : 'No reason given.'}</p>
         )}
       </div>
-      <div className="flex min-h-11 shrink-0 flex-col items-start justify-center gap-1.5">
-        {state.kind === 'pending' && (
-          <>
-            <PendingReviewChip />
-            {Boolean(state.proofCount) && (
-              <p className="text-sm text-ink2">
-                Sent with {state.proofCount} {state.proofCount === 1 ? 'attachment' : 'attachments'}
-              </p>
-            )}
-          </>
-        )}
-        {state.kind === 'approved' && (
-          <>
-            <StatusChip tone="open">
-              <Check aria-hidden="true" className="size-4" />
-              Approved
-            </StatusChip>
-            {state.again && <p className="text-sm text-ink2">{state.again}</p>}
-          </>
-        )}
-        {state.kind === 'available' && (
-          <>
-            {action}
-            {state.rejection && (
-              <p className="max-w-[220px] text-sm text-ink2">
-                Not approved{state.rejection.note && ` — ${state.rejection.note}`}
-              </p>
-            )}
-          </>
-        )}
-      </div>
-    </ListCard>
+      {(state.kind === 'todo' || state.kind === 'rejected') && action && (
+        <div className="flex min-h-11 shrink-0 items-center">{action}</div>
+      )}
+    </li>
   )
 }

@@ -20,8 +20,8 @@ test('create a proof-required task, submit it with proof, and approve it as admi
 
   await bobPage.goto('/tasks')
   const row = bobPage.getByRole('listitem').filter({ hasText: 'Read Genesis 1-3' })
-  await expect(row.getByText('Read Genesis 1-3 — 10 DC')).toBeVisible()
-  await expect(row.getByText('Proof required')).toBeVisible()
+  await expect(row.getByText('10 DC', { exact: true })).toBeVisible()
+  await expect(row.getByText('Photo, file or link needed')).toBeVisible()
   await row.getByRole('button', { name: /I did this/ }).click()
   const dialog = bobPage.getByRole('dialog', { name: 'Submit “Read Genesis 1-3”' })
   // A proof-required task can't go without proof.
@@ -33,9 +33,10 @@ test('create a proof-required task, submit it with proof, and approve it as admi
   await dialog.getByRole('button', { name: 'Add link' }).click()
   const submitted = serverActionSettled(bobPage)
   await dialog.getByRole('button', { name: 'Submit for review' }).click()
-  await expect(row.getByText('Pending review')).toBeVisible()
   await submitted
-  await expect(row.getByText('Sent with 1 attachment')).toBeVisible()
+  // The row moves to Waiting for review (#394).
+  const waiting = bobPage.getByRole('region', { name: 'Waiting for review' }).getByRole('listitem').filter({ hasText: 'Read Genesis 1-3' })
+  await expect(waiting.getByText(/sent today · 1 attachment/)).toBeVisible()
 
   await page.goto('/admin/tasks')
   const pending = page.getByRole('listitem').filter({ hasText: 'Read Genesis 1-3' })

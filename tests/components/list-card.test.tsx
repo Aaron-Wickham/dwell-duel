@@ -88,17 +88,6 @@ describe('a page-level list is ListCards', () => {
     expect(container.querySelector('ul')).not.toHaveClass('divide-y')
   })
 
-  it('tasks, with the action beside the text', () => {
-    const { container } = render(
-      <ul>
-        <TaskRow title="Read Genesis 1-3" rewardAmount={10} description={null} state={{ kind: 'available' }} action={<button type="button">I did this</button>} />
-      </ul>,
-    )
-    const card = container.querySelector('li')
-    expectListCard(card)
-    expect(card).not.toHaveClass('pressable')
-  })
-
   it('admin members, the same card at every width', () => {
     const { container: members } = render(
       <ul>
@@ -117,7 +106,6 @@ describe('a page-level list is ListCards', () => {
   it('sit on the page per the approved grid, spaced with no dividers or card around them', () => {
     const lists: [string, RegExp][] = [
       ['app/(app)/bets/bet-rows.tsx', /lg:grid-cols-2/],
-      ['app/(app)/tasks/page.tsx', /lg:grid-cols-2/],
       ['app/(app)/admin/(sections)/members/page.tsx', /lg:grid-cols-3/],
     ]
     for (const [file, grid] of lists) {
@@ -126,7 +114,7 @@ describe('a page-level list is ListCards', () => {
       expect(text, file).toMatch(/listCardsClass/)
       expect(text, file).not.toMatch(/divide-y/)
     }
-    for (const page of ['app/(app)/bets/page.tsx', 'app/(app)/tasks/page.tsx', 'app/(app)/admin/(sections)/members/page.tsx']) {
+    for (const page of ['app/(app)/bets/page.tsx', 'app/(app)/admin/(sections)/members/page.tsx']) {
       expect(source(page), page).not.toMatch(/SectionCard/)
     }
   })
@@ -186,6 +174,20 @@ describe('a list inside a SectionCard is divided rows', () => {
     expect(screen.getAllByRole('button', { name: /^Approve/ })[0]).toHaveAccessibleName('Approve Alice’s Read Genesis 1-3')
   })
 
+
+  // #394: grouped under visible headings, a task's row needs no card of its own.
+  it('tasks, divided rows on the page under each group’s heading, with the action beside the text', () => {
+    const { container } = render(
+      <ul>
+        <TaskRow title="Read Genesis 1-3" rewardAmount={10} description={null} cadence="once" state={{ kind: 'todo' }} action={<button type="button">I did this</button>} />
+      </ul>,
+    )
+    expectDividedRow(container.querySelector('li'))
+    expect(container.querySelector('li')).not.toHaveClass('pressable')
+    const page = source('app/(app)/tasks/page.tsx')
+    expect(page).toMatch(/<ul className=\{dividedRowsClass\}>/)
+    expect(page).not.toMatch(/SectionCard|listCardsClass/)
+  })
 
   it('the leaderboard, rows on the page with your own row tinted', () => {
     const { container } = render(

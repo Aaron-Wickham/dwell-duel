@@ -18,12 +18,13 @@ test('reject a task submission with a reason the member then sees', async ({ pag
   const startingBalance = await balance.textContent()
 
   await bobPage.goto('/tasks')
-  const row = bobPage.getByRole('listitem').filter({ hasText: title })
+  // Tasks groups rows by state (#394), so the row moves from To do to Waiting for review.
+  const group = (name: string) => bobPage.getByRole('region', { name }).getByRole('listitem').filter({ hasText: title })
   const submitted = serverActionSettled(bobPage)
-  await row.getByRole('button', { name: /I did this/ }).click()
+  await group('To do').getByRole('button', { name: /I did this/ }).click()
   await bobPage.getByRole('dialog').getByRole('button', { name: 'Submit for review' }).click()
-  await expect(row.getByText('Pending review')).toBeVisible()
   await submitted
+  await expect(group('Waiting for review')).toBeVisible()
 
   await page.goto('/admin/tasks')
   const pending = page.getByRole('listitem').filter({ hasText: title })
@@ -33,9 +34,10 @@ test('reject a task submission with a reason the member then sees', async ({ pag
   await expect(page.getByText('Nothing pending.')).toBeVisible()
 
   await bobPage.goto('/tasks')
-  await expect(row.getByText('Not approved — Say it to your small group leader first')).toBeVisible()
+  const rejected = group('Not approved')
+  await expect(rejected.getByText('“Say it to your small group leader first”')).toBeVisible()
   // A rejected task can be tried again, and paid nothing.
-  await expect(row.getByRole('button', { name: /I did this/ })).toBeVisible()
+  await expect(rejected.getByRole('button', { name: /Try again/ })).toBeVisible()
   await bobPage.goto('/')
   await expect(balance).toHaveText(startingBalance!)
   await member.close()

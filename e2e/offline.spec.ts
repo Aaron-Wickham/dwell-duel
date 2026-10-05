@@ -21,6 +21,7 @@ test('offline: the banner shows and clears live, a tab tap answers at once, a na
       const orig = history[k].bind(history)
       history[k] = (d: unknown, u: string, url?: string | URL | null) => { console.log('X HIST', k, String(url), location.pathname); return orig(d, u, url) }
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(window as any).navigation?.addEventListener('navigate', (e: any) => console.log('X NAVAPI', e.navigationType, e.destination.url))
     addEventListener('online', () => console.log('X ONLINE-EVENT', location.pathname))
     console.log('X LOAD', location.href, navigator.onLine)

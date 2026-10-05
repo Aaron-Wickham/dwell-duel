@@ -140,7 +140,9 @@ a line to `CHANGELOG.md` under the next release.
   sentence doesn't need it, unless the sentence is the row's only tap
   target, as a feed row's names are (#395). An action that swaps the pressed control
   for another (Add for Remove) moves focus to its replacement, and
-  every sheet traps focus while it's open (#392).
+  every sheet traps focus while it's open: the slip also makes the page
+  behind it `inert` (`#app-shell`, `lib/ui/app-shell.ts`), since focus
+  guards alone leak under key repeat (#392).
 - **Links are underlined by default.** The base `a` rule underlines
   every link, matching the mockup (its links use the browser default
   underline). A link styled as a button, tab, tile, chip or nav item
@@ -177,8 +179,9 @@ a line to `CHANGELOG.md` under the next release.
 
 ## Native feel and speed
 
-- **No transient banner pushes content** (#401): the offline banner is
-  `fixed` under the top bar, and anything like it overlays the page too.
+- **A transient banner never covers the page** (#401): the offline
+  banner is `fixed` under the top bar, and an invisible copy in the
+  page's flow reserves its height while it shows.
 - **Skeletons, or a streamed Suspense.** Every signed-in route gets a
   `loading.tsx` skeleton (`SkeletonScreen`), unless a real 404 must
   survive the initial load, in which case it streams behind `<Suspense>`
@@ -191,9 +194,12 @@ a line to `CHANGELOG.md` under the next release.
   `display: contents` wrapper announcing one status scoped to its own
   subtree, for as long as any of its fallbacks is still showing — as the
   market page does. A route-level `loading.tsx` keeps its own single
-  status. A skeleton draws only blocks that always render, at real phone
-  text height (a header description is 24px lines, two below `md:`), so
-  nothing jumps when the page arrives (#401).
+  status. A skeleton draws only blocks that always render, at their real
+  height at 375 and 1280 (a text line is a box as tall as the line, a
+  header description 24px lines, two below `md:`), so nothing jumps when
+  the page arrives (#401). A block that shows only sometimes streams
+  behind a `<Suspense fallback={null}>` instead, as Home's Needs you and
+  Getting started do (#388).
 - **Drill-down pages** pass `Page`'s `transition="drill-down"`, which
   also enables the back-swipe; its logical parents live in
   `lib/nav/back-swipe.ts`.

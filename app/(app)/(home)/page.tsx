@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { ChartColumn, BookOpen, MessageSquareText, Trophy, ShieldCheck, Mail, Ticket } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
+import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { adminHref, atLeast, getRole } from '@/lib/auth/roles'
 import { countOpenMarkets } from '@/lib/markets/list-markets'
@@ -95,7 +96,7 @@ export default async function Home() {
   return (
     <Page transition="tab">
       <PageHeader title={`Welcome, ${standing?.displayName ?? FALLBACK_NAME}`} />
-      <LiveTables subscriptions={pageSubscriptions.home({ me: user.id, reviewer: atLeast(role, 'reviewer') })} />
+      <LiveTables subscriptions={pageSubscriptions.home({ me: user.id, reviewer: atLeast(role, 'reviewer') })} renderedAt={renderStamp()} />
       <HomeHero
         balance={balance}
         rank={rank}

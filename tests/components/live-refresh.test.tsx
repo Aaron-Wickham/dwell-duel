@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { StrictMode, type ReactElement } from 'react'
 import { act, render } from '@testing-library/react'
-import { LiveTables, LiveTablesProvider } from '@/components/live/live-tables'
+import { LiveTables, LiveTablesProvider, STALE_RENDER_MS } from '@/components/live/live-tables'
 import type { LiveSubscription } from '@/components/live/live-refresh'
 
 type Status = 'SUBSCRIBED' | 'CLOSED' | 'CHANNEL_ERROR' | 'TIMED_OUT'
@@ -155,11 +155,11 @@ function show() {
   document.dispatchEvent(new Event('visibilitychange'))
 }
 
-function Harness({ subscriptions }: { subscriptions?: LiveSubscription[] }) {
+function Harness({ subscriptions, renderedAt }: { subscriptions?: LiveSubscription[]; renderedAt?: number }) {
   return (
     <LiveTablesProvider userId="member-1">
       <LiveRefresh />
-      {subscriptions && <LiveTables subscriptions={subscriptions} />}
+      {subscriptions && <LiveTables subscriptions={subscriptions} renderedAt={renderedAt} />}
     </LiveTablesProvider>
   )
 }
@@ -431,6 +431,48 @@ describe('LiveRefresh', () => {
     rebuiltPage!.report('SUBSCRIBED')
     vi.advanceTimersByTime(DEBOUNCE_MS)
     expect(mocks.refresh).not.toHaveBeenCalled()
+  })
+
+  // #384: a page shown from the client router's 30s cache shows at once, then refreshes in place.
+  describe('a page shown from the client cache', () => {
+    async function navigate(view: { rerender: (node: ReactElement) => void }, renderedAt: number, topic: 'pools' | 'activity' = 'pools') {
+      await act(async () => {
+        view.rerender(<Harness subscriptions={[{ topic }]} renderedAt={renderedAt} />)
+      })
+    }
+
+    // The document's first page, freshly rendered; the navigation under test comes after it.
+    async function load() {
+      const view = render(<Harness subscriptions={[{ topic: 'activity' }]} renderedAt={Date.now()} />)
+      await act(() => vi.dynamicImportSettled())
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+      return view
+    }
+
+    it('refreshes once in place when its render is older than a fresh navigation’s', async () => {
+      const view = await load()
+      await navigate(view, Date.now() - STALE_RENDER_MS - 5000)
+      vi.advanceTimersByTime(DEBOUNCE_MS)
+      expect(mocks.refresh).toHaveBeenCalledTimes(1)
+      vi.advanceTimersByTime(MAX_WAIT_MS)
+      expect(mocks.refresh).toHaveBeenCalledTimes(1)
+    })
+
+    it('leaves a fresh navigation alone, so it never renders twice', async () => {
+      const view = await load()
+      await navigate(view, Date.now() - 500)
+      vi.advanceTimersByTime(MAX_WAIT_MS)
+      expect(mocks.refresh).not.toHaveBeenCalled()
+    })
+
+    it('leaves the document’s first page alone, however long it took to hydrate', async () => {
+      const view = render(<Harness subscriptions={[{ topic: 'pools' }]} renderedAt={Date.now() - 10_000} />)
+      await act(() => vi.dynamicImportSettled())
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
+      vi.advanceTimersByTime(MAX_WAIT_MS)
+      expect(mocks.refresh).not.toHaveBeenCalled()
+      view.unmount()
+    })
   })
 
   it('catches up when the app comes back to the foreground, not when it leaves', async () => {

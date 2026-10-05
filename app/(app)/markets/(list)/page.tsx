@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ChartColumn, Plus, SearchX } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
+import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { listResolvedMarkets, listOpenMarkets, listMatchingMarkets, type MarketSummary } from '@/lib/markets/list-markets'
 import { marketsHref, readMarketSearch } from '@/lib/markets/search'
@@ -309,7 +310,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
           <Link href={allCategoriesHref}>Show all categories</Link>
         </p>
       )}
-      <LiveTables subscriptions={pageSubscriptions.markets()} />
+      <LiveTables subscriptions={pageSubscriptions.markets()} renderedAt={renderStamp()} />
       <ShowMoreFocus />
       {narrowed ? (
         renderMatches()

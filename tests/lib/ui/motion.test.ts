@@ -76,7 +76,7 @@ describe('motion tokens', () => {
     expect(offenders).toEqual([])
   })
 
-  // #384: on a drill-down the old page is gone by about 100ms, before the new one fades in.
+  // #384: on a drill-down the old page is gone by 120ms (--duration-press), before the new one fades in.
   it('clears the old page fast on a drill-down, before the new one fades in', () => {
     expect(css).toMatch(/--vt-push-exit: var\(--duration-press\);/)
     for (const dir of ['nav-forward', 'nav-back']) {

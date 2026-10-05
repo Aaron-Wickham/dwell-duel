@@ -4,6 +4,7 @@ import { Ban, CircleDot, Coins, History } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
+import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { listMyCancelledBets } from '@/lib/bets/list-my-bets'
 import { listMyWagers } from '@/lib/bets/list-my-wagers'
@@ -146,7 +147,7 @@ export default async function MyBetsPage(props: PageProps<'/bets'>) {
         title="My bets"
         description="Your solo bets, parlays and coin history. Only you can see this page."
       />
-      <LiveTables subscriptions={tab === 'coins' ? pageSubscriptions.myCoins(user.id) : pageSubscriptions.myBets(user.id)} />
+      <LiveTables subscriptions={tab === 'coins' ? pageSubscriptions.myCoins(user.id) : pageSubscriptions.myBets(user.id)} renderedAt={renderStamp()} />
       <ShowMoreFocus />
       <SubNav
         label="My bets sections"

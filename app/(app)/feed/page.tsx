@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
+import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { listFeed } from '@/lib/social/list-feed'
 import { FEED_SHOWS, FEED_SHOW_LABELS, feedShowHref, readFeedShow, type FeedShow } from '@/lib/social/feed-filter'
@@ -46,7 +47,7 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
         label="Show"
         items={FEED_SHOWS.map((s) => ({ href: feedShowHref(s), label: FEED_SHOW_LABELS[s], current: s === show }))}
       />
-      <LiveTables subscriptions={pageSubscriptions.feed()} />
+      <LiveTables subscriptions={pageSubscriptions.feed()} renderedAt={renderStamp()} />
       <ShowMoreFocus />
       <FeedList
         events={feed.rows}

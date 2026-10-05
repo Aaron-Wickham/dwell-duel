@@ -138,10 +138,15 @@ a line to `CHANGELOG.md` under the next release.
   (`components/nav/page-transition.tsx`), which turns the view transition
   off; a link into a drill-down passes `['nav-forward']`. Pages stay in the
   client router's cache for 30s (`experimental.staleTimes.dynamic` in
-  `next.config.ts`), so a revisited tab shows at once; `LiveRefresh`'s
-  `router.refresh()` and any revalidating action still re-read it. This
-  fits #251: a cached revisit is one server render fewer, and nothing
-  prefetches more than before.
+  `next.config.ts`): a revisited page shows its cached copy at once, then
+  refreshes in place, because every page passes `<LiveTables
+  renderedAt={renderStamp()}>` and `LiveRefresh` refreshes a page whose
+  render is over 2s old when it mounts. While you're on a page, live
+  updates refresh it; your own actions revalidate (every money action and
+  creating a market call `revalidatePath`, which clears the client cache),
+  so a new action that changes what another page lists does too. This
+  fits #251: a revisit costs the same one render as before, just after
+  the page shows, and nothing prefetches more than before.
 - **Pending state is UI, not data.** The nav's pill moves to a tapped tab
   as its navigation starts (`useLinkStatus`), and `IntentLink` marks a
   pending link so `globals.css` dims its card or control (`pendingMarker`;
@@ -194,8 +199,9 @@ a line to `CHANGELOG.md` under the next release.
   `duration-(--duration-fast)` in markup), mirrored for script by
   `lib/ui/motion.ts` (`EASE`, `DURATION`, `PILL_SLIDE`, `PILL_TRANSITION`);
   a test keeps them equal and fails on a `cubic-bezier` anywhere else.
-  Every sliding pill uses the pill slide, and a link it slides under
-  takes `pill-label`, so its colour cross-fades over the same 280ms; every
+  Every sliding pill uses the pill slide, and a nav or tab-bar link it
+  slides under takes `pill-label`, so its colour cross-fades over the same
+  280ms; every
   dialog takes `components/ui/dialog-classes.ts`. Reduced motion turns page
   transitions into a `--duration-fast` cross-fade, never a cut. Times in
   CSS that script also keeps (the sign-in intro's) are custom properties

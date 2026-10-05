@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const { supabase, redirect } = vi.hoisted(() => ({ supabase: { rpc: vi.fn() }, redirect: vi.fn() }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase, user: { id: 'member-1' } }) }))
 vi.mock('next/navigation', () => ({ redirect }))
+const { revalidatePath } = vi.hoisted(() => ({ revalidatePath: vi.fn() }))
+vi.mock('next/cache', () => ({ revalidatePath }))
 const { notifyNewMarket } = vi.hoisted(() => ({ notifyNewMarket: vi.fn() }))
 vi.mock('@/lib/push/notify', () => ({ afterAction: (fn: () => void) => fn(), notifyNewMarket }))
 
@@ -37,6 +39,17 @@ beforeEach(() => {
   supabase.rpc.mockResolvedValue({ data: { market_id: 'market-1', replayed: false }, error: null })
   redirect.mockReset()
   notifyNewMarket.mockReset()
+  revalidatePath.mockReset()
+})
+
+// #384: the creator's cached markets list and Home count must show the new market.
+describe('createMarketAction and the client cache', () => {
+  it('revalidates the markets list and Home before opening the new market', async () => {
+    await createMarketAction(undefined, binaryForm('Will it rain?'))
+    expect(revalidatePath).toHaveBeenCalledWith('/markets')
+    expect(revalidatePath).toHaveBeenCalledWith('/')
+    expect(revalidatePath.mock.invocationCallOrder.at(-1)!).toBeLessThan(redirect.mock.invocationCallOrder[0])
+  })
 })
 
 describe('createMarketAction length limits', () => {

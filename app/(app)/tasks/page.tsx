@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { BookOpen } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
+import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { listTasks } from '@/lib/tasks/list-tasks'
 import { listMyTaskCompletions } from '@/lib/tasks/list-task-completions'
@@ -29,7 +30,7 @@ export default async function TasksPage() {
   return (
     <Page transition="tab">
       <PageHeader title="Tasks" description="Earn DC with Bible study. A reviewer checks each one before the coins land." />
-      <LiveTables subscriptions={pageSubscriptions.tasks(user.id)} />
+      <LiveTables subscriptions={pageSubscriptions.tasks(user.id)} renderedAt={renderStamp()} />
       {activeTasks.length === 0 ? (
         <EmptyState icon={BookOpen} title="No tasks yet.">
           Admins add Bible-study tasks here.

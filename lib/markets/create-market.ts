@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
@@ -105,5 +106,8 @@ type Created = { market_id: string; replayed: boolean }
 function finish(data: unknown): never {
   const { market_id, replayed } = data as Created
   if (!replayed) afterAction(() => notifyNewMarket(market_id))
+  // The markets list and Home's open count may sit in the creator's 30s client cache (#384).
+  revalidatePath('/markets')
+  revalidatePath('/')
   redirect(`/markets/${market_id}`)
 }

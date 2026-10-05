@@ -3,6 +3,10 @@
 import { createContext, useContext, useEffect, useId, useMemo, useSyncExternalStore, type ReactNode } from 'react'
 import type { LiveSubscription, LiveTableSubscription } from './live-refresh'
 
+// A page whose server render is older than this when it mounts came from the client router's
+// 30s cache (#384), not a fresh navigation, which mounts well inside it.
+export const STALE_RENDER_MS = 2000
+
 function entryId(subscription: LiveSubscription): string {
   return 'topic' in subscription ? `#${subscription.topic}` : `${subscription.table}|${subscription.filter}`
 }
@@ -32,6 +36,9 @@ class LiveTableRegistry {
   // Just the registered page declarations, without the base -- what LiveRefresh's page channel
   // is built from, kept separate so the base's own channel never has to be recomputed for it.
   private pageSnapshot: LiveSubscription[] = []
+  private readonly staleListeners = new Set<() => void>()
+  // The document's first page arrived with the HTML, however long hydration took, so it's fresh.
+  private firstPage = true
 
   constructor(userId: string) {
     this.userId = userId
@@ -61,6 +68,25 @@ class LiveTableRegistry {
   }
 
   getPageSnapshot = (): LiveSubscription[] => this.pageSnapshot
+
+  // A page mounted from the client cache shows its cached copy at once; LiveRefresh then
+  // refreshes it in place. Compares the server's clock with the browser's, so a browser clock
+  // running well ahead costs an extra refresh, never a missed one.
+  noteRender(renderedAt: number): void {
+    if (this.firstPage) {
+      this.firstPage = false
+      return
+    }
+    if (Date.now() - renderedAt <= STALE_RENDER_MS) return
+    for (const listener of this.staleListeners) listener()
+  }
+
+  onStaleRender = (listener: () => void): (() => void) => {
+    this.staleListeners.add(listener)
+    return () => {
+      this.staleListeners.delete(listener)
+    }
+  }
 }
 
 const LiveTablesContext = createContext<LiveTableRegistry | null>(null)
@@ -95,16 +121,30 @@ export function useLiveBaseSubscription(): LiveTableSubscription | null {
   return registry ? registry.base : null
 }
 
+const noStaleRenders = () => () => {}
+
+// LiveRefresh's hook for a page mounted from the client cache.
+export function useStaleRenderSubscription(): (listener: () => void) => () => void {
+  const registry = useContext(LiveTablesContext)
+  return registry ? registry.onStaleRender : noStaleRenders
+}
+
 // The signed-in member's id, which names their own private Postgres Changes channels.
 export function useLiveMemberId(): string | null {
   const registry = useContext(LiveTablesContext)
   return registry ? registry.userId : null
 }
 
-export function LiveTables({ subscriptions }: { subscriptions: LiveSubscription[] }): null {
+// `renderedAt` is when the server rendered the page (renderStamp()), so a page shown from the client
+// cache can be refreshed in place (#384). A refresh renders a new stamp, which is fresh.
+export function LiveTables({ subscriptions, renderedAt }: { subscriptions: LiveSubscription[]; renderedAt?: number }): null {
   const registry = useContext(LiveTablesContext)
   const key = subscriptionKey(subscriptions)
   const id = useId()
+
+  useEffect(() => {
+    if (registry && renderedAt !== undefined) registry.noteRender(renderedAt)
+  }, [registry, renderedAt])
 
   useEffect(() => {
     if (!registry) return

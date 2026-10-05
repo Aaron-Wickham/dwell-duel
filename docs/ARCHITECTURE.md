@@ -957,19 +957,28 @@ page is on the way (`IntentLink`'s pending marker, or `CardLinkClick`'s
 streams.
 
 **Client cache** (#384). `experimental.staleTimes.dynamic` is 30 in
-`next.config.ts`, so a page visited (or prefetched on intent) in the last
-30 seconds renders from the client router's cache: a tab switch back is
-instant, with no skeleton and no server render. That lowers Vercel
-invocations rather than raising them, since nothing is prefetched that
-wasn't before (#251). Freshness: `LiveRefresh` calls `router.refresh()`,
-which re-reads the current route past the cache, on every live change
-the page follows; every money action, and most others, call
-`revalidatePath`, which clears the whole client cache (comments and
-reactions call `refresh()` for their own page). A change someone else made
-while you were on another page shows on a cached page when its next live
-change or refresh arrives, at most 30s after you left it otherwise. The
-nav's pill moves to a tapped tab as the navigation starts (`useLinkStatus`
-through `PendingReporter` in `app-nav.tsx`), before the page arrives.
+`next.config.ts`, so a page visited in the last 30 seconds comes back from
+the client router's cache: a tab switch back shows the cached copy at
+once, with no skeleton, and then refreshes in place. Each page passes
+`<LiveTables renderedAt={renderStamp()}>` (`lib/live/render-stamp.ts`);
+when a page mounts with a server render older than `STALE_RENDER_MS` (2s),
+it came from the cache, and `LiveRefresh` books one `router.refresh()`
+(through its debounce), which re-reads the route past the cache. A fresh
+navigation mounts well inside 2s and isn't refreshed twice, and the
+document's first page is never refreshed, however slowly it hydrated. The
+check compares the server's clock with the browser's, so a browser clock
+running well ahead costs an extra refresh, never a missed one. Pages
+without `LiveTables` (Settings, Profile, How it works, most admin
+sections) show their cached copy without refreshing it. While you're on a
+page, `LiveRefresh` refreshes it on every live change it follows. Your own
+actions revalidate: every money action, creating a market and most
+others call `revalidatePath`, which clears the whole client cache
+(comments and reactions call `refresh()` for their own page). On the
+budget (#251) a revisit costs the same one render as before, after the
+page shows instead of before it, and nothing is prefetched that wasn't
+before. The nav's pill moves to a tapped tab as the navigation starts
+(`useLinkStatus` through `PendingReporter` in `app-nav.tsx`), before the
+page arrives.
 
 **Free-tier budget at 1,000 members** (#250, #251). A model, not a
 measurement: after merge, read Supabase → Realtime usage and Vercel →
@@ -1014,8 +1023,8 @@ script. `public/sw.js` is hand-written. It caches only the content-hashed
 `/_next/static/` files and a precached `/offline` page, which it serves
 when a navigation can't reach the network. Each deploy gets its own cache. It never caches per-member HTML, RSC
 payloads, server actions or Supabase responses. Drill-down pages slide in
-with React's `<ViewTransition>` (the old page gone by about 100ms,
-`--vt-push-exit`) and support a back swipe; a tab switch (`nav-tab`, the
+with React's `<ViewTransition>` (the old page gone by 120ms,
+`--duration-press`, through `--vt-push-exit`) and support a back swipe; a tab switch (`nav-tab`, the
 nav, `SubNav` and Home's tab tiles) swaps with no transition (#384); a
 skeleton giving way to content fades; and each signed-in route has a
 skeleton. `NavDepthTracker` (`lib/nav/nav-depth.ts`)

@@ -43,10 +43,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   experimental: {
     useOffline: true,
-    // A page visited in the last 30s comes back from the client router's cache instead of a
-    // skeleton and a server render (#384): a tab switch is instant, and there are fewer renders,
-    // not more (#251). LiveRefresh's router.refresh() still re-reads the page on a live change, and
-    // an action that revalidates (every money action does) clears the cache.
+    // A page visited in the last 30s comes back from the client router's cache at once instead of
+    // a skeleton (#384), and LiveRefresh then refreshes it in place (a page passes LiveTables its
+    // render time). That's the same one render a revisit cost before (#251). An action that
+    // revalidates (every money action does) clears the cache.
     staleTimes: {
       dynamic: 30,
     },

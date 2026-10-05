@@ -570,8 +570,8 @@
 /* Page transitions. React's <ViewTransition> (components/nav/page-transition.tsx) adds these
    classes: nav-forward / nav-back from a link's transitionTypes, page-enter / page-exit for a
    skeleton giving way to content. A tab switch (nav-tab) gets none and swaps at once (#384).
-   On a drill-down the old page is gone by about 100ms, before the new one fades in, so two titles
-   never show stacked. */
+   On a drill-down the old page is gone by 120ms (--duration-press), before the new one fades in,
+   so two titles never show stacked. */
 :root {
   --vt-exit: var(--duration-fast);
   --vt-push-exit: var(--duration-press);

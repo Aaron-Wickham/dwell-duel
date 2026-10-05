@@ -5,6 +5,7 @@ import { redirect, notFound } from 'next/navigation'
 import { ChevronDown, CopyPlus, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
+import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { getMarket, type MarketDetail } from '@/lib/markets/get-market'
@@ -125,7 +126,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
 
   return (
     <Page transition="drill-down">
-      <LiveTables subscriptions={pageSubscriptions.marketDetail(market.id, user.id, market.category?.id ?? null)} />
+      <LiveTables subscriptions={pageSubscriptions.marketDetail(market.id, user.id, market.category?.id ?? null)} renderedAt={renderStamp()} />
       <BackLink href="/markets">Markets</BackLink>
 
       <div className="flex flex-col gap-3">

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { CalendarDays, Trophy } from 'lucide-react'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
+import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { getJumpToMeTop, getLeaderboardPage, getYourStanding, type Board } from '@/lib/social/leaderboard'
 import { currentSeasonName } from '@/lib/social/season'
@@ -187,7 +188,7 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
   return (
     <Page transition="tab">
       <PageHeader title="Leaderboard" description={description(board)} />
-      <LiveTables subscriptions={pageSubscriptions.leaderboard()} />
+      <LiveTables subscriptions={pageSubscriptions.leaderboard()} renderedAt={renderStamp()} />
       <ShowMoreFocus />
       <SubNav
         label="Ranking"

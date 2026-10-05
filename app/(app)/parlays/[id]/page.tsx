@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { LiveTables } from '@/components/live/live-tables'
+import { renderStamp } from '@/lib/live/render-stamp'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { ParlayDetailSkeleton } from '@/components/parlays/parlay-detail-skeleton'
 import { LegPill, ParlayProgress, ParlayStatusChip, outcomeFigure } from '@/components/parlays/parlay-parts'
@@ -47,7 +48,7 @@ export default async function ParlayPage(props: PageProps<'/parlays/[id]'>) {
   return (
     <Page transition="drill-down">
       <BackLink href="/bets">My bets</BackLink>
-      <LiveTables subscriptions={pageSubscriptions.parlay(head.id)} />
+      <LiveTables subscriptions={pageSubscriptions.parlay(head.id)} renderedAt={renderStamp()} />
       <PageHeader
         title={`Parlay · ${head.legCount} picks`}
         description={

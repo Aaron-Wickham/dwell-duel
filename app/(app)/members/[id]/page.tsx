@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { redirect, notFound } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
+import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { getMemberStanding } from '@/lib/social/leaderboard'
 import { readPageParams } from '@/lib/pagination/cursor'
@@ -36,7 +37,7 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
   return (
     <Page transition="drill-down">
       <HistoryBackLink />
-      <LiveTables subscriptions={pageSubscriptions.member(member.id)} />
+      <LiveTables subscriptions={pageSubscriptions.member(member.id)} renderedAt={renderStamp()} />
       <LoadingStatus>
         <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
           <div className="flex min-w-0 flex-col gap-5 md:gap-7">

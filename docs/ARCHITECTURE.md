@@ -312,8 +312,8 @@ spending coins should get a trigger and a `write_limits()` row.
   the caller's own rows) returns `task_id, streak, includes_current`: the
   run of consecutive periods with an approved completion ending in the
   current period or the one before, numbered by `period_index` (not
-  callable by members). The Tasks page shows it as `StreakBadge` from two
-  periods up.
+  callable by members). The Tasks page shows it in the row's line (`streakLabel`,
+  "3-week streak") from two periods up.
 - `proof_attachments`: files, photos and links attached to a submission or
   a resolution. The files live in the private `proof` storage bucket.
 

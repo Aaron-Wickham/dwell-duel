@@ -345,8 +345,9 @@ full ledger) can see it.
 
 Admins keep a catalogue of Bible-study tasks, each with a DC reward.
 Tasks groups them by what you can do with each: **To do** (tasks you can
-submit now), **Waiting for review**, **Not approved** and **Done this
-week** (approved in the current period). A group with nothing in it
+submit now), **Waiting for review**, **Not approved** and **Done**
+(approved and not open again yet: this period for a repeating task, for
+good for a one-off). A group with nothing in it
 isn't shown.
 
 - A task is **one-off** or **repeats** daily, weekly (Monday–Sunday

@@ -1,6 +1,6 @@
 'use client'
 
-import { startTransition, useOptimistic, useState } from 'react'
+import { startTransition, useOptimistic, useRef, useState } from 'react'
 import { Popover } from '@base-ui/react/popover'
 import { SmilePlus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -9,8 +9,10 @@ import { REACTIONS, reactionLabel, toggleReaction, type EventReactions, type Rea
 import { setReactionAction } from '@/lib/social/reactions-actions'
 import { cn } from '@/lib/utils'
 
-const pillClass =
-  'pressable hit-area inline-flex h-8 cursor-pointer items-center gap-1 rounded-full border px-2.5 text-sm font-bold'
+// The button is the 44px target; the pill drawn inside it stays compact, so a row with reactions
+// doesn't grow by a full button height.
+const pillButtonClass = 'pressable group inline-flex min-h-11 cursor-pointer items-center'
+const pillClass = 'inline-flex h-8 items-center gap-1 rounded-full border px-2.5 text-sm font-bold'
 
 // --line-s, not --line: the edge is all that marks an unselected pill as a control (A11Y-07).
 function pillTone(mine: boolean) {
@@ -27,9 +29,13 @@ export function ReactionBar({ eventId, reactions }: { eventId: string; reactions
     toggleReaction(current, change.kind, change.on),
   )
   const [pickerOpen, setPickerOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   function toggle(kind: ReactionKind) {
     const on = !shown[kind].mine
+    // Taking back the last reaction of a kind removes its pill, the button that has focus, so focus
+    // moves to React rather than falling back to the page.
+    if (!on && shown[kind].count === 1) triggerRef.current?.focus()
     haptics.tap()
     startTransition(async () => {
       apply({ kind, on })
@@ -52,17 +58,20 @@ export function ReactionBar({ eventId, reactions }: { eventId: string; reactions
             aria-pressed={count.mine}
             aria-label={reactionLabel(name, count)}
             onClick={() => toggle(kind)}
-            className={cn(pillClass, pillTone(count.mine))}
+            className={pillButtonClass}
           >
-            <span aria-hidden="true">{emoji}</span>
-            <span aria-hidden="true">{count.count}</span>
+            <span aria-hidden="true" className={cn(pillClass, pillTone(count.mine))}>
+              <span>{emoji}</span>
+              <span>{count.count}</span>
+            </span>
           </button>
         )
       })}
       <Popover.Root open={pickerOpen} onOpenChange={setPickerOpen} modal="trap-focus">
         <Popover.Trigger
+          ref={triggerRef}
           aria-label="React"
-          className="pressable hit-area inline-flex h-8 w-11 cursor-pointer items-center justify-center rounded-full text-ink2 hover:bg-sunk hover:text-ink"
+          className="pressable inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-ink2 hover:bg-sunk hover:text-ink"
         >
           <SmilePlus aria-hidden="true" className="size-5" />
         </Popover.Trigger>

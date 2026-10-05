@@ -46,14 +46,16 @@ describe('ReactionBar', () => {
     expect(buttons.slice(0, 2).map((b) => b.textContent)).toEqual(['🔥3', '😂1'])
     for (const button of buttons) {
       expect(button).toHaveAttribute('type', 'button')
-      expect(button).toHaveClass('hit-area')
+      // Every reaction control is a full 44px target (the pill inside it is drawn smaller).
+      expect(button.className).toMatch(/\b(min-h-11|size-11)\b/)
     }
   })
 
   it('gives an unselected reaction an edge that reads as a control (A11Y-07)', () => {
     render(<ReactionBar eventId="bet:1" reactions={SOME} />)
-    expect(screen.getByRole('button', { name: 'React laugh, 1 reaction' })).toHaveClass('border-line-s')
-    expect(screen.getByRole('button', { name: 'React laugh, 1 reaction' })).not.toHaveClass('border-line')
+    const pill = screen.getByRole('button', { name: 'React laugh, 1 reaction' }).firstElementChild
+    expect(pill).toHaveClass('border-line-s')
+    expect(pill).not.toHaveClass('border-line')
   })
 
   it('shows only React when nobody has reacted', () => {

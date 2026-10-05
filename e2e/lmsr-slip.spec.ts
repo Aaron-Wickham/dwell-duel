@@ -35,7 +35,9 @@ test('the slip shows an exact payout on a new market, and its bet is final', asy
 
   // A new market opens at even odds, and each row quotes 10 DC with the slip's own number (#390).
   const outcomes = page.getByRole('region', { name: 'Outcomes' })
-  await expect(outcomes.getByText('50%', { exact: true })).toHaveCount(2)
+  // Each animated figure keeps a plain-text twin for screen readers (AnimatedText); NumberFlow's own
+  // fallback text can linger undrawn behind its shadow root, so count only what's visible.
+  await expect(outcomes.getByText('50%', { exact: true }).filter({ visible: true })).toHaveCount(2)
   await expect(outcomes.getByText('10 DC wins 18', { exact: true })).toHaveCount(2)
 
   await addToSlip(page, 'Yes')
@@ -101,5 +103,5 @@ test('the slip shows a parlay’s exact payout on new markets, and placing fixes
   // The market on screen shows the leg with the fixed payout, and the parlay moved its price.
   const position = page.getByRole('region', { name: 'Your position' })
   await expect(position.getByText(`10 DC · 2 picks · pays ${quote.payout} DC if every pick wins.`)).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Outcomes' }).getByText(/^5\d%$/)).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Outcomes' }).locator('.sr-only').getByText(/^5\d%$/)).toHaveCount(1)
 })

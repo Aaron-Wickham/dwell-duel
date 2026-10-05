@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { serviceClient, type TestClient, reconcilePoolTotals } from './helpers'
 import { seedMembers, makeMember, clientFor, createTestMarket, ensureInvited, type Member } from './fixtures'
-import { getMarketBets } from '@/lib/markets/get-market'
+import { getMarketBets, MARKET_BETS_PAGE } from '@/lib/markets/get-market'
 import { readPageParams, showMoreHref, type PageParams } from '@/lib/pagination/cursor'
 
 let alice: Member
@@ -62,7 +62,7 @@ describe('getMarketBets', () => {
     expect(await getMarketBets(carolClient, market.marketId, FIRST)).toEqual({ rows: [], next: null, windowed: false })
   })
 
-  it("pages a busy market's bets 50 at a time, newest first, with nothing skipped or repeated", async () => {
+  it("pages a busy market's bets MARKET_BETS_PAGE at a time, newest first, with nothing skipped or repeated", async () => {
     const market = await createTestMarket(aliceClient, ['Yes', 'No'])
     const other = await createTestMarket(aliceClient, ['Yes', 'No'], { title: 'Other market' })
     const start = Date.parse('2026-09-01T00:00:00.000Z')
@@ -79,14 +79,18 @@ describe('getMarketBets', () => {
     if (error) throw error
     await reconcilePoolTotals()
 
-    const first = await getMarketBets(bobClient, market.marketId, FIRST)
-    expect(first.rows.map((b) => b.amount)).toEqual(Array.from({ length: 50 }, (_, i) => 70 - i))
-    expect(first.next?.kind).toBe('extend')
-
-    const href = new URL(showMoreHref(`/markets/${market.marketId}`, {}, 'bets', first.next!), 'http://localhost')
-    const second = await getMarketBets(bobClient, market.marketId, readPageParams(Object.fromEntries(href.searchParams), 'bets'))
-    expect(second.rows.map((b) => b.amount)).toEqual(Array.from({ length: 70 }, (_, i) => 70 - i))
-    expect(second.next).toBeNull()
+    // Each Show more extends the list by one page (#390: ten bets a page on the market page).
+    let page = await getMarketBets(bobClient, market.marketId, FIRST)
+    let shown = MARKET_BETS_PAGE
+    expect(page.rows.map((b) => b.amount)).toEqual(Array.from({ length: shown }, (_, i) => 70 - i))
+    while (page.next) {
+      expect(page.next.kind).toBe('extend')
+      const href = new URL(showMoreHref(`/markets/${market.marketId}`, {}, 'bets', page.next), 'http://localhost')
+      page = await getMarketBets(bobClient, market.marketId, readPageParams(Object.fromEntries(href.searchParams), 'bets'))
+      shown = Math.min(shown + MARKET_BETS_PAGE, 70)
+      expect(page.rows.map((b) => b.amount)).toEqual(Array.from({ length: shown }, (_, i) => 70 - i))
+    }
+    expect(shown).toBe(70)
   })
 
   it('reads a garbage bets param as the first page', async () => {

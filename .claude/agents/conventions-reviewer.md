@@ -22,7 +22,7 @@ list page, `components/ui/list-card.tsx` for a card) before calling something wr
   `rowTitleClass`/`eyebrowClass`; a `cubic-bezier` or raw duration outside the motion tokens.
 - **Structure.** A signed-in page not wrapped in `<Page>`, or with zero or two `<h1>`s; a region
   not a `SectionCard`; a negative margin instead of `description`; an empty list without
-  `EmptyState`; `ListCard` vs divided row chosen wrongly (#328); a card capped in width; grids not
+  `EmptyState`; `ListCard` vs divided row chosen wrongly, or cards inside a card (D2, #386); a card capped in width; grids not
   at `lg:`, type not at `md:`.
 - **Controls.** A clickable `div`/`span`; under 44px; missing `pressable`; a lone title link without
   `hit-area`; a button-styled link without `no-underline`; a custom select or checkbox; a server

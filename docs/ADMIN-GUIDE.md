@@ -3,7 +3,7 @@
 For the people who run DwellDuel: reviewers, admins and the owner. It's
 task by task: what to tap, what the app asks, and what happens to members'
 coins. The rules every member plays by are in
-[How it works](HOW-IT-WORKS.md) (in the app under Settings → How it works);
+[How it works](HOW-IT-WORKS.md) (in the app under Settings → How it works → Read the full rules);
 this guide doesn't repeat them except where running the group needs them.
 
 Everything here happens under **Admin**, which reviewers and above open
@@ -22,11 +22,12 @@ is waiting), and on market pages.
 A role only counts while its account is invited. Removing a member takes
 their role away with their invite, straight away.
 
-The red count on **Admin** is what's waiting on you: other members' task
-submissions (reviewers and above) and closed markets with no result
-(admins and above). The **Tasks** and **Markets** tabs show their share of
-it, and Home's Admin tile counts the same and opens whichever queue has
-work.
+What's waiting on you is other members' task submissions (reviewers and
+above) and closed markets with no result (admins and above). While
+anything waits, your avatar carries a red dot and its menu's **Admin** item
+says "N waiting"; inside Admin, the **Tasks** and **Markets** tabs show
+their share as a red count; and Home's **Needs you** lists each queue with
+its count, opening that section.
 
 ## Inviting people
 
@@ -101,10 +102,11 @@ Members' DC waits on a market until it's resolved, so resolve within 48
 hours of it closing.
 
 **Where to find them.** **Admin → Markets** lists every market that has
-closed with no result, oldest first, with when it closed, its pool, who
-made it and a Resolve button. **Home → Markets to resolve** shows what's
-waiting on *you*: a creator sees their own as soon as they close, and
-reviewers and admins see any market still unresolved 48 hours after
+closed with no result, oldest first, with when it closed, the DC in it, who
+made it and a Resolve button. Home's **Needs you** shows what's waiting on
+*you*: an admin sees how many markets wait, opening Admin → Markets; a
+creator sees each of their own as soon as it closes ("… closed. Resolve
+it."), and a reviewer also sees any market still unresolved 48 hours after
 closing, and straight away one whose creator has money on it (since the
 creator can't resolve that one).
 
@@ -123,7 +125,7 @@ from a laptop it's in the right-hand column, under the outcomes.
    number** instead; it can't equal the line, and the app picks Over or
    Under from it.
 2. Say **why** it won (required, up to 1,000 characters). Everyone sees
-   this on the market page and in the feed.
+   this on the market page and in Activity.
 3. Optionally add **proof**: photos, a PDF or text file, or links (up to 5
    attachments, at most 3 of them files, 3 MB a file and 6 MB together).
    Resolution proof files are deleted 90 days after the result; links
@@ -168,7 +170,7 @@ close with no result is **waiting for a result** (#403).
   can't void it; an admin does.
 - **Steps:** in the **Call off market** card, its own card below Resolve on
   the market page, tap **Call off this market**, give the reason (required, up to 500 characters;
-  everyone sees it on the market page and in the feed), and confirm.
+  everyone sees it on the market page and in Activity), and confirm.
 - **What happens:** every bet is refunded. A parlay with a pick on it drops
   that pick and carries on with the rest; a parlay with no picks left is
   refunded. This can't be undone.
@@ -315,7 +317,7 @@ paper over it.
 - A parlay's stake buys shares on each of its picks, so parlays move a
   market's chance like solo bets do. "Includes N DC riding in parlays" under
   the outcomes shows how much parlay money is on the market.
-- An override settles every affected parlay again; a void drops the leg,
+- An override settles every affected parlay again; a void drops the pick,
   and the rest pay at their own odds.
 - Parlays placed before the October 2026 switch keep their old caps: 20×
   and 1,000 DC.
@@ -323,7 +325,7 @@ paper over it.
 ## Good practice
 
 - **Resolve within 48 hours** of a market closing; members are waiting on
-  their DC and parlays on their legs.
+  their DC, and parlays on their picks.
 - **Say why** in every resolution and void, plainly, and add proof when
   there is any: a photo of the scoreboard beats "Yes won".
 - **Don't resolve a market you're unsure of.** Leave it for another

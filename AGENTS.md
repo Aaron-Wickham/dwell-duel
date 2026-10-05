@@ -42,7 +42,9 @@ a line to `CHANGELOG.md` under the next release.
   *fills* mark only the primary action and first place; `acc-text` (dark
   `#8BE651`) stays the positive and open text colour. Active navigation uses
   `nav-active`, `tab-active` and `segment-active`, and a card or row title
-  link takes `text-ink`. `StatusChip` tones come only from the semantic
+  link takes `text-ink`. In light, lime is a fill or brand only (the tab
+  bar's pill, first place), never text on the background nor a state shown
+  by colour alone. `StatusChip` tones come only from the semantic
   tokens (`open` is acc-soft / acc-text, `won` win, `lost` loss, `wait`
   gold, `done` and `void` sunk), never `primary`.
 - **Every signed-in page is a `<Page>`.** It lives in `components/ui/page.tsx`
@@ -52,7 +54,7 @@ a line to `CHANGELOG.md` under the next release.
   goes in its `description` slot, never a negative margin. Lists with
   nothing in them render an `EmptyState`: no icon (the prop is optional
   and no list passes one) and, wherever there is one, the next step as
-  its `action` (#387). The title of a row or tile in a
+  its `action` (#387). The title of a row or card in a
   list is `rowTitleClass`, beside `h1Class`, `h2Class` and `eyebrowClass`;
   a figure is `figureHeroClass`, `figureClass` or `figureInlineClass`, and
   the sizes between body and caption are `uiTextClass`, `chipTextClass` and
@@ -82,25 +84,31 @@ a line to `CHANGELOG.md` under the next release.
   `border-line` hairline, `rounded-tile` (`--radius-tile`, 14px), `p-3.5`
   / `md:p-4`, no shadow, tinting flush (`hover-tint [--tint-inset:0]`)
   rather than lifting. Its title link is a `stretched-link` and any other
-  control sits in a `relative z-[1]` wrapper; a card whose only controls
-  are its own controls (a pick in the slip) passes `tappable={false}`. The list is
+  control sits in a `relative z-[1]` wrapper; a card that doesn't open
+  anything as a whole (a pick in the slip) passes `tappable={false}`. The list is
   `listCardsClass` (`flex flex-col gap-2`, no dividers), with its `lg:`
   grid added at the call site. Something that isn't an `<li>` uses
-  `tappableListCardClass`. My bets and Admin › Members are list cards on
-  the page; the leaderboard, Activity and Tasks' groups are divided rows
-  on the page; the admin queues, task catalog and categories, the ledger, coin
-  history, invites, a market's bet list and Home's Your bets and Needs
-  you are divided rows.
+  `tappableListCardClass`. My bets is list cards on the page; the
+  leaderboard, Activity and Tasks' groups are divided rows on the page;
+  Admin › Members is a table on the page (divided rows below `lg:`) and
+  the review queue a table in its card (#399); the task catalog,
+  categories, markets waiting to be resolved, the ledger, coin history,
+  invites, a market's bet list and Home's Your bets and Needs you are
+  divided rows.
 - **A chip only when it adds information the context doesn't** (#387).
   A list filtered to one status shows no status chip on its items; a
   category chip shows only while more than one category holds markets
   and the list isn't narrowed to one. No emoji in chrome. An icon stays
-  only where it carries meaning (the tab bar, the close X, `Message`'s
-  error and ok marks, the Needs you chevrons, the Google G); secondary
-  buttons are text only.
-- **Home's sections are uncarded on a phone** (#388, D1/D2). Its sections
-  (`HomeSection`, `components/home/home-section.tsx`) are rows on the page
-  under an `<h2>` below `lg:`, and cards like a `SectionCard` from `lg:`.
+  only where it carries meaning (the tab bar and the menus' items, the
+  back arrow, the close X, `Message`'s marks, the Needs you chevrons, a
+  select's or disclosure's chevron, the plus on Add and Create market,
+  search, proof types, the Google G); other secondary buttons are text
+  only.
+- **Home's lists are uncarded on a phone** (#388, D1/D2). Your bets,
+  Activity and Needs you (`HomeSection`, `components/home/home-section.tsx`)
+  are rows on the page under an `<h2>` below `lg:`, and cards like a
+  `SectionCard` from `lg:`; Getting started, Turn on notifications and the
+  weekly recap stay cards at every width.
 - **Page widths come from `<Page width>`:** `wide` (default, 1120px of
   content) or `reading` (about 820px, centred), and a skeleton uses
   `pageClassFor(width)`. Don't cap a card's width inside a page; fill the
@@ -171,8 +179,6 @@ a line to `CHANGELOG.md` under the next release.
 
 - **No transient banner pushes content** (#401): the offline banner is
   `fixed` under the top bar, and anything like it overlays the page too.
-  A skeleton draws only blocks that always render, at real phone text
-  height (a header description is 24px lines, two below `md:`).
 - **Skeletons, or a streamed Suspense.** Every signed-in route gets a
   `loading.tsx` skeleton (`SkeletonScreen`), unless a real 404 must
   survive the initial load, in which case it streams behind `<Suspense>`
@@ -185,7 +191,9 @@ a line to `CHANGELOG.md` under the next release.
   `display: contents` wrapper announcing one status scoped to its own
   subtree, for as long as any of its fallbacks is still showing — as the
   market page does. A route-level `loading.tsx` keeps its own single
-  status.
+  status. A skeleton draws only blocks that always render, at real phone
+  text height (a header description is 24px lines, two below `md:`), so
+  nothing jumps when the page arrives (#401).
 - **Drill-down pages** pass `Page`'s `transition="drill-down"`, which
   also enables the back-swipe; its logical parents live in
   `lib/nav/back-swipe.ts`.

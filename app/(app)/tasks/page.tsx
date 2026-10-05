@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { dividedRowsClass } from '@/components/ui/list-card'
 import { TaskRow, type TaskRowState } from '@/components/tasks/task-row'
 import { AGAIN_LABEL, cadenceWord } from '@/lib/tasks/period-label'
+import { cn } from '@/lib/utils'
 import { SubmitTaskDialog } from './submit-task-dialog'
 
 type Group = 'todo' | 'waiting' | 'rejected' | 'done'
@@ -98,8 +99,8 @@ export default async function TasksPage() {
       {activeTasks.length === 0 ? (
         <EmptyState title="No tasks yet.">Admins add Bible-study tasks here.</EmptyState>
       ) : (
-        // To do (7fr) beside what's waiting, turned down and done (5fr) from lg.
-        <div className="flex flex-col gap-7 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
+        // To do (7fr) beside what's waiting, turned down and done (5fr) from lg; alone, To do takes the column.
+        <div className={cn('flex flex-col gap-7', hasSide && 'lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start')}>
           <TaskGroup group="todo" rows={groups.todo} />
           {hasSide && (
             <div className="flex flex-col gap-7">

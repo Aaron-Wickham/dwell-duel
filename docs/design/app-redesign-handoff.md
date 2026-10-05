@@ -141,7 +141,7 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 | Create market | wide | The form (7fr) beside a live preview of its market card (5fr). The fields run Title (with an example placeholder), Type, Outcomes or Line, Close time, Category, then Details (optional); under them, beside Create market, one line says what can't change later (#390). The type is three option cards, Yes/No, Multiple choice and Over/Under, each with a line saying what it asks: stacked on a phone, in a row from `lg:`. The chosen card is `acc-soft` with an `acc-text` border and dot; the native radio covers each card, transparent (#352). |
 | Parlay | wide | Picks (7fr) beside the summary and How it adds up (5fr). See *My bets and the parlay page* below. |
 | Admin › Members | wide | The Members heading, then a list card per member on the page in three columns (D2). |
-| Tasks | wide | To do (7fr) beside Waiting for review, Not approved and Done this week stacked (5fr), each a group of divided rows on the page under its visible heading (#394). On a phone the groups follow one another in that order. |
+| Tasks | wide | To do (7fr) beside Waiting for review, Not approved and Done stacked (5fr), each a group of divided rows on the page under its visible heading (#394). On a phone the groups follow one another in that order. |
 | Admin › Tasks | wide | Pending approvals as divided rows in their card; Create task (5fr) beside the task catalog (7fr), divided rows in its card (D2). |
 | Admin › Markets | wide | Markets waiting to be resolved, then the categories, each as divided rows in its card (D2). |
 | Admin › Ledger | wide | The economy card (owner only), then the ledger card under a visible "Every coin movement" heading, divided rows. |
@@ -178,12 +178,12 @@ Phone layouts are single columns and don't change. From `lg:` (1024px) each page
 
 ## Tasks (#394)
 
-- **Grouped by what you can do,** in this order, each a `ListSection` whose visible `h2` shows only when the group has rows: **To do** (tasks you can submit now), **Waiting for review**, **Not approved** and **Done this week** (approved in the current period). Divided rows on the page, no card around them and none per row. From `lg:`, To do (7fr) sits beside the other three stacked (5fr).
+- **Grouped by what you can do,** in this order, each a `ListSection` whose visible `h2` shows only when the group has rows: **To do** (tasks you can submit now), **Waiting for review**, **Not approved** and **Done** (approved and not yet open again: this period for a repeating task, for good for a one-off). Divided rows on the page, no card around them and none per row. From `lg:`, To do (7fr) sits beside the other three stacked (5fr).
 - **The subtitle** is the one that teaches a rule: "Earn DC with Bible study. A reviewer checks each one."
 - **A row** is the title (`rowTitleClass`), then one line: the reward first in gold, "**10 DC** · weekly" (`once` for a one-off), plus " · 3-week streak" from two periods in a row; the description in one clamped line under it; and "Photo, file or link needed" when the task needs proof. No chips. Its action is a secondary small button on the right, "I did this", which opens the submit dialog.
 - **Waiting for review:** "**25 DC** · sent Thu" ("today", a weekday within the week, then a date), plus " · 1 attachment". No button. While the submission is on its way the button gives way to "Sent for review", and the row then moves here.
 - **Not approved:** the reviewer's reason in `text-loss`, in quotes ("No reason given." without one), and a secondary "Try again" that opens the same dialog.
-- **Done this week:** a quiet `--ink2` line, "Read Philippians · 15 DC", with a check in `text-win` on the right; under it, for a repeating task, its streak and when it opens again ("3-week streak · Again Monday, midnight ET").
+- **Done:** a quiet `--ink2` line, "Read Philippians · 15 DC", with a check in `text-win` on the right; under it, for a repeating task, its streak and when it opens again ("3-week streak · Again Monday, midnight ET").
 - The skeleton draws To do's heading and four rows with their buttons beside one more group.
 
 ## Activity rows and reactions (#395)

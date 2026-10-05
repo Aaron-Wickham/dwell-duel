@@ -21,7 +21,7 @@ const GROUP_TITLES: Record<Group, string> = {
   todo: 'To do',
   waiting: 'Waiting for review',
   rejected: 'Not approved',
-  done: 'Done this week',
+  done: 'Done',
 }
 
 // One group of tasks under its visible heading, shown only when it has rows.

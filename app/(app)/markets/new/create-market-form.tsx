@@ -143,7 +143,7 @@ export function CreateMarketForm({
             {KIND_OPTIONS.map((option) => (
               <label
                 key={option.kind}
-                className="pressable relative flex min-h-11 cursor-pointer items-start gap-3 rounded-tile border border-line bg-surface p-3.5 has-checked:border-acc-text has-checked:bg-acc-soft has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus md:p-4"
+                className="pressable relative flex min-h-11 cursor-pointer items-start gap-3 rounded-tile border border-line bg-surface p-3.5 has-checked:border-acc-text has-checked:bg-acc-soft has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus md:p-4"
               >
                 <input
                   type="radio"

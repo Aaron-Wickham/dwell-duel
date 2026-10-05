@@ -41,7 +41,7 @@ export function SampleMarket() {
         <div className="absolute inset-y-0 right-16 left-0">
           <div className="absolute inset-x-0 bottom-0 border-t border-line short:hidden" />
           <div className="absolute inset-x-0 top-1/2 border-t border-dashed border-line short:hidden" />
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="sign-in-intro-draw absolute inset-0 size-full overflow-visible">
+          <svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" className="sign-in-intro-draw absolute inset-0 size-full overflow-visible">
             <path d={samplePath('no')} fill="none" className="stroke-line-s" strokeWidth={2.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
             <path d={samplePath('yes')} fill="none" className="stroke-s2" strokeWidth={3} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           </svg>

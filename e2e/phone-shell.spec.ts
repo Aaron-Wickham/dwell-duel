@@ -23,10 +23,13 @@ test.describe('phone shell', () => {
     })
   }
 
-  test('the page locks zoom', async ({ page }) => {
+  // D6 (#402): a browser tab can pinch-zoom; only the installed app locks it (StandaloneZoomLock,
+  // which Playwright can't reach: it has no standalone mode).
+  test('a browser tab leaves zoom on', async ({ page }) => {
     await page.goto('/markets')
     const content = await page.locator('meta[name="viewport"]').getAttribute('content')
-    expect(content).toContain('maximum-scale=1')
-    expect(content).toContain('user-scalable=no')
+    expect(content).not.toContain('maximum-scale')
+    expect(content).not.toContain('user-scalable')
+    expect(await page.evaluate(() => getComputedStyle(document.body).touchAction)).toBe('auto')
   })
 })

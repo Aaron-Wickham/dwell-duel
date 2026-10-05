@@ -226,6 +226,13 @@ a line to `CHANGELOG.md` under the next release.
   changes to the shell in the simulator's installed app, not just Safari:
   `npm run check:ios` cold-launches the installed app on a booted
   simulator and fails on a short viewport (`--video` records the launch).
+- **Zoom is locked only in the installed app** (D6, #402). A browser tab
+  must keep pinch-zoom (low-vision members need it), so never put
+  `maximum-scale` or `user-scalable` in `siteViewport`, and never set
+  `touch-action` that excludes pinch-zoom outside `display-mode:
+  standalone`. `StandaloneZoomLock` adds the lock to the viewport meta in
+  standalone, where a zoomed page displaces the fixed bars; check shell
+  changes with `npm run check:ios`.
 - **The `pressable` and `no-callout` utilities,** plus the `--safe-top` /
   `--safe-bottom` tokens, which are non-zero only in standalone mode.
   Every tap target is `pressable`. A card or row that one link makes

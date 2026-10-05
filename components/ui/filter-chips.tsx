@@ -34,7 +34,7 @@ export function FilterChips({
       aria-label={label}
       className={cn(
         'no-callout flex items-center gap-2',
-        scroll ? '-mx-4 overflow-x-auto px-4 py-0.5 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0' : 'flex-wrap',
+        scroll ? '-mx-4 -my-1 overflow-x-auto px-4 py-1.5 [scrollbar-width:none] md:mx-0 md:my-0 md:flex-wrap md:overflow-visible md:px-0 md:py-0' : 'flex-wrap',
         className,
       )}
     >

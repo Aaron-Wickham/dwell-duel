@@ -43,6 +43,8 @@
   --line-s: #6F8581;
   --primary: #03272D;
   --on-primary: #FFFFFF;
+  /* Light lime and --wm-b fail 3:1 on every light surface (A11Y-08): they are fills and brand
+     only, never an indicator on their own (a selected state, a status, a chart series). */
   --lime: #72DB2B;
   --on-lime: #03272D;
   --link: #03272D;
@@ -493,9 +495,16 @@
     -webkit-font-smoothing: antialiased;
     /* No pull-to-refresh, overscroll glow or scroll chaining; live updates keep data fresh. */
     overscroll-behavior-y: none;
-    /* Vertical scroll only: no pinch-zoom and no sideways panning, in the installed app too. */
-    touch-action: pan-y;
     overflow-x: clip;
+  }
+
+  /* The installed app scrolls vertically only: no pinch-zoom (which displaces the fixed bars) and
+     no sideways panning. A browser tab keeps pinch-zoom (D6, #402); StandaloneZoomLock locks the
+     viewport meta to match. */
+  @media (display-mode: standalone) {
+    body {
+      touch-action: pan-y;
+    }
   }
 
   /* Drops the double-tap-to-zoom wait, so taps land at once. */

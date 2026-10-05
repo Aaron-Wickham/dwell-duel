@@ -222,7 +222,7 @@ export function BackSwipe({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <div ref={surfaceRef} className="flex flex-1 touch-pan-y flex-col overflow-x-clip">
+    <div ref={surfaceRef} className="flex flex-1 touch-pan-y touch-pinch-zoom flex-col overflow-x-clip">
       <div
         ref={backdropRef}
         aria-hidden="true"

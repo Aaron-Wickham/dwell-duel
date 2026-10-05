@@ -85,7 +85,10 @@ Every text pairing passes WCAG AA in both themes, and `--line-s` clears 3:1 on `
 ## Sizing and accessibility
 
 - **Targets:** every control is at least 44px tall. Primary buttons are 48px and compact ones 44px.
-- **Focus:** every control gets a visible ring: `:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }`.
+- **Focus:** every control gets a visible ring: `:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }`, 3px everywhere, the Create market type cards included. A sideways-scrolling chip row pads 6px above and below (with a matching negative margin) so the ring isn't clipped (#402).
+- **Zoom (D6, #402):** a browser tab can pinch-zoom; only the installed app locks it (`StandaloneZoomLock` adds `maximum-scale=1, user-scalable=no` to the viewport meta, and `touch-action: pan-y` on `body` applies only in `display-mode: standalone`), since zoom there displaces the fixed top and tab bars with no browser chrome to recover.
+- **Lime is never an indicator alone (A11Y-08):** in light mode `--lime` and `--wm-b` fail 3:1 on every surface, so they are fills or brand only; a selected state, status or chart series pairs them with a border or uses another token.
+- **Decorative SVGs** are `aria-hidden` (the sign-in sample chart included); Getting started's step buttons are described by their step's title, and its Dismiss is named "Dismiss getting started".
 - **Corner radii:** cards 18px (`--radius-card`), list cards, sunken panels and segmented tracks 14px (`--radius-tile`), buttons and inputs 12px (`--radius-control`), segments, icon tiles and inline code 10px (`--radius-segment`), chips fully rounded (999px). Every corner is one of these; there's no `rounded-[Npx]`.
 - **Card padding:** 18px on phones and 24px from `md:` (`cardPaddingClass`), for `Card`, `SectionCard` and every card built by hand, the market card included.
 - **Grid gaps:** a `lg:` grid of cards is 20px apart (`lg:gap-5`).

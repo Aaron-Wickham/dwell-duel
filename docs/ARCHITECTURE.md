@@ -1049,6 +1049,16 @@ there after the keyboard goes; `KeyboardViewportReset`
 (`components/app-shell/keyboard-viewport-reset.tsx`) nudges the scroll a
 pixel and back once it has (#350). The `color-scheme` meta lets a full page
 load in dark mode paint a dark canvas before `globals.css` arrives (#353).
+Zoom (D6, #402): the viewport meta leaves pinch-zoom on, so a browser tab
+can zoom (WCAG 1.4.4); `StandaloneZoomLock`
+(`components/app-shell/standalone-zoom-lock.tsx`), an inline script that
+runs before first paint, appends `maximum-scale=1, user-scalable=no` only
+under `display-mode: standalone`, and `body`'s `touch-action: pan-y` is
+scoped to standalone too, because a zoomed installed app leaves the fixed
+top and tab bars displaced with no browser chrome to recover. The back-swipe
+surface is `touch-pan-y touch-pinch-zoom`, so it doesn't block the pinch in
+a browser. The trade-off: in a browser a zoomed page can scroll the fixed
+bars partly out of view until it's zoomed back.
 
 **Push notifications** (#80). Settings' Notifications card
 (`app/(app)/settings/notification-settings.tsx`) asks for permission,

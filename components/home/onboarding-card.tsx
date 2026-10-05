@@ -65,7 +65,7 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
             {doneCount} of {shown.length} done
           </p>
         </div>
-        <Button variant="quiet" size="sm" onClick={dismiss}>
+        <Button variant="quiet" size="sm" onClick={dismiss} aria-label="Dismiss getting started">
           Dismiss
         </Button>
       </div>
@@ -87,13 +87,16 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
                 </span>
               )}
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className={cn('font-extrabold', stepDone && 'text-ink2 line-through')}>{step.title}</span>
+                <span id={`onboarding-step-${step.key}`} className={cn('font-extrabold', stepDone && 'text-ink2 line-through')}>
+                  {step.title}
+                </span>
                 {stepDone ? <span className="sr-only">Done</span> : <span className="text-sm text-ink2">{step.hint}</span>}
               </div>
               {!stepDone && (
                 <Link
                   href={step.href}
                   transitionTypes={step.drillDown ? ['nav-forward'] : TAB_TRANSITION}
+                  aria-describedby={`onboarding-step-${step.key}`}
                   className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'shrink-0 no-underline')}
                 >
                   {step.cta}

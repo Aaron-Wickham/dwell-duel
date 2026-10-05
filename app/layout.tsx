@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { StatusBand } from '@/components/app-shell/status-band'
 import { VercelMetrics } from '@/components/app-shell/vercel-metrics'
 import { LaunchScreen } from '@/components/brand/launch-screen'
+import { StandaloneZoomLock } from '@/components/app-shell/standalone-zoom-lock'
 import { siteMetadata, siteViewport } from '@/lib/app-shell/site-metadata'
 import { resolveTheme, THEME_COOKIE } from '@/lib/theme/theme'
 import { preferenceAttributes, resolvePreferences } from '@/lib/preferences/preferences'
@@ -34,6 +35,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
       className={`${manrope.variable} h-full`}
     >
       <body className="flex min-h-full flex-col">
+        <StandaloneZoomLock />
         <LaunchScreen />
         <StatusBand />
         {children}

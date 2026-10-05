@@ -1621,6 +1621,13 @@ export type Database = {
           id: string
         }[]
       }
+      member_net_worths: {
+        Args: { p_ids: string[] }
+        Returns: {
+          id: string
+          score: number
+        }[]
+      }
       member_records: {
         Args: { p_ids: string[] }
         Returns: {

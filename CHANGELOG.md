@@ -28,6 +28,7 @@ before v0.4.0 used other headings.)
 - **Coin history by day, and a chart you can read by keyboard.** My bets › Coins groups your coin movements under a heading per day (Today, Yesterday, "Sat, Oct 3", on Eastern time), each row giving just its time, in a narrower column that's easier to scan on a computer; its loading placeholder is the list's own rows instead of bet cards. The market page's chart is a slider for a keyboard or screen reader: arrow keys, Page Up/Down, Home and End step through its points, showing the readout the pointer shows and announcing the time and each outcome's chance; the hidden table of points stays (#418).
 
 ### Fixes
+- **The top bar stays put when you type.** In the installed app, opening the keyboard no longer slides the top bar under the clock and battery (#487).
 - **The tab bar's pill slides cleanly.** Tapping a tab after scrolling no longer makes the pill dip and restart its slide when the new page arrives (#442).
 - **The keyboard no longer brings the tab bar up with it.** While you type, the tab bar and slip button step aside and come back once the keyboard has gone (#443).
 - **Two lines that weren't true.** The leaderboard's empty state no longer tells members to invite friends (only admins can) and offers Browse markets instead; the owner's economy panel now describes the market maker's payouts rather than the old pools (#468).

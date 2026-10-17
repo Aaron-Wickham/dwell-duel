@@ -30,6 +30,7 @@ class FakeViewport extends EventTarget {
   width = 390
   height = 760
   scale = 1
+  offsetTop = 0
 }
 
 describe('KeyboardOpenFlag', () => {
@@ -78,5 +79,22 @@ describe('KeyboardOpenFlag', () => {
     viewport.scale = 2
     resize(380)
     expect(document.documentElement.dataset.keyboard).toBeUndefined()
+  })
+
+  it('carries the iOS pan of the visible area while the keyboard is up, and drops it after (#487)', () => {
+    render(<KeyboardOpenFlag />)
+    const input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+    viewport.offsetTop = 64
+    resize(420)
+    expect(document.documentElement.style.getPropertyValue('--vv-top')).toBe('64px')
+    viewport.offsetTop = 90
+    viewport.dispatchEvent(new Event('scroll'))
+    expect(document.documentElement.style.getPropertyValue('--vv-top')).toBe('90px')
+    input.blur()
+    viewport.offsetTop = 0
+    resize(760)
+    expect(document.documentElement.style.getPropertyValue('--vv-top')).toBe('')
   })
 })

@@ -18,6 +18,9 @@ export function nextKeyboardOpen(wasOpen: boolean, fullHeight: number, height: n
 
 // On iOS the fixed tab bar and slip button ride up above the keyboard, covering the field and the
 // page (#443). While the keyboard is up, <html data-keyboard="open"> hides them (globals.css).
+// iOS also pans the visible area down inside the page to keep the field in view, and the sticky
+// top bar and status band stay pinned to the page, sliding up under the status bar (#487); so
+// --vv-top carries that pan and they follow it.
 export function KeyboardOpenFlag(): null {
   useEffect(() => {
     const viewport = window.visualViewport
@@ -39,8 +42,13 @@ export function KeyboardOpenFlag(): null {
       }
       fullHeight = Math.max(fullHeight, height)
       open = nextKeyboardOpen(open, fullHeight, height, isTextEntry(document.activeElement))
-      if (open) root.dataset.keyboard = 'open'
-      else delete root.dataset.keyboard
+      if (open) {
+        root.dataset.keyboard = 'open'
+        root.style.setProperty('--vv-top', `${Math.max(0, vv.offsetTop)}px`)
+      } else {
+        delete root.dataset.keyboard
+        root.style.removeProperty('--vv-top')
+      }
     }
 
     // A frame later, so focus moving from one field to the next is judged once it has landed.
@@ -50,14 +58,17 @@ export function KeyboardOpenFlag(): null {
     }
 
     viewport.addEventListener('resize', schedule)
+    viewport.addEventListener('scroll', schedule)
     document.addEventListener('focusin', schedule)
     document.addEventListener('focusout', schedule)
     return () => {
       cancelAnimationFrame(frame)
       viewport.removeEventListener('resize', schedule)
+      viewport.removeEventListener('scroll', schedule)
       document.removeEventListener('focusin', schedule)
       document.removeEventListener('focusout', schedule)
       delete root.dataset.keyboard
+      root.style.removeProperty('--vv-top')
     }
   }, [])
 

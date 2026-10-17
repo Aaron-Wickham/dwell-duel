@@ -39,12 +39,15 @@ export const WRITE_LIMITS = {
     { max: 1000, windowSeconds: 86400 },
   ],
   task_submission: [{ max: 30, windowSeconds: 86400 }],
+  // Solo bets and parlays (0114, #450): far above an honest day's betting.
+  bet: [{ max: 200, windowSeconds: 86400 }],
+  parlay: [{ max: 100, windowSeconds: 86400 }],
 } as const
 
 export type WriteAction = keyof typeof WRITE_LIMITS
 
 // enforce_write_limit's raise for each action (SQLSTATE DD429), and what the member sees.
-const { market, category, comment, reaction, task_submission } = WRITE_LIMITS
+const { market, category, comment, reaction, task_submission, bet, parlay } = WRITE_LIMITS
 
 export const RATE_LIMIT_ERRORS = {
   market: {
@@ -66,5 +69,13 @@ export const RATE_LIMIT_ERRORS = {
   task_submission: {
     match: 'you have submitted too many tasks recently; try again later',
     formError: `You can submit up to ${task_submission[0].max} tasks a day. Try again later.`,
+  },
+  bet: {
+    match: 'you have placed too many bets recently; try again later',
+    formError: `You can place up to ${bet[0].max} bets a day. Try again tomorrow.`,
+  },
+  parlay: {
+    match: 'you have placed too many parlays recently; try again later',
+    formError: `You can place up to ${parlay[0].max} parlays a day. Try again tomorrow.`,
   },
 } as const satisfies Record<WriteAction, { match: string; formError: string }>

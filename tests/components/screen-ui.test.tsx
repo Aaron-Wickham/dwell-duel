@@ -7,6 +7,7 @@ import { SectionCard } from '@/components/ui/section-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { BackLink } from '@/components/ui/back-link'
 import { Avatar } from '@/components/ui/avatar'
+import { tintFor } from '@/lib/ui/tint'
 
 describe('Page', () => {
   it('wraps the body in the width-capped, padded page column', () => {
@@ -125,12 +126,21 @@ describe('Avatar', () => {
 
   it('sizes itself', () => {
     const { container, rerender } = render(<Avatar name="Sarah" />)
-    expect(container.firstChild).toHaveClass('size-10', 'bg-acc-soft', 'text-acc-text')
+    expect(container.firstChild).toHaveClass('size-10', ...tintFor('Sarah').split(' '))
     rerender(<Avatar name="Sarah" size="sm" />)
     expect(container.firstChild).toHaveClass('size-8', 'text-sm')
     rerender(<Avatar name="Sarah" size="lg" />)
-    expect(container.firstChild).toHaveClass('size-16', 'md:size-20', 'bg-acc-soft', 'text-acc-text')
+    expect(container.firstChild).toHaveClass('size-16', 'md:size-20', ...tintFor('Sarah').split(' '))
     expect(container.firstChild).not.toHaveClass('bg-lime')
+  })
+
+  it('gives each member a steady tint, and different members different ones', () => {
+    const { container, rerender } = render(<Avatar name="Sarah" />)
+    const sarah = (container.firstChild as HTMLElement).className
+    rerender(<Avatar name="Sarah" />)
+    expect((container.firstChild as HTMLElement).className).toBe(sarah)
+    const tints = new Set(['Ruth', 'Ben', 'Caleb', 'Grace', 'Eli', 'Naomi', 'Levi', 'Leah'].map((n) => tintFor(n)))
+    expect(tints.size).toBeGreaterThan(2)
   })
 
   it('shows a photo instead of the letter when given one, still hidden from assistive tech', () => {

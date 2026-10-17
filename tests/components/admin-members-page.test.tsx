@@ -147,7 +147,7 @@ describe('AdminMembersPage (#254)', () => {
   })
 
   // #418: sortable by balance, net worth and joined date, with the order in the URL.
-  it('sorts A–Z by default, with headers that sort by each figure', async () => {
+  it('sorts A to Z by default, with headers that sort by each figure', async () => {
     await renderPage({ q: 'an' })
     const table = screen.getByRole('table')
     expect(within(table).getByRole('columnheader', { name: /^Member/ })).toHaveAttribute('aria-sort', 'ascending')
@@ -160,7 +160,7 @@ describe('AdminMembersPage (#254)', () => {
       '/admin/members?q=an&sort=net_worth',
     )
     expect(within(table).getByRole('link', { name: 'Joined, sort newest first' })).toHaveAttribute('href', '/admin/members?q=an&sort=joined')
-    expect(within(table).getByText(/Members, A–Z/)).toBeInTheDocument()
+    expect(within(table).getByText(/Members, A to Z/)).toBeInTheDocument()
   })
 
   it('sorts by balance from ?sort=, turning round on a second tap and keeping the sort across tabs and searches', async () => {
@@ -177,7 +177,7 @@ describe('AdminMembersPage (#254)', () => {
       'href',
       '/admin/members?sort=balance&dir=asc',
     )
-    expect(within(table).getByRole('link', { name: 'Member, sort A–Z' })).toHaveAttribute('href', '/admin/members')
+    expect(within(table).getByRole('link', { name: 'Member, sort A to Z' })).toHaveAttribute('href', '/admin/members')
     const tabs = screen.getByRole('navigation', { name: 'Show members' })
     expect(within(tabs).getByRole('link', { name: 'Removed (12)' })).toHaveAttribute('href', '/admin/members?show=removed&sort=balance')
     expect(screen.getByRole('search').querySelector('input[type="hidden"][name="sort"]')).toHaveAttribute('value', 'balance')
@@ -191,16 +191,28 @@ describe('AdminMembersPage (#254)', () => {
 
   it('sorts the Active tab by net worth, using the net worths it read', async () => {
     await renderPage({ sort: 'net_worth' })
-    expect(listMembersByNetWorth).toHaveBeenCalledWith({}, { query: '', ascending: false, page: { top: null, bottom: null } })
+    expect(listMembersByNetWorth).toHaveBeenCalledWith({}, { query: '', removed: false, ascending: false, page: { top: null, bottom: null } })
     expect(readNetWorths).not.toHaveBeenCalled()
     expect(screen.getByRole('row', { name: /Ben/ })).toHaveTextContent('90 DC net worth')
   })
 
-  it('can’t sort the Removed tab by net worth, falling back to A–Z', async () => {
-    listMembersPage.mockResolvedValue({ rows: [{ ...BEN, removed: true }], next: null, windowed: false })
-    await renderPage({ sort: 'net_worth', show: 'removed' })
-    expect(listMembersByNetWorth).not.toHaveBeenCalled()
-    expect(listMembersPage).toHaveBeenCalled()
-    expect(within(screen.getByRole('columnheader', { name: 'Net worth' })).queryByRole('link')).toBeNull()
+  // #429: the Removed tab sorts by net worth too, flips on a second tap, and pages from a cursor.
+  it('sorts the Removed tab by net worth, both ways, paging from the cursor in the URL', async () => {
+    const GONE = { ...BEN, removed: true }
+    const next = { kind: 'extend' as const, cursor: 'c2', firstId: GONE.id }
+    listMembersByNetWorth.mockResolvedValue({ rows: [GONE], next, windowed: false, netWorths: new Map([[GONE.id, 70]]) })
+    await renderPage({ sort: 'net_worth', show: 'removed', q: 'be' })
+    expect(listMembersByNetWorth).toHaveBeenCalledWith({}, { query: 'be', removed: true, ascending: false, page: { top: null, bottom: null } })
+    expect(listMembersPage).not.toHaveBeenCalled()
+    expect(readNetWorths).not.toHaveBeenCalled()
+    const section = screen.getByRole('region', { name: 'Removed members' })
+    expect(within(section).getByRole('row', { name: /Ben/ })).toHaveTextContent('70 DC net worth')
+    expect(within(section).getByRole('columnheader', { name: /^Net worth/ })).toHaveAttribute('aria-sort', 'descending')
+    expect(within(section).getByRole('link', { name: 'Net worth, sort lowest net worth first' })).toHaveAttribute(
+      'href',
+      '/admin/members?q=be&show=removed&sort=net_worth&dir=asc',
+    )
+    expect(within(section).getByText(/Removed members, highest net worth first/)).toBeInTheDocument()
+    expect(within(section).getByRole('link', { name: /Show more/ }).getAttribute('href')).toContain('after=c2')
   })
 })

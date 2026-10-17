@@ -42,7 +42,7 @@ describe('PlacedParlay', () => {
   it('says what an open parlay pays if all win, in the line under its title (#393)', () => {
     renderParlay(parlay({}))
     expect(screen.getByRole('link', { name: 'Parlay · 2 picks' })).toHaveAttribute('href', '/parlays/p1')
-    expect(line('5 DC · pays 80 DC if all win')).toBeInTheDocument()
+    expect(line('5 DC · Pays 80 DC if all win')).toBeInTheDocument()
     expect(screen.getByText('80 DC')).toHaveClass('text-win')
     // No chip and no multiplier on the card: only the picks' words.
     expect(screen.queryByText('Open')).toBeNull()
@@ -52,24 +52,24 @@ describe('PlacedParlay', () => {
 
   it('says what a won parlay paid', () => {
     renderParlay(parlay({ status: 'won', credited: 80 }))
-    expect(line('5 DC · won 80 DC')).toBeInTheDocument()
+    expect(line('5 DC · Won 80 DC')).toBeInTheDocument()
     expect(screen.getByText('80 DC')).toHaveClass('text-win')
   })
 
   it('says a lost parlay lost, once', () => {
     renderParlay(parlay({ status: 'lost' }))
-    expect(line('5 DC · lost')).toBeInTheDocument()
-    expect(screen.getByText('lost')).toHaveClass('text-loss')
+    expect(line('5 DC · Lost')).toBeInTheDocument()
+    expect(screen.getByText('Lost')).toHaveClass('text-loss')
   })
 
   it('says a refunded parlay was refunded', () => {
     renderParlay(parlay({ status: 'refunded', credited: 5, multiplierBp: 10_000, potentialPayout: 5 }))
-    expect(line('5 DC · refunded')).toBeInTheDocument()
+    expect(line('5 DC · Refunded')).toBeInTheDocument()
   })
 
   it('marks the payout as an estimate while a pick’s odds aren’t set', () => {
     renderParlay(parlay({ estimated: true }))
-    expect(line('5 DC · pays ~80 DC if all win')).toBeInTheDocument()
+    expect(line('5 DC · Pays ~80 DC if all win')).toBeInTheDocument()
   })
 
   it('shows the day it was placed beside the title', () => {
@@ -106,10 +106,11 @@ describe('PlacedParlay', () => {
     )
     expect(screen.getAllByRole('link')).toHaveLength(1)
     expect(screen.getByText(/Will it rain\? ·/)).toBeInTheDocument()
-    expect(screen.getByText('Grace').tagName).toBe('STRONG')
+    // The pick is a chip (#446), as on Home.
+    expect(screen.getByText('Grace').closest('.rounded-full')).not.toBeNull()
     expect(screen.getByText('Won')).toHaveClass('text-win')
     expect(screen.getByText('Won')).not.toHaveClass('rounded-full')
-    expect(screen.getByText('Lost')).toHaveClass('text-loss')
+    for (const lost of screen.getAllByText('Lost')) expect(lost).toHaveClass('text-loss')
     expect(screen.getByText('Called off')).toHaveClass('text-ink2')
   })
 

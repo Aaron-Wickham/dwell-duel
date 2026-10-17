@@ -51,7 +51,16 @@ const TEXT_PAIRS: [string, string][] = [
   ['win', 'win-soft'],
   ['loss', 'loss-soft'],
   ['gold', 'gold-soft'],
+  ['info', 'info-soft'],
+  ['tint1', 'tint1-soft'],
+  ['tint2', 'tint2-soft'],
+  ['tint3', 'tint3-soft'],
+  ['tint4', 'tint4-soft'],
+  ['tint5', 'tint5-soft'],
+  ['tint6', 'tint6-soft'],
   ['on-hero', 'hero'],
+  ['hero-2', 'hero'],
+  ['hero-num', 'hero'],
 ]
 
 // A control's edge against what it sits on: 3:1 for non-text contrast.

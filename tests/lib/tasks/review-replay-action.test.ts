@@ -6,7 +6,7 @@ const { supabase, revalidatePath, maybeSingle } = vi.hoisted(() => {
   return { supabase: { rpc: vi.fn(), from: vi.fn(() => chain) }, revalidatePath: vi.fn(), maybeSingle }
 })
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase, user: { id: 'reviewer-1' } }) }))
-vi.mock('next/cache', () => ({ revalidatePath }))
+vi.mock('next/cache', () => ({ revalidatePath, updateTag: vi.fn() }))
 vi.mock('@/lib/push/notify', () => ({ afterAction: vi.fn(), notifyTaskReviews: vi.fn() }))
 
 import { approveTaskCompletionAction, rejectTaskCompletionAction } from '@/lib/tasks/review-task-completion'

@@ -8,7 +8,8 @@ import { howItWorks } from '@/lib/docs/how-it-works'
 import { rebaseHashLinks } from '@/lib/docs/markdown'
 
 export const metadata: Metadata = {
-  title: 'Privacy · DwellDuel',
+  title: 'Privacy',
+  alternates: { canonical: '/privacy' },
   description: 'What DwellDuel keeps about its members, who can see it, and for how long.',
 }
 

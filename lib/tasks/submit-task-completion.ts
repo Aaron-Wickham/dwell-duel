@@ -12,18 +12,18 @@ export type ActionState = { formError?: string; field?: 'note' } | undefined
 // submit_task_completion's raises (0019, 0042, 0046), its attachment checks (0089's caps) included, and the write
 // limit (0090).
 const SUBMIT_TASK_ERRORS: readonly KnownError<'note'>[] = [
-  { match: 'not invited', formError: 'Only invited members can submit a task.' },
-  { match: 'task not found or inactive', formError: 'This task is no longer available.' },
+  { match: 'not invited', formError: 'Only invited members can submit a task. Sign in with the account you were invited with.' },
+  { match: 'task not found or inactive', formError: 'This task was taken down. Pick another under To do.' },
   { match: 'this task needs proof: add a photo, file or link', formError: 'This task needs proof: add a photo, file or link.' },
   {
     match: 'you already have a pending or approved submission for this task in the current period',
-    formError: 'You’ve already submitted this task for the current period.',
+    formError: 'You’ve already submitted this one. You can do it again when it resets.',
   },
   { match: 'attachments must be a list', formError: 'Your attachments didn’t come through. Try again.' },
   { match: 'add at most 5 attachments', formError: 'Add at most 5 attachments. Remove one and send again.' },
   { match: 'add at most 3 photos or files', formError: 'Add at most 3 photos or files. Remove one and send again.' },
   { match: 'links must start with http:// or https://', formError: 'Links must start with http:// or https://.' },
-  { match: "that file can't be attached here", formError: 'That file can’t be attached here.' },
+  { match: "that file can't be attached here", formError: 'That file can’t be attached. Use a photo, PDF or text file.' },
   { match: "an attachment didn't finish uploading; try again", formError: 'An attachment didn’t finish uploading. Try again.' },
   { match: 'unknown attachment kind', formError: 'Your attachments didn’t come through. Try again.' },
   RATE_LIMIT_ERRORS.task_submission,

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 
 // Home's sections are rows on the page on a phone and cards from lg (#388, the P1004-Home boards):
 // one markup for both, and the skeleton shares the class.
-export const homeSectionClass = 'flex flex-col gap-1 lg:rounded-card lg:border lg:border-line lg:bg-surface lg:p-6 lg:shadow-card'
+export const homeSectionClass = 'flex flex-col gap-1 lg:rounded-card lg:bg-surface lg:p-6'
 
 // A divided list of rows inside a section.
 export const homeRowsClass = 'flex flex-col divide-y divide-line'

@@ -16,7 +16,7 @@ test('create a proof-required task, submit it with proof, and approve it as admi
   await page.getByLabel('Reward (DC)').fill('10')
   await page.getByLabel('Require proof').check()
   await page.getByRole('button', { name: 'Create task' }).click()
-  await expect(page.getByText('Read Genesis 1-3 — 10 DC')).toBeVisible()
+  await expect(page.getByText('Read Genesis 1-3 · 10 DC')).toBeVisible()
 
   await bobPage.goto('/tasks')
   const row = bobPage.getByRole('listitem').filter({ hasText: 'Read Genesis 1-3' })
@@ -36,7 +36,7 @@ test('create a proof-required task, submit it with proof, and approve it as admi
   await submitted
   // The row moves to Waiting for review (#394).
   const waiting = bobPage.getByRole('region', { name: 'Waiting for review' }).getByRole('listitem').filter({ hasText: 'Read Genesis 1-3' })
-  await expect(waiting.getByText(/sent today · 1 attachment/)).toBeVisible()
+  await expect(waiting.getByText(/Sent today · 1 attachment/)).toBeVisible()
 
   await page.goto('/admin/tasks')
   // The queue is a table (#399); a row's note and proof open from its Proof cell.

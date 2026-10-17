@@ -15,6 +15,7 @@ import { chartClosedAt, type MarketCardStatus } from '@/lib/markets/market-statu
 import { focusTarget } from '@/lib/pagination/row-id'
 import { figureClass, figureInlineClass, rowTitleClass } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
+import { QuickPicks, type QuickPick } from '@/components/markets/quick-picks'
 
 // A multiple-choice card's legend names this many outcomes, then "+N more".
 const LEGEND_OUTCOMES = 3
@@ -56,6 +57,9 @@ export interface MarketCardProps {
   // Create market's live preview: a market not made yet, so its title leads nowhere and its close
   // time may still be blank.
   preview?: boolean
+  // An open market's picks to add from the card (#439): both of a two-outcome market's, or a
+  // multiple-choice market's two favourites with how many more it has.
+  quickPicks?: { picks: QuickPick[]; more: number }
 }
 
 // The outcome a card leads with: a two-outcome market's Yes (or Over), which its chart draws, or
@@ -133,6 +137,7 @@ export function MarketCard({
   domId,
   now,
   preview = false,
+  quickPicks,
 }: MarketCardProps) {
   // Every outcome has a seed pool (0041), so only a market that closed before seeding, with no
   // bets on it, has no odds.
@@ -205,7 +210,8 @@ export function MarketCard({
               resolvedLabel={status === 'resolved' ? resolvedOutcomeLabel : null}
             />
           )}
-          {legend.length > 0 && (
+          {quickPicks && quickPicks.picks.length > 0 && <QuickPicks picks={quickPicks.picks} more={quickPicks.more} />}
+          {legend.length > 0 && !quickPicks && (
             <p className="text-sm">
               {legend.slice(0, LEGEND_OUTCOMES).map((outcome, index) => (
                 <Fragment key={outcome.id}>

@@ -6,10 +6,10 @@ activity, so security reports are welcome and taken seriously.
 
 ## Supported versions
 
-Only what is running now: production at
-[www.dwellduel.com](https://www.dwellduel.com) and the `main` branch, which
-deploys to it on every merge. Older tags and releases aren't patched;
-a fix lands on `main` and deploys from there.
+Only what is running now: the latest v1.x release, which is production at
+[www.dwellduel.com](https://www.dwellduel.com), and the `main` branch, which
+deploys to it on every merge. Older tags and releases (the v0.x betas
+included) aren't patched; a fix lands on `main` and deploys from there.
 
 ## Reporting a vulnerability
 
@@ -52,8 +52,9 @@ targets, not guarantees; a serious issue gets dropped-everything attention.
 
 **Out of scope:**
 
-- Supabase, Vercel, Google, GitHub, Sentry, UptimeRobot, healthchecks.io and
-  the browsers' push services themselves; report those to their owners;
+- Supabase, Vercel, Google, GitHub, Anthropic (the Claude security
+  review), Sentry, UptimeRobot, healthchecks.io and the browsers' push
+  services themselves; report those to their owners;
 - denial of service, load testing, and anything that relies on
   overwhelming the free-tier limits;
 - social engineering of members or the maintainer, and physical attacks;
@@ -88,7 +89,13 @@ to understand and fix the problem.
 ### Members and roles
 
 - **Sign-in** is Google only, and only for an email on the invite list.
-  Supabase Auth has every other provider and email sign-up turned off.
+  Supabase Auth has every other provider and email sign-up turned off, and
+  the invite check itself (`is_invited()`) also requires a Google identity
+  on the account (0112), so switching on another provider couldn't let
+  someone claim an invitee's place. The one escape hatch is an
+  `allow_email_sign_in` row in `app_flags`, which members can't read or
+  write and only `supabase/seed.sql` inserts, for local tests that sign in
+  by magic link; production has none.
   Sessions are signed with an ES256 key and verified locally; the legacy
   shared-secret keys are disabled.
 - **Roles** are owner › admin › reviewer › member (`profiles.role`), and a
@@ -115,7 +122,8 @@ to understand and fix the problem.
 ### What a collaborator with write access can and can't do
 
 - **Can:** push branches, open and review pull requests, and run
-  workflows. CI on a pull request uses no secrets.
+  workflows. CI on a pull request uses no secrets; the security review
+  (below) uses only `CLAUDE_CODE_OAUTH_TOKEN`.
 - **Can't merge alone.** `main` takes changes only through a pull request
   with the code owner's approval (a new push dismisses it), every
   conversation resolved, the branch up to date with `main`, and the
@@ -126,13 +134,17 @@ to understand and fix the problem.
   backup encryption recipient and backup-repository token) live in the
   GitHub `Production` environment, which only `main` can deploy to. A
   workflow on another branch can't read them.
-- **Branch workflows and the one repository-level secret.** A write
+- **Branch workflows and the repository-level secrets.** A write
   collaborator can run workflows from their own branch, which can read
-  repository-level secrets. There is one, `CRON_SECRET`, kept there by
-  design so the Closing alerts backup can run on its schedule. It only
+  repository-level secrets. There are two. The first, `CRON_SECRET`, is
+  kept there by design so the Closing alerts backup can run on its schedule. It only
   authorizes the two cron endpoints, which are idempotent: calling them
   sends nothing that wasn't already due and reads no member data back.
   It's rotated whenever the set of people with write access changes.
+  `CLAUDE_CODE_OAUTH_TOKEN`, for the security review, is the second
+  (added 2026-10-17): a token from the owner's Claude subscription (`claude setup-token`),
+  so there's no bill, whose worst case is someone using up that
+  subscription's limits. It's revoked and remade on the same occasions.
 - **No production data access.** Collaborators don't get the Supabase or
   Vercel dashboards, the production database or members' data. AI agents
   the owner runs are the exception: see below.
@@ -172,15 +184,21 @@ who the member is and what they typed (below).
 
 ## Controls in place
 
-- Google-only, invite-gated sign-in; ES256-signed sessions; legacy JWT API
+- Google-only, invite-gated sign-in, with the invite check requiring a
+  Google identity (0112); ES256-signed sessions; legacy JWT API
   keys disabled.
 - Row-level security on every table, `anon` granted nothing in `public`,
   definer functions reviewed through a checked-in list, and DB tests for
   the policies, privileges and refusals.
-- Per-member write limits and Storage upload quotas in the database.
-- A Content Security Policy, `X-Frame-Options: DENY`, `nosniff`, a referrer
-  policy and a `Permissions-Policy` (`next.config.ts`); nothing of Google's
-  loads on the sign-in page (#366).
+- Per-member write limits in the database (markets, categories, comments,
+  reactions and task submissions since 0090, and 200 solo bets and 100
+  parlays a day since 0114; admins are exempt) and Storage upload quotas.
+- A Content Security Policy with a per-request nonce, built in
+  `lib/security/csp.ts` and set by `proxy.ts`, so
+  an injected inline script doesn't run: scripts need the nonce or one of
+  the app's own hashes, never `'unsafe-inline'` (#449). `X-Frame-Options:
+  DENY`, `nosniff`, a referrer policy and a `Permissions-Policy`
+  (`next.config.ts`); nothing of Google's loads on the sign-in page (#366).
 - Push endpoints allowlisted to known push services, in SQL and in the
   sender.
 - Error reports scrubbed of users, cookies, request bodies, headers and
@@ -194,6 +212,17 @@ who the member is and what they typed (below).
   read-only production MCP server ([AI agents](#ai-agents)).
 - GitHub secret scanning with push protection, Dependabot security and
   version updates, and every Action pinned to a commit SHA.
+- A Claude security review of every same-repo pull request
+  (`.github/workflows/security-review.yml`, #451), which comments its
+  findings. It's advisory, outside `ci-ok`, so a false positive can't block
+  a merge, and it skips forks and drafts. It runs Anthropic's
+  `claude-code-action` and keeps one comment, updated on each push. It
+  runs on the owner's `CLAUDE_CODE_OAUTH_TOKEN` repository secret, made
+  with `claude setup-token` on their Pro or Max subscription, so reviews
+  count against its usage limits rather than an API bill; without the
+  secret it passes without a review (Settings › Secrets and
+  variables › Actions; a repository secret, not a `Production` one, since
+  pull requests can't reach that environment).
 - Branch rulesets on `main` (review, `ci-ok`, up to date) and the
   `Production` environment limited to `main`.
 - Encrypted backups, with secrets masked out of the public Actions logs.

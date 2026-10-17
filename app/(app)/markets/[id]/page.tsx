@@ -1,3 +1,5 @@
+import type { Metadata } from 'next'
+import { marketTitle } from '@/lib/app-shell/page-titles'
 import type { DbClient } from '@/lib/supabase/database'
 import { Suspense } from 'react'
 import { redirect, notFound } from 'next/navigation'
@@ -19,8 +21,9 @@ import { readSlip } from '@/lib/parlays/slip'
 import { BackLink } from '@/components/ui/back-link'
 import { LoadingStatus } from '@/components/ui/loading-status'
 import { LocalTime } from '@/components/ui/local-time'
-import { Page, h1Class } from '@/components/ui/page'
-import { SectionCard } from '@/components/ui/section-card'
+import { Page, figureHeroClass, h1Class, h2Class } from '@/components/ui/page'
+import { chartSectionClass } from '@/components/markets/market-detail-skeletons'
+import { leadingOutcome } from '@/components/markets/market-card'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { cn } from '@/lib/utils'
 import {
@@ -41,13 +44,17 @@ import { getPositionKeys } from '@/lib/markets/position'
 import { describeMarketStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
 import { hasBetHistory } from '@/lib/markets/bet-history'
 import { listMarketEdits } from '@/lib/markets/market-edits'
-import { listCategoryCounts, mostUsedCategories } from '@/lib/markets/categories'
+import { cachedCategoryCounts, mostUsedCategories } from '@/lib/markets/categories'
 import { getParlayRiding } from '@/lib/markets/parlay-riding'
 
 // No loading.tsx for this route (and the markets list's own loading.tsx sits in the (list)
 // group, so it doesn't wrap this one): the market must be found before anything streams, so an
 // unknown id still gets a real 404 status. Your position, the chart, the outcomes, the bets and
 // the comments each stream in behind their own skeleton.
+export async function generateMetadata(props: PageProps<'/markets/[id]'>): Promise<Metadata> {
+  return marketTitle((await props.params).id)
+}
+
 export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>) {
   const { id } = await props.params
   const searchParams = await props.searchParams
@@ -65,12 +72,12 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // What rides in parlays is read here too, so the outcomes' skeleton knows whether to hold the
   // line that says so, and the rail below it doesn't move when the outcomes land (#390).
   const [resolution, edits, role, creatorStakes, positionKeys, categoryCounts, resolvable, voidable, stake, riding] = await Promise.all([
-    market.status === 'resolved' ? getResolutionProof(supabase, market.id) : null,
+    market.status === 'resolved' ? getResolutionProof(supabase, market.id, user.id) : null,
     market.editedAt ? listMarketEdits(supabase, market.id) : [],
     getRole(supabase),
     getCreatorStakes(supabase, [{ id: market.id, createdBy: market.createdBy }]),
     getPositionKeys(supabase, market.id),
-    listCategoryCounts(supabase),
+    cachedCategoryCounts(supabase),
     rpcFlag(supabase.rpc('can_resolve_market', { p_market_id: market.id })),
     rpcFlag(supabase.rpc('can_void_market', { p_market_id: market.id })),
     rpcFlag(supabase.rpc('has_stake_in_market', { p_market_id: market.id, p_profile_id: user.id })),
@@ -115,7 +122,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   }
   const manage = hasManageCards(rights)
   // Waiting on its result, the viewer's one job here is to resolve it, so on a phone the cards come
-  // straight after the outcomes, before the chart, not under every bet and comment (CR-A12, #390).
+  // first, before the chart, not under every bet and comment (CR-A12, #390, #440).
   const manageFirst = market.status === 'open' && isPastClose && rights.canResolve
   // The rail holds still beside a long chart, bets and comments, unless it carries the resolve or
   // void forms, which could be taller than the screen and then never show their bottom.
@@ -173,7 +180,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
         <div className="flex flex-col gap-2">
           <h1 className={`${h1Class} break-words`}>{market.title}</h1>
           <p className="text-sm text-ink2">
-            {when && <>{when} · </>}by {isCreator ? 'you' : market.creatorName}
+            {when && <>{when} · </>}By {isCreator ? 'you' : market.creatorName}
             {severalCategories && market.category && <> · {market.category.name}</>}
           </p>
           {creatorStake && (
@@ -189,11 +196,11 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
       {/* Each section's fallback holds its section's place. The fallbacks announce nothing
           themselves (SkeletonScreen announce={false}); LoadingStatus wraps them in one combined
           status, scoped to just these, for as long as any of them is still showing.
-          From lg: the chart, comments and bets on the left; on the right a rail with the outcomes,
-          Your position and any resolve or void cards. The rail comes first in the markup, since
-          betting is the page's job (#390). On a phone both columns are display: contents, so every
-          section is one flex column, ordered: outcomes, (resolve and void while the market waits on
-          a result the viewer can give), chart, position, comments, bets, then any other cards. */}
+          From lg: the chart, comments and bets on the left; on the right a rail with Your position
+          on top of the outcomes, then any resolve or void cards. On a phone both columns are
+          display: contents, so every section is one flex column, ordered (#440): (resolve and void
+          first while the market waits on a result the viewer can give), chart, position, outcomes,
+          comments, bets, then any other cards. */}
       <LoadingStatus>
         <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-7">
           <div
@@ -202,7 +209,14 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
               stickyRail && 'lg:sticky lg:top-[calc(72px+var(--safe-top)+24px)]',
             )}
           >
-            <div className="order-1 lg:order-none">
+            {positionRows > 0 && (
+              <div className={cn('lg:order-none', manageFirst ? 'order-3' : 'order-2')}>
+                <Suspense fallback={<MarketPositionSkeleton rows={positionRows} />}>
+                  <MarketPosition market={market} keys={positionKeys} now={now} />
+                </Suspense>
+              </div>
+            )}
+            <div className={cn('lg:order-none', manageFirst ? 'order-4' : 'order-3')}>
               <Suspense fallback={<MarketOutcomesSkeleton
                     outcomes={market.outcomes.length}
                     canBet={canBet}
@@ -212,22 +226,15 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
                 <MarketOutcomes market={market} odds={odds} slip={slip} canBet={canBet} resolution={resolution} riding={riding} />
               </Suspense>
             </div>
-            {positionRows > 0 && (
-              <div className={cn('lg:order-none', manageFirst ? 'order-4' : 'order-3')}>
-                <Suspense fallback={<MarketPositionSkeleton rows={positionRows} />}>
-                  <MarketPosition market={market} keys={positionKeys} now={now} />
-                </Suspense>
-              </div>
-            )}
             {manage && (
-              <div className={cn('flex flex-col gap-5 lg:order-none lg:gap-7', manageFirst ? 'order-2' : 'order-7')}>
+              <div className={cn('flex flex-col gap-5 lg:order-none lg:gap-7', manageFirst ? 'order-1' : 'order-7')}>
                 <MarketManage market={market} rights={rights} canBet={canBet} />
               </div>
             )}
           </div>
           <div className="contents lg:col-start-1 lg:row-start-1 lg:flex lg:flex-col lg:gap-7">
-            <div className={cn('lg:order-none', manageFirst ? 'order-3' : 'order-2')}>
-              <Suspense fallback={<MarketChartSkeleton />}>
+            <div className={cn('lg:order-none', manageFirst ? 'order-2' : 'order-1')}>
+              <Suspense fallback={<MarketChartSkeleton figure={market.status === 'open'} />}>
                 <MarketChart market={market} odds={odds} now={now} />
               </Suspense>
             </div>
@@ -274,20 +281,45 @@ async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: 
     outcomeIds: chartOutcomes.map((o) => o.id),
   }, now)
 
+  // While it takes bets or waits on a result, the leading outcome's chance leads the section (#489).
+  const lead =
+    market.status === 'open'
+      ? leadingOutcome(
+          market.kind,
+          odds.map((o) => ({
+            id: o.outcomeId,
+            label: o.label,
+            pct: o.impliedProbability === null ? null : Math.round(o.impliedProbability * 100),
+          })),
+        )
+      : undefined
+
   return (
     <ContentReveal>
-      <SectionCard title={chartTitle(market.kind, odds)} titleId="chart-title" className="gap-3">
-        <ProbabilityChart
-          kind={market.kind}
-          outcomes={chartOutcomes}
-          points={chart.series.All}
-          rangeSeries={chart.series}
-          betCount={chart.betCount}
-          now={now}
-          closedAt={chartClosedAt(market.status, market.closeAt, market.settledAt)}
-          resolvedLabel={market.status === 'resolved' ? market.resolvedOutcomeLabel : null}
-        />
-      </SectionCard>
+      <section aria-labelledby="chart-title" className={chartSectionClass}>
+        <h2 id="chart-title" className={`${h2Class} max-md:px-4`}>
+          {chartTitle(market.kind, odds)}
+        </h2>
+        {lead && lead.pct !== null && (
+          <p className="flex flex-wrap items-baseline gap-x-2 max-md:px-4">
+            <span className={`${figureHeroClass} text-acc-text`}>{lead.pct}%</span>
+            <span className="min-w-0 break-words font-bold">{lead.label}</span>
+          </p>
+        )}
+        {/* A small inset on a phone keeps the axis labels off the screen edge. */}
+        <div className="max-md:px-2">
+          <ProbabilityChart
+            kind={market.kind}
+            outcomes={chartOutcomes}
+            points={chart.series.All}
+            rangeSeries={chart.series}
+            betCount={chart.betCount}
+            now={now}
+            closedAt={chartClosedAt(market.status, market.closeAt, market.settledAt)}
+            resolvedLabel={market.status === 'resolved' ? market.resolvedOutcomeLabel : null}
+          />
+        </div>
+      </section>
     </ContentReveal>
   )
 }

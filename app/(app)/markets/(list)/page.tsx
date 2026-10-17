@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { Fragment } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -8,10 +9,12 @@ import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { listResolvedMarkets, listOpenMarkets, listMatchingMarkets, type MarketSummary } from '@/lib/markets/list-markets'
 import { marketsHref, readMarketSearch } from '@/lib/markets/search'
-import { busiestCategories, listCategoryCounts, readCategoryParam } from '@/lib/markets/categories'
+import { busiestCategories, cachedCategoryCounts, readCategoryParam } from '@/lib/markets/categories'
 import type { KeysetPage } from '@/lib/pagination/keyset'
-import { marketOdds } from '@/lib/markets/pricing'
-import { outcomeSeries } from '@/lib/markets/outcome-series'
+import { lmsrState, marketOdds } from '@/lib/markets/pricing'
+import { isPositiveOutcome, outcomeSeries } from '@/lib/markets/outcome-series'
+import { addToSlipAction, removeFromSlipAction } from '@/lib/parlays/slip-actions'
+import type { QuickPick } from '@/components/markets/quick-picks'
 import { weeklyChange } from '@/lib/markets/chart-summary'
 import { marketCardStatus, type MarketCardStatus } from '@/lib/markets/market-status'
 import { readSparklines } from '@/lib/markets/sparklines'
@@ -32,6 +35,8 @@ import { MarketSearch } from '@/components/markets/market-search'
 import { MoreCategories } from '@/components/markets/more-categories'
 import { cn } from '@/lib/utils'
 import { MarketCard, leadingOutcome, type MarketCardChart } from '@/components/markets/market-card'
+
+export const metadata: Metadata = { title: 'Markets' }
 
 const GROUPS: { id: MarketCardStatus; heading: string }[] = [
   { id: 'open', heading: 'Open' },
@@ -80,7 +85,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
   const narrowed = q !== ''
   // A category (0103) is named by its slug, so the lists wait on the counts only when there's one
   // to look up. An unknown or hidden slug, and the old ?mine= chips, fall through to All.
-  const countsRead = listCategoryCounts(supabase)
+  const countsRead = cachedCategoryCounts(supabase)
   const category = searchParams.category ? readCategoryParam(searchParams.category, await countsRead) : null
   const scope = { categoryId: category?.id ?? null }
   const slug = category?.slug ?? null
@@ -155,6 +160,33 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     }))
     const status = marketCardStatus(market.status, market.closeAt, now)
     const lead = leadingOutcome(market.kind, outcomes)
+    // Picks to add from the card (#439), only while the market takes bets.
+    let quickPicks: { picks: QuickPick[]; more: number } | undefined
+    if (status === 'open' && market.pricing === 'lmsr') {
+      const q = lmsrState(market.outcomes)
+      const all = odds.map((o, index) => ({ o, index, pct: outcomes[index].pct ?? 0 }))
+      const multiple = market.kind === 'multiple_choice'
+      const shown = multiple ? [...all].sort((a, b) => b.pct - a.pct).slice(0, 2) : all
+      quickPicks = {
+        more: all.length - shown.length,
+        picks: shown.map(({ o, index, pct }) => ({
+          pick: {
+            outcomeId: o.outcomeId,
+            outcomeLabel: o.label,
+            marketId: market.id,
+            marketTitle: market.title,
+            parlay: false,
+            open: true,
+            lmsr: { q, index, liquidity: market.liquidity },
+          },
+          pct,
+          series: multiple ? outcomeSeries(market.kind, o.label, index) : null,
+          tone: multiple ? null : isPositiveOutcome(market.kind, o.label) ? 'yes' : 'no',
+          addAction: addToSlipAction.bind(null, o.outcomeId),
+          removeAction: removeFromSlipAction.bind(null, o.outcomeId),
+        })),
+      }
+    }
     const card = {
       id: market.id,
       title: market.title,
@@ -175,6 +207,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       betCount: market.betCount,
       domId: rowDomId(rowIdPrefix(list), market.id),
       now: nowMs,
+      quickPicks,
     }
     return { list, card }
   })
@@ -245,7 +278,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
         </h2>
         <p id="markets-matches-caption" className="text-sm text-ink2">
           {`${lead} ${complete && matchCards.length === 1 ? 'matches' : 'match'} “${q}”. Showing matches in every status. `}
-          <Link href={clearHref}>{clearLabel}</Link>
+          <Link href={clearHref} className="prose-link">{clearLabel}</Link>
         </p>
         {windowTop(matches, 'match')}
         <div className="grid gap-5 lg:grid-cols-3">
@@ -318,7 +351,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       {category && (
         <p id="markets-category-caption" className="text-sm text-ink2">
           Showing {narrowed ? '' : STATUS_WORDS[filter]}markets in <strong className="text-ink">{category.name}</strong> ·{' '}
-          <Link href={allCategoriesHref}>Show all categories</Link>
+          <Link href={allCategoriesHref} className="prose-link">Show all categories</Link>
         </p>
       )}
       <LiveTables subscriptions={pageSubscriptions.markets()} renderedAt={renderStamp()} />

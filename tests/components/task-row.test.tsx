@@ -10,7 +10,7 @@ const NOW = Date.parse('2026-10-04T18:00:00Z')
 function renderRow(props: Partial<ComponentProps<typeof TaskRow>> & Pick<ComponentProps<typeof TaskRow>, 'state'>) {
   return render(
     <ul>
-      <TaskRow title="Read Genesis 1-3" rewardAmount={10} description={null} cadence="weekly" {...props} />
+      <TaskRow title="Read Genesis 1-3" rewardAmount={10} description={null} cadence="Weekly" {...props} />
     </ul>,
   )
 }
@@ -22,15 +22,15 @@ describe('TaskRow', () => {
   it('leads a task to do with the reward in gold, then the cadence, and renders the action', () => {
     renderRow({ state: { kind: 'todo' }, description: 'The creation account and the fall.', action: <button type="button">I did this</button> })
     expect(screen.getByText('Read Genesis 1-3')).toBeInTheDocument()
-    expect(screen.getByText(metaLine('10 DC · weekly'))).toBeInTheDocument()
+    expect(screen.getByText(metaLine('10 DC · Weekly'))).toBeInTheDocument()
     expect(screen.getByText('10 DC')).toHaveClass('text-gold')
     expect(screen.getByText('The creation account and the fall.')).toHaveClass('line-clamp-1')
     expect(screen.getByRole('button', { name: 'I did this' })).toBeInTheDocument()
   })
 
-  it('says "once" for a one-off task, and carries no chips (#394)', () => {
-    const { container } = renderRow({ state: { kind: 'todo' }, cadence: 'once' })
-    expect(screen.getByText(metaLine('10 DC · once'))).toBeInTheDocument()
+  it('says "Once" for a one-off task, and carries no chips (#394)', () => {
+    const { container } = renderRow({ state: { kind: 'todo' }, cadence: 'Once' })
+    expect(screen.getByText(metaLine('10 DC · Once'))).toBeInTheDocument()
     expect(container.querySelector('.rounded-full')).toBeNull()
   })
 
@@ -48,7 +48,7 @@ describe('TaskRow', () => {
 
   it('shows a streak of two periods or more beside the cadence, and none for a single period', () => {
     const { unmount } = renderRow({ state: { kind: 'todo' }, streak: { period: 'weekly', count: 3 } })
-    expect(screen.getByText(metaLine('10 DC · weekly · 3-week streak'))).toBeInTheDocument()
+    expect(screen.getByText(metaLine('10 DC · Weekly · 3-week streak'))).toBeInTheDocument()
     unmount()
     renderRow({ state: { kind: 'todo' }, streak: { period: 'weekly', count: 1 } })
     expect(screen.queryByText(/streak/)).toBeNull()
@@ -59,7 +59,7 @@ describe('TaskRow', () => {
       state: { kind: 'waiting', sentAt: '2026-10-01T12:00:00Z', now: NOW, proofCount: 1 },
       action: <button type="button">I did this</button>,
     })
-    expect(screen.getByText(metaLine('10 DC · sent Thu · 1 attachment'))).toBeInTheDocument()
+    expect(screen.getByText(metaLine('10 DC · Sent Thu · 1 attachment'))).toBeInTheDocument()
     expect(screen.queryByRole('button')).toBeNull()
   })
 
@@ -88,7 +88,7 @@ describe('TaskRow', () => {
   })
 
   it('gives a done one-off task no second line', () => {
-    const { container } = renderRow({ state: { kind: 'done', again: null }, cadence: 'once' })
+    const { container } = renderRow({ state: { kind: 'done', again: null }, cadence: 'Once' })
     expect(container.querySelectorAll('p')).toHaveLength(1)
   })
 })

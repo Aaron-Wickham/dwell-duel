@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { STANDALONE_ZOOM_LOCK } from '@/components/app-shell/standalone-zoom-lock'
+import { STANDALONE_ZOOM_LOCK } from '@/lib/app-shell/inline-scripts'
 
 const BASE = 'width=device-width, initial-scale=1, viewport-fit=cover'
 

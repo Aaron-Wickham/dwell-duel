@@ -12,6 +12,7 @@ export type RecordedQuery = {
   lte: [string, unknown][]
   is: [string, unknown][]
   in: [string, unknown[]][]
+  ilike: [string, string][]
   or: string[]
   order: [string, unknown][]
   limit?: number
@@ -28,7 +29,7 @@ export function fakeSupabase(respond: (query: RecordedQuery, index: number) => F
       return builder
     },
     from(table: string) {
-      const query: RecordedQuery = { table, eq: [], gt: [], lte: [], is: [], in: [], or: [], order: [] }
+      const query: RecordedQuery = { table, eq: [], gt: [], lte: [], is: [], in: [], ilike: [], or: [], order: [] }
       const index = queries.push(query) - 1
       const builder = {
         select(columns: string, options?: unknown) {
@@ -54,6 +55,10 @@ export function fakeSupabase(respond: (query: RecordedQuery, index: number) => F
         },
         in(column: string, values: unknown[]) {
           query.in.push([column, values])
+          return builder
+        },
+        ilike(column: string, pattern: string) {
+          query.ilike.push([column, pattern])
           return builder
         },
         or(filter: string) {

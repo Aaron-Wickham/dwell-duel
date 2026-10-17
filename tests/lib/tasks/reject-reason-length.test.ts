@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const { supabase } = vi.hoisted(() => ({ supabase: { rpc: vi.fn() } }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase, user: { id: 'admin-1' } }) }))
-vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), updateTag: vi.fn() }))
 
 import { rejectTaskCompletionAction, bulkRejectTaskCompletionsAction } from '@/lib/tasks/review-task-completion'
 

@@ -5,6 +5,7 @@ export function StatusBand() {
   return (
     <div
       aria-hidden="true"
+      data-keyboard-follows
       style={{ viewTransitionName: 'status-band' }}
       className="pointer-events-none fixed inset-x-0 top-0 z-30 h-(--safe-top) bg-status-band"
     />

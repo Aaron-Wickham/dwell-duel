@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { Fragment } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { howItWorks } from '@/lib/docs/how-it-works'
@@ -9,6 +10,8 @@ import { cardClass } from '@/components/ui/card'
 import { ScrollToHash } from '@/components/docs/scroll-to-hash'
 import { RulesContents } from '@/components/docs/rules-contents'
 import type { DocSection } from '@/lib/docs/markdown'
+
+export const metadata: Metadata = { title: 'Full rules' }
 
 // Clears the sticky top bar (64px on a phone, 72px from md) when a link jumps to a heading, with a
 // little room above it. The bar is sticky at every width, so this is too.

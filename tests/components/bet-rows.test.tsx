@@ -28,7 +28,7 @@ const line = (text: string) => screen.getByText((_, el) => el?.tagName === 'P' &
 describe('WagerRows (#393)', () => {
   it('says what an open bet pays, with its closing day beside the title and no chip', () => {
     renderBet(bet({}))
-    expect(line('10 DC on Yes · pays 18 DC')).toBeInTheDocument()
+    expect(line('10 DC on Yes · Pays 18 DC')).toBeInTheDocument()
     expect(screen.getByText('18 DC')).toHaveClass('text-win')
     expect(screen.getByText('Closes').parentElement).toHaveTextContent('Closes Oct 18')
     expect(screen.queryByText('Open')).toBeNull()
@@ -36,18 +36,18 @@ describe('WagerRows (#393)', () => {
 
   it('says a bet waiting on its result is waiting, in the line', () => {
     renderBet(bet({ result: { kind: 'awaiting' } }))
-    expect(line('10 DC on Yes · pays 18 DC · waiting for a result')).toBeInTheDocument()
+    expect(line('10 DC on Yes · Pays 18 DC · Waiting for a result')).toBeInTheDocument()
     expect(screen.getByText('Closed')).toBeInTheDocument()
   })
 
   it('says what a settled bet did', () => {
     renderBet(bet({ result: { kind: 'won', payout: 18 } }))
-    expect(line('10 DC on Yes · won 18 DC')).toBeInTheDocument()
+    expect(line('10 DC on Yes · Won 18 DC')).toBeInTheDocument()
   })
 
   it('says a lost bet lost', () => {
     renderBet(bet({ result: { kind: 'lost' } }))
-    expect(screen.getByText('lost')).toHaveClass('text-loss')
+    expect(screen.getByText('Lost')).toHaveClass('text-loss')
   })
 
   it('leaves the payout out for a pool bet, whose payout was never fixed', () => {

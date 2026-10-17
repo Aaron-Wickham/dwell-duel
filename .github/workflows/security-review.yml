@@ -1,0 +1,69 @@
+name: Security review
+
+# Claude reviews each pull request's diff for security issues and comments its findings (#451).
+# Advisory only: it's its own workflow, outside CI's required `ci-ok`, so a false positive can't
+# block a merge. It runs on the owner's Claude subscription through the CLAUDE_CODE_OAUTH_TOKEN
+# repository secret (made with `claude setup-token`), so there's no API bill; without that secret
+# it skips (SECURITY.md).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: security-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    # Same-repo PRs only: the reviewer reads the PR's code, which a fork could write to steer it,
+    # and a fork's PR gets no secrets anyway. Drafts wait until they're ready.
+    if: github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The secrets context can't be read in an `if:`, so the token comes through env. Without it (not
+    # set yet, or a Dependabot PR, which gets no Actions secrets) the steps skip and the job passes.
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    steps:
+      - name: Skip without a Claude token
+        if: env.CLAUDE_CODE_OAUTH_TOKEN == ''
+        run: echo "::notice::CLAUDE_CODE_OAUTH_TOKEN isn't set, so there's no security review on this PR."
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: anthropics/claude-code-action@f27be6b65a4652f08a2ba3cff79114829b588967 # v1
+        if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The workflow's own token, so the Claude GitHub App needn't be installed.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_sticky_comment: true
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Review this pull request's diff for security issues only. The PR branch is checked out
+            in the working directory; read AGENTS.md and SECURITY.md first for this app's rules
+            (Supabase RLS and security-definer functions, the invite gate, roles, money paths,
+            the CSP, server actions).
+
+            Look for: missing or weakened authorisation (RLS, has_role, is_invited), injection,
+            secrets in code, unsafe redirects, XSS or CSP weakening, IDOR, money moved without the
+            ledger or an idempotency key, and data members shouldn't see (emails, others' rows).
+            Report only real, specific findings with file and line, each rated HIGH, MEDIUM or LOW
+            with a one-line fix. If there are none, say "No security issues found." Don't comment
+            on style or non-security bugs.
+
+            Post your result as one PR comment with `gh pr comment`; don't submit review text as
+            messages.
+          claude_args: |
+            --model claude-sonnet-5-5
+            --allowedTools "Read,Grep,Glob,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"

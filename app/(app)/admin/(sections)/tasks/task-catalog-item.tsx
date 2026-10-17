@@ -33,7 +33,7 @@ export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary
     <li className={cn(dividedRowClass, 'flex flex-col gap-2')}>
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
         <p className={cn(rowTitleClass, 'min-w-0 break-words', !task.isActive && 'text-ink2')}>
-          {task.title} — {formatDcAmount(task.rewardAmount)}
+          {task.title} · {formatDcAmount(task.rewardAmount)}
         </p>
         <span className="flex flex-wrap gap-1.5">
           {task.isRepeatable && task.period && <StatusChip tone="void">{PERIOD_LABEL[task.period]}</StatusChip>}

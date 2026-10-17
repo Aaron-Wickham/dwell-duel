@@ -7,7 +7,7 @@ export function SearchSummary({ count, noun, query, clearHref }: { count: number
   return (
     <p className="text-sm text-ink2">
       {count.toLocaleString('en-US')} {count === 1 ? `${one} matches` : `${many} match`} “{query}”.{' '}
-      <Link href={clearHref} replace scroll={false}>
+      <Link href={clearHref} replace scroll={false} className="prose-link">
         Clear search
       </Link>
     </p>

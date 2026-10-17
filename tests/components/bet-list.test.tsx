@@ -18,7 +18,7 @@ describe('BetList', () => {
   it("reads each bet as one sentence and marks the viewer's own", () => {
     render(<BetList bets={bets} outcomes={outcomes} viewerId="p-alice" canBet />)
     const sentences = screen.getAllByRole('listitem').map((li) => li.querySelector('p')?.textContent)
-    expect(sentences).toEqual(['Bob — 15 DC on No', 'Alice — 5 DC on Yes (you)'])
+    expect(sentences).toEqual(['Bob · 15 DC on No', 'Alice · 5 DC on Yes (you)'])
   })
 
   it("links each bettor's name to their profile", () => {
@@ -42,10 +42,10 @@ describe('BetList', () => {
 
   it('gives each bet a focus target named from its sentence, when the list has a row id prefix', () => {
     render(<BetList bets={bets} outcomes={outcomes} viewerId="p-alice" canBet rowIdPrefix="bet" />)
-    const row = screen.getByRole('listitem', { name: 'Bob — 15 DC on No' })
+    const row = screen.getByRole('listitem', { name: 'Bob · 15 DC on No' })
     expect(row).toHaveAttribute('id', 'bet-2')
     expect(row).toHaveAttribute('tabindex', '-1')
-    expect(screen.getByRole('listitem', { name: /^Alice — 5 DC on Yes ?\(you\)$/ })).toHaveAttribute('id', 'bet-1')
+    expect(screen.getByRole('listitem', { name: /^Alice · 5 DC on Yes ?\(you\)$/ })).toHaveAttribute('id', 'bet-1')
   })
 
   // Bets are final (0102), and nothing cancels or removes one since #332.

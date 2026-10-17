@@ -13,7 +13,7 @@ export async function savePushSubscriptionAction(input: unknown): Promise<Subscr
   if (!user) return { error: SIGNED_OUT_ERROR }
 
   const subscription = validSubscription(input)
-  if (!subscription) return { error: 'This browser’s notification service isn’t supported.' }
+  if (!subscription) return { error: 'This browser can’t get notifications. Try another browser, or add DwellDuel to your Home Screen.' }
 
   const userAgent = ((await headers()).get('user-agent') ?? '').slice(0, SUBSCRIPTION_LIMITS.userAgent)
   const { error } = await supabase.rpc('save_push_subscription', {

@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, type MouseEvent } from 'react'
 import { Plus } from 'lucide-react'
-import { useSlip } from '@/components/slip/slip-provider'
+import { useSlipPicks } from '@/components/slip/slip-provider'
 import { Button } from '@/components/ui/button'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { ToastActionForm, type ToastActionResult } from '@/components/ui/toast-action-form'
@@ -16,7 +16,7 @@ type SlipAction = (formData: FormData) => ToastActionResult | Promise<ToastActio
 // row in the same commit. The server's answer settles it: a `false` result (a no-op, e.g. the
 // slip was full) leaves the server's slip unchanged, so the row flips back.
 export function useInSlip(outcomeId: string): boolean {
-  return useSlip().picks.some((p) => p.outcomeId === outcomeId)
+  return useSlipPicks().picks.some((p) => p.outcomeId === outcomeId)
 }
 
 // The outcome whose Add or Remove a member just pressed with focus on it, so the control that
@@ -58,7 +58,7 @@ export function OutcomeSlipControl({
   removeAction: SlipAction
   disabledReasonId?: string
 }) {
-  const slip = useSlip()
+  const slip = useSlipPicks()
   const inSlip = useInSlip(pick.outcomeId)
   const { ref: focusRef, mark: markFocus } = useKeepFocus(pick.outcomeId)
   const label = pick.outcomeLabel

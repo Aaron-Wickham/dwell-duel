@@ -154,12 +154,16 @@ describe('skeletons match their pages', () => {
 
   // #388: only what every member sees, so nothing conditional: Your bets' and Activity's three
   // rows each, and the Balance card, shown from lg.
-  it('the home skeleton draws Your bets and Activity with three rows each, and the desktop Balance card', () => {
+  it('the home skeleton draws three bet cards, three Activity rows and the Balance card at both widths (#438)', () => {
     const { container } = render(<HomeLoading />)
-    const lists = container.querySelectorAll('.divide-y')
-    expect(lists).toHaveLength(2)
-    for (const list of lists) expect(list.children).toHaveLength(3)
-    expect(container.querySelector('.bg-acc-soft')).toHaveClass('hidden', 'lg:flex')
+    const activity = container.querySelectorAll('.divide-y')
+    expect(activity).toHaveLength(1)
+    expect(activity[0].children).toHaveLength(3)
+    expect(container.querySelectorAll('.rounded-tile.bg-surface')).toHaveLength(3)
+    const balances = container.querySelectorAll('.bg-hero')
+    expect(balances).toHaveLength(2)
+    expect(balances[0].parentElement).toHaveClass('lg:hidden')
+    expect(balances[1].parentElement).toHaveClass('hidden', 'lg:block')
   })
 
   // #395: a row shows only the reactions someone used, plus one React button.

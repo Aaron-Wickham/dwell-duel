@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from './helpers'
 import { pgQuery } from './pg-query'
+import { expectError } from './assertions'
 import { seedMembers, makeMember, clientFor, createTestMarket, createPoolMarket, createTestTask, ensureInvited, giveRole, type Member, type TestMarket } from './fixtures'
 import { RATE_LIMIT_ERRORS, WRITE_LIMITS, type WriteAction } from '@/lib/forms/limits'
 
@@ -174,6 +175,45 @@ describe('task submissions', () => {
     await fill(bob, 'task_submission', 30)
     const { error } = await bobClient.rpc('submit_task_completion', { p_task_id: taskId })
     expect(error?.message).toBe(RATE_LIMIT_ERRORS.task_submission.match)
+  })
+})
+
+// #450 (0114): bets and parlays count too; a slip at the limit places nothing.
+describe('bets and parlays', () => {
+  const single = (client: SupabaseClient, m: TestMarket) =>
+    client.rpc('place_slip_v4', {
+      p_singles: [{ outcome_id: m.outcomeIds[0], amount: 1, payout: 1 }],
+      p_parlay_outcome_ids: [],
+      p_parlay_stake: 0,
+    })
+
+  it('refuses a solo bet past the day’s 200, in words the slip maps', async () => {
+    await fill(bob, 'bet', WRITE_LIMITS.bet[0].max)
+    const { error } = await single(bobClient, market)
+    expectError(error ?? undefined, RATE_LIMIT_ERRORS.bet.match)
+    const { count } = await serviceClient().from('bets').select('id', { count: 'exact', head: true }).eq('profile_id', bob.id)
+    expect(count).toBe(0)
+  })
+
+  it('still takes a bet under the limit, and counts it', async () => {
+    const { error } = await single(bobClient, market)
+    expect(error).toBeNull()
+    expect(await counters(bob)).toEqual([{ action: 'bet', window_seconds: 86400, writes: 1 }])
+  })
+
+  it('refuses a parlay past the day’s 100', async () => {
+    const [one, two] = await Promise.all([
+      createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true, title: 'One' }),
+      createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true, title: 'Two' }),
+    ])
+    await fill(bob, 'parlay', WRITE_LIMITS.parlay[0].max)
+    const { error } = await bobClient.rpc('place_slip_v4', {
+      p_singles: [],
+      p_parlay_outcome_ids: [one.outcomeIds[0], two.outcomeIds[0]],
+      p_parlay_stake: 2,
+      p_parlay_payout: 1,
+    })
+    expectError(error ?? undefined, RATE_LIMIT_ERRORS.parlay.match)
   })
 })
 

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
@@ -23,6 +24,8 @@ import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { SubNav } from '@/components/ui/sub-nav'
 import { CancelledBetRows, WagerRows } from './bet-rows'
 import { CoinRows } from './coin-rows'
+
+export const metadata: Metadata = { title: 'My bets' }
 
 const PATH = '/bets'
 

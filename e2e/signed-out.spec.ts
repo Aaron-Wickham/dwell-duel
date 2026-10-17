@@ -94,7 +94,7 @@ test('the sign-in page says what DwellDuel is, and the privacy page is public', 
   expect(privacy.status()).toBe(200)
 
   await page.goto('/sign-in')
-  await expect(page.getByText('Earn DC with Bible-study tasks')).toBeVisible()
+  await expect(page.getByText('earn more with Bible study', { exact: false })).toBeVisible()
   await expect(page.getByRole('img', { name: /^Sample market: Will the sermon run past noon\?/ })).toBeVisible()
   await page.getByRole('link', { name: 'Privacy' }).click()
   await expect(page).toHaveURL(/\/privacy$/)
@@ -160,7 +160,7 @@ test('with a Google client ID, sign-in goes straight to Google, which posts back
   // Supabase's redirect beside it, in case the direct path is what failed.
   await page.route(/\/auth\/v1\/authorize/, (route) => route.abort())
   const supabase = page.waitForRequest(/\/auth\/v1\/authorize/)
-  await page.getByRole('button', { name: 'Try another way' }).click()
+  await page.getByRole('button', { name: 'Sign in another way' }).click()
   expect(new URL((await supabase).url()).searchParams.get('prompt')).toBe('select_account')
 })
 

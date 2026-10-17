@@ -29,5 +29,5 @@ export type RewardRange = { min: number; max: number }
 export function taskRewardsDetail(range: RewardRange | null): string | null {
   if (!range) return null
   if (range.min === range.max) return `they pay ${formatDcAmount(range.min)} each`
-  return `they pay ${formatDc(range.min)}–${formatDcAmount(range.max)}`
+  return `they pay ${formatDc(range.min)} to ${formatDcAmount(range.max)}`
 }

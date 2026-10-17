@@ -1,9 +1,14 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { getJumpToMeTop, getLeaderboardPage, getYourStanding, type Board } from '@/lib/social/leaderboard'
+import type { ReactNode } from 'react'
+import Link from 'next/link'
+import type { DbClient } from '@/lib/supabase/database'
+import { cachedLeaderboardPage, cachedYourStanding, getJumpToMeTop, searchLeaderboard, type Board } from '@/lib/social/leaderboard'
+import { readMemberSearch } from '@/lib/social/member-search'
 import { currentSeasonName } from '@/lib/social/season'
 import { newestHref, showMoreHref, type SearchParams } from '@/lib/pagination/cursor'
 import { readRankPageParams } from '@/lib/pagination/rank-cursor'
@@ -19,6 +24,8 @@ import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { SubNav } from '@/components/ui/sub-nav'
+import { SearchField } from '@/components/ui/search-field'
+import { SearchSummary } from '@/components/ui/search-summary'
 import { JumpToMe } from '@/components/leaderboard/jump-to-me'
 import { StandingCompact } from '@/components/leaderboard/standing-compact'
 import { LeaderboardRow } from '@/components/leaderboard/leaderboard-row'
@@ -28,7 +35,9 @@ import { Podium } from '@/components/leaderboard/podium'
 import { YourStandingCard } from '@/components/leaderboard/your-standing'
 import { RaceChart } from '@/components/leaderboard/race-chart-lazy'
 import { cn } from '@/lib/utils'
-import { getAwards, getPastChampions, getRace, getRecords } from '@/lib/social/leaderboard-extras'
+import { cachedAwards, cachedRace, getPastChampions, getRecords } from '@/lib/social/leaderboard-extras'
+
+export const metadata: Metadata = { title: 'Leaderboard' }
 
 const PATH = '/leaderboard'
 const ROW_ID_PREFIX = 'member'
@@ -48,6 +57,77 @@ function note(board: Board): string {
   return `Profit is winnings and refunds minus stakes on bets in ${currentSeasonName()}.`
 }
 
+// A member search (#465): every name containing `q` on the net-worth board, highest ranked first,
+// each with its rank on the whole board. It pages on `match`, and a new search starts at the top.
+async function memberMatches(supabase: DbClient, meId: string, q: string, searchParams: SearchParams) {
+  const matches = await searchLeaderboard(supabase, q, readRankPageParams(searchParams, 'match'))
+  const records = await getRecords(
+    supabase,
+    matches.rows.map((r) => r.id),
+  )
+  if (matches.windowed && matches.rows.length === 0) return <NothingOlder href={newestHref(PATH, searchParams, 'match')} />
+  if (matches.rows.length === 0) {
+    return (
+      <EmptyState
+        title={`No members match “${q}”.`}
+        action={
+          <Link href={PATH} replace scroll={false} className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'self-start no-underline')}>
+            Clear search
+          </Link>
+        }
+      >
+        Check the spelling, or try part of a name.
+      </EmptyState>
+    )
+  }
+  // The count is only known when every match is on screen; past one page, they're best first.
+  const complete = !matches.next && !matches.windowed
+  return (
+    <ListSection title="Matching members" titleId="leaderboard-matches" titleHidden className="gap-0">
+      {complete ? (
+        <SearchSummary count={matches.rows.length} noun={['member', 'members']} query={q} clearHref={PATH} />
+      ) : (
+        <p className="text-sm text-ink2">
+          {`Members matching “${q}”, highest ranked first. `}
+          <Link href={PATH} replace scroll={false} className="prose-link">
+            Clear search
+          </Link>
+        </p>
+      )}
+      {matches.windowed && (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <BackToNewest href={newestHref(PATH, searchParams, 'match')} label="Back to the top" />
+        </div>
+      )}
+      <ol className={cn(dividedRowsClass, 'mt-3')}>
+        {matches.rows.map((member) => (
+          <LeaderboardRow
+            key={member.id}
+            rank={member.rank}
+            name={member.displayName}
+            avatarSrc={member.avatarSrc}
+            score={member.score}
+            record={records.get(member.id)}
+            isMe={member.id === meId}
+            href={`/members/${member.id}`}
+            domId={rowDomId(ROW_ID_PREFIX, member.id)}
+          />
+        ))}
+      </ol>
+      {matches.next && (
+        <div className="mt-3 flex flex-col">
+          <ShowMore
+            href={showMoreHref(PATH, searchParams, 'match', matches.next)}
+            fresh={matches.next.kind === 'window'}
+            focusId={rowDomId(ROW_ID_PREFIX, matches.next.firstId)}
+          />
+        </div>
+      )}
+      <p className="mt-3 text-sm text-ink2">{note('all')}</p>
+    </ListSection>
+  )
+}
+
 // Both tabs page on `before`: a tab link carries no cursor, so switching always starts at the top.
 export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) {
   const searchParams = await props.searchParams
@@ -55,12 +135,34 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
   if (!user) redirect('/sign-in')
 
   const board = readBoard(searchParams.tab)
+  const q = readMemberSearch(searchParams.q)
+
+  // The search sits beside the tabs and reads the net-worth board, so no tab is current during one.
+  const shell = (body: ReactNode) => (
+    <Page transition="tab">
+      <PageHeader title="Leaderboard" />
+      <LiveTables subscriptions={pageSubscriptions.leaderboard()} renderedAt={renderStamp()} />
+      <ShowMoreFocus />
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
+        <SubNav
+          label="Ranking"
+          items={(Object.keys(TABS) as Board[]).map((b) => ({ href: TABS[b].href, label: TABS[b].label, current: !q && b === board }))}
+        />
+        <div className="min-w-0 md:w-96">
+          <SearchField action={PATH} label="Search members by name" placeholder="Search members" value={q} />
+        </div>
+      </div>
+      {body}
+    </Page>
+  )
+  if (q) return shell(await memberMatches(supabase, user.id, q, searchParams))
+
   // `?at=me` opens a window with the member's own row near its top. It only applies to a fresh
   // visit: once a "Show more" has put a cursor in the URL, the cursor decides, so the link that
   // follows a window never throws the member back to their own place.
   const pageParams = readRankPageParams(searchParams, 'before')
   const jumping = searchParams.at === 'me' && pageParams.top === null && pageParams.bottom === null
-  const page = await getLeaderboardPage(
+  const page = await cachedLeaderboardPage(
     supabase,
     board,
     jumping ? { top: await getJumpToMeTop(supabase, board, user.id), bottom: null } : pageParams,
@@ -75,10 +177,10 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
       supabase,
       page.rows.map((r) => r.id),
     ),
-    showMonthExtras ? getRace(supabase) : [],
-    showMonthExtras ? getAwards(supabase) : [],
+    showMonthExtras ? cachedRace(supabase) : [],
+    showMonthExtras ? cachedAwards(supabase) : [],
     board === 'month' ? getPastChampions(supabase) : [],
-    showStanding ? getYourStanding(supabase, user.id) : null,
+    showStanding ? cachedYourStanding(supabase, user.id) : null,
     showStanding ? getRecords(supabase, [user.id]) : new Map(),
   ])
   // Only the net-worth board has a podium; This month leads with the race instead (#396).
@@ -94,8 +196,19 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
     body = <NothingOlder href={backToNewestHref} />
   } else if (board === 'all' && !page.windowed && page.rows.length <= 1) {
     body = (
-      <EmptyState title="No other members yet.">
-        Invite friends to start the competition.
+      <EmptyState
+        title="No other members yet."
+        action={
+          <IntentLink
+            href="/markets"
+            transitionTypes={TAB_TRANSITION}
+            className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'self-start no-underline')}
+          >
+            Browse markets
+          </IntentLink>
+        }
+      >
+        You’ll see how you rank once someone else joins.
       </EmptyState>
     )
   } else if (board === 'month' && page.rows.length === 0) {
@@ -130,7 +243,7 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
         {page.windowed && (
           <div className="mb-3 flex flex-wrap items-center gap-3">
             <p className="text-sm text-ink2">
-              {firstRank === lastRank ? `Showing rank ${firstRank}` : `Showing ranks ${firstRank}–${lastRank}`}
+              {firstRank === lastRank ? `Showing rank ${firstRank}` : `Showing ranks ${firstRank} to ${lastRank}`}
             </p>
             <BackToNewest href={backToNewestHref} label="Back to the top" />
           </div>
@@ -219,16 +332,5 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
     )
   }
 
-  return (
-    <Page transition="tab">
-      <PageHeader title="Leaderboard" />
-      <LiveTables subscriptions={pageSubscriptions.leaderboard()} renderedAt={renderStamp()} />
-      <ShowMoreFocus />
-      <SubNav
-        label="Ranking"
-        items={(Object.keys(TABS) as Board[]).map((b) => ({ href: TABS[b].href, label: TABS[b].label, current: b === board }))}
-      />
-      {body}
-    </Page>
-  )
+  return shell(body)
 }

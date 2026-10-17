@@ -71,7 +71,7 @@ describe('NeedsYou (#388)', () => {
 
   it('points a member at 0 DC to Tasks, in gold, with what tasks pay', () => {
     render(<NeedsYou counts={{ tasks: 0, markets: 0 }} showReviews={false} showAdminMarkets={false} marketsToResolve={NONE} balance={0} taskRewards={{ min: 5, max: 25 }} />)
-    const row = screen.getByRole('link', { name: 'You’re out of Dwell Coin. Earn more with Tasks: they pay 5–25 DC.' })
+    const row = screen.getByRole('link', { name: 'You’re out of Dwell Coin. Earn more with Tasks: they pay 5 to 25 DC.' })
     expect(row).toHaveAttribute('href', '/tasks')
     expect(row).toHaveClass('text-gold')
   })
@@ -95,10 +95,10 @@ describe('YourBets (#388)', () => {
     expect(within(section).getByRole('link', { name: 'See all 30' })).toHaveAttribute('href', '/bets')
     const [bet, parlay, closed] = within(section).getAllByRole('listitem')
     expect(within(bet).getByRole('link', { name: 'Will it rain on the church picnic?' })).toHaveAttribute('href', '/markets/k1')
-    expect(bet).toHaveTextContent('10 DC on Yes · pays 18 DC')
+    expect(bet).toHaveTextContent('10 DC on Yes · Pays 18 DC')
     expect(bet).toHaveTextContent('Closes Oct 6')
     expect(within(parlay).getByRole('link', { name: 'Parlay · 3 picks' })).toHaveAttribute('href', '/parlays/p1')
-    expect(parlay).toHaveTextContent('5 DC · pays 80 DC if all win')
+    expect(parlay).toHaveTextContent('5 DC · Pays 80 DC if all win')
     expect(closed).toHaveTextContent('Closed')
   })
 
@@ -146,10 +146,11 @@ describe('HomeActivity (#388)', () => {
 })
 
 describe('BalanceCard (#388)', () => {
-  it('shows the balance with rank and what is riding, from lg only', () => {
+  it('shows the balance with rank and what is riding on the deep teal hero, at every width (#438)', () => {
     render(<BalanceCard balance={4886} rank={218} memberCount={502} ridingDc={275} ridingWagers={30} />)
     const card = screen.getByRole('region', { name: 'Balance' })
-    expect(card).toHaveClass('hidden', 'lg:flex')
+    expect(card).toHaveClass('flex', 'bg-hero', 'text-on-hero')
+    expect(card).not.toHaveClass('hidden')
     expect(card).toHaveTextContent('4,886 DC')
     expect(card).toHaveTextContent('218th of 502 · 275 DC riding on 30 bets')
   })

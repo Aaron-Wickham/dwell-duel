@@ -18,7 +18,7 @@ const { supabase, single, upload, remove, revalidatePath } = vi.hoisted(() => {
   }
 })
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase, user: { id: 'member-1' } }) }))
-vi.mock('next/cache', () => ({ revalidatePath }))
+vi.mock('next/cache', () => ({ revalidatePath, updateTag: vi.fn() }))
 
 import { updateProfileAction } from '@/lib/profile/update-profile'
 

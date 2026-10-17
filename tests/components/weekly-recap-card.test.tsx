@@ -49,7 +49,7 @@ describe('WeeklyRecapCard', () => {
   it('shows every figure for a full week', () => {
     render(<WeeklyRecapCard recap={FULL} />)
     const region = screen.getByRole('region', { name: 'Last week' })
-    expect(within(region).getByText('Sep 28 – Oct 4')).toBeInTheDocument()
+    expect(within(region).getByText('Sep 28 to Oct 4')).toBeInTheDocument()
     expect(terms(region)).toEqual(['Your betting', 'Your task rewards', 'Best call', 'Biggest upset', 'Most tasks done', 'Closing this week'])
 
     expect(within(region).getByText('−15 DC')).toHaveClass('text-loss')
@@ -74,7 +74,7 @@ describe('WeeklyRecapCard', () => {
       />,
     )
     const region = screen.getByRole('region', { name: 'This week so far' })
-    expect(within(region).getByText('Sep 21–27')).toBeInTheDocument()
+    expect(within(region).getByText('Sep 21 to 27')).toBeInTheDocument()
     expect(terms(region)).toEqual(['Most tasks done', 'Closing next week'])
     expect(region).toHaveTextContent('Carol, 1 task approved')
     expect(within(region).queryByText(/more on/)).toBeNull()

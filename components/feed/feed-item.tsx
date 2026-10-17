@@ -44,7 +44,7 @@ export function FeedItem({
             ) : (
               // The names are the row's only tap targets (#187), so each reaches 44px tall without
               // growing the row (A11Y-06).
-              <IntentLink key={i} href={segment.href} transitionTypes={['nav-forward']} className="hit-area">
+              <IntentLink key={i} href={segment.href} transitionTypes={['nav-forward']} className="hit-area prose-link">
                 {segment.text}
               </IntentLink>
             ),

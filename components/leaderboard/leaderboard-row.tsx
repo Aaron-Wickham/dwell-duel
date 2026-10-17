@@ -9,7 +9,7 @@ import { rowTitleClass } from '@/components/ui/page'
 // Your own row, and the bar standing in for it, stick to the bottom of the viewport, above the
 // phone's tab bar, until the page scrolls them into their place.
 export const stickyMineClass =
-  'sticky bottom-[calc(82px+var(--safe-bottom))] z-[2] -mx-3 rounded-tile bg-acc-soft px-3 [--tint-inset:0] before:rounded-[inherit] md:bottom-0'
+  'sticky bottom-[calc(var(--tab-bar-h)+4px+var(--safe-bottom))] z-[2] -mx-3 rounded-tile bg-acc-soft px-3 [--tint-inset:0] before:rounded-[inherit] md:bottom-0'
 
 export function RankNumber({ rank, label = `Rank ${rank}` }: { rank: number; label?: string }) {
   return (

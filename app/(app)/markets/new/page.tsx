@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
@@ -7,8 +8,10 @@ import type { DbClient } from '@/lib/supabase/database'
 import type { MarketKind } from '@/lib/markets/kind'
 import { formatLine } from '@/lib/markets/kind'
 import { isUuid } from '@/lib/uuid'
-import { listCategoryCounts, mostUsedCategories } from '@/lib/markets/categories'
+import { cachedCategoryCounts, mostUsedCategories } from '@/lib/markets/categories'
 import { CreateMarketForm, type MarketPrefill } from './create-market-form'
+
+export const metadata: Metadata = { title: 'Create market' }
 
 // Read with the member's own client, so RLS decides what can be copied; a market they can't see
 // reads as no row, and the form opens blank.
@@ -44,7 +47,7 @@ export default async function NewMarketPage(props: PageProps<'/markets/new'>) {
     // eslint-disable-next-line react-hooks/purity
     readPrefill(supabase, from, Date.now()),
     getRole(supabase),
-    listCategoryCounts(supabase),
+    cachedCategoryCounts(supabase),
   ])
   const categories = { suggestions: counts.map((c) => c.name), popular: mostUsedCategories(counts).map((c) => c.name) }
 

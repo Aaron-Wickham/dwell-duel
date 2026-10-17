@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { revalidateGroupReads } from '@/lib/cache/group-reads'
 import { requireUser } from '@/lib/auth/require-user'
 import { isRole } from '@/lib/auth/roles'
 import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
@@ -17,7 +18,7 @@ const OWNER_ERRORS: readonly KnownError<never>[] = [
   { match: "the owner's own role can't be changed", formError: 'The owner’s own role can’t be changed.' },
   { match: 'member not found', formError: 'This member no longer exists.' },
   { match: 'only the owner can delete a market', formError: 'Only the owner can delete a market.' },
-  { match: 'market not found', formError: 'This market no longer exists.' },
+  { match: 'market not found', formError: 'This market was deleted. Go back to Markets.' },
   { match: 'this market has bets, so void it instead', formError: 'This market has bets, so call it off instead.' },
   { match: 'only the owner can delete a task', formError: 'Only the owner can delete a task.' },
   { match: 'task not found', formError: 'This task no longer exists.' },
@@ -36,6 +37,7 @@ async function run<F extends keyof Fns>(fn: F, args: Fns[F]['Args']): Promise<Co
   const { error } = await supabase.rpc(fn, args)
   if (error) return friendlyError(error, OWNER_ERRORS, `${fn} failed`)
   revalidatePath('/', 'layout')
+  revalidateGroupReads()
   return undefined
 }
 

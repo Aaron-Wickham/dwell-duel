@@ -163,7 +163,7 @@ export function ProofPicker({
               <li key={draft.key} className="flex min-h-11 items-center gap-3 rounded-control bg-sunk px-2">
                 {draft.kind === 'image' ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={previews.get(draft.key)} alt="" className="size-9 shrink-0 rounded-segment object-cover" />
+                  <img src={previews.get(draft.key)} alt="" width={36} height={36} decoding="async" className="size-9 shrink-0 rounded-segment object-cover" />
                 ) : draft.kind === 'file' ? (
                   <FileText aria-hidden="true" className="size-5 shrink-0 text-ink2" />
                 ) : (

@@ -9,7 +9,7 @@ export function NotFoundBody() {
         <h1 className={h1Class}>Page not found</h1>
         <p className="text-ink2">The link may be old, or what it pointed to was removed.</p>
         <Link href="/" className={buttonVariants({ variant: 'primary' })}>
-          Go home
+          Go to Home
         </Link>
       </div>
     </div>

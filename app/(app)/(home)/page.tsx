@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
@@ -24,10 +25,10 @@ import { NeedsYou } from '@/components/home/needs-you'
 import { YourBets } from '@/components/home/your-bets'
 import { HomeActivity } from '@/components/home/home-activity'
 import { BalanceCard } from '@/components/home/balance-card'
-import { firstName, ridingText } from '@/lib/home/copy'
+import { firstName } from '@/lib/home/copy'
 import { getTaskRewardRange } from '@/lib/tasks/list-tasks'
-import { formatDcAmount } from '@/lib/format/dc'
-import { rankText } from '@/lib/format/rank'
+
+export const metadata: Metadata = { title: 'Home' }
 
 const ACTIVITY_ROWS = 3
 
@@ -99,16 +100,6 @@ export default async function Home() {
         <div className="flex flex-col gap-7 max-lg:contents">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 max-lg:order-1">
             <h1 className={h1Class}>Hi, {firstName(standing?.displayName)}</h1>
-            <p className="text-sm text-ink2 lg:hidden">
-              {rank !== null && `${rankText(rank, memberCount)} · `}
-              {atStake.wagers === 0 ? (
-                ridingText(0, 0)
-              ) : (
-                <>
-                  <b className="text-ink">{formatDcAmount(atStake.dc)}</b> riding
-                </>
-              )}
-            </p>
           </div>
           <div className="contents max-lg:[&>*]:order-3">
             {onboardingShown && (
@@ -132,6 +123,7 @@ export default async function Home() {
         </div>
         <div className="flex flex-col gap-7 max-lg:contents lg:pt-[73px]">
           <BalanceCard
+            className="max-lg:order-1"
             balance={balance}
             rank={rank}
             memberCount={memberCount}

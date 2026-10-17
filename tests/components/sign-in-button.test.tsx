@@ -94,13 +94,13 @@ describe('SignInButton', () => {
 
   it('offers Supabase’s redirect beside a direct button after a failed sign-in, and only then', async () => {
     const { unmount } = render(<SignInButton direct />)
-    expect(screen.queryByRole('button', { name: 'Try another way' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Sign in another way' })).toBeNull()
     unmount()
 
     params = new URLSearchParams('error=auth')
     render(<SignInButton direct />)
     expect(screen.getAllByRole('alert')).toHaveLength(1)
-    await userEvent.click(screen.getByRole('button', { name: 'Try another way' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in another way' }))
     expect(signInWithOAuth).toHaveBeenCalledOnce()
   })
 

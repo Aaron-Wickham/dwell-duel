@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { revalidateGroupReads } from '@/lib/cache/group-reads'
 import { requireUser } from '@/lib/auth/require-user'
 import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { atLeast, getRole } from '@/lib/auth/roles'
@@ -13,7 +14,7 @@ const NOT_VOIDABLE = 'only an unresolved, unvoided market can be voided'
 
 // void_market's raises (0016, 0046, 0073) and the reason's length check (0073).
 const VOID_MARKET_ERRORS: readonly KnownError<'reason'>[] = [
-  { match: 'market not found', formError: 'This market no longer exists.' },
+  { match: 'market not found', formError: 'This market was deleted. Go back to Markets.' },
   { match: NOT_VOIDABLE, formError: 'This market already has a result or was already called off.' },
   { match: 'only the market creator or an admin can void this market', formError: 'Only the market’s creator or an admin can call it off.' },
   { match: 'this market has closed, so only an admin can void it', formError: 'This market has closed, so only an admin can call it off.' },
@@ -47,6 +48,7 @@ export async function voidMarketAction(
       const creatorMayVoid = market?.created_by === user.id && new Date(market.close_at).getTime() > Date.now()
       if (market?.status === 'voided' && (creatorMayVoid || atLeast(await getRole(supabase), 'admin'))) {
         revalidatePath('/', 'layout')
+        revalidateGroupReads()
         return undefined
       }
     }
@@ -56,5 +58,6 @@ export async function voidMarketAction(
   afterAction(() => notifyMarketResult(marketId))
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')
+  revalidateGroupReads()
   return undefined
 }

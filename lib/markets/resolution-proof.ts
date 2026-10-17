@@ -18,7 +18,7 @@ type Row = {
 }
 
 // The current resolution's reason and proof (0042), plus the one it overrode, newest first.
-export async function getResolutionProof(supabase: DbClient, marketId: string): Promise<ResolutionProof | null> {
+export async function getResolutionProof(supabase: DbClient, marketId: string, viewerId?: string): Promise<ResolutionProof | null> {
   const { data, error } = await supabase
     .from('market_resolutions')
     .select(`id, note, reversed_at, market_outcomes(label), proof_attachments(${PROOF_COLUMNS})`)
@@ -31,7 +31,7 @@ export async function getResolutionProof(supabase: DbClient, marketId: string): 
   if (!current) return null
   const previous = rows.find((r) => r.id !== current.id) ?? null
 
-  const views = await toProofViews(supabase, [...current.proof_attachments, ...(previous?.proof_attachments ?? [])])
+  const views = await toProofViews(supabase, [...current.proof_attachments, ...(previous?.proof_attachments ?? [])], viewerId)
   const pick = (r: Row) => views.filter((v) => r.proof_attachments.some((p) => p.id === v.id))
   return {
     note: current.note,

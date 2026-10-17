@@ -48,7 +48,7 @@ describe('YourStandingCard', () => {
 
   it('shows a dash and a note when no bet has settled', () => {
     render(<YourStandingCard standing={standing()} />)
-    expect(within(card()).getByText('–')).toBeInTheDocument()
+    expect(within(card()).getByText('None yet')).toBeInTheDocument()
     expect(within(card()).getByText(/No settled bets yet\./)).toBeInTheDocument()
   })
 

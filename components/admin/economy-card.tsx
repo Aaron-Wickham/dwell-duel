@@ -52,7 +52,7 @@ export function EconomyCard({ summary }: { summary: EconomySummary }) {
                 <Dc value={s.added} />
               </td>
               <td className="py-2 text-right whitespace-nowrap">
-                {s.removed === null ? <span className="text-ink2">—</span> : <Dc value={-s.removed} />}
+                {s.removed === null ? <span className="text-ink2">None</span> : <Dc value={-s.removed} />}
               </td>
             </tr>
           ))}
@@ -70,10 +70,10 @@ export function EconomyCard({ summary }: { summary: EconomySummary }) {
       </table>
 
       <p className="text-sm text-ink2">
-        Winners split exactly a market’s real stakes, rounded down, so payout rounding is the fractions of
-        a DC that rounding keeps (an override can pay some back). Seed payouts appear only for older
-        results, which counted the seed. Parlays remove the stakes they lose, and overrides take back
-        earlier payouts.
+        Market maker is what the house paid winners, less every stake it took. Each winning share pays 1
+        DC, rounded down, so payout rounding is the fractions of a DC that rounding keeps (an override can
+        pay some back). Seed payouts appear only for older results, which counted the seed. Parlays remove
+        the stakes they lose, and overrides take back earlier payouts.
       </p>
 
       {reconciles ? (

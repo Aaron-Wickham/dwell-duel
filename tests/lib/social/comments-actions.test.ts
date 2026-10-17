@@ -46,8 +46,8 @@ describe('postCommentAction', () => {
 
   it('says so when the market has gone', async () => {
     insert.mockResolvedValue({ error: { code: '23503', message: 'fk' } })
-    expect(await postCommentAction(MARKET, undefined, form('Hi'))).toEqual({ formError: 'This market no longer exists.' })
-    expect(await postCommentAction('not-a-uuid', undefined, form('Hi'))).toEqual({ formError: 'This market no longer exists.' })
+    expect(await postCommentAction(MARKET, undefined, form('Hi'))).toEqual({ formError: 'This market was deleted. Go back to Markets.' })
+    expect(await postCommentAction('not-a-uuid', undefined, form('Hi'))).toEqual({ formError: 'This market was deleted. Go back to Markets.' })
     expect(refresh).not.toHaveBeenCalled()
   })
 

@@ -78,9 +78,9 @@ describe('MemberRow', () => {
     expect(within(row).getAllByRole('cell')[1]).toHaveTextContent('Removed')
   })
 
-  it('shows a dash for a net worth it couldn’t read', () => {
+  it('says so for a net worth it couldn’t read', () => {
     const row = renderRow(BEN, null)
-    expect(within(row).getAllByRole('cell')[3]).toHaveTextContent('— net worth')
+    expect(within(row).getAllByRole('cell')[3]).toHaveTextContent('Net worth unavailable')
   })
 })
 
@@ -101,15 +101,5 @@ describe('MembersTableHead', () => {
     )
     expect(screen.getByRole('link', { name: 'Joined, sort newest first' })).toHaveAttribute('href', '/admin/members?sort=joined')
     expect(within(screen.getByRole('columnheader', { name: 'Role' })).queryByRole('link')).toBeNull()
-  })
-
-  it('leaves a column it can’t sort as plain text', () => {
-    render(
-      <table>
-        <MembersTableHead order={BY_NAME} sortHrefs={{ name: HREFS.name, balance: HREFS.balance, joined: HREFS.joined }} />
-      </table>,
-    )
-    expect(screen.getByRole('columnheader', { name: /^Member/ })).toHaveAttribute('aria-sort', 'ascending')
-    expect(within(screen.getByRole('columnheader', { name: 'Net worth' })).queryByRole('link')).toBeNull()
   })
 })

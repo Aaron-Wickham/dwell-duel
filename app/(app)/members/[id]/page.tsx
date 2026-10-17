@@ -1,3 +1,5 @@
+import type { Metadata } from 'next'
+import { memberTitle } from '@/lib/app-shell/page-titles'
 import { Suspense } from 'react'
 import { redirect, notFound } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
@@ -24,6 +26,10 @@ import { rankText } from '@/lib/format/rank'
 // No loading.tsx for this route: the member must be found before anything streams, so an
 // unknown id still gets a real 404 status. The stats and the activity list stream in behind
 // skeletons, under one combined loading status.
+export async function generateMetadata(props: PageProps<'/members/[id]'>): Promise<Metadata> {
+  return memberTitle((await props.params).id)
+}
+
 export default async function MemberPage(props: PageProps<'/members/[id]'>) {
   const { id } = await props.params
   const searchParams = await props.searchParams

@@ -9,7 +9,7 @@ test('reject a task submission with a reason the member then sees', async ({ pag
   await page.getByLabel('Title').fill(title)
   await page.getByLabel('Reward (DC)').fill('8')
   await page.getByRole('button', { name: 'Create task' }).click()
-  await expect(page.getByText(`${title} — 8 DC`)).toBeVisible()
+  await expect(page.getByText(`${title} · 8 DC`)).toBeVisible()
 
   const member = await browser.newContext({ storageState: MEMBER_STORAGE_STATE_PATH })
   const bobPage = await member.newPage()

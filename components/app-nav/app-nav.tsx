@@ -12,6 +12,7 @@ import { AnimatedText } from '@/components/ui/animated-text'
 import { NavPendingHint } from '@/components/nav/nav-pending-hint'
 import { TAB_TRANSITION } from '@/components/nav/page-transition'
 import { haptics } from '@/lib/haptics'
+import { scrollToTopOnCurrentTab } from '@/lib/nav/scroll-to-top'
 import { PILL_TRANSITION } from '@/lib/ui/motion'
 import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
@@ -95,6 +96,7 @@ function DesktopLink({
       aria-current={active ? 'page' : undefined}
       aria-label={label}
       title={label}
+      onClick={(event) => scrollToTopOnCurrentTab(event, href)}
       className={cn(
         `pressable pill-label relative isolate inline-flex min-h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap rounded-full ${uiTextClass} font-bold no-underline xl:px-3.5`,
         shown ? 'text-on-nav-active' : 'text-ink2 hover:bg-sunk hover:text-ink',
@@ -104,6 +106,7 @@ function DesktopLink({
       {shown && (
         <m.span
           layoutId="nav-pill"
+          layoutDependency={href}
           aria-hidden="true"
           className="absolute inset-0 -z-10 rounded-full bg-nav-active"
           transition={PILL_TRANSITION}
@@ -177,6 +180,7 @@ export function AppNav({
         </header>
 
         <header
+          data-keyboard-follows
           style={{ viewTransitionName: 'app-topbar' }}
           className="no-callout sticky top-(--safe-top) z-30 flex h-16 shrink-0 items-center gap-1 border-b border-line bg-surface pr-2 pl-3 md:hidden"
         >
@@ -188,8 +192,9 @@ export function AppNav({
 
         <nav
           aria-label="Primary"
+          data-keyboard-hides
           style={{ viewTransitionName: 'app-tabbar' }}
-          className="no-callout fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-[calc(12px+var(--safe-bottom))] md:hidden"
+          className="no-callout fixed inset-x-0 bottom-0 z-30 grid h-[calc(var(--tab-bar-h)+var(--safe-bottom))] grid-cols-5 gap-0.5 border-t border-line bg-surface px-1 pt-1 pb-[calc(4px+var(--safe-bottom))] md:hidden"
         >
           {NAV_ITEMS.map((item) => {
             const Icon = ICONS[item.id]
@@ -204,27 +209,34 @@ export function AppNav({
                 transitionTypes={TAB_TRANSITION}
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={tabAriaLabel(item)}
-                onClick={haptics.tap}
+                onClick={(event) => {
+                  haptics.tap()
+                  scrollToTopOnCurrentTab(event, item.href)
+                }}
                 className={cn(
-                  'pressable pill-label relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-tile text-xs leading-[1.1] no-underline',
+                  'pressable pill-label relative flex min-h-[50px] flex-col items-center justify-center gap-0.5 rounded-tile text-xs leading-[1.1] no-underline',
                   isShown ? 'text-ink' : 'text-ink2',
                 )}
               >
                 <PendingReporter href={item.href} onPending={onPending} />
                 <span
                   className={cn(
-                    'relative isolate flex h-[30px] w-[52px] items-center justify-center rounded-full transition-colors duration-(--duration-slide) ease-ios motion-reduce:transition-none',
+                    'relative isolate flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-(--duration-slide) ease-ios motion-reduce:transition-none',
                     isShown && 'text-on-tab-active',
                   )}
                 >
                   {/* One pill that slides between tabs, like the desktop nav's. The tab bar stays
                       pinned through page transitions, and its new snapshot is live, so the slide
                       shows while the page moves under it. */}
+                  {/* layoutDependency: the pill measures itself only when it moves to another tab.
+                      Otherwise the re-render when the new page arrives, scrolled back to the top,
+                      re-measured it mid-slide and restarted the slide off by the scroll distance (#442). */}
                   {isShown && (
                     <m.span
                       layoutId="tabbar-pill"
+                      layoutDependency={item.id}
                       aria-hidden="true"
-                      className="absolute inset-0 -z-10 rounded-full border-[1.5px] border-tab-active-ring bg-tab-active"
+                      className="absolute inset-0 -z-10 rounded-full bg-tab-active"
                       transition={PILL_TRANSITION}
                     />
                   )}

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { SlipProvider, useSlip } from '@/components/slip/slip-provider'
+import { SlipProvider, useSlip, useSlipPicks } from '@/components/slip/slip-provider'
 import { EMPTY_SLIP } from '@/lib/parlays/get-slip'
 
 vi.mock('@/lib/parlays/slip-actions', () => ({ setPickModeAction: vi.fn() }))
@@ -79,5 +79,29 @@ describe('SlipProvider retry state (#192)', () => {
     expect(screen.getByLabelText('Stake')).toHaveTextContent('')
     await userEvent.click(screen.getByRole('button', { name: 'Place' }))
     expect(sent).toEqual(['key-1', 'key-2'])
+  })
+})
+
+describe('SlipProvider renders (#457)', () => {
+  it('leaves a control that reads only the picks alone while a stake is typed', async () => {
+    let pickRenders = 0
+    const PickCount = memo(function PickCount() {
+      pickRenders++
+      return <output aria-label="Picks">{useSlipPicks().picks.length}</output>
+    })
+    function StakeBox() {
+      const { stakes, setStake } = useSlip()
+      return <input aria-label="Stake box" value={stakes.o1 ?? ''} onChange={(e) => setStake('o1', e.target.value)} />
+    }
+    render(
+      <SlipProvider view={EMPTY_SLIP}>
+        <PickCount />
+        <StakeBox />
+      </SlipProvider>,
+    )
+    const before = pickRenders
+    await userEvent.type(screen.getByLabelText('Stake box'), '125')
+    expect(screen.getByLabelText('Stake box')).toHaveValue('125')
+    expect(pickRenders).toBe(before)
   })
 })

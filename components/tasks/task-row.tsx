@@ -33,7 +33,7 @@ export function TaskRow({
   title: string
   rewardAmount: number
   description: string | null
-  // "weekly", "once" (cadenceWord).
+  // "Weekly", "Once" (cadenceWord).
   cadence: string
   streak?: { period: NonNullable<TaskSummary['period']>; count: number } | null
   state: TaskRowState
@@ -74,7 +74,7 @@ export function TaskRow({
               <>
                 {state.sentAt && (
                   <>
-                    {' · sent '}
+                    {' · Sent '}
                     <SentDay iso={state.sentAt} now={state.now} />
                   </>
                 )}

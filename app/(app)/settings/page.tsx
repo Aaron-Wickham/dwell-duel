@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -18,6 +19,8 @@ import { NotificationSettings } from './notification-settings'
 import { MotionSettings, ThemeSetting } from './settings-controls'
 import { SignOutButton } from './sign-out-button'
 import { InstallApp } from './install-app'
+
+export const metadata: Metadata = { title: 'Settings' }
 
 export default async function SettingsPage() {
   const { supabase, user } = await requireUser()
@@ -62,7 +65,7 @@ export default async function SettingsPage() {
       </SectionCard>
       <InstallApp />
       <SectionCard title="Help" titleId="settings-help">
-        <p className="text-ink2">Betting, parlays, results and tasks, explained, and what DwellDuel keeps about you.</p>
+        <p className="text-ink2">How the game works, what DwellDuel keeps about you, and the terms.</p>
         <div className="flex flex-wrap gap-2">
           <Link
             href="/how-it-works"
@@ -78,6 +81,9 @@ export default async function SettingsPage() {
             className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}
           >
             Your data
+          </Link>
+          <Link href="/terms" className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'no-underline')}>
+            Terms
           </Link>
         </div>
       </SectionCard>

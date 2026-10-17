@@ -35,6 +35,11 @@ a line to `CHANGELOG.md` under the next release.
 
 ## UI conventions
 
+- **One surface language** (#441). A card (`cardClass`, `ListCard`) is a
+  step lighter than the page (`bg-surface` on `bg-bg`) with no border and
+  no resting shadow; only what floats (a sheet, a menu, a dialog, a card
+  lifted under the mouse) casts a shadow. Hairlines stay for dividers
+  inside a card, form fields and tables.
 - **Tokens, never raw colours.** Colours come from the CSS variables in
   `app/globals.css`, through Tailwind utilities (`bg-surface`, `text-ink2`,
   `border-line` and so on). Light and dark are the same markup with
@@ -42,11 +47,16 @@ a line to `CHANGELOG.md` under the next release.
   *fills* mark only the primary action and first place; `acc-text` (dark
   `#8BE651`) stays the positive and open text colour. Active navigation uses
   `nav-active`, `tab-active` and `segment-active`, and a card or row title
-  link takes `text-ink`. In light, lime is a fill or brand only (the tab
-  bar's pill, first place), never text on the background nor a state shown
+  link takes `text-ink`. In light, lime is a fill or brand only (first place,
+  Getting started's step dots), never text on the background nor a state shown
   by colour alone. `StatusChip` tones come only from the semantic
   tokens (`open` is acc-soft / acc-text, `won` win, `lost` loss, `wait`
-  gold, `done` and `void` sunk), never `primary`.
+  gold, `info` blue for a result or something of yours, `done` and `void`
+  sunk), never `primary`. Category chips and avatar initials take a
+  `--tint1`…`--tint6` pair from `tintFor` (`lib/ui/tint.ts`), never a
+  status colour (#445).
+- **Every page exports a title** (`metadata` or `generateMetadata`, #460); the root
+  layout's template adds " · DwellDuel", and a test fails on a page without one.
 - **Every signed-in page is a `<Page>`.** It lives in `components/ui/page.tsx`
   and has exactly one `<h1>`, from `PageHeader` or `h1Class`. Sections are
   `SectionCard`s, whose `<h2>` names the region (a page of prose, like How it
@@ -59,7 +69,7 @@ a line to `CHANGELOG.md` under the next release.
   a figure is `figureHeroClass`, `figureClass` or `figureInlineClass`, and
   the sizes between body and caption are `uiTextClass`, `chipTextClass` and
   `microTextClass`. Don't add a `text-[Npx]` of your own (the sign-in page
-  and the brand mark (the wordmark and the beta badge) are the only
+  and the brand mark (the wordmark) are the only
   exceptions), nor a `rounded-[Npx]`: radii are
   `rounded-segment` (10px), `-control`, `-tile`, `-card` or `-full`. A card
   built by hand takes `cardPaddingClass` from `components/ui/card.tsx`.
@@ -80,9 +90,9 @@ a line to `CHANGELOG.md` under the next release.
   taking `pressable hover-tint relative` and a `stretched-link` title:
   never bordered cards inside the card.
 - **`ListCard` is for a standalone list on the page.**
-  `components/ui/list-card.tsx`'s `ListCard` is the My bets parlay card: a
-  `border-line` hairline, `rounded-tile` (`--radius-tile`, 14px), `p-3.5`
-  / `md:p-4`, no shadow, tinting flush (`hover-tint [--tint-inset:0]`)
+  `components/ui/list-card.tsx`'s `ListCard` is the My bets parlay card: the
+  page's surface step (`bg-surface`, no hairline, #441), `rounded-tile`
+  (`--radius-tile`, 14px), `p-3.5` / `md:p-4`, no shadow, tinting flush (`hover-tint [--tint-inset:0]`)
   rather than lifting. Its title link is a `stretched-link` and any other
   control sits in a `relative z-[1]` wrapper; a card that doesn't open
   anything as a whole (a pick in the slip) passes `tappable={false}`. The list is
@@ -93,7 +103,7 @@ a line to `CHANGELOG.md` under the next release.
   Admin › Members is a table on the page (divided rows below `lg:`) and
   the review queue a table in its card (#399); the task catalog,
   categories, markets waiting to be resolved, the ledger, coin history,
-  invites, a market's bet list and Home's Your bets and Needs you are
+  invites, a market's bet list and Home's Activity and Needs you rows are
   divided rows.
 - **A chip only when it adds information the context doesn't** (#387).
   A list filtered to one status shows no status chip on its items; a
@@ -104,11 +114,13 @@ a line to `CHANGELOG.md` under the next release.
   select's or disclosure's chevron, the plus on Add and Create market,
   search, proof types, the Google G); other secondary buttons are text
   only.
-- **Home's lists are uncarded on a phone** (#388, D1/D2). Your bets,
-  Activity and Needs you (`HomeSection`, `components/home/home-section.tsx`)
-  are rows on the page under an `<h2>` below `lg:`, and cards like a
-  `SectionCard` from `lg:`; Getting started, Turn on notifications and the
-  weekly recap stay cards at every width.
+- **Home** (#388, #438). The deep-teal Balance card shows at every width
+  (under the greeting on a phone). Your bets are `ListCard`s on the page,
+  never inside a card (two columns from `lg:`). Activity and Needs you
+  (`HomeSection`, `components/home/home-section.tsx`) are rows on the page
+  under an `<h2>` below `lg:` and cards from `lg:`; Needs you's review and
+  resolve counts are gold and blue tiles. Getting started, Turn on
+  notifications and the weekly recap stay cards at every width.
 - **Page widths come from `<Page width>`:** `wide` (default, 1120px of
   content) or `reading` (about 820px, centred), and a skeleton uses
   `pageClassFor(width)`. Don't cap a card's width inside a page; fill the
@@ -143,12 +155,13 @@ a line to `CHANGELOG.md` under the next release.
   every sheet traps focus while it's open: the slip also makes the page
   behind it `inert` (`#app-shell`, `lib/ui/app-shell.ts`), since focus
   guards alone leak under key repeat (#392).
-- **Links are underlined by default.** The base `a` rule underlines
-  every link, matching the mockup (its links use the browser default
-  underline). A link styled as a button, tab, tile, chip or nav item
-  carries `no-underline`. The one exception is a card or row title that
-  is a `stretched-link`: the utility drops its underline until it's
-  hovered or focused (#393), since the whole card is the tap target.
+- **Links are plain by default; sentences opt in** (#437, reversing the
+  earlier underline-by-default rule). The base `a` rule draws no underline
+  at rest (a mouse hover still underlines), so titles, See all, back links
+  and menu items read by their place and weight. A link inside a sentence
+  ("How parlays pay", a feed row's names, a bet row's name, the rendered
+  rules) takes the `prose-link` utility, which keeps it underlined. A link
+  styled as a button, tab, chip or nav item may still carry `no-underline`.
 - **Charts** (#391; the handoff's Charts section). A two-outcome market
   draws one line, Yes or Over (`plottedOutcomes`), in `--s2`. Series
   colours come from `outcomeSeries` (the race's from `memberSeries`, by
@@ -163,6 +176,12 @@ a line to `CHANGELOG.md` under the next release.
   summary of the page (#400): Tasks keeps "Earn DC with Bible study. A reviewer checks each
   one.";
   most pages have none, and their skeleton draws no description line.
+- **No em or en dashes in what members see** (#470): use " · " between
+  parts, ":" before an explanation, "to" in a range ("5 to 50 DC", "Oct 5
+  to 11"), and a hyphen in a record ("17-12"). Code comments may keep them.
+- **A phrase after a · starts with a capital** ("10 DC · Weekly",
+  "5 DC on Yes · Pays 18 DC", "· Waiting for a result"); a segment that
+  starts with a number needs nothing.
 - **Words we use** (#400). Member-facing text, docs for members and tests
   say: **pick**, never "leg" (leg stays in code and in HOW-IT-WORKS' parlay
   maths); **submission**, never "completion" (the table's name); **To
@@ -172,6 +191,16 @@ a line to `CHANGELOG.md` under the next release.
   **called off**, never "voided", and **waiting for a result**, never
   "awaiting resolution" (D7, #403; the database values `voided` and
   `awaiting`, RPC names and the admin ledger's labels keep theirs).
+- **Design skills** (#447). Two vendored skills live in `.claude/skills/`:
+  **Impeccable** (`/impeccable`, pbakaus/impeccable 4.6.0 at 08d5b47,
+  Apache 2.0) for app screens (critique, audit, polish, colorize, layout),
+  and **Taste** (`/taste`, Leonxlnx/taste-skill v2 at f624f37, MIT) only for
+  public pages (sign-in, privacy, terms), since it says it isn't for app
+  screens. Impeccable's launcher downloads a binary on first run; that
+  isn't allowed here, so it runs on its "launcher unavailable" path, reading
+  PRODUCT.md and DESIGN.md directly. Taste's `scripts/lint.mjs` is safe to
+  run. Where a skill's rules clash with this file (eyebrows, hairlines), this
+  file wins. Update a skill by re-copying its folder at a pinned commit.
 - **Visual source of truth:** `docs/design/app-redesign-handoff.md`, which
   describes the app as it is. The dated specs and plans in `docs/archive/`
   are history: they name things the code no longer has, so don't build
@@ -502,8 +531,11 @@ a line to `CHANGELOG.md` under the next release.
 - **Nobody but an admin resolves a market they have a stake in**, and
   nobody reviews their own task submission (0046). Ask the database
   (`can_resolve_market`) rather than re-deriving who may resolve.
-- **The CSP lives in `next.config.ts`.** A new external origin for scripts,
-  images or connections must be added there, or the browser blocks it.
+- **The CSP lives in `lib/security/csp.ts`,** set per request with a nonce
+  by `proxy.ts` (#449). A new external origin for scripts, images or
+  connections must be added there, or the browser blocks it. Inline script
+  never runs by `'unsafe-inline'`: one of our own goes in
+  `lib/app-shell/inline-scripts.ts`, whose texts the CSP allows by hash.
 - **Profile photos** are `profiles.avatar_path`, a path in the public
   `avatars` bucket; render them with `avatarUrl()` from
   `lib/profile/avatar.ts` through `<Avatar src>`. Profile edits go through

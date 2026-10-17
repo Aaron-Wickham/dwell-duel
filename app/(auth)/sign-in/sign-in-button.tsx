@@ -84,7 +84,7 @@ export function SignInButton({ direct = false, alternative = false }: { direct?:
             <span role="status">Opening Google…</span>
           </>
         ) : alternative ? (
-          'Try another way'
+          'Sign in another way'
         ) : (
           <>
             <GoogleMark />

@@ -7,12 +7,12 @@ test('bulk-approve two pending task completions from the admin queue', async ({ 
   await page.getByLabel('Title').fill('Read Psalm 23')
   await page.getByLabel('Reward (DC)').fill('5')
   await page.getByRole('button', { name: 'Create task' }).click()
-  await expect(page.getByText('Read Psalm 23 — 5 DC')).toBeVisible()
+  await expect(page.getByText('Read Psalm 23 · 5 DC')).toBeVisible()
 
   await page.getByLabel('Title').fill('Read Proverbs 3')
   await page.getByLabel('Reward (DC)').fill('7')
   await page.getByRole('button', { name: 'Create task' }).click()
-  await expect(page.getByText('Read Proverbs 3 — 7 DC')).toBeVisible()
+  await expect(page.getByText('Read Proverbs 3 · 7 DC')).toBeVisible()
 
   // Bob submits: nobody reviews their own submission (0046), so the owner reviews his.
   const member = await browser.newContext({ storageState: MEMBER_STORAGE_STATE_PATH })

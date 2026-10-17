@@ -9,14 +9,17 @@ const PODIUM = [
   { avatar: 'size-10', block: 'h-[34px]', order: 'order-3' },
 ]
 
-// Mirrors the Net worth board: the header, the board tabs, then the rankings as divided rows on the
+// Mirrors the Net worth board: the header, the board tabs and the member search, then the rankings as divided rows on the
 // page (D2), with the podium above them on a phone and, at lg, in a side column beside them over
 // Your standing (7 : 5).
 export default function Loading() {
   return (
     <SkeletonScreen name="leaderboard" className={pageClass}>
       <SkeletonPageHeader />
-      <Skeleton className="h-[52px] w-full rounded-tile md:w-[232px]" />
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
+        <Skeleton className="h-[52px] w-full rounded-tile md:w-[232px]" />
+        <Skeleton className="h-12 w-full rounded-control md:w-96" />
+      </div>
       <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
         <div className="flex flex-col gap-5 lg:col-start-2 lg:row-start-1 lg:gap-7">
           <div className="flex items-end justify-center gap-3 md:gap-6">

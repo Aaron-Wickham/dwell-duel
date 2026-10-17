@@ -1,8 +1,9 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { countMembers, listMembersByNetWorth, listMembersByValue, listMembersPage } from '@/lib/members/list-members'
-import { MEMBER_SORTS, canSort, nextOrder, orderLabel, orderParams, readMemberOrder, type MemberOrder } from '@/lib/members/member-sort'
+import { nextOrder, orderLabel, orderParams, readMemberOrder, type MemberOrder, type MemberSort } from '@/lib/members/member-sort'
 import { readNetWorths } from '@/lib/members/net-worth'
 import { readValuePageParams } from '@/lib/pagination/value-cursor'
 import type { DbClient } from '@/lib/supabase/database'
@@ -20,6 +21,8 @@ import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { SubNav } from '@/components/ui/sub-nav'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { MemberRow, MembersTableHead, membersBodyClass, membersTableClass } from '@/app/(app)/admin/members/member-row'
+
+export const metadata: Metadata = { title: 'Members' }
 
 const PATH = '/admin/members'
 const ROW_ID_PREFIX = 'member'
@@ -42,7 +45,7 @@ async function readPage(supabase: DbClient, searchParams: SearchParams, query: s
   }
   const ascending = order.dir === 'asc'
   if (order.sort === 'net_worth') {
-    const list = await listMembersByNetWorth(supabase, { query, ascending, page: readValuePageParams(searchParams, 'after', 'integer') })
+    const list = await listMembersByNetWorth(supabase, { query, removed, ascending, page: readValuePageParams(searchParams, 'after', 'integer') })
     return { list, netWorths: list.netWorths }
   }
   const column = order.sort === 'balance' ? 'balance' : 'joined_at'
@@ -59,16 +62,15 @@ export default async function AdminMembersPage(props: PageProps<'/admin/members'
 
   const query = readSearchQuery(searchParams.q)
   const removed = searchParams.show === 'removed'
-  const order = readMemberOrder(searchParams, removed)
+  const order = readMemberOrder(searchParams)
   const [{ list, netWorths }, counts] = await Promise.all([readPage(supabase, searchParams, query, removed, order), countMembers(supabase, query)])
   const backToStartHref = newestHref(PATH, searchParams, 'after')
   const tabCount = removed ? counts.removed : counts.active
-  const sortHrefs = Object.fromEntries(
-    MEMBER_SORTS.filter((sort) => canSort(sort, removed)).map((sort) => {
-      const next = nextOrder(order, sort)
-      return [sort, { href: hrefWith(searchParams, orderParams(next)), next: next.dir }]
-    }),
-  )
+  const sortLink = (sort: MemberSort) => {
+    const next = nextOrder(order, sort)
+    return { href: hrefWith(searchParams, orderParams(next)), next: next.dir }
+  }
+  const sortHrefs = { name: sortLink('name'), balance: sortLink('balance'), net_worth: sortLink('net_worth'), joined: sortLink('joined') }
   const keep: Record<string, string> = {}
   for (const [key, value] of Object.entries({ show: removed ? 'removed' : null, ...orderParams(order) })) if (value) keep[key] = value
 

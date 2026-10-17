@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { revalidateGroupReads } from '@/lib/cache/group-reads'
 import { requireUser } from '@/lib/auth/require-user'
 import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { RATE_LIMIT_ERRORS, TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
@@ -15,7 +16,7 @@ export type ActionState = { formError?: string; field?: Field; saved?: boolean }
 const UPDATE_MARKET_ERRORS: readonly KnownError<Field>[] = [
   { match: 'enter a title', formError: 'Enter a title.', field: 'title' },
   { match: 'choose a category', formError: 'Choose a category.', field: 'category' },
-  { match: 'market not found', formError: 'This market no longer exists.' },
+  { match: 'market not found', formError: 'This market was deleted. Go back to Markets.' },
   { match: "only the market's creator or an admin can edit it", formError: 'Only the market’s creator or an admin can edit it.' },
   { match: "others have bet on this market, so its title can't change", formError: 'Others have bet on this market, so its title can’t change.', field: 'title' },
   { match: "this market has closed, so it can't be edited", formError: 'This market has closed, so it can’t be edited.' },
@@ -78,5 +79,7 @@ export async function updateMarketAction(marketId: string, _prevState: ActionSta
   if (error) return friendlyError(error, UPDATE_MARKET_ERRORS, 'update_market failed')
 
   revalidatePath('/', 'layout')
+
+  revalidateGroupReads()
   return { saved: true }
 }

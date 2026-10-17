@@ -8,7 +8,7 @@ describe('NotFoundBody', () => {
     render(<NotFoundBody />)
     expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
     expect(screen.getByText('The link may be old, or what it pointed to was removed.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Go home' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/')
   })
 
   // #387: the giant numeral was decoration that pushed the words down.

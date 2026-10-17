@@ -245,7 +245,7 @@ describe('AppNav', () => {
     render(<Nav balance={120} isAdmin />)
     for (const header of screen.getAllByRole('banner')) expect(header).toHaveClass('sticky', 'top-(--safe-top)')
     const phone = screen.getAllByRole('navigation', { name: 'Primary' })[1]
-    expect(phone).toHaveClass('fixed', 'bottom-0', 'pb-[calc(12px+var(--safe-bottom))]')
+    expect(phone).toHaveClass('fixed', 'bottom-0', 'pb-[calc(4px+var(--safe-bottom))]', 'h-[calc(var(--tab-bar-h)+var(--safe-bottom))]')
   })
 
   it('keeps the nav off the long-press menu and gives every nav control a press state', () => {
@@ -267,7 +267,7 @@ describe('AppNav', () => {
   })
 
 
-  // #385 (A11Y-12): the beta sticker stays on sign-in, not in the signed-in shell.
+  // #385 (A11Y-12) kept the beta sticker out of the signed-in shell; v1.0.0 dropped it everywhere.
   it('shows no Beta badge in the signed-in shell', () => {
     render(<Nav balance={120} isAdmin={false} />)
     expect(screen.getAllByRole('link', { name: 'DwellDuel home' })).toHaveLength(2)
@@ -295,6 +295,25 @@ describe('AppNav', () => {
       expect(tap).toHaveBeenCalledOnce()
     } finally {
       window.removeEventListener('click', cancel, true)
+    }
+  })
+
+  it('scrolls back to the top when the tab you are on is tapped, in both navs, still tapping on a phone', () => {
+    pathname = '/leaderboard'
+    window.history.replaceState(null, '', '/leaderboard')
+    const scrollTo = vi.fn()
+    window.scrollTo = scrollTo as unknown as typeof window.scrollTo
+    try {
+      render(<Nav balance={120} isAdmin={false} />)
+      const [desktop, phone] = screen.getAllByRole('navigation', { name: 'Primary' })
+      // fireEvent returns false when the click's default, the navigation, was prevented.
+      expect(fireEvent.click(within(desktop).getByRole('link', { name: 'Leaderboard' }))).toBe(false)
+      expect(fireEvent.click(within(phone).getByRole('link', { name: /Leaders/ }))).toBe(false)
+      expect(scrollTo).toHaveBeenCalledTimes(2)
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
+      expect(tap).toHaveBeenCalledOnce()
+    } finally {
+      window.history.replaceState(null, '', '/')
     }
   })
 

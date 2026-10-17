@@ -1,7 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const { rpc, sendPush } = vi.hoisted(() => ({ rpc: vi.fn(), sendPush: vi.fn() }))
-vi.mock('@/lib/push/send', () => ({ sendPush }))
+// sendPushGroups answers each market as sendPush would, so these tests stub one market at a time.
+vi.mock('@/lib/push/send', () => ({
+  sendPush,
+  sendPushGroups: async (groups: unknown[], db: unknown, run: unknown) => {
+    const results = []
+    for (const group of groups) results.push(await sendPush(group, db, run))
+    return results
+  },
+}))
 vi.mock('@/lib/supabase/service-role', () => ({
   serviceRoleClient: () => ({
     from: () => ({

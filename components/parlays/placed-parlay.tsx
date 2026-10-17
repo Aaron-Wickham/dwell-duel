@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { LegResult } from './parlay-parts'
 import { rowTitleClass, uiTextClass } from '@/components/ui/page'
 import { formatDcAmount } from '@/lib/format/dc'
+import { PickChip } from '@/components/markets/pick-chip'
 
 // A card shows this many picks; the rest are one tap away on the parlay's page.
 const PREVIEW_LEGS = 3
@@ -18,7 +19,7 @@ function ParlayLine({ parlay }: { parlay: ParlayView }) {
     case 'pending':
       return (
         <>
-          {stake} · pays{' '}
+          {stake} · Pays{' '}
           <span className="font-extrabold text-win">
             {parlay.estimated ? '~' : ''}
             {formatDcAmount(parlay.potentialPayout)}
@@ -29,17 +30,17 @@ function ParlayLine({ parlay }: { parlay: ParlayView }) {
     case 'won':
       return (
         <>
-          {stake} · won <span className="font-extrabold text-win">{formatDcAmount(parlay.credited)}</span>
+          {stake} · Won <span className="font-extrabold text-win">{formatDcAmount(parlay.credited)}</span>
         </>
       )
     case 'lost':
       return (
         <>
-          {stake} · <span className="font-extrabold text-loss">lost</span>
+          {stake} · <span className="font-extrabold text-loss">Lost</span>
         </>
       )
     case 'refunded':
-      return <>{stake} · refunded</>
+      return <>{stake} · Refunded</>
   }
 }
 
@@ -75,7 +76,7 @@ export function PlacedParlay({ parlay, domId }: { parlay: ParlayView; domId?: st
         {shown.map((leg) => (
           <li key={leg.marketId} className={cn('flex items-center justify-between gap-3 py-2', uiTextClass)}>
             <span className="min-w-0 break-words">
-              {leg.marketTitle} · <strong>{leg.outcomeLabel}</strong>
+              {leg.marketTitle} · <PickChip label={leg.outcomeLabel} />
             </span>
             <LegResult status={leg.status} />
           </li>

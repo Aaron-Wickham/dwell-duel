@@ -165,6 +165,18 @@ export type Database = {
           },
         ]
       }
+      app_flags: {
+        Row: {
+          key: string
+        }
+        Insert: {
+          key: string
+        }
+        Update: {
+          key?: string
+        }
+        Relationships: []
+      }
       bets: {
         Row: {
           amount: number
@@ -1327,6 +1339,15 @@ export type Database = {
         Returns: {
           active: number
           removed: number
+        }[]
+      }
+      admin_member_net_worths: {
+        Args: { p_query?: string }
+        Returns: {
+          display_name: string
+          id: string
+          removed: boolean
+          score: number
         }[]
       }
       admin_members: {

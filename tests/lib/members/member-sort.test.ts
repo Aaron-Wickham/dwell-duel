@@ -4,19 +4,22 @@ import { nextOrder, orderLabel, orderParams, readMemberOrder } from '@/lib/membe
 // #418: Admin › Members' sort lives in ?sort= and ?dir=.
 describe('member sort', () => {
   it('reads A–Z by default and for anything it doesn’t know', () => {
-    expect(readMemberOrder({}, false)).toEqual({ sort: 'name', dir: 'asc' })
-    expect(readMemberOrder({ sort: 'email' }, false)).toEqual({ sort: 'name', dir: 'asc' })
-    expect(readMemberOrder({ sort: 'name', dir: 'desc' }, false)).toEqual({ sort: 'name', dir: 'asc' })
+    expect(readMemberOrder({})).toEqual({ sort: 'name', dir: 'asc' })
+    expect(readMemberOrder({ sort: 'email' })).toEqual({ sort: 'name', dir: 'asc' })
+    expect(readMemberOrder({ sort: 'name', dir: 'desc' })).toEqual({ sort: 'name', dir: 'asc' })
   })
 
   it('sorts figures highest first and the newest member first unless asked otherwise', () => {
-    expect(readMemberOrder({ sort: 'balance' }, false)).toEqual({ sort: 'balance', dir: 'desc' })
-    expect(readMemberOrder({ sort: 'joined', dir: 'asc' }, true)).toEqual({ sort: 'joined', dir: 'asc' })
-    expect(readMemberOrder({ sort: 'net_worth', dir: 'sideways' }, false)).toEqual({ sort: 'net_worth', dir: 'desc' })
+    expect(readMemberOrder({ sort: 'balance' })).toEqual({ sort: 'balance', dir: 'desc' })
+    expect(readMemberOrder({ sort: 'joined', dir: 'asc' })).toEqual({ sort: 'joined', dir: 'asc' })
+    expect(readMemberOrder({ sort: 'net_worth', dir: 'sideways' })).toEqual({ sort: 'net_worth', dir: 'desc' })
   })
 
-  it('falls back to A–Z for net worth on the Removed tab', () => {
-    expect(readMemberOrder({ sort: 'net_worth' }, true)).toEqual({ sort: 'name', dir: 'asc' })
+  // #429: net worth sorts the Removed tab too, so the order no longer depends on the tab.
+  it('reads net worth highest first unless asked otherwise', () => {
+    expect(readMemberOrder({ show: 'removed', sort: 'net_worth' })).toEqual({ sort: 'net_worth', dir: 'desc' })
+    expect(readMemberOrder({ show: 'removed', sort: 'net_worth', dir: 'asc' })).toEqual({ sort: 'net_worth', dir: 'asc' })
+    expect(nextOrder({ sort: 'net_worth', dir: 'desc' }, 'net_worth')).toEqual({ sort: 'net_worth', dir: 'asc' })
   })
 
   it('turns the sorted column round, and starts another in its first direction', () => {

@@ -7,16 +7,18 @@ coins. The rules every member plays by are in
 this guide doesn't repeat them except where running the group needs them.
 
 Everything here happens under **Admin**, which reviewers and above open
-from their avatar's menu or from Home's **Needs you** (it opens on whatever
-is waiting), and on market pages.
+from their avatar's menu or from Home's **Needs you**, and on market pages.
+Admin opens on whatever is waiting: submissions to review first, then (for
+admins) markets to resolve; with nothing waiting, a reviewer lands on Tasks
+and an admin on Invites. Its header links to this guide.
 
 ## Roles at a glance
 
 | Role | Can | Admin sections |
 |---|---|---|
 | **Member** | Bet, create markets and edit their own (wording, category, and the closing time while they have no money on it), resolve their own markets once they close (unless they have money on them), void their own markets before they close, submit tasks | none |
-| **Reviewer** | Everything a member can, plus approve and reject other members' task submissions, and resolve any closed market they have no money on | Tasks (the approval queue only) |
-| **Admin** | Everything a reviewer can, plus invite people, create and edit tasks, resolve any market at any time (even before it closes, and even one they have money on), override a result, void any market, move any market's closing time or reopen it, delete any comment, and see members' emails and the full ledger | Invites, Tasks, Markets, Members, Ledger |
+| **Reviewer** | Everything a member can, plus approve and reject other members' task submissions, and resolve any closed market they have no money on | Tasks (To review only) |
+| **Admin** | Everything a reviewer can, plus invite people, create and edit tasks, resolve any market at any time (even before it closes, and even one they have money on), override a result, void any market that has no result yet, move any market's closing time or reopen it, delete any comment, and see members' emails and the full ledger | Invites, Tasks, Markets, Members, Ledger |
 | **Owner** (exactly one) | Everything an admin can, plus adjust balances, change roles, remove a member or invite them again, and delete a market or task nobody has used | The same, with the owner's cards on each member's page and the Economy card on Ledger |
 
 A role only counts while its account is invited. Removing a member takes
@@ -117,8 +119,8 @@ for you, you can't resolve it: the database decides
 (`can_resolve_market`), and the app only shows what it allows.
 
 **Steps.** On the market page, in the **Resolve market** card: on a phone
-it comes straight after the outcomes and your position once the market has
-closed (before then, for an admin resolving early, it's near the bottom);
+it comes first, before the chart, once the market has closed and you can
+resolve it (before then, for an admin resolving early, it's at the bottom);
 from a laptop it's in the right-hand column, under the outcomes.
 
 1. Pick the **winning outcome**. For an Over/Under, type the **actual
@@ -137,14 +139,15 @@ shares, rounded down to whole DC, which is what its slip said it would
 pay. Nobody is refunded when nobody backed the winner, with one exception:
 a bet placed before the October 2026 switch gets its stake back if the
 market resolves to an outcome nobody had backed at the switch.
-Each parlay with a pick on the market settles that leg: a losing pick
+Each parlay with a pick on the market settles that pick: a losing pick
 loses the parlay, and a parlay pays once every pick has won.
 
 ### Overriding a result
 
 Admins only, for a result that was wrong.
 
-1. On the resolved market, in the **Override resolution** card, choose a
+1. On the resolved market, in the **Override resolution** card (at the
+   bottom on a phone, in the right-hand column on a laptop), choose a
    **different** outcome (the current one can't be picked again) and say
    why.
 2. The confirmation warns that earlier payouts are reversed. Confirm.
@@ -152,8 +155,9 @@ Admins only, for a result that was wrong.
 The app takes back every original payout, pays the new winners, and
 settles every parlay with a pick there again on the new result.
 
-**"Blocked: a past winner has already spent their winnings"** means taking
-the payout back would put someone below 0 DC. The message names who. Sort
+**"Can't override: Ben has already spent 30 DC of 50 DC won on this
+market…"** means taking the payout back would put someone below 0 DC. The
+message names who, and how much. Sort
 it out first: talk to them, and if the group agrees, the owner adds DC to
 their balance with a reason (see [Adjusting a balance](#adjusting-a-balance)),
 then override again.
@@ -169,8 +173,9 @@ close with no result is **waiting for a result** (#403).
   only an admin. A creator with a bet or parlay pick on their own market
   can't void it; an admin does.
 - **Steps:** in the **Call off market** card, its own card below Resolve on
-  the market page, tap **Call off this market**, give the reason (required, up to 500 characters;
-  everyone sees it on the market page and in Activity), and confirm.
+  the market page, tap **Call off market…** to show the form, give the
+  reason (required, up to 500 characters; everyone sees it on the market
+  page and in Activity), tap **Call off this market**, and confirm.
 - **What happens:** every bet is refunded. A parlay with a pick on it drops
   that pick and carries on with the rest; a parlay with no picks left is
   refunded. This can't be undone.
@@ -185,9 +190,11 @@ markets it has:
   (capitals and spacing don't count as different).
 - **Merge** moves every market in one category into another, logs each
   move in the market's Edit history, and hides the old category.
+- **Merge** asks first, and only merges into a category that isn't hidden.
 - **Hide** takes a category out of the filter chips and suggestions
-  without touching its markets. Typing a hidden category's name for a
-  market brings it back.
+  without touching its markets. Hidden categories are listed last, with
+  **Unhide**; typing a hidden category's name for a market also brings it
+  back.
 - **Other** is the default and can only be renamed.
 
 ### Bets are final
@@ -197,7 +204,7 @@ stands, or the market is voided.
 
 ## Tasks
 
-### The catalogue (admins)
+### The task catalog (admins)
 
 **Admin → Tasks → Create task**: a title, an optional description, a
 reward in DC (at most 500), whether it **requires proof**, and whether it's
@@ -205,7 +212,8 @@ reward in DC (at most 500), whether it **requires proof**, and whether it's
 or yearly. Periods run on US Eastern time, so a daily task resets at
 midnight Eastern. A member can submit a task once per period.
 
-In the **Task catalog** each task has **Edit**, and **Deactivate**, which
+In the **Task catalog** each task has **Edit** (which can't change whether
+it repeats, or its cadence, once it's created), and **Deactivate**, which
 hides it from members without losing its history (**Reactivate** brings it
 back). The owner can also **Delete** a task nobody has submitted yet.
 
@@ -236,16 +244,18 @@ at it when you review.
 ## Members (owner)
 
 **Admin → Members** lists everyone, A to Z, in two tabs: **Active** and
-**Removed**: on a computer a table of name and email, role, balance, net
-worth (balance plus DC riding on open bets) and when they joined. Tap
-**Balance**, **Net worth** or **Joined** above the list to sort by it
-(highest or newest first; tap again for the other way), and **Member** to go
-back to A to Z. Net worth sorts the Active tab only. Search finds a member by
+**Removed**: on a computer a table of name and email, role (on Removed,
+"Removed"), balance, net worth (balance plus DC riding on open bets) and
+when they joined; on a phone, one row each. Tap **Balance**, **Net worth**
+or **Joined** above the list to sort by it (highest or newest first; tap
+again for the other way), and **Member** to go back to A to Z. Those sort
+both tabs, removed members by net worth included. Search finds a member by
 name or email, and keeps the sort. A member's name opens their Admin page:
-their email, when they joined and last signed in, their balance and their
-last five coin movements (**Open in Ledger** shows all of them), then the
-owner's cards below, with Access last. Admins can look; the cards are the
-owner's.
+their role (or Removed), a link to their public profile, their email, when
+they joined and last signed in, their balance and their last five coin
+movements (**Open in Ledger** shows all of them), then the owner's cards
+below: Role (not shown for a removed member), Adjust balance, and Access
+last. Admins can look; the cards are the owner's.
 
 ### Adjusting a balance
 
@@ -290,11 +300,18 @@ Removing a member doesn't erase their data. If someone asks for that, see
 ## Ledger and the Economy card
 
 **Admin → Ledger** lists every DC movement, newest first: starting grants,
-bets, payouts, refunds, parlays, task rewards and adjustments. Pick a
-**Member** and a **Kind** above the list and tap **Filter** to see only
-those; from a member's page, **Open in Ledger** narrows it to them.
+bets, payouts, refunds, parlays, task rewards, adjustments, and reversals
+when a result is overridden. Type a **Member**'s name (or part of it,
+removed members too; names only, not emails), pick a **Kind** above the
+list and tap **Filter** to see only those. A name that is exactly one
+member's whole name picks them, even beside longer names that contain it;
+otherwise a name that fits more than one member lists up to five of them
+to pick from (type more of the name to narrow it), and one that fits
+nobody says so. **Show everyone's** clears the member again. From a
+member's page, **Open in Ledger** narrows it to them.
 
-The **Economy card** above it (owner only) shows the DC in circulation
+The **Economy card** above it (owner only, and only while the ledger isn't
+filtered) shows the DC in circulation
 (balances plus stakes still riding) and this month's DC added and removed,
 by source: starting grants, task rewards, the market maker (what markets
 paid winners, less every stake on them, parlays included), payout rounding,

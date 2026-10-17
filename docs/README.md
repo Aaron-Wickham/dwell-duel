@@ -10,8 +10,9 @@
 | [OPERATIONS.md](OPERATIONS.md) | Running production: deploys, rollback, backups and restore, rotating secrets, incidents and owner recovery, free-tier limits, scheduled jobs |
 | [RELEASING.md](RELEASING.md) | Cutting a release: the changelog, README, tag, GitHub Release and the note to members |
 | [design/app-redesign-handoff.md](design/app-redesign-handoff.md) | The visual source of truth: the design canvas, tokens, brand, layouts, navigation and components |
-| [../AGENTS.md](../AGENTS.md) | Conventions every change follows (UI, speed, data, testing, migrations) |
-| [../.claude/](../.claude/) | Claude Code's project setup: `settings.json` (allowed and refused commands), hooks (past migrations, generated and `.env` files, lint on edit), the `new-migration`, `new-route`, `pr-ready` and `release` skills and the `money-path-reviewer` and `conventions-reviewer` agents; `../.mcp.json` adds a read-only Supabase server and context7 (see GETTING-STARTED, Using Claude or another AI agent) |
+| [../AGENTS.md](../AGENTS.md) | Conventions every change follows (UI, speed, data, testing, migrations); `../CLAUDE.md` just includes it |
+| [../DESIGN.md](../DESIGN.md) and [../PRODUCT.md](../PRODUCT.md) | Short briefs for design tools and skills: the design system in brief (pointing at the handoff doc) and who the app is for |
+| [../.claude/](../.claude/) | Claude Code's project setup: `settings.json` (allowed and refused commands), hooks (past migrations, generated and `.env` files, lint on edit), the `new-migration`, `new-route`, `pr-ready` and `release` skills, the vendored `impeccable` and `taste` design skills, and the `money-path-reviewer` and `conventions-reviewer` agents; `../.mcp.json` adds a read-only Supabase server and context7 (see GETTING-STARTED, Using Claude or another AI agent) |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | How changes get in: branches, pull requests and the merge rules |
 | [../SECURITY.md](../SECURITY.md) | The security policy: reporting a vulnerability, scope, testing rules and the trust model |
 | [../CHANGELOG.md](../CHANGELOG.md) | What shipped in each release |

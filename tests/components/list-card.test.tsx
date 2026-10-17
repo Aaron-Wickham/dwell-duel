@@ -26,11 +26,11 @@ import { CancelledBetRows } from '@/app/(app)/bets/bet-rows'
 const root = path.resolve(import.meta.dirname, '../..')
 const source = (file: string) => readFileSync(path.join(root, file), 'utf8')
 
-// The card's look, from the My bets parlay card (#328).
+// The card's look (#328): since #441 the page's surface step, with no hairline and no shadow.
 function expectListCard(el: Element | null) {
   expect(el).not.toBeNull()
-  expect(el).toHaveClass('rounded-tile', 'border', 'border-line', 'p-3.5', 'md:p-4')
-  expect(el).not.toHaveClass('shadow-card')
+  expect(el).toHaveClass('rounded-tile', 'bg-surface', 'p-3.5', 'md:p-4')
+  expect(el).not.toHaveClass('border', 'shadow-card')
 }
 
 // A row of a list inside a SectionCard (D2, #386): no border or corners of its own.
@@ -41,7 +41,7 @@ function expectDividedRow(el: Element | null) {
 }
 
 describe('ListCard', () => {
-  it('is a bordered 14px tile that tints flush under a mouse and never lifts', () => {
+  it('is a 14px surface tile that tints flush under a mouse and never lifts', () => {
     render(
       <ul>
         <ListCard>

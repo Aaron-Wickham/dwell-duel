@@ -48,7 +48,7 @@ export function InlineContent({ nodes }: { nodes: Inline[] }): ReactNode {
         const children = <InlineContent nodes={node.children} />
         if (kind === 'app') {
           return (
-            <Link key={i} href={node.href}>
+            <Link key={i} href={node.href} className="prose-link">
               {children}
             </Link>
           )
@@ -56,7 +56,7 @@ export function InlineContent({ nodes }: { nodes: Inline[] }): ReactNode {
         if (kind === 'web') {
           return (
             // An address has no spaces to wrap at, and would run off a 320px screen (#398).
-            <a key={i} href={pageHref(node.href)} className={node.href.startsWith('mailto:') ? 'wrap-anywhere' : undefined}>
+            <a key={i} href={pageHref(node.href)} className={node.href.startsWith('mailto:') ? 'prose-link wrap-anywhere' : 'prose-link'}>
               {children}
             </a>
           )

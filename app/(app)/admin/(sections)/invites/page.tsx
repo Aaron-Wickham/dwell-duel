@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
@@ -18,6 +19,8 @@ import { InviteListItem } from '@/components/admin/invite-list-item'
 import { AddInviteForm } from './add-invite-form'
 import { RevokeInviteButton } from './revoke-invite-button'
 import { CopyInviteButton } from './copy-invite-button'
+
+export const metadata: Metadata = { title: 'Invites' }
 
 const PATH = '/admin/invites'
 const ROW_ID_PREFIX = 'invite'

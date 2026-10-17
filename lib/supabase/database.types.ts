@@ -1341,6 +1341,15 @@ export type Database = {
           removed: number
         }[]
       }
+      admin_member_net_worths: {
+        Args: { p_query?: string }
+        Returns: {
+          display_name: string
+          id: string
+          removed: boolean
+          score: number
+        }[]
+      }
       admin_members: {
         Args: { p_id?: string; p_query?: string }
         Returns: {

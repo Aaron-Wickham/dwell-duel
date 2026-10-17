@@ -240,7 +240,7 @@ at it when you review.
 worth (balance plus DC riding on open bets) and when they joined. Tap
 **Balance**, **Net worth** or **Joined** above the list to sort by it
 (highest or newest first; tap again for the other way), and **Member** to go
-back to A to Z. Net worth sorts the Active tab only. Search finds a member by
+back to A to Z. Every column sorts both tabs. Search finds a member by
 name or email, and keeps the sort. A member's name opens their Admin page:
 their email, when they joined and last signed in, their balance and their
 last five coin movements (**Open in Ledger** shows all of them), then the

@@ -1,8 +1,6 @@
 import type { SearchParams } from '@/lib/pagination/cursor'
 
-// Admin › Members' orders (#418): A–Z by default, or by a figure in either direction. Net worth
-// sorts only the Active tab, since it's read off the net-worth board, which leaves removed members
-// out (0093); on the Removed tab it falls back to A–Z.
+// Admin › Members' orders (#418): A–Z by default, or by a figure in either direction, on both tabs.
 export const MEMBER_SORTS = ['name', 'balance', 'net_worth', 'joined'] as const
 export type MemberSort = (typeof MEMBER_SORTS)[number]
 export type SortDir = 'asc' | 'desc'
@@ -11,14 +9,10 @@ export type MemberOrder = { sort: MemberSort; dir: SortDir }
 // The direction a column sorts in first: names A–Z, figures highest first, the newest member first.
 export const FIRST_DIR: Record<MemberSort, SortDir> = { name: 'asc', balance: 'desc', net_worth: 'desc', joined: 'desc' }
 
-export function canSort(sort: MemberSort, removed: boolean): boolean {
-  return !(removed && sort === 'net_worth')
-}
-
-export function readMemberOrder(searchParams: SearchParams, removed: boolean): MemberOrder {
+export function readMemberOrder(searchParams: SearchParams): MemberOrder {
   const raw = searchParams.sort
   const sort = MEMBER_SORTS.find((s) => s === raw) ?? 'name'
-  if (sort === 'name' || !canSort(sort, removed)) return { sort: 'name', dir: 'asc' }
+  if (sort === 'name') return { sort: 'name', dir: 'asc' }
   const dir = searchParams.dir === 'asc' || searchParams.dir === 'desc' ? searchParams.dir : FIRST_DIR[sort]
   return { sort, dir }
 }

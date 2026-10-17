@@ -102,14 +102,4 @@ describe('MembersTableHead', () => {
     expect(screen.getByRole('link', { name: 'Joined, sort newest first' })).toHaveAttribute('href', '/admin/members?sort=joined')
     expect(within(screen.getByRole('columnheader', { name: 'Role' })).queryByRole('link')).toBeNull()
   })
-
-  it('leaves a column it can’t sort as plain text', () => {
-    render(
-      <table>
-        <MembersTableHead order={BY_NAME} sortHrefs={{ name: HREFS.name, balance: HREFS.balance, joined: HREFS.joined }} />
-      </table>,
-    )
-    expect(screen.getByRole('columnheader', { name: /^Member/ })).toHaveAttribute('aria-sort', 'ascending')
-    expect(within(screen.getByRole('columnheader', { name: 'Net worth' })).queryByRole('link')).toBeNull()
-  })
 })

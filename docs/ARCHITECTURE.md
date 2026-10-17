@@ -656,6 +656,7 @@ one already on `origin/main`). They roughly follow the project's history:
 | 0111 | `member_net_worths(ids)` (#418): balance plus `stakes_riding` for up to 50 members in one read, current and removed alike (security invoker, signed-in callers only), replacing Admin › Members' per-member `member_standing` fallback for removed members. Additive: a new function |
 | 0112 | `is_invited()` also requires a Google identity on the account (`app_metadata.providers` has `google`), unless the `app_flags` row `allow_email_sign_in` exists; only `supabase/seed.sql` adds it, for the tests' magic-link sessions (GHSA-qxxc-jg94-c49j). Additive: a new table and a replaced function |
 | 0113 | Indexes on four foreign keys the advisor flagged: `allowed_emails.invited_by`, `market_resolutions.reversed_by`, `tasks.created_by`, `task_completions.reviewed_by` (#453). Additive |
+| 0114 | `write_limits()` adds `bet` (200 a day) and `parlay` (100 a day), counted by new `BEFORE INSERT` triggers on `bets` and `parlays` through `enforce_write_limit`, which gains their messages (#450). A slip replayed with its attempt key inserts nothing, so it isn't counted. Additive: new triggers and replaced functions |
 
 Numbers 0075, 0077–0082 and 0084–0088 were reserved by branches that merged later under higher numbers, so they are unused.
 

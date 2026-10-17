@@ -65,6 +65,7 @@ before v0.4.0 used other headings.)
 - **A smoother tab pill.** The pill in My bets, Admin and every other segmented control slides without making the browser lay out the page on each frame, so it keeps up on older phones; it looks and times exactly as before (#418).
 
 ### Under the hood
+- **A daily cap on bets.** Each member can place up to 200 solo bets and 100 parlays a day, far above an honest day's betting, so a stolen session can't flood the market (0114, #450). The slip says so in plain words.
 - **Search engines see only the public pages.** `robots.txt` and a sitemap list sign-in, privacy and terms; those carry canonical links, the signed-in pages and not-invited are `noindex`, and the share card gains its site name, type and image text (#459, #461). The create-next-app leftovers are gone from `public/` (#463). Printing a page leaves out the app's bars, and sharing a market reuses the invite page's clipboard helper (#466).
 - **Only Google accounts get in.** The invite check now also requires a Google sign-in on the account, so turning on another sign-in method could never let someone claim an invitee's place (0112). Four missing foreign-key indexes added (0113, #453).
 - **Design skills in the repo.** Impeccable (app screens) and Taste (public pages) are vendored in `.claude/skills/` with their licences, plus a short `PRODUCT.md` and a `DESIGN.md` that points at the handoff doc (#447).

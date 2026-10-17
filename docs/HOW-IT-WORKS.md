@@ -548,6 +548,8 @@ member can make at most:
 | Comments | 10 a minute, 200 a day |
 | Reactions | 60 a minute, 1,000 a day |
 | Task submissions | 30 a day |
+| Solo bets | 200 a day |
+| Parlays | 100 a day |
 
 Each count starts with your first one and resets once its minute or day
 has passed. Going over just refuses that one, with a message

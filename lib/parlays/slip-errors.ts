@@ -1,5 +1,6 @@
 import { formatDcAmount } from '@/lib/format/dc'
 import { GENERIC_ERROR } from '@/lib/errors/friendly-error'
+import { RATE_LIMIT_ERRORS } from '@/lib/forms/limits'
 
 // place_slip (0039) prefixes a failure with the pick or the parlay it came from.
 const PICK_ERROR = /^pick ([0-9a-f-]{36}): (.+)$/i
@@ -27,6 +28,9 @@ const KNOWN: Record<string, string> = {
   'that parlay would pay more than dwellduel can hold': 'That parlay would pay more than DwellDuel can hold. Try a smaller stake.',
   'your slip is empty': 'Your slip is empty.',
   'not invited': 'This account isn’t on the invite list. Sign in with the account you were invited with.',
+  // The daily limits (0114, #450).
+  [RATE_LIMIT_ERRORS.bet.match]: RATE_LIMIT_ERRORS.bet.formError,
+  [RATE_LIMIT_ERRORS.parlay.match]: RATE_LIMIT_ERRORS.parlay.formError,
 }
 
 // Refusals the SQL already writes for members (a market's title, a limit, a next step), shown as

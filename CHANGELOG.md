@@ -13,6 +13,7 @@ before v0.4.0 used other headings.)
 ## Unreleased
 
 ### Features
+- **Tap the tab you're on to go back to the top.** In the tab bar or the nav on a computer, tapping the page you're already on scrolls it to the top, as other apps do, instead of reloading it (#464).
 - **A terms page.** Short and plain: play money with no cash value, invite only, admins' calls are final, be kind, it's a beta. Linked from sign-in and Settings (#462).
 - **Add to your slip from Markets.** Each open market's card has its picks right on it: Yes and No side by side, or a multiple-choice market's two favourites. Tap one to add it, tap again to take it out (#439).
 - **A Home you can read at a glance.** Your balance leads in a deep teal card on a phone too, what needs you shows as two coloured counts, and your bets are cards with the pick in its colour and "Waiting for a result" once a market closes (#438).

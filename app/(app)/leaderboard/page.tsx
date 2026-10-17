@@ -94,8 +94,19 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
     body = <NothingOlder href={backToNewestHref} />
   } else if (board === 'all' && !page.windowed && page.rows.length <= 1) {
     body = (
-      <EmptyState title="No other members yet.">
-        Invite friends to start the competition.
+      <EmptyState
+        title="No other members yet."
+        action={
+          <IntentLink
+            href="/markets"
+            transitionTypes={TAB_TRANSITION}
+            className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'self-start no-underline')}
+          >
+            Browse markets
+          </IntentLink>
+        }
+      >
+        You’ll see how you rank once someone else joins.
       </EmptyState>
     )
   } else if (board === 'month' && page.rows.length === 0) {

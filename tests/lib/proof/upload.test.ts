@@ -49,4 +49,9 @@ describe('uploadProof', () => {
     ]
     expect(await uploadProof(drafts, 'task/u/')).toHaveLength(4)
   })
+
+  it('uploads each file with a day-long cache lifetime (#452)', async () => {
+    await uploadProof([draft(file('a.pdf'))], 'task/u/')
+    expect(upload).toHaveBeenCalledWith(expect.stringMatching(/^task\/u\/.+\/a\.pdf$/), expect.anything(), expect.objectContaining({ cacheControl: '86400' }))
+  })
 })

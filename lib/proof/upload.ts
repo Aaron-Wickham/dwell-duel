@@ -7,6 +7,10 @@ async function proofBucket() {
   return browserClient().storage.from('proof')
 }
 
+// A path is never written twice (each upload gets its own UUID folder), so a cached copy can't go
+// stale (#452). A day, not a year: a file the retention job deletes shouldn't linger in a cache.
+export const PROOF_CACHE_SECONDS = String(24 * 60 * 60)
+
 function safeName(name: string): string {
   return name.replace(/[^A-Za-z0-9._-]+/g, '-').slice(-80) || 'file'
 }
@@ -33,7 +37,7 @@ export async function uploadProof(drafts: ProofDraft[], prefix: string): Promise
       totalBytes += file.size
       if (totalBytes > PROOF_MAX_TOTAL_BYTES) throw new Error('Those files are over 6 MB together.')
       const path = `${prefix}${crypto.randomUUID()}/${safeName(file.name)}`
-      const { error } = await bucket.upload(path, file, { contentType: file.type || undefined })
+      const { error } = await bucket.upload(path, file, { contentType: file.type || undefined, cacheControl: PROOF_CACHE_SECONDS })
       if (error) throw new Error(`${draft.file.name} didn’t upload: ${error.message}`)
       uploaded.push(path)
       records.push({ kind: draft.kind, storage_path: path, file_name: draft.file.name, size_bytes: file.size })

@@ -32,7 +32,7 @@ export default async function AdminTasksPage(props: PageProps<'/admin/tasks'>) {
 
   const [tasks, pendingPage, counts] = await Promise.all([
     canManage ? listTasks(supabase) : Promise.resolve([]),
-    listPendingTaskCompletions(supabase, readPageParams(searchParams, 'after')),
+    listPendingTaskCompletions(supabase, readPageParams(searchParams, 'after'), user.id),
     getReviewCounts(supabase, role),
   ])
   // Ages are worked out here, on the server, so the client-rendered list hydrates with the same text.

@@ -852,7 +852,11 @@ button runs the action (`ConfirmSubmitDialog`). Balance adjustments and
 role changes ask the same way. Files upload straight from the browser to the
 private `proof` bucket (`lib/proof/upload.ts`), then `record_proof`
 checks the paths when the RPC runs. Pages show proof through short-lived
-signed URLs made with the viewer's own session.
+signed URLs made with the viewer's own session. `toProofViews` hands a
+viewer the URL it signed for them earlier (per server instance, keyed by
+viewer and path) until it has 15 minutes of its hour left, so a re-render or
+live refresh doesn't make the browser download every photo again; uploads
+carry a day-long `cacheControl`, and thumbnails load lazily (#452).
 
 **Storage caps and retention (#253, 0089).** The free plan holds 1 GB across
 the `proof` and `avatars` buckets, so the limits live in the database, not

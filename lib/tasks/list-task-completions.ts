@@ -73,6 +73,7 @@ function pendingQuery<Columns extends string>(supabase: DbClient, columns: Colum
 export async function listPendingTaskCompletions(
   supabase: DbClient,
   page: PageParams,
+  viewerId?: string,
 ): Promise<KeysetPage<PendingCompletion>> {
   const keyOf = (c: { id: string; submitted_at: string }): Cursor => ({ ts: c.submitted_at, id: c.id })
   const result = await readKeyset(
@@ -98,7 +99,7 @@ export async function listPendingTaskCompletions(
   )
 
   // proof_attachments.kind is a CHECK-constrained text column, so the generated type says string.
-  const proof = await toProofViews(supabase, result.rows.flatMap((c) => c.proof_attachments) as ProofRow[])
+  const proof = await toProofViews(supabase, result.rows.flatMap((c) => c.proof_attachments) as ProofRow[], viewerId)
 
   return {
     ...result,

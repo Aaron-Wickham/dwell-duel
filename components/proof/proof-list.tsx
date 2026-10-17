@@ -2,8 +2,9 @@ import { FileText, Link2 } from 'lucide-react'
 import type { ProofView } from '@/lib/proof/types'
 
 // Attachments past their retention (0077) are gone, so they're counted in a line instead.
-// Photos as a thumbnail strip, then documents and links, each opening in a new tab. Signed URLs
-// last an hour (lib/proof/signed.ts), long past any time someone keeps a page open to look.
+// Photos as a thumbnail strip, then documents and links, each opening in a new tab. A signed URL is
+// reused for most of its hour (lib/proof/signed.ts), so a refresh finds the photo in the browser's
+// cache, and has at least a quarter of an hour left, past any time someone keeps a page open to look.
 export function ProofList({ proof, label }: { proof: ProofView[]; label: string }) {
   if (proof.length === 0) return null
   const expired = proof.filter((p) => p.expired)
@@ -24,7 +25,7 @@ export function ProofList({ proof, label }: { proof: ProofView[]; label: string 
                 aria-label={`Open photo ${p.label}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.href} alt="" className="size-full object-cover" />
+                <img src={p.href} alt="" width={64} height={64} loading="lazy" decoding="async" className="size-full object-cover" />
               </a>
             </li>
           ))}

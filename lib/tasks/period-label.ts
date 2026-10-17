@@ -7,9 +7,10 @@ export const PERIOD_LABEL: Record<NonNullable<TaskSummary['period']>, string> = 
   yearly: 'Yearly',
 }
 
-// The cadence word after a task's reward on Tasks ("10 DC · weekly", #394).
+// The cadence word after a task's reward on Tasks ("10 DC · Weekly", #394). Capitalised: each
+// segment after a · starts a new phrase.
 export function cadenceWord(task: Pick<TaskSummary, 'isRepeatable' | 'period'>): string {
-  return task.isRepeatable && task.period ? PERIOD_LABEL[task.period].toLowerCase() : 'once'
+  return task.isRepeatable && task.period ? PERIOD_LABEL[task.period] : 'Once'
 }
 
 // When an approved repeating task opens again (#266). Periods run on US Eastern time

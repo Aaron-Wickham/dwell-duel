@@ -124,13 +124,13 @@ describe('PendingApprovals', () => {
       'Approve Alice’s Read Genesis 1-3',
       'Approve Ben’s Memorize Psalm 23',
     ])
-    expect(screen.getByText(/selected · pays/)).toHaveTextContent('0 selected · pays 0 DC')
+    expect(screen.getByText(/selected · Pays/)).toHaveTextContent('0 selected · Pays 0 DC')
   })
 
   it('says how many are selected and what they pay', async () => {
     render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select all' }))
-    expect(screen.getByText(/selected · pays/)).toHaveTextContent('2 selected · pays 35 DC')
+    expect(screen.getByText(/selected · Pays/)).toHaveTextContent('2 selected · Pays 35 DC')
   })
 
   it('opens a submission’s note and proof from its Proof cell', async () => {

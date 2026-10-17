@@ -8,6 +8,10 @@ import { rowTitleClass } from '@/components/ui/page'
 import type { ClosingMarket, ClosingWager } from '@/lib/home/closing-soon'
 import { formatDcAmount } from '@/lib/format/dc'
 import { cn } from '@/lib/utils'
+import { ListCard, listCardsClass } from '@/components/ui/list-card'
+import { StatusChip } from '@/components/ui/status-chip'
+import { PickChip } from '@/components/markets/pick-chip'
+import { h2Class } from '@/components/ui/page'
 import { HomeSection, SeeAll, homeRowsClass } from './home-section'
 
 function Row({ href, title, detail, closeAt, now }: { href: string; title: string; detail?: ReactNode; closeAt: string; now: number }) {
@@ -34,6 +38,32 @@ function Row({ href, title, detail, closeAt, now }: { href: string; title: strin
   )
 }
 
+// One open bet or parlay as a card (#438): the title with the day it closes, then the stake, the
+// pick in its colour and what it pays. A closed one says it's waiting for a result instead of a day.
+function BetCard({ href, title, detail, closeAt, now }: { href: string; title: string; detail: ReactNode; closeAt: string; now: number }) {
+  const closed = Date.parse(closeAt) <= now
+  return (
+    <ListCard className="flex flex-col gap-2 bg-surface">
+      <div className="flex items-start justify-between gap-3">
+        <IntentLink href={href} transitionTypes={['nav-forward']} className={cn(rowTitleClass, 'stretched-link min-w-0 break-words text-ink')}>
+          {title}
+        </IntentLink>
+        {closed ? (
+          <StatusChip tone="wait" size="sm" className="shrink-0">
+            Waiting for a result
+          </StatusChip>
+        ) : (
+          <span className="shrink-0 pt-0.5 text-sm whitespace-nowrap text-ink2">
+            <span className="sr-only">Closes </span>
+            <LocalTime iso={closeAt} format="day" />
+          </span>
+        )}
+      </div>
+      <p className="text-sm">{detail}</p>
+    </ListCard>
+  )
+}
+
 function Pays({ amount, estimated = false }: { amount: number; estimated?: boolean }) {
   return (
     <span className="font-extrabold text-win">
@@ -43,8 +73,8 @@ function Pays({ amount, estimated = false }: { amount: number; estimated?: boole
   )
 }
 
-// Home's next few open bets and parlays, soonest to close first (#388), as divided rows: each is
-// a data row, not a card. With none open, the markets closing soonest stand in.
+// Home's next few open bets and parlays, soonest to close first (#388), as cards (#438). With none
+// open, the markets closing soonest stand in, as rows.
 export function YourBets({
   wagers,
   openCount,
@@ -90,12 +120,19 @@ export function YourBets({
     )
   }
 
+  // Cards on the page, not inside a section card, at every width (#438).
   return (
-    <HomeSection title="Your bets" titleId="your-bets-title" action={<SeeAll href="/bets" label={`See all ${openCount}`} />}>
-      <ul className={homeRowsClass}>
+    <section aria-labelledby="your-bets-title" className="flex flex-col gap-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="your-bets-title" className={h2Class}>
+          Your bets
+        </h2>
+        <SeeAll href="/bets" label={`See all ${openCount}`} />
+      </div>
+      <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-2')}>
         {wagers.map((w) =>
           w.kind === 'bet' ? (
-            <Row
+            <BetCard
               key={w.key}
               href={`/markets/${w.marketId}`}
               title={w.marketTitle}
@@ -103,10 +140,10 @@ export function YourBets({
               now={now}
               detail={
                 <>
-                  {formatDcAmount(w.amount)} on {w.outcomeLabel}
+                  {formatDcAmount(w.amount)} on <PickChip label={w.outcomeLabel} />
                   {w.payout !== null && (
                     <>
-                      {' · pays '}
+                      {' · Pays '}
                       <Pays amount={w.payout} />
                     </>
                   )}
@@ -114,7 +151,7 @@ export function YourBets({
               }
             />
           ) : (
-            <Row
+            <BetCard
               key={w.key}
               href={`/parlays/${w.parlayId}`}
               title={`Parlay · ${w.legCount} picks`}
@@ -122,13 +159,13 @@ export function YourBets({
               now={now}
               detail={
                 <>
-                  {formatDcAmount(w.stake)} · pays <Pays amount={w.payout} estimated={w.estimated} /> if all win
+                  {formatDcAmount(w.stake)} · Pays <Pays amount={w.payout} estimated={w.estimated} /> if all win
                 </>
               }
             />
           ),
         )}
       </ul>
-    </HomeSection>
+    </section>
   )
 }

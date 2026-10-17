@@ -107,11 +107,13 @@ a line to `CHANGELOG.md` under the next release.
   select's or disclosure's chevron, the plus on Add and Create market,
   search, proof types, the Google G); other secondary buttons are text
   only.
-- **Home's lists are uncarded on a phone** (#388, D1/D2). Your bets,
-  Activity and Needs you (`HomeSection`, `components/home/home-section.tsx`)
-  are rows on the page under an `<h2>` below `lg:`, and cards like a
-  `SectionCard` from `lg:`; Getting started, Turn on notifications and the
-  weekly recap stay cards at every width.
+- **Home** (#388, #438). The deep-teal Balance card shows at every width
+  (under the greeting on a phone). Your bets are `ListCard`s on the page,
+  never inside a card (two columns from `lg:`). Activity and Needs you
+  (`HomeSection`, `components/home/home-section.tsx`) are rows on the page
+  under an `<h2>` below `lg:` and cards from `lg:`; Needs you's review and
+  resolve counts are gold and blue tiles. Getting started, Turn on
+  notifications and the weekly recap stay cards at every width.
 - **Page widths come from `<Page width>`:** `wide` (default, 1120px of
   content) or `reading` (about 820px, centred), and a skeleton uses
   `pageClassFor(width)`. Don't cap a card's width inside a page; fill the
@@ -167,6 +169,9 @@ a line to `CHANGELOG.md` under the next release.
   summary of the page (#400): Tasks keeps "Earn DC with Bible study. A reviewer checks each
   one.";
   most pages have none, and their skeleton draws no description line.
+- **A phrase after a · starts with a capital** ("10 DC · Weekly",
+  "5 DC on Yes · Pays 18 DC", "· Waiting for a result"); a segment that
+  starts with a number needs nothing.
 - **Words we use** (#400). Member-facing text, docs for members and tests
   say: **pick**, never "leg" (leg stays in code and in HOW-IT-WORKS' parlay
   maths); **submission**, never "completion" (the table's name); **To

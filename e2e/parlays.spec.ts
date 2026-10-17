@@ -52,7 +52,7 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   await expect(page).toHaveURL(/\/bets$/)
   const placed = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: titles[0] }).first()
   // The card says what it pays (#393), and each pick's result as a word; no chip, no multiplier.
-  await expect(placed.getByText(`5 DC · pays ${quote.payout} DC if all win`, { exact: true })).toBeVisible()
+  await expect(placed.getByText(`5 DC · Pays ${quote.payout} DC if all win`, { exact: true })).toBeVisible()
   await expect(placed.getByText('Waiting', { exact: true })).toHaveCount(2)
   await expect(placed.getByText(multiplier, { exact: true })).toHaveCount(0)
 
@@ -80,7 +80,7 @@ test('build a two-leg parlay in the slip, place it, and win it', async ({ page }
   await page.getByRole('navigation', { name: 'My bets sections' }).getByRole('link', { name: 'Settled' }).click()
   await expect(page).toHaveURL(/\/bets\?tab=settled$/)
   const won = page.getByRole('listitem', { name: 'Parlay · 2 picks' }).filter({ hasText: titles[0] }).first()
-  await expect(won.getByText(`5 DC · won ${quote.payout} DC`, { exact: true })).toBeVisible()
+  await expect(won.getByText(`5 DC · Won ${quote.payout} DC`, { exact: true })).toBeVisible()
   await expect(won.getByText('Won', { exact: true })).toHaveCount(2)
   await won.getByRole('link', { name: 'Parlay · 2 picks' }).click()
   const summary = page.getByRole('region', { name: 'Summary' })

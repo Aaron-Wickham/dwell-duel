@@ -119,12 +119,13 @@ describe('PositionCard, while the market is open', () => {
   it('lists each bet separately with what it pays, and no Cancel', () => {
     render(<PositionCard position={open} resolvedAt={null} />)
     const card = screen.getByRole('region', { name: 'Your position' })
-    expect(card).toHaveClass('border-2', 'border-ink')
+    // A small blue strip on top of the outcomes (#440).
+    expect(card).toHaveClass('bg-info-soft', 'rounded-tile')
     expect(within(card).getByText('30 DC on this market · Bets are final.')).toBeInTheDocument()
 
     const rows = within(card).getAllByRole('listitem')
     expect(rows).toHaveLength(3)
-    expect(within(rows[0]).getByText('20 DC on Yes')).toBeInTheDocument()
+    expect(rows[0]).toHaveTextContent('20 DC on Yes')
     expect(within(rows[0]).getByText('Pays 26 DC')).toBeInTheDocument()
     expect(within(rows[1]).getByText('Pays 31 DC')).toBeInTheDocument()
     // Every bet in an open market is open, so none carries an Open chip (#387).
@@ -134,9 +135,9 @@ describe('PositionCard, while the market is open', () => {
 
   it('shows a parlay pick with its pill and a link to the parlay', () => {
     render(<PositionCard position={open} resolvedAt={null} />)
-    const row = screen.getByText('Parlay pick: Yes').closest('li')!
+    const row = screen.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === 'Parlay pick: Yes').closest('li')!
     expect(
-      within(row).getByText('5 DC · 3 picks · pays ~80 DC if every pick wins. This pick’s odds are set when this market closes.'),
+      within(row).getByText('5 DC · 3 picks · Pays ~80 DC if every pick wins. This pick’s odds are set when this market closes.'),
     ).toBeInTheDocument()
     expect(within(row).getByText('Open')).toBeInTheDocument()
     const link = within(row).getByRole('link', { name: /^View parlay/ })

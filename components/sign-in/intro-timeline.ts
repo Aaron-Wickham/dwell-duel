@@ -39,7 +39,7 @@ export const SAMPLE = {
   // Yes's chance before the two bets, one step apart.
   history: [50, 54, 49, 56, 51, 58, 52, 54],
   yes: INTRO.bets[INTRO.bets.length - 1].yes,
-  bet: 'Sam bet 10 DC on Yes · just now',
+  bet: 'Sam bet 10 DC on Yes · Just now',
 } as const
 
 const STEPS = [...SAMPLE.history, ...INTRO.bets.map((bet) => bet.yes)]

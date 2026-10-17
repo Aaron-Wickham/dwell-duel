@@ -36,7 +36,7 @@ test('create a proof-required task, submit it with proof, and approve it as admi
   await submitted
   // The row moves to Waiting for review (#394).
   const waiting = bobPage.getByRole('region', { name: 'Waiting for review' }).getByRole('listitem').filter({ hasText: 'Read Genesis 1-3' })
-  await expect(waiting.getByText(/sent today · 1 attachment/)).toBeVisible()
+  await expect(waiting.getByText(/Sent today · 1 attachment/)).toBeVisible()
 
   await page.goto('/admin/tasks')
   // The queue is a table (#399); a row's note and proof open from its Proof cell.

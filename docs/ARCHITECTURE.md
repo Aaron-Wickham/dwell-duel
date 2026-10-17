@@ -10,7 +10,7 @@ conventions every change follows, read [AGENTS.md](../AGENTS.md).
 Browser / installed app (PWA)
   │  React Server Components + a few client islands
   ▼
-Next.js 16 on Vercel ── proxy.ts: signed-out requests → /sign-in
+Next.js 16 on Vercel ── proxy.ts: signed-out requests → /sign-in, per-request CSP nonce
   │  server components read with the member's own Supabase session
   │  server actions call Postgres RPCs for everything that moves coins or
   │  changes access; a few own-row writes go straight to tables under RLS
@@ -130,7 +130,7 @@ scripts/        check-migration-order.sh, backup/ (backup.sh, restore.sh…),
 public/         sw.js (service worker), icons, favicons, iOS splash screens
 docs/           this file, HOW-IT-WORKS, OPERATIONS, ADMIN-GUIDE, RELEASING, GETTING-STARTED,
                 the design handoff, and archive/ (dated specs and plans, history only)
-(root)          proxy.ts, instrumentation*.ts, next.config.ts (CSP, Sentry wrap),
+(root)          proxy.ts (session, CSP), instrumentation*.ts, next.config.ts (headers, Sentry wrap),
                 vercel.json; .github/ (CI, deploys, scheduled jobs); .claude/ and
                 .mcp.json (Claude Code's guard rails and skills, below)
 ```
@@ -966,7 +966,10 @@ cookie and turns a signed-out page load into a real redirect. It skips
 Link prefetches (the `next-router-prefetch` or `purpose: prefetch`
 header, #251) and static files: a prefetch of a signed-in page is its own
 invocation, the prefetched layout's `requireUser` still guards it, and the
-navigation that follows runs the proxy.
+navigation that follows runs the proxy. It also sets every page's CSP with
+a fresh nonce (Security headers, below), so it runs for `/offline` too, but
+returns before the auth call there: the service worker precaches that page
+anonymously.
 
 Every signed-in page is dynamic, so a link prefetched on sight is a
 render every time it scrolls into view. The nav,
@@ -1069,7 +1072,8 @@ pixel and back once it has (#350). The `color-scheme` meta lets a full page
 load in dark mode paint a dark canvas before `globals.css` arrives (#353).
 Zoom (D6, #402): the viewport meta leaves pinch-zoom on, so a browser tab
 can zoom (WCAG 1.4.4); `StandaloneZoomLock`
-(`components/app-shell/standalone-zoom-lock.tsx`), an inline script that
+(`components/app-shell/standalone-zoom-lock.tsx`, its text in
+`lib/app-shell/inline-scripts.ts`), an inline script that
 runs before first paint, appends `maximum-scale=1, user-scalable=no` only
 under `display-mode: standalone`, and `body`'s `touch-action: pan-y` is
 scoped to standalone too, because a zoomed installed app leaves the fixed
@@ -1314,7 +1318,11 @@ value never stops production booting.
   does the same for the npm, Next build and Playwright caches when
   `package-lock.json` changes, and CI only restores them (a Next cache keyed
   on the source saved an entry per push and broke GitHub's 10 GB limit, #277).
-  `cleanup-caches.yml` deletes a PR's caches when it closes. GitHub disables
+  `cleanup-caches.yml` deletes a PR's caches when it closes.
+  `security-review.yml` (#451) has Claude review a same-repo PR's diff for
+  security issues and comment its findings; it's advisory, not part of
+  `ci-ok`, and skips (passing) until the `ANTHROPIC_API_KEY` repository
+  secret is set (SECURITY.md). GitHub disables
   scheduled workflows after 60 days without repository activity (merged PRs
   count); if the closing-alerts backup or warm-caches stops, re-enable it in
   the Actions tab. Every third-party action is
@@ -1363,15 +1371,30 @@ value never stops production booting.
   migrations and never edited; `lib/supabase/database.ts` wraps it
   (`Database`, `DbClient`) and marks the few function arguments that take a
   real null. Every client and helper uses `DbClient`.
-- **Security headers** (`next.config.ts`): a Content Security Policy that
-  only allows scripts from the app itself (and `va.vercel-scripts.com`, for
-  Vercel Analytics and Speed Insights) and connections to the app, its
+- **Security headers** (`next.config.ts`, and the CSP from `proxy.ts`): a
+  Content Security Policy (`lib/security/csp.ts`) that only allows scripts
+  from the app itself (and `va.vercel-scripts.com`, for Vercel Analytics and
+  Speed Insights), and inline script only by nonce or hash, never
+  `'unsafe-inline'` (#449). The proxy makes a fresh nonce for every request
+  and sets the policy on both the request, where Next finds the nonce and
+  puts it on its own scripts, and the response; that needs dynamic
+  rendering, which every page already is (the root layout reads cookies).
+  The app's own pre-paint scripts (the launch screen's, the sign-in intro's,
+  the standalone zoom lock) live in `lib/app-shell/inline-scripts.ts` and are
+  allowed by their SHA-256 (`lib/security/script-hashes.ts`), so a change to
+  one changes its hash at build; a new inline script must go there too, or
+  the browser blocks it. `next.config.ts` sends no page CSP of its own (a
+  second policy would also be enforced, without the nonce), only `/sw.js`'s,
+  which the proxy skips. Paths the proxy skips (static files, the cron and
+  health routes, the manifest) carry no CSP, since no page renders there.
+  `style-src` keeps `'unsafe-inline'`, and `'unsafe-eval'` is dev-only. The
+  policy allows connections to the app, its
   Supabase project and Sentry's ingest (`*.sentry.io`); nothing from Google,
   since sign-in leaves and returns by navigation. `form-action 'self'`,
   `frame-ancestors 'none'` with `X-Frame-Options: DENY`, `nosniff`, a referrer policy and
   a `Permissions-Policy` denying camera, microphone and location. `poweredByHeader` is off. A
   new third-party origin (analytics, an image host) has to be added to the
-  CSP there.
+  CSP in `lib/security/csp.ts`.
 - **Required env vars** are checked at boot (`lib/env/required.ts`):
   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
   always, and `SUPABASE_SECRET_KEY` and `CRON_SECRET` in production; a

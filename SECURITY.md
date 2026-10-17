@@ -115,7 +115,8 @@ to understand and fix the problem.
 ### What a collaborator with write access can and can't do
 
 - **Can:** push branches, open and review pull requests, and run
-  workflows. CI on a pull request uses no secrets.
+  workflows. CI on a pull request uses no secrets; the security review
+  (below) uses only `ANTHROPIC_API_KEY`.
 - **Can't merge alone.** `main` takes changes only through a pull request
   with the code owner's approval (a new push dismisses it), every
   conversation resolved, the branch up to date with `main`, and the
@@ -133,6 +134,9 @@ to understand and fix the problem.
   authorizes the two cron endpoints, which are idempotent: calling them
   sends nothing that wasn't already due and reads no member data back.
   It's rotated whenever the set of people with write access changes.
+  `ANTHROPIC_API_KEY`, once added for the security review, is the second:
+  a dedicated key with a spend limit, whose worst case is spent credit, and
+  rotated on the same occasions.
 - **No production data access.** Collaborators don't get the Supabase or
   Vercel dashboards, the production database or members' data. AI agents
   the owner runs are the exception: see below.
@@ -178,9 +182,11 @@ who the member is and what they typed (below).
   definer functions reviewed through a checked-in list, and DB tests for
   the policies, privileges and refusals.
 - Per-member write limits and Storage upload quotas in the database.
-- A Content Security Policy, `X-Frame-Options: DENY`, `nosniff`, a referrer
-  policy and a `Permissions-Policy` (`next.config.ts`); nothing of Google's
-  loads on the sign-in page (#366).
+- A Content Security Policy with a per-request nonce, set by `proxy.ts`, so
+  an injected inline script doesn't run: scripts need the nonce or one of
+  the app's own hashes, never `'unsafe-inline'` (#449). `X-Frame-Options:
+  DENY`, `nosniff`, a referrer policy and a `Permissions-Policy`
+  (`next.config.ts`); nothing of Google's loads on the sign-in page (#366).
 - Push endpoints allowlisted to known push services, in SQL and in the
   sender.
 - Error reports scrubbed of users, cookies, request bodies, headers and
@@ -194,6 +200,13 @@ who the member is and what they typed (below).
   read-only production MCP server ([AI agents](#ai-agents)).
 - GitHub secret scanning with push protection, Dependabot security and
   version updates, and every Action pinned to a commit SHA.
+- A Claude security review of every same-repo pull request
+  (`.github/workflows/security-review.yml`, #451), which comments its
+  findings. It's advisory, outside `ci-ok`, so a false positive can't block
+  a merge, and it skips forks. It stays off, passing without a review, until
+  the owner adds an `ANTHROPIC_API_KEY` repository secret (Settings ›
+  Secrets and variables › Actions; a repository secret, not a `Production`
+  one, since pull requests can't reach that environment).
 - Branch rulesets on `main` (review, `ci-ok`, up to date) and the
   `Production` environment limited to `main`.
 - Encrypted backups, with secrets masked out of the public Actions logs.

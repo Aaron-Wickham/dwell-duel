@@ -7,8 +7,9 @@ function runsFor(url: string, headers?: Record<string, string>): boolean {
 }
 
 describe('proxy matcher', () => {
-  // The service worker, the offline page and the manifest must load with no session and no
-  // auth round trip: a redirected /sw.js fails the worker's install.
+  // The service worker and the manifest must load with no session and no auth round trip: a
+  // redirected /sw.js fails the worker's install. The offline page runs it for its CSP's nonce
+  // (#449), and the proxy skips auth for it (proxy.test.ts).
   it.each([
     ['/', true],
     ['/markets', true],
@@ -18,7 +19,7 @@ describe('proxy matcher', () => {
     ['/api/cron/keep-alive', false],
     ['/api/cronjobs', true],
     ['/sw.js', false],
-    ['/offline', false],
+    ['/offline', true],
     ['/manifest.webmanifest', false],
     ['/_next/static/chunks/main.js', false],
     ['/favicon.ico', false],

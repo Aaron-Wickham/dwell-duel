@@ -62,8 +62,8 @@ describe('recapWeekFor', () => {
 
 describe('weekRangeLabel', () => {
   it('names the month once inside a month, and both across two', () => {
-    expect(weekRangeLabel({ monday: '2026-09-21', sunday: '2026-09-27' })).toBe('Sep 21–27')
-    expect(weekRangeLabel({ monday: '2026-09-28', sunday: '2026-10-04' })).toBe('Sep 28 – Oct 4')
-    expect(weekRangeLabel({ monday: '2026-12-28', sunday: '2027-01-03' })).toBe('Dec 28 – Jan 3')
+    expect(weekRangeLabel({ monday: '2026-09-21', sunday: '2026-09-27' })).toBe('Sep 21 to 27')
+    expect(weekRangeLabel({ monday: '2026-09-28', sunday: '2026-10-04' })).toBe('Sep 28 to Oct 4')
+    expect(weekRangeLabel({ monday: '2026-12-28', sunday: '2027-01-03' })).toBe('Dec 28 to Jan 3')
   })
 })

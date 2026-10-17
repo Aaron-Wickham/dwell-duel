@@ -1,3 +1,5 @@
+import type { Metadata } from 'next'
+import { marketTitle } from '@/lib/app-shell/page-titles'
 import type { DbClient } from '@/lib/supabase/database'
 import { Suspense } from 'react'
 import { redirect, notFound } from 'next/navigation'
@@ -48,6 +50,10 @@ import { getParlayRiding } from '@/lib/markets/parlay-riding'
 // group, so it doesn't wrap this one): the market must be found before anything streams, so an
 // unknown id still gets a real 404 status. Your position, the chart, the outcomes, the bets and
 // the comments each stream in behind their own skeleton.
+export async function generateMetadata(props: PageProps<'/markets/[id]'>): Promise<Metadata> {
+  return marketTitle((await props.params).id)
+}
+
 export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>) {
   const { id } = await props.params
   const searchParams = await props.searchParams
@@ -65,7 +71,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // What rides in parlays is read here too, so the outcomes' skeleton knows whether to hold the
   // line that says so, and the rail below it doesn't move when the outcomes land (#390).
   const [resolution, edits, role, creatorStakes, positionKeys, categoryCounts, resolvable, voidable, stake, riding] = await Promise.all([
-    market.status === 'resolved' ? getResolutionProof(supabase, market.id) : null,
+    market.status === 'resolved' ? getResolutionProof(supabase, market.id, user.id) : null,
     market.editedAt ? listMarketEdits(supabase, market.id) : [],
     getRole(supabase),
     getCreatorStakes(supabase, [{ id: market.id, createdBy: market.createdBy }]),

@@ -11,7 +11,7 @@ test('a bet shows up in the feed and on the bettor\'s profile', async ({ page })
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)
 
   await placeSolo(page, 'Yes', 5)
-  await expect(page.getByText('Alice — 5 DC on Yes (you)')).toBeVisible()
+  await expect(page.getByText('Alice · 5 DC on Yes (you)')).toBeVisible()
 
   const sentence = 'Alice bet 5 DC on Yes in Social layer market'
 

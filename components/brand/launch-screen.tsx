@@ -1,9 +1,6 @@
+import { SHOW_ON_COLD_START } from '@/lib/app-shell/inline-scripts'
 import { DURATION } from '@/lib/ui/motion'
 import { LEAF_ANGLES, LEAF_PATH, D_PATH } from './symbol-paths'
-
-// Runs while the HTML is still parsing, before the first paint: only an installed app's cold start
-// (a new session) shows the overlay, so a browser tab and every later navigation never do.
-const SHOW_ON_COLD_START = `try{if(matchMedia('(display-mode: standalone)').matches&&!sessionStorage.getItem('dd-launched')){sessionStorage.setItem('dd-launched','1');document.documentElement.dataset.launch=''}}catch(e){}`
 
 // The static iOS splash (scripts/generate-splash.mjs) is the white D alone on teal, 32vmin wide and
 // centred. This overlay's first frame is that exact picture; the leaves then grow in one after

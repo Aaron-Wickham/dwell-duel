@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
@@ -26,6 +27,8 @@ import { HomeActivity } from '@/components/home/home-activity'
 import { BalanceCard } from '@/components/home/balance-card'
 import { firstName } from '@/lib/home/copy'
 import { getTaskRewardRange } from '@/lib/tasks/list-tasks'
+
+export const metadata: Metadata = { title: 'Home' }
 
 const ACTIVITY_ROWS = 3
 

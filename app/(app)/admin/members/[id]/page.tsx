@@ -1,3 +1,5 @@
+import type { Metadata } from 'next'
+import { memberTitle } from '@/lib/app-shell/page-titles'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
@@ -23,6 +25,11 @@ import { formatDcAmount } from '@/lib/format/dc'
 // sections' layout, so the member's name is the page's heading. No loading.tsx: the member must be
 // found before anything streams, so an unknown id still gets a real 404 status; the coin history
 // streams in behind its skeleton.
+export async function generateMetadata(props: PageProps<'/admin/members/[id]'>): Promise<Metadata> {
+  const { title } = await memberTitle((await props.params).id)
+  return { title: `${title} · Admin` }
+}
+
 export default async function AdminMemberPage(props: PageProps<'/admin/members/[id]'>) {
   const { id } = await props.params
   const { supabase, user } = await requireUser()

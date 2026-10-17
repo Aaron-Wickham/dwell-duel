@@ -80,8 +80,8 @@ describe('EconomyCard', () => {
     render(<EconomyCard summary={toEconomySummary(ROW)} />)
     expect(screen.getByRole('table', { name: 'September 2026, Eastern time' })).toBeInTheDocument()
 
-    expect(within(rowFor('Starting grants')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+300 DC', '—'])
-    expect(within(rowFor('Task rewards')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+10 DC', '—'])
+    expect(within(rowFor('Starting grants')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+300 DC', 'None'])
+    expect(within(rowFor('Task rewards')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+10 DC', 'None'])
     expect(within(rowFor('Market maker')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0 DC', '0 DC'])
     expect(within(rowFor('Seed payouts (older results)')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+8 DC', '−22 DC'])
     expect(within(rowFor('Payout rounding')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0 DC', '−3 DC'])

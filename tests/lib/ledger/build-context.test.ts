@@ -37,7 +37,7 @@ describe('buildContext', () => {
 
   it('quotes the reason on an admin adjustment, and falls back to the label without one', () => {
     expect(buildContext('admin_adjustment', { reason: 'Task was claimed twice' }, EMPTY_LOOKUPS)).toBe(
-      'Admin adjustment — “Task was claimed twice”',
+      'Admin adjustment: “Task was claimed twice”',
     )
     expect(buildContext('admin_adjustment', {}, EMPTY_LOOKUPS)).toBe('Admin adjustment')
   })

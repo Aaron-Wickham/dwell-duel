@@ -38,7 +38,7 @@ export function orderParams(order: MemberOrder): { sort: string | null; dir: str
 }
 
 const LABELS: Record<MemberSort, Record<SortDir, string>> = {
-  name: { asc: 'A–Z', desc: 'Z–A' },
+  name: { asc: 'A to Z', desc: 'Z to A' },
   balance: { desc: 'highest balance first', asc: 'lowest balance first' },
   net_worth: { desc: 'highest net worth first', asc: 'lowest net worth first' },
   joined: { desc: 'newest first', asc: 'oldest first' },

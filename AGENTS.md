@@ -50,6 +50,8 @@ a line to `CHANGELOG.md` under the next release.
   sunk), never `primary`. Category chips and avatar initials take a
   `--tint1`…`--tint6` pair from `tintFor` (`lib/ui/tint.ts`), never a
   status colour (#445).
+- **Every page exports a title** (`metadata` or `generateMetadata`, #460); the root
+  layout's template adds " · DwellDuel", and a test fails on a page without one.
 - **Every signed-in page is a `<Page>`.** It lives in `components/ui/page.tsx`
   and has exactly one `<h1>`, from `PageHeader` or `h1Class`. Sections are
   `SectionCard`s, whose `<h2>` names the region (a page of prose, like How it
@@ -169,6 +171,9 @@ a line to `CHANGELOG.md` under the next release.
   summary of the page (#400): Tasks keeps "Earn DC with Bible study. A reviewer checks each
   one.";
   most pages have none, and their skeleton draws no description line.
+- **No em or en dashes in what members see** (#470): use " · " between
+  parts, ":" before an explanation, "to" in a range ("5 to 50 DC", "Oct 5
+  to 11"), and a hyphen in a record ("17-12"). Code comments may keep them.
 - **A phrase after a · starts with a capital** ("10 DC · Weekly",
   "5 DC on Yes · Pays 18 DC", "· Waiting for a result"); a segment that
   starts with a number needs nothing.
@@ -521,8 +526,11 @@ a line to `CHANGELOG.md` under the next release.
 - **Nobody but an admin resolves a market they have a stake in**, and
   nobody reviews their own task submission (0046). Ask the database
   (`can_resolve_market`) rather than re-deriving who may resolve.
-- **The CSP lives in `next.config.ts`.** A new external origin for scripts,
-  images or connections must be added there, or the browser blocks it.
+- **The CSP lives in `lib/security/csp.ts`,** set per request with a nonce
+  by `proxy.ts` (#449). A new external origin for scripts, images or
+  connections must be added there, or the browser blocks it. Inline script
+  never runs by `'unsafe-inline'`: one of our own goes in
+  `lib/app-shell/inline-scripts.ts`, whose texts the CSP allows by hash.
 - **Profile photos** are `profiles.avatar_path`, a path in the public
   `avatars` bucket; render them with `avatarUrl()` from
   `lib/profile/avatar.ts` through `<Avatar src>`. Profile edits go through

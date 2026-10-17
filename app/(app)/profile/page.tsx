@@ -1,9 +1,12 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { avatarUrl } from '@/lib/profile/avatar'
 import { Page, PageHeader } from '@/components/ui/page'
 import { BackLink } from '@/components/ui/back-link'
 import { ProfileForm } from './profile-form'
+
+export const metadata: Metadata = { title: 'Edit profile' }
 
 export default async function ProfilePage() {
   const { supabase, user } = await requireUser()

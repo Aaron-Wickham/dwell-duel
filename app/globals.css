@@ -1045,3 +1045,23 @@
   transition: none !important;
   animation: none !important;
 }
+
+/* Printing a market or the rules (#466): the page alone, without the app's chrome, in light. */
+@media print {
+  :root {
+    color-scheme: light;
+  }
+
+  nav[aria-label="Primary"],
+  header[style*="app-topbar"],
+  header[style*="app-header"],
+  .slip-fab,
+  [data-keyboard-follows],
+  [role="status"][aria-live] {
+    display: none !important;
+  }
+
+  main {
+    padding-bottom: 0 !important;
+  }
+}

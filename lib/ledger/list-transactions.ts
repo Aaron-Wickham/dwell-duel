@@ -114,7 +114,7 @@ export function buildContext(type: string, meta: EntryMeta, lookups: Lookups): s
     case 'bet_won':
       return marketTitle ? `Bet won: ${marketTitle}` : label
     case 'admin_adjustment':
-      return meta.reason ? `Admin adjustment — “${meta.reason}”` : label
+      return meta.reason ? `Admin adjustment: “${meta.reason}”` : label
     case 'bet_placed': {
       const outcomeLabel = meta.outcome_id ? lookups.outcomes.get(meta.outcome_id) : undefined
       return marketTitle && outcomeLabel ? `Bet on ${outcomeLabel} in ${marketTitle}` : label

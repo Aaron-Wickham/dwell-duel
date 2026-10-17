@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { redirect } from 'next/navigation'
@@ -16,6 +17,8 @@ import { TaskRow, type TaskRowState } from '@/components/tasks/task-row'
 import { AGAIN_LABEL, cadenceWord } from '@/lib/tasks/period-label'
 import { cn } from '@/lib/utils'
 import { SubmitTaskDialog } from './submit-task-dialog'
+
+export const metadata: Metadata = { title: 'Tasks' }
 
 type Group = 'todo' | 'waiting' | 'rejected' | 'done'
 

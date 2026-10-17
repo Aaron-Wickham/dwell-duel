@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
@@ -14,6 +15,8 @@ import { ContentReveal } from '@/components/nav/page-transition'
 import { AwaitingMarketRow } from '@/components/admin/awaiting-market-row'
 import { CategoryCard } from '@/components/admin/category-card'
 import { listCategoryCounts, OTHER_CATEGORY_ID } from '@/lib/markets/categories'
+
+export const metadata: Metadata = { title: 'Markets to resolve' }
 
 const ROW_ID_PREFIX = 'awaiting'
 

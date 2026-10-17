@@ -36,7 +36,7 @@ describe('adjustBalanceAction', () => {
 
     const state = await adjustBalanceAction('p-mia', undefined, adjustForm('-50'))
 
-    expect(state).toEqual({ formError: 'That would take Mia’s balance below zero — they have 15 DC.', field: 'amount' })
+    expect(state).toEqual({ formError: 'That would take Mia’s balance below zero: they have 15 DC.', field: 'amount' })
     expect(supabase.from).toHaveBeenCalledWith('profiles')
     expect(eq).toHaveBeenCalledWith('id', 'p-mia')
   })

@@ -78,9 +78,9 @@ describe('MemberRow', () => {
     expect(within(row).getAllByRole('cell')[1]).toHaveTextContent('Removed')
   })
 
-  it('shows a dash for a net worth it couldn’t read', () => {
+  it('says so for a net worth it couldn’t read', () => {
     const row = renderRow(BEN, null)
-    expect(within(row).getAllByRole('cell')[3]).toHaveTextContent('— net worth')
+    expect(within(row).getAllByRole('cell')[3]).toHaveTextContent('Net worth unavailable')
   })
 })
 

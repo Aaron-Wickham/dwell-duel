@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
@@ -22,6 +23,8 @@ import { CreateTaskForm } from './create-task-form'
 import { PENDING_ROW_ID_PREFIX, PendingApprovals } from './pending-approvals'
 import { TaskCatalogItem } from './task-catalog-item'
 
+export const metadata: Metadata = { title: 'Tasks to review' }
+
 export default async function AdminTasksPage(props: PageProps<'/admin/tasks'>) {
   const searchParams = await props.searchParams
   const { supabase, user } = await requireUser()
@@ -32,7 +35,7 @@ export default async function AdminTasksPage(props: PageProps<'/admin/tasks'>) {
 
   const [tasks, pendingPage, counts] = await Promise.all([
     canManage ? listTasks(supabase) : Promise.resolve([]),
-    listPendingTaskCompletions(supabase, readPageParams(searchParams, 'after')),
+    listPendingTaskCompletions(supabase, readPageParams(searchParams, 'after'), user.id),
     getReviewCounts(supabase, role),
   ])
   // Ages are worked out here, on the server, so the client-rendered list hydrates with the same text.

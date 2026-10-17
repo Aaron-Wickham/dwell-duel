@@ -13,6 +13,7 @@ before v0.4.0 used other headings.)
 ## Unreleased
 
 ### Features
+- **A terms page.** Short and plain: play money with no cash value, invite only, admins' calls are final, be kind, it's a beta. Linked from sign-in and Settings (#462).
 - **Add to your slip from Markets.** Each open market's card has its picks right on it: Yes and No side by side, or a multiple-choice market's two favourites. Tap one to add it, tap again to take it out (#439).
 - **A Home you can read at a glance.** Your balance leads in a deep teal card on a phone too, what needs you shows as two coloured counts, and your bets are cards with the pick in its colour and "Waiting for a result" once a market closes (#438).
 - **The chart leads the market page.** It comes first, then a small blue strip with your position, then the outcomes, comments and bets. When a market is waiting for a result you can give, Resolve still comes first (#440).
@@ -28,6 +29,7 @@ before v0.4.0 used other headings.)
 - **Coin history by day, and a chart you can read by keyboard.** My bets › Coins groups your coin movements under a heading per day (Today, Yesterday, "Sat, Oct 3", on Eastern time), each row giving just its time, in a narrower column that's easier to scan on a computer; its loading placeholder is the list's own rows instead of bet cards. The market page's chart is a slider for a keyboard or screen reader: arrow keys, Page Up/Down, Home and End step through its points, showing the readout the pointer shows and announcing the time and each outcome's chance; the hidden table of points stays (#418).
 
 ### Fixes
+- **Every page has its own title**, so your tabs, history and screen reader say where you are ("Markets · DwellDuel", a market's own question) (#460).
 - **The top bar stays put when you type.** In the installed app, opening the keyboard no longer slides the top bar under the clock and battery (#487).
 - **The tab bar's pill slides cleanly.** Tapping a tab after scrolling no longer makes the pill dip and restart its slide when the new page arrives (#442).
 - **The keyboard no longer brings the tab bar up with it.** While you type, the tab bar and slip button step aside and come back once the keyboard has gone (#443).
@@ -38,6 +40,11 @@ before v0.4.0 used other headings.)
 - **A member's page adds up, and Edit profile is simpler.** Next to net worth, a line says how it splits: "4,886 DC balance + 275 DC riding on open bets", so it squares with the balance in the top bar. Their Recent activity no longer links their own name back to the page you're on, the stats card shows a record as "17–12" with the share won under it instead of wrapping on a phone, and its loading placeholder is the card's real height, so the page no longer jumps when the stats arrive. Edit profile is one card with photo, name, bio and a single Save, without the separate preview, and its loading placeholder is the card's real height (#397).
 
 ### Polish
+- **Sign-in says what DwellDuel is.** "Friendly bets with your church friends", and the line under it says it's play money, never real money (#467).
+- **The full rules are easier to scan.** Each main section opens with a one-line "In short", Markets is split into creating, finding, and Duplicate and Share, the notes on markets from before October 2026 moved to the end, and housekeeping detail about notifications is gone (#469).
+- **No more dashes.** Ranges read "5 to 50 DC" and "Oct 5 to 11", a bet row reads "Ruth · 10 DC on Yes", and a record is "17-12" everywhere (#470).
+- **Every error says what to do next,** for example "This task was taken down. Pick another under To do." (#471).
+- **Clearer buttons and labels:** "Read the basics", "Sign in another way", "Go to Home", and the profile's "Tasks approved" (#472).
 - **Capitals after a dot.** "10 DC · Weekly", "Pays 18 DC", "Once", "Sent": a phrase after a · now starts with a capital everywhere.
 - **Calmer links.** Titles, See all, back links and menu items are no longer underlined; only a link inside a sentence is (How parlays pay, a name in Activity), and any link underlines when you point at it with a mouse (#437).
 - **Colour that means something.** A new blue for results and things of yours, and each category and member gets its own soft colour, so chips and avatars aren't all one green (#445).
@@ -58,13 +65,22 @@ before v0.4.0 used other headings.)
 - **A smoother tab pill.** The pill in My bets, Admin and every other segmented control slides without making the browser lay out the page on each frame, so it keeps up on older phones; it looks and times exactly as before (#418).
 
 ### Under the hood
+- **A daily cap on bets.** Each member can place up to 200 solo bets and 100 parlays a day, far above an honest day's betting, so a stolen session can't flood the market (0114, #450). The slip says so in plain words.
+- **Search engines see only the public pages.** `robots.txt` and a sitemap list sign-in, privacy and terms; those carry canonical links, the signed-in pages and not-invited are `noindex`, and the share card gains its site name, type and image text (#459, #461). The create-next-app leftovers are gone from `public/` (#463). Printing a page leaves out the app's bars, and sharing a market reuses the invite page's clipboard helper (#466).
 - **Only Google accounts get in.** The invite check now also requires a Google sign-in on the account, so turning on another sign-in method could never let someone claim an invitee's place (0112). Four missing foreign-key indexes added (0113, #453).
 - **Design skills in the repo.** Impeccable (app screens) and Taste (public pages) are vendored in `.claude/skills/` with their licences, plus a short `PRODUCT.md` and a `DESIGN.md` that points at the handoff doc (#447).
+- **Inline script needs a nonce now.** The Content Security Policy moves from `next.config.ts` to the proxy, which makes a fresh nonce for every request; Next puts it on its own scripts, and the app's three pre-paint scripts (the launch screen, the sign-in intro and the standalone zoom lock) are allowed by their hash. `script-src` no longer has `'unsafe-inline'`, so an injected inline script wouldn't run. Every page was already rendered per request, so none changes how it renders (#449).
+- **A Claude security review on pull requests.** A new Security review workflow runs Anthropic's `claude-code-security-review` on same-repo pull requests and comments what it finds. It's advisory, outside `ci-ok`, and skips until the `ANTHROPIC_API_KEY` repository secret is added (#451).
 - **Next 16.4.0, and two dependency advisories patched.** Next moves from 16.3.8 to 16.4.0, and the lockfile takes `sharp` 0.35.5 and `source-map-js` 1.2.2, so `npm audit --omit=dev` is clean again (#448).
 - **More Claude Code setup.** Hooks that lint each edited file as CI does and refuse hand edits to the generated database types and `.env` files; `new-route` and `pr-ready` skills; `money-path-reviewer` and `conventions-reviewer` agents; and the context7 docs server in `.mcp.json` (#379).
 - **The docs describe the redesigned app.** AGENTS.md, the design handoff, How it works, Architecture, the admin guide and the README match what shipped in #380–#403: the handoff points at the Oct 4 proposal boards and notes where the app departs from them, stale rules and removed components are gone, and the README's screenshots are new (#404).
 - **Every timing in the stylesheet is a motion token.** The launch screen, skeleton shimmer, nav pending hint and LeafLoader read `--duration-*` and `--delay-*` tokens (mirrored in `lib/ui/motion.ts`), with the same values as before, and a test fails on a raw `ms` or `s` in `globals.css` outside the token block (#418).
 - **Admin › Members reads net worth in one call per page.** A new `member_net_worths` function (migration 0111) gives the net worth of up to 50 members at once, removed members included, instead of one `member_standing` call per removed member, which on the Removed tab was every row (#418).
+- **Closing alerts go out in one batch.** The schedule reads each member's devices once per run, sends every due market's pushes together six at a time, and records what the devices said in one call, instead of a read, a round of sends and a write per market; each market is still claimed only once a device took it (#455).
+- **Typing a stake no longer re-renders every market card.** The slip keeps its stakes in a context of their own, and the quick picks, Add buttons and sheet read only the picks, so a keystroke in the slip redraws just the slip (#457).
+- **Sentry starts after the page is ready.** The browser's error reporting loads once the phone is idle (at most 3 seconds in) instead of during hydration, and an error raised before then is still caught and sent (#458).
+- **Proof photos stop downloading again on every refresh.** A reviewer is handed the same signed link to a photo for most of its hour instead of a new one each time the queue or a market page refreshes, so the browser keeps its copy; uploads are cached for a day, and thumbnails load lazily at their size (#452).
+- **A Lighthouse check on every pull request.** A separate, non-required workflow builds the app and runs Lighthouse on the sign-in and privacy pages, warning when LCP, TBT, CLS, performance or accessibility miss their budgets and keeping the reports for a week (#456).
 
 ## v0.10.1-beta — 2026-10-04
 

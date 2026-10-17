@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type RefObject } from 'react'
 import { Drawer } from '@base-ui/react/drawer'
 import { X } from 'lucide-react'
-import { useSlip } from '@/components/slip/slip-provider'
+import { useSlipPicks } from '@/components/slip/slip-provider'
 import { SLIP_CLOSE_ID, SlipPanel } from '@/components/slip/slip-panel'
 import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import { APP_SHELL_ID } from '@/lib/ui/app-shell'
@@ -29,7 +29,7 @@ export function SlipDrawer({
   // Where focus goes back to on close, or null for wherever it was when the slip opened.
   returnFocusTo: RefObject<HTMLElement | null>
 }) {
-  const { picks, open, setOpen } = useSlip()
+  const { picks, open, setOpen } = useSlipPicks()
   const isDesktop = useIsDesktop()
   // Base UI skips the enter transition of a drawer that mounts already open, which this one does
   // when the slip's first opening is what loads it. Mounting closed for a frame keeps the slide-in.

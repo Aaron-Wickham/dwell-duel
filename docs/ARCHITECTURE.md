@@ -10,7 +10,7 @@ conventions every change follows, read [AGENTS.md](../AGENTS.md).
 Browser / installed app (PWA)
   │  React Server Components + a few client islands
   ▼
-Next.js 16 on Vercel ── proxy.ts: signed-out requests → /sign-in
+Next.js 16 on Vercel ── proxy.ts: signed-out requests → /sign-in, per-request CSP nonce
   │  server components read with the member's own Supabase session
   │  server actions call Postgres RPCs for everything that moves coins or
   │  changes access; a few own-row writes go straight to tables under RLS
@@ -66,7 +66,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`). The rankings are divided rows on the page; your own row sticks to the bottom of the viewport, and on a phone the Net worth board puts a sticky standing bar with Jump to me after the rows when yours isn't among them, while at lg Your standing (with Jump to me) sits under the podium in a sticky side column (#396). Jump to me (`?at=me`): `getJumpToMeTop` reads the 10 members above you through `rankedAbove` and the page opens a `readOrdered` window there, with focus on your row; any cursor in the URL overrides it, and Back to the top drops it |
 | `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings. Net worth is shown with its split into balance and DC riding (`getMemberStanding`'s `balance` and `score`), and the activity list renders the member's own name as plain text (`FeedList`'s `plainHref`, #397). `/members` alone redirects to the leaderboard |
 | `/profile` | Edit your name, photo and bio, one card at reading width (#397) |
-| `/settings` | One reading-width column (#398): Appearance & motion (theme, haptics, reduced motion; this device), Notifications (this device's push, and the account's choices, disabled with a reason where push can't work), Install the app (on a phone browser that hasn't installed it, `install-app.tsx`), Help (How it works, and Your data: the full rules' privacy section, `/how-it-works/rules#how-your-data`), Account (your profile and sign out) |
+| `/settings` | One reading-width column (#398): Appearance & motion (theme, haptics, reduced motion; this device), Notifications (this device's push, and the account's choices, disabled with a reason where push can't work), Install the app (on a phone browser that hasn't installed it, `install-app.tsx`), Help (How it works; Your data, the full rules' privacy section, `/how-it-works/rules#how-your-data`; and Terms), Account (your profile and sign out) |
 | `/how-it-works` | The member version (#398): four short sections and four questions as native `<details>`, written in the page (`app/(app)/how-it-works/page.tsx`, kept true to `docs/HOW-IT-WORKS.md`), then a link to the full rules. Opening it ticks Getting started's first step (`MarkHowItWorksRead`) |
 | `/how-it-works/rules` | The full rules, a drill-down from `/how-it-works` (back-swipe parent), rendered from `docs/HOW-IT-WORKS.md` (read by `lib/docs/how-it-works.ts`, shipped by `outputFileTracingIncludes`, parsed by `lib/docs/markdown.ts`), with a sticky contents list at `lg`. A link to a section from another page (`/how-it-works/rules#how-<slug>`) lands on it through `ScrollToHash`, since a client navigation looks for the id while the skeleton shows |
 | `/admin/invites` · `/admin/tasks` · `/admin/markets` · `/admin/members` · `/admin/ledger` | Admin sections, shown by role, in `app/(app)/admin/(sections)/` under its layout's Admin header (whose description links `docs/ADMIN-GUIDE.md` on GitHub) and tabs; `/admin` alone redirects to the section with work waiting, else the first one the role can see (`adminHref(role, counts)`, which the avatar menu's Admin item uses too); Tasks and Markets carry their share of the avatar's waiting count as a badge (`my_review_counts`), Markets lists every closed market with no result, oldest first (`lib/admin/markets-awaiting.ts`, #243), then a Categories section of divided rows (`CategoryCard`) with Rename, Merge (a panel with a confirm) and Hide or Unhide (`lib/admin/category-actions.ts`, #327); Tasks pages its review queue oldest first with "Show more", signs proof only for the rows shown (an extended range caps at 150 rows, then starts a fresh window), and reads its "waiting" chip from `my_review_counts` (`lib/tasks/list-task-completions.ts`, #255); the ledger opens with the owner's Economy card (unfiltered only), and its Member and Kind selects (`LedgerFilters`, a GET form) set `?member=<id>` and `?kind=<type>`, which `listAllTransactions` applies in the query (#254, #418). Members and Invites (#254) each have a search box (`SearchField`, `?q=`) and two tabs (`SubNav`, `?show=`): Members' Active · Removed, paged A–Z by `admin_members` with `NAME_ORDER` (`lib/pagination/name-cursor.ts`), as a read-only table (divided rows below `lg`) whose net worth column is read for the page's members by `readNetWorths` (`lib/members/net-worth.ts`: `member_net_worths`, 50 ids a call, current and removed members alike, #399, #418); its headers sort it by balance, net worth or joined date in either direction (`?sort=`, `?dir=`, `lib/members/member-sort.ts`, #418), paged with `valueOrder` (`lib/pagination/value-cursor.ts`): balance and joined through `admin_members` (`listMembersByValue`), net worth (Active only) through the net-worth board (`listMembersByNetWorth`), which a search reads whole and sorts in memory, since the board can't match emails; Tasks' queue is a table too, under a sticky bulk bar, and Reject asks for its reason in a dialog (`reject-dialog.tsx`); Invites' Waiting · Claimed, paged newest first with `INVITE_ORDER` (`lib/invites/list-invites.ts`) |
@@ -75,7 +75,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/auth/google` and `/auth/google/nonce` (signing in straight with Google,
 below), `/privacy` (How it works' Your data section, for anyone, and the
-privacy policy Google's brand review reads), `/not-invited` and `/offline`. The API has four routes; the fourth, `/api/push/resync`, is the service worker's (Push notifications, below).
+privacy policy Google's brand review reads), `/terms` (the short terms, #462), `/not-invited` and `/offline`, plus `robots.txt` and `sitemap.xml` (`app/robots.ts`, `app/sitemap.ts`), which open only sign-in, privacy and terms to crawlers; the signed-in layout is `noindex` (#459). Every page exports a title, which the root's `%s · DwellDuel` template completes; a market's and a member's come from `lib/app-shell/page-titles.ts` (#460). The API has four routes; the fourth, `/api/push/resync`, is the service worker's (Push notifications, below).
 `/api/cron/keep-alive`, which a daily Vercel cron calls so the free
 Supabase project never pauses. It also deletes unattached proof files,
 attempt keys older than a day and uninvited sign-ins (below), expires
@@ -130,7 +130,7 @@ scripts/        check-migration-order.sh, backup/ (backup.sh, restore.sh…),
 public/         sw.js (service worker), icons, favicons, iOS splash screens
 docs/           this file, HOW-IT-WORKS, OPERATIONS, ADMIN-GUIDE, RELEASING, GETTING-STARTED,
                 the design handoff, and archive/ (dated specs and plans, history only)
-(root)          proxy.ts, instrumentation*.ts, next.config.ts (CSP, Sentry wrap),
+(root)          proxy.ts (session, CSP), instrumentation*.ts, next.config.ts (headers, Sentry wrap),
                 vercel.json; .github/ (CI, deploys, scheduled jobs); .claude/ and
                 .mcp.json (Claude Code's guard rails and skills, below)
 ```
@@ -501,7 +501,9 @@ the closing alerts' recipients. Since 0071 (#207) they come from
 resolve them) and `due_market_alerts()` (admins and above except the
 market's creator, who has the reminder, `resolve_reminders` on), which claim
 nothing; 0098 dropped the claiming `push_resolve_reminders()` and
-`push_market_alerts()` they replaced; the route sends one market at a time and claims through
+`push_market_alerts()` they replaced; the route sends every due market in one batch
+(`sendPushGroups`: one subscription read per member per run, six sends at a time, one
+`record_push_results` call per 50 devices, #455), judges each market on its own, and claims through
 `claim_push_log(kind, refs)` only the markets at least one device took, so
 a failed push is due again next run.
 `my_review_counts()` (security invoker) counts what waits on the caller: other
@@ -656,6 +658,7 @@ one already on `origin/main`). They roughly follow the project's history:
 | 0111 | `member_net_worths(ids)` (#418): balance plus `stakes_riding` for up to 50 members in one read, current and removed alike (security invoker, signed-in callers only), replacing Admin › Members' per-member `member_standing` fallback for removed members. Additive: a new function |
 | 0112 | `is_invited()` also requires a Google identity on the account (`app_metadata.providers` has `google`), unless the `app_flags` row `allow_email_sign_in` exists; only `supabase/seed.sql` adds it, for the tests' magic-link sessions (GHSA-qxxc-jg94-c49j). Additive: a new table and a replaced function |
 | 0113 | Indexes on four foreign keys the advisor flagged: `allowed_emails.invited_by`, `market_resolutions.reversed_by`, `tasks.created_by`, `task_completions.reviewed_by` (#453). Additive |
+| 0114 | `write_limits()` adds `bet` (200 a day) and `parlay` (100 a day), counted by new `BEFORE INSERT` triggers on `bets` and `parlays` through `enforce_write_limit`, which gains their messages (#450). A slip replayed with its attempt key inserts nothing, so it isn't counted. Additive: new triggers and replaced functions |
 
 Numbers 0075, 0077–0082 and 0084–0088 were reserved by branches that merged later under higher numbers, so they are unused.
 
@@ -742,7 +745,10 @@ never listed.
 **Betting through the slip.** An outcome's "Add" writes a cookie
 of picks (`lib/parlays/slip.ts`). `SlipProvider` in the signed-in layout
 holds those picks, each marked Solo or Parlay, with optimistic add, remove
-and mode switches. Stakes live only in client state. The layout also
+and mode switches. Stakes live only in client state, in a second context:
+`useSlip()` reads both, while a control that only adds, removes or counts
+picks (the cards' quick picks, the Add buttons, the sheet) reads
+`useSlipPicks()`, so typing a stake re-renders only the panel (#457). The layout also
 hands it the member's balance, for the quick-stake chips' Max (the balance
 less the slip's other stakes), the balance strip at the top of the slip
 ("N DC left after this slip" or "N DC short") and the line under Place
@@ -849,7 +855,11 @@ button runs the action (`ConfirmSubmitDialog`). Balance adjustments and
 role changes ask the same way. Files upload straight from the browser to the
 private `proof` bucket (`lib/proof/upload.ts`), then `record_proof`
 checks the paths when the RPC runs. Pages show proof through short-lived
-signed URLs made with the viewer's own session.
+signed URLs made with the viewer's own session. `toProofViews` hands a
+viewer the URL it signed for them earlier (per server instance, keyed by
+viewer and path) until it has 15 minutes of its hour left, so a re-render or
+live refresh doesn't make the browser download every photo again; uploads
+carry a day-long `cacheControl`, and thumbnails load lazily (#452).
 
 **Storage caps and retention (#253, 0089).** The free plan holds 1 GB across
 the `proof` and `avatars` buckets, so the limits live in the database, not
@@ -968,7 +978,10 @@ cookie and turns a signed-out page load into a real redirect. It skips
 Link prefetches (the `next-router-prefetch` or `purpose: prefetch`
 header, #251) and static files: a prefetch of a signed-in page is its own
 invocation, the prefetched layout's `requireUser` still guards it, and the
-navigation that follows runs the proxy.
+navigation that follows runs the proxy. It also sets every page's CSP with
+a fresh nonce (Security headers, below), so it runs for `/offline` too, but
+returns before the auth call there: the service worker precaches that page
+anonymously.
 
 Every signed-in page is dynamic, so a link prefetched on sight is a
 render every time it scrolls into view. The nav,
@@ -1071,7 +1084,8 @@ pixel and back once it has (#350). The `color-scheme` meta lets a full page
 load in dark mode paint a dark canvas before `globals.css` arrives (#353).
 Zoom (D6, #402): the viewport meta leaves pinch-zoom on, so a browser tab
 can zoom (WCAG 1.4.4); `StandaloneZoomLock`
-(`components/app-shell/standalone-zoom-lock.tsx`), an inline script that
+(`components/app-shell/standalone-zoom-lock.tsx`, its text in
+`lib/app-shell/inline-scripts.ts`), an inline script that
 runs before first paint, appends `maximum-scale=1, user-scalable=no` only
 under `display-mode: standalone`, and `body`'s `touch-action: pan-y` is
 scoped to standalone too, because a zoomed installed app leaves the fixed
@@ -1242,7 +1256,11 @@ value never stops production booting.
   on the Node runtime and exports `onRequestError`, capturing every
   uncaught error in a component, route, action or the proxy. Browser:
   `instrumentation-client.ts` loads the SDK lazily (global handlers only),
-  and `useReportError` sends the render errors the error boundaries catch.
+  once the browser is idle (`requestIdleCallback`, at most 3 s; a 3 s timer
+  where there's none), so it doesn't compete with hydration (#458); an
+  uncaught error before then is caught by its own listeners and sent once
+  the SDK is ready, and
+  `useReportError` sends the render errors the error boundaries catch.
   Handled errors go through `reportError` (`lib/observability/report.ts`):
   `console.error` plus a capture, which `friendlyError`, the resolve and slip
   actions, the cron steps, the health route, the Admin health read and the
@@ -1316,7 +1334,16 @@ value never stops production booting.
   does the same for the npm, Next build and Playwright caches when
   `package-lock.json` changes, and CI only restores them (a Next cache keyed
   on the source saved an entry per push and broke GitHub's 10 GB limit, #277).
-  `cleanup-caches.yml` deletes a PR's caches when it closes. GitHub disables
+  `cleanup-caches.yml` deletes a PR's caches when it closes.
+  `lighthouse.yml` runs `@lhci/cli` on every PR against a production build
+  of `/sign-in` and `/privacy` (three runs each, `lighthouserc.json`), with
+  warn-only budgets (LCP 2.5 s, TBT 200 ms, CLS 0.1, performance 0.9,
+  accessibility 0.95) and the reports as an artifact; it isn't part of
+  `ci-ok`, so it never blocks a merge (#456).
+  `security-review.yml` (#451) has Claude review a same-repo PR's diff for
+  security issues and comment its findings; it's advisory, not part of
+  `ci-ok`, and skips (passing) until the `ANTHROPIC_API_KEY` repository
+  secret is set (SECURITY.md). GitHub disables
   scheduled workflows after 60 days without repository activity (merged PRs
   count); if the closing-alerts backup or warm-caches stops, re-enable it in
   the Actions tab. Every third-party action is
@@ -1365,15 +1392,30 @@ value never stops production booting.
   migrations and never edited; `lib/supabase/database.ts` wraps it
   (`Database`, `DbClient`) and marks the few function arguments that take a
   real null. Every client and helper uses `DbClient`.
-- **Security headers** (`next.config.ts`): a Content Security Policy that
-  only allows scripts from the app itself (and `va.vercel-scripts.com`, for
-  Vercel Analytics and Speed Insights) and connections to the app, its
+- **Security headers** (`next.config.ts`, and the CSP from `proxy.ts`): a
+  Content Security Policy (`lib/security/csp.ts`) that only allows scripts
+  from the app itself (and `va.vercel-scripts.com`, for Vercel Analytics and
+  Speed Insights), and inline script only by nonce or hash, never
+  `'unsafe-inline'` (#449). The proxy makes a fresh nonce for every request
+  and sets the policy on both the request, where Next finds the nonce and
+  puts it on its own scripts, and the response; that needs dynamic
+  rendering, which every page already is (the root layout reads cookies).
+  The app's own pre-paint scripts (the launch screen's, the sign-in intro's,
+  the standalone zoom lock) live in `lib/app-shell/inline-scripts.ts` and are
+  allowed by their SHA-256 (`lib/security/script-hashes.ts`), so a change to
+  one changes its hash at build; a new inline script must go there too, or
+  the browser blocks it. `next.config.ts` sends no page CSP of its own (a
+  second policy would also be enforced, without the nonce), only `/sw.js`'s,
+  which the proxy skips. Paths the proxy skips (static files, the cron and
+  health routes, the manifest) carry no CSP, since no page renders there.
+  `style-src` keeps `'unsafe-inline'`, and `'unsafe-eval'` is dev-only. The
+  policy allows connections to the app, its
   Supabase project and Sentry's ingest (`*.sentry.io`); nothing from Google,
   since sign-in leaves and returns by navigation. `form-action 'self'`,
   `frame-ancestors 'none'` with `X-Frame-Options: DENY`, `nosniff`, a referrer policy and
   a `Permissions-Policy` denying camera, microphone and location. `poweredByHeader` is off. A
   new third-party origin (analytics, an image host) has to be added to the
-  CSP there.
+  CSP in `lib/security/csp.ts`.
 - **Required env vars** are checked at boot (`lib/env/required.ts`):
   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
   always, and `SUPABASE_SECRET_KEY` and `CRON_SECRET` in production; a

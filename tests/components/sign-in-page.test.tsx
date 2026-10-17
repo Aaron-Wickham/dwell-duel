@@ -10,7 +10,7 @@ import SignInPage from '@/app/(auth)/sign-in/page'
 describe('SignInPage', () => {
   it('shows the tagline and the Google sign-in button', () => {
     render(<SignInPage />)
-    expect(screen.getByRole('heading', { level: 1, name: 'Friendly bets. Faithful study.' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Friendly bets with your church friends' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument()
   })
 
@@ -27,7 +27,7 @@ describe('SignInPage', () => {
   // #387: one plain sentence, where three facts sat in icon tiles.
   it('says what DwellDuel is in one sentence', () => {
     render(<SignInPage />)
-    expect(screen.getByText('Bet on friendly questions and earn DC with Bible-study tasks. Play money, invite-only.')).toBeInTheDocument()
+    expect(screen.getByText('Bet play money on friendly questions, and earn more with Bible study. No real money.')).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'What DwellDuel is' })).toBeNull()
   })
 

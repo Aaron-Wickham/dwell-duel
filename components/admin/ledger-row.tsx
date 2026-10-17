@@ -19,7 +19,7 @@ export function LedgerRow({ entry, domId, showMember = true }: { entry: LedgerEn
           </>
         )}
         <span className={cn('font-extrabold whitespace-nowrap tabular-nums', amountClass)}>{formatSignedDcAmount(entry.amount)}</span>{' '}
-        — {entry.context}
+        · {entry.context}
       </p>
       <span className="whitespace-nowrap pt-0.5 text-sm text-ink2">
         {isOldEntry(entry.createdAt) ? <LocalTime iso={entry.createdAt} format="day" /> : ageLabel(entry.createdAt)}

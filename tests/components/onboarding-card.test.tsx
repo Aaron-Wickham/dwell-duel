@@ -40,7 +40,7 @@ describe('OnboardingCard', () => {
       'bet',
       'task',
     ])
-    expect(within(step('Learn how DwellDuel works')).getByRole('link', { name: 'Read' })).toHaveAttribute('href', '/how-it-works')
+    expect(within(step('Learn how DwellDuel works')).getByRole('link', { name: 'Read the basics' })).toHaveAttribute('href', '/how-it-works')
     expect(within(step('Turn on notifications')).getByRole('link', { name: 'Turn on' })).toHaveAttribute(
       'href',
       '/settings#settings-notifications',

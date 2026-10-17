@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
@@ -20,6 +21,8 @@ import { IntentLink } from '@/components/ui/intent-link'
 import { TAB_TRANSITION } from '@/components/nav/page-transition'
 import { cn } from '@/lib/utils'
 import { FeedList } from './feed-list'
+
+export const metadata: Metadata = { title: 'Activity' }
 
 const ROW_ID_PREFIX = 'feed'
 

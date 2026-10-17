@@ -49,4 +49,13 @@ describe('parseSlipError', () => {
     })
     expect(logged).toEqual(['column "x" does not exist'])
   })
+
+  it('names the daily bet and parlay limits (#450)', () => {
+    expect(parseSlipError(`pick ${A}: you have placed too many bets recently; try again later`)).toEqual({
+      pickErrors: { [A]: 'You can place up to 200 bets a day. Try again tomorrow.' },
+    })
+    expect(parseSlipError('parlay: you have placed too many parlays recently; try again later')).toEqual({
+      parlayError: 'You can place up to 100 parlays a day. Try again tomorrow.',
+    })
+  })
 })

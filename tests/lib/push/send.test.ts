@@ -4,7 +4,7 @@ const { sendNotification, serviceRoleClient } = vi.hoisted(() => ({ sendNotifica
 vi.mock('web-push', () => ({ default: { sendNotification } }))
 vi.mock('@/lib/supabase/service-role', () => ({ serviceRoleClient }))
 
-import { sendPush } from '@/lib/push/send'
+import { sendPush, sendPushGroups } from '@/lib/push/send'
 import type { DbClient } from '@/lib/supabase/database'
 
 type Sub = { id: string; profile_id: string; endpoint: string; p256dh: string; auth: string }
@@ -188,5 +188,99 @@ describe('sendPush', () => {
 
     expect((await sendPush([{ profileId: 'alice', payload }], db)).sent).toBe(20)
     expect(peak).toBe(6)
+  })
+})
+
+// #455: the closing alerts send every due market in one batch.
+describe('sendPushGroups', () => {
+  function countingDb(subscriptions: Sub[]) {
+    const reads: string[][] = []
+    const records: { p_delivered: string[]; p_failed: string[] }[] = []
+    const db = {
+      rpc: async (name: string, args: { p_delivered: string[]; p_failed: string[] }) => {
+        expect(name).toBe('record_push_results')
+        records.push(args)
+        return { error: null }
+      },
+      from: () => ({
+        select: () => ({
+          in: async (_col: string, ids: string[]) => {
+            reads.push(ids)
+            return { data: subscriptions.filter((s) => ids.includes(s.profile_id)), error: null }
+          },
+        }),
+        delete: () => ({ in: async () => ({ error: null }) }),
+      }),
+    }
+    return { db: db as unknown as DbClient, reads, records }
+  }
+
+  const newRun = () => ({ sent: 0, credentialIds: [] as string[], credentialCount: 0, credentialMarkets: [], subscriptions: new Map() })
+
+  it('reads the subscriptions once, answers each group on its own and records every outcome in one call', async () => {
+    const { db, reads, records } = countingDb([sub('s1', 'alice'), sub('s2', 'bob'), sub('s3', 'carol')])
+    sendNotification.mockImplementation(async ({ endpoint }: { endpoint: string }) => {
+      if (endpoint.endsWith('s2')) throw Object.assign(new Error('Bad'), { statusCode: 400 })
+      return { statusCode: 201 }
+    })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const results = await sendPushGroups(
+      [[{ profileId: 'alice', payload }], [{ profileId: 'bob', payload }], [{ profileId: 'carol', payload }, { profileId: 'alice', payload }]],
+      db,
+    )
+    expect(results).toEqual([
+      { sent: 1, removed: 0, failed: 0, systemic: 0, credentials: 0 },
+      { sent: 0, removed: 0, failed: 1, systemic: 0, credentials: 0 },
+      { sent: 2, removed: 0, failed: 0, systemic: 0, credentials: 0 },
+    ])
+    expect(reads).toEqual([['alice', 'bob', 'carol']])
+    expect(records).toHaveLength(1)
+    expect(records[0].p_delivered.sort()).toEqual(['s1', 's3'])
+    expect(records[0].p_failed).toEqual(['s2'])
+  })
+
+  it('reuses a run’s subscriptions instead of reading a member twice, without devices found gone', async () => {
+    const { db, reads } = countingDb([sub('s1', 'alice'), sub('s2', 'alice'), sub('s3', 'bob')])
+    sendNotification.mockImplementation(async ({ endpoint }: { endpoint: string }) => {
+      if (endpoint.endsWith('s1')) throw Object.assign(new Error('Gone'), { statusCode: 410 })
+      return { statusCode: 201 }
+    })
+    const run = newRun()
+    expect(await sendPushGroups([[{ profileId: 'alice', payload }]], db, run)).toEqual([{ sent: 1, removed: 1, failed: 0, systemic: 0, credentials: 0 }])
+    sendNotification.mockClear()
+    expect(await sendPushGroups([[{ profileId: 'alice', payload }], [{ profileId: 'bob', payload }]], db, run)).toEqual([
+      { sent: 1, removed: 0, failed: 0, systemic: 0, credentials: 0 },
+      { sent: 1, removed: 0, failed: 0, systemic: 0, credentials: 0 },
+    ])
+    expect(reads).toEqual([['alice'], ['bob']])
+    expect(sendNotification.mock.calls.map(([target]) => target.endpoint.split('/').pop()).sort()).toEqual(['s2', 's3'])
+    expect(run.sent).toBe(3)
+  })
+
+  it('keeps every group’s sends under one cap of six', async () => {
+    const subs = Array.from({ length: 12 }, (_, i) => sub(`s${i}`, `p${i}`))
+    const { db } = countingDb(subs)
+    let inFlight = 0
+    let peak = 0
+    sendNotification.mockImplementation(async () => {
+      inFlight++
+      peak = Math.max(peak, inFlight)
+      await new Promise((resolve) => setTimeout(resolve, 1))
+      inFlight--
+      return { statusCode: 201 }
+    })
+    const results = await sendPushGroups(subs.map((s) => [{ profileId: s.profile_id, payload }]), db)
+    expect(results.every((r) => r.sent === 1)).toBe(true)
+    expect(peak).toBe(6)
+  })
+
+  it('fails every group as systemic when the subscriptions can’t be read', async () => {
+    const db = { from: () => ({ select: () => ({ in: async () => ({ data: null, error: new Error('db down') }) }) }) } as unknown as DbClient
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(await sendPushGroups([[{ profileId: 'alice', payload }], [{ profileId: 'bob', payload }, { profileId: 'carol', payload }]], db)).toEqual([
+      { sent: 0, removed: 0, failed: 1, systemic: 1, credentials: 0 },
+      { sent: 0, removed: 0, failed: 2, systemic: 2, credentials: 0 },
+    ])
   })
 })

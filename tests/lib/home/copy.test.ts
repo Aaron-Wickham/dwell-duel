@@ -39,7 +39,7 @@ describe('countNoun', () => {
 
 describe('taskRewardsDetail', () => {
   it('gives the range of what tasks pay, a single amount, or nothing without tasks', () => {
-    expect(taskRewardsDetail({ min: 5, max: 25 })).toBe('they pay 5–25 DC')
+    expect(taskRewardsDetail({ min: 5, max: 25 })).toBe('they pay 5 to 25 DC')
     expect(taskRewardsDetail({ min: 10, max: 10 })).toBe('they pay 10 DC each')
     expect(taskRewardsDetail(null)).toBeNull()
   })

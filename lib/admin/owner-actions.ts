@@ -17,7 +17,7 @@ const OWNER_ERRORS: readonly KnownError<never>[] = [
   { match: "the owner's own role can't be changed", formError: 'The owner’s own role can’t be changed.' },
   { match: 'member not found', formError: 'This member no longer exists.' },
   { match: 'only the owner can delete a market', formError: 'Only the owner can delete a market.' },
-  { match: 'market not found', formError: 'This market no longer exists.' },
+  { match: 'market not found', formError: 'This market was deleted. Go back to Markets.' },
   { match: 'this market has bets, so void it instead', formError: 'This market has bets, so call it off instead.' },
   { match: 'only the owner can delete a task', formError: 'Only the owner can delete a task.' },
   { match: 'task not found', formError: 'This task no longer exists.' },

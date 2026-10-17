@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { requireUser } from '@/lib/auth/require-user'
 import { adminHref, atLeast, getRole } from '@/lib/auth/roles'
 import { getReviewCounts, reviewSubscriptions } from '@/lib/admin/review-counts'
@@ -22,6 +23,9 @@ import { FALLBACK_NAME } from '@/lib/profile/fallback-name'
 import { KeyboardViewportReset } from '@/components/app-shell/keyboard-viewport-reset'
 import { KeyboardOpenFlag } from '@/components/app-shell/keyboard-open'
 import { APP_SHELL_ID } from '@/lib/ui/app-shell'
+
+// Signed-in pages are private; a crawler never gets past sign-in, but if it ever did (#459).
+export const metadata: Metadata = { robots: { index: false, follow: false } }
 
 export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   const { supabase, user } = await requireUser()

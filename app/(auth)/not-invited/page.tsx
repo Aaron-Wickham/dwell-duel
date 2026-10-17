@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { h1Class } from '@/components/ui/page'
@@ -8,6 +9,8 @@ import { safeNextPath } from '@/lib/auth/next-path'
 import { NOT_INVITED_EMAIL_COOKIE } from '@/lib/auth/not-invited'
 import { cn } from '@/lib/utils'
 import { RefusedEmail } from './refused-email'
+
+export const metadata: Metadata = { title: 'Not invited', robots: { index: false } }
 
 export default async function NotInvitedPage({ searchParams }: PageProps<'/not-invited'>) {
   const email = (await cookies()).get(NOT_INVITED_EMAIL_COOKIE)?.value ?? null

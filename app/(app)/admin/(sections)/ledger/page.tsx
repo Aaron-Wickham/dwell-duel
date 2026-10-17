@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { requireUser } from '@/lib/auth/require-user'
@@ -21,6 +22,8 @@ import { ContentReveal } from '@/components/nav/page-transition'
 import { isUuid } from '@/lib/uuid'
 import type { DbClient } from '@/lib/supabase/database'
 import { cn } from '@/lib/utils'
+
+export const metadata: Metadata = { title: 'Ledger' }
 
 const PATH = '/admin/ledger'
 const ROW_ID_PREFIX = 'ledger'

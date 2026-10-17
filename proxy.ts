@@ -4,8 +4,25 @@ import { isAppPath } from '@/lib/auth/app-paths'
 import { safeNextPath } from '@/lib/auth/next-path'
 import { isAuthUnavailable, readClaims } from '@/lib/auth/auth-unavailable'
 import { fetchWithTimeout, SERVER_FETCH_TIMEOUT_MS } from '@/lib/supabase/timeout-fetch'
+import { contentSecurityPolicy, newNonce } from '@/lib/security/csp'
+import { INLINE_SCRIPT_HASHES } from '@/lib/security/script-hashes'
+
+// The service worker precaches it anonymously, and it must load with no auth round trip.
+const OFFLINE_PATH = '/offline'
 
 export async function proxy(request: NextRequest) {
+  // A fresh nonce per request (#449). Next reads it from the request's own CSP header while it
+  // renders and puts it on each of its scripts; the response carries the same policy. The offline
+  // page's cached copy keeps the headers it was fetched with, so its nonce still matches.
+  const csp = contentSecurityPolicy({ nonce: newNonce(), scriptHashes: INLINE_SCRIPT_HASHES })
+  request.headers.set('content-security-policy', csp)
+  const withCsp = (res: NextResponse) => {
+    res.headers.set('Content-Security-Policy', csp)
+    return res
+  }
+
+  if (request.nextUrl.pathname === OFFLINE_PATH) return withCsp(NextResponse.next({ request }))
+
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -28,7 +45,7 @@ export async function proxy(request: NextRequest) {
   // Auth itself is unavailable (network, timeout, 5xx, 429): pass the request through
   // unredirected, so the page's own requireUser() throws into the error boundary instead of
   // bouncing a member with a live session to sign-in.
-  if (error && isAuthUnavailable(error)) return response
+  if (error && isAuthUnavailable(error)) return withCsp(response)
 
   // A page's own redirect('/sign-in') runs after its loading skeleton has streamed, so the
   // browser gets a 200 and a client-side hop. Redirecting here keeps it a real 307. Only
@@ -45,7 +62,7 @@ export async function proxy(request: NextRequest) {
     return redirect
   }
 
-  return response
+  return withCsp(response)
 }
 
 // Not on a Link prefetch (#251): a signed-in page is dynamic, so each prefetch is its own
@@ -56,7 +73,7 @@ export const config = {
   matcher: [
     {
       source:
-        '/((?!_next/static|_next/image|favicon.ico|manifest\\.webmanifest$|sw\\.js$|offline$|api/cron/|api/health$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml)$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|manifest\\.webmanifest$|sw\\.js$|api/cron/|api/health$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|txt|xml)$).*)',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' },

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
@@ -20,6 +21,8 @@ import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { SubNav } from '@/components/ui/sub-nav'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { MemberRow, MembersTableHead, membersBodyClass, membersTableClass } from '@/app/(app)/admin/members/member-row'
+
+export const metadata: Metadata = { title: 'Members' }
 
 const PATH = '/admin/members'
 const ROW_ID_PREFIX = 'member'

@@ -1245,7 +1245,11 @@ value never stops production booting.
   on the Node runtime and exports `onRequestError`, capturing every
   uncaught error in a component, route, action or the proxy. Browser:
   `instrumentation-client.ts` loads the SDK lazily (global handlers only),
-  and `useReportError` sends the render errors the error boundaries catch.
+  once the browser is idle (`requestIdleCallback`, at most 3 s; a 3 s timer
+  where there's none), so it doesn't compete with hydration (#458); an
+  uncaught error before then is caught by its own listeners and sent once
+  the SDK is ready, and
+  `useReportError` sends the render errors the error boundaries catch.
   Handled errors go through `reportError` (`lib/observability/report.ts`):
   `console.error` plus a capture, which `friendlyError`, the resolve and slip
   actions, the cron steps, the health route, the Admin health read and the

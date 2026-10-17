@@ -69,7 +69,7 @@ describe('script-src (#449)', () => {
     ['SignInIntro', SignInIntro],
   ])('allows %s’s script by its hash', (_name, Component) => {
     const html = renderToStaticMarkup(<Component />)
-    const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1])
+    const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)].map((m) => m[1])
     expect(scripts).toHaveLength(1)
     expect(INLINE_SCRIPT_HASHES).toContain(scriptHash(scripts[0]))
   })

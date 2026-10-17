@@ -20,6 +20,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored design skills (#447): third-party scripts, not our code.
+    ".claude/skills/impeccable/**",
+    ".claude/skills/taste/**",
     // Supabase CLI-generated local artifacts (gitignored, not our code).
     "supabase/.temp/**",
     // Claude Code's git worktrees: whole other checkouts, linted in their own right.

@@ -24,7 +24,7 @@ SECURITY.md, [AI agents](../SECURITY.md#ai-agents).
 | **Vercel** project `dwell-duel` (Hobby) | The app, its functions in `cle1` (Cleveland, `vercel.json`), the daily keep-alive cron | Vercel → Settings (environment variables, deploy hook, domains); `vercel.json` |
 | **Supabase** project `lymrpiivqvdnfcjmxksx` (Free, us-east-2) | Postgres, Auth (Google only), Realtime, Storage (`avatars`, `proof`), `pg_cron` and `pg_net` | Supabase dashboard; schema only through `supabase/migrations/` |
 | **Supabase Vault** | `app_url` and `cron_secret`, for `pg_cron`'s closing-alerts call | SQL editor (README, One-time setup) |
-| **GitHub** `Aaron-Wickham/dwell-duel` (public) | Code, CI, Deploy Production, Backups, the Closing alerts backup, Warm caches, Cleanup caches; the Sentry GitHub app (code mapping, suspect commits) | Rulesets "CI" (`ci-ok` required, up to date, no bypass) and "Protect main" (code-owner review); the `Production` environment (secrets, `main` only); repository secret `CRON_SECRET`; variables `APP_URL` and `VERCEL_TEAM_ID` |
+| **GitHub** `Aaron-Wickham/dwell-duel` (public) | Code, CI, Deploy Production, Backups, the Closing alerts backup, Warm caches, Cleanup caches, and two advisory pull-request workflows outside `ci-ok` (Security review, Lighthouse); the Sentry GitHub app (code mapping, suspect commits) | Rulesets "CI" (`ci-ok` required, up to date, no bypass) and "Protect main" (code-owner review); the `Production` environment (secrets, `main` only); repository secrets `CRON_SECRET` and, once added, `CLAUDE_CODE_OAUTH_TOKEN` (the security review); variables `APP_URL` and `VERCEL_TEAM_ID` |
 | **GitHub** `Aaron-Wickham/dwell-duel-backups` (private) | The encrypted backups | Written with `BACKUP_REPO_TOKEN` |
 | **Google Cloud** OAuth client | Google sign-in | Its client ID and secret are in Supabase → Auth → Providers → Google |
 | **Domains** | `www.dwellduel.com` serves the app; `dwellduel.com` 308-redirects to it; `dwelldule.com` and `www.dwelldule.com` 301 to it | Vercel → Settings → Domains |
@@ -427,6 +427,12 @@ Update them under Settings → Environments → Production.
 ### Elsewhere
 
 - **`CRON_SECRET` repository secret:** as above, with the other two copies.
+- **`CLAUDE_CODE_OAUTH_TOKEN` repository secret** (the Security review
+  workflow, #451): run `claude setup-token` on the owner's Claude
+  subscription, update the secret (Settings → Secrets and variables →
+  Actions), and check the next same-repo pull request gets its review
+  comment. Without it the workflow skips and passes. Remake it whenever
+  the set of people with write access changes (SECURITY.md).
 - **`DOCKERHUB_TOKEN` repository secret:** unused since #238 (CI caches
   Supabase's images itself). Delete it.
 - **Google OAuth client secret:** Google Cloud → Credentials → the client →

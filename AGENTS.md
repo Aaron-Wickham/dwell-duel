@@ -103,7 +103,7 @@ a line to `CHANGELOG.md` under the next release.
   Admin › Members is a table on the page (divided rows below `lg:`) and
   the review queue a table in its card (#399); the task catalog,
   categories, markets waiting to be resolved, the ledger, coin history,
-  invites, a market's bet list and Home's Your bets and Needs you are
+  invites, a market's bet list and Home's Activity and Needs you rows are
   divided rows.
 - **A chip only when it adds information the context doesn't** (#387).
   A list filtered to one status shows no status chip on its items; a

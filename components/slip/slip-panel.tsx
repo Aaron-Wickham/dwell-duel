@@ -395,7 +395,7 @@ export function SlipPanel() {
       </ul>
       {(picks.length >= 2 || legs.length > 0) && (
         <p className="text-sm">
-          <Link href="/how-it-works/rules#how-the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']} className="hit-area">
+          <Link href="/how-it-works/rules#how-the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']} className="hit-area prose-link">
             How parlays pay
           </Link>
         </p>
@@ -472,7 +472,7 @@ export function SlipPanel() {
         {broke ? (
           <Message tone="gold" id={WHY_ID}>
             You have 0 DC. Earn more with{' '}
-            <Link href="/tasks" className="text-inherit">
+            <Link href="/tasks" className="prose-link text-inherit">
               Tasks
             </Link>
             , then come back to this slip.

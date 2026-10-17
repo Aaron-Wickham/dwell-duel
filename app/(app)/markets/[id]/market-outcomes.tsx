@@ -93,7 +93,7 @@ export async function MarketOutcomes({
         {ridingTotal > 0 && (
           <p className="border-t border-line pt-3 text-sm text-ink2">
             Includes {formatDcAmount(ridingTotal)} riding in parlays.{' '}
-            <Link href="/how-it-works/rules#how-the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']}>
+            <Link href="/how-it-works/rules#how-the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']} className="prose-link">
               How parlays pay
             </Link>
           </p>

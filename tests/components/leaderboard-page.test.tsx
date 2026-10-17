@@ -190,7 +190,7 @@ describe('LeaderboardPage', () => {
   it('pins your own row to the bottom of the screen until it scrolls into place', async () => {
     await renderPage({ rows: [member(1, 90, 1), member(2, 80, 2), { ...member(3, 70, 3), id: 'p-me', displayName: 'Me' }], next: null, windowed: true })
     const mine = screen.getByRole('listitem', { name: /^Rank 3/ })
-    expect(mine).toHaveClass('sticky', 'bg-acc-soft', 'bottom-[calc(82px+var(--safe-bottom))]', 'md:bottom-0')
+    expect(mine).toHaveClass('sticky', 'bg-acc-soft', 'bottom-[calc(var(--tab-bar-h)+4px+var(--safe-bottom))]', 'md:bottom-0')
     expect(screen.getByRole('listitem', { name: /Member 1/ })).not.toHaveClass('sticky')
   })
 

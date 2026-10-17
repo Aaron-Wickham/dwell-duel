@@ -29,7 +29,7 @@ export function SignInFrame({ intro = false, dimmed = false, children }: { intro
         <div className="sign-in-intro-text flex flex-col gap-5 short:gap-3.5 lg:col-start-1 lg:row-start-1 lg:max-w-[480px]">
           {children}
           <p className="text-center text-sm lg:max-w-[380px]">
-            <Link href="/privacy" className="hit-area font-bold">
+            <Link href="/privacy" className="hit-area prose-link font-bold">
               Privacy
             </Link>
           </p>

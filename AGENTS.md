@@ -42,11 +42,14 @@ a line to `CHANGELOG.md` under the next release.
   *fills* mark only the primary action and first place; `acc-text` (dark
   `#8BE651`) stays the positive and open text colour. Active navigation uses
   `nav-active`, `tab-active` and `segment-active`, and a card or row title
-  link takes `text-ink`. In light, lime is a fill or brand only (the tab
-  bar's pill, first place), never text on the background nor a state shown
+  link takes `text-ink`. In light, lime is a fill or brand only (first place,
+  Getting started's step dots), never text on the background nor a state shown
   by colour alone. `StatusChip` tones come only from the semantic
   tokens (`open` is acc-soft / acc-text, `won` win, `lost` loss, `wait`
-  gold, `done` and `void` sunk), never `primary`.
+  gold, `info` blue for a result or something of yours, `done` and `void`
+  sunk), never `primary`. Category chips and avatar initials take a
+  `--tint1`…`--tint6` pair from `tintFor` (`lib/ui/tint.ts`), never a
+  status colour (#445).
 - **Every signed-in page is a `<Page>`.** It lives in `components/ui/page.tsx`
   and has exactly one `<h1>`, from `PageHeader` or `h1Class`. Sections are
   `SectionCard`s, whose `<h2>` names the region (a page of prose, like How it
@@ -143,12 +146,13 @@ a line to `CHANGELOG.md` under the next release.
   every sheet traps focus while it's open: the slip also makes the page
   behind it `inert` (`#app-shell`, `lib/ui/app-shell.ts`), since focus
   guards alone leak under key repeat (#392).
-- **Links are underlined by default.** The base `a` rule underlines
-  every link, matching the mockup (its links use the browser default
-  underline). A link styled as a button, tab, tile, chip or nav item
-  carries `no-underline`. The one exception is a card or row title that
-  is a `stretched-link`: the utility drops its underline until it's
-  hovered or focused (#393), since the whole card is the tap target.
+- **Links are plain by default; sentences opt in** (#437, reversing the
+  earlier underline-by-default rule). The base `a` rule draws no underline
+  at rest (a mouse hover still underlines), so titles, See all, back links
+  and menu items read by their place and weight. A link inside a sentence
+  ("How parlays pay", a feed row's names, a bet row's name, the rendered
+  rules) takes the `prose-link` utility, which keeps it underlined. A link
+  styled as a button, tab, chip or nav item may still carry `no-underline`.
 - **Charts** (#391; the handoff's Charts section). A two-outcome market
   draws one line, Yes or Over (`plottedOutcomes`), in `--s2`. Series
   colours come from `outcomeSeries` (the race's from `memberSeries`, by

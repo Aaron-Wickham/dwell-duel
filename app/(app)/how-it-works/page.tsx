@@ -90,7 +90,7 @@ const QUESTIONS: { id: string; question: string; answer: ReactNode }[] = [
       <>
         Your stake is split evenly across the picks, and each pick’s odds multiply together. The slip shows exactly what
         the parlay pays before you place it. If any pick loses, it pays nothing.{' '}
-        <Link href="/how-it-works/rules#how-the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']}>
+        <Link href="/how-it-works/rules#how-the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']} className="prose-link">
           The parlay maths
         </Link>
       </>

@@ -191,7 +191,7 @@ export function AppNav({
           aria-label="Primary"
           data-keyboard-hides
           style={{ viewTransitionName: 'app-tabbar' }}
-          className="no-callout fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 gap-0.5 border-t border-line bg-surface px-1 pt-1.5 pb-[calc(12px+var(--safe-bottom))] md:hidden"
+          className="no-callout fixed inset-x-0 bottom-0 z-30 grid h-[calc(var(--tab-bar-h)+var(--safe-bottom))] grid-cols-5 gap-0.5 border-t border-line bg-surface px-1 pt-1 pb-[calc(4px+var(--safe-bottom))] md:hidden"
         >
           {NAV_ITEMS.map((item) => {
             const Icon = ICONS[item.id]
@@ -208,14 +208,14 @@ export function AppNav({
                 aria-label={tabAriaLabel(item)}
                 onClick={haptics.tap}
                 className={cn(
-                  'pressable pill-label relative flex min-h-14 flex-col items-center justify-center gap-[3px] rounded-tile text-xs leading-[1.1] no-underline',
+                  'pressable pill-label relative flex min-h-[50px] flex-col items-center justify-center gap-0.5 rounded-tile text-xs leading-[1.1] no-underline',
                   isShown ? 'text-ink' : 'text-ink2',
                 )}
               >
                 <PendingReporter href={item.href} onPending={onPending} />
                 <span
                   className={cn(
-                    'relative isolate flex h-[30px] w-[52px] items-center justify-center rounded-full transition-colors duration-(--duration-slide) ease-ios motion-reduce:transition-none',
+                    'relative isolate flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-(--duration-slide) ease-ios motion-reduce:transition-none',
                     isShown && 'text-on-tab-active',
                   )}
                 >
@@ -230,7 +230,7 @@ export function AppNav({
                       layoutId="tabbar-pill"
                       layoutDependency={item.id}
                       aria-hidden="true"
-                      className="absolute inset-0 -z-10 rounded-full border-[1.5px] border-tab-active-ring bg-tab-active"
+                      className="absolute inset-0 -z-10 rounded-full bg-tab-active"
                       transition={PILL_TRANSITION}
                     />
                   )}

@@ -78,9 +78,11 @@ never a raw colour. The groups:
 | `--ink`, `--ink2`, `--line`, `--line-s` | text, secondary text, hairlines, stronger borders |
 | `--primary`, `--on-primary`, `--lime`, `--on-lime`, `--link`, `--focus` | buttons, the lime accent and what sits on it, links, focus rings |
 | `--nav-active`, `--on-nav-active` | the desktop nav's active pill, a chosen filter chip, your avatar's ring on your profile (teal and white in light, near-white and `#021B1F` in dark) |
-| `--tab-active`, `--on-tab-active`, `--tab-active-ring` | the phone tab bar's active pill (lime with a teal ring in light; `#17434A` with a `--line-s` ring in dark) |
+| `--tab-active`, `--on-tab-active` | the phone tab bar's active tint behind the icon (a soft green in light, `#17434A` in dark; #444) |
+| `--tab-bar-h` | the phone tab bar's height above the safe area (58px, #444); the page's bottom padding, the slip button and the leaderboard's sticky row offset by it |
 | `--segment-active` | a segmented control's chosen segment (the surface in light, `#17434A` in dark) |
-| `--acc-soft`, `--acc-text`, `--win`, `--win-soft`, `--loss`, `--loss-soft`, `--gold`, `--gold-soft` | chips, wins, losses and warnings |
+| `--acc-soft`, `--acc-text`, `--win`, `--win-soft`, `--loss`, `--loss-soft`, `--gold`, `--gold-soft`, `--info`, `--info-soft` | chips, wins, losses, warnings, and blue for a result or something of yours to look at (#445) |
+| `--tint1` … `--tint6` with their `-soft` fills | category chips and avatar initials, picked by a stable hash of the name (`tintFor`, `lib/ui/tint.ts`), so a category or member keeps one colour everywhere (#445) |
 | `--hero`, `--on-hero`, `--hero-2`, `--hero-num`, `--hero-inset` | the hero surfaces (Home's balance hero went in #388; its desktop Balance card is `--acc-soft`) |
 | `--s1` … `--s6` | chart series: five hues validated as a set for colour-vision deficiency (ink, green, blue, magenta, orange), and `--s6` is `--line-s`, the grey for a sixth outcome |
 | `--wm-a`, `--wm-b`, `--sym-d`, `--splash`, `--on-splash`, `--status-band` | the wordmark, the launch screen and the iOS status bar |
@@ -90,11 +92,11 @@ never a raw colour. The groups:
 
 Every text pairing passes WCAG AA in both themes, and `--line-s` clears 3:1 on `--surface`, `--sunk` and `--acc-soft`; `tests/lib/ui/contrast.test.ts` checks them, so add a new pairing there.
 
-**In dark, links are near-white and lime fills mark only the primary action and first place (#380).** `--acc-text` (`#8BE651` in dark) stays the positive and open text colour. `--link` is the dark ink, plainly underlined; a card or row title link (a stretched link, a bettor's name in a divided row) takes `text-ink` in both themes, and a stretched-link title isn't underlined until it's hovered or focused (#393); and active navigation uses the `nav-active`, `tab-active` and `segment-active` tokens rather than `--primary`. Light mode's lime and `--wm-b` are fills or brand only.
+**In dark, links are near-white and lime fills mark only the primary action and first place (#380).** `--acc-text` (`#8BE651` in dark) stays the positive and open text colour. `--link` is the dark ink. Links aren't underlined at rest (#437): only a link inside a sentence is, through `prose-link` (How parlays pay, a feed row's or bet row's names, the rendered rules), and every link underlines on a mouse hover. A card or row title link takes `text-ink` in both themes; and active navigation uses the `nav-active`, `tab-active` and `segment-active` tokens rather than `--primary`. Light mode's lime and `--wm-b` are fills or brand only.
 
-**Chip tones** come only from the semantic tokens, never `--primary`: `open` (acc-soft with acc-text), `wait` (gold), `won` (win: a won bet or parlay, a winning outcome), `done` (sunk with ink: a resolved market, the owner's role), `lost` (loss) and `void` (sunk with ink2). `StatusChip` comes in `md` (28px, 13px text) and `sm` (24px, 12px text).
+**Chip tones** come only from the semantic tokens, never `--primary`: `open` (acc-soft with acc-text), `wait` (gold), `won` (win: a won bet or parlay, a winning outcome), `done` (sunk with ink: the owner's role), `lost` (loss), `void` (sunk with ink2) and `info` (blue: a result, your position, something to resolve; #445). `StatusChip` comes in `md` (28px, 13px text) and `sm` (24px, 12px text).
 
-**Lime is never used as text on the light background.** It appears only as a fill behind teal text (the phone tab bar's active pill, the leaderboard's first-place rank badge and podium block, Getting started's step dots). An avatar's initial sits on `--acc-soft` at every size (#380). Count badges are red (`--loss`, #351).
+**Lime is never used as text on the light background.** It appears only as a fill behind teal text (the leaderboard's first-place rank badge and podium block, Getting started's step dots). An avatar's initial sits on its member's tint (`tintFor` of the name; #445), never lime (#380). Count badges are red (`--loss`, #351).
 
 ## Sizing and accessibility
 
@@ -261,7 +263,7 @@ Written for someone who has just been invited: get them oriented, then signed in
 - **Desktop (from `md:`):** a 72px top bar with the wordmark, then Home, Markets, My bets, Tasks and Leaderboard. Below `xl:` the five labels won't fit beside the balance and avatar, so each is a 44px icon (the tab bar's) with its label kept for screen readers and as a tooltip, and below `lg:` the wordmark is the symbol alone. On the right: the balance chip (a link to My bets) and your avatar. The active item is a filled `--nav-active` pill. No Admin link and no BETA badge (the badge stays on sign-in and Not invited). A Skip to content link comes first.
 - **Phone (below `md:`):**
   - Top bar (64px): wordmark, balance chip, avatar, for every role.
-  - Bottom tab bar with 5 tabs: Home (lucide `House`), Markets (`ChartColumn`), Bets (`Ticket`), Tasks (`BookOpen`), Leaders (`Trophy`). The active tab's icon sits in a `--tab-active` pill with a 1.5px `--tab-active-ring` border. Bets is named "My bets", and Leaders "Leaders, leaderboard", so voice control can say the word on screen (`tabAriaLabel`).
+  - Bottom tab bar with 5 tabs: Home (lucide `House`), Markets (`ChartColumn`), Bets (`Ticket`), Tasks (`BookOpen`), Leaders (`Trophy`). The bar is `--tab-bar-h` (58px) above the safe area, each tab 50px tall (#444). The active tab's icon sits on a 28×48px `--tab-active` tint, with no border. Bets is named "My bets", and Leaders "Leaders, leaderboard", so voice control can say the word on screen (`tabAriaLabel`).
 - **The balance chip** is a 36px `--gold-soft` pill with gold "4,886 DC", text only (no coin icon), inside a 44px link named "Balance 4,886 DC, view my bets". It marks My bets current.
 - **Which tab is marked:** `/feed` marks Home and `/members/*` Leaderboard, but your own profile and Settings mark the avatar instead.
 - **The avatar is a menu** (`ProfileMenu`, Base UI Menu, `components/app-nav/profile-menu.tsx`): Your profile, Settings, Admin (reviewers and above) and Send feedback, each a 44px link with its icon. When work waits on a reviewer or above, the avatar carries a small red dot (`bg-loss`, `ring-surface`), its name says how much ("Your profile and settings, 3 waiting"), and the Admin item says it in words (`AttentionCount`, "3 waiting").

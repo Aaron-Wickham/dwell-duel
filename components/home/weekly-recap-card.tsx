@@ -85,7 +85,7 @@ export function WeeklyRecapCard({ recap }: { recap: WeeklyRecap | null }) {
             </ul>
             {more > 0 && (
               <p className="mt-1 text-sm text-ink2">
-                And {more} more on <Link href="/markets">Markets</Link>.
+                And {more} more on <Link href="/markets" className="prose-link">Markets</Link>.
               </p>
             )}
           </Row>

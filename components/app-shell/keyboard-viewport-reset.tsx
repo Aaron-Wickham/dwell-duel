@@ -5,7 +5,7 @@ import { useEffect } from 'react'
 // Long enough for iOS's keyboard to finish sliding away before the page is asked to re-measure.
 export const KEYBOARD_SETTLE_MS = 300
 
-function isTextEntry(element: Element | null): boolean {
+export function isTextEntry(element: Element | null): boolean {
   if (!element) return false
   if (element instanceof HTMLTextAreaElement) return true
   if (element instanceof HTMLElement && element.isContentEditable) return true

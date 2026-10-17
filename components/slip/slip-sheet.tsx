@@ -57,6 +57,7 @@ export function SlipSheet() {
           data-enter={presentAtLoad ? undefined : ''}
           data-leaving={leaving || undefined}
           inert={leaving}
+          data-keyboard-hides
           className="slip-fab fixed right-4 bottom-[calc(94px+var(--safe-bottom))] z-20 md:right-8 md:bottom-8"
         >
           <button

@@ -156,8 +156,8 @@ below).
 two-outcome market it can lose at most about 35 DC (*b* × ln 2), however
 people bet on it solo; the owner's economy panel shows its result as the
 **market maker** line. Parlays are the house's too: it keeps a lost
-parlay's stake and pays a won one, with no cap, and that shows on the same
-line.
+parlay's stake and pays a won one, with no cap, and that shows on its own
+**house-paid parlays** line.
 
 **Your position.** A market you have money on shows a **Your position**
 card at the top (above the chart on a phone, at the top of the right-hand

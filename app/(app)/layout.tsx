@@ -20,6 +20,7 @@ import { OfflineBanner, OfflineSpacer } from '@/components/offline/offline-banne
 import { OfflineNavNotice } from '@/components/offline/offline-nav-notice'
 import { FALLBACK_NAME } from '@/lib/profile/fallback-name'
 import { KeyboardViewportReset } from '@/components/app-shell/keyboard-viewport-reset'
+import { KeyboardOpenFlag } from '@/components/app-shell/keyboard-open'
 import { APP_SHELL_ID } from '@/lib/ui/app-shell'
 
 export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
@@ -54,6 +55,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
       <SlipProvider view={slipView} balance={profile?.balance ?? 0}>
         <NavDepthTracker />
         <KeyboardViewportReset />
+        <KeyboardOpenFlag />
         <CardLinkClick />
         {alertTables.length > 0 && <LiveTables subscriptions={alertTables} />}
         {/* A market closing changes nothing in the database, so an admin's badge refreshes at the next close. */}

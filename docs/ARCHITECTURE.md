@@ -742,7 +742,10 @@ never listed.
 **Betting through the slip.** An outcome's "Add" writes a cookie
 of picks (`lib/parlays/slip.ts`). `SlipProvider` in the signed-in layout
 holds those picks, each marked Solo or Parlay, with optimistic add, remove
-and mode switches. Stakes live only in client state. The layout also
+and mode switches. Stakes live only in client state, in a second context:
+`useSlip()` reads both, while a control that only adds, removes or counts
+picks (the cards' quick picks, the Add buttons, the sheet) reads
+`useSlipPicks()`, so typing a stake re-renders only the panel (#457). The layout also
 hands it the member's balance, for the quick-stake chips' Max (the balance
 less the slip's other stakes), the balance strip at the top of the slip
 ("N DC left after this slip" or "N DC short") and the line under Place

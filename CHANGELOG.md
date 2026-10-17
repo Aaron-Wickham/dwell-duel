@@ -64,6 +64,7 @@ before v0.4.0 used other headings.)
 - **Every timing in the stylesheet is a motion token.** The launch screen, skeleton shimmer, nav pending hint and LeafLoader read `--duration-*` and `--delay-*` tokens (mirrored in `lib/ui/motion.ts`), with the same values as before, and a test fails on a raw `ms` or `s` in `globals.css` outside the token block (#418).
 - **Admin › Members reads net worth in one call per page.** A new `member_net_worths` function (migration 0111) gives the net worth of up to 50 members at once, removed members included, instead of one `member_standing` call per removed member, which on the Removed tab was every row (#418).
 - **Closing alerts go out in one batch.** The schedule reads each member's devices once per run, sends every due market's pushes together six at a time, and records what the devices said in one call, instead of a read, a round of sends and a write per market; each market is still claimed only once a device took it (#455).
+- **Typing a stake no longer re-renders every market card.** The slip keeps its stakes in a context of their own, and the quick picks, Add buttons and sheet read only the picks, so a keystroke in the slip redraws just the slip (#457).
 
 ## v0.10.1-beta — 2026-10-04
 

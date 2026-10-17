@@ -10,9 +10,9 @@ vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
 )
 
-const { listOpenMarkets, listResolvedMarkets, listMatchingMarkets, listCategoryCounts, readSparklines, readWeekAgoChances, requestShowMoreFocus, push } = vi.hoisted(() => ({
+const { listOpenMarkets, listResolvedMarkets, listMatchingMarkets, cachedCategoryCounts, readSparklines, readWeekAgoChances, requestShowMoreFocus, push } = vi.hoisted(() => ({
   listOpenMarkets: vi.fn(),
-  listCategoryCounts: vi.fn(),
+  cachedCategoryCounts: vi.fn(),
   listMatchingMarkets: vi.fn(),
   push: vi.fn(),
   listResolvedMarkets: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock('@/lib/markets/sparklines', () => ({ readSparklines }))
 vi.mock('@/lib/markets/chart-series', () => ({ readWeekAgoChances }))
 vi.mock('@/lib/markets/categories', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/markets/categories')>()),
-  listCategoryCounts,
+  cachedCategoryCounts,
 }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase: {}, user: { id: 'p-me' } }) }))
 vi.mock('@/components/live/live-tables', () => ({ LiveTables: () => null }))
@@ -114,8 +114,8 @@ beforeEach(() => {
   readSparklines.mockResolvedValue(new Map())
   readWeekAgoChances.mockReset()
   readWeekAgoChances.mockResolvedValue(new Map())
-  listCategoryCounts.mockReset()
-  listCategoryCounts.mockResolvedValue([])
+  cachedCategoryCounts.mockReset()
+  cachedCategoryCounts.mockResolvedValue([])
   requestShowMoreFocus.mockReset()
 })
 
@@ -354,7 +354,7 @@ describe('MarketsPage: categories (#327)', () => {
   const TEN = ['Weather', 'Sports', 'Bible Study', 'Potluck', 'Trivia', 'Music', 'Games', 'Family', 'Arts', 'Other'].map((name, i) => cat(i, name))
 
   it('shows All and the eight busiest as chips, with More… for the rest', async () => {
-    listCategoryCounts.mockResolvedValue(TEN)
+    cachedCategoryCounts.mockResolvedValue(TEN)
     await renderPage(EMPTY, EMPTY, { status: 'open' })
     const chips = within(screen.getByRole('navigation', { name: 'Categories' })).getAllByRole('link')
     expect(chips.map((c) => c.textContent)).toEqual(['All', 'Weather', 'Sports', 'Bible Study', 'Potluck', 'Trivia', 'Music', 'Games', 'Family'])
@@ -365,13 +365,13 @@ describe('MarketsPage: categories (#327)', () => {
   })
 
   it('shows no category row while only one category holds markets (#389)', async () => {
-    listCategoryCounts.mockResolvedValue([cat(9, 'Other'), cat(1, 'Sports', 0)])
+    cachedCategoryCounts.mockResolvedValue([cat(9, 'Other'), cat(1, 'Sports', 0)])
     await renderPage(EMPTY, EMPTY)
     expect(screen.queryByRole('navigation', { name: 'Categories' })).toBeNull()
   })
 
   it('puts the category chips behind the phone’s search button, so the filters stay one row (#389)', async () => {
-    listCategoryCounts.mockResolvedValue(TEN.slice(0, 3))
+    cachedCategoryCounts.mockResolvedValue(TEN.slice(0, 3))
     await renderPage(EMPTY, EMPTY)
     const button = screen.getByRole('button', { name: 'Search and filter markets' })
     const chips = screen.getByRole('navigation', { name: 'Categories' }).parentElement!
@@ -383,13 +383,13 @@ describe('MarketsPage: categories (#327)', () => {
   })
 
   it('leaves out More… when every category fits', async () => {
-    listCategoryCounts.mockResolvedValue(TEN.slice(0, 3))
+    cachedCategoryCounts.mockResolvedValue(TEN.slice(0, 3))
     await renderPage(EMPTY, EMPTY)
     expect(screen.queryByRole('button', { name: 'More…' })).toBeNull()
   })
 
   it('narrows every list to the chosen category and says so, keeping it in the tabs and the search', async () => {
-    listCategoryCounts.mockResolvedValue(TEN)
+    cachedCategoryCounts.mockResolvedValue(TEN)
     const weather = { ...market(1, 'open'), category: { name: 'Weather', slug: 'weather' } }
     await renderPage({ rows: [weather], next: null, windowed: false }, EMPTY, { category: 'Weather' })
 
@@ -406,21 +406,21 @@ describe('MarketsPage: categories (#327)', () => {
 
   // #387: a category chip only while it tells markets apart.
   it('shows each card’s category under All while more than one category holds markets', async () => {
-    listCategoryCounts.mockResolvedValue(TEN)
+    cachedCategoryCounts.mockResolvedValue(TEN)
     const weather = { ...market(1, 'open'), category: { name: 'Weather', slug: 'weather' } }
     await renderPage({ rows: [weather], next: null, windowed: false }, EMPTY)
     expect(screen.getByRole('article', { name: /Market 1/ })).toHaveTextContent('Category: Weather')
   })
 
   it('shows no category chip while only one category holds markets', async () => {
-    listCategoryCounts.mockResolvedValue([cat(9, 'Other'), cat(1, 'Sports', 0)])
+    cachedCategoryCounts.mockResolvedValue([cat(9, 'Other'), cat(1, 'Sports', 0)])
     const other = { ...market(1, 'open'), category: { name: 'Other', slug: 'other' } }
     await renderPage({ rows: [other], next: null, windowed: false }, EMPTY)
     expect(screen.getByRole('article', { name: /Market 1/ })).not.toHaveTextContent('Category:')
   })
 
   it('adds a chosen category from beyond the busiest to the row', async () => {
-    listCategoryCounts.mockResolvedValue(TEN)
+    cachedCategoryCounts.mockResolvedValue(TEN)
     await renderPage(EMPTY, EMPTY, { category: 'arts', status: 'awaiting' })
     const chips = within(screen.getByRole('navigation', { name: 'Categories' })).getAllByRole('link')
     expect(chips.at(-1)).toHaveTextContent('Arts')
@@ -430,14 +430,14 @@ describe('MarketsPage: categories (#327)', () => {
   })
 
   it('treats an unknown category as All', async () => {
-    listCategoryCounts.mockResolvedValue(TEN)
+    cachedCategoryCounts.mockResolvedValue(TEN)
     await renderPage(EMPTY, EMPTY, { category: 'nope' })
     expect(listOpenMarkets).toHaveBeenCalledWith({}, expect.anything(), expect.anything(), NO_CATEGORY)
     expect(document.getElementById('markets-category-caption')).toBeNull()
   })
 
   it('searches within the chosen category', async () => {
-    listCategoryCounts.mockResolvedValue(TEN)
+    cachedCategoryCounts.mockResolvedValue(TEN)
     listMatchingMarkets.mockResolvedValue(EMPTY)
     render(await MarketsPage({ params: Promise.resolve({}), searchParams: Promise.resolve({ q: 'rain', category: 'weather' }) }))
     expect(listMatchingMarkets).toHaveBeenCalledWith({}, expect.anything(), { q: 'rain', categoryId: 'cat-0' })

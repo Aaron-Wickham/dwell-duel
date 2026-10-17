@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { revalidateGroupReads } from '@/lib/cache/group-reads'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
@@ -109,5 +110,6 @@ function finish(data: unknown): never {
   // The markets list and Home's open count may sit in the creator's 30s client cache (#384).
   revalidatePath('/markets')
   revalidatePath('/')
+  revalidateGroupReads()
   redirect(`/markets/${market_id}`)
 }

@@ -389,6 +389,9 @@ month ranks the month's betting profit, so everyone starts level.
   stake placed this month on a market that resolves next month is a loss
   this month, and its winnings count next month. Only members who've bet
   or been paid this month appear.
+- **Search for a member** by typing part of their name in the search box
+  beside the tabs: it lists everyone whose name contains it, in any case,
+  with their rank and net worth on the main board.
 - **Ties share a rank** on both boards ("1, 1, 3").
 - **Only current members are ranked.** Someone the owner has removed drops
   off both boards and out of the count in a rank like "218th of 502"; their profile still shows

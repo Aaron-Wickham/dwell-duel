@@ -298,6 +298,25 @@ describe('AppNav', () => {
     }
   })
 
+  it('scrolls back to the top when the tab you are on is tapped, in both navs, still tapping on a phone', () => {
+    pathname = '/leaderboard'
+    window.history.replaceState(null, '', '/leaderboard')
+    const scrollTo = vi.fn()
+    window.scrollTo = scrollTo as unknown as typeof window.scrollTo
+    try {
+      render(<Nav balance={120} isAdmin={false} />)
+      const [desktop, phone] = screen.getAllByRole('navigation', { name: 'Primary' })
+      // fireEvent returns false when the click's default, the navigation, was prevented.
+      expect(fireEvent.click(within(desktop).getByRole('link', { name: 'Leaderboard' }))).toBe(false)
+      expect(fireEvent.click(within(phone).getByRole('link', { name: /Leaders/ }))).toBe(false)
+      expect(scrollTo).toHaveBeenCalledTimes(2)
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
+      expect(tap).toHaveBeenCalledOnce()
+    } finally {
+      window.history.replaceState(null, '', '/')
+    }
+  })
+
   it('dots the avatar when work waits on a reviewer, with the count in its name', () => {
     render(<Nav balance={120} isAdmin attention={3} />)
     const buttons = screen.getAllByRole('button', { name: 'Your profile and settings, 3 waiting' })

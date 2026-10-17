@@ -134,6 +134,21 @@
   }
 }
 
+/* WCAG 2.2 Focus Not Obscured (2.4.11, #473): when focus or an anchor scrolls something into view,
+   keep it clear of the sticky top bar and the fixed tab bar (64px and --tab-bar-h on a phone,
+   the 72px desktop bar from md, where there's no tab bar). */
+html {
+  scroll-padding-top: calc(64px + var(--safe-top));
+  scroll-padding-bottom: calc(var(--tab-bar-h) + var(--safe-bottom) + 8px);
+}
+
+@media (width >= 48rem) {
+  html {
+    scroll-padding-top: calc(72px + var(--safe-top));
+    scroll-padding-bottom: 0px;
+  }
+}
+
 /* The same dark values appear twice: once for an explicit choice, once for the system fallback. */
 [data-theme="dark"] {
   color-scheme: dark;
@@ -641,7 +656,7 @@
 }
 
 /* Skeleton blocks (components/ui/skeleton.tsx): a band of the surface colour sweeps across the
-   sunk fill. A component layer, so bg-* and rounded-* utilities on a Skeleton win. */
+   sunk fill. The one gradient in the app, and only while something loads. taste-skill-ignore A component layer, so bg-* and rounded-* utilities on a Skeleton win. */
 @layer components {
   .skeleton {
     border-radius: var(--radius-control);

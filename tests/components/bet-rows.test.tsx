@@ -47,7 +47,7 @@ describe('WagerRows (#393)', () => {
 
   it('says a lost bet lost', () => {
     renderBet(bet({ result: { kind: 'lost' } }))
-    expect(screen.getByText('lost')).toHaveClass('text-loss')
+    expect(screen.getByText('Lost')).toHaveClass('text-loss')
   })
 
   it('leaves the payout out for a pool bet, whose payout was never fixed', () => {

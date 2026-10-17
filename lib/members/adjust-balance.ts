@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { revalidateGroupReads } from '@/lib/cache/group-reads'
 import { requireUser } from '@/lib/auth/require-user'
 import { isBalanceCheckViolation } from '@/lib/errors/balance-error'
 import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
@@ -51,5 +52,6 @@ export async function adjustBalanceAction(profileId: string, _prevState: ActionS
 
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')
+  revalidateGroupReads()
   return undefined
 }

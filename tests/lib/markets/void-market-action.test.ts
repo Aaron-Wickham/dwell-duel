@@ -6,7 +6,7 @@ const { supabase, revalidatePath, maybeSingle } = vi.hoisted(() => {
   return { supabase: { rpc: vi.fn(), from: vi.fn(() => chain) }, revalidatePath: vi.fn(), maybeSingle }
 })
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase, user: { id: 'member-1' } }) }))
-vi.mock('next/cache', () => ({ revalidatePath }))
+vi.mock('next/cache', () => ({ revalidatePath, updateTag: vi.fn() }))
 const { getRole } = vi.hoisted(() => ({ getRole: vi.fn() }))
 vi.mock('@/lib/auth/roles', async (orig) => ({ ...(await orig<typeof import('@/lib/auth/roles')>()), getRole }))
 vi.mock('@/lib/push/notify', () => ({ afterAction: vi.fn(), notifyMarketResult: vi.fn() }))

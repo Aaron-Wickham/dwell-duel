@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { revalidateGroupReads } from '@/lib/cache/group-reads'
 import { requireUser } from '@/lib/auth/require-user'
 import { GENERIC_ERROR, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { isDeliberateRaise } from '@/lib/errors/deliberate-raise'
@@ -105,6 +106,7 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
     if (!refused.priceMoved) return refused
     // The slip re-reads its picks, so it shows (and next sends) the payout the price gives now.
     revalidatePath('/', 'layout')
+    revalidateGroupReads()
     const movedStakes: Record<string, string> = {}
     for (const id of Object.keys(refused.pickErrors ?? {})) movedStakes[id] = String(formData.get(`stake:${id}`) ?? '')
     if (refused.parlayError) movedStakes.parlay = String(formData.get('parlay_stake') ?? '')
@@ -124,6 +126,7 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
   }
   // Refreshes the shared layout too, so the balance, the slip and every bet list stay current.
   revalidatePath('/', 'layout')
+  revalidateGroupReads()
 
   let parlay: NonNullable<NonNullable<PlaceSlipState>['placed']>['parlay'] = null
   if (parlayId) {

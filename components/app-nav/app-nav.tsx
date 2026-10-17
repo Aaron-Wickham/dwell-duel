@@ -12,6 +12,7 @@ import { AnimatedText } from '@/components/ui/animated-text'
 import { NavPendingHint } from '@/components/nav/nav-pending-hint'
 import { TAB_TRANSITION } from '@/components/nav/page-transition'
 import { haptics } from '@/lib/haptics'
+import { scrollToTopOnCurrentTab } from '@/lib/nav/scroll-to-top'
 import { PILL_TRANSITION } from '@/lib/ui/motion'
 import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
@@ -95,6 +96,7 @@ function DesktopLink({
       aria-current={active ? 'page' : undefined}
       aria-label={label}
       title={label}
+      onClick={(event) => scrollToTopOnCurrentTab(event, href)}
       className={cn(
         `pressable pill-label relative isolate inline-flex min-h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap rounded-full ${uiTextClass} font-bold no-underline xl:px-3.5`,
         shown ? 'text-on-nav-active' : 'text-ink2 hover:bg-sunk hover:text-ink',
@@ -207,7 +209,10 @@ export function AppNav({
                 transitionTypes={TAB_TRANSITION}
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={tabAriaLabel(item)}
-                onClick={haptics.tap}
+                onClick={(event) => {
+                  haptics.tap()
+                  scrollToTopOnCurrentTab(event, item.href)
+                }}
                 className={cn(
                   'pressable pill-label relative flex min-h-[50px] flex-col items-center justify-center gap-0.5 rounded-tile text-xs leading-[1.1] no-underline',
                   isShown ? 'text-ink' : 'text-ink2',

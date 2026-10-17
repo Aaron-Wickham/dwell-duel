@@ -58,8 +58,8 @@ describe('PlacedParlay', () => {
 
   it('says a lost parlay lost, once', () => {
     renderParlay(parlay({ status: 'lost' }))
-    expect(line('5 DC · lost')).toBeInTheDocument()
-    expect(screen.getByText('lost')).toHaveClass('text-loss')
+    expect(line('5 DC · Lost')).toBeInTheDocument()
+    expect(screen.getByText('Lost')).toHaveClass('text-loss')
   })
 
   it('says a refunded parlay was refunded', () => {
@@ -106,10 +106,11 @@ describe('PlacedParlay', () => {
     )
     expect(screen.getAllByRole('link')).toHaveLength(1)
     expect(screen.getByText(/Will it rain\? ·/)).toBeInTheDocument()
-    expect(screen.getByText('Grace').tagName).toBe('STRONG')
+    // The pick is a chip (#446), as on Home.
+    expect(screen.getByText('Grace').closest('.rounded-full')).not.toBeNull()
     expect(screen.getByText('Won')).toHaveClass('text-win')
     expect(screen.getByText('Won')).not.toHaveClass('rounded-full')
-    expect(screen.getByText('Lost')).toHaveClass('text-loss')
+    for (const lost of screen.getAllByText('Lost')) expect(lost).toHaveClass('text-loss')
     expect(screen.getByText('Called off')).toHaveClass('text-ink2')
   })
 

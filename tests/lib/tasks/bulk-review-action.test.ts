@@ -14,7 +14,7 @@ const { supabase, revalidatePath, mine, filters } = vi.hoisted(() => {
   return { supabase: { rpc: vi.fn(), from: vi.fn(() => chain) }, revalidatePath: vi.fn(), mine, filters }
 })
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase, user: { id: 'admin-1' } }) }))
-vi.mock('next/cache', () => ({ revalidatePath }))
+vi.mock('next/cache', () => ({ revalidatePath, updateTag: vi.fn() }))
 
 import { bulkApproveTaskCompletionsAction, bulkRejectTaskCompletionsAction } from '@/lib/tasks/review-task-completion'
 

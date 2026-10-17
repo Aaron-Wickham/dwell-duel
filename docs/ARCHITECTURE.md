@@ -63,7 +63,7 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 | `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its odds (on a pool market, an estimate from `parlay_leg_odds` until its market closes; on an `lmsr` market, its factor, fixed at placement) and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`: the page checks the parlay exists first (so an unknown id is a real 404), then streams the body behind `<Suspense>` with `ParlayDetailSkeleton` |
 | `/tasks` | Bible-study tasks to submit, with optional or required proof |
 | `/feed` | Activity (#385, #388): a drill-down from Home (back-swipe parent `/`), Home's tab marked while it shows. Everyone's activity, with reactions, live; a "Show" `SubNav` (`?show=all|results|mine`, `lib/social/feed-filter.ts`) narrows it to results (`RESULT_KINDS`, voids included) or your own events plus results and voids on markets you have a stake in and voids of markets you created (`my_activity_events()`, 0094, whose `UNION ALL` branches each use an index) |
-| `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`). The rankings are divided rows on the page; your own row sticks to the bottom of the viewport, and on a phone the Net worth board puts a sticky standing bar with Jump to me after the rows when yours isn't among them, while at lg Your standing (with Jump to me) sits under the podium in a sticky side column (#396). Jump to me (`?at=me`): `getJumpToMeTop` reads the 10 members above you through `rankedAbove` and the page opens a `readOrdered` window there, with focus on your row; any cursor in the URL overrides it, and Back to the top drops it |
+| `/leaderboard` | Net-worth ranks, and This month's betting profit (`?tab=month`). The rankings are divided rows on the page; your own row sticks to the bottom of the viewport, and on a phone the Net worth board puts a sticky standing bar with Jump to me after the rows when yours isn't among them, while at lg Your standing (with Jump to me) sits under the podium in a sticky side column (#396). Jump to me (`?at=me`): `getJumpToMeTop` reads the 10 members above you through `rankedAbove` and the page opens a `readOrdered` window there, with focus on your row; any cursor in the URL overrides it, and Back to the top drops it. A member search (#465): `SearchField` beside the tabs sends `?q=` (`readMemberSearch` in `lib/social/member-search.ts`: control characters and `*` dropped, whitespace collapsed, 80 code points), and `searchLeaderboard` reads `leaderboard_net_worth` through the viewer's own client with `display_name` `ilike` `containsPattern(q)` (`lib/search/query.ts`: `\`, `%` and `_` escaped) as its own filter beside the rank cursor, so each match keeps its whole-board rank; one flat list, best first, paged under `?match=`, with no tab current. Nobody matching is an `EmptyState` with Clear search. It isn't a group read: each search is its own query |
 | `/members/[id]` | A member's profile, stats and activity; your own adds Edit profile and Settings. Net worth is shown with its split into balance and DC riding (`getMemberStanding`'s `balance` and `score`), and the activity list renders the member's own name as plain text (`FeedList`'s `plainHref`, #397). `/members` alone redirects to the leaderboard |
 | `/profile` | Edit your name, photo and bio, one card at reading width (#397) |
 | `/settings` | One reading-width column (#398): Appearance & motion (theme, haptics, reduced motion; this device), Notifications (this device's push, and the account's choices, disabled with a reason where push can't work), Install the app (on a phone browser that hasn't installed it, `install-app.tsx`), Help (How it works; Your data, the full rules' privacy section, `/how-it-works/rules#how-your-data`; and Terms), Account (your profile and sign out) |
@@ -1018,6 +1018,30 @@ page shows instead of before it, and nothing is prefetched that wasn't
 before. The nav's pill moves to a tapped tab as the navigation starts
 (`useLinkStatus` through `PendingReporter` in `app-nav.tsx`), before the
 page arrives.
+
+**Group reads** (#454). The reads whose answer is the same for every
+invited member go through Next's data cache (`groupRead` in
+`lib/cache/group-reads.ts`, `unstable_cache`, since the app doesn't use
+Cache Components): both leaderboard boards' pages
+(`cachedLeaderboardPage`: `leaderboard_net_worth`, `leaderboard_month`),
+a member's standing (`cachedYourStanding`), the month's race
+(`cachedRace`, `leaderboard_race_steps`) and awards (`cachedAwards`,
+`leaderboard_awards`), and `category_counts` (`cachedCategoryCounts`,
+keyed by whether hidden categories are in). One member's read serves the
+next for 30 seconds (`GROUP_READS_REVALIDATE_S`), under the
+`group-reads` tag, which every action that moves coins, renames a member
+or changes categories or markets expires (`revalidateGroupReads`, through
+`updateTag`); their `revalidatePath('/', 'layout')` clears the entries
+too. Each read runs with the viewer's own client, so the database's
+policies still decide what it returns. Every one of these either refuses
+anyone not invited or shows them nothing, so only an invited member's
+answer is stored: `groupRead` checks `is_invited()` once a render
+(`viewerIsInvited`, beside the read rather than before it), and anyone
+not invited reads past the cache, as before. The uncached functions stay
+for the DB tests and Admin. `weekly_recap` stays uncached: the same row
+carries the viewer's own week (`my_betting_net`, `my_betting_moves` and
+`my_task_income`, read through `auth.uid()`), so caching its group half
+needs a migration that splits it.
 
 **Free-tier budget at 1,000 members** (#250, #251). A model, not a
 measurement: after merge, read Supabase → Realtime usage and Vercel →

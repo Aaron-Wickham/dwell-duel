@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { getLeaderboardPage } from '@/lib/social/leaderboard'
+import { getLeaderboardPage, searchLeaderboard } from '@/lib/social/leaderboard'
+import { readMemberSearch } from '@/lib/social/member-search'
 import { RANK_ORDER, decodeRankCursor, type RankCursor } from '@/lib/pagination/rank-cursor'
 import { fakeSupabase } from '../fake-supabase'
 
@@ -79,5 +80,68 @@ describe('getLeaderboardPage', () => {
   it('throws when the read fails, so the error page shows rather than a wrong board', async () => {
     const { client } = fakeSupabase(() => ({ error: new Error('read failed') }))
     await expect(getLeaderboardPage(client, 'month', { top: null, bottom: null })).rejects.toThrow('read failed')
+  })
+})
+
+describe('searchLeaderboard', () => {
+  it('narrows the net-worth board to names containing the search, keeping board order and whole-board ranks', async () => {
+    const shown = [row(4, 300, 4), row(18, 90, 18)]
+    const { client, queries } = fakeSupabase(() => ({ data: shown }))
+
+    const page = await searchLeaderboard(client, 'Ruth', { top: null, bottom: null })
+
+    expect(queries).toHaveLength(1)
+    expect(queries[0]).toMatchObject({ table: 'leaderboard_net_worth', rpc: true, select: 'id, display_name, avatar_path, score, rank', limit: 50 })
+    // ilike is case-insensitive, so "ruth" finds "Ruth" and "RUTHIE" alike.
+    expect(queries[0].ilike).toEqual([['display_name', '%Ruth%']])
+    expect(queries[0].or).toEqual([])
+    expect(queries[0].order).toEqual([
+      ['score', { ascending: false }],
+      ['display_name', { ascending: true }],
+      ['id', { ascending: true }],
+    ])
+    expect(page.rows.map((m) => [m.displayName, m.rank, m.score])).toEqual([
+      ['Member 004', 4, 300],
+      ['Member 018', 18, 90],
+    ])
+  })
+
+  it('takes what was typed literally: LIKE wildcards are escaped and never reach the cursor filter', async () => {
+    const { client, queries } = fakeSupabase(() => ({ data: [] }))
+    await searchLeaderboard(client, '50%_off\\', { top: null, bottom: null })
+    expect(queries[0].ilike).toEqual([['display_name', '%50\\%\\_off\\\\%']])
+  })
+
+  it('pages its matches with the board cursor alongside the search', async () => {
+    const shown = [row(5, 100, 4)]
+    const top: RankCursor = { score: 100, name: 'Member 005', id: shown[0].id }
+    const { client, queries } = fakeSupabase(() => ({ data: shown }))
+
+    const page = await searchLeaderboard(client, 'member', { top, bottom: null })
+
+    expect(queries[0].or).toEqual([RANK_ORDER.range({ top, bottom: null })])
+    expect(queries[0].ilike).toEqual([['display_name', '%member%']])
+    expect(page.windowed).toBe(true)
+  })
+
+  it('leaves the board itself unfiltered', async () => {
+    const { client, queries } = fakeSupabase(() => ({ data: [] }))
+    await getLeaderboardPage(client, 'all', { top: null, bottom: null })
+    expect(queries[0].ilike).toEqual([])
+  })
+})
+
+describe('readMemberSearch', () => {
+  it('trims, collapses whitespace and drops control characters and *', () => {
+    expect(readMemberSearch('  Ruth \t  Ann ')).toBe('Ruth Ann')
+    expect(readMemberSearch('Ru*th\u0000')).toBe('Ruth')
+    expect(readMemberSearch(['Ben', 'Ruth'])).toBe('Ben')
+    expect(readMemberSearch(undefined)).toBe('')
+    expect(readMemberSearch('   ')).toBe('')
+  })
+
+  it('caps the search at the longest display name, never cutting an emoji in half', () => {
+    expect([...readMemberSearch('😀'.repeat(100))]).toHaveLength(80)
+    expect(readMemberSearch('a'.repeat(200))).toHaveLength(80)
   })
 })

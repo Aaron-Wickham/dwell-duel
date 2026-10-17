@@ -17,4 +17,5 @@ In brief:
 - **Radii:** `rounded-segment` 10, `-control` 12, `-tile` 14, `-card` 18, `-full`.
 - **Motion:** `--ease-*` / `--duration-*` tokens, mirrored in `lib/ui/motion.ts`; reduced motion
   cross-fades.
-- **Current proposals:** the Oct 17 refresh boards, https://claude.ai/artifact/4kNk8MpsucUD1d1FrP9C4w
+- **Latest boards:** the Oct 17 refresh, https://claude.ai/artifact/4kNk8MpsucUD1d1FrP9C4w, built in
+  v0.11.0; the handoff doc describes the app as built.

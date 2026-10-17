@@ -14,9 +14,9 @@ describe('SignInPage', () => {
     expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument()
   })
 
-  it('marks the app as a beta beside the wordmark, as the signed-in header does (#354)', () => {
+  it('no longer marks the app as a beta (v1.0.0)', () => {
     render(<SignInPage />)
-    expect(screen.getByText('Beta')).toBeInTheDocument()
+    expect(screen.queryByText('Beta')).toBeNull()
   })
 
   it('tells an invitee which account to use', () => {

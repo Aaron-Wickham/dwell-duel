@@ -19,7 +19,7 @@ A market maker sells shares at each outcome's current chance, so every
 bet's payout is fixed when it's placed; bets can be combined into parlays;
 and everything that happens shows up in a live activity feed.
 
-**Current release:** [v0.11.0-beta](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v0.11.0-beta) · see the [changelog](CHANGELOG.md).
+**Current release:** [v1.0.0](https://github.com/Aaron-Wickham/dwell-duel/releases/tag/v1.0.0) · see the [changelog](CHANGELOG.md).
 
 | Home | A market | Activity | Settings |
 |---|---|---|---|
@@ -43,7 +43,8 @@ and everything that happens shows up in a live activity feed.
   payout are fixed when it's placed.
 - **Results with receipts:** resolving needs a reason and can carry
   photos, files or links. Admins can override (blocked if a past winner has
-  already spent their winnings) or call a market off (everyone is refunded).
+  already spent their winnings) or call a market off (every bet is
+  refunded, and a parlay carries on without that pick).
 - **My bets:** solo bets and parlays together, under Open, Settled and
   Cancelled. Bets are final; the Cancelled tab keeps bets cancelled before
   October 2026, when that was allowed.
@@ -263,6 +264,11 @@ Supabase, never the production database. A PR must be up to date with
 `main` to merge, so `main` itself isn't tested again: merging deploys.
 `ci-ok` has no bypass, so nothing merges red. CI also fails a PR whose new
 migration is numbered at or below `main`'s newest.
+Two advisory workflows run beside it, outside `ci-ok`: a Lighthouse check
+on the public pages (`.github/workflows/lighthouse.yml`), whose budgets only
+warn, and a Claude security review of same-repo PRs
+(`.github/workflows/security-review.yml`), which skips until its
+`CLAUDE_CODE_OAUTH_TOKEN` secret is set.
 Dependabot opens weekly update PRs for npm packages and GitHub Actions
 (`.github/dependabot.yml`).
 

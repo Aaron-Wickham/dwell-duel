@@ -11,7 +11,7 @@ describe('feedbackHref', () => {
 
   it('encodes the subject and body so a mail client reads them as separate fields', () => {
     const href = feedbackHref('1.2.3')
-    expect(href).toContain('subject=DwellDuel%20beta%20feedback')
+    expect(href).toContain('subject=DwellDuel%20feedback')
     expect(href).toContain('body=App%20version%3A%201.2.3')
   })
 

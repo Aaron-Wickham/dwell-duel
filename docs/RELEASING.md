@@ -6,7 +6,7 @@ one when a batch of work has landed, typically after a review round or a
 feature set. Aaron cuts releases; the steps go through a pull request like
 any other change.
 
-Releases are `vMAJOR.MINOR.PATCH-beta`. Bump the **minor** version for new
+Releases are `vMAJOR.MINOR.PATCH` (`-beta` until v1.0.0). Bump the **minor** version for new
 features or a rule change members will notice, and the **patch** version
 for fixes only.
 
@@ -14,7 +14,7 @@ for fixes only.
 
 ### 1. Prepare the release PR
 
-Branch from an up-to-date `main` as `release/vX.Y.Z-beta`.
+Branch from an up-to-date `main` as `release/vX.Y.Z`.
 
 - [ ] **Rebuild `## Unreleased` in `CHANGELOG.md` into the release.** Each
   PR adds its lines under Unreleased with whatever heading it chose, so
@@ -27,14 +27,14 @@ Branch from an up-to-date `main` as `release/vX.Y.Z-beta`.
     can carry one across);
   - check each line still matches what shipped, and that it names its
     issue (`(#123)`).
-- [ ] **Rename it** `## vX.Y.Z-beta — YYYY-MM-DD` (today's date), and open
+- [ ] **Rename it** `## vX.Y.Z — YYYY-MM-DD` (today's date), and open
   a fresh, empty `## Unreleased` above it.
 - [ ] **Write the summary**: one paragraph under the version heading, for
   members as much as for developers, leading with what they'll notice.
 - [ ] **README:** update the "Current release" line near the top to the new
   tag. (The releases table is gone; the README links GitHub Releases.)
-- [ ] **`package.json`:** set `"version"` to `X.Y.Z-beta` with
-  `npm version X.Y.Z-beta --no-git-tag-version`, which updates
+- [ ] **`package.json`:** set `"version"` to `X.Y.Z` with
+  `npm version X.Y.Z --no-git-tag-version`, which updates
   `package-lock.json` too.
 - [ ] **Docs:** if a rule changed, check [HOW-IT-WORKS.md](HOW-IT-WORKS.md)
   says it (the app renders that file), and that [ADMIN-GUIDE.md](ADMIN-GUIDE.md)
@@ -44,7 +44,7 @@ Branch from an up-to-date `main` as `release/vX.Y.Z-beta`.
   bar, launch screen, page height, safe areas), run `npm run check:ios` on
   a booted simulator (ARCHITECTURE.md, Environments and deploys).
 
-Open the PR titled `Release vX.Y.Z-beta`, saying which issues and PRs it
+Open the PR titled `Release vX.Y.Z`, saying which issues and PRs it
 covers. CI runs as for any PR, and it merges the usual way.
 
 ### 2. Tag and publish
@@ -60,8 +60,8 @@ Once the release PR has merged and Deploy Production has finished:
 
   ```bash
   git checkout main && git pull
-  gh release create vX.Y.Z-beta --target "$(git rev-parse HEAD)" \
-    --title "DwellDuel vX.Y.Z-beta" --notes-file notes.md --latest
+  gh release create vX.Y.Z --target "$(git rev-parse HEAD)" \
+    --title "DwellDuel vX.Y.Z" --notes-file notes.md --latest
   ```
 
   Check that `HEAD` is the release PR's merge commit before running it.

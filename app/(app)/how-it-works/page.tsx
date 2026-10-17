@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { ChevronDown } from 'lucide-react'
@@ -5,6 +6,8 @@ import { HistoryBackLink } from '@/components/ui/history-back-link'
 import { dividedRowsClass } from '@/components/ui/list-card'
 import { h2Class, Page, PageHeader } from '@/components/ui/page'
 import { MarkHowItWorksRead } from '@/components/docs/mark-how-it-works-read'
+
+export const metadata: Metadata = { title: 'How it works' }
 
 // The short version for members (#398): four plain sections and the questions people ask, with the
 // full rules (docs/HOW-IT-WORKS.md, at /how-it-works/rules) a tap away. Keep every line here true

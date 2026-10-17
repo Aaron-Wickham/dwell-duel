@@ -15,8 +15,10 @@ export function splashMedia({ width, height, ratio }: SplashDevice): string {
 
 export const siteMetadata: Metadata = {
   metadataBase: new URL('https://www.dwellduel.com'),
-  title: 'DwellDuel',
-  description: 'Friendly bets. Faithful study.',
+  // Every page names itself (#460): the title bar, history and the route announcer read it.
+  title: { default: 'DwellDuel', template: '%s · DwellDuel' },
+  description: 'An invite-only game for a church friend group: bet play money on friendly questions and earn more through Bible study.',
+  applicationName: 'DwellDuel',
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
@@ -26,7 +28,12 @@ export const siteMetadata: Metadata = {
     ],
     apple: '/apple-touch-icon-180.png',
   },
-  openGraph: { images: ['/og-image-1200x630.png'] },
+  openGraph: {
+    type: 'website',
+    siteName: 'DwellDuel',
+    url: '/',
+    images: [{ url: '/og-image-1200x630.png', width: 1200, height: 630, alt: 'DwellDuel' }],
+  },
   // iOS ignores theme_color for the status bar in an installed app. black-translucent lets the
   // page draw under it, where the status band paints the teal behind the time and battery.
   appleWebApp: {

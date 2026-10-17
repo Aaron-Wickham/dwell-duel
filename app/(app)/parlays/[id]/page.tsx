@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -51,6 +52,8 @@ function legDetail(leg: ParlayLegDetail) {
   if (leg.marketStatus === 'resolved') return `Resolved: ${leg.winningLabel ?? 'unknown'}`
   return null
 }
+
+export const metadata: Metadata = { title: 'Parlay' }
 
 export default async function ParlayPage(props: PageProps<'/parlays/[id]'>) {
   const { id } = await props.params

@@ -13,6 +13,7 @@ before v0.4.0 used other headings.)
 ## Unreleased
 
 ### Features
+- **A terms page.** Short and plain: play money with no cash value, invite only, admins' calls are final, be kind, it's a beta. Linked from sign-in and Settings (#462).
 - **Add to your slip from Markets.** Each open market's card has its picks right on it: Yes and No side by side, or a multiple-choice market's two favourites. Tap one to add it, tap again to take it out (#439).
 - **A Home you can read at a glance.** Your balance leads in a deep teal card on a phone too, what needs you shows as two coloured counts, and your bets are cards with the pick in its colour and "Waiting for a result" once a market closes (#438).
 - **The chart leads the market page.** It comes first, then a small blue strip with your position, then the outcomes, comments and bets. When a market is waiting for a result you can give, Resolve still comes first (#440).
@@ -28,6 +29,7 @@ before v0.4.0 used other headings.)
 - **Coin history by day, and a chart you can read by keyboard.** My bets › Coins groups your coin movements under a heading per day (Today, Yesterday, "Sat, Oct 3", on Eastern time), each row giving just its time, in a narrower column that's easier to scan on a computer; its loading placeholder is the list's own rows instead of bet cards. The market page's chart is a slider for a keyboard or screen reader: arrow keys, Page Up/Down, Home and End step through its points, showing the readout the pointer shows and announcing the time and each outcome's chance; the hidden table of points stays (#418).
 
 ### Fixes
+- **Every page has its own title**, so your tabs, history and screen reader say where you are ("Markets · DwellDuel", a market's own question) (#460).
 - **The top bar stays put when you type.** In the installed app, opening the keyboard no longer slides the top bar under the clock and battery (#487).
 - **The tab bar's pill slides cleanly.** Tapping a tab after scrolling no longer makes the pill dip and restart its slide when the new page arrives (#442).
 - **The keyboard no longer brings the tab bar up with it.** While you type, the tab bar and slip button step aside and come back once the keyboard has gone (#443).
@@ -58,6 +60,7 @@ before v0.4.0 used other headings.)
 - **A smoother tab pill.** The pill in My bets, Admin and every other segmented control slides without making the browser lay out the page on each frame, so it keeps up on older phones; it looks and times exactly as before (#418).
 
 ### Under the hood
+- **Search engines see only the public pages.** `robots.txt` and a sitemap list sign-in, privacy and terms; those carry canonical links, the signed-in pages and not-invited are `noindex`, and the share card gains its site name, type and image text (#459, #461). The create-next-app leftovers are gone from `public/` (#463). Printing a page leaves out the app's bars, and sharing a market reuses the invite page's clipboard helper (#466).
 - **Only Google accounts get in.** The invite check now also requires a Google sign-in on the account, so turning on another sign-in method could never let someone claim an invitee's place (0112). Four missing foreign-key indexes added (0113, #453).
 - **Design skills in the repo.** Impeccable (app screens) and Taste (public pages) are vendored in `.claude/skills/` with their licences, plus a short `PRODUCT.md` and a `DESIGN.md` that points at the handoff doc (#447).
 - **Next 16.4.0, and two dependency advisories patched.** Next moves from 16.3.8 to 16.4.0, and the lockfile takes `sharp` 0.35.5 and `source-map-js` 1.2.2, so `npm audit --omit=dev` is clean again (#448).

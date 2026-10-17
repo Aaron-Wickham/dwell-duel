@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
@@ -21,6 +22,8 @@ import { ContentReveal } from '@/components/nav/page-transition'
 import { CreateTaskForm } from './create-task-form'
 import { PENDING_ROW_ID_PREFIX, PendingApprovals } from './pending-approvals'
 import { TaskCatalogItem } from './task-catalog-item'
+
+export const metadata: Metadata = { title: 'Tasks to review' }
 
 export default async function AdminTasksPage(props: PageProps<'/admin/tasks'>) {
   const searchParams = await props.searchParams

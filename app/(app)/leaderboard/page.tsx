@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
@@ -29,6 +30,8 @@ import { YourStandingCard } from '@/components/leaderboard/your-standing'
 import { RaceChart } from '@/components/leaderboard/race-chart-lazy'
 import { cn } from '@/lib/utils'
 import { getAwards, getPastChampions, getRace, getRecords } from '@/lib/social/leaderboard-extras'
+
+export const metadata: Metadata = { title: 'Leaderboard' }
 
 const PATH = '/leaderboard'
 const ROW_ID_PREFIX = 'member'

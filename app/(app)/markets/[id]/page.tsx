@@ -1,3 +1,5 @@
+import type { Metadata } from 'next'
+import { marketTitle } from '@/lib/app-shell/page-titles'
 import type { DbClient } from '@/lib/supabase/database'
 import { Suspense } from 'react'
 import { redirect, notFound } from 'next/navigation'
@@ -48,6 +50,10 @@ import { getParlayRiding } from '@/lib/markets/parlay-riding'
 // group, so it doesn't wrap this one): the market must be found before anything streams, so an
 // unknown id still gets a real 404 status. Your position, the chart, the outcomes, the bets and
 // the comments each stream in behind their own skeleton.
+export async function generateMetadata(props: PageProps<'/markets/[id]'>): Promise<Metadata> {
+  return marketTitle((await props.params).id)
+}
+
 export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>) {
   const { id } = await props.params
   const searchParams = await props.searchParams

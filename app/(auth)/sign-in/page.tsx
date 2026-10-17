@@ -1,8 +1,11 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { h1Class } from '@/components/ui/page'
 import { SignInFrame } from '@/components/sign-in/sign-in-frame'
 import { cn } from '@/lib/utils'
 import { SignInButton } from './sign-in-button'
+
+export const metadata: Metadata = { title: 'Sign in', alternates: { canonical: '/sign-in' } }
 
 // Public, so Google's brand review (and anyone sent here) can tell what the app is. Written for
 // someone who has just been invited: what this is, in one plain sentence (#387), then the way in. On

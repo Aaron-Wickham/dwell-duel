@@ -32,6 +32,10 @@ export function SignInFrame({ intro = false, dimmed = false, children }: { intro
             <Link href="/privacy" className="hit-area prose-link font-bold">
               Privacy
             </Link>
+            <span className="text-ink2"> · </span>
+            <Link href="/terms" className="hit-area prose-link font-bold">
+              Terms
+            </Link>
           </p>
         </div>
       </div>

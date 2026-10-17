@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { Fragment } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -34,6 +35,8 @@ import { MarketSearch } from '@/components/markets/market-search'
 import { MoreCategories } from '@/components/markets/more-categories'
 import { cn } from '@/lib/utils'
 import { MarketCard, leadingOutcome, type MarketCardChart } from '@/components/markets/market-card'
+
+export const metadata: Metadata = { title: 'Markets' }
 
 const GROUPS: { id: MarketCardStatus; heading: string }[] = [
   { id: 'open', heading: 'Open' },

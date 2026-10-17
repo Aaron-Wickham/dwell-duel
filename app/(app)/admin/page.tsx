@@ -1,7 +1,10 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { adminHref, getRole } from '@/lib/auth/roles'
 import { getReviewCounts } from '@/lib/admin/review-counts'
+
+export const metadata: Metadata = { title: 'Admin' }
 
 // /admin has no content of its own: it opens the section with work waiting, else the first this
 // role can see.

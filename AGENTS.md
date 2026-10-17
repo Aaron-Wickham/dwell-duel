@@ -50,6 +50,8 @@ a line to `CHANGELOG.md` under the next release.
   sunk), never `primary`. Category chips and avatar initials take a
   `--tint1`…`--tint6` pair from `tintFor` (`lib/ui/tint.ts`), never a
   status colour (#445).
+- **Every page exports a title** (`metadata` or `generateMetadata`, #460); the root
+  layout's template adds " · DwellDuel", and a test fails on a page without one.
 - **Every signed-in page is a `<Page>`.** It lives in `components/ui/page.tsx`
   and has exactly one `<h1>`, from `PageHeader` or `h1Class`. Sections are
   `SectionCard`s, whose `<h2>` names the region (a page of prose, like How it

@@ -69,7 +69,7 @@ a line to `CHANGELOG.md` under the next release.
   a figure is `figureHeroClass`, `figureClass` or `figureInlineClass`, and
   the sizes between body and caption are `uiTextClass`, `chipTextClass` and
   `microTextClass`. Don't add a `text-[Npx]` of your own (the sign-in page
-  and the brand mark (the wordmark and the beta badge) are the only
+  and the brand mark (the wordmark) are the only
   exceptions), nor a `rounded-[Npx]`: radii are
   `rounded-segment` (10px), `-control`, `-tile`, `-card` or `-full`. A card
   built by hand takes `cardPaddingClass` from `components/ui/card.tsx`.

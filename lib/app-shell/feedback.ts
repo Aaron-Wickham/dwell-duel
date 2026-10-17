@@ -1,5 +1,5 @@
 export const FEEDBACK_EMAIL = 'aaronmaxwellwickham1917@gmail.com'
-export const FEEDBACK_SUBJECT = 'DwellDuel beta feedback'
+export const FEEDBACK_SUBJECT = 'DwellDuel feedback'
 
 // `version` defaults to the build-time deploy id next.config.ts's `env` inlines everywhere (see
 // components/offline/service-worker-registration.tsx for the same pattern), so a caller only needs

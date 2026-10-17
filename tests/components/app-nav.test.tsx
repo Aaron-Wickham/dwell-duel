@@ -267,7 +267,7 @@ describe('AppNav', () => {
   })
 
 
-  // #385 (A11Y-12): the beta sticker stays on sign-in, not in the signed-in shell.
+  // #385 (A11Y-12) kept the beta sticker out of the signed-in shell; v1.0.0 dropped it everywhere.
   it('shows no Beta badge in the signed-in shell', () => {
     render(<Nav balance={120} isAdmin={false} />)
     expect(screen.getAllByRole('link', { name: 'DwellDuel home' })).toHaveLength(2)

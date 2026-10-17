@@ -36,9 +36,9 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
-    title: 'A beta',
+    title: 'As it is',
     body: [
-      'DwellDuel is a small project in beta. It may change, go down or lose data, and it’s offered as it is, without any promise. These terms may change too; the latest version is always on this page.',
+      'DwellDuel is a small project run by friends. It may change, go down or lose data, and it’s offered as it is, without any promise. These terms may change too; the latest version is always on this page.',
     ],
   },
 ]

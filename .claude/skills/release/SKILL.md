@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a DwellDuel release (vX.Y.Z-beta) by following docs/RELEASING.md — release PR rebuilding Unreleased into the new CHANGELOG section with the README and package.json bumps, then the tagged GitHub Release and the note to members. Use when Aaron asks to release, tag, ship a version or cut vX.Y.Z.
+description: Cut a DwellDuel release (vX.Y.Z) by following docs/RELEASING.md — release PR rebuilding Unreleased into the new CHANGELOG section with the README and package.json bumps, then the tagged GitHub Release and the note to members. Use when Aaron asks to release, tag, ship a version or cut vX.Y.Z.
 ---
 
 # Release

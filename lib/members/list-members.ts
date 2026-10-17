@@ -196,11 +196,3 @@ export async function listMembersByNetWorth(
     netWorths: new Map(result.rows.map((row) => [row.id, row.score])),
   }
 }
-
-// Every member's id and name, A–Z, removed or not, for Admin › Ledger's member filter (#418).
-export async function listMemberNames(supabase: DbClient): Promise<{ id: string; name: string }[]> {
-  const rows = await readAll((from, to) =>
-    supabase.from('profiles').select('id, display_name').order('display_name').order('id').range(from, to),
-  )
-  return rows.map((row) => ({ id: row.id, name: row.display_name }))
-}

@@ -86,6 +86,7 @@ before v0.4.0 used other headings.)
 - **Proof photos stop downloading again on every refresh.** A reviewer is handed the same signed link to a photo for most of its hour instead of a new one each time the queue or a market page refreshes, so the browser keeps its copy; uploads are cached for a day, and thumbnails load lazily at their size (#452).
 - **The leaderboard and category counts are read once for everyone.** Both boards, Your standing, the month's race and awards, and the category counts come from Next's data cache for up to 30 seconds, since every invited member gets the same answer; anything that moves coins or changes a name, market or category clears them at once. The weekly recap stays uncached, because its row includes your own week (#454).
 - **A Lighthouse check on every pull request.** A separate, non-required workflow builds the app and runs Lighthouse on the sign-in and privacy pages, warning when LCP, TBT, CLS, performance or accessibility miss their budgets and keeping the reports for a week (#456).
+- **Admin › Ledger no longer reads every member to filter by one.** The Member filter is a box you type a name into, removed members included: a name that fits one member shows their movements (and "Show more" pages by their id, without searching again), and one that fits nobody or several says so, listing the matches. The box shows who the ledger is filtered to, and Show everyone’s clears it (#430).
 
 ## v0.10.1-beta — 2026-10-04
 

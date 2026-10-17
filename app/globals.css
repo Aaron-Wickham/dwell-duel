@@ -746,6 +746,19 @@
 
 /* The slip's floating button (components/slip/slip-sheet.tsx) rises in with the first pick and
    fades out after the last (#384); reduced motion fades it without the rise. */
+/* While the on-screen keyboard is up, iOS would carry the fixed tab bar and slip button up above it,
+   over the field being typed in (#443). KeyboardOpenFlag sets the attribute. */
+:root[data-keyboard="open"] [data-keyboard-hides] {
+  visibility: hidden;
+  opacity: 0;
+}
+[data-keyboard-hides] {
+  transition: opacity var(--duration-fast) ease-out, visibility 0s linear var(--duration-fast);
+}
+:root:not([data-keyboard="open"]) [data-keyboard-hides] {
+  transition: opacity var(--duration-fast) ease-out;
+}
+
 .slip-fab[data-enter] {
   animation: slip-fab-in var(--duration-enter) var(--ease-ios) both;
 }

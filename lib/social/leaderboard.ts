@@ -1,4 +1,5 @@
 import type { DbClient } from '@/lib/supabase/database'
+import { groupRead } from '@/lib/cache/group-reads'
 import { readOrdered, type KeysetPage } from '@/lib/pagination/keyset'
 import { RANK_ORDER, rankedAbove, type RankCursor, type RankPageParams } from '@/lib/pagination/rank-cursor'
 import { avatarUrl } from '@/lib/profile/avatar'
@@ -52,6 +53,12 @@ export async function getLeaderboardPage(supabase: DbClient, board: Board, page:
     ...result,
     rows: result.rows.map((r) => ({ id: r.id, displayName: r.display_name, avatarSrc: avatarUrl(r.avatar_path), score: r.score, rank: r.rank })),
   }
+}
+
+// Both boards answer the same for every invited member (0051, 0093), so a page of either is a
+// group read, keyed by the board and the window.
+export function cachedLeaderboardPage(supabase: DbClient, board: Board, page: RankPageParams): Promise<KeysetPage<LeaderboardEntry>> {
+  return groupRead(supabase, 'leaderboard-page', JSON.stringify([board, page.top, page.bottom]), () => getLeaderboardPage(supabase, board, page))
 }
 
 // How many members "Jump to me" shows above the member's own row, so the row has neighbours.
@@ -151,4 +158,9 @@ export async function getYourStanding(supabase: DbClient, memberId: string): Pro
     tiedWith: Math.max(0, (sharing.data?.length ?? 0) - 1),
     above: nearest ? { name: nearest.display_name, gap: nearest.score - score } : null,
   }
+}
+
+// A member's standing is the same whoever asks, so it's a group read keyed by the member.
+export function cachedYourStanding(supabase: DbClient, memberId: string): Promise<YourStanding | null> {
+  return groupRead(supabase, 'your-standing', memberId, () => getYourStanding(supabase, memberId))
 }

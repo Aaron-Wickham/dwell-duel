@@ -4,7 +4,7 @@ const { supabase, redirect } = vi.hoisted(() => ({ supabase: { rpc: vi.fn() }, r
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase, user: { id: 'member-1' } }) }))
 vi.mock('next/navigation', () => ({ redirect }))
 const { revalidatePath } = vi.hoisted(() => ({ revalidatePath: vi.fn() }))
-vi.mock('next/cache', () => ({ revalidatePath }))
+vi.mock('next/cache', () => ({ revalidatePath, updateTag: vi.fn() }))
 const { notifyNewMarket } = vi.hoisted(() => ({ notifyNewMarket: vi.fn() }))
 vi.mock('@/lib/push/notify', () => ({ afterAction: (fn: () => void) => fn(), notifyNewMarket }))
 

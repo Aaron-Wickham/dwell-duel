@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const { supabase, revalidatePath } = vi.hoisted(() => ({ supabase: { rpc: vi.fn() }, revalidatePath: vi.fn() }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase, user: { id: 'admin-1' } }) }))
-vi.mock('next/cache', () => ({ revalidatePath }))
+vi.mock('next/cache', () => ({ revalidatePath, updateTag: vi.fn() }))
 
 import { mergeCategoryAction, renameCategoryAction, setCategoryHiddenAction } from '@/lib/admin/category-actions'
 

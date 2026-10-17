@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { revalidateGroupReads } from '@/lib/cache/group-reads'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 import { GENERIC_ERROR, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
@@ -65,6 +66,7 @@ export async function resolveMarketAction(
       (await resolvedByMeTo(supabase, marketId, outcomeId, user.id))
     ) {
       revalidatePath('/', 'layout')
+      revalidateGroupReads()
       return undefined
     }
     if (error.message === SAME_OUTCOME) return { formError: SAME_OUTCOME_MESSAGE, field: 'outcome' }
@@ -81,6 +83,7 @@ export async function resolveMarketAction(
   afterAction(() => notifyMarketResult(marketId))
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')
+  revalidateGroupReads()
   return undefined
 }
 

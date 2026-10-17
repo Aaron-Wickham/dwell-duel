@@ -1,4 +1,5 @@
 import type { DbClient } from '@/lib/supabase/database'
+import { groupRead } from '@/lib/cache/group-reads'
 
 // 0103 seeds it with this id, and every market made without a category lands in it.
 export const OTHER_CATEGORY_ID = '00000000-0000-4000-8000-000000000327'
@@ -31,6 +32,12 @@ export async function listCategoryCounts(supabase: DbClient, includeHidden = fal
     openMarkets: c.open_markets,
     markets: c.markets,
   }))
+}
+
+// Categories and markets are readable by every invited member and nobody else (0103), so the
+// counts are a group read, keyed by whether hidden categories are in.
+export function cachedCategoryCounts(supabase: DbClient, includeHidden = false): Promise<CategoryCount[]> {
+  return groupRead(supabase, 'category-counts', String(includeHidden), () => listCategoryCounts(supabase, includeHidden))
 }
 
 export function busiestCategories(counts: CategoryCount[], n = BUSIEST_CHIPS): CategoryCount[] {

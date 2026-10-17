@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { revalidateGroupReads } from '@/lib/cache/group-reads'
 import { requireUser } from '@/lib/auth/require-user'
 import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
@@ -37,6 +38,7 @@ export async function renameCategoryAction(categoryId: string, _prev: CategoryAc
   const { error } = await supabase.rpc('rename_market_category', { p_category_id: categoryId, p_name: name })
   if (error) return friendlyError(error, CATEGORY_ERRORS, 'rename_market_category failed')
   revalidatePath('/', 'layout')
+  revalidateGroupReads()
   return { saved: true }
 }
 
@@ -48,6 +50,7 @@ export async function mergeCategoryAction(categoryId: string, _prev: CategoryAct
   const { error } = await supabase.rpc('merge_market_categories', { p_from: categoryId, p_into: into })
   if (error) return friendlyError(error, CATEGORY_ERRORS, 'merge_market_categories failed')
   revalidatePath('/', 'layout')
+  revalidateGroupReads()
   return { saved: true }
 }
 
@@ -62,5 +65,6 @@ export async function setCategoryHiddenAction(
   const { error } = await supabase.rpc('set_market_category_hidden', { p_category_id: categoryId, p_hidden: hidden })
   if (error) return friendlyError(error, CATEGORY_ERRORS, 'set_market_category_hidden failed')
   revalidatePath('/', 'layout')
+  revalidateGroupReads()
   return { saved: true }
 }

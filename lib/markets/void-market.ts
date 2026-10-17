@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { revalidateGroupReads } from '@/lib/cache/group-reads'
 import { requireUser } from '@/lib/auth/require-user'
 import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { atLeast, getRole } from '@/lib/auth/roles'
@@ -47,6 +48,7 @@ export async function voidMarketAction(
       const creatorMayVoid = market?.created_by === user.id && new Date(market.close_at).getTime() > Date.now()
       if (market?.status === 'voided' && (creatorMayVoid || atLeast(await getRole(supabase), 'admin'))) {
         revalidatePath('/', 'layout')
+        revalidateGroupReads()
         return undefined
       }
     }
@@ -56,5 +58,6 @@ export async function voidMarketAction(
   afterAction(() => notifyMarketResult(marketId))
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')
+  revalidateGroupReads()
   return undefined
 }

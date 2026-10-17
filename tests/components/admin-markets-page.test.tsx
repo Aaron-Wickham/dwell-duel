@@ -24,10 +24,10 @@ vi.mock('@/lib/auth/roles', async (importOriginal) => ({
 
 const { listAwaitingMarkets } = vi.hoisted(() => ({ listAwaitingMarkets: vi.fn() }))
 vi.mock('@/lib/admin/markets-awaiting', () => ({ listAwaitingMarkets }))
-const { listCategoryCounts } = vi.hoisted(() => ({ listCategoryCounts: vi.fn() }))
+const { cachedCategoryCounts } = vi.hoisted(() => ({ cachedCategoryCounts: vi.fn() }))
 vi.mock('@/lib/markets/categories', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/markets/categories')>()),
-  listCategoryCounts,
+  cachedCategoryCounts,
 }))
 const { mergeCategoryAction, renameCategoryAction, setCategoryHiddenAction } = vi.hoisted(() => ({
   mergeCategoryAction: vi.fn(),
@@ -54,7 +54,7 @@ const MARKET = {
 }
 
 describe('AdminMarketsPage', () => {
-  beforeEach(() => listCategoryCounts.mockResolvedValue([SPORTS, OLD, FOOTY, OTHER]))
+  beforeEach(() => cachedCategoryCounts.mockResolvedValue([SPORTS, OLD, FOOTY, OTHER]))
   it('lists each waiting market with its pool, creator and a Resolve link to its resolve form', async () => {
     listAwaitingMarkets.mockResolvedValue({ rows: [MARKET], next: null, windowed: false })
     render(await AdminMarketsPage({ searchParams: Promise.resolve({}) } as never))
@@ -87,7 +87,7 @@ describe('AdminMarketsPage', () => {
   it('lists every category as a card, the hidden ones last, and never offers to hide or merge Other (#327)', async () => {
     listAwaitingMarkets.mockResolvedValue({ rows: [], next: null, windowed: false })
     render(await AdminMarketsPage({ searchParams: Promise.resolve({}) } as never))
-    expect(listCategoryCounts).toHaveBeenCalledWith({}, true)
+    expect(cachedCategoryCounts).toHaveBeenCalledWith({}, true)
 
     const section = screen.getByRole('region', { name: 'Categories' })
     const cards = within(section).getAllByRole('listitem')

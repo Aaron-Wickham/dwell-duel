@@ -19,8 +19,8 @@ const { getJumpToMeTop, getLeaderboardPage, getYourStanding, requestShowMoreFocu
   getAwards: vi.fn(),
   getPastChampions: vi.fn(),
 }))
-vi.mock('@/lib/social/leaderboard', () => ({ getJumpToMeTop, getLeaderboardPage, getYourStanding }))
-vi.mock('@/lib/social/leaderboard-extras', () => ({ getRecords, getRace, getAwards, getPastChampions }))
+vi.mock('@/lib/social/leaderboard', () => ({ getJumpToMeTop, cachedLeaderboardPage: getLeaderboardPage, cachedYourStanding: getYourStanding }))
+vi.mock('@/lib/social/leaderboard-extras', () => ({ getRecords, cachedRace: getRace, cachedAwards: getAwards, getPastChampions }))
 // Recharts needs layout jsdom doesn't have; the chart has its own test.
 vi.mock('@/components/leaderboard/race-chart-lazy', () => ({ RaceChart: ({ series }: { series: unknown[] }) => <div data-testid="race">{series.length}</div> }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase: {}, user: { id: 'p-me' } }) }))

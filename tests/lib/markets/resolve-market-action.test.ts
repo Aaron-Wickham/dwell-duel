@@ -7,7 +7,7 @@ const { supabase, revalidatePath, maybeSingle } = vi.hoisted(() => {
   return { supabase: { rpc: vi.fn(), from: vi.fn(() => chain) }, revalidatePath: vi.fn(), maybeSingle }
 })
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase, user: { id: 'member-1' } }) }))
-vi.mock('next/cache', () => ({ revalidatePath }))
+vi.mock('next/cache', () => ({ revalidatePath, updateTag: vi.fn() }))
 
 import { resolveMarketAction } from '@/lib/markets/resolve-market'
 

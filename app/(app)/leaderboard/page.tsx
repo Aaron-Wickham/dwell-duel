@@ -4,7 +4,7 @@ import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { getJumpToMeTop, getLeaderboardPage, getYourStanding, type Board } from '@/lib/social/leaderboard'
+import { cachedLeaderboardPage, cachedYourStanding, getJumpToMeTop, type Board } from '@/lib/social/leaderboard'
 import { currentSeasonName } from '@/lib/social/season'
 import { newestHref, showMoreHref, type SearchParams } from '@/lib/pagination/cursor'
 import { readRankPageParams } from '@/lib/pagination/rank-cursor'
@@ -29,7 +29,7 @@ import { Podium } from '@/components/leaderboard/podium'
 import { YourStandingCard } from '@/components/leaderboard/your-standing'
 import { RaceChart } from '@/components/leaderboard/race-chart-lazy'
 import { cn } from '@/lib/utils'
-import { getAwards, getPastChampions, getRace, getRecords } from '@/lib/social/leaderboard-extras'
+import { cachedAwards, cachedRace, getPastChampions, getRecords } from '@/lib/social/leaderboard-extras'
 
 export const metadata: Metadata = { title: 'Leaderboard' }
 
@@ -63,7 +63,7 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
   // follows a window never throws the member back to their own place.
   const pageParams = readRankPageParams(searchParams, 'before')
   const jumping = searchParams.at === 'me' && pageParams.top === null && pageParams.bottom === null
-  const page = await getLeaderboardPage(
+  const page = await cachedLeaderboardPage(
     supabase,
     board,
     jumping ? { top: await getJumpToMeTop(supabase, board, user.id), bottom: null } : pageParams,
@@ -78,10 +78,10 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
       supabase,
       page.rows.map((r) => r.id),
     ),
-    showMonthExtras ? getRace(supabase) : [],
-    showMonthExtras ? getAwards(supabase) : [],
+    showMonthExtras ? cachedRace(supabase) : [],
+    showMonthExtras ? cachedAwards(supabase) : [],
     board === 'month' ? getPastChampions(supabase) : [],
-    showStanding ? getYourStanding(supabase, user.id) : null,
+    showStanding ? cachedYourStanding(supabase, user.id) : null,
     showStanding ? getRecords(supabase, [user.id]) : new Map(),
   ])
   // Only the net-worth board has a podium; This month leads with the race instead (#396).

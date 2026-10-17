@@ -43,7 +43,7 @@ import { getPositionKeys } from '@/lib/markets/position'
 import { describeMarketStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
 import { hasBetHistory } from '@/lib/markets/bet-history'
 import { listMarketEdits } from '@/lib/markets/market-edits'
-import { listCategoryCounts, mostUsedCategories } from '@/lib/markets/categories'
+import { cachedCategoryCounts, mostUsedCategories } from '@/lib/markets/categories'
 import { getParlayRiding } from '@/lib/markets/parlay-riding'
 
 // No loading.tsx for this route (and the markets list's own loading.tsx sits in the (list)
@@ -76,7 +76,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
     getRole(supabase),
     getCreatorStakes(supabase, [{ id: market.id, createdBy: market.createdBy }]),
     getPositionKeys(supabase, market.id),
-    listCategoryCounts(supabase),
+    cachedCategoryCounts(supabase),
     rpcFlag(supabase.rpc('can_resolve_market', { p_market_id: market.id })),
     rpcFlag(supabase.rpc('can_void_market', { p_market_id: market.id })),
     rpcFlag(supabase.rpc('has_stake_in_market', { p_market_id: market.id, p_profile_id: user.id })),

@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { revalidateGroupReads } from '@/lib/cache/group-reads'
 import { requireUser } from '@/lib/auth/require-user'
 import { isRole } from '@/lib/auth/roles'
 import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
@@ -36,6 +37,7 @@ async function run<F extends keyof Fns>(fn: F, args: Fns[F]['Args']): Promise<Co
   const { error } = await supabase.rpc(fn, args)
   if (error) return friendlyError(error, OWNER_ERRORS, `${fn} failed`)
   revalidatePath('/', 'layout')
+  revalidateGroupReads()
   return undefined
 }
 

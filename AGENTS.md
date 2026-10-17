@@ -35,6 +35,11 @@ a line to `CHANGELOG.md` under the next release.
 
 ## UI conventions
 
+- **One surface language** (#441). A card (`cardClass`, `ListCard`) is a
+  step lighter than the page (`bg-surface` on `bg-bg`) with no border and
+  no resting shadow; only what floats (a sheet, a menu, a dialog, a card
+  lifted under the mouse) casts a shadow. Hairlines stay for dividers
+  inside a card, form fields and tables.
 - **Tokens, never raw colours.** Colours come from the CSS variables in
   `app/globals.css`, through Tailwind utilities (`bg-surface`, `text-ink2`,
   `border-line` and so on). Light and dark are the same markup with
@@ -85,9 +90,9 @@ a line to `CHANGELOG.md` under the next release.
   taking `pressable hover-tint relative` and a `stretched-link` title:
   never bordered cards inside the card.
 - **`ListCard` is for a standalone list on the page.**
-  `components/ui/list-card.tsx`'s `ListCard` is the My bets parlay card: a
-  `border-line` hairline, `rounded-tile` (`--radius-tile`, 14px), `p-3.5`
-  / `md:p-4`, no shadow, tinting flush (`hover-tint [--tint-inset:0]`)
+  `components/ui/list-card.tsx`'s `ListCard` is the My bets parlay card: the
+  page's surface step (`bg-surface`, no hairline, #441), `rounded-tile`
+  (`--radius-tile`, 14px), `p-3.5` / `md:p-4`, no shadow, tinting flush (`hover-tint [--tint-inset:0]`)
   rather than lifting. Its title link is a `stretched-link` and any other
   control sits in a `relative z-[1]` wrapper; a card that doesn't open
   anything as a whole (a pick in the slip) passes `tappable={false}`. The list is

@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils'
 // a SectionCard is `dividedRowsClass` rows, never bordered cards inside the card.
 export const listCardsClass = 'flex flex-col gap-2'
 
-// A hairline and no shadow: the cards sit side by side on the page, so none of them floats.
-export const listCardClass = 'rounded-tile border border-line p-3.5 md:p-4'
+// The page's surface step, no hairline and no shadow (#441): the cards sit side by side on the page,
+// so none of them floats.
+export const listCardClass = 'rounded-tile bg-surface p-3.5 md:p-4'
 
 // Tints flush to the border instead of lifting (#244).
 export const tappableListCardClass = cn(listCardClass, 'pressable hover-tint relative [--tint-inset:0] before:rounded-[inherit]')

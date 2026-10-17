@@ -19,19 +19,30 @@ function Heading({ width }: { width: string }) {
   )
 }
 
-export function MarketChartSkeleton() {
+// The chart leads the market page (#489): edge to edge and uncarded on a phone, a card from lg.
+export const chartSectionClass =
+  'flex flex-col gap-3 max-md:-mx-4 lg:rounded-card lg:bg-surface lg:p-6'
+
+export function MarketChartSkeleton({ figure = true }: { figure?: boolean }) {
   return (
     <SkeletonScreen name="market-chart" announce={false}>
-      <SkeletonCard>
-        <Heading width="w-44" />
+      <div className={chartSectionClass}>
+        <div className="max-md:px-4">
+          <Heading width="w-44" />
+        </div>
+        {figure && (
+          <div className="flex h-10 items-center max-md:px-4 md:h-14">
+            <Skeleton className="h-9 w-32 md:h-12" />
+          </div>
+        )}
         {/* The chart's bet count and range picker row, the plot, then its tick labels. */}
-        <div className="flex h-[52px] items-center justify-between gap-3">
+        <div className="flex h-[52px] items-center justify-between gap-3 max-md:px-4">
           <Skeleton className="h-4 w-12" />
           <Skeleton className="h-[52px] w-40 rounded-tile" />
         </div>
         <Skeleton className="h-[220px] md:h-[300px]" />
         <Skeleton className="h-5 w-full" />
-      </SkeletonCard>
+      </div>
     </SkeletonScreen>
   )
 }

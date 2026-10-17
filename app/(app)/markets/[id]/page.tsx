@@ -21,8 +21,9 @@ import { readSlip } from '@/lib/parlays/slip'
 import { BackLink } from '@/components/ui/back-link'
 import { LoadingStatus } from '@/components/ui/loading-status'
 import { LocalTime } from '@/components/ui/local-time'
-import { Page, h1Class } from '@/components/ui/page'
-import { SectionCard } from '@/components/ui/section-card'
+import { Page, figureHeroClass, h1Class, h2Class } from '@/components/ui/page'
+import { chartSectionClass } from '@/components/markets/market-detail-skeletons'
+import { leadingOutcome } from '@/components/markets/market-card'
 import { ContentReveal } from '@/components/nav/page-transition'
 import { cn } from '@/lib/utils'
 import {
@@ -233,7 +234,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           </div>
           <div className="contents lg:col-start-1 lg:row-start-1 lg:flex lg:flex-col lg:gap-7">
             <div className={cn('lg:order-none', manageFirst ? 'order-2' : 'order-1')}>
-              <Suspense fallback={<MarketChartSkeleton />}>
+              <Suspense fallback={<MarketChartSkeleton figure={market.status === 'open'} />}>
                 <MarketChart market={market} odds={odds} now={now} />
               </Suspense>
             </div>
@@ -280,9 +281,27 @@ async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: 
     outcomeIds: chartOutcomes.map((o) => o.id),
   }, now)
 
+  // While it takes bets or waits on a result, the leading outcome's chance leads the section (#489).
+  const lead =
+    market.status === 'open'
+      ? leadingOutcome(
+          market.kind,
+          odds.map((o) => ({ id: o.outcomeId, label: o.label, pct: o.impliedProbability === null ? null : Math.round(o.impliedProbability * 100) })),
+        )
+      : undefined
+
   return (
     <ContentReveal>
-      <SectionCard title={chartTitle(market.kind, odds)} titleId="chart-title" className="gap-3">
+      <section aria-labelledby="chart-title" className={chartSectionClass}>
+        <h2 id="chart-title" className={`${h2Class} max-md:px-4`}>
+          {chartTitle(market.kind, odds)}
+        </h2>
+        {lead && lead.pct !== null && (
+          <p className="flex flex-wrap items-baseline gap-x-2 max-md:px-4">
+            <span className={`${figureHeroClass} text-acc-text`}>{lead.pct}%</span>
+            <span className="min-w-0 break-words font-bold">{lead.label}</span>
+          </p>
+        )}
         <ProbabilityChart
           kind={market.kind}
           outcomes={chartOutcomes}
@@ -293,7 +312,7 @@ async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: 
           closedAt={chartClosedAt(market.status, market.closeAt, market.settledAt)}
           resolvedLabel={market.status === 'resolved' ? market.resolvedOutcomeLabel : null}
         />
-      </SectionCard>
+      </section>
     </ContentReveal>
   )
 }

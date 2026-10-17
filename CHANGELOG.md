@@ -40,6 +40,8 @@ before v0.4.0 used other headings.)
 - **A member's page adds up, and Edit profile is simpler.** Next to net worth, a line says how it splits: "4,886 DC balance + 275 DC riding on open bets", so it squares with the balance in the top bar. Their Recent activity no longer links their own name back to the page you're on, the stats card shows a record as "17–12" with the share won under it instead of wrapping on a phone, and its loading placeholder is the card's real height, so the page no longer jumps when the stats arrive. Edit profile is one card with photo, name, bio and a single Save, without the separate preview, and its loading placeholder is the card's real height (#397).
 
 ### Polish
+- **One look for every card.** Cards are now a soft step lighter than the page, with no outline and no shadow; only what floats (the slip, menus, a card under your mouse) casts one (#441).
+- **The chart leads, edge to edge.** On a phone a market's chart runs the full width with the leading chance large above it (#489).
 - **Sign-in says what DwellDuel is.** "Friendly bets with your church friends", and the line under it says it's play money, never real money (#467).
 - **The full rules are easier to scan.** Each main section opens with a one-line "In short", Markets is split into creating, finding, and Duplicate and Share, the notes on markets from before October 2026 moved to the end, and housekeeping detail about notifications is gone (#469).
 - **No more dashes.** Ranges read "5 to 50 DC" and "Oct 5 to 11", a bet row reads "Ruth · 10 DC on Yes", and a record is "17-12" everywhere (#470).

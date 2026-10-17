@@ -492,8 +492,10 @@
 @utility prose-link {
   text-decoration-line: underline;
 
-  &:hover {
-    text-decoration-thickness: 3px;
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      text-decoration-thickness: 3px;
+    }
   }
 }
 
@@ -505,7 +507,14 @@
 @utility stretched-link {
   text-decoration-line: none;
 
-  &:hover,
+  /* Only a mouse hovers: iOS keeps :hover on a link after a touch, even one that only scrolled,
+     which left a card's title underlined. */
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      text-decoration-line: underline;
+    }
+  }
+
   &:focus-visible {
     text-decoration-line: underline;
   }

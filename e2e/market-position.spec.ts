@@ -115,10 +115,10 @@ test('Your position lists each bet with its fixed payout, and a parlay pick; par
   await expect(solo.getByRole('button')).toHaveCount(0)
   await expect(position.getByText('5 DC on this market · Bets are final.')).toBeVisible()
 
-  // On a phone the outcomes come first, then the chart, then the card (#390).
+  // On a phone the chart comes first, then the position strip, then the outcomes (#440).
   const chart = page.getByRole('region', { name: 'Yes over time' })
-  expect((await outcomes.boundingBox())!.y).toBeLessThan((await chart.boundingBox())!.y)
   expect((await chart.boundingBox())!.y).toBeLessThan((await position.boundingBox())!.y)
+  expect((await position.boundingBox())!.y).toBeLessThan((await outcomes.boundingBox())!.y)
 
   // Backer1's parlay rides on Yes too. The page follows parlay_legs for this market
   // (pageSubscriptions.marketDetail); this checks the figure itself after a refresh.
@@ -127,12 +127,12 @@ test('Your position lists each bet with its fixed payout, and a parlay pick; par
   await page.reload()
   await expect(outcomes.getByText(/^Includes 15 DC riding in parlays\./)).toBeVisible()
 
-  // From lg the outcomes top the right rail, level with the chart, with the card under them.
+  // From lg the position strip tops the right rail, level with the chart, with the outcomes under it (#440).
   await page.setViewportSize({ width: 1280, height: 900 })
   const [posBox, chartBox, outcomesBox] = await Promise.all([position.boundingBox(), chart.boundingBox(), outcomes.boundingBox()])
-  expect(outcomesBox!.x).toBeGreaterThan(chartBox!.x + chartBox!.width)
-  expect(Math.abs(outcomesBox!.y - chartBox!.y)).toBeLessThanOrEqual(1)
-  expect(outcomesBox!.y + outcomesBox!.height).toBeLessThanOrEqual(posBox!.y)
+  expect(posBox!.x).toBeGreaterThan(chartBox!.x + chartBox!.width)
+  expect(Math.abs(posBox!.y - chartBox!.y)).toBeLessThanOrEqual(1)
+  expect(posBox!.y + posBox!.height).toBeLessThanOrEqual(outcomesBox!.y)
   expect(Math.abs(posBox!.x - outcomesBox!.x)).toBeLessThanOrEqual(1)
   await expect(page.getByRole('region', { name: 'Place a bet' })).toHaveCount(0)
   await settle(page)

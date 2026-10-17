@@ -36,12 +36,14 @@ export function MarketChartSkeleton({ figure = true }: { figure?: boolean }) {
           </div>
         )}
         {/* The chart's bet count and range picker row, the plot, then its tick labels. */}
-        <div className="flex h-[52px] items-center justify-between gap-3 max-md:px-4">
+        <div className="flex h-[52px] items-center justify-between gap-3 max-md:px-2">
           <Skeleton className="h-4 w-12" />
           <Skeleton className="h-[52px] w-40 rounded-tile" />
         </div>
-        <Skeleton className="h-[220px] md:h-[300px]" />
-        <Skeleton className="h-5 w-full" />
+        <div className="flex flex-col gap-3 max-md:px-2">
+          <Skeleton className="h-[220px] md:h-[300px]" />
+          <Skeleton className="h-5 w-full" />
+        </div>
       </div>
     </SkeletonScreen>
   )

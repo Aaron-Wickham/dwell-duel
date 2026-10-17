@@ -526,8 +526,11 @@ a line to `CHANGELOG.md` under the next release.
 - **Nobody but an admin resolves a market they have a stake in**, and
   nobody reviews their own task submission (0046). Ask the database
   (`can_resolve_market`) rather than re-deriving who may resolve.
-- **The CSP lives in `next.config.ts`.** A new external origin for scripts,
-  images or connections must be added there, or the browser blocks it.
+- **The CSP lives in `lib/security/csp.ts`,** set per request with a nonce
+  by `proxy.ts` (#449). A new external origin for scripts, images or
+  connections must be added there, or the browser blocks it. Inline script
+  never runs by `'unsafe-inline'`: one of our own goes in
+  `lib/app-shell/inline-scripts.ts`, whose texts the CSP allows by hash.
 - **Profile photos** are `profiles.avatar_path`, a path in the public
   `avatars` bucket; render them with `avatarUrl()` from
   `lib/profile/avatar.ts` through `<Avatar src>`. Profile edits go through

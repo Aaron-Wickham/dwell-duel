@@ -132,4 +132,39 @@ describe('proxy', () => {
 
     expect(response.status).not.toBe(307)
   })
+
+  describe('the CSP (#449)', () => {
+    const nonceOf = (csp: string | null) => csp?.match(/'nonce-([^']+)'/)?.[1]
+
+    it('puts a fresh nonce on the response, and the same policy on the request Next renders from', async () => {
+      getClaims.mockResolvedValue({ data: { claims: { sub: 'member-1' } }, error: null })
+
+      const first = await proxy(request('/markets'))
+      const second = await proxy(request('/markets'))
+      const csp = first.headers.get('content-security-policy')
+
+      expect(nonceOf(csp)).toBeTruthy()
+      expect(nonceOf(second.headers.get('content-security-policy'))).not.toBe(nonceOf(csp))
+      // Inline script runs only by the nonce or one of the three hashes.
+      expect(csp).toMatch(/script-src 'self' 'nonce-[^']+' ('sha256-[^']+' ){3}https:\/\/va\.vercel-scripts\.com;/)
+      expect(first.headers.get('x-middleware-request-content-security-policy')).toBe(csp)
+    })
+
+    it('sets it when Auth is unavailable too', async () => {
+      getClaims.mockResolvedValue({ data: null, error: new AuthRetryableFetchError('network down', 0) })
+
+      const response = await proxy(request('/markets'))
+
+      expect(nonceOf(response.headers.get('content-security-policy'))).toBeTruthy()
+    })
+
+    it('gives the offline page its policy without an auth round trip', async () => {
+      const response = await proxy(request('/offline'))
+
+      expect(createServerClient).not.toHaveBeenCalled()
+      expect(response.status).toBe(200)
+      expect(nonceOf(response.headers.get('content-security-policy'))).toBeTruthy()
+      expect(response.headers.get('x-middleware-request-content-security-policy')).toBe(response.headers.get('content-security-policy'))
+    })
+  })
 })

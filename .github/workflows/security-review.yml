@@ -1,0 +1,44 @@
+name: Security review
+
+# Claude reviews each pull request's diff for security issues and comments its findings (#451).
+# Advisory only: it's its own workflow, outside CI's required `ci-ok`, so a false positive can't
+# block a merge. It runs only when the ANTHROPIC_API_KEY repository secret is set (SECURITY.md).
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: security-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    # Same-repo PRs only. The action isn't hardened against prompt injection, and a fork's PR gets
+    # no secrets anyway.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The secrets context can't be read in an `if:`, so the key comes through env. Without it (not
+    # set yet, or a Dependabot PR, which gets no Actions secrets) the steps skip and the job passes.
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - name: Skip without an API key
+        if: env.ANTHROPIC_API_KEY == ''
+        run: echo "::notice::ANTHROPIC_API_KEY isn't set, so there's no security review on this PR."
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: env.ANTHROPIC_API_KEY != ''
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+
+      - uses: anthropics/claude-code-security-review@0c6a49f1fa56a1d472575da86a94dbc1edb78eda # main, 2026-02-11 (no tagged releases)
+        if: env.ANTHROPIC_API_KEY != ''
+        with:
+          comment-pr: true
+          claude-api-key: ${{ secrets.ANTHROPIC_API_KEY }}

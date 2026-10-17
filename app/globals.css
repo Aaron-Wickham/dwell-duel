@@ -826,6 +826,11 @@
 [data-keyboard-hides] {
   transition: opacity var(--duration-fast) ease-out, visibility 0s linear var(--duration-fast);
 }
+/* The top bar and status band follow iOS's pan of the visible area while the keyboard is up, so
+   they stay under the status bar's edge instead of sliding beneath it (#487). */
+:root[data-keyboard="open"] [data-keyboard-follows] {
+  translate: 0 var(--vv-top, 0px);
+}
 :root:not([data-keyboard="open"]) [data-keyboard-hides] {
   transition: opacity var(--duration-fast) ease-out;
 }

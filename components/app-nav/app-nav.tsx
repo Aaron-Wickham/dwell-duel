@@ -178,6 +178,7 @@ export function AppNav({
         </header>
 
         <header
+          data-keyboard-follows
           style={{ viewTransitionName: 'app-topbar' }}
           className="no-callout sticky top-(--safe-top) z-30 flex h-16 shrink-0 items-center gap-1 border-b border-line bg-surface pr-2 pl-3 md:hidden"
         >

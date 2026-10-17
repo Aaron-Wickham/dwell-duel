@@ -339,7 +339,7 @@ Next-specific code.
 app/(app)/        signed-in routes: home, markets, bets, parlays, tasks, feed, leaderboard,
                   members, profile, settings, how-it-works, admin
 app/(auth)/       sign-in, auth/google (direct Google sign-in), callback, not-invited,
-                  offline, privacy
+                  offline, privacy, terms
 app/api/          cron/keep-alive, cron/closing-alerts, health, push/resync
 components/       ui/ (Page, SectionCard, Button, dialogs…), brand/, live/, and feature components
 lib/              server actions, Supabase clients, odds maths, pagination, auth, forms
@@ -533,7 +533,9 @@ booted iOS Simulator with the app installed. `docs/ARCHITECTURE.md`
 - **Project skills.** `new-migration` (number, keep additive, regenerate
   types, test, document), `new-route` (a signed-in page with everything it
   needs) and `release` (follows [RELEASING.md](RELEASING.md)) load when the
-  task matches, or by name. `/pr-ready` runs only when you ask: it checks
+  task matches, or by name. Two vendored design skills sit beside them:
+  `impeccable` for app screens and `taste` for the public pages only
+  (AGENTS.md, Design skills). `/pr-ready` runs only when you ask: it checks
   the branch against the same-PR rules (docs, changelog, types, limits,
   attempt keys, env vars) and runs lint, types and unit tests.
 - **Project agents.** `money-path-reviewer` checks a change to how coins
@@ -585,9 +587,9 @@ node scripts/seed-scale.mjs   # 500 members, 200 markets, 20,000 bets, locally
 | **Parlay** | Several picks combined into one bet that wins only if every pick wins, paid by the house |
 | **Leg** | One pick in a parlay (`parlay_legs`); it buys an even share of the stake's shares, so its factor is fixed when placed |
 | **Open** | A market still taking bets, before its close time |
-| **Awaiting** | Past its close time, with no result yet |
+| **Awaiting** | Past its close time, with no result yet (members read "waiting for a result") |
 | **Settled** | Resolved or voided; for a bet or parlay, paid, lost or refunded |
-| **Resolve / override / void** | Name the winner and pay out / change a result / cancel the market and refund everyone |
+| **Resolve / override / void** | Name the winner and pay out / change a result / cancel the market, refunding every bet and dropping it from parlays (members read "called off") |
 | **Attempt key** | A UUID a retryable action sends, so a replay returns the first result instead of acting twice |
 | **Reviewer** | The role that approves task submissions; see [Roles](HOW-IT-WORKS.md#roles) |
 

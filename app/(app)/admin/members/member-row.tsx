@@ -64,23 +64,16 @@ function SortHeader({
   )
 }
 
-// `sortHrefs` holds a link for each column that can sort this tab; Net worth can't on Removed.
 export function MembersTableHead({
   order,
   sortHrefs,
 }: {
   order: MemberOrder
-  sortHrefs: Partial<Record<MemberSort, { href: string; next: SortDir }>>
+  sortHrefs: Record<MemberSort, { href: string; next: SortDir }>
 }) {
   const header = (sort: MemberSort, label: string, className?: string) => {
     const link = sortHrefs[sort]
-    return link ? (
-      <SortHeader sort={sort} label={label} order={order} href={link.href} next={link.next} className={className} />
-    ) : (
-      <th role="columnheader" scope="col" className={cn(headClass, 'max-lg:hidden', className)}>
-        {label}
-      </th>
-    )
+    return <SortHeader sort={sort} label={label} order={order} href={link.href} next={link.next} className={className} />
   }
   return (
     <thead role="rowgroup" className="max-lg:block">

@@ -90,11 +90,12 @@ test('Show more on the admin ledger appends older rows in place, and a reload ke
   await expect(row('00')).toBeVisible()
 })
 
-// #418: the ledger's filters live in the URL and narrow the query.
+// #418: the ledger's filters live in the URL and narrow the query. The member is typed, and a name
+// that fits one member becomes their id (#430).
 test('the ledger filters by member and kind', async ({ page }) => {
   await page.goto('/admin/ledger')
   const ledger = page.getByRole('region', { name: 'Every coin movement' })
-  await ledger.getByRole('combobox', { name: 'Member' }).selectOption({ label: 'Bob' })
+  await ledger.getByRole('searchbox', { name: 'Member' }).fill('bob')
   await ledger.getByRole('combobox', { name: 'Kind' }).selectOption({ label: 'Starting grant' })
   await ledger.getByRole('button', { name: 'Filter' }).click()
   await expect(page).toHaveURL(/\/admin\/ledger\?member=[0-9a-f-]+&kind=starting_grant$/)
@@ -107,4 +108,12 @@ test('the ledger filters by member and kind', async ({ page }) => {
   await expect(page.getByText('No “Bet cancelled” movements for Bob.')).toBeVisible()
   await page.getByRole('link', { name: 'Show every kind' }).click()
   await expect(bob.getByRole('combobox', { name: 'Kind' })).toHaveValue('')
+  await expect(bob.getByRole('searchbox', { name: 'Member' })).toHaveValue('Bob')
+
+  await bob.getByRole('searchbox', { name: 'Member' }).fill('nobody by this name')
+  await bob.getByRole('button', { name: 'Filter' }).click()
+  await expect(page.getByText('No member matches “nobody by this name”.')).toBeVisible()
+  await page.getByRole('link', { name: 'Show everyone’s' }).click()
+  await expect(page).toHaveURL(/\/admin\/ledger$/)
+  await expect(ledger.getByRole('searchbox', { name: 'Member' })).toHaveValue('')
 })

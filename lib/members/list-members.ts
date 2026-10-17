@@ -133,17 +133,39 @@ function worthQuery(supabase: DbClient) {
   return supabase.rpc('leaderboard_net_worth').select('id, display_name, score')
 }
 
-// The Active tab sorted by net worth, with each row's net worth. It reads the net-worth board, which
-// holds exactly the Active tab's members (0093) and computes every member's worth on each read
-// anyway. The board can't search emails, so a search reads the matching ids and the whole board and
-// sorts them here: a few rows per member, and only while an admin searches in this order.
+// One tab sorted by net worth, with each row's net worth. The Active tab reads the net-worth board,
+// which holds exactly its members (0093) and computes every member's worth on each read anyway. The
+// board can't search emails, so a search there reads the matching ids and the whole board and sorts
+// them here: a few rows per member, and only while an admin searches in this order. The board
+// leaves removed members out, so the Removed tab reads admin_member_net_worths (0115, #429), which
+// searches as admin_members does and is ordered and paged in SQL.
 export async function listMembersByNetWorth(
   supabase: DbClient,
-  options: { query: string; ascending: boolean; page: ValuePageParams },
+  options: { query: string; removed: boolean; ascending: boolean; page: ValuePageParams },
 ): Promise<KeysetPage<MemberSummary> & { netWorths: Map<string, number> }> {
   const { ascending } = options
   let result: KeysetPage<WorthRow>
-  if (options.query === '') {
+  if (options.removed) {
+    result = await readOrdered(
+      options.page,
+      valueOrder('score', ascending),
+      async (filter, limit) => {
+        let q = supabase
+          .rpc('admin_member_net_worths', { p_query: options.query })
+          .select('id, display_name, score')
+          .eq('removed', true)
+        if (filter) q = q.or(filter)
+        const { data, error } = await q
+          .order('score', { ascending })
+          .order('display_name', { ascending: true })
+          .order('id', { ascending: true })
+          .limit(limit)
+        if (error) throw error
+        return data ?? []
+      },
+      worthKey,
+    )
+  } else if (options.query === '') {
     result = await readOrdered(
       options.page,
       valueOrder('score', ascending),
@@ -195,12 +217,4 @@ export async function listMembersByNetWorth(
     rows: result.rows.flatMap((row) => details.get(row.id) ?? []),
     netWorths: new Map(result.rows.map((row) => [row.id, row.score])),
   }
-}
-
-// Every member's id and name, A–Z, removed or not, for Admin › Ledger's member filter (#418).
-export async function listMemberNames(supabase: DbClient): Promise<{ id: string; name: string }[]> {
-  const rows = await readAll((from, to) =>
-    supabase.from('profiles').select('id, display_name').order('display_name').order('id').range(from, to),
-  )
-  return rows.map((row) => ({ id: row.id, name: row.display_name }))
 }

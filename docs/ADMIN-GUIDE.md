@@ -240,7 +240,7 @@ at it when you review.
 worth (balance plus DC riding on open bets) and when they joined. Tap
 **Balance**, **Net worth** or **Joined** above the list to sort by it
 (highest or newest first; tap again for the other way), and **Member** to go
-back to A to Z. Net worth sorts the Active tab only. Search finds a member by
+back to A to Z. Every column sorts both tabs. Search finds a member by
 name or email, and keeps the sort. A member's name opens their Admin page:
 their email, when they joined and last signed in, their balance and their
 last five coin movements (**Open in Ledger** shows all of them), then the
@@ -290,9 +290,11 @@ Removing a member doesn't erase their data. If someone asks for that, see
 ## Ledger and the Economy card
 
 **Admin → Ledger** lists every DC movement, newest first: starting grants,
-bets, payouts, refunds, parlays, task rewards and adjustments. Pick a
-**Member** and a **Kind** above the list and tap **Filter** to see only
-those; from a member's page, **Open in Ledger** narrows it to them.
+bets, payouts, refunds, parlays, task rewards and adjustments. Type a
+**Member**'s name (or part of it, removed members too), pick a **Kind**
+above the list and tap **Filter** to see only those. A name that fits more
+than one member lists them to pick from; **Show everyone's** clears the
+member again. From a member's page, **Open in Ledger** narrows it to them.
 
 The **Economy card** above it (owner only) shows the DC in circulation
 (balances plus stakes still riding) and this month's DC added and removed,

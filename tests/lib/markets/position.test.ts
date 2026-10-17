@@ -83,13 +83,13 @@ function position(overrides: Partial<ParlayView>, here: ParlayLegView, others: P
 describe('legSummary', () => {
   it('describes the parlay while its leg here is open, and says when the odds are set', () => {
     expect(legSummary(position({}, leg('m', 'open'), [leg('a', 'open'), leg('b', 'open')]))).toBe(
-      '5 DC · 3 picks · pays ~80 DC if every pick wins. This pick’s odds are set when this market closes.',
+      '5 DC · 3 picks · Pays ~80 DC if every pick wins. This pick’s odds are set when this market closes.',
     )
   })
 
   it('drops the odds note once they are set', () => {
     expect(legSummary(position({ estimated: false }, leg('m', 'awaiting', true), [leg('a', 'open', true)]))).toBe(
-      '5 DC · 2 picks · pays 80 DC if every pick wins.',
+      '5 DC · 2 picks · Pays 80 DC if every pick wins.',
     )
   })
 

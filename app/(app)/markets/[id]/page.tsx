@@ -115,7 +115,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   }
   const manage = hasManageCards(rights)
   // Waiting on its result, the viewer's one job here is to resolve it, so on a phone the cards come
-  // straight after the outcomes, before the chart, not under every bet and comment (CR-A12, #390).
+  // first, before the chart, not under every bet and comment (CR-A12, #390, #440).
   const manageFirst = market.status === 'open' && isPastClose && rights.canResolve
   // The rail holds still beside a long chart, bets and comments, unless it carries the resolve or
   // void forms, which could be taller than the screen and then never show their bottom.
@@ -189,11 +189,11 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
       {/* Each section's fallback holds its section's place. The fallbacks announce nothing
           themselves (SkeletonScreen announce={false}); LoadingStatus wraps them in one combined
           status, scoped to just these, for as long as any of them is still showing.
-          From lg: the chart, comments and bets on the left; on the right a rail with the outcomes,
-          Your position and any resolve or void cards. The rail comes first in the markup, since
-          betting is the page's job (#390). On a phone both columns are display: contents, so every
-          section is one flex column, ordered: outcomes, (resolve and void while the market waits on
-          a result the viewer can give), chart, position, comments, bets, then any other cards. */}
+          From lg: the chart, comments and bets on the left; on the right a rail with Your position
+          on top of the outcomes, then any resolve or void cards. On a phone both columns are
+          display: contents, so every section is one flex column, ordered (#440): (resolve and void
+          first while the market waits on a result the viewer can give), chart, position, outcomes,
+          comments, bets, then any other cards. */}
       <LoadingStatus>
         <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-7">
           <div
@@ -202,7 +202,14 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
               stickyRail && 'lg:sticky lg:top-[calc(72px+var(--safe-top)+24px)]',
             )}
           >
-            <div className="order-1 lg:order-none">
+            {positionRows > 0 && (
+              <div className={cn('lg:order-none', manageFirst ? 'order-3' : 'order-2')}>
+                <Suspense fallback={<MarketPositionSkeleton rows={positionRows} />}>
+                  <MarketPosition market={market} keys={positionKeys} now={now} />
+                </Suspense>
+              </div>
+            )}
+            <div className={cn('lg:order-none', manageFirst ? 'order-4' : 'order-3')}>
               <Suspense fallback={<MarketOutcomesSkeleton
                     outcomes={market.outcomes.length}
                     canBet={canBet}
@@ -212,21 +219,14 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
                 <MarketOutcomes market={market} odds={odds} slip={slip} canBet={canBet} resolution={resolution} riding={riding} />
               </Suspense>
             </div>
-            {positionRows > 0 && (
-              <div className={cn('lg:order-none', manageFirst ? 'order-4' : 'order-3')}>
-                <Suspense fallback={<MarketPositionSkeleton rows={positionRows} />}>
-                  <MarketPosition market={market} keys={positionKeys} now={now} />
-                </Suspense>
-              </div>
-            )}
             {manage && (
-              <div className={cn('flex flex-col gap-5 lg:order-none lg:gap-7', manageFirst ? 'order-2' : 'order-7')}>
+              <div className={cn('flex flex-col gap-5 lg:order-none lg:gap-7', manageFirst ? 'order-1' : 'order-7')}>
                 <MarketManage market={market} rights={rights} canBet={canBet} />
               </div>
             )}
           </div>
           <div className="contents lg:col-start-1 lg:row-start-1 lg:flex lg:flex-col lg:gap-7">
-            <div className={cn('lg:order-none', manageFirst ? 'order-3' : 'order-2')}>
+            <div className={cn('lg:order-none', manageFirst ? 'order-2' : 'order-1')}>
               <Suspense fallback={<MarketChartSkeleton />}>
                 <MarketChart market={market} odds={odds} now={now} />
               </Suspense>

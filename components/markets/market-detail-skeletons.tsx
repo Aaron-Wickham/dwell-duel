@@ -40,23 +40,22 @@ export function MarketChartSkeleton() {
 export function MarketPositionSkeleton({ rows }: { rows: number }) {
   return (
     <SkeletonScreen name="market-position" announce={false}>
-      <SkeletonCard className="gap-1 border-2 border-ink">
-        <Heading width="w-36" />
+      <div className="flex flex-col gap-1.5 rounded-tile bg-info-soft p-3.5 md:p-4">
+        <div className="flex h-5 items-center">
+          <Skeleton className="h-3.5 w-24" />
+        </div>
         <div className="flex h-5 items-center">
           <Skeleton className="h-3.5 w-56 max-w-full" />
         </div>
-        <div className="flex flex-col divide-y divide-line">
+        <div className="flex flex-col gap-1">
           {Array.from({ length: Math.min(rows, 4) }, (_, i) => (
-            <div key={i} className="flex h-[70px] items-center justify-between gap-3 py-3">
-              <div className="flex grow flex-col gap-2">
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-4 w-44 max-w-full" />
-              </div>
-              <Skeleton className="h-7 w-24" />
+            <div key={i} className="flex h-7 items-center justify-between gap-3">
+              <Skeleton className="h-3.5 w-32" />
+              <Skeleton className="h-3.5 w-20" />
             </div>
           ))}
         </div>
-      </SkeletonCard>
+      </div>
     </SkeletonScreen>
   )
 }

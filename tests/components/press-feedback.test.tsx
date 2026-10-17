@@ -303,12 +303,22 @@ describe('press feedback', () => {
     for (const label of kinds) expect(label).toHaveClass('pressable')
   })
 
-  it('tints a Needs you row rather than lifting it', () => {
+  it('tints a Needs you row rather than lifting it, and presses a count tile (#438)', () => {
     const { container } = render(
-      <NeedsYou counts={{ tasks: 2, markets: 0 }} showReviews showAdminMarkets={false} marketsToResolve={{ total: 0, markets: [] }} balance={5} taskRewards={null} />,
+      <NeedsYou
+        counts={{ tasks: 2, markets: 0 }}
+        showReviews
+        showAdminMarkets={false}
+        marketsToResolve={{ total: 1, markets: [{ id: 'm1', title: 'Rain on Sunday?', closeAt: '2026-10-03T12:00:00Z' }] }}
+        balance={5}
+        taskRewards={null}
+      />,
     )
-    expect(container.querySelector('a')).toHaveClass('pressable', 'relative', 'hover-tint')
-    expect(container.querySelector('a')).not.toHaveClass('hover-lift')
+    const [tile, row] = container.querySelectorAll('a')
+    expect(tile).toHaveClass('pressable', 'bg-gold-soft')
+    expect(tile).not.toHaveClass('hover-lift')
+    expect(row).toHaveClass('pressable', 'relative', 'hover-tint')
+    expect(row).not.toHaveClass('hover-lift')
   })
 
   it('tints a ListCard flush to its border instead of lifting it inside the section card', () => {

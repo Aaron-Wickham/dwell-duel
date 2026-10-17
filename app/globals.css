@@ -80,11 +80,12 @@
   --tint6: #4A5A12;
   --tint6-soft: #EEF2D6;
   --focus: #03272D;
-  --hero: #E3F4D5;
-  --on-hero: #03272D;
-  --hero-2: #46605E;
-  --hero-num: #2A6E0B;
-  --hero-inset: #D2EBBF;
+  /* Home's balance card, deep teal in light too (#438). */
+  --hero: #03272D;
+  --on-hero: #FFFFFF;
+  --hero-2: #B9D3CE;
+  --hero-num: #8BE651;
+  --hero-inset: #0D3A41;
   --wm-a: #03272D;
   --wm-b: #3FAE14;
   --sym-d: #03272D;

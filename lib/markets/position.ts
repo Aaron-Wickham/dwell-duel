@@ -157,6 +157,6 @@ export function legSummary({ parlay, leg }: PositionLeg): string {
     return `Your pick won. The parlay waits on ${waiting} more ${waiting === 1 ? 'pick' : 'picks'}.`
   }
   if (leg.status === 'voided') return 'Pick called off; the parlay continues without it.'
-  const pays = `${formatDcAmount(parlay.stake)} · ${picks(parlay.legs.length)} · pays ${parlay.estimated ? '~' : ''}${formatDcAmount(parlay.potentialPayout)} if every pick wins.`
+  const pays = `${formatDcAmount(parlay.stake)} · ${picks(parlay.legs.length)} · Pays ${parlay.estimated ? '~' : ''}${formatDcAmount(parlay.potentialPayout)} if every pick wins.`
   return leg.oddsKnown ? pays : `${pays} This pick’s odds are set when this market closes.`
 }

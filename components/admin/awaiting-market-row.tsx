@@ -26,7 +26,7 @@ export function AwaitingMarketRow({ market, now, domId }: { market: AwaitingMark
         </Link>
         <p className="text-sm text-ink2">
           Closed <LocalTime iso={market.closeAt} format="dateTime" /> · {relativeTime(market.closeAt, now)} ·{' '}
-          <span className="whitespace-nowrap">{formatDcAmount(market.pooled)}</span> in the pool · by{' '}
+          <span className="whitespace-nowrap">{formatDcAmount(market.pooled)}</span> in the pool · By{' '}
           <span className="relative z-[1]">
             <Link href={`/members/${market.creatorId}`} transitionTypes={['nav-forward']} className="prose-link">
               {market.creatorName}

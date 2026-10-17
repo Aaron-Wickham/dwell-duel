@@ -42,3 +42,5 @@ jobs:
         with:
           comment-pr: true
           claude-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # The action's own default is an older model.
+          claude-model: claude-opus-5-5

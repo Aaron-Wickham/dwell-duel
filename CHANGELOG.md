@@ -12,8 +12,18 @@ before v0.4.0 used other headings.)
 
 ## Unreleased
 
+## v1.0.0 — 2026-10-17
+
+DwellDuel is out of beta. Nothing about how you play changes: this release takes the Beta label off the sign-in page and the terms, and brings every guide up to date with the app as it is after v0.11.0's refresh. Versions from here are plain v1.x.
+
+### Polish
+- **No more beta.** The Beta badge beside the wordmark on sign-in is gone, the terms' "A beta" section is now "As it is", and Send feedback's email subject is "DwellDuel feedback".
+- **A capital after the dot on a market page.** Its meta line reads "Closes Sun 12:00 PM · By Ben Turner" (or "By you").
+
 ### Under the hood
-- **The security review runs on a Claude subscription, not paid API credit.** It now uses `claude-code-action` with a `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`, reviewing only for security and posting one comment that it updates on each push; it still skips until the secret is added (#451).
+- **The security review runs on a Claude subscription, not paid API credit.** It uses `claude-code-action` with a `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`, reviewing only for security and keeping one comment that it updates on each push (#451, #494).
+- **Every doc checked against the code.** How it works (the slip's 10-pick and one-per-market limits, the stake and payout ceilings, when admins see a closed market, comments above bets), the admin guide (where Admin opens, the call-off steps, the override message, member sorting, the ledger's name box), Architecture, Security, Operations, the design handoff, AGENTS.md, the README and Getting started all match what shipped.
+- **Releases drop the `-beta` suffix** (`docs/RELEASING.md`).
 
 ## v0.11.0-beta — 2026-10-17
 

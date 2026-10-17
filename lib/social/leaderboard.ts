@@ -3,6 +3,7 @@ import { groupRead } from '@/lib/cache/group-reads'
 import { readOrdered, type KeysetPage } from '@/lib/pagination/keyset'
 import { RANK_ORDER, rankedAbove, type RankCursor, type RankPageParams } from '@/lib/pagination/rank-cursor'
 import { avatarUrl } from '@/lib/profile/avatar'
+import { containsPattern } from '@/lib/search/query'
 
 // `all` ranks net worth, balance plus DC riding on open bets; `month` ranks this calendar
 // month's net betting profit, in America/New_York.
@@ -25,9 +26,12 @@ const BOARD_FUNCTIONS = { all: 'leaderboard_net_worth', month: 'leaderboard_mont
 
 const rankKey = (r: BoardRow): RankCursor => ({ score: r.score, name: r.display_name, id: r.id })
 
-function boardQuery(supabase: DbClient, board: Board, filter: string | null, limit: number) {
+// `search` narrows the board to names containing it, any case. It goes in as its own ilike
+// filter, never inside the cursor's or(...), so what a member types can't add filter syntax.
+function boardQuery(supabase: DbClient, board: Board, filter: string | null, limit: number, search = '') {
   let query = supabase.rpc(BOARD_FUNCTIONS[board]).select('id, display_name, avatar_path, score, rank')
   if (filter) query = query.or(filter)
+  if (search) query = query.ilike('display_name', containsPattern(search))
   return query
     .order('score', { ascending: false })
     .order('display_name', { ascending: true })
@@ -39,11 +43,21 @@ function boardQuery(supabase: DbClient, board: Board, filter: string | null, lim
 // starts mid-board, even inside a tie, still shows each row's rank on the whole board. The key
 // columns are the whole row, so the probe needs no fetchKeys.
 export async function getLeaderboardPage(supabase: DbClient, board: Board, page: RankPageParams): Promise<KeysetPage<LeaderboardEntry>> {
+  return readBoard(supabase, board, page, '')
+}
+
+// The members whose name contains `q` (#465), on the net-worth board, so each keeps its rank
+// on the whole board. Read with the viewer's own client: it shows what the board would.
+export async function searchLeaderboard(supabase: DbClient, q: string, page: RankPageParams): Promise<KeysetPage<LeaderboardEntry>> {
+  return readBoard(supabase, 'all', page, q)
+}
+
+async function readBoard(supabase: DbClient, board: Board, page: RankPageParams, search: string): Promise<KeysetPage<LeaderboardEntry>> {
   const result = await readOrdered(
     page,
     RANK_ORDER,
     async (filter, limit) => {
-      const { data, error } = await boardQuery(supabase, board, filter, limit)
+      const { data, error } = await boardQuery(supabase, board, filter, limit, search)
       if (error) throw error
       return (data ?? []) as BoardRow[]
     },

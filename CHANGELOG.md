@@ -13,6 +13,7 @@ before v0.4.0 used other headings.)
 ## Unreleased
 
 ### Features
+- **Find a member on the leaderboard.** A search box beside the tabs lists everyone whose name contains what you type, with their rank and net worth, each linking to their page (#465).
 - **Tap the tab you're on to go back to the top.** In the tab bar or the nav on a computer, tapping the page you're already on scrolls it to the top, as other apps do, instead of reloading it (#464).
 - **A terms page.** Short and plain: play money with no cash value, invite only, admins' calls are final, be kind, it's a beta. Linked from sign-in and Settings (#462).
 - **Add to your slip from Markets.** Each open market's card has its picks right on it: Yes and No side by side, or a multiple-choice market's two favourites. Tap one to add it, tap again to take it out (#439).

@@ -141,8 +141,8 @@ to understand and fix the problem.
   authorizes the two cron endpoints, which are idempotent: calling them
   sends nothing that wasn't already due and reads no member data back.
   It's rotated whenever the set of people with write access changes.
-  `CLAUDE_CODE_OAUTH_TOKEN`, once added for the security review, is the
-  second: a token from the owner's Claude subscription (`claude setup-token`),
+  `CLAUDE_CODE_OAUTH_TOKEN`, for the security review, is the second
+  (added 2026-10-17): a token from the owner's Claude subscription (`claude setup-token`),
   so there's no bill, whose worst case is someone using up that
   subscription's limits. It's revoked and remade on the same occasions.
 - **No production data access.** Collaborators don't get the Supabase or
@@ -217,10 +217,10 @@ who the member is and what they typed (below).
   findings. It's advisory, outside `ci-ok`, so a false positive can't block
   a merge, and it skips forks and drafts. It runs Anthropic's
   `claude-code-action` and keeps one comment, updated on each push. It
-  stays off, passing without a review, until
-  the owner adds a `CLAUDE_CODE_OAUTH_TOKEN` repository secret, made with
-  `claude setup-token` on their Pro or Max subscription, so reviews count
-  against its usage limits rather than an API bill (Settings › Secrets and
+  runs on the owner's `CLAUDE_CODE_OAUTH_TOKEN` repository secret, made
+  with `claude setup-token` on their Pro or Max subscription, so reviews
+  count against its usage limits rather than an API bill; without the
+  secret it passes without a review (Settings › Secrets and
   variables › Actions; a repository secret, not a `Production` one, since
   pull requests can't reach that environment).
 - Branch rulesets on `main` (review, `ci-ok`, up to date) and the

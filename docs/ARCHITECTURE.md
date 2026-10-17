@@ -43,7 +43,7 @@ itself.
 | Styling | Tailwind v4 with CSS-variable tokens (`app/globals.css`), light and dark |
 | UI pieces | Base UI (dialogs, drawers), lucide-react icons, Motion (loaded lazily), NumberFlow, Recharts (the market page's chart and the leaderboard's race chart; cards draw plain SVG), sonner toasts |
 | Data | Supabase: Postgres, Auth, Realtime, Storage (`@supabase/ssr`) |
-| Hosting | Vercel (production only, plus a daily cron), with `@vercel/analytics` (10% of events kept) and `@vercel/speed-insights` (`sampleRate` 0.05), sampled in `lib/app-shell/analytics-sampling.ts` to stay inside Hobby's quotas (#278; Analytics samples per event, so its visit and visitor counts read about 10x low); `engines.node` pins Vercel to Node 22, the major `.nvmrc` and CI use |
+| Hosting | Vercel (production only, functions in `cle1` per `vercel.json`, plus a daily cron), with `@vercel/analytics` (10% of events kept) and `@vercel/speed-insights` (`sampleRate` 0.05), sampled in `lib/app-shell/analytics-sampling.ts` to stay inside Hobby's quotas (#278; Analytics samples per event, so its visit and visitor counts read about 10x low); `engines.node` pins Vercel to Node 22, the major `.nvmrc` and CI use |
 | Tests | Vitest (unit, component, DB against local Supabase), Playwright (e2e) |
 
 ## Routes
@@ -54,10 +54,10 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 
 | Route | What it is |
 |---|---|
-| `/` | Home, a tab (#388): "Hi, {first name}" with rank (once the member has a settled bet, `getHomeHistory`) and what's riding; Needs you, only when something waits (task submissions to review for reviewers and up, markets to resolve for admins and up, each opening its Admin section; a member's own closed markets from `markets_to_resolve()`; the 0 DC nudge to Tasks); Getting started, for newcomers only; Your bets, the three open bets and parlays closing soonest (`getClosingSoon`, `lib/home/closing-soon.ts`: the markets the member has bets on, soonest first through `markets (status, close_at)`, merged with their pending parlays' next close), or the three open markets closing soonest; Notifications; Activity, the feed's three newest rows (`listLatestFeed`) with See all to `/feed`; the weekly recap (Sundays and Mondays). From `lg` a Balance card and Needs you sit in a 5fr column beside the rest |
-| `/markets` | Three tabs, each one keyset list with its own Show more (#389): Open (the default; soonest to close first, `?open=`), Waiting (`?status=awaiting`, oldest close first, `?awaiting=`) and Resolved (`?status=resolved`, resolved and voided newest settled first, `?resolved=`). Open and Waiting are `listOpenMarkets` split at one `now` (its `bound`, #261). `lib/markets/status-filter.ts` maps the old `pending`, `closed` and `all` to awaiting, resolved and open. Each card (`MarketCard`) leads with its leading outcome's chance and weekly change (`weeklyChange` in `lib/markets/chart-summary.ts`: the chance now against the chance a week ago, read at that instant by `readWeekAgoChances` in `lib/markets/chart-series.ts`, `market_series` with no buckets, 0110, #409; cached in Next's data cache per list and hour, keyed by its markets' `sparkVersion`s and the week-ago instant rounded down to the hour, which is the instant read), then the chart, a multiple-choice legend and the meta line, whose bet count is a `bets(count)` embed in the list's own query. Outcomes read in `market_outcomes.position` order (0110, in `listMarkets`, `getMarket` and Duplicate's prefill): the order the creator typed them, so Yes before No and Over before Under. `?q=` (a title search, `lib/markets/search.ts`: trimmed, `*` and control characters dropped, 80 characters, then `ilike` with `\`, `%` and `_` escaped, sent as its own filter parameter, backed by a trigram index) switches it to one flat list of matches in every status, newest first and paged under `?match=` (`listMatchingMarkets`); no tab is current then, and each tab leads back out of the search. `?category=<slug>` (0103, #327) narrows every list, search included, to one category: the "Categories" `FilterChips` row (All, the 8 busiest by `category_counts()`, the chosen one if it isn't among them, then a More… dialog, `MoreCategories`, listing the rest) scrolls sideways on a phone and wraps from `md`, with a "Showing … in X · Show all categories" line under it; an unknown or hidden slug, and the old `?mine=` links (whose chips #327 removed; the `i_bet_on` column stays), fall through to All. The chips show only while more than one category holds markets. The search (`MarketSearch`: a field at the right of the tabs from `md`, an icon button that opens it on a phone) keeps the chip in the URL, and the tabs and chips keep each other. Card sparklines come from `market_sparks` (0095) through Next's data cache, one entry per list, keyed by a hash of its markets' `sparkVersion`s (the summed `pool_version` while open, `settled` after): a render costs one cache read per list, and a live refresh reads from Supabase only a list whose markets moved (`lib/markets/sparklines.ts`, #252; the budget is below) |
+| `/` | Home, a tab (#388, #438): "Hi, {first name}"; the deep-teal Balance card (`BalanceCard`) at every width, with rank (once the member has a settled bet, `getHomeHistory`) and what's riding; Needs you, only when something waits (task submissions to review for reviewers and up, markets to resolve for admins and up, each opening its Admin section, as gold and blue tiles; a member's own closed markets from `markets_to_resolve()`; the 0 DC nudge to Tasks); Getting started, for newcomers only; Your bets, `ListCard`s for the three open bets and parlays closing soonest (`getClosingSoon`, `lib/home/closing-soon.ts`: the markets the member has bets on, soonest first through `markets (status, close_at)`, merged with their pending parlays' next close), or the three open markets closing soonest; Notifications; Activity, the feed's three newest rows (`listLatestFeed`) with See all to `/feed`; the weekly recap (Sundays and Mondays). On a phone the Balance card sits under the greeting; from `lg` it and Needs you sit in a 5fr column beside the rest |
+| `/markets` | Three tabs, each one keyset list with its own Show more (#389): Open (the default; soonest to close first, `?open=`), Waiting (`?status=awaiting`, oldest close first, `?awaiting=`) and Resolved (`?status=resolved`, resolved and voided newest settled first, `?resolved=`). Open and Waiting are `listOpenMarkets` split at one `now` (its `bound`, #261). `lib/markets/status-filter.ts` maps the old `pending`, `closed` and `all` to awaiting, resolved and open. Each card (`MarketCard`) leads with its leading outcome's chance and weekly change (`weeklyChange` in `lib/markets/chart-summary.ts`: the chance now against the chance a week ago, read at that instant by `readWeekAgoChances` in `lib/markets/chart-series.ts`, `market_series` with no buckets, 0110, #409; cached in Next's data cache per list and hour, keyed by its markets' `sparkVersion`s and the week-ago instant rounded down to the hour, which is the instant read), then the chart; on an open card, quick picks (`QuickPicks`, #439: one toggle button per outcome, a multiple-choice market's two likeliest, adding to or removing from the slip without opening the market), elsewhere a multiple-choice legend; and the meta line, whose bet count is a `bets(count)` embed in the list's own query. Outcomes read in `market_outcomes.position` order (0110, in `listMarkets`, `getMarket` and Duplicate's prefill): the order the creator typed them, so Yes before No and Over before Under. `?q=` (a title search, `lib/markets/search.ts`: trimmed, `*` and control characters dropped, 80 characters, then `ilike` with `\`, `%` and `_` escaped, sent as its own filter parameter, backed by a trigram index) switches it to one flat list of matches in every status, newest first and paged under `?match=` (`listMatchingMarkets`); no tab is current then, and each tab leads back out of the search. `?category=<slug>` (0103, #327) narrows every list, search included, to one category: the "Categories" `FilterChips` row (All, the 8 busiest by `category_counts()`, the chosen one if it isn't among them, then a More… dialog, `MoreCategories`, listing the rest) scrolls sideways on a phone and wraps from `md`, with a "Showing … in X · Show all categories" line under it; an unknown or hidden slug, and the old `?mine=` links (whose chips #327 removed; the `i_bet_on` column stays), fall through to All. The chips show only while more than one category holds markets. The search (`MarketSearch`: a field at the right of the tabs from `md`, an icon button that opens it on a phone) keeps the chip in the URL, and the tabs and chips keep each other. Card sparklines come from `market_sparks` (0095) through Next's data cache, one entry per list, keyed by a hash of its markets' `sparkVersion`s (the summed `pool_version` while open, `settled` after): a render costs one cache read per list, and a live refresh reads from Supabase only a list whose markets moved (`lib/markets/sparklines.ts`, #252; the budget is below) |
 | `/markets/new` | Create a market: Yes/No, multiple choice (up to 6) or Over/Under. `?from=<id>` pre-fills it from a market (Duplicate) |
-| `/markets/[id]` | A market (#390): outcomes first, each with its chance, what 10 DC wins (`soloPays`, `lib/parlays/solo-pays.ts`, the slip's own quote) and the slip control, with the result or void stated once above them and one "riding in parlays" line under them (`market_parlay_riding`, #279, display only); the chart; the viewer's own position (#262: each solo bet with the payout fixed when it was placed, each parlay leg linking to its parlay, then results and the net once settled; read from `my_market_position`'s keys before anything streams, so a viewer with nothing on the market gets no card and no skeleton); comments; the latest 10 bets (`MARKET_BETS_PAGE`, `readKeyset`'s page size). Resolve, Void and Delete are separate cards (`market-manage.tsx`), whose rights (`can_resolve_market`, `can_void_market`, `has_stake_in_market`) are read before anything streams too; Share, Duplicate, Edit, Reopen and Edit history are a "More actions" menu (`market-menu.tsx`). From `lg:` the outcomes, position and cards are a rail beside the chart, comments and bets, sticky unless it holds a card |
+| `/markets/[id]` | A market (#390, #440), chart first: the chart, led by its leading outcome's chance while open and edge to edge on a phone (#489); the viewer's own position (#262: each solo bet with the payout fixed when it was placed, each parlay leg linking to its parlay, then results and the net once settled; read from `my_market_position`'s keys before anything streams, so a viewer with nothing on the market gets no card and no skeleton); the outcomes, each with its chance, what 10 DC wins (`soloPays`, `lib/parlays/solo-pays.ts`, the slip's own quote) and the slip control, with the result or call-off stated once above them and one "riding in parlays" line under them (`market_parlay_riding`, #279, display only); comments; the latest 10 bets (`MARKET_BETS_PAGE`, `readKeyset`'s page size). Resolve (or Override), Call off and Delete are separate cards (`market-manage.tsx`), whose rights (`can_resolve_market`, `can_void_market`, `has_stake_in_market`) are read before anything streams too; on a phone they come last, or first while the market waits on a result the viewer can give. Share, Duplicate, Edit, Reopen and Edit history are a "More actions" menu (`market-menu.tsx`). From `lg:` the position, outcomes and cards are a rail beside the chart, comments and bets, sticky unless it holds a card |
 | `/bets` | My bets: Open · Settled · Cancelled, solo bets and parlays together, and Coins, the member's own `coin_transactions` (`?tab=`) |
 | `/parlays` | Redirects to `/bets` (kept for old links) |
 | `/parlays/[id]` | A parlay's breakdown (#120): status, stake, multiplier and payout, each pick with its odds (on a pool market, an estimate from `parlay_leg_odds` until its market closes; on an `lmsr` market, its factor, fixed at placement) and result, and how the multiplier adds up. Any invited member can open one; My bets' cards link here. No `loading.tsx`: the page checks the parlay exists first (so an unknown id is a real 404), then streams the body behind `<Suspense>` with `ParlayDetailSkeleton` |
@@ -75,7 +75,9 @@ the slip, live updates and toasts. `lib/auth/app-paths.ts` lists them so
 Public routes live under `app/(auth)/`: `/sign-in`, `/callback` (the OAuth
 return), `/auth/google` and `/auth/google/nonce` (signing in straight with Google,
 below), `/privacy` (How it works' Your data section, for anyone, and the
-privacy policy Google's brand review reads), `/terms` (the short terms, #462), `/not-invited` and `/offline`, plus `robots.txt` and `sitemap.xml` (`app/robots.ts`, `app/sitemap.ts`), which open only sign-in, privacy and terms to crawlers; the signed-in layout is `noindex` (#459). Every page exports a title, which the root's `%s · DwellDuel` template completes; a market's and a member's come from `lib/app-shell/page-titles.ts` (#460). The API has four routes; the fourth, `/api/push/resync`, is the service worker's (Push notifications, below).
+privacy policy Google's brand review reads), `/terms` (the short terms, #462), `/not-invited` and `/offline`, plus `robots.txt` and `sitemap.xml` (`app/robots.ts`, `app/sitemap.ts`), which open only sign-in, privacy and terms to crawlers, each with a canonical link; the signed-in layout, `/not-invited` and `/offline` are `noindex` (#459). Every page exports a title, which the root's `%s · DwellDuel` template completes; a market's and a member's come from `lib/app-shell/page-titles.ts` (#460). Share links carry Open Graph metadata from `lib/app-shell/site-metadata.ts`, with `public/og-image-1200x630.png` (#461).
+
+The API has four routes. The first is
 `/api/cron/keep-alive`, which a daily Vercel cron calls so the free
 Supabase project never pauses. It also deletes unattached proof files,
 attempt keys older than a day and uninvited sign-ins (below), expires
@@ -91,7 +93,7 @@ still the previous evening in Eastern time, so a run then settled the
 month before last and September's champion only posted on October 2
 (#197). Any hour from 05:00 UTC is past midnight Eastern under EST and
 EDT alike; `tests/lib/deploy/keep-alive-schedule.test.ts` guards it.
-The other, `/api/cron/closing-alerts`, sends the same closing alerts from
+The second, `/api/cron/closing-alerts`, sends the same closing alerts from
 Supabase's `pg_cron`: within a minute of a market closing, and at least every
 ten minutes otherwise (the heartbeat, see Notifications). A second `pg_cron`
 job, `cron-history-cleanup` (0065), prunes `cron.job_run_details` older than
@@ -100,6 +102,7 @@ The third, `/api/health`, is for an external uptime monitor: one service-role
 read of one row, `200 {"ok":true}` when Supabase answers and `503` when it
 doesn't, `Cache-Control: no-store`, no member data, and outside the proxy
 (`proxy.ts`'s matcher) so it doesn't depend on Auth.
+The fourth, `/api/push/resync`, is the service worker's (Push notifications, below).
 
 The daily keep-alive runs its steps independently (database touch, proof
 cleanup, proof retention, avatar cleanup, storage usage, key cleanup,
@@ -117,22 +120,24 @@ components/     UI by area: admin, app-nav, app-shell, bets, brand, docs, feed,
                 offline, parlays, proof, push, sign-in, slip, tasks, ui (shared primitives: Page,
                 SectionCard, Button, Field, SegmentedControl, SubNav, ShowMore,
                 EmptyState, Skeleton…)
-lib/            logic by area: admin, app-shell, auth, bets, docs, economy, env,
+lib/            logic by area: admin, app-shell, auth, bets, cache (group reads), docs, economy, env,
                 errors, format (formatDc for every DC amount), forms, home, invites, ledger, live, markets, members, nav,
                 observability, offline, pagination, parlays, preferences, profile,
-                proof, push, search, social, supabase, tasks, theme, toast, ui
-supabase/       migrations/00NN_*.sql, config.toml
+                proof, push, search, security (the CSP), social, supabase, tasks, theme, toast, ui
+supabase/       migrations/00NN_*.sql, config.toml, seed.sql (local and CI only)
 tests/          app/ (route handlers), components/, lib/, db/ (Vitest)
 e2e/            Playwright specs
 scripts/        check-migration-order.sh, backup/ (backup.sh, restore.sh…),
                 generate-splash.mjs, generate-favicons.mjs, ios-standalone-check.mjs
                 (npm run check:ios), seed-scale.mjs
-public/         sw.js (service worker), icons, favicons, iOS splash screens
-docs/           this file, HOW-IT-WORKS, OPERATIONS, ADMIN-GUIDE, RELEASING, GETTING-STARTED,
-                the design handoff, and archive/ (dated specs and plans, history only)
+public/         sw.js (service worker), icons, favicons, the share image, iOS splash screens
+docs/           README (the index), this file, HOW-IT-WORKS, OPERATIONS, ADMIN-GUIDE, RELEASING,
+                GETTING-STARTED, the design handoff, images/ (README screenshots) and archive/
+                (dated specs and plans, history only)
 (root)          proxy.ts (session, CSP), instrumentation*.ts, next.config.ts (headers, Sentry wrap),
-                vercel.json; .github/ (CI, deploys, scheduled jobs); .claude/ and
-                .mcp.json (Claude Code's guard rails and skills, below)
+                vercel.json, lighthouserc.json; CONTRIBUTING, SECURITY, CHANGELOG, PRODUCT and
+                DESIGN (the design skills' context); .github/ (CI, deploys, scheduled jobs);
+                .claude/ and .mcp.json (Claude Code's guard rails and skills, below)
 ```
 
 ## Data model
@@ -166,14 +171,15 @@ that list is the review step: a definer function skips RLS, so it must check
 its caller (`is_invited`, `has_role`, `auth.uid()`) itself.
 
 **Write limits** (0090, #273). A member's own inserts into `markets`,
-`market_categories`, `market_comments`, `feed_reactions` and `task_completions`
-pass `enforce_write_limit`, a BEFORE INSERT trigger that counts them per
+`market_categories`, `market_comments`, `feed_reactions`, `task_completions`,
+and since 0114 (#450) `bets` and `parlays`, pass `enforce_write_limit`, a BEFORE INSERT trigger that counts them per
 fixed window in `write_rate_counters` (one row per member, action and
 window, out of members' reach) and raises SQLSTATE `DD429` once a window is
 full: 20 markets a day, 20 new categories a day (0103; editing a market
 can make one too), 10 comments a minute and 200 a day, 60 reactions a
-minute and 1,000 a day, 30 task submissions a day (bet cancels had their own
-limit until #332 dropped cancelling, 0107).
+minute and 1,000 a day, 30 task submissions a day, 200 solo bets and 100
+parlays a day (a slip replayed on its attempt key inserts nothing, so isn't
+counted; bet cancels had their own limit until #332 dropped cancelling, 0107).
 The limits live in `write_limits()`, mirrored by `WRITE_LIMITS` in
 `lib/forms/limits.ts` (a DB test keeps them equal), whose
 `RATE_LIMIT_ERRORS` word each raise for its action. The service role, admins
@@ -190,7 +196,12 @@ spending coins should get a trigger and a `write_limits()` row.
   only an unclaimed row (`admin_delete_invites`, 0073); a claimed one goes
   only through `remove_member`. Members' insert grant covers only `email` and
   `invited_by`, which defaults to and must equal the caller; `claimed_by` is
-  the profile trigger's alone.
+  the profile trigger's alone. `is_invited()`, which every gate builds on,
+  also needs a Google identity on the account (0112).
+- `app_flags` (0112): switches for local databases, service role only. Its one
+  key, `allow_email_sign_in`, lets `is_invited()` pass an account with no
+  Google identity, for the tests' magic-link sessions; only
+  `supabase/seed.sql` adds it, so production never has it.
 - `profiles`: one per member. Display name, bio, `avatar_path`, `balance`
   and `role` (owner › admin › reviewer › member). A trigger creates it on
   first sign-in and grants 100 DC.
@@ -721,7 +732,10 @@ off. There are two ways in, chosen at build by `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
   the button stays on screen (#366).
 
 Either way, `finishSignIn` (`lib/auth/finish-sign-in.ts`) does the rest, and
-a member whose email isn't in `allowed_emails` lands on `/not-invited`. A signed-out request
+a member whose email isn't in `allowed_emails` lands on `/not-invited`. The
+database checks the provider too: since 0112 `is_invited()` needs a Google
+identity on the account, so an invited email signed in some other way is
+refused everything (`app_flags`, above, is the tests' way round it). A signed-out request
 for an app page is sent to `/sign-in?next=<path>`; the sign-in page keeps
 `next` in the short-lived `sign-in-next` cookie (path `/callback`, or
 `/auth/google` when going straight to Google) for the round trip through Google, and
@@ -1076,8 +1090,9 @@ list's refetch on every pool change is the biggest remaining egress term
 Realtime fits with headroom. Vercel fits too, but only just: about 6% under
 the invocation limit on these guesses, and going over pauses the app for
 up to 30 days. Read Vercel → Usage within the first weeks at scale; the
-next levers are moving `my_role` into the JWT (CPU), caching the
-viewer-independent reads, or Vercel Pro.
+next levers are moving `my_role` into the JWT (CPU), caching more of the
+viewer-independent reads (Group reads, above, cover the leaderboard and
+category counts so far), or Vercel Pro.
 
 **Long lists.** Keyset pagination (`lib/pagination`) with "Show more".
 Each list keeps its place in URL cursors, jumps to a fresh window after
@@ -1109,7 +1124,16 @@ browser's restored position, and a `#hash` keeps its target. The viewport's
 viewport, carrying the fixed bars up with it, and iOS sometimes leaves them
 there after the keyboard goes; `KeyboardViewportReset`
 (`components/app-shell/keyboard-viewport-reset.tsx`) nudges the scroll a
-pixel and back once it has (#350). The `color-scheme` meta lets a full page
+pixel and back once it has (#350). While the on-screen keyboard is up
+(a text field focused and the visual viewport shrunk by at least 150px, so an
+iPad's hardware keyboard doesn't count), `KeyboardOpenFlag`
+(`components/app-shell/keyboard-open.tsx`) sets `<html data-keyboard="open">`,
+which hides the tab bar and slip button (#443), and `--vv-top`, the visual
+viewport's offset, which the sticky top bar and status band follow so iOS's
+pan doesn't slide them under the status bar (#487). `html`'s
+`scroll-padding` keeps a focused control clear of the top and tab bars
+(WCAG 2.4.11, #473), and tapping the tab you're already on scrolls it to the
+top instead of navigating (`lib/nav/scroll-to-top.ts`, #464). The `color-scheme` meta lets a full page
 load in dark mode paint a dark canvas before `globals.css` arrives (#353).
 Zoom (D6, #402): the viewport meta leaves pinch-zoom on, so a browser tab
 can zoom (WCAG 1.4.4); `StandaloneZoomLock`
@@ -1228,7 +1252,7 @@ which slides under all four segmented controls: SubNav, the theme control, the
 slip's Solo/Parlay toggle and the chart's range) share one
 slide, `PILL_SLIDE` / `PILL_TRANSITION`: 280ms on the iOS curve, and the
 nav links they slide under (`pill-label`) cross-fade their colour over the
-same 280ms. The three dialogs share `components/ui/dialog-classes.ts`. `pressable`
+same 280ms. Every dialog (the confirms, More categories, submitting and rejecting a task, editing a market and its edit history) shares `components/ui/dialog-classes.ts`. `pressable`
 shrinks every control on press and never grows one on hover (#383); a
 standalone tappable card adds `hover-lift` and lifts onto `--lift-shadow`
 under a mouse, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244; My bets' parlay and bet tiles too, #269), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins). `AnimatedNumber` counts
@@ -1284,7 +1308,8 @@ value never stops production booting.
   redeploy after setting it. Server: `instrumentation.ts` initialises the SDK
   on the Node runtime and exports `onRequestError`, capturing every
   uncaught error in a component, route, action or the proxy. Browser:
-  `instrumentation-client.ts` loads the SDK lazily (global handlers only),
+  `instrumentation-client.ts` loads the SDK lazily (global handlers only,
+  `lib/observability/client.ts`),
   once the browser is idle (`requestIdleCallback`, at most 3 s; a 3 s timer
   where there's none), so it doesn't compete with hydration (#458); an
   uncaught error before then is caught by its own listeners and sent once
@@ -1437,7 +1462,7 @@ value never stops production booting.
   the browser blocks it. `next.config.ts` sends no page CSP of its own (a
   second policy would also be enforced, without the nonce), only `/sw.js`'s,
   which the proxy skips. Paths the proxy skips (static files, the cron and
-  health routes, the manifest) carry no CSP, since no page renders there.
+  health routes, the manifest, `robots.txt` and `sitemap.xml`) carry no CSP, since no page renders there.
   `style-src` keeps `'unsafe-inline'`, and `'unsafe-eval'` is dev-only. The
   policy allows connections to the app, its
   Supabase project and Sentry's ingest (`*.sentry.io`); nothing from Google,
@@ -1466,4 +1491,7 @@ value never stops production booting.
   `.env` files, and `lint-on-edit.sh` runs ESLint on each edited file as CI
   does; `.mcp.json` adds a read-only Supabase MCP scoped to production and
   context7 for library docs. Migrations still reach production only through
-  Deploy Production.
+  Deploy Production. `.claude/skills/` holds the repo's own skills
+  (`new-migration`, `new-route`, `pr-ready`, `release`) and the vendored design
+  skills (`impeccable`, `taste`, #447), and `.claude/agents/` the
+  `money-path-reviewer` and `conventions-reviewer` agents.

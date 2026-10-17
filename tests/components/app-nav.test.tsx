@@ -245,7 +245,7 @@ describe('AppNav', () => {
     render(<Nav balance={120} isAdmin />)
     for (const header of screen.getAllByRole('banner')) expect(header).toHaveClass('sticky', 'top-(--safe-top)')
     const phone = screen.getAllByRole('navigation', { name: 'Primary' })[1]
-    expect(phone).toHaveClass('fixed', 'bottom-0', 'pb-[calc(12px+var(--safe-bottom))]')
+    expect(phone).toHaveClass('fixed', 'bottom-0', 'pb-[calc(4px+var(--safe-bottom))]', 'h-[calc(var(--tab-bar-h)+var(--safe-bottom))]')
   })
 
   it('keeps the nav off the long-press menu and gives every nav control a press state', () => {

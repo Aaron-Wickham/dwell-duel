@@ -51,9 +51,9 @@
   /* The desktop nav's active pill, the phone tab bar's, and a segmented control's chosen segment. */
   --nav-active: #03272D;
   --on-nav-active: #FFFFFF;
-  --tab-active: #72DB2B;
+  /* A soft tint behind the active tab's icon, not a lime pill (#444). */
+  --tab-active: #DDF0CF;
   --on-tab-active: #03272D;
-  --tab-active-ring: #03272D;
   --segment-active: #FCFDFB;
   --acc-soft: #E3F4D5;
   --acc-text: #2A6E0B;
@@ -63,6 +63,22 @@
   --win-soft: #E3F4D5;
   --loss: #A8281C;
   --loss-soft: #FAE1DD;
+  --info: #25418C;
+  --info-soft: #E5ECFA;
+  /* Category and avatar tints (#445): six soft fills, each with its text colour, picked by a stable
+     hash (lib/ui/tint.ts). Text on its own fill passes AA in both themes (contrast.test.ts). */
+  --tint1: #0F5E55;
+  --tint1-soft: #DDF1EC;
+  --tint2: #8A2257;
+  --tint2-soft: #FBE3EE;
+  --tint3: #2B4A9E;
+  --tint3-soft: #E4EBFA;
+  --tint4: #7A4E00;
+  --tint4-soft: #F7EACB;
+  --tint5: #8F3A12;
+  --tint5-soft: #FAE6DA;
+  --tint6: #4A5A12;
+  --tint6-soft: #EEF2D6;
   --focus: #03272D;
   --hero: #E3F4D5;
   --on-hero: #03272D;
@@ -91,6 +107,8 @@
   --on-splash: #FFFFFF;
   --safe-top: 0px;
   --safe-bottom: 0px;
+  /* The phone tab bar's height above the safe area (#444); what sits above it offsets by this. */
+  --tab-bar-h: 58px;
 }
 
 /* viewport-fit=cover makes env(safe-area-inset-*) non-zero in a normal Safari tab too, where
@@ -134,7 +152,6 @@
   --on-nav-active: #021B1F;
   --tab-active: #17434A;
   --on-tab-active: #EAF4EE;
-  --tab-active-ring: #5E8883;
   --segment-active: #17434A;
   --acc-soft: #143A1E;
   --acc-text: #8BE651;
@@ -144,6 +161,20 @@
   --win-soft: #143A1E;
   --loss: #FF9585;
   --loss-soft: #3D1C17;
+  --info: #B9C8F5;
+  --info-soft: #1B2A4F;
+  --tint1: #8FE0D2;
+  --tint1-soft: #123B37;
+  --tint2: #FF9CC8;
+  --tint2-soft: #3F1A2C;
+  --tint3: #A9BEFF;
+  --tint3-soft: #1B2A4F;
+  --tint4: #F0C15A;
+  --tint4-soft: #3A2E14;
+  --tint5: #FFAD85;
+  --tint5-soft: #3D2216;
+  --tint6: #CFE08A;
+  --tint6-soft: #2A3312;
   --focus: #72DB2B;
   --hero: #0D3A41;
   --on-hero: #FFFFFF;
@@ -186,7 +217,6 @@
     --on-nav-active: #021B1F;
     --tab-active: #17434A;
     --on-tab-active: #EAF4EE;
-    --tab-active-ring: #5E8883;
     --segment-active: #17434A;
     --acc-soft: #143A1E;
     --acc-text: #8BE651;
@@ -196,6 +226,20 @@
     --win-soft: #143A1E;
     --loss: #FF9585;
     --loss-soft: #3D1C17;
+    --info: #B9C8F5;
+    --info-soft: #1B2A4F;
+    --tint1: #8FE0D2;
+    --tint1-soft: #123B37;
+    --tint2: #FF9CC8;
+    --tint2-soft: #3F1A2C;
+    --tint3: #A9BEFF;
+    --tint3-soft: #1B2A4F;
+    --tint4: #F0C15A;
+    --tint4-soft: #3A2E14;
+    --tint5: #FFAD85;
+    --tint5-soft: #3D2216;
+    --tint6: #CFE08A;
+    --tint6-soft: #2A3312;
     --focus: #72DB2B;
     --hero: #0D3A41;
     --on-hero: #FFFFFF;
@@ -237,7 +281,6 @@
   --color-on-nav-active: var(--on-nav-active);
   --color-tab-active: var(--tab-active);
   --color-on-tab-active: var(--on-tab-active);
-  --color-tab-active-ring: var(--tab-active-ring);
   --color-segment-active: var(--segment-active);
   --color-acc-soft: var(--acc-soft);
   --color-acc-text: var(--acc-text);
@@ -247,6 +290,20 @@
   --color-win-soft: var(--win-soft);
   --color-loss: var(--loss);
   --color-loss-soft: var(--loss-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-tint1: var(--tint1);
+  --color-tint1-soft: var(--tint1-soft);
+  --color-tint2: var(--tint2);
+  --color-tint2-soft: var(--tint2-soft);
+  --color-tint3: var(--tint3);
+  --color-tint3-soft: var(--tint3-soft);
+  --color-tint4: var(--tint4);
+  --color-tint4-soft: var(--tint4-soft);
+  --color-tint5: var(--tint5);
+  --color-tint5-soft: var(--tint5-soft);
+  --color-tint6: var(--tint6);
+  --color-tint6-soft: var(--tint6-soft);
   --color-focus: var(--focus);
   --color-hero: var(--hero);
   --color-on-hero: var(--on-hero);
@@ -430,6 +487,15 @@
   }
 }
 
+/* A link inside a sentence (#437): the one kind of link underlined at rest. */
+@utility prose-link {
+  text-decoration-line: underline;
+
+  &:hover {
+    text-decoration-thickness: 3px;
+  }
+}
+
 /* A card or row that one link makes tappable as a whole: the link's ::after covers its nearest
    positioned ancestor, the card, which is `relative pressable`. Another control inside the card
    sits above the cover in a `relative z-[1]` wrapper. The link is the card's title, so it isn't
@@ -541,16 +607,21 @@
     text-align: start;
   }
 
+  /* Links are plain at rest (#437): a title, a See all or a back link reads by its place and weight,
+     and a line under every one made pages busy. A link inside a sentence opts back in with
+     `prose-link`. Under a mouse every link still underlines on hover. */
   a {
     color: var(--link);
-    text-decoration-line: underline;
+    text-decoration-line: none;
     text-decoration-thickness: 1.5px;
     text-underline-offset: 3px;
     transition: text-decoration-thickness var(--duration-hover) ease-out;
   }
 
-  a:hover {
-    text-decoration-thickness: 3px;
+  @media (hover: hover) and (pointer: fine) {
+    a:hover {
+      text-decoration-line: underline;
+    }
   }
 
   :focus-visible {

@@ -73,11 +73,11 @@ export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>)
       {member && (
         <p className="text-sm text-ink2">
           Showing {member.name}’s coin movements.{' '}
-          <Link href={`/admin/members/${member.id}`} transitionTypes={['nav-forward']}>
+          <Link href={`/admin/members/${member.id}`} transitionTypes={['nav-forward']} className="prose-link">
             Open {member.name}
           </Link>
           {' · '}
-          <Link href={hrefWith(searchParams, { member: null })} replace scroll={false}>
+          <Link href={hrefWith(searchParams, { member: null })} replace scroll={false} className="prose-link">
             Show everyone’s
           </Link>
         </p>

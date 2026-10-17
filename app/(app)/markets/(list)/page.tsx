@@ -245,7 +245,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
         </h2>
         <p id="markets-matches-caption" className="text-sm text-ink2">
           {`${lead} ${complete && matchCards.length === 1 ? 'matches' : 'match'} “${q}”. Showing matches in every status. `}
-          <Link href={clearHref}>{clearLabel}</Link>
+          <Link href={clearHref} className="prose-link">{clearLabel}</Link>
         </p>
         {windowTop(matches, 'match')}
         <div className="grid gap-5 lg:grid-cols-3">
@@ -318,7 +318,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       {category && (
         <p id="markets-category-caption" className="text-sm text-ink2">
           Showing {narrowed ? '' : STATUS_WORDS[filter]}markets in <strong className="text-ink">{category.name}</strong> ·{' '}
-          <Link href={allCategoriesHref}>Show all categories</Link>
+          <Link href={allCategoriesHref} className="prose-link">Show all categories</Link>
         </p>
       )}
       <LiveTables subscriptions={pageSubscriptions.markets()} renderedAt={renderStamp()} />

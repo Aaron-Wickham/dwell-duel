@@ -1,13 +1,14 @@
 import { cn } from '@/lib/utils'
 import { uiTextClass, figureClass } from '@/components/ui/page'
+import { tintFor } from '@/lib/ui/tint'
 
-// Every size's initial sits on --acc-soft: a lime fill is for the primary action and first place
-// alone (#380), and a large avatar isn't either.
+// An initial sits on a soft tint picked from the member's name (#445), so a list of members isn't
+// one green; never lime, which is for the primary action and first place alone (#380).
 const SIZES = {
-  sm: 'size-8 bg-acc-soft text-sm text-acc-text',
-  md: 'size-10 bg-acc-soft text-acc-text',
-  nav: `size-9 bg-acc-soft ${uiTextClass} text-acc-text`,
-  lg: `size-16 bg-acc-soft text-acc-text md:size-20 ${figureClass}`,
+  sm: 'size-8 text-sm',
+  md: 'size-10',
+  nav: `size-9 ${uiTextClass}`,
+  lg: `size-16 md:size-20 ${figureClass}`,
 } as const
 
 // The phone size of each variant, so the browser reserves the box before the photo arrives.
@@ -36,7 +37,7 @@ export function Avatar({ name, src, size = 'md' }: { name: string; src?: string 
   // Array.from splits by code point, so a name starting with an emoji keeps the whole character.
   const initial = Array.from(name.trim())[0]?.toUpperCase() ?? '?'
   return (
-    <span aria-hidden="true" className={className}>
+    <span aria-hidden="true" className={cn(className, tintFor(name))}>
       {initial}
     </span>
   )

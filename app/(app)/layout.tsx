@@ -73,7 +73,7 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
               avatarSrc: avatarUrl(profile?.avatar_path),
             }}
           />
-          <main id="main" className="flex flex-1 flex-col pb-[calc(82px+var(--safe-bottom))] md:pb-0">
+          <main id="main" className="flex flex-1 flex-col pb-[calc(var(--tab-bar-h)+8px+var(--safe-bottom))] md:pb-0">
             <OfflineSpacer />
             {children}
             <SlipSpacer />

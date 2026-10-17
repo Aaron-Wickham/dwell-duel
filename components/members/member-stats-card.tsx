@@ -36,7 +36,7 @@ function Record({ record }: { record: WinLoss }) {
   return (
     <>
       <span aria-hidden="true">
-        {record.won}–{record.lost}
+        {record.won}-{record.lost}
       </span>
       <span className="sr-only">
         {record.won} won, {record.lost} lost
@@ -108,7 +108,7 @@ export function MemberStatsCard({ stats }: { stats: MemberStats }) {
           </>
         )}
         <Stat label="Markets created">{stats.marketsCreated}</Stat>
-        <Stat label="Tasks completed">{stats.tasksCompleted}</Stat>
+        <Stat label="Tasks approved">{stats.tasksCompleted}</Stat>
       </dl>
     </SectionCard>
   )

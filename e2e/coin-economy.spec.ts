@@ -16,7 +16,7 @@ test('create a proof-required task, submit it with proof, and approve it as admi
   await page.getByLabel('Reward (DC)').fill('10')
   await page.getByLabel('Require proof').check()
   await page.getByRole('button', { name: 'Create task' }).click()
-  await expect(page.getByText('Read Genesis 1-3 — 10 DC')).toBeVisible()
+  await expect(page.getByText('Read Genesis 1-3 · 10 DC')).toBeVisible()
 
   await bobPage.goto('/tasks')
   const row = bobPage.getByRole('listitem').filter({ hasText: 'Read Genesis 1-3' })

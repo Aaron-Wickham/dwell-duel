@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: '/',
     name: 'DwellDuel',
     short_name: 'DwellDuel',
-    description: 'Friendly bets. Faithful study.',
+    description: 'Friendly play-money bets and Bible study with your church friends.',
     start_url: '/',
     scope: '/',
     display: 'standalone',

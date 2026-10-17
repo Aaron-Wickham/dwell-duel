@@ -120,7 +120,7 @@ test.describe('Jump to me', () => {
     const mine = page.getByRole('listitem').filter({ hasText: '(you)' })
     await expect(mine).toBeVisible()
     await expect(mine).toBeFocused()
-    await expect(page.getByText(/^Showing ranks \d+–\d+$/)).toBeVisible()
+    await expect(page.getByText(/^Showing ranks \d+ to \d+$/)).toBeVisible()
 
     await page.getByRole('link', { name: 'Back to the top' }).click()
     await expect(page).toHaveURL(/\/leaderboard$/)

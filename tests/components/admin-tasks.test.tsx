@@ -379,7 +379,7 @@ describe('TaskCatalogItem', () => {
 
   it('shows the title and reward as one piece of text', () => {
     renderItem(GENESIS)
-    expect(screen.getAllByText('Read Genesis 1-3 — 10 DC')).toHaveLength(1)
+    expect(screen.getAllByText('Read Genesis 1-3 · 10 DC')).toHaveLength(1)
     expect(screen.queryByText('Inactive')).toBeNull()
     expect(screen.queryByText('Weekly')).toBeNull()
   })

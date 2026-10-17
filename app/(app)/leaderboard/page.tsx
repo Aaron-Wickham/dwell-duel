@@ -144,7 +144,7 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
         {page.windowed && (
           <div className="mb-3 flex flex-wrap items-center gap-3">
             <p className="text-sm text-ink2">
-              {firstRank === lastRank ? `Showing rank ${firstRank}` : `Showing ranks ${firstRank}–${lastRank}`}
+              {firstRank === lastRank ? `Showing rank ${firstRank}` : `Showing ranks ${firstRank} to ${lastRank}`}
             </p>
             <BackToNewest href={backToNewestHref} label="Back to the top" />
           </div>

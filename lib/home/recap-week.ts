@@ -40,6 +40,6 @@ export function weekRangeLabel(week: Pick<RecapWeek, 'monday' | 'sunday'>): stri
   const format = (date: string, options: Intl.DateTimeFormatOptions) =>
     new Date(`${date}T12:00:00Z`).toLocaleString('en-US', { ...options, timeZone: 'UTC' })
   const start = format(week.monday, { month: 'short', day: 'numeric' })
-  if (week.monday.slice(0, 7) === week.sunday.slice(0, 7)) return `${start}–${format(week.sunday, { day: 'numeric' })}`
-  return `${start} – ${format(week.sunday, { month: 'short', day: 'numeric' })}`
+  if (week.monday.slice(0, 7) === week.sunday.slice(0, 7)) return `${start} to ${format(week.sunday, { day: 'numeric' })}`
+  return `${start} to ${format(week.sunday, { month: 'short', day: 'numeric' })}`
 }

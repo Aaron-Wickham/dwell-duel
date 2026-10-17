@@ -52,7 +52,7 @@ export function EconomyCard({ summary }: { summary: EconomySummary }) {
                 <Dc value={s.added} />
               </td>
               <td className="py-2 text-right whitespace-nowrap">
-                {s.removed === null ? <span className="text-ink2">—</span> : <Dc value={-s.removed} />}
+                {s.removed === null ? <span className="text-ink2">None</span> : <Dc value={-s.removed} />}
               </td>
             </tr>
           ))}

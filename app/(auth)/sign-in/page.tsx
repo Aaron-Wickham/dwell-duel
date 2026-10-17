@@ -8,20 +8,21 @@ import { SignInButton } from './sign-in-button'
 export const metadata: Metadata = { title: 'Sign in', alternates: { canonical: '/sign-in' } }
 
 // Public, so Google's brand review (and anyone sent here) can tell what the app is. Written for
-// someone who has just been invited: what this is, in one plain sentence (#387), then the way in. On
-// a short phone the sentence drops out so the button stays on screen.
+// someone who has just been invited (#467): the headline says what it is and who it's for, the
+// sentence answers "is this real money?" before the button. On a short phone the sentence drops out
+// so the button stays on screen; the headline still says it's among friends.
 export default function SignInPage() {
   // Optional: without it, sign-in goes through Supabase's own Google redirect.
   const direct = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID)
   return (
     <SignInFrame intro>
       <h1 className={cn(h1Class, 'lg:text-[52px]')}>
-        Friendly bets.{' '}
+        Friendly bets with{' '}
         <br />
-        Faithful study.
+        your church friends
       </h1>
       <p className="text-lg text-ink2 short:hidden lg:max-w-[440px]">
-        Bet on friendly questions and earn DC with Bible-study tasks. Play money, invite-only.
+        Bet play money on friendly questions, and earn more with Bible study. No real money.
       </p>
       <div className="flex flex-col gap-2 lg:max-w-[380px]">
         <Suspense>

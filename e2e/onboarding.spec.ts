@@ -18,7 +18,7 @@ test('Getting started opens with How it works, and ticks it off once the page ha
     '/settings#settings-notifications',
   )
 
-  await learn.getByRole('link', { name: 'Read' }).click()
+  await learn.getByRole('link', { name: 'Read the basics' }).click()
   await expect(page).toHaveURL(/\/how-it-works$/)
   await expect(page.getByRole('heading', { level: 2, name: 'Betting' })).toBeVisible()
 

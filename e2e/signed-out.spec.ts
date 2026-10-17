@@ -160,7 +160,7 @@ test('with a Google client ID, sign-in goes straight to Google, which posts back
   // Supabase's redirect beside it, in case the direct path is what failed.
   await page.route(/\/auth\/v1\/authorize/, (route) => route.abort())
   const supabase = page.waitForRequest(/\/auth\/v1\/authorize/)
-  await page.getByRole('button', { name: 'Try another way' }).click()
+  await page.getByRole('button', { name: 'Sign in another way' }).click()
   expect(new URL((await supabase).url()).searchParams.get('prompt')).toBe('select_account')
 })
 

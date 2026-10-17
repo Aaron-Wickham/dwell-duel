@@ -54,11 +54,11 @@ describe('MemberStatsCard', () => {
     render(<MemberStatsCard stats={toMemberStats(FULL)} />)
 
     expect(screen.getByRole('region', { name: 'Stats' })).toBeInTheDocument()
-    // "4–2" on screen (one line at 375px, VIZ-17), the words for a screen reader.
-    expect(within(stat('Solo bets')).getByText('4–2')).toHaveAttribute('aria-hidden', 'true')
+    // "4-2" on screen (one line at 375px, VIZ-17), the words for a screen reader.
+    expect(within(stat('Solo bets')).getByText('4-2')).toHaveAttribute('aria-hidden', 'true')
     expect(within(stat('Solo bets')).getByText('4 won, 2 lost')).toHaveClass('sr-only')
     expect(within(stat('Solo bets')).getByText('67% won · 1 refunded')).toBeInTheDocument()
-    expect(within(stat('Parlays')).getByText('1–3')).toBeInTheDocument()
+    expect(within(stat('Parlays')).getByText('1-3')).toBeInTheDocument()
     expect(within(stat('Parlays')).getByText('25% won')).toBeInTheDocument()
     expect(within(stat('Parlays')).queryByText(/refunded/)).toBeNull()
     expect(stat('Net profit')).toHaveTextContent('+45 DC')
@@ -70,7 +70,7 @@ describe('MemberStatsCard', () => {
     expect(stat('Best parlay')).toHaveTextContent('6.00×')
     expect(stat('Best parlay')).toHaveTextContent('Paid 60 DC')
     expect(stat('Markets created')).toHaveTextContent('2')
-    expect(stat('Tasks completed')).toHaveTextContent('5')
+    expect(stat('Tasks approved')).toHaveTextContent('5')
     expect(screen.queryByText('No settled bets yet.')).toBeNull()
   })
 
@@ -92,7 +92,7 @@ describe('MemberStatsCard', () => {
     expect(screen.queryByText('Solo bets')).toBeNull()
     expect(screen.queryByText('Biggest win')).toBeNull()
     expect(stat('Markets created')).toHaveTextContent('1')
-    expect(stat('Tasks completed')).toHaveTextContent('0')
+    expect(stat('Tasks approved')).toHaveTextContent('0')
   })
 })
 

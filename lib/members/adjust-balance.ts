@@ -16,7 +16,7 @@ export type ActionState = { formError?: string; field?: 'amount' | 'reason' } | 
 const ADJUST_BALANCE_ERRORS: readonly KnownError<'amount' | 'reason'>[] = [
   { match: 'only the owner can adjust a balance', formError: 'Only the owner can adjust a balance.' },
   { match: 'adjustment amount must not be zero', formError: 'Enter a non-zero whole number of DC.', field: 'amount' },
-  { match: 'a reason is required for a balance adjustment', formError: 'Add a reason — it’s shown in the ledger next to this adjustment.', field: 'reason' },
+  { match: 'a reason is required for a balance adjustment', formError: 'Add a reason. It’s shown in the ledger next to this adjustment.', field: 'reason' },
   { match: 'reason too long', formError: tooLong('Reason', TEXT_LIMITS.adjustReason), field: 'reason' },
   { match: 'profiles_balance_check', formError: 'That would take their balance below zero.', field: 'amount' },
 ]
@@ -29,7 +29,7 @@ export async function adjustBalanceAction(profileId: string, _prevState: ActionS
   const reason = String(formData.get('reason') ?? '').trim()
 
   if (!Number.isInteger(amount) || amount === 0) return { formError: 'Enter a non-zero whole number of DC.', field: 'amount' }
-  if (!reason) return { formError: 'Add a reason — it’s shown in the ledger next to this adjustment.', field: 'reason' }
+  if (!reason) return { formError: 'Add a reason. It’s shown in the ledger next to this adjustment.', field: 'reason' }
   if (reason.length > TEXT_LIMITS.adjustReason) return { formError: tooLong('Reason', TEXT_LIMITS.adjustReason), field: 'reason' }
 
   const attemptKey = String(formData.get('idempotency_key') ?? '')
@@ -43,7 +43,7 @@ export async function adjustBalanceAction(profileId: string, _prevState: ActionS
     if (isBalanceCheckViolation(error)) {
       const { data: profile } = await supabase.from('profiles').select('display_name, balance').eq('id', profileId).maybeSingle()
       if (profile) {
-        return { formError: `That would take ${profile.display_name}’s balance below zero — they have ${formatDcAmount(profile.balance)}.`, field: 'amount' }
+        return { formError: `That would take ${profile.display_name}’s balance below zero: they have ${formatDcAmount(profile.balance)}.`, field: 'amount' }
       }
     }
     return friendlyError(error, ADJUST_BALANCE_ERRORS, 'adjust_balance failed')

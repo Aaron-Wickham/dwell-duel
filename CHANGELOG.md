@@ -40,6 +40,11 @@ before v0.4.0 used other headings.)
 - **A member's page adds up, and Edit profile is simpler.** Next to net worth, a line says how it splits: "4,886 DC balance + 275 DC riding on open bets", so it squares with the balance in the top bar. Their Recent activity no longer links their own name back to the page you're on, the stats card shows a record as "17–12" with the share won under it instead of wrapping on a phone, and its loading placeholder is the card's real height, so the page no longer jumps when the stats arrive. Edit profile is one card with photo, name, bio and a single Save, without the separate preview, and its loading placeholder is the card's real height (#397).
 
 ### Polish
+- **Sign-in says what DwellDuel is.** "Friendly bets with your church friends", and the line under it says it's play money, never real money (#467).
+- **The full rules are easier to scan.** Each main section opens with a one-line "In short", Markets is split into creating, finding, and Duplicate and Share, the notes on markets from before October 2026 moved to the end, and housekeeping detail about notifications is gone (#469).
+- **No more dashes.** Ranges read "5 to 50 DC" and "Oct 5 to 11", a bet row reads "Ruth · 10 DC on Yes", and a record is "17-12" everywhere (#470).
+- **Every error says what to do next,** for example "This task was taken down. Pick another under To do." (#471).
+- **Clearer buttons and labels:** "Read the basics", "Sign in another way", "Go to Home", and the profile's "Tasks approved" (#472).
 - **Capitals after a dot.** "10 DC · Weekly", "Pays 18 DC", "Once", "Sent": a phrase after a · now starts with a capital everywhere.
 - **Calmer links.** Titles, See all, back links and menu items are no longer underlined; only a link inside a sentence is (How parlays pay, a name in Activity), and any link underlines when you point at it with a mouse (#437).
 - **Colour that means something.** A new blue for results and things of yours, and each category and member gets its own soft colour, so chips and avatars aren't all one green (#445).

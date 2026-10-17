@@ -147,7 +147,7 @@ describe('AdminMembersPage (#254)', () => {
   })
 
   // #418: sortable by balance, net worth and joined date, with the order in the URL.
-  it('sorts A–Z by default, with headers that sort by each figure', async () => {
+  it('sorts A to Z by default, with headers that sort by each figure', async () => {
     await renderPage({ q: 'an' })
     const table = screen.getByRole('table')
     expect(within(table).getByRole('columnheader', { name: /^Member/ })).toHaveAttribute('aria-sort', 'ascending')
@@ -160,7 +160,7 @@ describe('AdminMembersPage (#254)', () => {
       '/admin/members?q=an&sort=net_worth',
     )
     expect(within(table).getByRole('link', { name: 'Joined, sort newest first' })).toHaveAttribute('href', '/admin/members?q=an&sort=joined')
-    expect(within(table).getByText(/Members, A–Z/)).toBeInTheDocument()
+    expect(within(table).getByText(/Members, A to Z/)).toBeInTheDocument()
   })
 
   it('sorts by balance from ?sort=, turning round on a second tap and keeping the sort across tabs and searches', async () => {
@@ -177,7 +177,7 @@ describe('AdminMembersPage (#254)', () => {
       'href',
       '/admin/members?sort=balance&dir=asc',
     )
-    expect(within(table).getByRole('link', { name: 'Member, sort A–Z' })).toHaveAttribute('href', '/admin/members')
+    expect(within(table).getByRole('link', { name: 'Member, sort A to Z' })).toHaveAttribute('href', '/admin/members')
     const tabs = screen.getByRole('navigation', { name: 'Show members' })
     expect(within(tabs).getByRole('link', { name: 'Removed (12)' })).toHaveAttribute('href', '/admin/members?show=removed&sort=balance')
     expect(screen.getByRole('search').querySelector('input[type="hidden"][name="sort"]')).toHaveAttribute('value', 'balance')
@@ -196,7 +196,7 @@ describe('AdminMembersPage (#254)', () => {
     expect(screen.getByRole('row', { name: /Ben/ })).toHaveTextContent('90 DC net worth')
   })
 
-  it('can’t sort the Removed tab by net worth, falling back to A–Z', async () => {
+  it('can’t sort the Removed tab by net worth, falling back to A to Z', async () => {
     listMembersPage.mockResolvedValue({ rows: [{ ...BEN, removed: true }], next: null, windowed: false })
     await renderPage({ sort: 'net_worth', show: 'removed' })
     expect(listMembersByNetWorth).not.toHaveBeenCalled()

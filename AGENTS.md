@@ -171,6 +171,9 @@ a line to `CHANGELOG.md` under the next release.
   summary of the page (#400): Tasks keeps "Earn DC with Bible study. A reviewer checks each
   one.";
   most pages have none, and their skeleton draws no description line.
+- **No em or en dashes in what members see** (#470): use " · " between
+  parts, ":" before an explanation, "to" in a range ("5 to 50 DC", "Oct 5
+  to 11"), and a hyphen in a record ("17-12"). Code comments may keep them.
 - **A phrase after a · starts with a capital** ("10 DC · Weekly",
   "5 DC on Yes · Pays 18 DC", "· Waiting for a result"); a segment that
   starts with a number needs nothing.

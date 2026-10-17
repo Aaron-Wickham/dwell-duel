@@ -35,7 +35,7 @@ export async function addInvite(
     if (error.code === '23505') {
       return { ok: false, formError: 'That email is already invited.' }
     }
-    return { ok: false, formError: 'Could not add that invite.' }
+    return { ok: false, formError: 'Couldn’t add that invite. Try again.' }
   }
 
   return { ok: true, email }

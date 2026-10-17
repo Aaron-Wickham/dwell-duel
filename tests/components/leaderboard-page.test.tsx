@@ -320,7 +320,7 @@ describe('LeaderboardPage', () => {
 
       expect(getJumpToMeTop).toHaveBeenCalledWith({}, 'all', 'p-me')
       expect(getLeaderboardPage).toHaveBeenCalledWith({}, 'all', { top, bottom: null })
-      expect(screen.getByText('Showing ranks 602–612')).toBeInTheDocument()
+      expect(screen.getByText('Showing ranks 602 to 612')).toBeInTheDocument()
       expect(screen.getByRole('link', { name: 'Back to the top' })).toHaveAttribute('href', '/leaderboard')
       expect(screen.getByRole('listitem', { name: /Rank 612.*Me/ })).toHaveAttribute('id', 'member-p-me')
       // Your row is on screen, so there's nothing left to jump to.

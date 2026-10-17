@@ -13,7 +13,7 @@ export type CommentState = { formError?: string; posted?: boolean } | undefined
 export async function postCommentAction(marketId: string, _prev: CommentState, formData: FormData): Promise<CommentState> {
   const { supabase, user } = await requireUser()
   if (!user) return { formError: SIGNED_OUT_ERROR }
-  if (!isUuid(marketId)) return { formError: 'This market no longer exists.' }
+  if (!isUuid(marketId)) return { formError: 'This market was deleted. Go back to Markets.' }
 
   // A textarea's newlines arrive as CRLF once the browser serialises the form, doubling up
   // against maxLength, which counts one character per line break.
@@ -31,7 +31,7 @@ export async function postCommentAction(marketId: string, _prev: CommentState, f
   // 23505 on the key's index: this attempt already posted, which is what was asked for.
   if (error && !(error.code === '23505' && error.message.includes(ATTEMPT_KEY_INDEX))) {
     // 23503: the market was deleted while the form was open.
-    if (error.code === '23503') return { formError: 'This market no longer exists.' }
+    if (error.code === '23503') return { formError: 'This market was deleted. Go back to Markets.' }
     if (error.message === RATE_LIMIT_ERRORS.comment.match) return { formError: RATE_LIMIT_ERRORS.comment.formError }
     return { formError: 'Couldn’t post your comment. Try again.' }
   }

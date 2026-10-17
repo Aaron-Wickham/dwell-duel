@@ -101,7 +101,7 @@ test('Your position lists each bet with its fixed payout, and a parlay pick; par
   const outcomes = page.getByRole('region', { name: 'Outcomes' })
 
   const leg = position.getByRole('listitem').filter({ hasText: 'Parlay pick: Yes' })
-  await expect(leg.getByText(/^5 DC · 2 picks · pays \d+ DC if every pick wins\./)).toBeVisible()
+  await expect(leg.getByText(/^5 DC · 2 picks · Pays \d+ DC if every pick wins\./)).toBeVisible()
   await expect(leg.getByRole('link', { name: /^View parlay/ })).toHaveAttribute('href', `/parlays/${parlayId}`)
 
   // Parlay money shows once, under the outcomes, never in a row (#390).

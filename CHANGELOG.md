@@ -58,6 +58,7 @@ before v0.4.0 used other headings.)
 - **A smoother tab pill.** The pill in My bets, Admin and every other segmented control slides without making the browser lay out the page on each frame, so it keeps up on older phones; it looks and times exactly as before (#418).
 
 ### Under the hood
+- **Only Google accounts get in.** The invite check now also requires a Google sign-in on the account, so turning on another sign-in method could never let someone claim an invitee's place (0112). Four missing foreign-key indexes added (0113, #453).
 - **Design skills in the repo.** Impeccable (app screens) and Taste (public pages) are vendored in `.claude/skills/` with their licences, plus a short `PRODUCT.md` and a `DESIGN.md` that points at the handoff doc (#447).
 - **Next 16.4.0, and two dependency advisories patched.** Next moves from 16.3.8 to 16.4.0, and the lockfile takes `sharp` 0.35.5 and `source-map-js` 1.2.2, so `npm audit --omit=dev` is clean again (#448).
 - **More Claude Code setup.** Hooks that lint each edited file as CI does and refuse hand edits to the generated database types and `.env` files; `new-route` and `pr-ready` skills; `money-path-reviewer` and `conventions-reviewer` agents; and the context7 docs server in `.mcp.json` (#379).

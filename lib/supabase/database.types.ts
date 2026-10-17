@@ -165,6 +165,18 @@ export type Database = {
           },
         ]
       }
+      app_flags: {
+        Row: {
+          key: string
+        }
+        Insert: {
+          key: string
+        }
+        Update: {
+          key?: string
+        }
+        Relationships: []
+      }
       bets: {
         Row: {
           amount: number

@@ -1,7 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-const { sendPush, after } = vi.hoisted(() => ({ sendPush: vi.fn(), after: vi.fn() }))
-vi.mock('@/lib/push/send', () => ({ sendPush }))
+const { sendPush, sendPushGroups, after } = vi.hoisted(() => {
+  const sendPush = vi.fn()
+  // Answers each group as sendPush would, so a test can stub one market's result at a time.
+  const sendPushGroups = vi.fn(async (groups: unknown[], db: unknown, run: unknown) => {
+    const results = []
+    for (const group of groups) results.push(await sendPush(group, db, run))
+    return results
+  })
+  return { sendPush, sendPushGroups, after: vi.fn() }
+})
+vi.mock('@/lib/push/send', () => ({ sendPush, sendPushGroups }))
 vi.mock('@/lib/supabase/service-role', () => ({ serviceRoleClient: vi.fn() }))
 vi.mock('next/server', () => ({ after }))
 
@@ -25,6 +34,7 @@ const dbReturning = (data: unknown, error: unknown = null) => {
 
 beforeEach(() => {
   sendPush.mockReset().mockResolvedValue({ sent: 1, removed: 0, failed: 0, systemic: 0, credentials: 0 })
+  sendPushGroups.mockClear()
   after.mockReset()
   vi.stubEnv('NEXT_PUBLIC_VAPID_PUBLIC_KEY', 'public-key')
   vi.stubEnv('VAPID_PRIVATE_KEY', 'private-key')
@@ -189,6 +199,8 @@ describe('notify', () => {
       .mockResolvedValueOnce({ sent: 2, removed: 1, failed: 0, systemic: 0, credentials: 0 })
 
     expect(await sendResolveReminders(db)).toEqual({ reminded: 2, sent: 3, failed: 2, systemic: 0 })
+    // #455: every market goes out in one batch, which still answers market by market.
+    expect(sendPushGroups).toHaveBeenCalledTimes(1)
     expect(sendPush.mock.calls.map(([messages]) => messages.map((m: { profileId: string }) => m.profileId))).toEqual([['alice'], ['bob'], ['carol']])
     expect(rpc).toHaveBeenCalledWith('claim_push_log', { p_kind: 'resolve_reminder', p_refs: ['m-1', 'm-3'] })
   })

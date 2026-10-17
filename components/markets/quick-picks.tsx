@@ -1,7 +1,7 @@
 'use client'
 
 import { Check, Plus } from 'lucide-react'
-import { useSlip } from '@/components/slip/slip-provider'
+import { useSlipPicks } from '@/components/slip/slip-provider'
 import { useInSlip } from '@/components/markets/outcome-slip-control'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { ToastActionForm, type ToastActionResult } from '@/components/ui/toast-action-form'
@@ -27,7 +27,7 @@ export interface QuickPick {
 // One outcome's button on a market card (#439). It's one button that adds the pick, then removes
 // it, so focus stays on it after the press rather than falling to a replacement.
 function QuickPickButton({ pick, pct, series, tone, addAction, removeAction, row }: QuickPick & { row: boolean }) {
-  const slip = useSlip()
+  const slip = useSlipPicks()
   const inSlip = useInSlip(pick.outcomeId)
   const label = pick.outcomeLabel
   return (

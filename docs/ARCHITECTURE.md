@@ -501,7 +501,9 @@ the closing alerts' recipients. Since 0071 (#207) they come from
 resolve them) and `due_market_alerts()` (admins and above except the
 market's creator, who has the reminder, `resolve_reminders` on), which claim
 nothing; 0098 dropped the claiming `push_resolve_reminders()` and
-`push_market_alerts()` they replaced; the route sends one market at a time and claims through
+`push_market_alerts()` they replaced; the route sends every due market in one batch
+(`sendPushGroups`: one subscription read per member per run, six sends at a time, one
+`record_push_results` call per 50 devices, #455), judges each market on its own, and claims through
 `claim_push_log(kind, refs)` only the markets at least one device took, so
 a failed push is due again next run.
 `my_review_counts()` (security invoker) counts what waits on the caller: other
@@ -743,7 +745,10 @@ never listed.
 **Betting through the slip.** An outcome's "Add" writes a cookie
 of picks (`lib/parlays/slip.ts`). `SlipProvider` in the signed-in layout
 holds those picks, each marked Solo or Parlay, with optimistic add, remove
-and mode switches. Stakes live only in client state. The layout also
+and mode switches. Stakes live only in client state, in a second context:
+`useSlip()` reads both, while a control that only adds, removes or counts
+picks (the cards' quick picks, the Add buttons, the sheet) reads
+`useSlipPicks()`, so typing a stake re-renders only the panel (#457). The layout also
 hands it the member's balance, for the quick-stake chips' Max (the balance
 less the slip's other stakes), the balance strip at the top of the slip
 ("N DC left after this slip" or "N DC short") and the line under Place
@@ -850,7 +855,11 @@ button runs the action (`ConfirmSubmitDialog`). Balance adjustments and
 role changes ask the same way. Files upload straight from the browser to the
 private `proof` bucket (`lib/proof/upload.ts`), then `record_proof`
 checks the paths when the RPC runs. Pages show proof through short-lived
-signed URLs made with the viewer's own session.
+signed URLs made with the viewer's own session. `toProofViews` hands a
+viewer the URL it signed for them earlier (per server instance, keyed by
+viewer and path) until it has 15 minutes of its hour left, so a re-render or
+live refresh doesn't make the browser download every photo again; uploads
+carry a day-long `cacheControl`, and thumbnails load lazily (#452).
 
 **Storage caps and retention (#253, 0089).** The free plan holds 1 GB across
 the `proof` and `avatars` buckets, so the limits live in the database, not
@@ -1243,7 +1252,11 @@ value never stops production booting.
   on the Node runtime and exports `onRequestError`, capturing every
   uncaught error in a component, route, action or the proxy. Browser:
   `instrumentation-client.ts` loads the SDK lazily (global handlers only),
-  and `useReportError` sends the render errors the error boundaries catch.
+  once the browser is idle (`requestIdleCallback`, at most 3 s; a 3 s timer
+  where there's none), so it doesn't compete with hydration (#458); an
+  uncaught error before then is caught by its own listeners and sent once
+  the SDK is ready, and
+  `useReportError` sends the render errors the error boundaries catch.
   Handled errors go through `reportError` (`lib/observability/report.ts`):
   `console.error` plus a capture, which `friendlyError`, the resolve and slip
   actions, the cron steps, the health route, the Admin health read and the
@@ -1317,7 +1330,12 @@ value never stops production booting.
   does the same for the npm, Next build and Playwright caches when
   `package-lock.json` changes, and CI only restores them (a Next cache keyed
   on the source saved an entry per push and broke GitHub's 10 GB limit, #277).
-  `cleanup-caches.yml` deletes a PR's caches when it closes. GitHub disables
+  `cleanup-caches.yml` deletes a PR's caches when it closes.
+  `lighthouse.yml` runs `@lhci/cli` on every PR against a production build
+  of `/sign-in` and `/privacy` (three runs each, `lighthouserc.json`), with
+  warn-only budgets (LCP 2.5 s, TBT 200 ms, CLS 0.1, performance 0.9,
+  accessibility 0.95) and the reports as an artifact; it isn't part of
+  `ci-ok`, so it never blocks a merge (#456). GitHub disables
   scheduled workflows after 60 days without repository activity (merged PRs
   count); if the closing-alerts backup or warm-caches stops, re-enable it in
   the Actions tab. Every third-party action is

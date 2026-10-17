@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Ticket } from 'lucide-react'
-import { useSlip } from '@/components/slip/slip-provider'
+import { useSlipPicks } from '@/components/slip/slip-provider'
 import { buttonVariants } from '@/components/ui/button'
 import { DURATION } from '@/lib/ui/motion'
 import { cn } from '@/lib/utils'
@@ -15,7 +15,7 @@ const SlipDrawer = dynamic(() => import('@/components/slip/slip-drawer').then((m
 // drawer behind it loads the first time the slip opens, or as soon as the button is pointed at or
 // focused, so it's usually there before the tap lands.
 export function SlipSheet() {
-  const { picks, open, setOpen } = useSlip()
+  const { picks, open, setOpen } = useSlipPicks()
   // Keeps the popup mounted through Base UI's exit transition after `open` flips to false.
   const [closing, setClosing] = useState(false)
   const [wanted, setWanted] = useState(false)
@@ -97,6 +97,6 @@ export function SlipSheet() {
 // clears the 82px tab bar and the button's 48px rises from 94px, so 72px clears its top by 24px;
 // on desktop the button rises from 32px, so 88px clears it by 8px.
 export function SlipSpacer() {
-  const { picks } = useSlip()
+  const { picks } = useSlipPicks()
   return picks.length > 0 ? <div aria-hidden="true" className="h-[72px] shrink-0 md:h-[88px]" /> : null
 }

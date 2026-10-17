@@ -71,7 +71,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // What rides in parlays is read here too, so the outcomes' skeleton knows whether to hold the
   // line that says so, and the rail below it doesn't move when the outcomes land (#390).
   const [resolution, edits, role, creatorStakes, positionKeys, categoryCounts, resolvable, voidable, stake, riding] = await Promise.all([
-    market.status === 'resolved' ? getResolutionProof(supabase, market.id) : null,
+    market.status === 'resolved' ? getResolutionProof(supabase, market.id, user.id) : null,
     market.editedAt ? listMarketEdits(supabase, market.id) : [],
     getRole(supabase),
     getCreatorStakes(supabase, [{ id: market.id, createdBy: market.createdBy }]),

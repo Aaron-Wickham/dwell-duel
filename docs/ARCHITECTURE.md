@@ -1327,7 +1327,12 @@ value never stops production booting.
   does the same for the npm, Next build and Playwright caches when
   `package-lock.json` changes, and CI only restores them (a Next cache keyed
   on the source saved an entry per push and broke GitHub's 10 GB limit, #277).
-  `cleanup-caches.yml` deletes a PR's caches when it closes. GitHub disables
+  `cleanup-caches.yml` deletes a PR's caches when it closes.
+  `lighthouse.yml` runs `@lhci/cli` on every PR against a production build
+  of `/sign-in` and `/privacy` (three runs each, `lighthouserc.json`), with
+  warn-only budgets (LCP 2.5 s, TBT 200 ms, CLS 0.1, performance 0.9,
+  accessibility 0.95) and the reports as an artifact; it isn't part of
+  `ci-ok`, so it never blocks a merge (#456). GitHub disables
   scheduled workflows after 60 days without repository activity (merged PRs
   count); if the closing-alerts backup or warm-caches stops, re-enable it in
   the Actions tab. Every third-party action is

@@ -57,3 +57,6 @@ next-env.d.ts
 
 # Claude Code: personal permissions, never shared
 /.claude/settings.local.json
+
+# Lighthouse CI reports (lighthouse.yml)
+/.lighthouseci/

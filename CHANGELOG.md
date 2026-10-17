@@ -67,6 +67,7 @@ before v0.4.0 used other headings.)
 - **Typing a stake no longer re-renders every market card.** The slip keeps its stakes in a context of their own, and the quick picks, Add buttons and sheet read only the picks, so a keystroke in the slip redraws just the slip (#457).
 - **Sentry starts after the page is ready.** The browser's error reporting loads once the phone is idle (at most 3 seconds in) instead of during hydration, and an error raised before then is still caught and sent (#458).
 - **Proof photos stop downloading again on every refresh.** A reviewer is handed the same signed link to a photo for most of its hour instead of a new one each time the queue or a market page refreshes, so the browser keeps its copy; uploads are cached for a day, and thumbnails load lazily at their size (#452).
+- **A Lighthouse check on every pull request.** A separate, non-required workflow builds the app and runs Lighthouse on the sign-in and privacy pages, warning when LCP, TBT, CLS, performance or accessibility miss their budgets and keeping the reports for a week (#456).
 
 ## v0.10.1-beta — 2026-10-04
 

@@ -1,4 +1,5 @@
 import type { DbClient } from '@/lib/supabase/database'
+import { groupRead } from '@/lib/cache/group-reads'
 import { chunk, IN_CHUNK } from '@/lib/pagination/chunk'
 import { avatarUrl } from '@/lib/profile/avatar'
 import { seasonOfEventId } from './season'
@@ -26,6 +27,11 @@ export async function getRace(supabase: DbClient, top = 5): Promise<RaceSeries[]
     byMember.set(row.profile_id, series)
   }
   return [...byMember.values()].sort((a, b) => b.final - a.final || a.name.localeCompare(b.name))
+}
+
+// leaderboard_race_steps refuses anyone not invited and never reads the caller (0062).
+export function cachedRace(supabase: DbClient, top = 5): Promise<RaceSeries[]> {
+  return groupRead(supabase, 'leaderboard-race', String(top), () => getRace(supabase, top))
 }
 
 export type AwardKind = 'biggest_win' | 'best_parlay' | 'sharpshooter' | 'most_active'
@@ -56,6 +62,11 @@ export async function getAwards(supabase: DbClient): Promise<Award[]> {
     }),
   )
   return awards.sort((a, b) => AWARD_ORDER.indexOf(a.kind) - AWARD_ORDER.indexOf(b.kind))
+}
+
+// leaderboard_awards refuses anyone not invited and never reads the caller (0105).
+export function cachedAwards(supabase: DbClient): Promise<Award[]> {
+  return groupRead(supabase, 'leaderboard-awards', '', () => getAwards(supabase))
 }
 
 export type MemberRecord = { won: number; lost: number }

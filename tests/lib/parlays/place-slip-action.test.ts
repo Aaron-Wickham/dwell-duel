@@ -9,7 +9,7 @@ const { rpc, from, readSlip, writeSlip, revalidatePath, userHolder } = vi.hoiste
   userHolder: { current: { id: 'member-1' } as { id: string } | null },
 }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase: { rpc, from }, user: userHolder.current }) }))
-vi.mock('next/cache', () => ({ revalidatePath }))
+vi.mock('next/cache', () => ({ revalidatePath, updateTag: vi.fn() }))
 vi.mock('@/lib/parlays/slip', () => ({ readSlip, writeSlip }))
 
 import { placeSlipAction } from '@/lib/parlays/place-slip'

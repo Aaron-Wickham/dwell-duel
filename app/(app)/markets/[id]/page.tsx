@@ -1,133 +1,93 @@
-import type { Metadata } from "next";
-import { marketTitle } from "@/lib/app-shell/page-titles";
-import type { DbClient } from "@/lib/supabase/database";
-import { Suspense } from "react";
-import { redirect, notFound } from "next/navigation";
-import { requireUser } from "@/lib/auth/require-user";
-import { LiveTables } from "@/components/live/live-tables";
-import { renderStamp } from "@/lib/live/render-stamp";
-import { pageSubscriptions } from "@/lib/live/page-subscriptions";
-import { atLeast, getRole } from "@/lib/auth/roles";
-import { getMarket, type MarketDetail } from "@/lib/markets/get-market";
-import { getResolutionProof } from "@/lib/markets/resolution-proof";
-import { getChartSeries } from "@/lib/markets/chart-series";
-import type { OutcomeOdds } from "@/lib/markets/odds";
-import { marketOdds } from "@/lib/markets/pricing";
-import { chartTitle, outcomeSeries } from "@/lib/markets/outcome-series";
-import { chartClosedAt } from "@/lib/markets/market-status";
-import { readPageParams } from "@/lib/pagination/cursor";
-import { isUuid } from "@/lib/uuid";
-import { readSlip } from "@/lib/parlays/slip";
-import { BackLink } from "@/components/ui/back-link";
-import { LoadingStatus } from "@/components/ui/loading-status";
-import { LocalTime } from "@/components/ui/local-time";
-import { Page, figureHeroClass, h1Class, h2Class } from "@/components/ui/page";
-import { chartSectionClass } from "@/components/markets/market-detail-skeletons";
-import { leadingOutcome } from "@/components/markets/market-card";
-import { ContentReveal } from "@/components/nav/page-transition";
-import { cn } from "@/lib/utils";
+import type { Metadata } from 'next'
+import { marketTitle } from '@/lib/app-shell/page-titles'
+import type { DbClient } from '@/lib/supabase/database'
+import { Suspense } from 'react'
+import { redirect, notFound } from 'next/navigation'
+import { requireUser } from '@/lib/auth/require-user'
+import { LiveTables } from '@/components/live/live-tables'
+import { renderStamp } from '@/lib/live/render-stamp'
+import { pageSubscriptions } from '@/lib/live/page-subscriptions'
+import { atLeast, getRole } from '@/lib/auth/roles'
+import { getMarket, type MarketDetail } from '@/lib/markets/get-market'
+import { getResolutionProof } from '@/lib/markets/resolution-proof'
+import { getChartSeries } from '@/lib/markets/chart-series'
+import type { OutcomeOdds } from '@/lib/markets/odds'
+import { marketOdds } from '@/lib/markets/pricing'
+import { chartTitle, outcomeSeries } from '@/lib/markets/outcome-series'
+import { chartClosedAt } from '@/lib/markets/market-status'
+import { readPageParams } from '@/lib/pagination/cursor'
+import { isUuid } from '@/lib/uuid'
+import { readSlip } from '@/lib/parlays/slip'
+import { BackLink } from '@/components/ui/back-link'
+import { LoadingStatus } from '@/components/ui/loading-status'
+import { LocalTime } from '@/components/ui/local-time'
+import { Page, figureHeroClass, h1Class, h2Class } from '@/components/ui/page'
+import { chartSectionClass } from '@/components/markets/market-detail-skeletons'
+import { leadingOutcome } from '@/components/markets/market-card'
+import { ContentReveal } from '@/components/nav/page-transition'
+import { cn } from '@/lib/utils'
 import {
   MarketBetsSkeleton,
   MarketChartSkeleton,
   MarketCommentsSkeleton,
   MarketOutcomesSkeleton,
   MarketPositionSkeleton,
-} from "@/components/markets/market-detail-skeletons";
-import { ProbabilityChart } from "@/components/markets/probability-chart-lazy";
-import { MarketBets } from "./market-bets";
-import { MarketComments } from "./market-comments";
-import {
-  MarketManage,
-  hasManageCards,
-  type ManageRights,
-} from "./market-manage";
-import { MarketMenu } from "./market-menu";
-import { MarketOutcomes } from "./market-outcomes";
-import { MarketPosition } from "./market-position";
-import { getPositionKeys } from "@/lib/markets/position";
-import {
-  describeMarketStake,
-  getCreatorStakes,
-} from "@/lib/markets/creator-stakes";
-import { hasBetHistory } from "@/lib/markets/bet-history";
-import { listMarketEdits } from "@/lib/markets/market-edits";
-import {
-  listCategoryCounts,
-  mostUsedCategories,
-} from "@/lib/markets/categories";
-import { getParlayRiding } from "@/lib/markets/parlay-riding";
+} from '@/components/markets/market-detail-skeletons'
+import { ProbabilityChart } from '@/components/markets/probability-chart-lazy'
+import { MarketBets } from './market-bets'
+import { MarketComments } from './market-comments'
+import { MarketManage, hasManageCards, type ManageRights } from './market-manage'
+import { MarketMenu } from './market-menu'
+import { MarketOutcomes } from './market-outcomes'
+import { MarketPosition } from './market-position'
+import { getPositionKeys } from '@/lib/markets/position'
+import { describeMarketStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
+import { hasBetHistory } from '@/lib/markets/bet-history'
+import { listMarketEdits } from '@/lib/markets/market-edits'
+import { cachedCategoryCounts, mostUsedCategories } from '@/lib/markets/categories'
+import { getParlayRiding } from '@/lib/markets/parlay-riding'
 
 // No loading.tsx for this route (and the markets list's own loading.tsx sits in the (list)
 // group, so it doesn't wrap this one): the market must be found before anything streams, so an
 // unknown id still gets a real 404 status. Your position, the chart, the outcomes, the bets and
 // the comments each stream in behind their own skeleton.
-export async function generateMetadata(
-  props: PageProps<"/markets/[id]">,
-): Promise<Metadata> {
-  return marketTitle((await props.params).id);
+export async function generateMetadata(props: PageProps<'/markets/[id]'>): Promise<Metadata> {
+  return marketTitle((await props.params).id)
 }
 
-export default async function MarketDetailPage(
-  props: PageProps<"/markets/[id]">,
-) {
-  const { id } = await props.params;
-  const searchParams = await props.searchParams;
-  const { supabase, user } = await requireUser();
-  if (!user) redirect("/sign-in");
-  if (!isUuid(id)) notFound();
+export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>) {
+  const { id } = await props.params
+  const searchParams = await props.searchParams
+  const { supabase, user } = await requireUser()
+  if (!user) redirect('/sign-in')
+  if (!isUuid(id)) notFound()
 
   // The slip is only a cookie, so reading it here costs nothing.
-  const [market, slipEntries] = await Promise.all([
-    getMarket(supabase, id),
-    readSlip(),
-  ]);
-  if (!market) notFound();
-  const isCreator = market.createdBy === user.id;
+  const [market, slipEntries] = await Promise.all([getMarket(supabase, id), readSlip()])
+  if (!market) notFound()
+  const isCreator = market.createdBy === user.id
   // The position keys and the viewer's rights are read before anything streams, so a viewer with
   // nothing on the market gets no card and no skeleton for one, and the resolve and void cards
   // take their place straight away: a placeholder that then vanished would shift the page.
   // What rides in parlays is read here too, so the outcomes' skeleton knows whether to hold the
   // line that says so, and the rail below it doesn't move when the outcomes land (#390).
-  const [
-    resolution,
-    edits,
-    role,
-    creatorStakes,
-    positionKeys,
-    categoryCounts,
-    resolvable,
-    voidable,
-    stake,
-    riding,
-  ] = await Promise.all([
-    market.status === "resolved"
-      ? getResolutionProof(supabase, market.id, user.id)
-      : null,
+  const [resolution, edits, role, creatorStakes, positionKeys, categoryCounts, resolvable, voidable, stake, riding] = await Promise.all([
+    market.status === 'resolved' ? getResolutionProof(supabase, market.id, user.id) : null,
     market.editedAt ? listMarketEdits(supabase, market.id) : [],
     getRole(supabase),
-    getCreatorStakes(supabase, [
-      { id: market.id, createdBy: market.createdBy },
-    ]),
+    getCreatorStakes(supabase, [{ id: market.id, createdBy: market.createdBy }]),
     getPositionKeys(supabase, market.id),
-    listCategoryCounts(supabase),
-    rpcFlag(supabase.rpc("can_resolve_market", { p_market_id: market.id })),
-    rpcFlag(supabase.rpc("can_void_market", { p_market_id: market.id })),
-    rpcFlag(
-      supabase.rpc("has_stake_in_market", {
-        p_market_id: market.id,
-        p_profile_id: user.id,
-      }),
-    ),
+    cachedCategoryCounts(supabase),
+    rpcFlag(supabase.rpc('can_resolve_market', { p_market_id: market.id })),
+    rpcFlag(supabase.rpc('can_void_market', { p_market_id: market.id })),
+    rpcFlag(supabase.rpc('has_stake_in_market', { p_market_id: market.id, p_profile_id: user.id })),
     // A called-off market's picks dropped out of their parlays, but parlay_legs keeps them.
-    market.status === "voided"
-      ? new Map<string, number>()
-      : getParlayRiding(supabase, market.id),
-  ]);
-  const ridingNote = [...riding.values()].some((dc) => dc > 0);
-  const positionRows =
-    positionKeys.betIds.length + positionKeys.parlayIds.length;
+    market.status === 'voided' ? new Map<string, number>() : getParlayRiding(supabase, market.id),
+  ])
+  const ridingNote = [...riding.values()].some((dc) => dc > 0)
+  const positionRows = positionKeys.betIds.length + positionKeys.parlayIds.length
 
-  const odds = marketOdds(market);
+  const odds = marketOdds(market)
 
   // Server Components render once per request with no re-render/
   // reconciliation cycle for React to keep consistent across -- the
@@ -135,84 +95,68 @@ export default async function MarketDetailPage(
   // apply here, and this page already does non-deterministic async DB
   // reads (getMarket, readSlip) on every invocation regardless.
   // eslint-disable-next-line react-hooks/purity
-  const now = Date.now();
-  const isPastClose = new Date(market.closeAt).getTime() <= now;
-  const canBet = market.status === "open" && !isPastClose;
-  const slip = slipEntries.map((e) => e.outcomeId);
+  const now = Date.now()
+  const isPastClose = new Date(market.closeAt).getTime() <= now
+  const canBet = market.status === 'open' && !isPastClose
+  const slip = slipEntries.map((e) => e.outcomeId)
   // update_market (0043, 0103, 0106): the creator or an admin rewords a market, or moves its close,
   // while it still takes bets, and can reopen it once it has closed until it's settled; an admin can
   // change its category at any time.
-  const admin = atLeast(role, "admin");
-  const canEditWording = canBet && (isCreator || admin);
+  const admin = atLeast(role, 'admin')
+  const canEditWording = canBet && (isCreator || admin)
   // can_move_market_close (0106) is update_market's close-time rule: a creator with a stake asks an admin.
-  const canMoveClose =
-    market.status === "open" &&
-    (isCreator || admin) &&
-    (await canMoveMarketClose(supabase, market.id));
-  const canReopen = isPastClose && canMoveClose;
-  const canEditCategory = canEditWording || admin;
+  const canMoveClose = market.status === 'open' && (isCreator || admin) && (await canMoveMarketClose(supabase, market.id))
+  const canReopen = isPastClose && canMoveClose
+  const canEditCategory = canEditWording || admin
 
-  const totalPool = odds.reduce((sum, o) => sum + o.poolTotal, 0);
+  const totalPool = odds.reduce((sum, o) => sum + o.poolTotal, 0)
   const rights: ManageRights = {
-    canResolve: market.status === "open" && resolvable,
-    canOverride: market.status === "resolved" && admin,
-    canVoid: market.status === "open" && voidable,
+    canResolve: market.status === 'open' && resolvable,
+    canOverride: market.status === 'resolved' && admin,
+    canVoid: market.status === 'open' && voidable,
     // delete_market (0040) refuses a market with bets, cancelled bets or parlay legs. An empty pool
     // is the cheap first check; only the owner of an empty market pays for the other two (#221).
-    canDelete:
-      role === "owner" &&
-      totalPool === 0 &&
-      !(await hasBetHistory(supabase, market.id)),
+    canDelete: role === 'owner' && totalPool === 0 && !(await hasBetHistory(supabase, market.id)),
     hasStake: stake,
     admin,
-  };
-  const manage = hasManageCards(rights);
+  }
+  const manage = hasManageCards(rights)
   // Waiting on its result, the viewer's one job here is to resolve it, so on a phone the cards come
   // first, before the chart, not under every bet and comment (CR-A12, #390, #440).
-  const manageFirst =
-    market.status === "open" && isPastClose && rights.canResolve;
+  const manageFirst = market.status === 'open' && isPastClose && rights.canResolve
   // The rail holds still beside a long chart, bets and comments, unless it carries the resolve or
   // void forms, which could be taller than the screen and then never show their bottom.
-  const stickyRail = !manage;
+  const stickyRail = !manage
 
   // What the creator has riding on it, shown to every member, since in a small group trust in the
   // result matters most (#84); to the creator, also who settles it when their stake stops them (0046, 0104).
   const creatorStake = describeMarketStake(
     creatorStakes.get(market.id),
     isCreator ? null : market.creatorName,
-    market.status === "open",
-  );
-  const stakeBlocks = isCreator && market.status === "open" && stake && !admin;
+    market.status === 'open',
+  )
+  const stakeBlocks = isCreator && market.status === 'open' && stake && !admin
   // #387: a category is worth naming only when more than one holds markets.
-  const severalCategories =
-    categoryCounts.filter((c) => c.markets > 0).length > 1;
+  const severalCategories = categoryCounts.filter((c) => c.markets > 0).length > 1
 
   const when =
-    market.status === "resolved" && market.resolvedAt ? (
+    market.status === 'resolved' && market.resolvedAt ? (
       <>
         Resolved <LocalTime iso={market.resolvedAt} format="day" />
       </>
-    ) : market.status === "voided" && market.settledAt ? (
+    ) : market.status === 'voided' && market.settledAt ? (
       <>
         Called off <LocalTime iso={market.settledAt} format="day" />
       </>
-    ) : market.status === "open" ? (
+    ) : market.status === 'open' ? (
       <>
-        {isPastClose ? "Closed" : "Closes"}{" "}
-        <LocalTime iso={market.closeAt} format="dateTime" />
+        {isPastClose ? 'Closed' : 'Closes'} <LocalTime iso={market.closeAt} format="dateTime" />
       </>
-    ) : null;
+    ) : null
 
   return (
     <Page transition="drill-down">
-      <LiveTables
-        subscriptions={pageSubscriptions.marketDetail(
-          market.id,
-          user.id,
-          market.category?.id ?? null,
-        )}
-        renderedAt={renderStamp()}
-      />
+      <LiveTables subscriptions={pageSubscriptions.marketDetail(market.id, user.id, market.category?.id ?? null)} renderedAt={renderStamp()} />
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-x-3">
@@ -222,13 +166,9 @@ export default async function MarketDetailPage(
             title={market.title}
             edit={{
               description: market.description,
-              category: market.category?.name ?? "",
+              category: market.category?.name ?? '',
               closeAt: market.closeAt,
-              mode: canEditWording
-                ? "edit"
-                : canEditCategory
-                  ? "category"
-                  : null,
+              mode: canEditWording ? 'edit' : canEditCategory ? 'category' : null,
               canMoveClose,
               canReopen,
               suggestions: categoryCounts.map((c) => c.name),
@@ -240,23 +180,16 @@ export default async function MarketDetailPage(
         <div className="flex flex-col gap-2">
           <h1 className={`${h1Class} break-words`}>{market.title}</h1>
           <p className="text-sm text-ink2">
-            {when && <>{when} · </>}by {isCreator ? "you" : market.creatorName}
-            {severalCategories && market.category && (
-              <> · {market.category.name}</>
-            )}
+            {when && <>{when} · </>}by {isCreator ? 'you' : market.creatorName}
+            {severalCategories && market.category && <> · {market.category.name}</>}
           </p>
           {creatorStake && (
             <p className="text-sm font-bold text-ink2">
               {creatorStake}
-              {stakeBlocks &&
-                " A reviewer or an admin resolves it, and only an admin can call it off."}
+              {stakeBlocks && ' A reviewer or an admin resolves it, and only an admin can call it off.'}
             </p>
           )}
-          {market.description && (
-            <p className="max-w-[68ch] whitespace-pre-line break-words text-ink2">
-              {market.description}
-            </p>
-          )}
+          {market.description && <p className="max-w-[68ch] whitespace-pre-line break-words text-ink2">{market.description}</p>}
         </div>
       </div>
 
@@ -272,78 +205,36 @@ export default async function MarketDetailPage(
         <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-7">
           <div
             className={cn(
-              "contents lg:col-start-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-7",
-              stickyRail &&
-                "lg:sticky lg:top-[calc(72px+var(--safe-top)+24px)]",
+              'contents lg:col-start-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-7',
+              stickyRail && 'lg:sticky lg:top-[calc(72px+var(--safe-top)+24px)]',
             )}
           >
             {positionRows > 0 && (
-              <div
-                className={cn(
-                  "lg:order-none",
-                  manageFirst ? "order-3" : "order-2",
-                )}
-              >
-                <Suspense
-                  fallback={<MarketPositionSkeleton rows={positionRows} />}
-                >
-                  <MarketPosition
-                    market={market}
-                    keys={positionKeys}
-                    now={now}
-                  />
+              <div className={cn('lg:order-none', manageFirst ? 'order-3' : 'order-2')}>
+                <Suspense fallback={<MarketPositionSkeleton rows={positionRows} />}>
+                  <MarketPosition market={market} keys={positionKeys} now={now} />
                 </Suspense>
               </div>
             )}
-            <div
-              className={cn(
-                "lg:order-none",
-                manageFirst ? "order-4" : "order-3",
-              )}
-            >
-              <Suspense
-                fallback={
-                  <MarketOutcomesSkeleton
+            <div className={cn('lg:order-none', manageFirst ? 'order-4' : 'order-3')}>
+              <Suspense fallback={<MarketOutcomesSkeleton
                     outcomes={market.outcomes.length}
                     canBet={canBet}
-                    waiting={market.status === "open" && !canBet}
+                    waiting={market.status === 'open' && !canBet}
                     ridingNote={ridingNote}
-                  />
-                }
-              >
-                <MarketOutcomes
-                  market={market}
-                  odds={odds}
-                  slip={slip}
-                  canBet={canBet}
-                  resolution={resolution}
-                  riding={riding}
-                />
+                  />}>
+                <MarketOutcomes market={market} odds={odds} slip={slip} canBet={canBet} resolution={resolution} riding={riding} />
               </Suspense>
             </div>
             {manage && (
-              <div
-                className={cn(
-                  "flex flex-col gap-5 lg:order-none lg:gap-7",
-                  manageFirst ? "order-1" : "order-7",
-                )}
-              >
+              <div className={cn('flex flex-col gap-5 lg:order-none lg:gap-7', manageFirst ? 'order-1' : 'order-7')}>
                 <MarketManage market={market} rights={rights} canBet={canBet} />
               </div>
             )}
           </div>
           <div className="contents lg:col-start-1 lg:row-start-1 lg:flex lg:flex-col lg:gap-7">
-            <div
-              className={cn(
-                "lg:order-none",
-                manageFirst ? "order-2" : "order-1",
-              )}
-            >
-              <Suspense
-                fallback={
-                  <MarketChartSkeleton figure={market.status === "open"} />
-                }
-              >
+            <div className={cn('lg:order-none', manageFirst ? 'order-2' : 'order-1')}>
+              <Suspense fallback={<MarketChartSkeleton figure={market.status === 'open'} />}>
                 <MarketChart market={market} odds={odds} now={now} />
               </Suspense>
             </div>
@@ -352,7 +243,7 @@ export default async function MarketDetailPage(
                 <MarketComments
                   marketId={market.id}
                   viewerId={user.id}
-                  page={readPageParams(searchParams, "comments")}
+                  page={readPageParams(searchParams, 'comments')}
                   searchParams={searchParams}
                 />
               </Suspense>
@@ -363,7 +254,7 @@ export default async function MarketDetailPage(
                   market={market}
                   viewerId={user.id}
                   canBet={canBet}
-                  page={readPageParams(searchParams, "bets")}
+                  page={readPageParams(searchParams, 'bets')}
                   searchParams={searchParams}
                 />
               </Suspense>
@@ -372,51 +263,36 @@ export default async function MarketDetailPage(
         </div>
       </LoadingStatus>
     </Page>
-  );
+  )
 }
 
-async function MarketChart({
-  market,
-  odds,
-  now,
-}: {
-  market: MarketDetail;
-  odds: OutcomeOdds[];
-  now: number;
-}) {
-  const { supabase } = await requireUser();
+async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: OutcomeOdds[]; now: number }) {
+  const { supabase } = await requireUser()
   const chartOutcomes = odds.map((o, index) => ({
     id: o.outcomeId,
     label: o.label,
     series: outcomeSeries(market.kind, o.label, index),
-  }));
-  const chart = await getChartSeries(
-    supabase,
-    {
-      id: market.id,
-      seedPerOutcome: market.seedPerOutcome,
-      pricing: market.pricing,
-      createdAt: market.createdAt,
-      outcomeIds: chartOutcomes.map((o) => o.id),
-    },
-    now,
-  );
+  }))
+  const chart = await getChartSeries(supabase, {
+    id: market.id,
+    seedPerOutcome: market.seedPerOutcome,
+    pricing: market.pricing,
+    createdAt: market.createdAt,
+    outcomeIds: chartOutcomes.map((o) => o.id),
+  }, now)
 
   // While it takes bets or waits on a result, the leading outcome's chance leads the section (#489).
   const lead =
-    market.status === "open"
+    market.status === 'open'
       ? leadingOutcome(
           market.kind,
           odds.map((o) => ({
             id: o.outcomeId,
             label: o.label,
-            pct:
-              o.impliedProbability === null
-                ? null
-                : Math.round(o.impliedProbability * 100),
+            pct: o.impliedProbability === null ? null : Math.round(o.impliedProbability * 100),
           })),
         )
-      : undefined;
+      : undefined
 
   return (
     <ContentReveal>
@@ -426,9 +302,7 @@ async function MarketChart({
         </h2>
         {lead && lead.pct !== null && (
           <p className="flex flex-wrap items-baseline gap-x-2 max-md:px-4">
-            <span className={`${figureHeroClass} text-acc-text`}>
-              {lead.pct}%
-            </span>
+            <span className={`${figureHeroClass} text-acc-text`}>{lead.pct}%</span>
             <span className="min-w-0 break-words font-bold">{lead.label}</span>
           </p>
         )}
@@ -441,36 +315,23 @@ async function MarketChart({
             rangeSeries={chart.series}
             betCount={chart.betCount}
             now={now}
-            closedAt={chartClosedAt(
-              market.status,
-              market.closeAt,
-              market.settledAt,
-            )}
-            resolvedLabel={
-              market.status === "resolved" ? market.resolvedOutcomeLabel : null
-            }
+            closedAt={chartClosedAt(market.status, market.closeAt, market.settledAt)}
+            resolvedLabel={market.status === 'resolved' ? market.resolvedOutcomeLabel : null}
           />
         </div>
       </section>
     </ContentReveal>
-  );
+  )
 }
 
-async function rpcFlag(
-  call: PromiseLike<{ data: boolean | null; error: unknown }>,
-): Promise<boolean> {
-  const { data, error } = await call;
-  if (error) throw error;
-  return data === true;
+async function rpcFlag(call: PromiseLike<{ data: boolean | null; error: unknown }>): Promise<boolean> {
+  const { data, error } = await call
+  if (error) throw error
+  return data === true
 }
 
-async function canMoveMarketClose(
-  supabase: DbClient,
-  marketId: string,
-): Promise<boolean> {
-  const { data, error } = await supabase.rpc("can_move_market_close", {
-    p_market_id: marketId,
-  });
-  if (error) throw error;
-  return data === true;
+async function canMoveMarketClose(supabase: DbClient, marketId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('can_move_market_close', { p_market_id: marketId })
+  if (error) throw error
+  return data === true
 }

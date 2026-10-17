@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { revalidateGroupReads } from '@/lib/cache/group-reads'
 import { requireUser } from '@/lib/auth/require-user'
 import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
@@ -38,6 +39,7 @@ export async function approveTaskCompletionAction(completionId: string, _prevSta
   const { error } = await supabase.rpc('approve_task_completion', { p_completion_id: completionId })
   if (error && (await reviewedByMe(supabase, error.message, completionId, user.id, 'approved'))) {
     revalidatePath('/', 'layout')
+    revalidateGroupReads()
     return undefined
   }
   if (error) return friendlyError(error, REVIEW_ERRORS, 'approve_task_completion failed')
@@ -45,6 +47,7 @@ export async function approveTaskCompletionAction(completionId: string, _prevSta
 
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')
+  revalidateGroupReads()
   return undefined
 }
 
@@ -126,6 +129,7 @@ export async function bulkApproveTaskCompletionsAction(_prevState: BulkActionSta
 
   // Refreshes the shared layout too, so the nav's balance and slip count stay current.
   revalidatePath('/', 'layout')
+  revalidateGroupReads()
   if (failed === 0) return { summary: `${succeeded} approved.` }
   return { summary: `${succeeded} approved, ${failed} failed: ${firstError}` }
 }

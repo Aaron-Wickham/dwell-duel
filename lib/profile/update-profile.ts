@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { revalidateGroupReads } from '@/lib/cache/group-reads'
 import { requireUser } from '@/lib/auth/require-user'
 import { friendlyError, type KnownError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
@@ -78,5 +79,6 @@ export async function updateProfileAction(_prevState: ActionState, formData: For
 
   // Names and photos show on every page's lists, so refresh them all.
   revalidatePath('/', 'layout')
+  revalidateGroupReads()
   return { saved: true }
 }

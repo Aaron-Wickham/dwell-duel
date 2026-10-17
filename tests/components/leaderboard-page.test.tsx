@@ -9,9 +9,10 @@ vi.mock('react', async (importOriginal) =>
   (await import('@/tests/components/view-transition-mock')).withViewTransition(await importOriginal()),
 )
 
-const { getJumpToMeTop, getLeaderboardPage, getYourStanding, requestShowMoreFocus, getRecords, getRace, getAwards, getPastChampions } = vi.hoisted(() => ({
+const { getJumpToMeTop, getLeaderboardPage, searchLeaderboard, getYourStanding, requestShowMoreFocus, getRecords, getRace, getAwards, getPastChampions } = vi.hoisted(() => ({
   getJumpToMeTop: vi.fn(),
   getLeaderboardPage: vi.fn(),
+  searchLeaderboard: vi.fn(),
   getYourStanding: vi.fn(),
   requestShowMoreFocus: vi.fn(),
   getRecords: vi.fn(),
@@ -19,14 +20,17 @@ const { getJumpToMeTop, getLeaderboardPage, getYourStanding, requestShowMoreFocu
   getAwards: vi.fn(),
   getPastChampions: vi.fn(),
 }))
-vi.mock('@/lib/social/leaderboard', () => ({ getJumpToMeTop, getLeaderboardPage, getYourStanding }))
-vi.mock('@/lib/social/leaderboard-extras', () => ({ getRecords, getRace, getAwards, getPastChampions }))
+vi.mock('@/lib/social/leaderboard', () => ({ getJumpToMeTop, cachedLeaderboardPage: getLeaderboardPage, cachedYourStanding: getYourStanding, searchLeaderboard }))
+vi.mock('@/lib/social/leaderboard-extras', () => ({ getRecords, cachedRace: getRace, cachedAwards: getAwards, getPastChampions }))
 // Recharts needs layout jsdom doesn't have; the chart has its own test.
 vi.mock('@/components/leaderboard/race-chart-lazy', () => ({ RaceChart: ({ series }: { series: unknown[] }) => <div data-testid="race">{series.length}</div> }))
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase: {}, user: { id: 'p-me' } }) }))
 vi.mock('@/components/live/live-tables', () => ({ LiveTables: () => null }))
 vi.mock('@/components/ui/show-more-focus', () => ({ ShowMoreFocus: () => null, requestShowMoreFocus }))
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }))
+vi.mock('next/form', () => ({
+  default: ({ replace: _replace, scroll: _scroll, ...props }: Record<string, unknown>) => <form {...props} />,
+}))
 // A plain click runs onNavigate, as the App Router's Link does for a client-side navigation.
 vi.mock('next/link', () => ({
   useLinkStatus: () => ({ pending: false }),
@@ -68,6 +72,7 @@ async function renderPage(board: KeysetPage<LeaderboardEntry>, searchParams: Rec
 
 beforeEach(() => {
   getLeaderboardPage.mockReset()
+  searchLeaderboard.mockReset()
   getJumpToMeTop.mockReset().mockResolvedValue(null)
   getYourStanding.mockReset().mockResolvedValue({ rank: 5, memberCount: 5, score: 50, tiedWith: 0, above: { name: 'Member 4', gap: 10 } })
   requestShowMoreFocus.mockReset()
@@ -348,6 +353,64 @@ describe('LeaderboardPage', () => {
     it('leaves the compact card off This month', async () => {
       await renderPage({ rows: [...FIVE], next: null, windowed: false }, { tab: 'month' })
       expect(screen.queryByRole('region', { name: 'Your rank' })).toBeNull()
+    })
+  })
+
+  describe('member search', () => {
+    async function renderSearch(matches: KeysetPage<LeaderboardEntry>, searchParams: Record<string, string>) {
+      searchLeaderboard.mockResolvedValue(matches)
+      render(await LeaderboardPage({ params: Promise.resolve({}), searchParams: Promise.resolve(searchParams) }))
+    }
+
+    it('has a search field on the board, empty until a search runs', async () => {
+      await renderPage({ rows: [member(1, 50, 1), member(2, 40, 2)], next: null, windowed: false })
+      const search = screen.getByRole('search')
+      expect(search).toHaveAttribute('action', '/leaderboard')
+      expect(within(search).getByRole('searchbox', { name: 'Search members by name' })).toHaveValue('')
+      expect(searchLeaderboard).not.toHaveBeenCalled()
+    })
+
+    it('lists the matching members with their rank and net worth, linking to each one', async () => {
+      await renderSearch({ rows: [member(7, 300, 4), member(12, 90, 18)], next: null, windowed: false }, { q: '  ru  th ', tab: 'month' })
+      expect(searchLeaderboard).toHaveBeenCalledWith({}, 'ru th', { top: null, bottom: null })
+      expect(getLeaderboardPage).not.toHaveBeenCalled()
+      expect(screen.getByRole('searchbox', { name: 'Search members by name' })).toHaveValue('ru th')
+      expect(screen.getByText(/2 members match “ru th”\./)).toBeInTheDocument()
+      const row = screen.getByRole('listitem', { name: /Rank 18.*Member 12/ })
+      expect(row).toHaveTextContent(/90 DC$/)
+      expect(within(row).getByRole('link', { name: 'Member 12' })).toHaveAttribute('href', `/members/${member(12, 90, 18).id}`)
+      // The search reads the net-worth board, so neither tab is current while it shows.
+      const tabs = screen.getByRole('navigation', { name: 'Ranking' })
+      for (const tab of within(tabs).getAllByRole('link')) expect(tab).not.toHaveAttribute('aria-current')
+      expect(screen.getByRole('link', { name: 'Clear search' })).toHaveAttribute('href', '/leaderboard')
+      expect(screen.queryByText('No other members yet.')).toBeNull()
+    })
+
+    it('pages a long search on match, keeping the search in the link', async () => {
+      await renderSearch(
+        { rows: [member(1, 50, 1)], next: { kind: 'extend', cursor: 'NEXT', firstId: member(2, 40, 2).id }, windowed: false },
+        { q: 'member' },
+      )
+      expect(screen.getByRole('link', { name: 'Show more' })).toHaveAttribute('href', '/leaderboard?q=member&match=NEXT')
+      expect(screen.getByText(/Members matching “member”, highest ranked first\./)).toBeInTheDocument()
+
+      const bottom = { score: 10, name: 'Member 9', id: member(9, 10, 9).id }
+      searchLeaderboard.mockClear()
+      await renderSearch({ rows: [member(1, 50, 1)], next: null, windowed: false }, { q: 'member', match: encodeRankCursor(bottom) })
+      expect(searchLeaderboard).toHaveBeenCalledWith({}, 'member', { top: null, bottom })
+    })
+
+    it('says when nobody matches, with a way back to the board', async () => {
+      await renderSearch({ rows: [], next: null, windowed: false }, { q: 'zed' })
+      expect(screen.getByText('No members match “zed”.')).toBeInTheDocument()
+      expect(screen.getByText('Check the spelling, or try part of a name.')).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Clear search' })).toHaveAttribute('href', '/leaderboard')
+    })
+
+    it('says there is nothing older for a search window past the end', async () => {
+      await renderSearch({ rows: [], next: null, windowed: true }, { q: 'zed', match_from: 'OLD' })
+      expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Back to newest' })).toHaveAttribute('href', '/leaderboard?q=zed')
     })
   })
 })

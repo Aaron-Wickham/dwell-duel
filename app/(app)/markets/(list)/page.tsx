@@ -9,7 +9,7 @@ import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { listResolvedMarkets, listOpenMarkets, listMatchingMarkets, type MarketSummary } from '@/lib/markets/list-markets'
 import { marketsHref, readMarketSearch } from '@/lib/markets/search'
-import { busiestCategories, listCategoryCounts, readCategoryParam } from '@/lib/markets/categories'
+import { busiestCategories, cachedCategoryCounts, readCategoryParam } from '@/lib/markets/categories'
 import type { KeysetPage } from '@/lib/pagination/keyset'
 import { lmsrState, marketOdds } from '@/lib/markets/pricing'
 import { isPositiveOutcome, outcomeSeries } from '@/lib/markets/outcome-series'
@@ -85,7 +85,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
   const narrowed = q !== ''
   // A category (0103) is named by its slug, so the lists wait on the counts only when there's one
   // to look up. An unknown or hidden slug, and the old ?mine= chips, fall through to All.
-  const countsRead = listCategoryCounts(supabase)
+  const countsRead = cachedCategoryCounts(supabase)
   const category = searchParams.category ? readCategoryParam(searchParams.category, await countsRead) : null
   const scope = { categoryId: category?.id ?? null }
   const slug = category?.slug ?? null

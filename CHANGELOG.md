@@ -13,6 +13,8 @@ before v0.4.0 used other headings.)
 ## Unreleased
 
 ### Features
+- **Find a member on the leaderboard.** A search box beside the tabs lists everyone whose name contains what you type, with their rank and net worth, each linking to their page (#465).
+- **Tap the tab you're on to go back to the top.** In the tab bar or the nav on a computer, tapping the page you're already on scrolls it to the top, as other apps do, instead of reloading it (#464).
 - **A terms page.** Short and plain: play money with no cash value, invite only, admins' calls are final, be kind, it's a beta. Linked from sign-in and Settings (#462).
 - **Add to your slip from Markets.** Each open market's card has its picks right on it: Yes and No side by side, or a multiple-choice market's two favourites. Tap one to add it, tap again to take it out (#439).
 - **A Home you can read at a glance.** Your balance leads in a deep teal card on a phone too, what needs you shows as two coloured counts, and your bets are cards with the pick in its colour and "Waiting for a result" once a market closes (#438).
@@ -82,6 +84,7 @@ before v0.4.0 used other headings.)
 - **Typing a stake no longer re-renders every market card.** The slip keeps its stakes in a context of their own, and the quick picks, Add buttons and sheet read only the picks, so a keystroke in the slip redraws just the slip (#457).
 - **Sentry starts after the page is ready.** The browser's error reporting loads once the phone is idle (at most 3 seconds in) instead of during hydration, and an error raised before then is still caught and sent (#458).
 - **Proof photos stop downloading again on every refresh.** A reviewer is handed the same signed link to a photo for most of its hour instead of a new one each time the queue or a market page refreshes, so the browser keeps its copy; uploads are cached for a day, and thumbnails load lazily at their size (#452).
+- **The leaderboard and category counts are read once for everyone.** Both boards, Your standing, the month's race and awards, and the category counts come from Next's data cache for up to 30 seconds, since every invited member gets the same answer; anything that moves coins or changes a name, market or category clears them at once. The weekly recap stays uncached, because its row includes your own week (#454).
 - **A Lighthouse check on every pull request.** A separate, non-required workflow builds the app and runs Lighthouse on the sign-in and privacy pages, warning when LCP, TBT, CLS, performance or accessibility miss their budgets and keeping the reports for a week (#456).
 
 ## v0.10.1-beta — 2026-10-04

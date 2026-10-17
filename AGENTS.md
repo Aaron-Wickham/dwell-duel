@@ -176,6 +176,16 @@ a line to `CHANGELOG.md` under the next release.
   **called off**, never "voided", and **waiting for a result**, never
   "awaiting resolution" (D7, #403; the database values `voided` and
   `awaiting`, RPC names and the admin ledger's labels keep theirs).
+- **Design skills** (#447). Two vendored skills live in `.claude/skills/`:
+  **Impeccable** (`/impeccable`, pbakaus/impeccable 4.6.0 at 08d5b47,
+  Apache 2.0) for app screens (critique, audit, polish, colorize, layout),
+  and **Taste** (`/taste`, Leonxlnx/taste-skill v2 at f624f37, MIT) only for
+  public pages (sign-in, privacy, terms), since it says it isn't for app
+  screens. Impeccable's launcher downloads a binary on first run; that
+  isn't allowed here, so it runs on its "launcher unavailable" path, reading
+  PRODUCT.md and DESIGN.md directly. Taste's `scripts/lint.mjs` is safe to
+  run. Where a skill's rules clash with this file (eyebrows, hairlines), this
+  file wins. Update a skill by re-copying its folder at a pinned commit.
 - **Visual source of truth:** `docs/design/app-redesign-handoff.md`, which
   describes the app as it is. The dated specs and plans in `docs/archive/`
   are history: they name things the code no longer has, so don't build

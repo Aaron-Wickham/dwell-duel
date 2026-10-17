@@ -53,6 +53,7 @@ before v0.4.0 used other headings.)
 - **A smoother tab pill.** The pill in My bets, Admin and every other segmented control slides without making the browser lay out the page on each frame, so it keeps up on older phones; it looks and times exactly as before (#418).
 
 ### Under the hood
+- **Design skills in the repo.** Impeccable (app screens) and Taste (public pages) are vendored in `.claude/skills/` with their licences, plus a short `PRODUCT.md` and a `DESIGN.md` that points at the handoff doc (#447).
 - **Next 16.4.0, and two dependency advisories patched.** Next moves from 16.3.8 to 16.4.0, and the lockfile takes `sharp` 0.35.5 and `source-map-js` 1.2.2, so `npm audit --omit=dev` is clean again (#448).
 - **More Claude Code setup.** Hooks that lint each edited file as CI does and refuse hand edits to the generated database types and `.env` files; `new-route` and `pr-ready` skills; `money-path-reviewer` and `conventions-reviewer` agents; and the context7 docs server in `.mcp.json` (#379).
 - **The docs describe the redesigned app.** AGENTS.md, the design handoff, How it works, Architecture, the admin guide and the README match what shipped in #380–#403: the handoff points at the Oct 4 proposal boards and notes where the app departs from them, stale rules and removed components are gone, and the README's screenshots are new (#404).

@@ -1371,8 +1371,9 @@ value never stops production booting.
   `ci-ok`, so it never blocks a merge (#456).
   `security-review.yml` (#451) has Claude review a same-repo PR's diff for
   security issues and comment its findings; it's advisory, not part of
-  `ci-ok`, and skips (passing) until the `ANTHROPIC_API_KEY` repository
-  secret is set (SECURITY.md). GitHub disables
+  `ci-ok`, runs `claude-code-action` on the owner's Claude subscription,
+  and skips (passing) until the `CLAUDE_CODE_OAUTH_TOKEN` repository secret
+  is set (SECURITY.md). GitHub disables
   scheduled workflows after 60 days without repository activity (merged PRs
   count); if the closing-alerts backup or warm-caches stops, re-enable it in
   the Actions tab. Every third-party action is

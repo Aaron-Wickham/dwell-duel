@@ -232,7 +232,8 @@ like a solo bet's:
   Place again.
 - **No other limits:** your own markets can be legs, a pick needs no
   money from other members first, and there is no cap on the multiplier
-  or the payout. Your balance is the limit.
+  or the payout. Your balance is the limit, besides the daily count under
+  **Limits**.
 - **A called-off leg** drops out: the payout becomes the stake × the other
   legs' odds, rounded down. With one leg left, it pays at that leg's odds.
   If every leg is called off, the stake is refunded.

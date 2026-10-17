@@ -12,6 +12,17 @@ before v0.4.0 used other headings.)
 
 ## Unreleased
 
+## v0.11.0-beta — 2026-10-17
+
+DwellDuel's biggest refresh yet. Home leads with your balance and your bets as cards, you can add a pick to your slip straight from a market's card, and a market's page opens on its chart. Cards lose their outlines, the tab bar is shorter, and colour now means something: blue for results and things of yours, and a soft colour of its own for each category and member. Links are no longer underlined unless they're in a sentence, and the words are plainer throughout, with no dashes and a capital after every dot. Find any member from the leaderboard's search, and tap the tab you're on to jump back to the top. Behind it: sign-in now needs a Google account, each member can place up to 200 bets and 100 parlays a day, a stricter Content Security Policy, every page has its own title, and the leaderboard is read once for everyone.
+
+### Security
+- **A daily cap on bets.** Each member can place up to 200 solo bets and 100 parlays a day, far above an honest day's betting, so a stolen session can't flood the market (0114, #450). The slip says so in plain words.
+- **Only Google accounts get in.** The invite check now also requires a Google sign-in on the account, so turning on another sign-in method could never let someone claim an invitee's place (0112).
+- **Inline script needs a nonce now.** The Content Security Policy moves from `next.config.ts` to the proxy, which makes a fresh nonce for every request; Next puts it on its own scripts, and the app's three pre-paint scripts (the launch screen, the sign-in intro and the standalone zoom lock) are allowed by their hash. `script-src` no longer has `'unsafe-inline'`, so an injected inline script wouldn't run. Every page was already rendered per request, so none changes how it renders (#449).
+- **A Claude security review on pull requests.** A new Security review workflow runs Anthropic's `claude-code-security-review` on same-repo pull requests and comments what it finds. It's advisory, outside `ci-ok`, and skips until the `ANTHROPIC_API_KEY` repository secret is added (#451).
+- **Next 16.4.0, and two dependency advisories patched.** Next moves from 16.3.8 to 16.4.0, and the lockfile takes `sharp` 0.35.5 and `source-map-js` 1.2.2, so `npm audit --omit=dev` is clean again (#448).
+
 ### Features
 - **Find a member on the leaderboard.** A search box beside the tabs lists everyone whose name contains what you type, with their rank and net worth, each linking to their page (#465).
 - **Tap the tab you're on to go back to the top.** In the tab bar or the nav on a computer, tapping the page you're already on scrolls it to the top, as other apps do, instead of reloading it (#464).
@@ -44,6 +55,8 @@ before v0.4.0 used other headings.)
 ### Polish
 - **One look for every card.** Cards are now a soft step lighter than the page, with no outline and no shadow; only what floats (the slip, menus, a card under your mouse) casts one (#441).
 - **The chart leads, edge to edge.** On a phone a market's chart runs the full width with the leading chance large above it (#489).
+- **Your pick as a chip everywhere.** My bets and a placed parlay show the pick in its colour, as Home does, and a lost bet reads "Lost" (#446).
+- **Nothing hides under the bars.** A field or link you move to with the keyboard scrolls clear of the top bar and the tab bar (#473).
 - **Sign-in says what DwellDuel is.** "Friendly bets with your church friends", and the line under it says it's play money, never real money (#467).
 - **The full rules are easier to scan.** Each main section opens with a one-line "In short", Markets is split into creating, finding, and Duplicate and Share, the notes on markets from before October 2026 moved to the end, and housekeeping detail about notifications is gone (#469).
 - **No more dashes.** Ranges read "5 to 50 DC" and "Oct 5 to 11", a bet row reads "Ruth · 10 DC on Yes", and a record is "17-12" everywhere (#470).
@@ -70,13 +83,9 @@ before v0.4.0 used other headings.)
 - **Sort removed members by net worth.** On Admin › Members' Removed tab, Net worth sorts the list highest first, and the other way with a second tap, as on Active (#429).
 
 ### Under the hood
-- **A daily cap on bets.** Each member can place up to 200 solo bets and 100 parlays a day, far above an honest day's betting, so a stolen session can't flood the market (0114, #450). The slip says so in plain words.
+- **Four missing foreign-key indexes.** Joins on them no longer scan their tables (0113, #453).
 - **Search engines see only the public pages.** `robots.txt` and a sitemap list sign-in, privacy and terms; those carry canonical links, the signed-in pages and not-invited are `noindex`, and the share card gains its site name, type and image text (#459, #461). The create-next-app leftovers are gone from `public/` (#463). Printing a page leaves out the app's bars, and sharing a market reuses the invite page's clipboard helper (#466).
-- **Only Google accounts get in.** The invite check now also requires a Google sign-in on the account, so turning on another sign-in method could never let someone claim an invitee's place (0112). Four missing foreign-key indexes added (0113, #453).
 - **Design skills in the repo.** Impeccable (app screens) and Taste (public pages) are vendored in `.claude/skills/` with their licences, plus a short `PRODUCT.md` and a `DESIGN.md` that points at the handoff doc (#447).
-- **Inline script needs a nonce now.** The Content Security Policy moves from `next.config.ts` to the proxy, which makes a fresh nonce for every request; Next puts it on its own scripts, and the app's three pre-paint scripts (the launch screen, the sign-in intro and the standalone zoom lock) are allowed by their hash. `script-src` no longer has `'unsafe-inline'`, so an injected inline script wouldn't run. Every page was already rendered per request, so none changes how it renders (#449).
-- **A Claude security review on pull requests.** A new Security review workflow runs Anthropic's `claude-code-security-review` on same-repo pull requests and comments what it finds. It's advisory, outside `ci-ok`, and skips until the `ANTHROPIC_API_KEY` repository secret is added (#451).
-- **Next 16.4.0, and two dependency advisories patched.** Next moves from 16.3.8 to 16.4.0, and the lockfile takes `sharp` 0.35.5 and `source-map-js` 1.2.2, so `npm audit --omit=dev` is clean again (#448).
 - **More Claude Code setup.** Hooks that lint each edited file as CI does and refuse hand edits to the generated database types and `.env` files; `new-route` and `pr-ready` skills; `money-path-reviewer` and `conventions-reviewer` agents; and the context7 docs server in `.mcp.json` (#379).
 - **The docs describe the redesigned app.** AGENTS.md, the design handoff, How it works, Architecture, the admin guide and the README match what shipped in #380–#403: the handoff points at the Oct 4 proposal boards and notes where the app departs from them, stale rules and removed components are gone, and the README's screenshots are new (#404).
 - **Every timing in the stylesheet is a motion token.** The launch screen, skeleton shimmer, nav pending hint and LeafLoader read `--duration-*` and `--delay-*` tokens (mirrored in `lib/ui/motion.ts`), with the same values as before, and a test fails on a raw `ms` or `s` in `globals.css` outside the token block (#418).

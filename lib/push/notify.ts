@@ -13,7 +13,7 @@ import {
   taskAlertPayload,
   taskReviewPayload,
 } from './messages'
-import { sendPush, type PushMessage, type PushResult, type PushRun } from './send'
+import { sendPush, sendPushGroups, type PushMessage, type PushResult, type PushRun } from './send'
 
 // Runs once the member's action has answered, so push never slows or fails it. Without the VAPID
 // keys there's nothing to send, so nothing is scheduled at all.
@@ -105,7 +105,8 @@ type ClosingAlertsResult<K extends string> = { error: unknown } | ({ [P in K]: n
 
 type PerMarketMessage = PushMessage & { marketId: string }
 
-// One market at a time, so each market's claim follows its own delivery (#207): a market is written
+// Every market's sends go out together (#455), but each market is judged on its own, so its claim
+// follows its own delivery (#207): a market is written
 // to push_log only once at least one device took the push, and a market whose sends all failed is
 // due again next run. `on conflict do nothing` in claim_push_log makes a race between two callers
 // harmless. A market whose recipients turned out to have no live device (every subscription gone)
@@ -124,8 +125,10 @@ async function deliverPerMarket(
   let sent = 0
   let failed = 0
   let systemic = 0
-  for (const [marketId, group] of byMarket) {
-    const result = await sendPush(group, db, run)
+  const markets = [...byMarket.keys()]
+  const results = await sendPushGroups([...byMarket.values()], db, run)
+  for (const [index, result] of results.entries()) {
+    const marketId = markets[index]
     sent += result.sent
     failed += result.failed
     systemic += result.systemic
@@ -241,7 +244,7 @@ export async function sendClosingAlerts(
   if (lease.error) return { error: lease.error }
   if (!lease.data) return { reminded: 0, alerted: 0, sent: 0, failed: 0, systemic: 0, busy: true }
   try {
-    const run: PushRun = { sent: 0, credentialIds: [], credentialCount: 0, credentialMarkets: [] }
+    const run: PushRun = { sent: 0, credentialIds: [], credentialCount: 0, credentialMarkets: [], subscriptions: new Map() }
     const reminders = await sendResolveReminders(db, run)
     const alerts = 'error' in reminders ? reminders : await sendMarketAlerts(db, run)
     // Settled even when a step failed, so the 401/403 answers already collected aren't lost.

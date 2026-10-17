@@ -4,7 +4,15 @@ const { rpc, sendPush } = vi.hoisted(() => ({ rpc: vi.fn(), sendPush: vi.fn() })
 vi.mock('@/lib/supabase/service-role', () => ({
   serviceRoleClient: () => ({ rpc: (fn: string, args?: unknown) => rpc(fn, args) }),
 }))
-vi.mock('@/lib/push/send', () => ({ sendPush }))
+// sendPushGroups answers each market as sendPush would, so these tests stub one market at a time.
+vi.mock('@/lib/push/send', () => ({
+  sendPush,
+  sendPushGroups: async (groups: unknown[], db: unknown, run: unknown) => {
+    const results = []
+    for (const group of groups) results.push(await sendPush(group, db, run))
+    return results
+  },
+}))
 
 import { GET } from '@/app/api/cron/closing-alerts/route'
 

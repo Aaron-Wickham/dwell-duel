@@ -501,7 +501,9 @@ the closing alerts' recipients. Since 0071 (#207) they come from
 resolve them) and `due_market_alerts()` (admins and above except the
 market's creator, who has the reminder, `resolve_reminders` on), which claim
 nothing; 0098 dropped the claiming `push_resolve_reminders()` and
-`push_market_alerts()` they replaced; the route sends one market at a time and claims through
+`push_market_alerts()` they replaced; the route sends every due market in one batch
+(`sendPushGroups`: one subscription read per member per run, six sends at a time, one
+`record_push_results` call per 50 devices, #455), judges each market on its own, and claims through
 `claim_push_log(kind, refs)` only the markets at least one device took, so
 a failed push is due again next run.
 `my_review_counts()` (security invoker) counts what waits on the caller: other

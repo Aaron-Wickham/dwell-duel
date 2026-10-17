@@ -18,7 +18,7 @@ function ParlayLine({ parlay }: { parlay: ParlayView }) {
     case 'pending':
       return (
         <>
-          {stake} · pays{' '}
+          {stake} · Pays{' '}
           <span className="font-extrabold text-win">
             {parlay.estimated ? '~' : ''}
             {formatDcAmount(parlay.potentialPayout)}
@@ -29,7 +29,7 @@ function ParlayLine({ parlay }: { parlay: ParlayView }) {
     case 'won':
       return (
         <>
-          {stake} · won <span className="font-extrabold text-win">{formatDcAmount(parlay.credited)}</span>
+          {stake} · Won <span className="font-extrabold text-win">{formatDcAmount(parlay.credited)}</span>
         </>
       )
     case 'lost':
@@ -39,7 +39,7 @@ function ParlayLine({ parlay }: { parlay: ParlayView }) {
         </>
       )
     case 'refunded':
-      return <>{stake} · refunded</>
+      return <>{stake} · Refunded</>
   }
 }
 

@@ -202,7 +202,7 @@ export function PendingApprovals({
               Select all
             </label>
             <p aria-live="polite" className="font-extrabold max-lg:text-sm">
-              {selectedCount} selected · pays <span className="whitespace-nowrap">{formatDcAmount(selectedDc)}</span>
+              {selectedCount} selected · Pays <span className="whitespace-nowrap">{formatDcAmount(selectedDc)}</span>
             </p>
           </div>
           {/* The form's own action is the approve, so the confirm dialog's button (which submits through

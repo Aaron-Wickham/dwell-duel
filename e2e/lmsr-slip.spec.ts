@@ -102,6 +102,6 @@ test('the slip shows a parlay’s exact payout on new markets, and placing fixes
 
   // The market on screen shows the leg with the fixed payout, and the parlay moved its price.
   const position = page.getByRole('region', { name: 'Your position' })
-  await expect(position.getByText(`10 DC · 2 picks · pays ${quote.payout} DC if every pick wins.`)).toBeVisible()
+  await expect(position.getByText(`10 DC · 2 picks · Pays ${quote.payout} DC if every pick wins.`)).toBeVisible()
   await expect(page.getByRole('region', { name: 'Outcomes' }).locator('.sr-only').getByText(/^5\d%$/)).toHaveCount(1)
 })

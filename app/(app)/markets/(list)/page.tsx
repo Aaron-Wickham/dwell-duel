@@ -10,8 +10,10 @@ import { listResolvedMarkets, listOpenMarkets, listMatchingMarkets, type MarketS
 import { marketsHref, readMarketSearch } from '@/lib/markets/search'
 import { busiestCategories, listCategoryCounts, readCategoryParam } from '@/lib/markets/categories'
 import type { KeysetPage } from '@/lib/pagination/keyset'
-import { marketOdds } from '@/lib/markets/pricing'
-import { outcomeSeries } from '@/lib/markets/outcome-series'
+import { lmsrState, marketOdds } from '@/lib/markets/pricing'
+import { isPositiveOutcome, outcomeSeries } from '@/lib/markets/outcome-series'
+import { addToSlipAction, removeFromSlipAction } from '@/lib/parlays/slip-actions'
+import type { QuickPick } from '@/components/markets/quick-picks'
 import { weeklyChange } from '@/lib/markets/chart-summary'
 import { marketCardStatus, type MarketCardStatus } from '@/lib/markets/market-status'
 import { readSparklines } from '@/lib/markets/sparklines'
@@ -155,6 +157,33 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     }))
     const status = marketCardStatus(market.status, market.closeAt, now)
     const lead = leadingOutcome(market.kind, outcomes)
+    // Picks to add from the card (#439), only while the market takes bets.
+    let quickPicks: { picks: QuickPick[]; more: number } | undefined
+    if (status === 'open' && market.pricing === 'lmsr') {
+      const q = lmsrState(market.outcomes)
+      const all = odds.map((o, index) => ({ o, index, pct: outcomes[index].pct ?? 0 }))
+      const multiple = market.kind === 'multiple_choice'
+      const shown = multiple ? [...all].sort((a, b) => b.pct - a.pct).slice(0, 2) : all
+      quickPicks = {
+        more: all.length - shown.length,
+        picks: shown.map(({ o, index, pct }) => ({
+          pick: {
+            outcomeId: o.outcomeId,
+            outcomeLabel: o.label,
+            marketId: market.id,
+            marketTitle: market.title,
+            parlay: false,
+            open: true,
+            lmsr: { q, index, liquidity: market.liquidity },
+          },
+          pct,
+          series: multiple ? outcomeSeries(market.kind, o.label, index) : null,
+          tone: multiple ? null : isPositiveOutcome(market.kind, o.label) ? 'yes' : 'no',
+          addAction: addToSlipAction.bind(null, o.outcomeId),
+          removeAction: removeFromSlipAction.bind(null, o.outcomeId),
+        })),
+      }
+    }
     const card = {
       id: market.id,
       title: market.title,
@@ -175,6 +204,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
       betCount: market.betCount,
       domId: rowDomId(rowIdPrefix(list), market.id),
       now: nowMs,
+      quickPicks,
     }
     return { list, card }
   })

@@ -6,9 +6,35 @@ import type { ReviewCounts } from '@/lib/admin/review-counts'
 import type { MarketsToResolve } from '@/lib/markets/markets-to-resolve'
 import { countNoun, taskRewardsDetail, type RewardRange } from '@/lib/home/copy'
 import { cn } from '@/lib/utils'
+import { figureClass, uiTextClass } from '@/components/ui/page'
 import { HomeSection, homeRowsClass } from './home-section'
 
 type Row = { key: string; href: string; drillDown: boolean; tone?: 'gold'; content: ReactNode }
+type Tile = { key: string; href: string; count: number; label: string; name: string; tone: 'gold' | 'info' }
+
+// A count waiting on the member (#438): the number large on its status colour, gold for submissions
+// to review and blue for markets to resolve, so the queue reads at a glance.
+function NeedsYouTile({ href, count, label, name, tone }: Omit<Tile, 'key'>) {
+  return (
+    <li>
+      <IntentLink
+        href={href}
+        transitionTypes={['nav-forward']}
+        aria-label={name}
+        className={cn(
+          'pressable flex min-h-11 flex-col gap-0.5 rounded-tile p-3.5 no-underline',
+          tone === 'gold' ? 'bg-gold-soft text-gold' : 'bg-info-soft text-info',
+        )}
+      >
+        <span className={cn(figureClass, 'tabular-nums')}>{count.toLocaleString('en-US')}</span>
+        <span className={cn(uiTextClass, 'flex items-center gap-0.5 font-bold')}>
+          {label}
+          <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
+        </span>
+      </IntentLink>
+    </li>
+  )
+}
 
 function NeedsYouRow({ href, drillDown, tone, children }: { href: string; drillDown: boolean; tone?: 'gold'; children: ReactNode }) {
   return (
@@ -49,29 +75,26 @@ export function NeedsYou({
   balance: number
   taskRewards: RewardRange | null
 }) {
+  const tiles: Tile[] = []
   const rows: Row[] = []
   if (showReviews && counts.tasks > 0) {
-    rows.push({
+    tiles.push({
       key: 'tasks',
       href: '/admin/tasks',
-      drillDown: true,
-      content: (
-        <>
-          <b>{countNoun(counts.tasks, 'task submission', 'task submissions')}</b> to review
-        </>
-      ),
+      count: counts.tasks,
+      label: 'To review',
+      name: `${countNoun(counts.tasks, 'task submission', 'task submissions')} to review`,
+      tone: 'gold',
     })
   }
   if (showAdminMarkets && counts.markets > 0) {
-    rows.push({
+    tiles.push({
       key: 'markets',
       href: '/admin/markets',
-      drillDown: true,
-      content: (
-        <>
-          <b>{countNoun(counts.markets, 'market', 'markets')}</b> to resolve
-        </>
-      ),
+      count: counts.markets,
+      label: 'To resolve',
+      name: `${countNoun(counts.markets, 'market', 'markets')} to resolve`,
+      tone: 'info',
     })
   }
   if (!showAdminMarkets) {
@@ -107,17 +130,26 @@ export function NeedsYou({
       content: `You’re out of Dwell Coin. Earn more with Tasks${rewards ? `: ${rewards}.` : '.'}`,
     })
   }
-  if (rows.length === 0) return null
+  if (tiles.length === 0 && rows.length === 0) return null
 
   return (
     <HomeSection title="Needs you" titleId="needs-you-title">
-      <ul className={homeRowsClass}>
-        {rows.map((row) => (
-          <NeedsYouRow key={row.key} href={row.href} drillDown={row.drillDown} tone={row.tone}>
-            {row.content}
-          </NeedsYouRow>
-        ))}
-      </ul>
+      {tiles.length > 0 && (
+        <ul className="grid grid-cols-2 gap-2.5 pt-2">
+          {tiles.map(({ key, ...tile }) => (
+            <NeedsYouTile key={key} {...tile} />
+          ))}
+        </ul>
+      )}
+      {rows.length > 0 && (
+        <ul className={homeRowsClass}>
+          {rows.map((row) => (
+            <NeedsYouRow key={row.key} href={row.href} drillDown={row.drillDown} tone={row.tone}>
+              {row.content}
+            </NeedsYouRow>
+          ))}
+        </ul>
+      )}
     </HomeSection>
   )
 }

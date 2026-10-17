@@ -59,17 +59,17 @@ function BetOutcome({ bet }: { bet: MyBet }) {
         <>
           {bet.pays !== null && (
             <>
-              {' · pays '}
+              {' · Pays '}
               <span className="font-extrabold text-win">{formatDcAmount(bet.pays)}</span>
             </>
           )}
-          {result.kind === 'awaiting' && ' · waiting for a result'}
+          {result.kind === 'awaiting' && ' · Waiting for a result'}
         </>
       )
     case 'won':
       return (
         <>
-          {' · won '}
+          {' · Won '}
           <span className="font-extrabold text-win">{formatDcAmount(result.payout)}</span>
         </>
       )
@@ -81,7 +81,7 @@ function BetOutcome({ bet }: { bet: MyBet }) {
         </>
       )
     case 'refunded':
-      return <>{result.reason === 'no_winners' ? ' · refunded, no winners' : ' · refunded'}</>
+      return <>{result.reason === 'no_winners' ? ' · Refunded, no winners' : ' · Refunded'}</>
   }
 }
 
@@ -147,7 +147,7 @@ export function CancelledBetRows({ bets, rowIdPrefix }: { bets: MyCancelledBet[]
           }
           detail={
             <>
-              {formatDcAmount(b.amount)} on <strong>{b.outcomeLabel}</strong> · refunded
+              {formatDcAmount(b.amount)} on <strong>{b.outcomeLabel}</strong> · Refunded
             </>
           }
         />

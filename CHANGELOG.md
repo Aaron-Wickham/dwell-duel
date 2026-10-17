@@ -12,6 +12,9 @@ before v0.4.0 used other headings.)
 
 ## Unreleased
 
+### Under the hood
+- **The security review runs on a Claude subscription, not paid API credit.** It now uses `claude-code-action` with a `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`, reviewing only for security and posting one comment that it updates on each push; it still skips until the secret is added (#451).
+
 ## v0.11.0-beta — 2026-10-17
 
 DwellDuel's biggest refresh yet. Home leads with your balance and your bets as cards, you can add a pick to your slip straight from a market's card, and a market's page opens on its chart. Cards lose their outlines, the tab bar is shorter, and colour now means something: blue for results and things of yours, and a soft colour of its own for each category and member. Links are no longer underlined unless they're in a sentence, and the words are plainer throughout, with no dashes and a capital after every dot. Find any member from the leaderboard's search, and tap the tab you're on to jump back to the top. Behind it: sign-in now needs a Google account, each member can place up to 200 bets and 100 parlays a day, a stricter Content Security Policy, every page has its own title, and the leaderboard is read once for everyone.

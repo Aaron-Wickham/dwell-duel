@@ -94,7 +94,7 @@ test('the sign-in page says what DwellDuel is, and the privacy page is public', 
   expect(privacy.status()).toBe(200)
 
   await page.goto('/sign-in')
-  await expect(page.getByText('Earn DC with Bible-study tasks')).toBeVisible()
+  await expect(page.getByText('earn more with Bible study', { exact: false })).toBeVisible()
   await expect(page.getByRole('img', { name: /^Sample market: Will the sermon run past noon\?/ })).toBeVisible()
   await page.getByRole('link', { name: 'Privacy' }).click()
   await expect(page).toHaveURL(/\/privacy$/)

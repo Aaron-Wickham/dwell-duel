@@ -9,6 +9,7 @@ import { focusTarget, rowDomId } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
 import { rowTitleClass } from '@/components/ui/page'
 import { formatDcAmount } from '@/lib/format/dc'
+import { PickChip } from '@/components/markets/pick-chip'
 
 // List cards on the page (D2), two to a row at lg, with a parlay spanning both (#393). The cards in
 // a row stretch to one height, so a tall card leaves no hole beside the short one; they read left to
@@ -77,7 +78,7 @@ function BetOutcome({ bet }: { bet: MyBet }) {
       return (
         <>
           {' · '}
-          <span className="font-extrabold text-loss">lost</span>
+          <span className="font-extrabold text-loss">Lost</span>
         </>
       )
     case 'refunded':
@@ -119,7 +120,7 @@ export function WagerRows({ wagers, rowIdPrefix }: { wagers: Wager[]; rowIdPrefi
             when={<BetWhen bet={b} />}
             detail={
               <>
-                {formatDcAmount(b.amount)} on <strong>{b.outcomeLabel}</strong>
+                {formatDcAmount(b.amount)} on <PickChip label={b.outcomeLabel} />
                 <BetOutcome bet={b} />
               </>
             }
@@ -147,7 +148,7 @@ export function CancelledBetRows({ bets, rowIdPrefix }: { bets: MyCancelledBet[]
           }
           detail={
             <>
-              {formatDcAmount(b.amount)} on <strong>{b.outcomeLabel}</strong> · Refunded
+              {formatDcAmount(b.amount)} on <PickChip label={b.outcomeLabel} /> · Refunded
             </>
           }
         />

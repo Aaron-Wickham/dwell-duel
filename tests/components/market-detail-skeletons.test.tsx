@@ -57,7 +57,7 @@ describe('the market chart skeleton', () => {
 
     const plot = container.querySelector('.skeleton.h-\\[220px\\]')!
     expect(plot).toHaveClass('md:h-[300px]')
-    expect(plot.previousElementSibling).toHaveClass('h-[52px]')
+    expect(plot.parentElement!.previousElementSibling).toHaveClass('h-[52px]')
     expect(plot.nextElementSibling).toHaveClass('skeleton', 'h-5')
   })
 })

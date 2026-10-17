@@ -180,7 +180,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
         <div className="flex flex-col gap-2">
           <h1 className={`${h1Class} break-words`}>{market.title}</h1>
           <p className="text-sm text-ink2">
-            {when && <>{when} · </>}by {isCreator ? 'you' : market.creatorName}
+            {when && <>{when} · </>}By {isCreator ? 'you' : market.creatorName}
             {severalCategories && market.category && <> · {market.category.name}</>}
           </p>
           {creatorStake && (

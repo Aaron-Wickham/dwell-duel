@@ -434,10 +434,12 @@ html {
 }
 
 /* A standalone card lifts toward a mouse: up 2px, onto a shadow. Always with pressable, which
-   carries the transition. Reduced motion keeps the shadow and drops the move. */
+   carries the transition. Reduced motion keeps the shadow and drops the move. A control inside the
+   card that answers the pointer itself (`data-own-hover`, a market card's quick picks) holds the
+   card still, so only the control under the pointer reacts. */
 @utility hover-lift {
   @media (hover: hover) and (pointer: fine) {
-    &.pressable:hover:not(:active) {
+    &.pressable:hover:not(:active):not(:has([data-own-hover]:hover)) {
       translate: 0 -2px;
       box-shadow: var(--lift-shadow);
     }

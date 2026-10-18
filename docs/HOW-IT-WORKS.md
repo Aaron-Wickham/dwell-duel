@@ -98,8 +98,8 @@ favourite of several), how many points it moved this week (on a market
 still open or waiting, once it's a week old), a small chart,
 and when it closes ("Closes in 2h" within a day) with how many bets it
 has, and an open market's card has its picks right on it: tap Yes or No
-(Over or Under, or one of a multiple-choice market's two favourites) to add it to your
-slip, and tap it again to take it out. A resolved card says who won ("Yes won"). When more than one category
+(Over or Under, or any answer of a multiple-choice market, each with an **Add**
+button) to add it to your slip, and tap it again to take it out. A resolved card says who won ("Yes won"). When more than one category
 holds markets, a **Category** button beside the tabs narrows the list to
 one (on a phone it's under the tabs, always in view). It opens
 every category, with a search at the top: **All** first, then the busiest

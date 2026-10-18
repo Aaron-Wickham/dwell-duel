@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, SlidersHorizontal } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/field'
 import { buttonVariants } from '@/components/ui/button'
 import { MARKET_SEARCH_MAX, marketsHref } from '@/lib/markets/search'
@@ -16,10 +16,9 @@ import { cn } from '@/lib/utils'
 // doesn't reload. The parent keys this by the query in the URL, so Clear search and Back reset
 // what's typed.
 //
-// On a phone the search and the category button share one row behind a button beside the tabs, so
-// the first card starts in the top third; a search in the URL opens it. From md they sit on the
-// tabs' row: the category button beside the tabs, the field at the right taking what's left, up to
-// 320px.
+// On a phone the category button is always in view, full width under the tabs, and the search sits
+// behind a button beside them; a search in the URL opens it. From md they all sit on the tabs' row:
+// the category button beside the tabs, the field at the right taking what's left, up to 320px.
 export function MarketSearch({ q, category, tabs, filters }: { q: string; category: string | null; tabs: ReactNode; filters?: ReactNode }) {
   const router = useRouter()
   const [value, setValue] = useState(q)
@@ -44,7 +43,7 @@ export function MarketSearch({ q, category, tabs, filters }: { q: string; catego
         {tabs}
         <button
           type="button"
-          aria-label={filters ? 'Search and filter markets' : 'Search markets'}
+          aria-label="Search markets"
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => {
@@ -53,11 +52,11 @@ export function MarketSearch({ q, category, tabs, filters }: { q: string; catego
           }}
           className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'size-11 shrink-0 px-0 md:hidden')}
         >
-          {filters ? <SlidersHorizontal aria-hidden="true" className="size-5" /> : <Search aria-hidden="true" className="size-5" />}
+          <Search aria-hidden="true" className="size-5" />
         </button>
       </div>
+      {filters && <div className="flex min-w-0 *:flex-1 md:max-w-56 md:shrink-0 md:*:flex-none lg:max-w-none">{filters}</div>}
       <div id={panelId} className={cn('items-center gap-2 md:contents', open ? 'flex' : 'hidden')}>
-        {filters && <div className="flex min-w-0 shrink md:max-w-56 md:shrink-0 lg:max-w-none">{filters}</div>}
         <form
           role="search"
           action="/markets"

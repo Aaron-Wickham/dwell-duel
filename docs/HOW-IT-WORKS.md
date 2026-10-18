@@ -101,7 +101,7 @@ has, and an open market's card has its picks right on it: tap Yes or No
 (Over or Under, or one of a multiple-choice market's two favourites) to add it to your
 slip, and tap it again to take it out. A resolved card says who won ("Yes won"). When more than one category
 holds markets, a **Category** button beside the tabs narrows the list to
-one (on a phone it's behind the filter button, with the search). It opens
+one (on a phone it's under the tabs, always in view). It opens
 every category, with a search at the top: **All** first, then the busiest
 (the most markets still taking bets, each saying how many are open), then
 under **Nothing open** the ones with no market taking bets. The choices are

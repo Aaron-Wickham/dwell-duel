@@ -408,12 +408,13 @@ describe('MarketsPage: categories (#327)', () => {
     expect(screen.getByRole('button', { name: 'Search markets' })).toBeInTheDocument()
   })
 
-  it('puts the category button beside the search behind the phone’s filter button, so the tabs stay one row (#389)', async () => {
+  it('keeps the category button in view on a phone, with only the search behind its button (#389)', async () => {
     cachedCategoryCounts.mockResolvedValue(TEN.slice(0, 3))
     await renderPage(EMPTY, EMPTY)
-    const button = screen.getByRole('button', { name: 'Search and filter markets' })
+    const button = screen.getByRole('button', { name: 'Search markets' })
     const panel = document.getElementById(button.getAttribute('aria-controls')!)!
-    expect(panel).toContainElement(screen.getByRole('button', { name: 'Category: All', hidden: true }))
+    expect(panel).not.toContainElement(screen.getByRole('button', { name: 'Category: All' }))
+    expect(panel).toContainElement(screen.getByRole('searchbox', { hidden: true }))
     expect(panel).toHaveClass('hidden', 'md:contents')
     fireEvent.click(button)
     expect(panel).not.toHaveClass('hidden')

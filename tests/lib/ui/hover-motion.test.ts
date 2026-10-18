@@ -43,7 +43,10 @@ describe('desktop hover motion', () => {
 
   it('lifts cards only under a real mouse', () => {
     const fine = block(lift, FINE_HOVER)
-    expect(fine).toMatch(/&\.pressable:hover:not\(:active\) \{\s*translate: 0 -2px;\s*box-shadow: var\(--lift-shadow\);/)
+    // A control that answers the pointer itself (a market card's quick picks) holds the card still.
+    expect(fine).toMatch(
+      /&\.pressable:hover:not\(:active\):not\(:has\(\[data-own-hover\]:hover\)\) \{\s*translate: 0 -2px;\s*box-shadow: var\(--lift-shadow\);/,
+    )
     expect(lift.replace(fine, '')).not.toContain('translate: 0 -2px')
   })
 

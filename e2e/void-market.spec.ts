@@ -3,11 +3,12 @@ import { localDateTimeString } from './local-date-time'
 import { clientForEmail } from '../tests/db/fixtures'
 import { MEMBER_STORAGE_STATE_PATH } from './global-setup'
 import { lmsrQuote } from '../lib/markets/pricing'
+import { chooseCategory } from './category'
 
 test('void a market through the confirmation dialog', async ({ page }) => {
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill('Will the potluck run out of rolls?')
-  await page.getByLabel('Category', { exact: true }).fill('Testing')
+  await chooseCategory(page, 'Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)

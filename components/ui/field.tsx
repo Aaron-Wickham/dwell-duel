@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
+import type { ComponentProps, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { keepSelectedOnReset } from '@/lib/forms/keep-on-reset'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,7 @@ const control =
 
 export function Field({
   label,
+  labelId,
   htmlFor,
   hint,
   error,
@@ -16,6 +17,8 @@ export function Field({
   className,
 }: {
   label: string
+  // For a control named by more than its label, as a picker button naming its choice is.
+  labelId?: string
   htmlFor: string
   hint?: string
   error?: string
@@ -24,7 +27,7 @@ export function Field({
 }) {
   return (
     <div className={cn('flex min-w-0 flex-col gap-1.5', className)}>
-      <label htmlFor={htmlFor} className={labelClass}>
+      <label id={labelId} htmlFor={htmlFor} className={labelClass}>
         {label}
       </label>
       {hint && (
@@ -42,7 +45,7 @@ export function Field({
   )
 }
 
-export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ className, ...props }: ComponentProps<'input'>) {
   return <input className={cn(control, className)} {...props} />
 }
 

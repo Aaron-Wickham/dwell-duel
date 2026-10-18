@@ -1,13 +1,14 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
 import { placeSolo } from './slip'
 import { makeMember } from '../tests/db/fixtures'
 import { deleteAuthUser, serviceClient } from '../tests/db/helpers'
+import { chooseCategory } from './category'
 
 async function createMarket(page: Page, title: string, category = 'Testing') {
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill(title)
-  await page.getByLabel('Category', { exact: true }).fill(category)
+  await chooseCategory(page, category)
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 2 * 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+$/)
@@ -40,15 +41,24 @@ test('markets search by title, narrow to a category, and clear', async ({ page }
   await box.fill(word)
   await box.press('Enter')
   await expect(page).toHaveURL(new RegExp(`/markets\\?q=${word}$`))
-  // A category chip narrows the search, and the choice lives in the URL (#327).
-  const chips = page.getByRole('navigation', { name: 'Categories' })
-  await chips.getByRole('link', { name: category }).click()
+  // The category picker narrows the search, and the choice lives in the URL (#327).
+  const openCategories = async () => {
+    await page.getByRole('button', { name: /^Category: / }).click()
+    return page.getByRole('dialog', { name: 'Categories' })
+  }
+  const row = (picker: Locator) => picker.getByRole('link').filter({ has: page.getByText(category, { exact: true }) })
+  let picker = await openCategories()
+  await picker.getByRole('searchbox', { name: 'Search categories' }).fill(category.toUpperCase())
+  await row(picker).click()
+  await expect(picker).toBeHidden()
   await expect(page).toHaveURL(new RegExp(`q=${word}&category=${category.toLowerCase().replace(' ', '-')}$`))
-  await expect(chips.getByRole('link', { name: category })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('button', { name: `Category: ${category}` })).toBeVisible()
   await expect(page.getByText(`Showing markets in ${category}`)).toBeVisible()
   // Filtered to a category, the card drops its category chip: the filter already says it (#387).
   await expect(page.getByRole('article').filter({ hasText: title })).toBeVisible()
-  await chips.getByRole('link', { name: 'All', exact: true }).click()
+  picker = await openCategories()
+  await expect(row(picker)).toHaveAttribute('aria-current', 'page')
+  await picker.getByRole('link', { name: 'All', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`/markets\\?q=${word}$`))
 
   // Links to the removed whose-markets chips fall through to every market.

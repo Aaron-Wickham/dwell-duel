@@ -9,7 +9,7 @@ import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { listResolvedMarkets, listOpenMarkets, listMatchingMarkets, type MarketSummary } from '@/lib/markets/list-markets'
 import { marketsHref, readMarketSearch } from '@/lib/markets/search'
-import { busiestCategories, cachedCategoryCounts, readCategoryParam } from '@/lib/markets/categories'
+import { cachedCategoryCounts, readCategoryParam } from '@/lib/markets/categories'
 import type { KeysetPage } from '@/lib/pagination/keyset'
 import { lmsrState, marketOdds } from '@/lib/markets/pricing'
 import { isPositiveOutcome, outcomeSeries } from '@/lib/markets/outcome-series'
@@ -30,9 +30,8 @@ import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { SubNav } from '@/components/ui/sub-nav'
-import { FilterChips } from '@/components/ui/filter-chips'
 import { MarketSearch } from '@/components/markets/market-search'
-import { MoreCategories } from '@/components/markets/more-categories'
+import { CategoryFilter } from '@/components/markets/category-picker'
 import { cn } from '@/lib/utils'
 import { MarketCard, leadingOutcome, type MarketCardChart } from '@/components/markets/market-card'
 
@@ -135,7 +134,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
   ])
 
   // A category chip tells markets apart only while more than one category holds markets, and never
-  // in a list already narrowed to one (#387). The category filter row follows the same rule.
+  // in a list already narrowed to one (#387). The category filter follows the same rule.
   const severalCategories = counts.filter((c) => c.markets > 0).length > 1
   const showCategory = category === null && severalCategories
   const cards = markets.map(([market, list]) => {
@@ -297,17 +296,14 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
     )
   }
 
-  // All, the busiest categories, and the chosen one when it isn't among them; More… lists the rest.
-  const busiest = busiestCategories(counts)
-  const categoryChip = (c: (typeof counts)[number]) => ({
+  // Every visible category, busiest first, each keeping the tab and the search.
+  const categoryItems = counts.map((c) => ({
     href: marketsHref({ status: filter, q, category: c.slug }),
-    label: c.name,
+    name: c.name,
+    openMarkets: c.openMarkets,
+    markets: c.markets,
     current: c.id === category?.id,
-  })
-  const categoryChips = [
-    { href: allCategoriesHref, label: 'All', current: category === null },
-    ...(category && !busiest.some((c) => c.id === category.id) ? [...busiest, category] : busiest).map(categoryChip),
-  ]
+  }))
 
   return (
     <Page transition="tab">
@@ -340,13 +336,7 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
             }))}
           />
         }
-        filters={
-          severalCategories && (
-            <FilterChips scroll label="Categories" items={categoryChips}>
-              {counts.length > busiest.length && <MoreCategories items={counts.map(categoryChip)} />}
-            </FilterChips>
-          )
-        }
+        filters={severalCategories && <CategoryFilter allHref={allCategoriesHref} items={categoryItems} />}
       />
       {category && (
         <p id="markets-category-caption" className="text-sm text-ink2">

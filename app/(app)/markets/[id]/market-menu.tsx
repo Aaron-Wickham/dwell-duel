@@ -34,8 +34,8 @@ export interface MarketEditOptions {
   mode: Extract<EditMarketMode, 'edit' | 'category'> | null
   canMoveClose: boolean
   canReopen: boolean
-  suggestions: string[]
-  popular: string[]
+  // Every visible category's name, most used first.
+  categories: string[]
 }
 
 type OpenDialog = EditMarketMode | 'history' | null
@@ -109,8 +109,7 @@ export function MarketMenu({
           {...marketProps}
           mode={edit.mode}
           canMoveClose={edit.canMoveClose}
-          suggestions={edit.suggestions}
-          popular={edit.popular}
+          categories={edit.categories}
           open={dialog === edit.mode}
           onOpenChange={toggle(edit.mode)}
           finalFocus={trigger}
@@ -120,8 +119,7 @@ export function MarketMenu({
         <EditMarketDialog
           {...marketProps}
           mode="reopen"
-          suggestions={[]}
-          popular={[]}
+          categories={[]}
           open={dialog === 'reopen'}
           onOpenChange={toggle('reopen')}
           finalFocus={trigger}

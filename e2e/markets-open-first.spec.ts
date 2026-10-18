@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { serviceClient } from '../tests/db/helpers'
 import { localDateTimeString } from './local-date-time'
+import { chooseCategory } from './category'
 
 // #261, #389: however many markets are waiting on a result, /markets opens on the ones taking
 // bets, and the Waiting tab pages its own list with Show more.
@@ -8,7 +9,7 @@ test('opens on the markets taking bets however many are waiting, and the Waiting
   const title = `Open first ${Date.now()}`
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill(title)
-  await page.getByLabel('Category', { exact: true }).fill('Testing')
+  await chooseCategory(page, 'Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 2 * 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+$/)

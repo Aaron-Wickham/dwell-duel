@@ -1,13 +1,14 @@
 import { test, expect } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
 import { serverActionSettled } from './server-action'
+import { chooseCategory } from './category'
 
 // Reactions on the feed and comments on a market (#79). The seeded session is Alice.
 
 async function createMarket(page: import('@playwright/test').Page, title: string) {
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill(title)
-  await page.getByLabel('Category', { exact: true }).fill('Testing')
+  await chooseCategory(page, 'Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)

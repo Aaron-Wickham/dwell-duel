@@ -4,10 +4,6 @@ import { groupRead } from '@/lib/cache/group-reads'
 // 0103 seeds it with this id, and every market made without a category lands in it.
 export const OTHER_CATEGORY_ID = '00000000-0000-4000-8000-000000000327'
 
-// How many categories the markets list shows as chips before More…, and the create form suggests.
-export const BUSIEST_CHIPS = 8
-export const MOST_USED_CHIPS = 6
-
 export interface CategoryCount {
   id: string
   name: string
@@ -40,16 +36,10 @@ export function cachedCategoryCounts(supabase: DbClient, includeHidden = false):
   return groupRead(supabase, 'category-counts', String(includeHidden), () => listCategoryCounts(supabase, includeHidden))
 }
 
-export function busiestCategories(counts: CategoryCount[], n = BUSIEST_CHIPS): CategoryCount[] {
-  return counts.slice(0, n)
-}
-
-// The create form's suggestions: the most markets ever, not just open ones, so a category used
-// every week still shows between its markets.
-export function mostUsedCategories(counts: CategoryCount[], n = MOST_USED_CHIPS): CategoryCount[] {
-  return [...counts]
-    .sort((a, b) => b.markets - a.markets || a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
-    .slice(0, n)
+// The Category field's order: the most markets ever, not just open ones, so a category used every
+// week stays near the top between its markets.
+export function mostUsedCategories(counts: CategoryCount[]): CategoryCount[] {
+  return [...counts].sort((a, b) => b.markets - a.markets || a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
 }
 
 // The database stores a name trimmed with each run of whitespace one space, and compares slugs.

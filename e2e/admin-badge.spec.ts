@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { serviceClient } from '../tests/db/helpers'
 import { localDateTimeString } from './local-date-time'
+import { chooseCategory } from './category'
 
 test.use({ viewport: { width: 375, height: 812 } })
 
@@ -8,7 +9,7 @@ test('the avatar shows what waits once a market has closed with no result', asyn
   const title = `Badge check ${Date.now()}`
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill(title)
-  await page.getByLabel('Category', { exact: true }).fill('Testing')
+  await chooseCategory(page, 'Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 2 * 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+$/)

@@ -14,7 +14,7 @@ import { formatLine, type MarketKind } from '@/lib/markets/kind'
 import { DEFAULT_LIQUIDITY } from '@/lib/markets/lmsr'
 import { marketOdds } from '@/lib/markets/pricing'
 import { MarketCard } from '@/components/markets/market-card'
-import { CategoryField } from '@/components/markets/category-field'
+import { CategoryPickerField } from '@/components/markets/category-picker'
 import { normalizeCategoryName } from '@/lib/markets/categories'
 import { h2Class, labelClass } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
@@ -51,23 +51,16 @@ export interface MarketPrefill {
   now: number
 }
 
-// What the category field offers: every visible category's name, and the most used as chips.
-export interface CategoryOptions {
-  suggestions: string[]
-  popular: string[]
-}
-
-const NO_CATEGORIES: CategoryOptions = { suggestions: [], popular: [] }
-
 // admin: an admin may resolve a market they have money on, so the reviewer note isn't theirs.
 export function CreateMarketForm({
   initial,
   admin = false,
-  categories = NO_CATEGORIES,
+  categories = [],
 }: {
   initial?: MarketPrefill
   admin?: boolean
-  categories?: CategoryOptions
+  // Every visible category's name, most used first.
+  categories?: string[]
 }) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
@@ -259,12 +252,11 @@ export function CreateMarketForm({
         {/* The picker's value is local wall-clock time; the server needs the instant it names. */}
         <input type="hidden" name="close_at" value={closeAt ? new Date(closeAt).toISOString() : ''} />
 
-        <CategoryField
+        <CategoryPickerField
           id="cm-category"
           value={category}
           onChange={setCategory}
-          suggestions={categories.suggestions}
-          popular={categories.popular}
+          options={categories}
           errorId="create-market-error"
           invalid={state?.field === 'category'}
         />

@@ -1,6 +1,7 @@
 import { test, expect, request as apiRequest } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
 import { serviceClient } from '../tests/db/helpers'
+import { chooseCategory } from './category'
 
 // #258: the create commits, but its answer never reaches the phone, and Next replays the action.
 // The replay carries the same attempt key, so it returns the first market instead of making a second.
@@ -9,7 +10,7 @@ test('a create-market whose response is lost does not make a second market', asy
   const title = `Lost create ${Date.now()}`
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill(title)
-  await page.getByLabel('Category', { exact: true }).fill('Testing')
+  await chooseCategory(page, 'Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
 
   // Sent from a separate request context so the dropped answer never delivers its cookies, as in

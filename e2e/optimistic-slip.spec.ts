@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
+import { chooseCategory } from './category'
 
 test('Add flips the row and shows the slip button before the server answers', async ({ page }) => {
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill('Will the optimistic pick land?')
-  await page.getByLabel('Category', { exact: true }).fill('Testing')
+  await chooseCategory(page, 'Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)

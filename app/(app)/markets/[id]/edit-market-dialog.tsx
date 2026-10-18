@@ -9,7 +9,7 @@ import { Field, Input, Textarea } from '@/components/ui/field'
 import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { h2Class } from '@/components/ui/page'
-import { CategoryField } from '@/components/markets/category-field'
+import { CategoryPickerField } from '@/components/markets/category-picker'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { formatDateTime } from '@/lib/markets/format-date'
 import { localInputValue } from '@/lib/markets/weekly-close'
@@ -73,8 +73,7 @@ export function EditMarketDialog({
   closeAt,
   mode,
   canMoveClose = true,
-  suggestions,
-  popular,
+  categories,
   open,
   onOpenChange,
   finalFocus,
@@ -87,8 +86,8 @@ export function EditMarketDialog({
   mode: EditMarketMode
   // In `edit`, whether the close time is offered: a creator with a stake can't move it (0106).
   canMoveClose?: boolean
-  suggestions: string[]
-  popular: string[]
+  // Every visible category's name, most used first.
+  categories: string[]
   open: boolean
   onOpenChange: (open: boolean) => void
   finalFocus?: RefObject<HTMLElement | null>
@@ -184,12 +183,11 @@ export function EditMarketDialog({
               </>
             )}
             {hasCategory && (
-              <CategoryField
+              <CategoryPickerField
                 id={`${formId}-category`}
                 value={draftCategory}
                 onChange={setDraftCategory}
-                suggestions={suggestions}
-                popular={popular}
+                options={categories}
                 errorId={errorId}
                 invalid={state?.field === 'category'}
               />

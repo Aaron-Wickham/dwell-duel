@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
+import { chooseCategory } from './choose-category'
 
 const actions = vi.hoisted(() => ({
   createMarketAction: vi.fn(),
@@ -72,7 +73,9 @@ describe('text limits on form inputs', () => {
     render(<CreateMarketForm />)
     expect(screen.getByLabelText('Title')).toHaveAttribute('maxlength', '120')
     expect(screen.getByLabelText('Details (optional)')).toHaveAttribute('maxlength', '1000')
-    expect(screen.getByLabelText('Category')).toHaveAttribute('maxlength', '24')
+    await userEvent.click(screen.getByRole('button', { name: /^Category\b/ }))
+    expect(await screen.findByRole('searchbox', { name: 'Search categories' })).toHaveAttribute('maxlength', '24')
+    await userEvent.keyboard('{Escape}')
 
     await userEvent.click(screen.getByRole('radio', { name: 'Multiple choice' }))
     await userEvent.click(screen.getByRole('button', { name: 'Add outcome' }))
@@ -145,7 +148,7 @@ describe('too-long errors point at their field', () => {
     render(<CreateMarketForm />)
 
     await userEvent.type(screen.getByLabelText('Title'), 'Will it rain?')
-    await userEvent.type(screen.getByLabelText('Category'), 'Weather')
+    await chooseCategory(userEvent, 'Weather')
     await userEvent.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await userEvent.click(screen.getByRole('button', { name: 'Create market' }))
 
@@ -162,7 +165,7 @@ describe('too-long errors point at their field', () => {
     await userEvent.click(screen.getByRole('radio', { name: 'Multiple choice' }))
     await userEvent.click(screen.getByRole('button', { name: 'Add outcome' }))
     await userEvent.type(screen.getByLabelText('Title'), 'Who wins the trivia night?')
-    await userEvent.type(screen.getByLabelText('Category'), 'Weather')
+    await chooseCategory(userEvent, 'Weather')
     await userEvent.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await userEvent.click(screen.getByRole('button', { name: 'Create market' }))
 

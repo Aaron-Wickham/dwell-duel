@@ -2,6 +2,7 @@ import { test, expect, request as apiRequest } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
 import { addToSlip, openSlip } from './slip'
 import { serviceClient } from '../tests/db/helpers'
+import { chooseCategory } from './category'
 
 // #61: the place commits, but its answer never reaches the phone. Retrying must show success
 // without placing the bet a second time.
@@ -12,7 +13,7 @@ test('a place whose response is lost can be retried without placing twice', asyn
   test.setTimeout(60_000)
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill('Lost response?')
-  await page.getByLabel('Category', { exact: true }).fill('Testing')
+  await chooseCategory(page, 'Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)

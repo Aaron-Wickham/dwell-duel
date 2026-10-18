@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { serviceClient } from '../tests/db/helpers'
 import { localDateTimeString } from './local-date-time'
+import { chooseCategory } from './category'
 
 // #326: the creator reopens a closed market by giving it a new close time, after confirming, on a
 // phone and on a desktop.
@@ -14,7 +15,7 @@ for (const [name, viewport] of [
       const title = `Reopen check ${Date.now()}`
       await page.goto('/markets/new')
       await page.getByLabel('Title').fill(title)
-      await page.getByLabel('Category', { exact: true }).fill('Testing')
+      await chooseCategory(page, 'Testing')
       await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
       await page.getByRole('button', { name: 'Create market' }).click()
       await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+$/)

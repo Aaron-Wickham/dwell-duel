@@ -52,8 +52,7 @@ const EDIT_PROPS = {
   category: 'Weather',
   closeAt: '2099-12-06T18:30:00.000Z',
   mode: 'edit' as const,
-  suggestions: ['Weather'],
-  popular: ['Weather'],
+  categories: ['Weather'],
 }
 
 const GENESIS: TaskSummary = {

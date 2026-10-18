@@ -1,12 +1,13 @@
 import { test, expect } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
+import { chooseCategory } from './category'
 
 test('create an over/under, reword it, and resolve it from the actual number', async ({ page }) => {
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill('Minutes the sermon runs')
   await page.getByLabel('Over/Under').check()
   await page.getByLabel('Line').fill('42.5')
-  await page.getByLabel('Category', { exact: true }).fill('Testing')
+  await chooseCategory(page, 'Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
 

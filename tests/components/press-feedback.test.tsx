@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import type { ReactElement } from 'react'
 import Link from 'next/link'
-import { render } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 
 vi.mock('@/lib/markets/create-market', () => ({ createMarketAction: vi.fn() }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
@@ -13,9 +13,7 @@ vi.mock('@/lib/preferences/set-preference', () => ({ setHapticsAction: vi.fn(), 
 
 import { BackLink } from '@/components/ui/back-link'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { FilterChips } from '@/components/ui/filter-chips'
-import { MoreCategories } from '@/components/markets/more-categories'
-import { CategoryField } from '@/components/markets/category-field'
+import { CategoryFilter, CategoryPickerField } from '@/components/markets/category-picker'
 import { MarketSearch } from '@/components/markets/market-search'
 import { JumpToMe } from '@/components/leaderboard/jump-to-me'
 import { Wordmark } from '@/components/brand/wordmark'
@@ -199,24 +197,10 @@ const CASES: [string, () => ReactElement][] = [
     ),
   ],
   [
-    'FilterChips',
-    () => (
-      <FilterChips
-        scroll
-        label="Categories"
-        items={[
-          { href: '/markets', label: 'All', current: true },
-          { href: '/markets?category=weather', label: 'Weather', current: false },
-        ]}
-      >
-        <MoreCategories items={[{ href: '/markets?category=arts', label: 'Arts', current: false }]} />
-      </FilterChips>
-    ),
+    'CategoryFilter',
+    () => <CategoryFilter allHref="/markets" items={[{ href: '/markets?category=weather', name: 'Weather', openMarkets: 2, markets: 3, current: false }]} />,
   ],
-  [
-    'CategoryField',
-    () => <CategoryField id="c" value="" onChange={() => {}} suggestions={['Weather']} popular={['Weather', 'Arts']} errorId="e" />,
-  ],
+  ['CategoryPickerField', () => <CategoryPickerField id="c" value="" onChange={() => {}} options={['Weather', 'Arts']} errorId="e" />],
   ['MarketSearch', () => <MarketSearch q="" category={null} tabs={null} />],
   ['JumpToMe', () => <JumpToMe href="/leaderboard?at=me" focusId="member-1" />],
   ['MotionSettings', () => <MotionSettings haptics reduceMotion={false} />],
@@ -390,6 +374,19 @@ describe('press feedback', () => {
       expect(classes).toContain('pressable')
       expect(classes.some((c) => c.startsWith('hover:')), variant).toBe(true)
     }
+  })
+
+  // The pickers' rows are in a portal, open only after a tap.
+  it.each([
+    ['CategoryFilter', () => <CategoryFilter allHref="/markets" items={[{ href: '/markets?category=arts', name: 'Arts', openMarkets: 0, markets: 1, current: false }]} />],
+    ['CategoryPickerField', () => <CategoryPickerField id="c" value="" onChange={() => {}} options={['Weather']} errorId="e" />],
+  ] as [string, () => ReactElement][])('%s: every row in the open dialog presses', async (_name, ui) => {
+    render(ui())
+    fireEvent.click(screen.getByRole('button', { name: /^Category/ }))
+    const dialog = await screen.findByRole('dialog')
+    const targets = tapTargets(dialog)
+    expect(targets.length).toBeGreaterThan(1)
+    for (const el of targets) expect(el, el.outerHTML).toHaveClass('pressable')
   })
 
   it('presses the market page’s More actions button and its items', () => {

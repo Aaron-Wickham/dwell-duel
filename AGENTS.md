@@ -112,7 +112,8 @@ a line to `CHANGELOG.md` under the next release.
   only where it carries meaning (the tab bar and the menus' items, the
   back arrow, the close X, `Message`'s marks, the Needs you chevrons, a
   select's or disclosure's chevron, the plus on Add and Create market,
-  search, proof types, the Google G); other secondary buttons are text
+  search, the category picker's check and Create plus, proof types, the
+  Google G); other secondary buttons are text
   only.
 - **Home** (#388, #438). The deep-teal Balance card shows at every width
   (under the greeting on a phone). Your bets are `ListCard`s on the page,

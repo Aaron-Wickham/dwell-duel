@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import type { KeysetPage } from '@/lib/pagination/keyset'
 import type { MarketSummary } from '@/lib/markets/list-markets'
@@ -297,10 +297,12 @@ describe('MarketsPage: search', () => {
     await renderPage(EMPTY, EMPTY)
     const button = screen.getByRole('button', { name: 'Search markets' })
     expect(button).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.getByRole('search', { hidden: true })).toHaveClass('hidden', 'md:flex')
+    const panel = document.getElementById(button.getAttribute('aria-controls')!)!
+    expect(panel).toContainElement(screen.getByRole('search', { hidden: true }))
+    expect(panel).toHaveClass('hidden', 'md:contents')
     fireEvent.click(button)
     expect(button).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('search')).not.toHaveClass('hidden')
+    expect(panel).not.toHaveClass('hidden')
     expect(screen.queryByRole('button', { name: 'Search' })).toBeNull()
   })
 
@@ -353,39 +355,68 @@ describe('MarketsPage: categories (#327)', () => {
   })
   const TEN = ['Weather', 'Sports', 'Bible Study', 'Potluck', 'Trivia', 'Music', 'Games', 'Family', 'Arts', 'Other'].map((name, i) => cat(i, name))
 
-  it('shows All and the eight busiest as chips, with More… for the rest', async () => {
-    cachedCategoryCounts.mockResolvedValue(TEN)
+  const openPicker = async () => {
+    fireEvent.click(screen.getByRole('button', { name: /^Category: / }))
+    return screen.findByRole('dialog', { name: 'Categories' })
+  }
+  const rows = (dialog: HTMLElement) => within(dialog).queryAllByRole('link')
+
+  it('names the category on one button that lists every one, busiest first, with what each holds', async () => {
+    cachedCategoryCounts.mockResolvedValue([...TEN.slice(0, 9), cat(9, 'Other', 0), { ...cat(10, 'Empty', 0), markets: 0 }, { ...cat(11, 'Old', 0), markets: 1 }])
     await renderPage(EMPTY, EMPTY, { status: 'open' })
-    const chips = within(screen.getByRole('navigation', { name: 'Categories' })).getAllByRole('link')
-    expect(chips.map((c) => c.textContent)).toEqual(['All', 'Weather', 'Sports', 'Bible Study', 'Potluck', 'Trivia', 'Music', 'Games', 'Family'])
-    expect(chips[0]).toHaveAttribute('href', '/markets')
-    expect(chips[3]).toHaveAttribute('href', '/markets?category=bible-study')
-    expect(screen.getByRole('button', { name: 'More…' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Category: All' })).toBeInTheDocument()
+    const dialog = await openPicker()
+    const links = rows(dialog)
+    expect(links.map((c) => c.textContent)).toEqual([
+      'All',
+      ...['Weather', 'Sports', 'Bible Study', 'Potluck', 'Trivia', 'Music', 'Games', 'Family', 'Arts'].map((name, i) => `${name}${10 - i} open`),
+      'OtherNo markets',
+      'EmptyNo markets',
+      'Old1 market',
+    ])
+    expect(links[0]).toHaveAttribute('href', '/markets')
+    expect(links[0]).toHaveAttribute('aria-current', 'page')
+    expect(links[3]).toHaveAttribute('href', '/markets?category=bible-study')
+    expect(within(dialog).getByRole('heading', { name: 'Nothing open' })).toBeInTheDocument()
     expect(document.getElementById('markets-category-caption')).toBeNull()
   })
 
-  it('shows no category row while only one category holds markets (#389)', async () => {
-    cachedCategoryCounts.mockResolvedValue([cat(9, 'Other'), cat(1, 'Sports', 0)])
+  it('narrows the list as you type, any case, and says when nothing matches', async () => {
+    cachedCategoryCounts.mockResolvedValue(TEN)
     await renderPage(EMPTY, EMPTY)
-    expect(screen.queryByRole('navigation', { name: 'Categories' })).toBeNull()
+    const dialog = await openPicker()
+    const search = within(dialog).getByRole('searchbox', { name: 'Search categories' })
+    fireEvent.change(search, { target: { value: 'STUD' } })
+    expect(rows(dialog).map((c) => c.textContent)).toEqual(['Bible Study8 open'])
+    fireEvent.change(search, { target: { value: 'zebra' } })
+    expect(rows(dialog)).toHaveLength(0)
+    expect(within(dialog).getByText('No categories match “zebra”.')).toBeInTheDocument()
   })
 
-  it('puts the category chips behind the phone’s search button, so the filters stay one row (#389)', async () => {
+  it('closes the dialog when a category is chosen', async () => {
+    cachedCategoryCounts.mockResolvedValue(TEN)
+    await renderPage(EMPTY, EMPTY)
+    const dialog = await openPicker()
+    fireEvent.click(within(dialog).getByRole('link', { name: /^Sports/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  it('shows no category button while only one category holds markets (#389)', async () => {
+    cachedCategoryCounts.mockResolvedValue([cat(9, 'Other'), cat(1, 'Sports', 0)])
+    await renderPage(EMPTY, EMPTY)
+    expect(screen.queryByRole('button', { name: /^Category/ })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Search markets' })).toBeInTheDocument()
+  })
+
+  it('puts the category button beside the search behind the phone’s filter button, so the tabs stay one row (#389)', async () => {
     cachedCategoryCounts.mockResolvedValue(TEN.slice(0, 3))
     await renderPage(EMPTY, EMPTY)
     const button = screen.getByRole('button', { name: 'Search and filter markets' })
-    const chips = screen.getByRole('navigation', { name: 'Categories' }).parentElement!
-    expect(button.getAttribute('aria-controls')?.split(' ')).toContain(chips.id)
-    expect(chips).toHaveClass('hidden', 'md:block')
+    const panel = document.getElementById(button.getAttribute('aria-controls')!)!
+    expect(panel).toContainElement(screen.getByRole('button', { name: 'Category: All', hidden: true }))
+    expect(panel).toHaveClass('hidden', 'md:contents')
     fireEvent.click(button)
-    expect(chips).not.toHaveClass('hidden')
-    expect(screen.getByRole('search')).not.toHaveClass('hidden')
-  })
-
-  it('leaves out More… when every category fits', async () => {
-    cachedCategoryCounts.mockResolvedValue(TEN.slice(0, 3))
-    await renderPage(EMPTY, EMPTY)
-    expect(screen.queryByRole('button', { name: 'More…' })).toBeNull()
+    expect(panel).not.toHaveClass('hidden')
   })
 
   it('narrows every list to the chosen category and says so, keeping it in the tabs and the search', async () => {
@@ -395,13 +426,18 @@ describe('MarketsPage: categories (#327)', () => {
 
     const scope = { categoryId: 'cat-0' }
     expect(listOpenMarkets).toHaveBeenCalledWith({}, { top: null, bottom: null }, { upcoming: true, at: expect.any(String) }, scope)
-    expect(within(screen.getByRole('navigation', { name: 'Categories' })).getByRole('link', { name: 'Weather' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('button', { name: 'Category: Weather', hidden: true })).toBeInTheDocument()
     expect(document.getElementById('markets-category-caption')).toHaveTextContent('Showing open markets in Weather · Show all categories')
     expect(screen.getByRole('link', { name: 'Show all categories' })).toHaveAttribute('href', '/markets')
     expect(screen.getByRole('link', { name: 'Resolved' })).toHaveAttribute('href', '/markets?status=resolved&category=weather')
     // The list is already narrowed to Weather, so no card repeats it (#387).
     expect(screen.getByRole('article', { name: /Market 1/ })).not.toHaveTextContent('Category:')
     expect(document.querySelector('input[type="hidden"][name="category"]')).toHaveValue('weather')
+
+    const dialog = await openPicker()
+    expect(within(dialog).getByRole('link', { name: /^Weather/ })).toHaveAttribute('aria-current', 'page')
+    expect(within(dialog).getByRole('link', { name: 'All' })).not.toHaveAttribute('aria-current')
+    expect(within(dialog).getByRole('link', { name: /^Sports/ })).toHaveAttribute('href', '/markets?category=sports')
   })
 
   // #387: a category chip only while it tells markets apart.
@@ -419,14 +455,16 @@ describe('MarketsPage: categories (#327)', () => {
     expect(screen.getByRole('article', { name: /Market 1/ })).not.toHaveTextContent('Category:')
   })
 
-  it('adds a chosen category from beyond the busiest to the row', async () => {
+  it('keeps the tab and the search in every category’s link', async () => {
     cachedCategoryCounts.mockResolvedValue(TEN)
+    listMatchingMarkets.mockResolvedValue(EMPTY)
     await renderPage(EMPTY, EMPTY, { category: 'arts', status: 'awaiting' })
-    const chips = within(screen.getByRole('navigation', { name: 'Categories' })).getAllByRole('link')
-    expect(chips.at(-1)).toHaveTextContent('Arts')
-    expect(chips.at(-1)).toHaveAttribute('aria-current', 'page')
     expect(screen.getByText('No waiting markets in Arts.')).toBeInTheDocument()
     expect(document.getElementById('markets-category-caption')).toHaveTextContent('Showing waiting markets in Arts')
+    const dialog = await openPicker()
+    expect(within(dialog).getByRole('link', { name: /^Arts/ })).toHaveAttribute('aria-current', 'page')
+    expect(within(dialog).getByRole('link', { name: /^Weather/ })).toHaveAttribute('href', '/markets?status=awaiting&category=weather')
+    expect(within(dialog).getByRole('link', { name: 'All' })).toHaveAttribute('href', '/markets?status=awaiting')
   })
 
   it('treats an unknown category as All', async () => {

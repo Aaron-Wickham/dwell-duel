@@ -49,7 +49,6 @@ export default async function NewMarketPage(props: PageProps<'/markets/new'>) {
     getRole(supabase),
     cachedCategoryCounts(supabase),
   ])
-  const categories = { suggestions: counts.map((c) => c.name), popular: mostUsedCategories(counts).map((c) => c.name) }
 
   return (
     <Page transition="drill-down">
@@ -66,7 +65,7 @@ export default async function NewMarketPage(props: PageProps<'/markets/new'>) {
         key={typeof from === 'string' ? from : 'blank'}
         initial={initial}
         admin={atLeast(role, 'admin')}
-        categories={categories}
+        categories={mostUsedCategories(counts).map((c) => c.name)}
       />
     </Page>
   )

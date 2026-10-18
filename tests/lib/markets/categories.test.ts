@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
-  busiestCategories,
   categorySlug,
   listCategoryCounts,
   mostUsedCategories,
@@ -25,14 +24,9 @@ describe('categories', () => {
     expect(categorySlug('  Bible   Study ')).toBe('bible-study')
   })
 
-  it('takes the busiest in the order category_counts ranked them', () => {
-    const counts = Array.from({ length: 10 }, (_, i) => cat(`C${i}`, 10 - i, 10 - i))
-    expect(busiestCategories(counts).map((c) => c.name)).toEqual(['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'])
-  })
-
   it('ranks the most used by every market, then by name', () => {
     const counts = [cat('Weather', 3, 3), cat('bible study', 0, 9), cat('Arts', 0, 3), cat('Sports', 1, 1)]
-    expect(mostUsedCategories(counts, 3).map((c) => c.name)).toEqual(['bible study', 'Arts', 'Weather'])
+    expect(mostUsedCategories(counts).map((c) => c.name)).toEqual(['bible study', 'Arts', 'Weather', 'Sports'])
   })
 
   it('reads ?category= as a visible slug, any case, and drops anything else', () => {

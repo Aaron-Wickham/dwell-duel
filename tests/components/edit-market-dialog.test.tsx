@@ -10,6 +10,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 import { EditMarketDialog } from './edit-market-dialog-harness'
 import { localInputValue } from '@/lib/markets/weekly-close'
 import { formatDateTime } from '@/lib/markets/format-date'
+import { chooseCategory } from './choose-category'
 
 const EDIT_PROPS = {
   marketId: 'm1',
@@ -17,8 +18,7 @@ const EDIT_PROPS = {
   category: 'Weather',
   closeAt: '2099-12-06T18:30:00.000Z',
   mode: 'edit' as const,
-  suggestions: ['Weather'],
-  popular: ['Weather'],
+  categories: ['Weather'],
 }
 
 beforeEach(() => updateMarketAction.mockReset())
@@ -52,13 +52,17 @@ describe('EditMarketDialog', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
-  it('sends the category with the wording, the busiest category one tap away (#327)', async () => {
+  it('sends the category with the wording, picked from its own dialog over the edit (#327)', async () => {
     updateMarketAction.mockResolvedValue({ saved: true })
-    render(<EditMarketDialog {...EDIT_PROPS} description={null} popular={['Weather', 'Sports']} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
-    expect(await screen.findByLabelText('Category')).toHaveValue('Weather')
-    await userEvent.click(screen.getByRole('button', { name: 'Sports' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    const user = userEvent.setup()
+    render(<EditMarketDialog {...EDIT_PROPS} description={null} categories={['Weather', 'Sports']} />)
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(await screen.findByRole('button', { name: /^Category\b/ })).toHaveAccessibleName('Category Weather')
+    await chooseCategory(user, 'Sports')
+    // Choosing closes only the picker.
+    expect(screen.getByRole('dialog', { name: 'Edit market' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Category\b/ })).toHaveAccessibleName('Category Sports')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
     await waitFor(() => expect(updateMarketAction).toHaveBeenCalled())
     const sent = updateMarketAction.mock.calls[0][2] as FormData
     expect(sent.get('category')).toBe('Sports')
@@ -118,7 +122,7 @@ describe('EditMarketDialog', () => {
     updateMarketAction.mockResolvedValue({ saved: true })
     render(<EditMarketDialog {...EDIT_PROPS} description="Before noon" mode="category" />)
     await userEvent.click(screen.getByRole('button', { name: 'Edit category' }))
-    expect(await screen.findByLabelText('Category')).toHaveValue('Weather')
+    expect(await screen.findByRole('button', { name: /^Category\b/ })).toHaveAccessibleName('Category Weather')
     expect(screen.queryByLabelText('Title')).toBeNull()
     expect(screen.getByRole('dialog')).toHaveTextContent('This market has closed, so only its category can change.')
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))

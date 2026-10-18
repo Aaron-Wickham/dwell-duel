@@ -1,13 +1,14 @@
 import { test, expect } from '@playwright/test'
 import { serviceClient } from '../tests/db/helpers'
 import { localDateTimeString } from './local-date-time'
+import { chooseCategory } from './category'
 
 // The markets share of the Admin badge has a tab of its own (#243).
 test('Admin › Markets lists a closed market with no result and opens its resolve form', async ({ page }) => {
   const title = `Awaiting check ${Date.now()}`
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill(title)
-  await page.getByLabel('Category', { exact: true }).fill('Testing')
+  await chooseCategory(page, 'Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 2 * 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+$/)

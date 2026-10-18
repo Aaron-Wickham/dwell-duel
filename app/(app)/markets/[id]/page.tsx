@@ -171,8 +171,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
               mode: canEditWording ? 'edit' : canEditCategory ? 'category' : null,
               canMoveClose,
               canReopen,
-              suggestions: categoryCounts.map((c) => c.name),
-              popular: mostUsedCategories(categoryCounts).map((c) => c.name),
+              categories: mostUsedCategories(categoryCounts).map((c) => c.name),
             }}
             edits={edits}
           />

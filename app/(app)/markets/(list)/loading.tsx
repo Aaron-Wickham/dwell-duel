@@ -3,9 +3,9 @@ import { Skeleton, SkeletonCard, SkeletonPageHeader, SkeletonScreen } from '@/co
 
 // Mirrors the markets list: header with Create market, the status tabs (Open, Waiting and Resolved
 // measure 276px from md) with the search beside them (an icon on a phone, a field from md), then a
-// column of market cards, three across from lg. The category chips are left out: they show only
-// while more than one category holds markets, behind the search button on a phone, and from md
-// beside the tabs when they fit, else under them.
+// column of market cards, three across from lg. The category button is left out: it shows only
+// while more than one category holds markets, behind the search button on a phone and between the
+// tabs and the field from md, where it narrows the field but doesn't change the row's height.
 // It sits in the (list) group because a loading.tsx also wraps every segment below it, and market
 // detail's real 404 needs nothing above it that streams.
 export default function Loading() {

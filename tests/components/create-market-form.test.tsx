@@ -8,6 +8,7 @@ vi.mock('@/lib/markets/create-market', () => ({ createMarketAction }))
 
 import { CreateMarketForm } from '@/app/(app)/markets/new/create-market-form'
 import { nextWeeklyClose } from '@/lib/markets/weekly-close'
+import { chooseCategory } from './choose-category'
 
 beforeEach(() => {
   createMarketAction.mockReset()
@@ -122,7 +123,7 @@ describe('CreateMarketForm', () => {
     render(<CreateMarketForm />)
 
     await user.type(screen.getByLabelText('Title'), 'Will it rain?')
-    await user.type(screen.getByLabelText('Category'), 'Weather')
+    await chooseCategory(user, 'Weather')
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await user.click(screen.getByRole('button', { name: 'Create market' }))
 
@@ -145,7 +146,7 @@ describe('CreateMarketForm', () => {
     render(<CreateMarketForm />)
 
     await user.type(screen.getByLabelText('Title'), 'x')
-    await user.type(screen.getByLabelText('Category'), 'Weather')
+    await chooseCategory(user, 'Weather')
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await user.click(screen.getByRole('button', { name: 'Create market' }))
 
@@ -167,7 +168,7 @@ describe('CreateMarketForm', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Multiple choice' }))
     await user.type(screen.getByLabelText('Title'), 'Who wins the trivia night?')
-    await user.type(screen.getByLabelText('Category'), 'Weather')
+    await chooseCategory(user, 'Weather')
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await user.click(screen.getByRole('button', { name: 'Create market' }))
 
@@ -204,7 +205,7 @@ describe('CreateMarketForm over/under', () => {
     const user = userEvent.setup()
     render(<CreateMarketForm />)
     await user.type(screen.getByLabelText('Title'), 'Times Sean says bet')
-    await user.type(screen.getByLabelText('Category'), 'Weather')
+    await chooseCategory(user, 'Weather')
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await user.click(screen.getByRole('radio', { name: 'Over/Under' }))
     await user.type(screen.getByLabelText('Line'), '3.5')
@@ -225,7 +226,7 @@ describe('CreateMarketForm keeps what was filled in (#63)', () => {
 
     await user.type(screen.getByLabelText('Title'), 'Will it rain?')
     await user.type(screen.getByLabelText('Details (optional)'), 'At the picnic')
-    await user.type(screen.getByLabelText('Category'), 'Weather')
+    await chooseCategory(user, 'Weather')
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await user.click(screen.getByRole('button', { name: 'Create market' }))
     await screen.findByRole('alert')
@@ -245,7 +246,7 @@ describe('CreateMarketForm keeps what was filled in (#63)', () => {
     await user.type(screen.getByLabelText('Title'), 'Minutes the sermon runs')
     await user.click(screen.getByRole('radio', { name: 'Over/Under' }))
     await user.type(screen.getByLabelText('Line'), '42.5')
-    await user.type(screen.getByLabelText('Category'), 'Weather')
+    await chooseCategory(user, 'Weather')
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await user.click(screen.getByRole('button', { name: 'Create market' }))
     await screen.findByRole('alert')
@@ -257,47 +258,86 @@ describe('CreateMarketForm keeps what was filled in (#63)', () => {
 })
 
 describe('CreateMarketForm category (#327)', () => {
-  const categories = { suggestions: ['Weather', 'Sports', 'Bible Study'], popular: ['Weather', 'Bible Study'] }
+  const categories = ['Weather', 'Bible Study', 'Sports']
+  const field = () => screen.getByRole('button', { name: /^Category\b/ })
+  const sentCategory = (container: HTMLElement) => container.querySelector<HTMLInputElement>('input[name="category"]')!.value
 
-  it('suggests every category as you type and offers the most used as chips that fill the field', async () => {
+  it('opens every category from one button, most used first, and fills the field with the one chosen', async () => {
     const user = userEvent.setup()
     const { container } = render(<CreateMarketForm categories={categories} />)
-    const field = screen.getByLabelText('Category')
-    expect(field).toHaveAttribute('maxLength', '24')
-    expect(field).toBeRequired()
-    expect(field).toHaveAccessibleDescription('Pick one or type your own.')
-    const options = container.querySelectorAll(`datalist#${field.getAttribute('list')} option`)
-    expect([...options].map((o) => o.getAttribute('value'))).toEqual(['Weather', 'Sports', 'Bible Study'])
+    expect(field()).toHaveAccessibleName('Category Choose a category')
+    expect(field()).toHaveAccessibleDescription('Pick one, or type a new one.')
+    await user.click(field())
+    const dialog = await screen.findByRole('dialog', { name: 'Choose a category' })
+    expect(within(dialog).getByRole('searchbox', { name: 'Search categories' })).toHaveAttribute('maxLength', '24')
+    const rows = within(within(dialog).getByRole('list', { name: 'Categories' })).getAllByRole('button')
+    expect(rows.map((r) => r.textContent)).toEqual(['Weather', 'Bible Study', 'Sports'])
+    await user.click(rows[1])
 
-    const chips = within(screen.getByRole('group', { name: 'Most used categories' })).getAllByRole('button')
-    expect(chips.map((c) => c.textContent)).toEqual(['Weather', 'Bible Study'])
-    await user.click(chips[1])
-    expect(field).toHaveValue('Bible Study')
-    expect(chips[1]).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(field()).toHaveAccessibleName('Category Bible Study')
+    expect(sentCategory(container)).toBe('Bible Study')
     expect(within(screen.getByRole('region', { name: 'Preview' })).getByText('Bible Study')).toBeInTheDocument()
-
-    // The same category whatever the case and spacing, so its chip still shows as chosen.
-    await user.clear(field)
-    await user.type(field, 'bible  study')
-    expect(chips[1]).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('sends the category and points a refusal at it, keeping what was typed', async () => {
+  it('narrows the rows as you type, and offers to make a name nobody has used', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<CreateMarketForm categories={categories} />)
+    await user.click(field())
+    const dialog = await screen.findByRole('dialog', { name: 'Choose a category' })
+    const search = within(dialog).getByRole('searchbox', { name: 'Search categories' })
+
+    await user.type(search, 'STUDY')
+    const list = within(dialog).getByRole('list', { name: 'Categories' })
+    expect(within(list).getAllByRole('button').map((b) => b.textContent)).toEqual(['Create “STUDY”', 'Bible Study'])
+
+    // The same category whatever the case and spacing, so there's nothing new to make.
+    await user.clear(search)
+    await user.type(search, 'bible  study')
+    expect(within(dialog).queryByRole('button', { name: /^Create/ })).toBeNull()
+    expect(within(dialog).getByRole('button', { name: 'Bible Study' })).toBeInTheDocument()
+
+    await user.clear(search)
+    await user.type(search, 'Winter')
+    await user.click(within(dialog).getByRole('button', { name: 'Create “Winter”' }))
+    expect(sentCategory(container)).toBe('Winter')
+
+    // A new name stays in the list, chosen, the next time it opens.
+    await user.click(field())
+    const reopened = await screen.findByRole('dialog', { name: 'Choose a category' })
+    expect(within(reopened).getByRole('button', { name: 'Winter' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(reopened).getByRole('button', { name: 'Weather' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('asks for a category before sending, pointing at the button', async () => {
+    const user = userEvent.setup()
+    render(<CreateMarketForm categories={categories} />)
+    await user.type(screen.getByLabelText('Title'), 'Will it snow?')
+    await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
+    await user.click(screen.getByRole('button', { name: 'Create market' }))
+
+    expect(createMarketAction).not.toHaveBeenCalled()
+    expect(field()).toHaveFocus()
+    expect(field()).toHaveAttribute('aria-invalid', 'true')
+    expect(field()).toHaveAccessibleDescription('Pick one, or type a new one. Choose a category, or make a new one.')
+    await chooseCategory(user, 'Weather')
+    expect(screen.queryByText('Choose a category, or make a new one.')).toBeNull()
+  })
+
+  it('sends the category and points a refusal at it, keeping what was chosen', async () => {
     createMarketAction.mockResolvedValue({ formError: 'Category can be at most 24 characters.', field: 'category' })
     const user = userEvent.setup()
     render(<CreateMarketForm categories={categories} />)
     await user.type(screen.getByLabelText('Title'), 'Will it snow?')
-    await user.type(screen.getByLabelText('Category'), 'Winter')
+    await chooseCategory(user, 'Winter')
     await user.type(screen.getByLabelText('Close time'), '2030-01-01T10:00')
     await user.click(screen.getByRole('button', { name: 'Create market' }))
     await screen.findByRole('alert')
 
     expect((createMarketAction.mock.calls[0][1] as FormData).get('category')).toBe('Winter')
-    expect(screen.getByLabelText('Category')).toHaveValue('Winter')
-    expect(screen.getByLabelText('Category')).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getByLabelText('Category')).toHaveAccessibleDescription(
-      'Pick one or type your own. Category can be at most 24 characters.',
-    )
+    expect(field()).toHaveAccessibleName('Category Winter')
+    expect(field()).toHaveAttribute('aria-invalid', 'true')
+    expect(field()).toHaveAccessibleDescription('Pick one, or type a new one. Category can be at most 24 characters.')
   })
 })
 

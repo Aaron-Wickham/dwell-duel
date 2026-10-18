@@ -53,9 +53,10 @@ kinds:
 | **Over/Under** | A number with a line ending in .5 (for example "Minutes the sermon runs, 42.5"). The outcomes are Over 42.5 and Under 42.5, and it can never tie. |
 
 **Categories.** Every market has exactly one category, such as Sports or
-Bible Study. Pick one of the suggestions as you type, tap one of the six
-most used, or type a new one (up to 24 characters): a name that differs
-only in capitals or spacing from an existing category is that category.
+Bible Study. Tap the Category field to see every category, the most used
+first, and pick one, or search for it; when what you search for isn't one
+yet, **Create** makes it (up to 24 characters). A name that differs only in
+capitals or spacing from an existing category is that category.
 Markets made before categories, and any made from an older version of the
 app, are in **Other**. An admin can rename, merge or hide categories; a
 hidden or merged-away one drops out of the suggestions and chips, and
@@ -99,10 +100,12 @@ and when it closes ("Closes in 2h" within a day) with how many bets it
 has, and an open market's card has its picks right on it: tap Yes or No
 (Over or Under, or one of a multiple-choice market's two favourites) to add it to your
 slip, and tap it again to take it out. A resolved card says who won ("Yes won"). When more than one category
-holds markets, chips under the tabs narrow the list to one: **All**, then
-the eight busiest categories (the most markets still taking bets), then
-**More…** for the rest. The choices are in the page's address, so a reload
-or a shared link keeps them.
+holds markets, a **Category** button beside the tabs narrows the list to
+one (on a phone it's behind the filter button, with the search). It opens
+every category, with a search at the top: **All** first, then the busiest
+(the most markets still taking bets, each saying how many are open), then
+under **Nothing open** the ones with no market taking bets. The choices are
+in the page's address, so a reload or a shared link keeps them.
 
 A yes/no chart draws one line, Yes's chance (an over/under draws Over's):
 No is the same line read from the top. A multiple-choice chart draws a
@@ -683,7 +686,7 @@ or reach them through
 - **Finding a market:** on Markets, type in the search box to find a market
   whose title contains what you typed (not case-sensitive, up to 80
   characters). It looks in every status, whichever tab you're on, keeps
-  the category chip, and lists every match in one list, newest first,
+  the chosen category, and lists every match in one list, newest first,
   rather than in sections.
   Your own bets are under My bets.
 - **Leaderboard and profiles:** see [The leaderboard](#the-leaderboard)

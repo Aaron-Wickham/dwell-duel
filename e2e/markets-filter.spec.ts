@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { localDateTimeString } from './local-date-time'
+import { chooseCategory } from './category'
 
 test('the tabs split markets into open, waiting and resolved, Open by default, and the choice lives in the URL', async ({ page }) => {
   const title = `Filter check ${Date.now()}`
@@ -7,7 +8,7 @@ test('the tabs split markets into open, waiting and resolved, Open by default, a
   close.setSeconds(0, 0)
   await page.goto('/markets/new')
   await page.getByLabel('Title').fill(title)
-  await page.getByLabel('Category', { exact: true }).fill('Testing')
+  await chooseCategory(page, 'Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(close))
   await page.getByRole('button', { name: 'Create market' }).click()
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+$/)

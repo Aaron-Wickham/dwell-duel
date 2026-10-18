@@ -59,7 +59,7 @@ export interface MarketCardProps {
   preview?: boolean
   // An open market's picks to add from the card (#439): both of a two-outcome market's, or a
   // multiple-choice market's two favourites with how many more it has.
-  quickPicks?: { picks: QuickPick[]; more: number }
+  quickPicks?: QuickPick[]
 }
 
 // The outcome a card leads with: a two-outcome market's Yes (or Over), which its chart draws, or
@@ -210,7 +210,7 @@ export function MarketCard({
               resolvedLabel={status === 'resolved' ? resolvedOutcomeLabel : null}
             />
           )}
-          {quickPicks && quickPicks.picks.length > 0 && <QuickPicks picks={quickPicks.picks} more={quickPicks.more} />}
+          {quickPicks && quickPicks.length > 0 && <QuickPicks picks={quickPicks} />}
           {legend.length > 0 && !quickPicks && (
             <p className="text-sm">
               {legend.slice(0, LEGEND_OUTCOMES).map((outcome, index) => (

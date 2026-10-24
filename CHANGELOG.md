@@ -12,16 +12,21 @@ before v0.4.0 used other headings.)
 
 ## Unreleased
 
+## v1.1.0 — 2026-10-23
+
+Market cards now show every answer, each with its own Add button, so you can put any pick in your slip straight from the list, and categories are one searchable list on Markets and when you create or edit a market. Behind the scenes the app moves to Node 24 and up-to-date libraries, and Safari's skipped page animations no longer show up as errors. Nothing about how you play changes.
+
 ### Fixes
-- **No more Sentry reports for Safari's skipped page transitions.** Safari words a view transition it drops for a resized viewport differently from Chrome ("…invalid state. Viewport size changed"), so the filter missed it (DWELL-DUEL-G). The page still loaded; only the animation was dropped.
+- **No more Sentry reports for Safari's skipped page transitions.** Safari words a view transition it drops for a resized viewport differently from Chrome ("…invalid state. Viewport size changed"), so the filter missed it (DWELL-DUEL-G). The page still loaded; only the animation was dropped (#501).
 
 ### Polish
-- **Every answer on a market card, each with an Add button.** A multiple-choice card lists all its answers, likeliest first, instead of the top two and "+4 more"; each row ends in Add (In slip once it's there), and under a mouse the pick you point at rings and fills while the card stays still, so it's clear a tap adds it. Yes and No get a plus and the same ring.
-- **Every category in one list.** Markets' row of category chips and its More… dialog are now one "Category: All" button that opens every category with a search, busiest first, each saying how many markets are open, and the quiet ones under "Nothing open". Create and Edit market choose a category from the same list, with a row to create a new one, in place of the typed field and its six chips.
+- **Every answer on a market card, each with an Add button.** A multiple-choice card lists all its answers, likeliest first, instead of the top two and "+4 more"; each row ends in Add (In slip once it's there), and under a mouse the pick you point at rings and fills while the card stays still, so it's clear a tap adds it. Yes and No get a plus and the same ring (#497).
+- **Every category in one list.** Markets' row of category chips and its More… dialog are now one "Category: All" button that opens every category with a search, busiest first, each saying how many markets are open, and the quiet ones under "Nothing open". Create and Edit market choose a category from the same list, with a row to create a new one, in place of the typed field and its six chips (#496).
 
 ### Under the hood
-- **Node 24.** The app, CI and Vercel move from Node 22 to Node 24, the current long-term-support line: `engines.node`, `.nvmrc` and `@types/node` move together, so Vercel builds on the version CI tests.
-- **The Supabase advisors' standing findings are written down.** OPERATIONS.md lists each one we keep and why, and what Query Performance's top entries are, so a new finding stands out.
+- **Node 24.** The app, CI and Vercel move from Node 22 to Node 24, the current long-term-support line: `engines.node`, `.nvmrc` and `@types/node` move together, so Vercel builds on the version CI tests (#502).
+- **The Supabase advisors' standing findings are written down.** OPERATIONS.md lists each one we keep and why, and what Query Performance's top entries are, so a new finding stands out (#501).
+- **Dependency updates** from Dependabot: motion 14, Next 16.4.2, React 19.3.1, Sentry 11.8, supabase-js 2.118, Base UI 1.9, lucide-react 1.60, Vitest 5.0.5, and the setup-node, upload-artifact and Claude Code actions (#436, #483, #434, #503, #504).
 
 ## v1.0.0 — 2026-10-17
 

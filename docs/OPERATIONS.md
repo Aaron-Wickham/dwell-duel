@@ -55,6 +55,29 @@ check ([Free-tier limits](#free-tier-limits)).
 deployments and logs through the owner's connectors, which is the quickest
 first look when an alarm fires.
 
+### Supabase advisors and Query Performance
+
+The advisors always show findings we keep on purpose (checked 2026-10-23).
+Anything outside this list is new and worth a look.
+
+| Finding | Why it stays |
+|---|---|
+| Function Search Path Mutable: `market_sparklines`, `i_bet_on`, `my_activity_events` | A `set search_path` stops Postgres inlining a SQL function into the caller's plan, and these three rely on it for their indexes (0094, and ARCHITECTURE's note on migration 0069). Every name inside is schema-qualified and they run with the caller's rights |
+| Signed-In Users Can Execute SECURITY DEFINER Function | They are the app's RPCs. Each checks its caller (`is_invited`, `has_role`, `auth.uid()`), and `tests/db/schema-privileges.test.ts` keeps the reviewed list, so adding one fails CI until it's listed. The pool-era `place_bet`/`place_parlay` refuse every market and stay for the DB tests' history fixtures |
+| RLS Enabled No Policy: `app_flags`, `cron_leases`, `idempotency_keys`, `live_ping_queue`, `live_pings`, `push_attempts`, `push_log`, `write_rate_counters` | Server-only tables: no policy means members can't read or write them, and the service role and definer functions can |
+| Leaked Password Protection Disabled | The app signs in with Google only (0112) and never calls a password sign-in, so there are no passwords to check |
+| Unused Index | Most are foreign-key indexes the advisor asked for (0113). With tables this small the planner seq-scans, so "unused" says nothing yet; revisit once tables hold thousands of rows |
+
+Query Performance, read the same day: the top entry by far is
+`realtime.list_changes`, Realtime polling the WAL for Postgres Changes
+subscriptions, and most of the rest are Supabase's own work: PostgREST
+reloading its schema cache (the catalog queries and `pg_timezone_names`),
+most likely set off by Realtime's own partition DDL on `realtime.messages_*`, which re-runs for each day's partition well over a hundred times.
+Neither is ours to tune. Every query, `my_role()` included, shows
+occasional 0.3 to 1.8 s maximums, which is the free tier's shared CPU, not
+the SQL: compare the mean times. Ours were all under 45 ms on average, the
+every-minute `ping_closing_alerts()` about 11 ms.
+
 ## Deploys
 
 Every merge to `main` runs **Deploy Production**

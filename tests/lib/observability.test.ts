@@ -65,6 +65,14 @@ describe('beforeSend', () => {
     expect(send({ exception: { values: [{ type: 'AbortError', value: 'Transition was skipped' }] } })).toBeNull()
   })
 
+  it("drops Safari's skip, which names its reason after the message (DWELL-DUEL-G)", async () => {
+    const send = await beforeSend()
+    const safari = 'Transition was aborted because of invalid state. Viewport size changed'
+    expect(send({ exception: { values: [{ type: 'InvalidStateError', value: safari }] } })).toBeNull()
+    expect(send({ exception: { values: [{ type: 'Error', value: `InvalidStateError: ${safari}` }] } })).toBeNull()
+    expect(send({ exception: { values: [{ type: 'InvalidStateError', value: 'Transition was aborted because of invalid stateful thing' }] } })).not.toBeNull()
+  })
+
   it('drops the bare "Script error." a browser reports for a cross-origin script (#363)', async () => {
     const send = await beforeSend()
     expect(send({ exception: { values: [{ type: 'Error', value: 'Script error.' }] } })).toBeNull()

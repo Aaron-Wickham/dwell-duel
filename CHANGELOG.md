@@ -15,12 +15,12 @@ before v0.4.0 used other headings.)
 ### Fixes
 - **No more Sentry reports for Safari's skipped page transitions.** Safari words a view transition it drops for a resized viewport differently from Chrome ("…invalid state. Viewport size changed"), so the filter missed it (DWELL-DUEL-G). The page still loaded; only the animation was dropped.
 
-### Under the hood
-- **The Supabase advisors' standing findings are written down.** OPERATIONS.md lists each one we keep and why, and what Query Performance's top entries are, so a new finding stands out.
-
 ### Polish
 - **Every answer on a market card, each with an Add button.** A multiple-choice card lists all its answers, likeliest first, instead of the top two and "+4 more"; each row ends in Add (In slip once it's there), and under a mouse the pick you point at rings and fills while the card stays still, so it's clear a tap adds it. Yes and No get a plus and the same ring.
 - **Every category in one list.** Markets' row of category chips and its More… dialog are now one "Category: All" button that opens every category with a search, busiest first, each saying how many markets are open, and the quiet ones under "Nothing open". Create and Edit market choose a category from the same list, with a row to create a new one, in place of the typed field and its six chips.
+
+### Under the hood
+- **The Supabase advisors' standing findings are written down.** OPERATIONS.md lists each one we keep and why, and what Query Performance's top entries are, so a new finding stands out.
 
 ## v1.0.0 — 2026-10-17
 

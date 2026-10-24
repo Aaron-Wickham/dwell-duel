@@ -98,7 +98,7 @@ model, the key flows and the migrations.
 
 ## Development
 
-Requires Node 22 and Docker (for local Supabase).
+Requires Node 24 and Docker (for local Supabase).
 
 ```bash
 npm install       # install dependencies

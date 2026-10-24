@@ -20,6 +20,7 @@ before v0.4.0 used other headings.)
 - **Every category in one list.** Markets' row of category chips and its More… dialog are now one "Category: All" button that opens every category with a search, busiest first, each saying how many markets are open, and the quiet ones under "Nothing open". Create and Edit market choose a category from the same list, with a row to create a new one, in place of the typed field and its six chips.
 
 ### Under the hood
+- **Node 24.** The app, CI and Vercel move from Node 22 to Node 24, the current long-term-support line: `engines.node`, `.nvmrc` and `@types/node` move together, so Vercel builds on the version CI tests.
 - **The Supabase advisors' standing findings are written down.** OPERATIONS.md lists each one we keep and why, and what Query Performance's top entries are, so a new finding stands out.
 
 ## v1.0.0 — 2026-10-17

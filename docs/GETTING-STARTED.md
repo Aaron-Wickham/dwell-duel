@@ -46,7 +46,7 @@ words the code and the docs use.
 
 | Tool | Version | Install |
 |---|---|---|
-| **Node** | 22 (see `.nvmrc`; `engines.node` pins Vercel to it) | `brew install nvm` then `nvm install 22`, or [nodejs.org](https://nodejs.org) |
+| **Node** | 24 (see `.nvmrc`; `engines.node` pins Vercel to it) | `brew install nvm` then `nvm install 24`, or [nodejs.org](https://nodejs.org) |
 | **Docker Desktop** | any current | [docker.com](https://www.docker.com/products/docker-desktop/). Local Supabase runs in Docker; it must be **running** before `npm run db:start`. |
 | **Supabase CLI** | 2.117.0 or newer (CI and deploys pin 2.117.0) | `brew install supabase/tap/supabase` |
 | **GitHub CLI** (optional, handy) | any | `brew install gh` then `gh auth login` |
@@ -65,7 +65,7 @@ cd dwell-duel
 npm install
 ```
 
-If you use nvm, `nvm use` picks up Node 22 from `.nvmrc`.
+If you use nvm, `nvm use` picks up Node 24 from `.nvmrc`.
 
 ## 3. Start the local database
 

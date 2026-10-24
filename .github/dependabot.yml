@@ -20,7 +20,7 @@ updates:
       minor-and-patch:
         update-types: ['minor', 'patch']
     ignore:
-      # The app runs on Node 22 (.nvmrc, CI and Vercel). Newer Node types would let code compile
+      # The app runs on Node 24 (.nvmrc, CI and Vercel). Newer Node types would let code compile
       # against APIs that don't exist at runtime; move this with .nvmrc.
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']

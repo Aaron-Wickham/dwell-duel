@@ -6,7 +6,8 @@ export const SENTRY_DSN = process.env.NEXT_PUBLIC_SENTRY_DSN
 // keyboard opening) or the tab hides. React's <ViewTransition> catches the rejected `ready`, but
 // react-dom 19.3 also chains `finished.finally()` with no catch, and that is where the skip escapes
 // as an unhandled rejection. The navigation itself completes; only the animation is dropped. These are
-// the messages React itself treats as benign, plus Chrome's for a skipped transition.
+// the messages React itself treats as benign, plus Chrome's for a skipped transition. Safari adds the
+// reason after a full stop ("…invalid state. Viewport size changed"), so a message may run on past one.
 const SKIPPED_VIEW_TRANSITION = new Set([
   'InvalidStateError: View transition was skipped because document visibility state is hidden.',
   'InvalidStateError: Skipping view transition because document visibility state has become hidden.',
@@ -21,8 +22,14 @@ type FilterableEvent = { message?: string; exception?: { values?: { type?: strin
 // already reads "Name: message".
 export function isSkippedViewTransition(event: FilterableEvent): boolean {
   return (event.exception?.values ?? []).some(
-    ({ type, value }) => SKIPPED_VIEW_TRANSITION.has(`${type}: ${value}`) || (value !== undefined && SKIPPED_VIEW_TRANSITION.has(value)),
+    ({ type, value }) => isSkipMessage(`${type}: ${value}`) || (value !== undefined && isSkipMessage(value)),
   )
+}
+
+function isSkipMessage(message: string): boolean {
+  if (SKIPPED_VIEW_TRANSITION.has(message)) return true
+  const stop = message.indexOf('. ')
+  return stop !== -1 && SKIPPED_VIEW_TRANSITION.has(message.slice(0, stop))
 }
 
 // What the browser reports in place of an error thrown by a cross-origin script (Google's sign-in script, until #366 removed it):

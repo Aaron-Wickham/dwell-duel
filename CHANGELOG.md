@@ -16,6 +16,9 @@ before v0.4.0 used other headings.)
 - **Every answer on a market card, each with an Add button.** A multiple-choice card lists all its answers, likeliest first, instead of the top two and "+4 more"; each row ends in Add (In slip once it's there), and under a mouse the pick you point at rings and fills while the card stays still, so it's clear a tap adds it. Yes and No get a plus and the same ring.
 - **Every category in one list.** Markets' row of category chips and its More… dialog are now one "Category: All" button that opens every category with a search, busiest first, each saying how many markets are open, and the quiet ones under "Nothing open". Create and Edit market choose a category from the same list, with a row to create a new one, in place of the typed field and its six chips.
 
+### Under the hood
+- **Node 24.** The app, CI and Vercel move from Node 22 to Node 24, the current long-term-support line: `engines.node`, `.nvmrc` and `@types/node` move together, so Vercel builds on the version CI tests.
+
 ## v1.0.0 — 2026-10-17
 
 DwellDuel is out of beta. Nothing about how you play changes: this release takes the Beta label off the sign-in page and the terms, and brings every guide up to date with the app as it is after v0.11.0's refresh. Versions from here are plain v1.x.

@@ -64,7 +64,8 @@ typing its name for a market brings it back.
 
 While a market is open, its creator (or an admin) can edit the
 description and the category, and can reword the title until someone else
-has bet on it, solo or as a parlay pick. An admin can change a market's
+has bet on it, solo or as a parlay pick (after that, Edit shows the title
+but doesn't let it change). An admin can change a market's
 category at any time, even after it closes. Everyone can see every past
 version under Edit history, in the market's More actions menu (the ⋯
 button at its top right, which also holds Share, Duplicate, Edit and
@@ -200,8 +201,10 @@ other stakes already in the slip, and a chip for more than that is
 greyed out. Each pick shows its chance, and a Solo pick what its stake
 wins. The top
 of the slip shows your balance (and how many DC short the slip is, when
-it is), and when Place can't be tapped, a line under it says why. At 0 DC
-it points you to Tasks; your picks stay in the slip. Adding or removing a
+it is). Place stays at the bottom of the slip while you scroll, and when
+it can't be tapped, a line under it says why. At 0 DC it points you to
+Tasks; your picks stay in the slip. If a pick is refused when you place,
+a line above Place says how many and the slip scrolls to the first one. Adding or removing a
 pick doesn't pop up a message: the outcome's row and the slip button's
 count change instead. Once the slip holds two or more picks, each is
 either:

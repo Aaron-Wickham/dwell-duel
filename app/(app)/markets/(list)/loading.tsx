@@ -29,6 +29,11 @@ export default function Loading() {
               <Skeleton className="h-4 w-12" />
             </div>
             <Skeleton className="h-16" />
+            {/* An open two-outcome card's quick picks, the usual first tab's usual card (#439). */}
+            <div className="flex gap-2">
+              <Skeleton className="h-11 flex-1 rounded-control" />
+              <Skeleton className="h-11 flex-1 rounded-control" />
+            </div>
             <Skeleton className="h-4 w-44" />
           </SkeletonCard>
         ))}

@@ -181,7 +181,7 @@ describe('placeSlipAction', () => {
     )
     expect(result).toEqual({
       pickErrors: { [A]: 'Enter a whole number of DC greater than 0.', [B]: 'Enter a whole number of DC greater than 0.' },
-      parlayError: 'A parlay needs at least 2 picks. Add another, or switch this one to Solo.',
+      parlayError: 'A parlay needs at least 2 picks. Switch another pick to Parlay, or this one back to Solo.',
     })
     expect(rpc).not.toHaveBeenCalled()
   })
@@ -207,7 +207,7 @@ describe('placeSlipAction', () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'This operation was aborted' } })
 
     const result = await placeSlipAction(undefined, form([['pick', `${A}:solo`], ['stake:' + A, '3']]))
-    expect(result).toEqual({ formError: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.' })
+    expect(result).toEqual({ formError: 'We couldn’t place your slip, and nothing was placed. Try again.' })
     expect(log).toHaveBeenCalled()
   })
 
@@ -220,7 +220,7 @@ describe('placeSlipAction', () => {
   })
 
   it('refuses an empty slip and a signed-out member', async () => {
-    expect(await placeSlipAction(undefined, form([]))).toEqual({ formError: 'Your slip is empty.' })
+    expect(await placeSlipAction(undefined, form([]))).toEqual({ formError: 'Your slip is empty. Add a pick from a market first.' })
     userHolder.current = null
     expect(await placeSlipAction(undefined, form([['pick', `${A}:solo`]]))).toEqual({ formError: 'You’re signed out. Sign in again.' })
   })

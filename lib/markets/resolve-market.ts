@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { revalidateGroupReads } from '@/lib/cache/group-reads'
 import { requireUser } from '@/lib/auth/require-user'
 import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
-import { GENERIC_ERROR, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
+import { GENERIC_ERROR, SIGNED_OUT_ERROR, friendlyError, type KnownError } from '@/lib/errors/friendly-error'
 import { isDeliberateRaise } from '@/lib/errors/deliberate-raise'
 import { reportError } from '@/lib/observability/report'
 import { clawbackMessage, parseClawbackError } from '@/lib/markets/clawback'
@@ -18,6 +18,33 @@ export type ActionState = { formError?: string; field?: 'outcome' | 'note' } | u
 const SAME_OUTCOME = 'that outcome is already the result'
 const ALREADY_RESOLVED = 'only an admin can change an already-resolved market'
 const SAME_OUTCOME_MESSAGE = 'That outcome is already the result, so there’s nothing to override.'
+
+type ResolveField = NonNullable<NonNullable<ActionState>['field']>
+
+// The raises of resolve_market_core (0102), resolve_market and its proof check (0042) and
+// resolve_over_under (0043), each saying what to do next.
+const RESOLVE_ERRORS: readonly KnownError<ResolveField>[] = [
+  { match: 'market not found', formError: 'This market is gone. Go back to Markets.' },
+  { match: 'market was voided', formError: 'This market was called off, so it can’t be resolved.' },
+  { match: ALREADY_RESOLVED, formError: 'This market already has a result. Only an admin can change it.' },
+  {
+    match: 'only the market creator, a reviewer or an admin can resolve this market',
+    formError: 'Only the market’s creator, a reviewer or an admin can resolve this market.',
+  },
+  { match: 'market has not closed yet', formError: 'This market hasn’t closed yet. Resolve it once betting closes.' },
+  {
+    match: 'you have a stake in this market, so someone else resolves it',
+    formError: 'You have a stake in this market, so a reviewer or an admin resolves it.',
+  },
+  { match: 'outcome does not belong to this market', formError: 'That outcome isn’t one of this market’s. Refresh and choose again.', field: 'outcome' },
+  { match: 'say why this outcome won', formError: 'Say why this outcome won.', field: 'note' },
+  { match: 'enter the actual result', formError: 'Enter the actual result.', field: 'outcome' },
+  { match: "the result can't equal the line", formError: 'The result can’t equal the line. Check the number you entered.', field: 'outcome' },
+  { match: 'add at most 10 attachments', formError: 'Add at most 10 attachments.' },
+  { match: 'links must start with http:// or https://', formError: 'Links must start with http:// or https://.' },
+  { match: "that file can't be attached here", formError: 'That file can’t be attached here. Remove it and attach another.' },
+  { match: "an attachment didn't finish uploading; try again", formError: 'An attachment didn’t finish uploading. Try again.' },
+]
 
 export async function resolveMarketAction(
   marketId: string,
@@ -77,7 +104,7 @@ export async function resolveMarketAction(
       reportError('resolve failed', error)
       return { formError: GENERIC_ERROR, field: 'outcome' }
     }
-    return { formError: error.message, field: 'outcome' }
+    return { field: 'outcome', ...friendlyError(error, RESOLVE_ERRORS, 'resolve refused with unmapped text') }
   }
 
   afterAction(() => notifyMarketResult(marketId))

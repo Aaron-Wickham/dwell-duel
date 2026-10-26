@@ -42,6 +42,25 @@ describe('EditMarketDialog', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
+  // MKT-5: update_market refuses a new title once others have bet, which would lose the rest.
+  it('shows a title others have bet on read-only, and saves the description with it unchanged', async () => {
+    updateMarketAction.mockResolvedValue({ saved: true })
+    render(<EditMarketDialog {...EDIT_PROPS} description="Before noon" titleLocked />)
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    const title = await screen.findByLabelText('Title')
+    expect(title).toHaveAttribute('readonly')
+    expect(title).toHaveAccessibleDescription('Others have bet on this market, so its title can’t change.')
+
+    const description = screen.getByLabelText('Description')
+    await userEvent.clear(description)
+    await userEvent.type(description, 'Before noon, Eastern')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() => expect(updateMarketAction).toHaveBeenCalled())
+    const sent = updateMarketAction.mock.calls[0][2] as FormData
+    expect(sent.getAll('title')).toEqual(['Will it snow?'])
+    expect(sent.get('description')).toBe('Before noon, Eastern')
+  })
+
   it('keeps the dialog open with the error tied to its field', async () => {
     updateMarketAction.mockResolvedValue({ formError: 'Title can be at most 120 characters.', field: 'title' })
     render(<EditMarketDialog {...EDIT_PROPS} description="Before noon" />)

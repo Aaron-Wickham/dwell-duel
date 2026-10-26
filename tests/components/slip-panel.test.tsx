@@ -207,6 +207,10 @@ describe('SlipPanel', () => {
       await waitFor(() => expect(stake).toHaveAccessibleDescription(/now pays 17\u00A0DC/))
       expect(stake).toHaveValue(10)
       expect(success).not.toHaveBeenCalled()
+      // MKT-3: the pinned Place block says so too, in case the pick has scrolled away.
+      expect(screen.getByRole('button', { name: 'Place bet · 10\u00A0DC' })).toHaveAccessibleDescription(
+        '1 pick’s price moved. Check it above, then tap Place again.',
+      )
     })
 
     it('drops a moved-price message once the stake it named changes', async () => {
@@ -474,7 +478,7 @@ describe('SlipPanel', () => {
       renderPanel(viewOf(pick(1), pick(2)), 0)
       expect(screen.getByText(line('Balance 0\u00A0DC'))).toBeInTheDocument()
       const place = screen.getByRole('button', { name: 'Place 2 bets' })
-      expect(place).toHaveAccessibleDescription('You have 0 DC. Earn more with Tasks, then come back to this slip.')
+      expect(place).toHaveAccessibleDescription('You have 0\u00A0DC. Earn more with Tasks, then come back to this slip.')
       expect(screen.getByRole('link', { name: 'Tasks' })).toHaveAttribute('href', '/tasks')
       await userEvent.type(stakeOf(1), '20')
       expect(screen.getByText('20 DC short')).toBeInTheDocument()

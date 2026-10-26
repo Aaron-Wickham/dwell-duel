@@ -13,6 +13,15 @@ before v0.4.0 used other headings.)
 ## Unreleased
 
 ### Fixes
+- **Place stays in view in the slip.** The Place button, what's holding it back and "Bets are final" are pinned to the bottom of the slip while you scroll and type stakes. When a pick is refused, a line above Place says how many ("1 pick’s price moved. Check it above, then tap Place again.") and the slip scrolls to it.
+- **Resolve errors in plain words.** A refused resolve now says what happened and what to do ("This market hasn’t closed yet. Resolve it once betting closes.") instead of database text; anything unexpected shows the general error.
+- **Editing a market others have bet on.** Its title now shows read-only with the reason, so a description or category change saves instead of being refused along with the title.
+- **Create market errors sit by their field,** and focus moves to it; an over/under's line is checked for the .5 as soon as you leave the field.
+- **Over/Under buttons keep their chance.** On a market card the percentage on an Over or Under button no longer gets cut off; only a long label does.
+- **Adding a pick from a card no longer greys the button out** while the slip saves: it shows In slip at once.
+- **Quick picks make sense to VoiceOver.** Each button is named for its outcome, chance and market, and the same whether or not it's in the slip, which it reports as pressed.
+- **A bettor's name on a market is easier to tap,** and their amount stays on one line.
+- **The markets list's loading screen** holds room for the quick picks, so cards don't grow when the page lands.
 - **Menus show where the keyboard is.** In the avatar's menu and a market's More actions, the item you reach with the arrow keys now takes a tint and a focus ring, instead of a grey tint you could barely see.
 - **Placeholders you can read.** The hint text inside search boxes and form fields (Search markets, the create-market form) is now the secondary text colour instead of a faded grey.
 - **Amounts stay on one line.** "12,345 DC" no longer breaks with "DC" on the next line on bet cards, parlays, Home and a market's bets.
@@ -21,6 +30,12 @@ before v0.4.0 used other headings.)
 - **A way back from a missing page.** "Page not found" on a market, member or parlay now also offers Back to Markets (or Leaderboard, My bets), and the top-level error and not-found pages have a main landmark for screen readers.
 
 ### Polish
+- **No and Under are no longer red.** Both sides of a yes/no or over/under market take the same neutral chip and button, on market cards, My bets, Home and Your position; red is kept for a lost bet. Only a result is coloured.
+- **On a phone, a market's picks come first.** While a market takes bets, its leading outcomes and their Add buttons sit right under the title, and the chart under them is shorter (160px), so you can pick without scrolling. Desktop is unchanged.
+- **Busy buttons say what they're doing:** "Placing…" in the slip, "Creating…" on Create market, "Resolving…" and "Calling off…" in their confirm dialogs.
+- **The slip's balance reads "Balance 120 DC",** and a pick that's gone is marked "No longer available" in grey rather than the lost-bet red.
+- **Empty Waiting and Resolved tabs** offer "See open markets" instead of Create market.
+- **Clearer words** in the slip ("Your slip is empty. Add a pick from a market first.", the parlay pick limits, and a failed place now says nothing was placed), the chart ("Chance of Yes"), Your position ("Waiting for a result."), Duplicate and the category picker; the empty-chart note on a card is the 13px chip size.
 - **Cards stand out from the page in light mode.** The light page background is a step darker, so cards on Home and My bets read as cards on a sunny phone screen; hover tints moved with it.
 - **Waiting counts are gold, not red.** The avatar's dot, the Admin tabs' badges and the menu's "3 waiting" use the same gold as Needs you, since something waiting isn't an error.
 - **Menus, dialogs and toasts have an edge in dark mode:** their border brightens and the shadow deepens, so they no longer melt into the card under them.

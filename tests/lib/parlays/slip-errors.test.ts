@@ -45,7 +45,7 @@ describe('parseSlipError', () => {
   it('never passes unknown database text to a member, and hands it to the caller to log', () => {
     const logged: string[] = []
     expect(parseSlipError(`pick ${A}: column "x" does not exist`, (raw) => logged.push(raw))).toEqual({
-      pickErrors: { [A]: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.' },
+      pickErrors: { [A]: 'We couldn’t place your slip, and nothing was placed. Try again.' },
     })
     expect(logged).toEqual(['column "x" does not exist'])
   })

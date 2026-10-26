@@ -123,7 +123,8 @@ export function SlipDrawer({
               </div>
               <Drawer.Content
                 onClick={handleContentClick}
-                className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(24px+var(--safe-bottom))] md:px-6"
+                // SlipPanel scrolls its own body and pins the Place block under it.
+                className="flex min-h-0 flex-1 flex-col"
               >
                 <SlipPanel />
               </Drawer.Content>

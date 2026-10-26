@@ -28,10 +28,11 @@ const TICK_FRACTIONS = [0, 0.25, 0.5, 0.75, 1]
 const GRID = [100, 75, 50, 25, 0]
 // The y ticks sit inside the plot's left edge, clear of the end labels in the right gutter.
 const Y_TICKS = [75, 50, 25]
-// Plot heights per breakpoint, from the phone and desktop artboards, and the least distance
-// between two end labels' centres: a label's height plus 4px (#391). A label is the name line
-// (13px at 1.05) over its figure (24px, 28px from md, at 1.25): 44px on a phone, 49px from md.
-const PHONE = { height: 220, gap: 48 }
+// Plot heights per breakpoint, and the least distance between two end labels' centres: a label's
+// height plus 4px (#391). A label is the name line (13px at 1.05) over its figure (24px, 28px from
+// md, at 1.25): 44px on a phone, 49px from md. The phone plot is 160px, so the pick block above it
+// and the outcomes below stay near the fold (D-4).
+const PHONE = { height: 160, gap: 48 }
 const DESKTOP = { height: 300, gap: 53 }
 // When the full labels can't all fit, each folds to its one name line with the figure beside it.
 const COMPACT_GAP = 18
@@ -164,7 +165,7 @@ export function ProbabilityChart({
   const plot = chartWindow(rangeSeries?.[range] ?? points, range, now, closedMs, buckets)
   if (!last || !plot) {
     return (
-      <div className="relative h-[220px] md:h-[300px]">
+      <div className="relative h-[160px] md:h-[300px]">
         <div className="absolute inset-y-0 right-[76px] left-0 md:right-[128px]">
           {gridLines}
           <p className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm font-bold text-ink2">
@@ -313,7 +314,7 @@ export function ProbabilityChart({
           </SegmentedControl>
         )}
       </div>
-      <div className="relative h-[220px] md:h-[300px]">
+      <div className="relative h-[160px] md:h-[300px]">
         <div
           ref={plotRef}
           role="slider"

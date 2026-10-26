@@ -195,6 +195,7 @@ export function ResolveForm({
           </>
         }
         confirmLabel={override ? `Change to ${winner}` : `Resolve as ${winner}`}
+        pendingLabel="Resolving…"
       />
       {state?.formError && (
         <Message tone="error" id="resolve-error">

@@ -54,7 +54,10 @@ a line to `CHANGELOG.md` under the next release.
   gold, `info` blue for a result or something of yours, `done` and `void`
   sunk), never `primary`. Category chips and avatar initials take a
   `--tint1`…`--tint6` pair from `tintFor` (`lib/ui/tint.ts`), never a
-  status colour (#445).
+  status colour (#445). An outcome is never coloured by its side
+  (D-3): `PickChip` and quick picks give Yes and No, Over and Under the
+  same neutral `--sunk`, and the word says which; only a result is win or
+  loss.
 - **Every page exports a title** (`metadata` or `generateMetadata`, #460); the root
   layout's template adds " · DwellDuel", and a test fails on a page without one.
 - **Every signed-in page is a `<Page>`.** It lives in `components/ui/page.tsx`

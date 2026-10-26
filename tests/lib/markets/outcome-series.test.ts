@@ -35,8 +35,8 @@ describe('plottedOutcomes', () => {
 
 describe('chartTitle', () => {
   it('names a two-outcome chart for the one line it draws (#390)', () => {
-    expect(chartTitle('binary', [{ label: 'No' }, { label: 'Yes' }])).toBe('Yes over time')
-    expect(chartTitle('over_under', [{ label: 'Over 42.5' }, { label: 'Under 42.5' }])).toBe('Over 42.5 over time')
+    expect(chartTitle('binary', [{ label: 'No' }, { label: 'Yes' }])).toBe('Chance of Yes')
+    expect(chartTitle('over_under', [{ label: 'Over 42.5' }, { label: 'Under 42.5' }])).toBe('Chance of Over 42.5')
   })
 
   it('calls a multiple-choice chart Chance over time', () => {

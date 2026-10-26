@@ -18,8 +18,6 @@ export interface QuickPick {
   pct: number
   // A multiple-choice outcome's chart colour, for its dot; null on a two-outcome market.
   series: Series | null
-  // Yes or Over (green), No or Under (red); null for a multiple-choice outcome.
-  tone: 'yes' | 'no' | null
   addAction: SlipAction
   removeAction: SlipAction
 }
@@ -27,8 +25,11 @@ export interface QuickPick {
 // One outcome's button on a market card (#439). It's one button that adds the pick, then removes
 // it, so focus stays on it after the press rather than falling to a replacement. A row (a
 // multiple-choice outcome) ends in an Add pill that says what a tap does; under a mouse the row
-// takes a ring and the pill fills, so it reads as a button rather than as part of the card.
-function QuickPickButton({ pick, pct, series, tone, addAction, removeAction, row }: QuickPick & { row: boolean }) {
+// takes a ring and the pill fills, so it reads as a button rather than as part of the card. Both
+// sides of a two-outcome market look the same (D-3): red is a lost bet, and the word says which
+// side. Its name stays the same when pressed, outcome, chance and market, and aria-pressed says
+// whether it's in the slip; while the add runs it keeps its in-slip look rather than greying out.
+function QuickPickButton({ pick, pct, series, addAction, removeAction, row }: QuickPick & { row: boolean }) {
   const slip = useSlipPicks()
   const inSlip = useInSlip(pick.outcomeId)
   const label = pick.outcomeLabel
@@ -41,18 +42,13 @@ function QuickPickButton({ pick, pct, series, tone, addAction, removeAction, row
       <FormSubmitButton
         variant="secondary"
         size="sm"
+        quietPending
         aria-pressed={inSlip}
-        aria-label={inSlip ? `Remove ${label} from slip` : `Add ${label} at ${pct}% to slip`}
+        aria-label={`${label}, ${pct}%, ${pick.marketTitle}`}
         className={cn(
           `group w-full border-0 ${uiTextClass} font-extrabold no-underline hover:ring-2`,
           row ? 'justify-between gap-3 pr-2 pl-3' : 'justify-center',
-          inSlip
-            ? 'bg-nav-active text-on-nav-active hover:bg-nav-active hover:ring-line-s'
-            : tone === 'yes'
-              ? 'bg-acc-soft text-acc-text hover:bg-acc-soft hover:ring-acc-text'
-              : tone === 'no'
-                ? 'bg-loss-soft text-loss hover:bg-loss-soft hover:ring-loss'
-                : 'bg-sunk text-ink hover:bg-sunk hover:ring-line-s',
+          inSlip ? 'bg-nav-active text-on-nav-active hover:bg-nav-active hover:ring-line-s' : 'bg-sunk text-ink hover:bg-sunk hover:ring-line-s',
         )}
       >
         {row ? (
@@ -80,9 +76,9 @@ function QuickPickButton({ pick, pct, series, tone, addAction, removeAction, row
         ) : (
           <>
             {inSlip ? <Check aria-hidden="true" className="size-4 shrink-0" /> : <Plus aria-hidden="true" className="size-4 shrink-0" />}
-            <span className="truncate">
-              {label} {pct}%
-            </span>
+            {/* The chance is what's being chosen on, so only the label gives way. */}
+            <span className="min-w-0 truncate">{label}</span>
+            <span className="shrink-0">{pct}%</span>
           </>
         )}
       </FormSubmitButton>
@@ -94,10 +90,10 @@ function QuickPickButton({ pick, pct, series, tone, addAction, removeAction, row
 // side, or every outcome of a multiple-choice market as a row, likeliest first. It sits above the
 // card's stretched link, so a tap here adds rather than opens, and `data-own-hover` keeps the card
 // from lifting while the pointer is on a pick.
-export function QuickPicks({ picks }: { picks: QuickPick[] }) {
-  const rows = picks.some((p) => p.tone === null)
+export function QuickPicks({ picks, className }: { picks: QuickPick[]; className?: string }) {
+  const rows = picks.some((p) => p.series !== null)
   return (
-    <div data-own-hover className={cn('relative z-[1]', rows ? 'flex flex-col gap-1.5' : 'flex gap-2')}>
+    <div data-own-hover className={cn('relative z-[1]', rows ? 'flex flex-col gap-1.5' : 'flex gap-2', className)}>
       {picks.map((p) => (
         <QuickPickButton key={p.pick.outcomeId} {...p} row={rows} />
       ))}

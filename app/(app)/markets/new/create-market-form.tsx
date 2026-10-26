@@ -38,6 +38,23 @@ const KIND_OPTIONS: { kind: MarketKind; label: string; hint: string }[] = [
 // beside the preview, where it's read before Create market.
 const CLOSE_TIME_HINT = 'Betting stops here, so pick a time before anyone knows the answer.'
 
+// create_market_v4 (0043) takes only a line ending in .5, so a tie can't happen.
+const LINE_ERROR = 'Set the line to a half number, like 3.5.'
+const isHalfLine = (line: string) => {
+  const n = Number(line)
+  return line.trim() !== '' && Number.isFinite(n) && n >= 0.5 && n % 1 === 0.5
+}
+
+// The control each refusal belongs to, so its message shows beside it and focus moves there.
+function controlFor(field: NonNullable<ActionState>['field']): string | null {
+  if (!field) return null
+  if (field === 'outcomes') return 'cm-outcome-0'
+  const outcome = /^outcome_(\d+)$/.exec(field)
+  if (outcome) return `cm-outcome-${Number(outcome[1]) - 1}`
+  const ids: Record<string, string> = { title: 'cm-title', line: 'cm-line', close_at: 'cm-close', category: 'cm-category', description: 'cm-desc' }
+  return ids[field] ?? null
+}
+
 // A market being duplicated (?from=), read on the server. `closeAt` is the original's close.
 export interface MarketPrefill {
   title: string
@@ -68,6 +85,7 @@ export function CreateMarketForm({
   const [kind, setKind] = useState<MarketKind>(initial?.kind ?? 'binary')
   const [outcomes, setOutcomes] = useState(initial?.kind === 'multiple_choice' ? initial.outcomes : ['', ''])
   const [line, setLine] = useState(initial?.line ?? '')
+  const [lineChecked, setLineChecked] = useState(false)
   const [editedCloseAt, setCloseAt] = useState<string | null>(initial ? null : '')
   const timeZone = useTimeZone() ?? Intl.DateTimeFormat().resolvedOptions().timeZone
   // Until it's edited, a duplicate's close time is worked out in the viewer's own time zone,
@@ -82,6 +100,16 @@ export function CreateMarketForm({
     attemptKey.release()
     return next
   }, undefined)
+
+  // A refusal moves focus to the field it names, which on a phone may be a screen above the button.
+  useEffect(() => {
+    const id = controlFor(state?.field)
+    if (id) document.getElementById(id)?.focus()
+  }, [state])
+  const errorFor = (field: NonNullable<ActionState>['field']) => (state && state.field === field ? state.formError : undefined)
+  const outcomeError = state?.field === 'outcomes' || state?.field?.startsWith('outcome_') ? state?.formError : undefined
+  // The line is checked once it's been left, then as it's typed, so 3 on the way to 3.5 isn't flagged.
+  const lineError = lineChecked && line.trim() !== '' && !isHalfLine(line) ? LINE_ERROR : errorFor('line')
 
   function updateOutcome(index: number, value: string) {
     setOutcomes((prev) => prev.map((outcome, i) => (i === index ? value : outcome)))
@@ -109,14 +137,21 @@ export function CreateMarketForm({
   // Too few outcomes points at the first input; a too-long label points at its own.
   const outcomeInvalid = (index: number) =>
     state?.field === `outcome_${index + 1}` || (index === 0 && state?.field === 'outcomes')
+  const describe = (...ids: (string | false | undefined)[]) => ids.filter(Boolean).join(' ') || undefined
 
   return (
     <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
       <form
         action={formAction}
+        onSubmit={(event) => {
+          if (kind !== 'over_under' || isHalfLine(line)) return
+          event.preventDefault()
+          setLineChecked(true)
+          document.getElementById('cm-line')?.focus()
+        }}
         className={`flex flex-col gap-5 ${cardClass} ${cardPaddingClass}`}
       >
-        <Field label="Title" htmlFor="cm-title">
+        <Field label="Title" htmlFor="cm-title" error={errorFor('title')}>
           <Input
             id="cm-title"
             name="title"
@@ -126,7 +161,7 @@ export function CreateMarketForm({
             onChange={(e) => setTitle(e.target.value)}
             maxLength={TEXT_LIMITS.marketTitle}
             aria-invalid={state?.field === 'title'}
-            aria-describedby={state?.field === 'title' ? 'create-market-error' : undefined}
+            aria-describedby={describe(state?.field === 'title' && 'cm-title-error')}
           />
         </Field>
 
@@ -178,6 +213,7 @@ export function CreateMarketForm({
             label="Line"
             htmlFor="cm-line"
             hint="Members bet on whether the result lands over or under this number. Use a half number, like 3.5, so there’s never a tie."
+            error={lineError}
           >
             <Input
               id="cm-line"
@@ -189,9 +225,10 @@ export function CreateMarketForm({
               required
               value={line}
               onChange={(e) => setLine(e.target.value)}
+              onBlur={() => setLineChecked(true)}
               className="md:w-40"
-              aria-invalid={state?.field === 'line'}
-              aria-describedby={['cm-line-hint', state?.field === 'line' ? 'create-market-error' : null].filter(Boolean).join(' ')}
+              aria-invalid={Boolean(lineError)}
+              aria-describedby={describe('cm-line-hint', lineError && 'cm-line-error')}
             />
           </Field>
         ) : (
@@ -210,7 +247,7 @@ export function CreateMarketForm({
                   maxLength={TEXT_LIMITS.outcomeLabel}
                   className="flex-1"
                   aria-invalid={outcomeInvalid(index) || undefined}
-                  aria-describedby={outcomeInvalid(index) ? 'create-market-error' : undefined}
+                  aria-describedby={outcomeInvalid(index) ? 'cm-outcomes-error' : undefined}
                 />
                 <button
                   type="button"
@@ -223,6 +260,11 @@ export function CreateMarketForm({
                 </button>
               </div>
             ))}
+            {outcomeError && (
+              <p id="cm-outcomes-error" role="alert" className="text-sm font-bold text-loss">
+                {outcomeError}
+              </p>
+            )}
             <input type="hidden" name="outcome_labels_text" value={outcomes.join('\n')} />
             <Button
               type="button"
@@ -238,7 +280,7 @@ export function CreateMarketForm({
           </fieldset>
         )}
 
-        <Field label="Close time" htmlFor="cm-close" hint={CLOSE_TIME_HINT}>
+        <Field label="Close time" htmlFor="cm-close" hint={CLOSE_TIME_HINT} error={errorFor('close_at')}>
           <Input
             id="cm-close"
             type="datetime-local"
@@ -246,7 +288,7 @@ export function CreateMarketForm({
             value={closeAt}
             onChange={(e) => setCloseAt(e.target.value)}
             aria-invalid={state?.field === 'close_at'}
-            aria-describedby={['cm-close-hint', state?.field === 'close_at' ? 'create-market-error' : null].filter(Boolean).join(' ')}
+            aria-describedby={describe('cm-close-hint', state?.field === 'close_at' && 'cm-close-error')}
           />
         </Field>
         {/* The picker's value is local wall-clock time; the server needs the instant it names. */}
@@ -257,11 +299,10 @@ export function CreateMarketForm({
           value={category}
           onChange={setCategory}
           options={categories}
-          errorId="create-market-error"
-          invalid={state?.field === 'category'}
+          error={errorFor('category')}
         />
 
-        <Field label="Details (optional)" htmlFor="cm-desc">
+        <Field label="Details (optional)" htmlFor="cm-desc" error={errorFor('description')}>
           <Textarea
             id="cm-desc"
             name="description"
@@ -269,7 +310,7 @@ export function CreateMarketForm({
             onChange={(e) => setDescription(e.target.value)}
             maxLength={TEXT_LIMITS.marketDescription}
             aria-invalid={state?.field === 'description'}
-            aria-describedby={state?.field === 'description' ? 'create-market-error' : undefined}
+            aria-describedby={describe(state?.field === 'description' && 'cm-desc-error')}
           />
         </Field>
 
@@ -282,13 +323,14 @@ export function CreateMarketForm({
           time while it’s open, unless you bet on it.{!admin && ' If you bet on it, a reviewer resolves it.'}
         </p>
 
-        {state?.formError && (
+        {/* A refusal that names no field (the type, a limit, the database) shows beside the button. */}
+        {state?.formError && !controlFor(state.field) && (
           <Message tone="error" id="create-market-error">
             {state.formError}
           </Message>
         )}
 
-        <FormSubmitButton block className="md:w-auto md:self-start">
+        <FormSubmitButton block className="md:w-auto md:self-start" pendingLabel="Creating…">
           Create market
         </FormSubmitButton>
       </form>

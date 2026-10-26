@@ -55,7 +55,7 @@ describe('the market chart skeleton', () => {
   it('draws the range row and the tick row around the plot, as the chart does', () => {
     const { container } = render(<MarketChartSkeleton />)
 
-    const plot = container.querySelector('.skeleton.h-\\[220px\\]')!
+    const plot = container.querySelector('.skeleton.h-\\[160px\\]')!
     expect(plot).toHaveClass('md:h-[300px]')
     expect(plot.parentElement!.previousElementSibling).toHaveClass('h-[52px]')
     expect(plot.nextElementSibling).toHaveClass('skeleton', 'h-5')

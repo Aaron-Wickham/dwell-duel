@@ -219,14 +219,18 @@ export function CategoryPickerField({
   options,
   errorId,
   invalid = false,
+  error,
 }: {
   id: string
   value: string
   onChange: (value: string) => void
   // Every visible category's name, most used first.
   options: string[]
-  errorId: string
+  // A form's own error message the field points to, when the form shows it elsewhere.
+  errorId?: string
   invalid?: boolean
+  // Or the error itself, shown under the field.
+  error?: string
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -262,10 +266,11 @@ export function CategoryPickerField({
     )
   }
 
-  const described = [`${id}-hint`, missing ? missingId : null, invalid ? errorId : null].filter(Boolean).join(' ')
+  const ownErrorId = `${id}-error`
+  const described = [`${id}-hint`, missing ? missingId : null, error ? ownErrorId : invalid ? errorId : null].filter(Boolean).join(' ')
 
   return (
-    <Field label="Category" labelId={`${id}-label`} htmlFor={id} hint="Pick one, or type a new one.">
+    <Field label="Category" labelId={`${id}-label`} htmlFor={id} hint="Pick one, or search for a new one to create it.">
       <PickerDialog
         open={open}
         onOpenChange={setOpen}
@@ -283,7 +288,7 @@ export function CategoryPickerField({
             id={id}
             aria-labelledby={`${id}-label ${id}-value`}
             aria-describedby={described}
-            aria-invalid={invalid || missing}
+            aria-invalid={invalid || missing || Boolean(error)}
             className="pressable flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 rounded-control border-[1.5px] border-line-s bg-surface px-3.5 text-left text-base text-ink hover:bg-sunk aria-[invalid=true]:border-2 aria-[invalid=true]:border-loss"
           >
             <span id={`${id}-value`} className={cn('min-w-0 truncate', !chosen && 'text-ink2')}>
@@ -321,10 +326,16 @@ export function CategoryPickerField({
           triggerRef.current?.focus()
         }}
       />
-      {missing && (
+      {missing ? (
         <p id={missingId} role="alert" className="text-sm font-bold text-loss">
           Choose a category, or make a new one.
         </p>
+      ) : (
+        error && (
+          <p id={ownErrorId} role="alert" className="text-sm font-bold text-loss">
+            {error}
+          </p>
+        )
       )}
     </Field>
   )

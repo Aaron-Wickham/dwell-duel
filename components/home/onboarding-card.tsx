@@ -26,14 +26,23 @@ const UNDO_TOAST_DURATION_MS = 8_000
 
 // When Undo was pressed. Dismissing saves a cookie, so Next re-renders Home without this card and
 // unmounts it; Undo's own cookie change brings back a fresh one, which reads this to take focus.
-// It goes stale quickly, so a card mounted much later never grabs focus.
+// It isn't used up by the first card to see it: the instance that survived the dismissal can see
+// it and then be replaced by the server's fresh card, which must see it too. It goes stale
+// quickly, so a card mounted much later never grabs focus.
 let restoredAt = 0
-const RESTORE_FOCUS_WINDOW_MS = 10_000
+const RESTORE_FOCUS_WINDOW_MS = 5_000
 
-function takeRestoreFocus(): boolean {
-  const recent = Date.now() - restoredAt < RESTORE_FOCUS_WINDOW_MS
+function restoreFocusPending(): boolean {
+  return Date.now() - restoredAt < RESTORE_FOCUS_WINDOW_MS
+}
+
+// Runs once the restore has landed. If the card is on screen it takes focus and the flag is
+// spent; if the fresh card is still streaming in, the flag waits for its mount.
+function focusRestoredHeading() {
+  const heading = restoreFocusPending() ? document.getElementById('onboarding-title') : null
+  if (!heading) return
+  heading.focus()
   restoredAt = 0
-  return recent
 }
 
 // How it works comes first, so a new member knows what a Dwell Coin is before spending one (#260).
@@ -63,7 +72,7 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
   // After Undo the card comes back where it was, and focus with it, rather than staying on the
   // page's h1, whether this instance survived the dismissal or a fresh one has just mounted.
   useEffect(() => {
-    if (shownNow && headingRef.current && takeRestoreFocus()) headingRef.current.focus()
+    if (shownNow && headingRef.current && restoreFocusPending()) headingRef.current.focus()
   }, [shownNow])
 
   if (!steps || dismissed) return null
@@ -80,7 +89,10 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
   function restore() {
     restoredAt = Date.now()
     setDismissed(false)
-    restoreOnboardingAction().catch(() => {})
+    // Once the action's re-render has landed, the card on screen may be a fresh one.
+    restoreOnboardingAction()
+      .then(() => requestAnimationFrame(focusRestoredHeading))
+      .catch(() => {})
   }
 
   function dismiss() {

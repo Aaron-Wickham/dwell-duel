@@ -1,7 +1,7 @@
 'use client'
 
 import { IntentLink } from '@/components/ui/intent-link'
-import { useActionState, useState } from 'react'
+import { useActionState, useCallback, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   bulkApproveTaskCompletionsAction,
@@ -87,13 +87,25 @@ export function PendingApprovals({
   emptyState?: ReactNode
 }) {
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
+  // Rows whose own Approve is held for its Undo or being sent (UX audit D-7): they sit out bulk actions
+  // until it settles, so one submission is never in both at once.
+  const [held, setHeld] = useState<ReadonlySet<string>>(new Set())
+  const onHeldChange = useCallback((id: string, isHeld: boolean) => {
+    setHeld((prev) => {
+      if (prev.has(id) === isHeld) return prev
+      const next = new Set(prev)
+      if (isHeld) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }, [])
   // Worked out from the rows on screen, so Select all follows rows that leave the list once reviewed.
-  const selectable = pending.filter((c) => c.submitterId !== viewerId).map((c) => c.id)
+  const selectable = pending.filter((c) => c.submitterId !== viewerId && !held.has(c.id)).map((c) => c.id)
   const selectedIds = selectable.filter((id) => selected.has(id))
   const selectedCount = selectedIds.length
-  const selectedDc = pending.filter((c) => selected.has(c.id) && c.submitterId !== viewerId).reduce((sum, c) => sum + c.rewardAmount, 0)
-  // Approve selected pays every reward at once, so it asks first; a row's Approve stays direct
-  // (AGENTS.md). An empty selection goes straight to the server's "Select at least one" error
+  const selectedDc = pending.filter((c) => selectedIds.includes(c.id)).reduce((sum, c) => sum + c.rewardAmount, 0)
+  // Approve selected pays every reward at once, so it asks first; a row's Approve is held for an
+  // Undo instead (UX audit D-7, AGENTS.md). An empty selection goes straight to the server's "Select at least one" error
   // rather than a dialog about nothing.
   const confirm = useConfirmSubmit(() => selectedCount > 0)
   const [approveState, approveAction, isApprovePending] = useActionState<BulkActionState | undefined, FormData>(
@@ -171,7 +183,7 @@ export function PendingApprovals({
     return (
       <div className="flex flex-col gap-3">
         {results}
-        {emptyState ?? <EmptyState title="No tasks to review." />}
+        {emptyState ?? <EmptyState title="No submissions to review." />}
       </div>
     )
   }
@@ -284,8 +296,10 @@ export function PendingApprovals({
                         name="completionIds"
                         value={c.id}
                         form={BULK_FORM_ID}
-                        checked={selected.has(c.id)}
-                        ref={keepCheckedOnReset(selected.has(c.id))}
+                        // Disabled while its own approval is held, so the bulk form never sends it.
+                        disabled={held.has(c.id)}
+                        checked={selected.has(c.id) && !held.has(c.id)}
+                        ref={keepCheckedOnReset(selected.has(c.id) && !held.has(c.id))}
                         onChange={(e) => toggle(c.id, e.target.checked)}
                         className="m-0 size-[22px] accent-primary"
                       />
@@ -316,7 +330,12 @@ export function PendingApprovals({
                   {own ? (
                     <p className="max-w-40 pt-2.5 text-right text-sm font-bold text-ink2">Yours: another reviewer reviews it.</p>
                   ) : (
-                    <ReviewButtons completionId={c.id} submitterName={c.submitterName} taskTitle={c.taskTitle} />
+                    <ReviewButtons
+                      completionId={c.id}
+                      submitterName={c.submitterName}
+                      taskTitle={c.taskTitle}
+                      onHeldChange={onHeldChange}
+                    />
                   )}
                 </td>
               </tr>
@@ -333,6 +352,7 @@ export function PendingApprovals({
         title={`Approve ${selectedCount} ${selectedCount === 1 ? 'submission' : 'submissions'}?`}
         description={`Pays ${formatDcAmount(selectedDc)} in rewards straight away.`}
         confirmLabel="Approve and pay"
+        pendingLabel="Approving…"
       />
       <RejectDialog
         formId={BULK_REJECT_FORM_ID}

@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 
 export type ConfirmActionState = { formError?: string } | undefined
 
-// A destructive action behind a confirmation dialog: void, delete, remove. A successful action
+// An action behind a confirmation dialog: void, delete, remove, or one that restores access. A successful action
 // usually makes the page stop rendering this button (the row or market is gone), taking the
 // trigger with it, so focus goes to the page heading rather than back to a trigger that no longer
 // exists. Cancel, Escape and a failed action all leave the trigger in place, so they keep it.
@@ -27,6 +27,7 @@ export function ConfirmActionButton({
   title,
   description,
   confirmLabel,
+  confirmVariant = 'danger',
   pendingLabel,
   dismissLabel = 'Cancel',
   hint,
@@ -44,6 +45,8 @@ export function ConfirmActionButton({
   title: string
   description: ReactNode
   confirmLabel: string
+  // A restoring action (Invite again) confirms with the primary button rather than a red one.
+  confirmVariant?: 'danger' | 'primary'
   // What the confirm button says while the action runs ("Calling off…").
   pendingLabel?: string
   dismissLabel?: string
@@ -99,7 +102,7 @@ export function ConfirmActionButton({
             <AlertDialog.Close className={buttonVariants({ variant: 'secondary' })} aria-disabled={isPending || undefined}>
               {dismissLabel}
             </AlertDialog.Close>
-            <FormSubmitButton variant="danger" pendingLabel={pendingLabel}>
+            <FormSubmitButton variant={confirmVariant} pendingLabel={pendingLabel}>
               {confirmLabel}
             </FormSubmitButton>
           </form>

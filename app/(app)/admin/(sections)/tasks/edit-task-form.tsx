@@ -10,6 +10,7 @@ import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { keepCheckedOnReset } from '@/lib/forms/keep-on-reset'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
+import { PERIOD_LABEL } from '@/lib/tasks/period-label'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 
 export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSummary; onDone: () => void }) {
@@ -45,7 +46,7 @@ export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSumma
           aria-describedby={state?.field === 'title' ? errorId : undefined}
         />
       </Field>
-      <Field label="Description" htmlFor={`${id}-description`}>
+      <Field label="Description (optional)" htmlFor={`${id}-description`}>
         <Textarea
           id={`${id}-description`}
           name="description"
@@ -82,6 +83,13 @@ export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSumma
         />
         Require proof
       </label>
+      {/* update_task can't change how often a task repeats, so the form says so instead of leaving
+          an admin looking for the field (ADM-10). */}
+      <p className="text-sm text-ink2">
+        {task.isRepeatable && task.period
+          ? `Repeats ${PERIOD_LABEL[task.period].toLowerCase()}. Create a new task to change how often.`
+          : 'Doesn’t repeat. Create a new task to make one that does.'}
+      </p>
       {/* Deactivate/Reactivate owns this flag; saving an edit keeps it as it is. */}
       {task.isActive && <input type="hidden" name="is_active" value="on" />}
       {state?.formError && (
@@ -90,7 +98,9 @@ export function EditTaskForm({ id, task, onDone }: { id: string; task: TaskSumma
         </Message>
       )}
       <div className="flex gap-2">
-        <FormSubmitButton size="sm">Save</FormSubmitButton>
+        <FormSubmitButton size="sm" pendingLabel="Saving…">
+          Save task
+        </FormSubmitButton>
         <Button size="sm" variant="quiet" onClick={onDone}>
           Cancel
         </Button>

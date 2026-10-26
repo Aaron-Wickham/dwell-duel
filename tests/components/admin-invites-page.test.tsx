@@ -53,8 +53,8 @@ describe('AdminInvitesPage (#254)', () => {
     await renderPage()
     expect(listInvitesPage).toHaveBeenCalledWith({}, { query: '', claimed: false, page: { top: null, bottom: null } })
     const section = screen.getByRole('region', { name: 'Invites' })
-    // Newest first, labelled like Members' A–Z.
-    expect(within(section).getByText('New')).toBeInTheDocument()
+    // Says the order in words, like Members' A–Z.
+    expect(within(section).getByText('Newest first')).toBeInTheDocument()
     const row = within(section).getByRole('listitem')
     expect(row).toHaveTextContent('Added Sep 28')
     expect(within(row).getByRole('button', { name: 'Revoke newfriend@example.com' })).toBeInTheDocument()

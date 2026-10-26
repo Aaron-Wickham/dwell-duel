@@ -85,13 +85,13 @@ describe('text limits on form inputs', () => {
   it('caps the task title and description in the create form', () => {
     render(<CreateTaskForm />)
     expect(screen.getByLabelText('Title')).toHaveAttribute('maxlength', '120')
-    expect(screen.getByLabelText('Description')).toHaveAttribute('maxlength', '1000')
+    expect(screen.getByLabelText('Description (optional)')).toHaveAttribute('maxlength', '1000')
   })
 
   it('caps the task title and description in the edit form', () => {
     render(<EditTaskForm id="edit-task-t1" task={GENESIS} onDone={() => {}} />)
     expect(screen.getByLabelText('Title')).toHaveAttribute('maxlength', '120')
-    expect(screen.getByLabelText('Description')).toHaveAttribute('maxlength', '1000')
+    expect(screen.getByLabelText('Description (optional)')).toHaveAttribute('maxlength', '1000')
   })
 
   it('caps the single and shared rejection reasons', async () => {
@@ -116,7 +116,7 @@ describe('text limits on form inputs', () => {
       </>,
     )
     expect(screen.getByLabelText('Reason')).toHaveAttribute('maxlength', '200')
-    expect(screen.getByLabelText('Email')).toHaveAttribute('maxlength', '254')
+    expect(screen.getByLabelText('Google email')).toHaveAttribute('maxlength', '254')
   })
 })
 
@@ -186,18 +186,18 @@ describe('too-long errors point at their field', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Create task' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Description can be at most 1000 characters.')
-    expect(screen.getByLabelText('Description')).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getByLabelText('Description')).toHaveAccessibleDescription('Description can be at most 1000 characters.')
+    expect(screen.getByLabelText('Description (optional)')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Description (optional)')).toHaveAccessibleDescription('Description can be at most 1000 characters.')
   })
 
   it('ties an edit-form description error to the description', async () => {
     actions.updateTaskAction.mockResolvedValue({ formError: 'Description can be at most 1000 characters.', field: 'description' })
     render(<EditTaskForm id="edit-task-t1" task={GENESIS} onDone={() => {}} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save task' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Description can be at most 1000 characters.')
-    expect(screen.getByLabelText('Description')).toHaveAttribute('aria-describedby', 'edit-task-t1-error')
+    expect(screen.getByLabelText('Description (optional)')).toHaveAttribute('aria-describedby', 'edit-task-t1-error')
   })
 
   it('ties a shared-reason error to the shared reason field', async () => {

@@ -72,10 +72,11 @@ describe('MemberRow', () => {
     expect(row).toHaveAttribute('tabindex', '-1')
   })
 
-  // #265
-  it('marks a removed member Removed in place of their role', () => {
+  // #265, #387: a removed member's role is back to Member, and their tab already says Removed.
+  it('shows no role and no Removed for a removed member', () => {
     const row = renderRow({ ...BEN, removed: true, role: 'member' })
-    expect(within(row).getAllByRole('cell')[1]).toHaveTextContent('Removed')
+    expect(within(row).getAllByRole('cell')[1]).toHaveTextContent('')
+    expect(row).not.toHaveTextContent(/Removed|Member/)
   })
 
   it('says so for a net worth it couldn’t read', () => {

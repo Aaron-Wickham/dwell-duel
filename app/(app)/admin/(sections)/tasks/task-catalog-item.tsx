@@ -38,7 +38,7 @@ export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary
         <span className="flex flex-wrap gap-1.5">
           {task.isRepeatable && task.period && <StatusChip tone="void">{PERIOD_LABEL[task.period]}</StatusChip>}
           {task.proofRequired && <StatusChip tone="void">Proof required</StatusChip>}
-          {!task.isActive && <StatusChip tone="wait">Inactive</StatusChip>}
+          {!task.isActive && <StatusChip tone="void">Inactive</StatusChip>}
         </span>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -79,6 +79,7 @@ export function TaskCatalogItem({ task, canDelete = false }: { task: TaskSummary
             title="Delete this task?"
             description="It’s removed for everyone. A task members have already submitted can’t be deleted; deactivate it instead."
             confirmLabel="Delete task"
+            pendingLabel="Deleting…"
             successMessage="Task deleted."
             action={deleteTaskAction.bind(null, task.id)}
           />

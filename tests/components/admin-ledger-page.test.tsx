@@ -127,6 +127,9 @@ describe('AdminLedgerPage', () => {
     expect(container.querySelector('input[type="hidden"][name="member"]')).toHaveValue(BEN)
     expect(screen.getByRole('combobox', { name: 'Kind' })).toHaveValue('task_completed')
     expect(screen.getByRole('option', { name: 'Task reward' })).toHaveValue('task_completed')
+    // UX audit D-8: members' words in the label, the database's type in ?kind=.
+    expect(screen.getByRole('option', { name: 'Market called off' })).toHaveValue('bet_voided_refund')
+    expect(screen.queryByRole('option', { name: /voided/i })).toBeNull()
     expect(screen.getByText('No “Task reward” movements for Ben.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Show every kind' })).toHaveAttribute('href', `/admin/ledger?member=${BEN}`)
     expect(screen.getByRole('link', { name: 'Show everyone’s' })).toHaveAttribute('href', '/admin/ledger?kind=task_completed')

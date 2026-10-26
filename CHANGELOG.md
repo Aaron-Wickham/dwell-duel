@@ -12,6 +12,9 @@ before v0.4.0 used other headings.)
 
 ## Unreleased
 
+### Features
+- **Undo a single approval.** A submission's own Approve in Admin › Tasks now waits five seconds, showing Approving… with Undo (and Undo in a message too), before it pays, and sits out Approve selected meanwhile. Leaving or hiding the page in that time approves it at once; only a page killed outright can lose it, leaving the submission waiting, never paid twice. Approve selected still asks first.
+
 ### Fixes
 - **Place stays in view in the slip.** The Place button, what's holding it back and "Bets are final" are pinned to the bottom of the slip while you scroll and type stakes. When a pick is refused, a line above Place says how many ("1 pick’s price moved. Check it above, then tap Place again.") and the slip scrolls to it.
 - **Resolve errors in plain words.** A refused resolve now says what happened and what to do ("This market hasn’t closed yet. Resolve it once betting closes.") instead of database text; anything unexpected shows the general error.
@@ -47,6 +50,10 @@ before v0.4.0 used other headings.)
 - **Needs you lands with the page.** It no longer pops in after Home has drawn, so your bet cards don't jump down under your thumb on a phone.
 - **Getting started holds still.** Its "2 of 5 done" and the notifications step wait for the device check instead of flipping to "3 of 5" a moment after the page opens.
 - **Back swipe follows your finger with reduced motion on.** The page now moves with the swipe; only the slide after you let go is skipped.
+- **The economy check says what to do.** When the owner's Economy card doesn't reconcile, it now says not to adjust balances to cover it and links the incident steps in the Operations guide.
+- **Closing-alerts warning for the right person.** Reviewers and admins are told members aren't affected and to tell the owner; only the owner gets the Supabase steps.
+- **Admin Tasks and Ledger no longer jump on load.** The skeleton draws only what everyone gets; Create task and the task catalog stream in below the queue, and the owner's Economy card streams in behind a skeleton of its own size.
+- **Adjusting a balance says the result.** A hint says to use a minus to take coins away, a reason is required before it's sent, and the confirmation names the balance it ends at and the reason.
 
 ### Polish
 - **No and Under are no longer red.** Both sides of a yes/no or over/under market take the same neutral chip and button, on market cards, My bets, Home and Your position; red is kept for a lost bet. Only a result is coloured.
@@ -86,12 +93,18 @@ before v0.4.0 used other headings.)
 - **Bigger small print on the leaderboard:** the podium's "(you)", the race chart's hint and its off-the-chart note are 14px.
 - **My bets hides the Cancelled tab** unless you had a bet cancelled before October 2026.
 - **Clearer words.** "Pays 210 DC if every pick wins"; "Would have paid" and "Pays 4.2×" start with a capital; "Refunded · No winners"; a resolved pick with no known winner says "Resolved"; Your standing drops "No settled bets yet." beside "None yet"; a member's empty activity says "No activity yet." with their name; Activity's empty All tab offers Browse markets; "’s 3-pick parlay paid" takes a curly apostrophe; Biggest win's market is underlined as a link.
+- **Admin uses members' words.** The ledger's Kind filter and rows say "Market called off", not "Market voided"; a waiting market shows "140 DC staked" with "Just now" capitalised; an empty queue says "No submissions to review."; Invites reads "Newest first" and "Google email"; buttons say "Adjust balance" and "Save task".
+- **Quieter admin lists.** Resolve on a waiting market is a secondary button; roles take a neutral chip and Inactive the called-off grey, instead of gold and green; claimed invites drop "(claimed)" and removed members drop "Removed", which their tabs already say.
+- **Admin busy buttons say what they're doing:** Adjusting…, Saving…, Approving…, Adding…, Revoking…, Removing…, Inviting…, Creating… and Deleting….
+- **Invite again confirms in the main colour,** not red, since it gives access back (`ConfirmActionButton` takes a `confirmVariant`).
+- **Smaller admin gaps.** The Members sort links on a phone are normal 14px words; the task edit form says how often the task repeats and that a new task changes it; the Admin guide link says it opens GitHub; an admin on a member's page is told only the owner can change role, balance or access; "under Invites" is a link; the approve toast names whose submission; Description is marked optional; and the Economy card folds its explanation under "How each source is counted".
 
 ### Under the hood
 - **`can_change_market_title`** (migration 0116) tells the market page whether a new title would go through, by the same rule as `update_market`.
 - **UX Engine is the design skill set.** `AGENTS.md` now routes every UI and UX change through the UX Engine plugin (installed per machine, not in this public repo), and `DESIGN.md` is a complete design contract extracted from `app/globals.css`, with each status chip's contrast computed.
 - **Link, busy-button and menu rules.** `AGENTS.md` now says a standalone link that leads onward takes a trailing chevron and a caption-weight link takes `prose-link`; slow actions' buttons take a `pendingLabel`; menu items share `menuItemClass`; and error toasts go through `toastError`.
 - **Lime current tab, Home's reads and skeleton rules.** `AGENTS.md` now allows lime as the phone's current-tab fill in both themes (the old `--tab-active` is `--menu-highlight`, the menu highlight it still drew), says Needs you renders with the first paint from the layout's `readReviewCounts`, and that Home's optional blocks read through `optionalRead`.
+- **Approve's Undo window, and members' words in the ledger.** `AGENTS.md`'s confirm, "Never optimistic" and Words we use notes describe the held single Approve (`useUndoWindow`, `lib/ui/undo-window.ts`) and the ledger's member labels.
 
 ## v1.1.0 — 2026-10-23
 

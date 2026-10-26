@@ -36,12 +36,20 @@ function restoreFocusPending(): boolean {
   return Date.now() - restoredAt < RESTORE_FOCUS_WINDOW_MS
 }
 
+// Undo is pressed inside the toast, and Sonner gives focus back to whatever had it before (the
+// page's h1) when focus leaves a toast. So a heading focused while Undo still holds focus loses it
+// at once; focusing it again on the next frame, from outside the toast, keeps it.
+function focusHeading(heading: HTMLElement) {
+  heading.focus()
+  if (document.activeElement !== heading) requestAnimationFrame(() => heading.focus())
+}
+
 // Runs once the restore has landed. If the card is on screen it takes focus and the flag is
 // spent; if the fresh card is still streaming in, the flag waits for its mount.
 function focusRestoredHeading() {
   const heading = restoreFocusPending() ? document.getElementById('onboarding-title') : null
   if (!heading) return
-  heading.focus()
+  focusHeading(heading)
   restoredAt = 0
 }
 
@@ -72,7 +80,7 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
   // After Undo the card comes back where it was, and focus with it, rather than staying on the
   // page's h1, whether this instance survived the dismissal or a fresh one has just mounted.
   useEffect(() => {
-    if (shownNow && headingRef.current && restoreFocusPending()) headingRef.current.focus()
+    if (shownNow && headingRef.current && restoreFocusPending()) focusHeading(headingRef.current)
   }, [shownNow])
 
   if (!steps || dismissed) return null

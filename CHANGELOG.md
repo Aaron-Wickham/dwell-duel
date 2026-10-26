@@ -56,6 +56,7 @@ before v0.4.0 used other headings.)
 - **Adjusting a balance says the result.** A hint says to use a minus to take coins away, a reason is required before it's sent, and the confirmation names the balance it ends at and the reason.
 
 ### Polish
+- **The review queue reads on a phone.** Approve and Reject… have a line of their own under each submission, so the member's name and "Nothing attached" no longer wrap a word a line.
 - **No and Under are no longer red.** Both sides of a yes/no or over/under market take the same neutral chip and button, on market cards, My bets, Home and Your position; red is kept for a lost bet. Only a result is coloured.
 - **On a phone, a market's picks come first.** While a market takes bets, its leading outcomes and their Add buttons sit right under the title, and the chart under them is shorter (160px), so you can pick without scrolling. Desktop is unchanged.
 - **Busy buttons say what they're doing:** "Placing…" in the slip, "Creating…" on Create market, "Resolving…" and "Calling off…" in their confirm dialogs.

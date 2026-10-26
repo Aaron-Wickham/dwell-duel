@@ -12,100 +12,104 @@ before v0.4.0 used other headings.)
 
 ## Unreleased
 
+## v1.2.0 — 2026-10-26
+
+Every screen got a careful once-over. The current tab on your phone is now a bright lime tile, No and Under are no longer red, and on a phone a market's Add buttons come before its chart. The slip keeps Place in view and says plainly why a pick was refused; busy buttons say what they're doing ("Placing…"); amounts never split across lines; and light mode's cards stand out from the page. Tasks shows the whole task before you submit and keeps a link you pasted; notification choices save as you tick them; the leaderboard's This month tab shows where you stand. Reviewers get a five-second Undo on Approve, and the review queue reads on a phone. Nothing about how bets, payouts or tasks work has changed.
+
 ### Features
-- **Undo a single approval.** A submission's own Approve in Admin › Tasks now waits five seconds, showing Approving… with Undo (and Undo in a message too), before it pays, and sits out Approve selected meanwhile. Leaving or hiding the page in that time approves it at once; only a page killed outright can lose it, leaving the submission waiting, never paid twice. Approve selected still asks first.
+- **Undo a single approval.** A submission's own Approve in Admin › Tasks now waits five seconds, showing Approving… with Undo (and Undo in a message too), before it pays, and sits out Approve selected meanwhile. Leaving or hiding the page in that time approves it at once; only a page killed outright can lose it, leaving the submission waiting, never paid twice. Approve selected still asks first (#515).
 
 ### Fixes
-- **Place stays in view in the slip.** The Place button, what's holding it back and "Bets are final" are pinned to the bottom of the slip while you scroll and type stakes. When a pick is refused, a line above Place says how many ("1 pick’s price moved. Check it above, then tap Place again.") and the slip scrolls to it.
-- **Resolve errors in plain words.** A refused resolve now says what happened and what to do ("This market hasn’t closed yet. Resolve it once betting closes.") instead of database text; anything unexpected shows the general error.
-- **Editing a market others have bet on.** Its title now shows read-only with the reason, so a description or category change saves instead of being refused along with the title; if someone bets while the dialog is open, it says to refresh for the latest title.
-- **Create market errors sit by their field,** and focus moves to it; an over/under's line is checked for the .5 as soon as you leave the field.
-- **Over/Under buttons keep their chance.** On a market card the percentage on an Over or Under button no longer gets cut off; only a long label does.
-- **Adding a pick from a card no longer greys the button out** while the slip saves: it shows In slip at once.
-- **Quick picks make sense to VoiceOver.** Each button is named for its outcome, chance and market, and the same whether or not it's in the slip, which it reports as pressed.
-- **A bettor's name on a market is easier to tap,** and their amount stays on one line.
-- **The markets list's loading screen** holds room for the quick picks, so cards don't grow when the page lands.
-- **Menus show where the keyboard is.** In the avatar's menu and a market's More actions, the item you reach with the arrow keys now takes a tint and a focus ring, instead of a grey tint you could barely see.
-- **Placeholders you can read.** The hint text inside search boxes and form fields (Search markets, the create-market form) is now the secondary text colour instead of a faded grey.
-- **Amounts stay on one line.** "12,345 DC" no longer breaks with "DC" on the next line on bet cards, parlays, Home and a market's bets.
-- **Printing in dark mode.** A market or the rules printed from the dark theme now prints dark text on white instead of near-white text.
-- **Text in cards can be selected with a mouse.** On a computer you can now select and copy the words on a tappable card; on a phone a long press still doesn't select it.
-- **A link you typed goes with your task.** Tapping Submit for review with a link still in the field now sends it with the rest, instead of dropping it; a link that can't go asks you to add it or clear it first.
-- **Upload problems say what to do.** A photo or file that doesn't upload now says why in plain words (today's upload limit of 30 files or 60 MB, a file too big or of the wrong type, or a connection problem) instead of Storage's own message.
-- **Notification choices save as you tick them,** like the rest of Settings, and put the box back with a message if the save fails. The Save choices button is gone.
-- **Blocked notifications offer Check again,** so the installed app, which has no reload button, can see that you've allowed them.
-- **The full rules' contents list scrolls** on a laptop screen, so its last sections can be reached.
-- **Removing an attachment keeps your place.** Focus moves to the next Remove button (or Add photos) instead of the page behind the dialog.
-- **A way back from a missing page.** "Page not found" on a market, member or parlay now also offers Back to Markets (or Leaderboard, My bets), and the top-level error and not-found pages have a main landmark for screen readers.
-- **"No real money" on every iPhone.** On a short screen, which is most Safari tabs, the sign-in page now keeps one line, "Play money only. No real money.", and the sample card drops its bet line to make room, so the page still doesn't scroll.
-- **Screen readers reach the heading first** on sign-in and Not invited, and skip the dimmed sample market on Not invited.
-- **Privacy no longer sends you to sign in.** Its mentions of other parts of the rules (Roles, Tasks) are plain words, since those pages are for members.
-- **This month shows where you stand.** The leaderboard's This month tab now has the sticky You bar on a phone and Your standing beside the rankings on a computer, and Jump to me stays on This month instead of switching to Net worth.
-- **A refunded parlay stops quoting odds.** Its page says "Refunded" over the stake and "Every pick was called off", without a payout that will never happen.
-- **A called-off bet says so.** My bets reads " · Called off · Refunded", and a market's Your position chip says "Called off".
-- **A new photo says it isn't saved yet.** The profile form says "Save profile to keep this photo." until you save.
-- **Your own reaction stands out by more than colour,** with a thicker edge and dark text.
-- **The leaderboard doesn't jump while This month loads:** each tab has its own loading skeleton.
-- **One failed read no longer blanks Home.** If the weekly recap, Getting started, Needs you, Activity or your open-bet total can't load, Home shows everything else without it (Activity says it didn't load, in its usual space).
-- **Needs you lands with the page.** It no longer pops in after Home has drawn, so your bet cards don't jump down under your thumb on a phone.
-- **Getting started holds still.** Its "2 of 5 done" and the notifications step wait for the device check instead of flipping to "3 of 5" a moment after the page opens.
-- **Back swipe follows your finger with reduced motion on.** The page now moves with the swipe; only the slide after you let go is skipped.
-- **The economy check says what to do.** When the owner's Economy card doesn't reconcile, it now says not to adjust balances to cover it and links the incident steps in the Operations guide.
-- **Closing-alerts warning for the right person.** Reviewers and admins are told members aren't affected and to tell the owner; only the owner gets the Supabase steps.
-- **Admin Tasks and Ledger no longer jump on load.** The skeleton draws only what everyone gets; Create task and the task catalog stream in below the queue, and the owner's Economy card streams in behind a skeleton of its own size.
-- **Adjusting a balance says the result.** A hint says to use a minus to take coins away, a reason is required before it's sent, and the confirmation names the balance it ends at and the reason.
+- **Place stays in view in the slip.** The Place button, what's holding it back and "Bets are final" are pinned to the bottom of the slip while you scroll and type stakes. When a pick is refused, a line above Place says how many ("1 pick’s price moved. Check it above, then tap Place again.") and the slip scrolls to it (#511).
+- **Resolve errors in plain words.** A refused resolve now says what happened and what to do ("This market hasn’t closed yet. Resolve it once betting closes.") instead of database text; anything unexpected shows the general error (#511).
+- **Editing a market others have bet on.** Its title now shows read-only with the reason, so a description or category change saves instead of being refused along with the title; if someone bets while the dialog is open, it says to refresh for the latest title (#511).
+- **Create market errors sit by their field,** and focus moves to it; an over/under's line is checked for the .5 as soon as you leave the field (#511).
+- **Over/Under buttons keep their chance.** On a market card the percentage on an Over or Under button no longer gets cut off; only a long label does (#511).
+- **Adding a pick from a card no longer greys the button out** while the slip saves: it shows In slip at once (#511).
+- **Quick picks make sense to VoiceOver.** Each button is named for its outcome, chance and market, and the same whether or not it's in the slip, which it reports as pressed (#511).
+- **A bettor's name on a market is easier to tap,** and their amount stays on one line (#511).
+- **The markets list's loading screen** holds room for the quick picks, so cards don't grow when the page lands (#511).
+- **Menus show where the keyboard is.** In the avatar's menu and a market's More actions, the item you reach with the arrow keys now takes a tint and a focus ring, instead of a grey tint you could barely see (#510).
+- **Placeholders you can read.** The hint text inside search boxes and form fields (Search markets, the create-market form) is now the secondary text colour instead of a faded grey (#510).
+- **Amounts stay on one line.** "12,345 DC" no longer breaks with "DC" on the next line on bet cards, parlays, Home and a market's bets (#510).
+- **Printing in dark mode.** A market or the rules printed from the dark theme now prints dark text on white instead of near-white text (#510).
+- **Text in cards can be selected with a mouse.** On a computer you can now select and copy the words on a tappable card; on a phone a long press still doesn't select it (#510).
+- **A link you typed goes with your task.** Tapping Submit for review with a link still in the field now sends it with the rest, instead of dropping it; a link that can't go asks you to add it or clear it first (#514).
+- **Upload problems say what to do.** A photo or file that doesn't upload now says why in plain words (today's upload limit of 30 files or 60 MB, a file too big or of the wrong type, or a connection problem) instead of Storage's own message (#514).
+- **Notification choices save as you tick them,** like the rest of Settings, and put the box back with a message if the save fails. The Save choices button is gone (#514).
+- **Blocked notifications offer Check again,** so the installed app, which has no reload button, can see that you've allowed them (#514).
+- **The full rules' contents list scrolls** on a laptop screen, so its last sections can be reached (#514).
+- **Removing an attachment keeps your place.** Focus moves to the next Remove button (or Add photos) instead of the page behind the dialog (#514).
+- **A way back from a missing page.** "Page not found" on a market, member or parlay now also offers Back to Markets (or Leaderboard, My bets), and the top-level error and not-found pages have a main landmark for screen readers (#510).
+- **"No real money" on every iPhone.** On a short screen, which is most Safari tabs, the sign-in page now keeps one line, "Play money only. No real money.", and the sample card drops its bet line to make room, so the page still doesn't scroll (#516).
+- **Screen readers reach the heading first** on sign-in and Not invited, and skip the dimmed sample market on Not invited (#516).
+- **Privacy no longer sends you to sign in.** Its mentions of other parts of the rules (Roles, Tasks) are plain words, since those pages are for members (#516).
+- **This month shows where you stand.** The leaderboard's This month tab now has the sticky You bar on a phone and Your standing beside the rankings on a computer, and Jump to me stays on This month instead of switching to Net worth (#513).
+- **A refunded parlay stops quoting odds.** Its page says "Refunded" over the stake and "Every pick was called off", without a payout that will never happen (#513).
+- **A called-off bet says so.** My bets reads " · Called off · Refunded", and a market's Your position chip says "Called off" (#513).
+- **A new photo says it isn't saved yet.** The profile form says "Save profile to keep this photo." until you save (#513).
+- **Your own reaction stands out by more than colour,** with a thicker edge and dark text (#513).
+- **The leaderboard doesn't jump while This month loads:** each tab has its own loading skeleton (#513).
+- **One failed read no longer blanks Home.** If the weekly recap, Getting started, Needs you, Activity or your open-bet total can't load, Home shows everything else without it (Activity says it didn't load, in its usual space) (#512).
+- **Needs you lands with the page.** It no longer pops in after Home has drawn, so your bet cards don't jump down under your thumb on a phone (#512).
+- **Getting started holds still.** Its "2 of 5 done" and the notifications step wait for the device check instead of flipping to "3 of 5" a moment after the page opens (#512).
+- **Back swipe follows your finger with reduced motion on.** The page now moves with the swipe; only the slide after you let go is skipped (#512).
+- **The economy check says what to do.** When the owner's Economy card doesn't reconcile, it now says not to adjust balances to cover it and links the incident steps in the Operations guide (#515).
+- **Closing-alerts warning for the right person.** Reviewers and admins are told members aren't affected and to tell the owner; only the owner gets the Supabase steps (#515).
+- **Admin Tasks and Ledger no longer jump on load.** The skeleton draws only what everyone gets; Create task and the task catalog stream in below the queue, and the owner's Economy card streams in behind a skeleton of its own size (#515).
+- **Adjusting a balance says the result.** A hint says to use a minus to take coins away, a reason is required before it's sent, and the confirmation names the balance it ends at and the reason (#515).
 
 ### Polish
-- **The review queue reads on a phone.** Approve and Reject… have a line of their own under each submission, so the member's name and "Nothing attached" no longer wrap a word a line.
-- **No and Under are no longer red.** Both sides of a yes/no or over/under market take the same neutral chip and button, on market cards, My bets, Home and Your position; red is kept for a lost bet. Only a result is coloured.
-- **On a phone, a market's picks come first.** While a market takes bets, its leading outcomes and their Add buttons sit right under the title, and the chart under them is shorter (160px), so you can pick without scrolling. Desktop is unchanged.
-- **Busy buttons say what they're doing:** "Placing…" in the slip, "Creating…" on Create market, "Resolving…" and "Calling off…" in their confirm dialogs.
-- **The slip's balance reads "Balance 120 DC",** and a pick that's gone is marked "No longer available" in grey rather than the lost-bet red.
-- **Empty Waiting and Resolved tabs** offer "See open markets" instead of Create market.
-- **Clearer words** in the slip ("Your slip is empty. Add a pick from a market first.", the parlay pick limits, and a failed place now says nothing was placed), the chart ("Chance of Yes"), Your position ("Waiting for a result."), Duplicate and the category picker; the empty-chart note on a card is the 13px chip size.
-- **Cards stand out from the page in light mode.** The light page background is a step darker, so cards on Home and My bets read as cards on a sunny phone screen; hover tints moved with it.
-- **Waiting counts are gold, not red.** The avatar's dot, the Admin tabs' badges and the menu's "3 waiting" use the same gold as Needs you, since something waiting isn't an error.
-- **Menus, dialogs and toasts have an edge in dark mode:** their border brightens and the shadow deepens, so they no longer melt into the card under them.
-- **Error toasts stay 10 seconds,** long enough to read what to do next; other toasts still go after 4.
-- **Busy buttons can say what they're doing.** Submit and confirm buttons can show the leaf loader with words like "Placing…" while an action runs, instead of only greying out (later changes turn this on for each form).
-- **The profile and Create market forms** are plain cards like the rest of the app, without a border and shadow.
-- **The submit dialog shows the whole task,** with its full instructions, says proof can't be deleted once it's sent, and its button reads "Uploading 1 of 3…" then "Sending…" while it works. Try again rows show the task's description too.
-- **Tasks says when you're done.** With every task waiting or done, To do reads "Nothing to do right now." and when the next one opens; Not approved now comes before Waiting for review; and admins with no tasks get an Add a task button.
-- **Task rewards are bold ink, not gold,** since gold means waiting. At the attachment limits the proof picker says which limit it reached.
-- **Read the full rules has a chevron,** so it reads as a link onward.
-- **Clearer words in Settings and Tasks.** File problems say what to do next ("Pick a smaller file."), the notification hints say "approved or not approved" and "a member's submission is waiting for you to review", the permission hint says to tap Turn on notifications again, and Install the app says Home Screen.
-- **The current tab is a lime tile.** On a phone, the tab you're on is now a lime tile filling its space, with a darker, bolder label and icon, in light and dark.
-- **Labels on tablets and small laptops.** From 768 to 1279px wide the top bar shows each section's short name (Home, Markets, Bets, Tasks, Leaders) instead of five bare icons.
-- **A calmer balance in the top bar.** Your balance is dark text on grey instead of gold, since gold means something waits on you, and it's left out on Home, where the Balance card already shows it.
-- **Bet cards say when they close.** Home's bets and the markets closing soonest read "Closes Oct 28", or "Closes 6 PM" within a day, in your own time zone.
-- **Whole rows open.** With no open bets, each of the markets closing soonest opens from anywhere on its row, not only its title.
-- **Undo for Getting started.** Dismissing it shows "Getting started hidden" with Undo, so a stray tap doesn't lose it.
-- **Needs you tiles answer the mouse** with a deeper wash of their colour, and the weekly recap's market names are underlined links.
-- **Turn on notifications lost its bell,** and its "Not now" now says what it does: "Don't show again".
-- **Plainer Home words.** "275 DC in 3 open bets" instead of "riding"; "Yes won at 8%"; "Time to resolve: …" for your closed markets; "Add a pick to your slip"; one line for what notifications are for; "approved tasks" in Activity's empty state; and "Add a pick from any market to place your first bet." when nothing is open.
-- **Small status chips** use the 13px chip size instead of 12px.
-- **The sign-in sample market's category** is a tinted category chip, like a real market card's.
-- **"Go to DwellDuel" reads as a link** at the end of Privacy and Terms: full-size ink text with a chevron, instead of small grey text.
-- **Clearer error words.** A failed action now says "That didn’t go through. Try again, and if it keeps happening, tell an admin."; a page that fails to load says it may be your connection or our side, or that you’re offline when you are; a failed sign-in says to use the account your invite was sent to; and "Nothing older here" lost its full stop.
-- **The race chart says how the lines moved,** "Aaron rose to +64 DC, …", on one line under its heading and in full to screen readers, and the card keeps one height before and after the first bet settles.
-- **Past champions match the awards:** plain rows with the profit in bold, no chip or trophy.
-- **Parlay picks read the same everywhere.** An open pick's chip is green, not waiting gold, and the tally counts every pick still to play out as "waiting", as the rows do. The progress bar's open segments have an edge, so each pick reads as its own segment.
-- **The parlay page goes back where you came from,** shows when it was placed in the summary, and every pick row opens its market.
-- **Bigger small print on the leaderboard:** the podium's "(you)", the race chart's hint and its off-the-chart note are 14px.
-- **My bets hides the Cancelled tab** unless you had a bet cancelled before October 2026.
-- **Clearer words.** "Pays 210 DC if every pick wins"; "Would have paid" and "Pays 4.2×" start with a capital; "Refunded · No winners"; a resolved pick with no known winner says "Resolved"; Your standing drops "No settled bets yet." beside "None yet"; a member's empty activity says "No activity yet." with their name; Activity's empty All tab offers Browse markets; "’s 3-pick parlay paid" takes a curly apostrophe; Biggest win's market is underlined as a link.
-- **Admin uses members' words.** The ledger's Kind filter and rows say "Market called off", not "Market voided"; a waiting market shows "140 DC staked" with "Just now" capitalised; an empty queue says "No submissions to review."; Invites reads "Newest first" and "Google email"; buttons say "Adjust balance" and "Save task".
-- **Quieter admin lists.** Resolve on a waiting market is a secondary button; roles take a neutral chip and Inactive the called-off grey, instead of gold and green; claimed invites drop "(claimed)" and removed members drop "Removed", which their tabs already say.
-- **Admin busy buttons say what they're doing:** Adjusting…, Saving…, Approving…, Adding…, Revoking…, Removing…, Inviting…, Creating… and Deleting….
-- **Invite again confirms in the main colour,** not red, since it gives access back (`ConfirmActionButton` takes a `confirmVariant`).
-- **Smaller admin gaps.** The Members sort links on a phone are normal 14px words; the task edit form says how often the task repeats and that a new task changes it; the Admin guide link says it opens GitHub; an admin on a member's page is told only the owner can change role, balance or access; "under Invites" is a link; the approve toast names whose submission; Description is marked optional; and the Economy card folds its explanation under "How each source is counted".
+- **The review queue reads on a phone.** Approve and Reject… have a line of their own under each submission, so the member's name and "Nothing attached" no longer wrap a word a line (#518).
+- **No and Under are no longer red.** Both sides of a yes/no or over/under market take the same neutral chip and button, on market cards, My bets, Home and Your position; red is kept for a lost bet. Only a result is coloured (#511).
+- **On a phone, a market's picks come first.** While a market takes bets, its leading outcomes and their Add buttons sit right under the title, and the chart under them is shorter (160px), so you can pick without scrolling. Desktop is unchanged (#511).
+- **Busy buttons say what they're doing:** "Placing…" in the slip, "Creating…" on Create market, "Resolving…" and "Calling off…" in their confirm dialogs (#511).
+- **The slip's balance reads "Balance 120 DC",** and a pick that's gone is marked "No longer available" in grey rather than the lost-bet red (#511).
+- **Empty Waiting and Resolved tabs** offer "See open markets" instead of Create market (#511).
+- **Clearer words** in the slip ("Your slip is empty. Add a pick from a market first.", the parlay pick limits, and a failed place now says nothing was placed), the chart ("Chance of Yes"), Your position ("Waiting for a result."), Duplicate and the category picker; the empty-chart note on a card is the 13px chip size (#511).
+- **Cards stand out from the page in light mode.** The light page background is a step darker, so cards on Home and My bets read as cards on a sunny phone screen; hover tints moved with it (#510).
+- **Waiting counts are gold, not red.** The avatar's dot, the Admin tabs' badges and the menu's "3 waiting" use the same gold as Needs you, since something waiting isn't an error (#510).
+- **Menus, dialogs and toasts have an edge in dark mode:** their border brightens and the shadow deepens, so they no longer melt into the card under them (#510).
+- **Error toasts stay 10 seconds,** long enough to read what to do next; other toasts still go after 4 (#510).
+- **Busy buttons can say what they're doing.** Submit and confirm buttons can show the leaf loader with words like "Placing…" while an action runs, instead of only greying out (later changes turn this on for each form) (#510).
+- **The profile and Create market forms** are plain cards like the rest of the app, without a border and shadow (#510).
+- **The submit dialog shows the whole task,** with its full instructions, says proof can't be deleted once it's sent, and its button reads "Uploading 1 of 3…" then "Sending…" while it works. Try again rows show the task's description too (#514).
+- **Tasks says when you're done.** With every task waiting or done, To do reads "Nothing to do right now." and when the next one opens; Not approved now comes before Waiting for review; and admins with no tasks get an Add a task button (#514).
+- **Task rewards are bold ink, not gold,** since gold means waiting. At the attachment limits the proof picker says which limit it reached (#514).
+- **Read the full rules has a chevron,** so it reads as a link onward (#514).
+- **Clearer words in Settings and Tasks.** File problems say what to do next ("Pick a smaller file."), the notification hints say "approved or not approved" and "a member's submission is waiting for you to review", the permission hint says to tap Turn on notifications again, and Install the app says Home Screen (#514).
+- **The current tab is a lime tile.** On a phone, the tab you're on is now a lime tile filling its space, with a darker, bolder label and icon, in light and dark (#512).
+- **Labels on tablets and small laptops.** From 768 to 1279px wide the top bar shows each section's short name (Home, Markets, Bets, Tasks, Leaders) instead of five bare icons (#512).
+- **A calmer balance in the top bar.** Your balance is dark text on grey instead of gold, since gold means something waits on you, and it's left out on Home, where the Balance card already shows it (#512).
+- **Bet cards say when they close.** Home's bets and the markets closing soonest read "Closes Oct 28", or "Closes 6 PM" within a day, in your own time zone (#512).
+- **Whole rows open.** With no open bets, each of the markets closing soonest opens from anywhere on its row, not only its title (#512).
+- **Undo for Getting started.** Dismissing it shows "Getting started hidden" with Undo, so a stray tap doesn't lose it (#512).
+- **Needs you tiles answer the mouse** with a deeper wash of their colour, and the weekly recap's market names are underlined links (#512).
+- **Turn on notifications lost its bell,** and its "Not now" now says what it does: "Don't show again" (#512).
+- **Plainer Home words.** "275 DC in 3 open bets" instead of "riding"; "Yes won at 8%"; "Time to resolve: …" for your closed markets; "Add a pick to your slip"; one line for what notifications are for; "approved tasks" in Activity's empty state; and "Add a pick from any market to place your first bet." when nothing is open (#512).
+- **Small status chips** use the 13px chip size instead of 12px (#510).
+- **The sign-in sample market's category** is a tinted category chip, like a real market card's (#516).
+- **"Go to DwellDuel" reads as a link** at the end of Privacy and Terms: full-size ink text with a chevron, instead of small grey text (#516).
+- **Clearer error words.** A failed action now says "That didn’t go through. Try again, and if it keeps happening, tell an admin."; a page that fails to load says it may be your connection or our side, or that you’re offline when you are; a failed sign-in says to use the account your invite was sent to; and "Nothing older here" lost its full stop (#510).
+- **The race chart says how the lines moved,** "Aaron rose to +64 DC, …", on one line under its heading and in full to screen readers, and the card keeps one height before and after the first bet settles (#513).
+- **Past champions match the awards:** plain rows with the profit in bold, no chip or trophy (#513).
+- **Parlay picks read the same everywhere.** An open pick's chip is green, not waiting gold, and the tally counts every pick still to play out as "waiting", as the rows do. The progress bar's open segments have an edge, so each pick reads as its own segment (#513).
+- **The parlay page goes back where you came from,** shows when it was placed in the summary, and every pick row opens its market (#513).
+- **Bigger small print on the leaderboard:** the podium's "(you)", the race chart's hint and its off-the-chart note are 14px (#513).
+- **My bets hides the Cancelled tab** unless you had a bet cancelled before October 2026 (#513).
+- **Clearer words.** "Pays 210 DC if every pick wins"; "Would have paid" and "Pays 4.2×" start with a capital; "Refunded · No winners"; a resolved pick with no known winner says "Resolved"; Your standing drops "No settled bets yet." beside "None yet"; a member's empty activity says "No activity yet." with their name; Activity's empty All tab offers Browse markets; "’s 3-pick parlay paid" takes a curly apostrophe; Biggest win's market is underlined as a link (#513).
+- **Admin uses members' words.** The ledger's Kind filter and rows say "Market called off", not "Market voided"; a waiting market shows "140 DC staked" with "Just now" capitalised; an empty queue says "No submissions to review."; Invites reads "Newest first" and "Google email"; buttons say "Adjust balance" and "Save task" (#515).
+- **Quieter admin lists.** Resolve on a waiting market is a secondary button; roles take a neutral chip and Inactive the called-off grey, instead of gold and green; claimed invites drop "(claimed)" and removed members drop "Removed", which their tabs already say (#515).
+- **Admin busy buttons say what they're doing:** Adjusting…, Saving…, Approving…, Adding…, Revoking…, Removing…, Inviting…, Creating… and Deleting… (#515).
+- **Invite again confirms in the main colour,** not red, since it gives access back (`ConfirmActionButton` takes a `confirmVariant`) (#515).
+- **Smaller admin gaps.** The Members sort links on a phone are normal 14px words; the task edit form says how often the task repeats and that a new task changes it; the Admin guide link says it opens GitHub; an admin on a member's page is told only the owner can change role, balance or access; "under Invites" is a link; the approve toast names whose submission; Description is marked optional; and the Economy card folds its explanation under "How each source is counted" (#515).
 
 ### Under the hood
-- **`can_change_market_title`** (migration 0116) tells the market page whether a new title would go through, by the same rule as `update_market`.
-- **UX Engine is the design skill set.** `AGENTS.md` now routes every UI and UX change through the UX Engine plugin (installed per machine, not in this public repo), and `DESIGN.md` is a complete design contract extracted from `app/globals.css`, with each status chip's contrast computed.
-- **Link, busy-button and menu rules.** `AGENTS.md` now says a standalone link that leads onward takes a trailing chevron and a caption-weight link takes `prose-link`; slow actions' buttons take a `pendingLabel`; menu items share `menuItemClass`; and error toasts go through `toastError`.
-- **Lime current tab, Home's reads and skeleton rules.** `AGENTS.md` now allows lime as the phone's current-tab fill in both themes (the old `--tab-active` is `--menu-highlight`, the menu highlight it still drew), says Needs you renders with the first paint from the layout's `readReviewCounts`, and that Home's optional blocks read through `optionalRead`.
-- **Approve's Undo window, and members' words in the ledger.** `AGENTS.md`'s confirm, "Never optimistic" and Words we use notes describe the held single Approve (`useUndoWindow`, `lib/ui/undo-window.ts`) and the ledger's member labels.
+- **`can_change_market_title`** (migration 0116) tells the market page whether a new title would go through, by the same rule as `update_market` (#511).
+- **UX Engine is the design skill set.** `AGENTS.md` now routes every UI and UX change through the UX Engine plugin (installed per machine, not in this public repo), and `DESIGN.md` is a complete design contract extracted from `app/globals.css`, with each status chip's contrast computed (#509).
+- **Link, busy-button and menu rules.** `AGENTS.md` now says a standalone link that leads onward takes a trailing chevron and a caption-weight link takes `prose-link`; slow actions' buttons take a `pendingLabel`; menu items share `menuItemClass`; and error toasts go through `toastError` (#510).
+- **Lime current tab, Home's reads and skeleton rules.** `AGENTS.md` now allows lime as the phone's current-tab fill in both themes (the old `--tab-active` is `--menu-highlight`, the menu highlight it still drew), says Needs you renders with the first paint from the layout's `readReviewCounts`, and that Home's optional blocks read through `optionalRead` (#512).
+- **Approve's Undo window, and members' words in the ledger.** `AGENTS.md`'s confirm, "Never optimistic" and Words we use notes describe the held single Approve (`useUndoWindow`, `lib/ui/undo-window.ts`) and the ledger's member labels (#515).
 
 ## v1.1.0 — 2026-10-23
 

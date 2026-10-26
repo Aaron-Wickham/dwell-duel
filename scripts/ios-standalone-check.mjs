@@ -93,7 +93,12 @@ function startProxy(reports) {
       const chunks = []
       up.on('data', (chunk) => chunks.push(chunk))
       up.on('end', () => {
-        const html = Buffer.concat(chunks).toString('utf8').replace('</body>', `${MEASURE_SCRIPT}</body>`)
+        // The CSP (#449) runs only inline scripts carrying the page's nonce, so the measuring script
+        // takes the nonce the page's own scripts were given.
+        const page = Buffer.concat(chunks).toString('utf8')
+        const nonce = page.match(/<script[^>]*\snonce="([^"]+)"/)?.[1]
+        const measure = nonce ? MEASURE_SCRIPT.replace('<script>', `<script nonce="${nonce}">`) : MEASURE_SCRIPT
+        const html = page.replace('</body>', `${measure}</body>`)
         const { 'content-length': _length, 'transfer-encoding': _encoding, ...rest } = up.headers
         res.writeHead(up.statusCode, { ...rest, 'content-length': Buffer.byteLength(html) })
         res.end(html)

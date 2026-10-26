@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getLeaderboardPage, searchLeaderboard } from '@/lib/social/leaderboard'
+import { getLeaderboardPage, getYourStanding, searchLeaderboard } from '@/lib/social/leaderboard'
 import { readMemberSearch } from '@/lib/social/member-search'
 import { RANK_ORDER, decodeRankCursor, type RankCursor } from '@/lib/pagination/rank-cursor'
 import { fakeSupabase } from '../fake-supabase'
@@ -80,6 +80,38 @@ describe('getLeaderboardPage', () => {
   it('throws when the read fails, so the error page shows rather than a wrong board', async () => {
     const { client } = fakeSupabase(() => ({ error: new Error('read failed') }))
     await expect(getLeaderboardPage(client, 'month', { top: null, bottom: null })).rejects.toThrow('read failed')
+  })
+})
+
+describe('getYourStanding', () => {
+  it("reads This month's standing from the month's board: your row, its size, a tie and the member above", async () => {
+    const { client, queries } = fakeSupabase((query) => {
+      if (query.select === undefined) return { count: 9 }
+      if (query.select === 'rank, score') return { data: { rank: 4, score: -20 } }
+      if (query.select === 'id') return { data: [{ id: 'a' }] }
+      return { data: [{ display_name: 'Ruth', score: 10 }] }
+    })
+
+    const standing = await getYourStanding(client, 'month', 'p-me')
+
+    expect(queries.every((q) => q.table === 'leaderboard_month' && q.rpc)).toBe(true)
+    expect(queries.find((q) => q.select === 'rank, score')?.eq).toEqual([['id', 'p-me']])
+    expect(queries.find((q) => q.select === 'display_name, score')?.gt).toEqual([['score', -20]])
+    expect(standing).toEqual({ rank: 4, memberCount: 9, score: -20, tiedWith: 0, above: { name: 'Ruth', gap: 30 } })
+  })
+
+  it('is null for a member with no bet this month', async () => {
+    const { client } = fakeSupabase((query) => (query.select === undefined ? { count: 9 } : { data: null }))
+    expect(await getYourStanding(client, 'month', 'p-me')).toBeNull()
+  })
+
+  it('reads Net worth from member_standing, as Home and the member page do', async () => {
+    const { client, queries } = fakeSupabase((query) => {
+      if (query.table === 'member_standing') return { data: { rank: 1, score: 900, member_count: 12 } }
+      return { data: [{ id: 'p-me' }] }
+    })
+    expect(await getYourStanding(client, 'all', 'p-me')).toEqual({ rank: 1, memberCount: 12, score: 900, tiedWith: 0, above: null })
+    expect(queries.filter((q) => q.table === 'leaderboard_net_worth')).toHaveLength(1)
   })
 })
 

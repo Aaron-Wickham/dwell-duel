@@ -8,6 +8,7 @@ import { NothingOlder } from '@/components/ui/nothing-older'
 import { ShowMore, BackToNewest } from '@/components/ui/show-more'
 import { ShowMoreFocus } from '@/components/ui/show-more-focus'
 import { FeedList } from '@/app/(app)/feed/feed-list'
+import { EmptyState } from '@/components/ui/empty-state'
 
 export const ROW_ID_PREFIX = 'activity'
 
@@ -15,10 +16,12 @@ export const ROW_ID_PREFIX = 'activity'
 // directly: it's an async Server Component inside a <Suspense>, which jsdom can't render in place.
 export async function MemberActivity({
   memberId,
+  memberName,
   page,
   searchParams,
 }: {
   memberId: string
+  memberName: string
   page: PageParams
   searchParams: SearchParams
 }) {
@@ -41,7 +44,13 @@ export async function MemberActivity({
         headingId="recent-activity"
         rowIdPrefix={ROW_ID_PREFIX}
         plainHref={pathname}
-        emptyState={activity.windowed ? <NothingOlder href={backToNewestHref} /> : undefined}
+        emptyState={
+          activity.windowed ? (
+            <NothingOlder href={backToNewestHref} />
+          ) : (
+            <EmptyState title="No activity yet.">{`${memberName}’s bets, markets and finished tasks show up here.`}</EmptyState>
+          )
+        }
         aboveList={activity.windowed && activity.rows.length > 0 && <BackToNewest href={backToNewestHref} />}
         belowList={
           activity.next && (

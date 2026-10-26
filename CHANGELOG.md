@@ -28,6 +28,12 @@ before v0.4.0 used other headings.)
 - **"No real money" on every iPhone.** On a short screen, which is most Safari tabs, the sign-in page now keeps one line, "Play money only. No real money.", and the sample card drops its bet line to make room, so the page still doesn't scroll.
 - **Screen readers reach the heading first** on sign-in and Not invited, and skip the dimmed sample market on Not invited.
 - **Privacy no longer sends you to sign in.** Its mentions of other parts of the rules (Roles, Tasks) are plain words, since those pages are for members.
+- **This month shows where you stand.** The leaderboard's This month tab now has the sticky You bar on a phone and Your standing beside the rankings on a computer, and Jump to me stays on This month instead of switching to Net worth.
+- **A refunded parlay stops quoting odds.** Its page says "Refunded" over the stake and "Every pick was called off", without a payout that will never happen.
+- **A called-off bet says so.** My bets reads " · Called off · Refunded", and a market's Your position chip says "Called off".
+- **A new photo says it isn't saved yet.** The profile form says "Save profile to keep this photo." until you save.
+- **Your own reaction stands out by more than colour,** with a thicker edge and dark text.
+- **The leaderboard doesn't jump while This month loads:** each tab has its own loading skeleton.
 
 ### Polish
 - **Cards stand out from the page in light mode.** The light page background is a step darker, so cards on Home and My bets read as cards on a sunny phone screen; hover tints moved with it.
@@ -45,6 +51,13 @@ before v0.4.0 used other headings.)
 - **The sign-in sample market's category** is a tinted category chip, like a real market card's.
 - **"Go to DwellDuel" reads as a link** at the end of Privacy and Terms: full-size ink text with a chevron, instead of small grey text.
 - **Clearer error words.** A failed action now says "That didn’t go through. Try again, and if it keeps happening, tell an admin."; a page that fails to load says "This page couldn’t load", or that you're offline when you are; a failed sign-in says to use the account your invite was sent to; and "Nothing older here" lost its full stop.
+- **The race chart says how the lines moved,** "Aaron rose to +64 DC, …", on one line under its heading and in full to screen readers, and the card keeps one height before and after the first bet settles.
+- **Past champions match the awards:** plain rows with the profit in bold, no chip or trophy.
+- **Parlay picks read the same everywhere.** An open pick's chip is green, not waiting gold, and the tally counts every pick still to play out as "waiting", as the rows do. The progress bar's open segments have an edge, so each pick reads as its own segment.
+- **The parlay page goes back where you came from,** shows when it was placed in the summary, and every pick row opens its market.
+- **Bigger small print on the leaderboard:** the podium's "(you)", the race chart's hint and its off-the-chart note are 14px.
+- **My bets hides the Cancelled tab** unless you had a bet cancelled before October 2026.
+- **Clearer words.** "Pays 210 DC if every pick wins"; "Would have paid" and "Pays 4.2×" start with a capital; "Refunded · No winners"; a resolved pick with no known winner says "Resolved"; Your standing drops "No settled bets yet." beside "None yet"; a member's empty activity says "No activity yet." with their name; Activity's empty All tab offers Browse markets; "’s 3-pick parlay paid" takes a curly apostrophe; Biggest win's market is underlined as a link.
 
 ### Under the hood
 - **UX Engine is the design skill set.** `AGENTS.md` now routes every UI and UX change through the UX Engine plugin (installed per machine, not in this public repo), and `DESIGN.md` is a complete design contract extracted from `app/globals.css`, with each status chip's contrast computed.

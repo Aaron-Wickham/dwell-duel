@@ -89,7 +89,7 @@ export default async function MemberPage(props: PageProps<'/members/[id]'>) {
                 </SkeletonScreen>
               }
             >
-              <MemberActivity memberId={member.id} page={readPageParams(searchParams, 'activity')} searchParams={searchParams} />
+              <MemberActivity memberId={member.id} memberName={member.displayName} page={readPageParams(searchParams, 'activity')} searchParams={searchParams} />
             </Suspense>
           </div>
         </div>

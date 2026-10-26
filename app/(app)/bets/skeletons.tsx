@@ -4,17 +4,19 @@ import { listCardClass } from '@/components/ui/list-card'
 import { betListClass } from './bet-rows'
 import { Skeleton, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
 
-function Tabs() {
-  return <Skeleton className="h-[52px] w-full rounded-tile md:w-[357px]" />
+// Open, Settled and Coins: the Cancelled tab shows only to the few members with a cancelled bet
+// (D-10), so only ?tab=cancelled is sure to draw all four.
+function Tabs({ withCancelled = false }: { withCancelled?: boolean }) {
+  return <Skeleton className={cn('h-[52px] w-full rounded-tile', withCancelled ? 'md:w-[357px]' : 'md:w-[246px]')} />
 }
 
 // Open, Settled and Cancelled: the tabs, then one tab's list cards straight on the page (D2), two
 // to a row at lg. A title with its day, then the stake line.
-export function BetsSkeleton() {
+export function BetsSkeleton({ withCancelled = false }: { withCancelled?: boolean }) {
   return (
     <SkeletonScreen name="bets" className={pageClassFor('wide')}>
       <SkeletonPageHeader />
-      <Tabs />
+      <Tabs withCancelled={withCancelled} />
       <div className={betListClass}>
         {Array.from({ length: 6 }, (_, i) => (
           <div

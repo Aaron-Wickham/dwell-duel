@@ -24,7 +24,7 @@ function ParlayLine({ parlay }: { parlay: ParlayView }) {
             {parlay.estimated ? '~' : ''}
             {formatDcAmount(parlay.potentialPayout)}
           </span>{' '}
-          if all win
+          if every pick wins
         </>
       )
     case 'won':

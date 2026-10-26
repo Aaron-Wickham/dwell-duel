@@ -224,6 +224,14 @@ describe('TaskCatalogItem', () => {
 })
 
 describe('ProfileForm', () => {
+  // SOC-5: a photo change waits for Save, so the form says so.
+  it('says a removed photo is gone only once the profile is saved', async () => {
+    render(<ProfileForm displayName="Ben" bio="" avatarSrc="https://example.test/ben.jpg" />)
+    expect(screen.queryByText(/^Save profile to/)).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Remove photo' }))
+    expect(screen.getByText('Save profile to remove your photo.')).toBeInTheDocument()
+  })
+
   it('keeps the bio after the server refuses it', async () => {
     actions.updateProfileAction.mockResolvedValue({ formError: 'Could not save your profile.' })
     render(<ProfileForm displayName="Ben" bio="Choir" avatarSrc={null} />)

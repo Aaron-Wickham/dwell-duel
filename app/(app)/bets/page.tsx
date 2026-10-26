@@ -5,7 +5,7 @@ import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
-import { listMyCancelledBets } from '@/lib/bets/list-my-bets'
+import { hasCancelledBets, listMyCancelledBets } from '@/lib/bets/list-my-bets'
 import { listMyWagers } from '@/lib/bets/list-my-wagers'
 import { listMyTransactions } from '@/lib/ledger/my-transactions'
 import { newestHref, readPageParams, showMoreHref, type SearchParams } from '@/lib/pagination/cursor'
@@ -135,6 +135,11 @@ export default async function MyBetsPage(props: PageProps<'/bets'>) {
 
   const tab = readTab(searchParams.tab)
   const pageParams = readPageParams(searchParams, tab)
+  // The Cancelled tab shows only to a member with a cancelled bet (D-10); ?tab=cancelled typed in
+  // still opens it, with its tab current.
+  const showCancelled = tab === 'cancelled' ? Promise.resolve(true) : hasCancelledBets(supabase, user.id)
+  // Read beside the tab's own list; a failure surfaces at the await below, not as an unhandled rejection.
+  showCancelled.catch(() => {})
 
   let section: ReactNode
   if (tab === 'coins') {
@@ -160,6 +165,7 @@ export default async function MyBetsPage(props: PageProps<'/bets'>) {
     )
   }
 
+  const withCancelled = await showCancelled
   return (
     // Coins is one stream of rows, so it reads at the reading width; the bet tabs' cards take the
     // wide column. The header and tabs move with it, keeping one pair of edges.
@@ -169,7 +175,7 @@ export default async function MyBetsPage(props: PageProps<'/bets'>) {
       <ShowMoreFocus />
       <SubNav
         label="My bets sections"
-        items={(Object.keys(TABS) as Tab[]).map((t) => ({
+        items={(Object.keys(TABS) as Tab[]).filter((t) => t !== 'cancelled' || withCancelled).map((t) => ({
           href: t === 'open' ? PATH : `${PATH}?tab=${t}`,
           label: TABS[t].label,
           current: t === tab,

@@ -169,9 +169,9 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
   )
   // The month's extras show only above the top of the board, never inside a window part-way down it.
   const showMonthExtras = board === 'month' && !page.windowed && page.rows.length > 0
-  // Your standing: the phone's sticky bar and the side card at lg. It needs rankings to stand
-  // beside, so it's read only when there are rows below the podium.
-  const showStanding = board === 'all' && page.rows.length > 1 && (page.windowed || page.rows.length > 3)
+  // Your standing: the phone's sticky bar and the side card at lg, on either board. It needs rankings
+  // to stand beside, so on Net worth it's read only when there are rows below the podium.
+  const showStanding = board === 'month' ? page.rows.length > 0 : page.rows.length > 1 && (page.windowed || page.rows.length > 3)
   const [records, race, awards, champions, standing, myRecords] = await Promise.all([
     getRecords(
       supabase,
@@ -180,7 +180,7 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
     showMonthExtras ? cachedRace(supabase) : [],
     showMonthExtras ? cachedAwards(supabase) : [],
     board === 'month' ? getPastChampions(supabase) : [],
-    showStanding ? cachedYourStanding(supabase, user.id) : null,
+    showStanding ? cachedYourStanding(supabase, board, user.id) : null,
     showStanding ? getRecords(supabase, [user.id]) : new Map(),
   ])
   // Only the net-worth board has a podium; This month leads with the race instead (#396).
@@ -230,7 +230,9 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
     )
   } else {
     const hasChampions = board === 'month' && !page.windowed && champions.length > 0
-    const jump = !meListed && <JumpToMe href={`${PATH}?at=me`} focusId={rowDomId(ROW_ID_PREFIX, user.id)} />
+    const jump = !meListed && standing && (
+      <JumpToMe href={board === 'month' ? `${PATH}?tab=month&at=me` : `${PATH}?at=me`} focusId={rowDomId(ROW_ID_PREFIX, user.id)} />
+    )
     // The rankings sit on the page as divided rows (D2). Their heading would repeat the h1 and the
     // tab, so it's for a screen reader only.
     const rankings = listed.length > 0 && (
@@ -265,7 +267,7 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
           ))}
         </ol>
         {/* After the rows, so it sticks to the bottom only while they're on screen. */}
-        {showStanding && standing && !meListed && <StandingCompact standing={standing} jump={jump} />}
+        {showStanding && standing && !meListed && <StandingCompact standing={standing} signed={board === 'month'} jump={jump} />}
         {page.next && (
           <div className="mt-3 flex flex-col">
             <ShowMore
@@ -286,21 +288,25 @@ export default async function LeaderboardPage(props: PageProps<'/leaderboard'>) 
       />
     )
     // At lg the rankings take 7 parts and a side column the other 5: the podium and Your standing on
-    // Net worth, the awards and past champions on This month. A phone reads the podium above the
-    // rankings and the awards below them; at lg the net-worth column sticks below the top bar.
+    // Net worth, Your standing, the awards and past champions on This month. A phone reads the podium
+    // above the rankings and the awards below them; at lg the net-worth column sticks below the top bar.
+    const standingCard = showStanding && listed.length > 0 && (
+      <YourStandingCard board={board} standing={standing} record={myRecords.get(user.id)} jump={jump} className="hidden lg:flex" />
+    )
+    const monthExtras = awards.length > 0 || hasChampions
     const side =
       board === 'all' ? (
-        (podiumBlock || (showStanding && listed.length > 0)) && (
+        (podiumBlock || standingCard) && (
           <div className="flex flex-col gap-5 lg:sticky lg:top-[calc(72px+var(--safe-top)+28px)] lg:col-start-2 lg:row-start-1 lg:gap-7">
             {podiumBlock}
-            {showStanding && listed.length > 0 && (
-              <YourStandingCard standing={standing} record={myRecords.get(user.id)} jump={jump} className="hidden lg:flex" />
-            )}
+            {standingCard}
           </div>
         )
       ) : (
-        (awards.length > 0 || hasChampions) && (
-          <div className="flex flex-col gap-5 lg:col-start-2 lg:row-start-1 lg:gap-7">
+        (monthExtras || standingCard) && (
+          // With nothing but the card, which a phone doesn't show, the column is for lg alone.
+          <div className={cn('flex-col gap-5 lg:col-start-2 lg:row-start-1 lg:flex lg:gap-7', monthExtras ? 'flex' : 'hidden')}>
+            {standingCard}
             <Awards awards={awards} />
             {hasChampions && <PastChampions champions={champions} />}
           </div>

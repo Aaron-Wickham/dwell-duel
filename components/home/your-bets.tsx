@@ -159,7 +159,7 @@ export function YourBets({
               now={now}
               detail={
                 <>
-                  {formatDcAmount(w.stake)} · Pays <Pays amount={w.payout} estimated={w.estimated} /> if all win
+                  {formatDcAmount(w.stake)} · Pays <Pays amount={w.payout} estimated={w.estimated} /> if every pick wins
                 </>
               }
             />

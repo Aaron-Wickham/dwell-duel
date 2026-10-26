@@ -263,7 +263,7 @@ describe('LeaderboardPage', () => {
       next: null,
       windowed: false,
     })
-    expect(getYourStanding).toHaveBeenCalledWith({}, 'p-me')
+    expect(getYourStanding).toHaveBeenCalledWith({}, 'all', 'p-me')
     const card = screen.getByRole('region', { name: 'Your standing' })
     expect(card.className).toContain('hidden')
     expect(within(card).getByText(/10 DC behind Member 4\./)).toBeInTheDocument()
@@ -276,10 +276,34 @@ describe('LeaderboardPage', () => {
     expect(side.parentElement?.className).toContain('lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]')
   })
 
-  it('leaves the standing card off This month', async () => {
+  // SOC-1: This month says where you stand too, from its own board.
+  it('shows your month standing in This month’s side column, above the awards, with the tab kept in Jump to me', async () => {
+    getAwards.mockResolvedValue([{ kind: 'most_active', memberId: 'a', name: 'Aaron', avatarSrc: null, value: 9, detail: null }])
+    getYourStanding.mockResolvedValue({ rank: 6, memberCount: 9, score: -20, tiedWith: 0, above: { name: 'Member 4', gap: 30 } })
     await renderPage({ rows: [member(1, 90, 1), member(2, 80, 2), member(3, 70, 3), member(4, 60, 4)], next: null, windowed: false }, { tab: 'month' })
-    expect(screen.queryByRole('region', { name: 'Your standing' })).toBeNull()
-    expect(getYourStanding).not.toHaveBeenCalled()
+    expect(getYourStanding).toHaveBeenCalledWith({}, 'month', 'p-me')
+    const card = screen.getByRole('region', { name: 'Your standing' })
+    expect(card.className).toContain('hidden')
+    expect(within(card).getByText('Profit')).toBeInTheDocument()
+    expect(within(card).getByText('−20 DC')).toBeInTheDocument()
+    expect(within(card).getByRole('link', { name: 'Jump to me' })).toHaveAttribute('href', '/leaderboard?tab=month&at=me')
+    const awards = screen.getByRole('heading', { name: 'This month’s awards' })
+    expect(card.compareDocumentPosition(awards) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('keeps a month side column holding only the standing card off a phone', async () => {
+    await renderPage({ rows: [member(1, 90, 1), member(2, 80, 2)], next: null, windowed: false }, { tab: 'month' })
+    const side = screen.getByRole('region', { name: 'Your standing' }).parentElement!
+    expect(side).toHaveClass('hidden', 'lg:flex')
+  })
+
+  it('offers no Jump to me to a member not on this month’s board', async () => {
+    getYourStanding.mockResolvedValue(null)
+    await renderPage({ rows: [member(1, 90, 1), member(2, 80, 2)], next: null, windowed: false }, { tab: 'month' })
+    const card = screen.getByRole('region', { name: 'Your standing' })
+    expect(within(card).getByText('You’re not on this month’s board yet. Place a bet to join it.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Jump to me' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Your rank' })).toBeNull()
   })
 
   it('leaves the standing card off a Net worth board that is only the podium', async () => {
@@ -350,9 +374,18 @@ describe('LeaderboardPage', () => {
       expect(screen.getByRole('link', { name: 'Back to the top' })).toHaveAttribute('href', '/leaderboard')
     })
 
-    it('leaves the compact card off This month', async () => {
+    it('shows the sticky bar on This month too, with a signed profit and the tab kept in Jump to me', async () => {
+      getYourStanding.mockResolvedValue({ rank: 8, memberCount: 9, score: 15, tiedWith: 0, above: { name: 'Member 5', gap: 35 } })
       await renderPage({ rows: [...FIVE], next: null, windowed: false }, { tab: 'month' })
-      expect(screen.queryByRole('region', { name: 'Your rank' })).toBeNull()
+      const bar = screen.getByRole('region', { name: 'Your rank' })
+      expect(bar).toHaveTextContent('+15')
+      expect(within(bar).getByText('35 DC behind Member 5.')).toBeInTheDocument()
+      expect(within(bar).getByRole('link', { name: 'Jump to me' })).toHaveAttribute('href', '/leaderboard?tab=month&at=me')
+    })
+
+    it('opens This month at your place for ?tab=month&at=me', async () => {
+      await renderPage({ rows: FIVE, next: null, windowed: false }, { tab: 'month', at: 'me' })
+      expect(getJumpToMeTop).toHaveBeenCalledWith({}, 'month', 'p-me')
     })
   })
 

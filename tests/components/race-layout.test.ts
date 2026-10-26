@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { exitStep, memberSeries, raceLayout } from '@/components/leaderboard/race-layout'
+import { describeRace, exitStep, memberSeries, raceLayout } from '@/components/leaderboard/race-layout'
 
 const PHONE = { height: 220, pad: 12, gap: 40 }
 
@@ -196,5 +196,24 @@ describe('memberSeries (#391)', () => {
 
   it('draws a sixth member in the grey line colour', () => {
     expect(memberSeries(['a', 'b', 'c', 'd', 'e', 'f']).filter((c) => c === 6)).toHaveLength(1)
+  })
+})
+
+describe('describeRace', () => {
+  const line = (name: string, profits: number[]) => ({ name, points: profits.map((profit) => ({ profit })), final: profits.at(-1)! })
+
+  it('says how each line moved, in board order', () => {
+    expect(describeRace([line('Aaron', [0, 30, 64]), line('Maci', [0, 41]), line('Py', [0, -3])])).toBe(
+      'Aaron rose to +64\u00A0DC, Maci rose to +41\u00A0DC and Py fell to −3\u00A0DC.',
+    )
+  })
+
+  it('names a start that was not zero, and a line that held', () => {
+    expect(describeRace([line('Ada', [10, 5]), line('Ben', [0, 0])])).toBe('Ada fell from +10\u00A0DC to +5\u00A0DC and Ben held at 0\u00A0DC.')
+  })
+
+  it('reads one line alone, and nothing for none', () => {
+    expect(describeRace([line('Ada', [0, 12])])).toBe('Ada rose to +12\u00A0DC.')
+    expect(describeRace([])).toBe('')
   })
 })

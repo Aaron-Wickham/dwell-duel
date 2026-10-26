@@ -110,6 +110,10 @@ export function ProfileForm({
           </div>
         </div>
         {!shownSrc && <p className="text-sm text-ink2">Without a photo, your initial shows instead.</p>}
+        {/* A photo isn't saved on its own (SOC-5): leaving now would drop it without a word. */}
+        {(photo || removed) && (
+          <p className="text-sm text-ink2">{photo ? 'Save profile to keep this photo.' : 'Save profile to remove your photo.'}</p>
+        )}
         {photoError && (
           <Message tone="error" id="profile-photo-error">
             {photoError}

@@ -196,7 +196,7 @@ describe('PositionCard, once settled', () => {
       <PositionCard position={{ bets: [solo(1, 20, 'Yes', { kind: 'refunded', reason: 'voided' }, null)], legs: [] }} resolvedAt={null} />,
     )
     expect(screen.getByText('Your bet was refunded.')).toBeInTheDocument()
-    expect(screen.getByText('Refunded')).toBeInTheDocument()
+    expect(screen.getByText('Called off')).toBeInTheDocument()
   })
 })
 

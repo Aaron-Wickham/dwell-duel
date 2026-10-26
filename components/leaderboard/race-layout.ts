@@ -1,4 +1,5 @@
 import { spreadLabels } from '@/components/markets/probability-chart'
+import { signedDc } from '@/lib/social/season'
 
 // Past this multiple of everyone else's range, the top or bottom line is a runaway and the scale
 // stops for the rest instead of for it.
@@ -136,4 +137,19 @@ export function memberSeries(ids: string[]): number[] {
     byId.set(id, slot + 1)
   }
   return ids.map((id) => byId.get(id)!)
+}
+
+// The race's text alternative, in describeMovement's words (#391): how each member's line moved
+// from before the first settlement to now, in board order. "Aaron rose to +64 DC, Maci rose to
+// +41 DC and Py fell to −3 DC."
+export function describeRace(series: { name: string; points: { profit: number }[]; final: number }[]): string {
+  const lines = series.map(({ name, points, final }) => {
+    const from = points[0]?.profit ?? 0
+    if (from === final) return `${name} held at ${signedDc(final)}`
+    const verb = final > from ? 'rose' : 'fell'
+    return from === 0 ? `${name} ${verb} to ${signedDc(final)}` : `${name} ${verb} from ${signedDc(from)} to ${signedDc(final)}`
+  })
+  if (lines.length === 0) return ''
+  const joined = lines.length === 1 ? lines[0] : `${lines.slice(0, -1).join(', ')} and ${lines.at(-1)}`
+  return `${joined}.`
 }

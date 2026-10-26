@@ -30,7 +30,14 @@ const labelTop = (name: string) => Number.parseFloat(screen.getByText(name).clos
 describe('RaceChart', () => {
   it('describes the standings to assistive tech and labels each line’s end with the name and total', () => {
     render(<RaceChart series={[series('Aaron', [0, 30, 64]), series('Maci', [0, 10, 41]), series('Py', [0, -3, -3])]} />)
-    expect(screen.getByRole('slider', { name: 'Net betting profit this month: Aaron +64\u00A0DC, Maci +41\u00A0DC, Py −3\u00A0DC' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('slider', { name: 'Net betting profit this month: Aaron rose to +64\u00A0DC, Maci rose to +41\u00A0DC and Py fell to −3\u00A0DC.' }),
+    ).toBeInTheDocument()
+    // SOC-6: the movement is said in the description too, on one clamped line under a fixed sentence,
+    // so the card's height never depends on the names.
+    const line = screen.getByText(/^Aaron rose to \+64\sDC, Maci rose to/)
+    expect(line).toHaveClass('line-clamp-1')
+    expect(line.parentElement).toHaveTextContent(/^Net profit for this month’s leaders\./)
     expect(screen.getByText('Aaron')).toBeInTheDocument()
     expect(screen.getByText('−3 DC')).toBeInTheDocument()
   })
@@ -223,7 +230,7 @@ describe('RaceChart', () => {
 
   it('draws a lone point as a flat line', () => {
     render(<RaceChart series={[series('Ada', [12])]} />)
-    expect(screen.getByRole('slider', { name: 'Net betting profit this month: Ada +12\u00A0DC' })).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Net betting profit this month: Ada held at +12\u00A0DC.' })).toBeInTheDocument()
   })
 
   it('says the race hasn’t started until a bet settles', () => {
@@ -231,5 +238,15 @@ describe('RaceChart', () => {
     expect(screen.getByRole('heading', { name: 'The race' })).toBeInTheDocument()
     expect(screen.getByText('The race starts once bets settle.')).toBeInTheDocument()
     expect(screen.queryByRole('slider')).toBeNull()
+  })
+
+  it('keeps the card one height with the plot or its empty state, and gives a runaway note the description line', () => {
+    const { unmount } = render(<RaceChart series={[]} />)
+    expect(screen.getByText('Nothing has settled yet.')).toHaveClass('line-clamp-1')
+    expect(screen.getByText('The race starts once bets settle.').closest('.min-h-\\[340px\\]')).not.toBeNull()
+    unmount()
+    render(<RaceChart series={[series('Aaron', [0, 20, 868]), series('Maci', [0, 40, 40]), series('Py', [0, 10, 30]), series('Jo', [0, -10, -20])]} />)
+    expect(screen.getByText(/^Aaron is off the top/)).toHaveClass('line-clamp-1')
+    expect(screen.getByRole('slider').closest('.min-h-\\[340px\\]')).not.toBeNull()
   })
 })

@@ -140,21 +140,40 @@ export type YourStanding = {
   above: { name: string; gap: number } | null
 }
 
-// The signed-in member's place on the net-worth board, for the desktop side card. The member
-// above is the nearest higher score, read with one limited query rather than from the page's
-// rows, which may be a window part-way down the board.
-export async function getYourStanding(supabase: DbClient, memberId: string): Promise<YourStanding | null> {
-  const standing = await supabase.rpc('member_standing', { p_profile_id: memberId }).maybeSingle()
-  if (standing.error) throw standing.error
-  if (!standing.data) return null
-  const { rank, score, member_count: memberCount } = standing.data as { rank: number | null; score: number; member_count: number }
+// The signed-in member's place on a board, for the phone's sticky bar and the side card. On net
+// worth it's member_standing's row, as Home and the member page read it; This month has no such
+// function, so it's the member's own row of the month's board and the board's size. The member
+// above is the nearest higher score, read with one limited query rather than from the page's rows,
+// which may be a window part-way down the board. Null when the member isn't on the board: removed,
+// or no bet yet this month.
+export async function getYourStanding(supabase: DbClient, board: Board, memberId: string): Promise<YourStanding | null> {
+  const fn = BOARD_FUNCTIONS[board]
+  let rank: number | null
+  let score: number
+  let memberCount: number
+  if (board === 'all') {
+    const standing = await supabase.rpc('member_standing', { p_profile_id: memberId }).maybeSingle()
+    if (standing.error) throw standing.error
+    if (!standing.data) return null
+    ;({ rank, score, member_count: memberCount } = standing.data as { rank: number | null; score: number; member_count: number })
+  } else {
+    const [mine, size] = await Promise.all([
+      supabase.rpc(fn).select('rank, score').eq('id', memberId).maybeSingle(),
+      supabase.rpc(fn, undefined, { head: true, count: 'exact' }),
+    ])
+    if (mine.error) throw mine.error
+    if (size.error) throw size.error
+    if (!mine.data) return null
+    ;({ rank, score } = mine.data)
+    memberCount = size.count ?? 0
+  }
   if (rank === null) return null
 
   const [sharing, higher] = await Promise.all([
-    supabase.rpc('leaderboard_net_worth').select('id').eq('rank', rank).limit(2),
+    supabase.rpc(fn).select('id').eq('rank', rank).limit(2),
     rank > 1
       ? supabase
-          .rpc('leaderboard_net_worth')
+          .rpc(fn)
           .select('display_name, score')
           .gt('score', score)
           .order('score', { ascending: true })
@@ -174,7 +193,7 @@ export async function getYourStanding(supabase: DbClient, memberId: string): Pro
   }
 }
 
-// A member's standing is the same whoever asks, so it's a group read keyed by the member.
-export function cachedYourStanding(supabase: DbClient, memberId: string): Promise<YourStanding | null> {
-  return groupRead(supabase, 'your-standing', memberId, () => getYourStanding(supabase, memberId))
+// A member's standing is the same whoever asks, so it's a group read keyed by the board and member.
+export function cachedYourStanding(supabase: DbClient, board: Board, memberId: string): Promise<YourStanding | null> {
+  return groupRead(supabase, 'your-standing', `${board}:${memberId}`, () => getYourStanding(supabase, board, memberId))
 }

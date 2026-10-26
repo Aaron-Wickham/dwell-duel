@@ -26,7 +26,8 @@ export const metadata: Metadata = { title: 'Activity' }
 
 const ROW_ID_PREFIX = 'feed'
 
-const EMPTY: Record<Exclude<FeedShow, 'all'>, { title: string; body: string }> = {
+const EMPTY: Record<FeedShow, { title: string; body: string }> = {
+  all: { title: 'Nothing yet.', body: 'Bets, new markets, results and finished tasks show up here as they happen.' },
   results: { title: 'No results yet.', body: 'Resolved markets and winning bets show up here.' },
   mine: { title: 'Nothing of yours yet.', body: 'Your bets, your markets and results on markets you’re in show up here.' },
 }
@@ -69,11 +70,11 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
         emptyState={
           feed.windowed ? (
             <NothingOlder href={backToNewestHref} />
-          ) : show !== 'all' ? (
+          ) : (
             <EmptyState
               title={EMPTY[show].title}
               action={
-                show === 'mine' && (
+                show !== 'results' && (
                   <IntentLink
                     href="/markets"
                     transitionTypes={TAB_TRANSITION}
@@ -86,7 +87,7 @@ export default async function FeedPage(props: PageProps<'/feed'>) {
             >
               {EMPTY[show].body}
             </EmptyState>
-          ) : undefined
+          )
         }
         aboveList={
           feed.windowed &&

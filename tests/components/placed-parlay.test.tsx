@@ -39,10 +39,10 @@ function renderParlay(p: ParlayView) {
 const line = (text: string) => screen.getByText((_, el) => el?.tagName === 'P' && el.textContent === text)
 
 describe('PlacedParlay', () => {
-  it('says what an open parlay pays if all win, in the line under its title (#393)', () => {
+  it('says what an open parlay pays if every pick wins, in the line under its title (#393)', () => {
     renderParlay(parlay({}))
     expect(screen.getByRole('link', { name: 'Parlay · 2 picks' })).toHaveAttribute('href', '/parlays/p1')
-    expect(line('5\u00A0DC · Pays 80\u00A0DC if all win')).toBeInTheDocument()
+    expect(line('5\u00A0DC · Pays 80\u00A0DC if every pick wins')).toBeInTheDocument()
     expect(screen.getByText('80 DC')).toHaveClass('text-win')
     // No chip and no multiplier on the card: only the picks' words.
     expect(screen.queryByText('Open')).toBeNull()
@@ -69,7 +69,7 @@ describe('PlacedParlay', () => {
 
   it('marks the payout as an estimate while a pick’s odds aren’t set', () => {
     renderParlay(parlay({ estimated: true }))
-    expect(line('5\u00A0DC · Pays ~80\u00A0DC if all win')).toBeInTheDocument()
+    expect(line('5\u00A0DC · Pays ~80\u00A0DC if every pick wins')).toBeInTheDocument()
   })
 
   it('shows the day it was placed beside the title', () => {

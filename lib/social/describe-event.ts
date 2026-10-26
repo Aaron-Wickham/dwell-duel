@@ -60,7 +60,7 @@ export function describeEvent(e: FeedEvent): Segment[] {
     case 'bet_won':
       return [actor(e), ` won ${formatDcAmount(e.amount ?? 0)} on `, market(e)]
     case 'parlay_won':
-      return [actor(e), `'s ${e.legCount}-pick parlay paid ${formatDcAmount(e.amount ?? 0)}`]
+      return [actor(e), `’s ${e.legCount}-pick parlay paid ${formatDcAmount(e.amount ?? 0)}`]
     case 'task_completed':
       return [actor(e), ` completed ${e.taskTitle} (+${formatDcAmount(e.amount ?? 0)})`]
     case 'season_champion':

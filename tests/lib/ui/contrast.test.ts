@@ -38,6 +38,7 @@ const TEXT_PAIRS: [string, string][] = [
   ['ink', 'bg'],
   ['ink', 'surface'],
   ['ink', 'sunk'],
+  ['ink2', 'bg'],
   ['ink2', 'surface'],
   ['ink2', 'sunk'],
   ['link', 'surface'],

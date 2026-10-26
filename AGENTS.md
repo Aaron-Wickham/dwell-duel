@@ -146,7 +146,9 @@ a line to `CHANGELOG.md` under the next release.
   "Approve selected" confirms, saying how many it approves and what it pays.
   A slow action's button (`FormSubmitButton`, `ConfirmActionButton`,
   `ConfirmSubmitDialog`) takes a `pendingLabel` ("Placing…"), shown with
-  `LeafLoader` while it runs, so busy never looks only unavailable.
+  `LeafLoader` while it runs, so busy never looks only unavailable. An
+  error toast goes through `toastError` (`lib/toast/error-toast.ts`), which
+  keeps it up 10 seconds; a test fails on a direct `toast.error`.
 - **Controls.** Every control is a real `<button>`, `<a>` or `<label>`ed
   input, at least 44px tall. Selects and checkboxes stay native. When a
   form shows a server error, wire `aria-invalid` and `aria-describedby`

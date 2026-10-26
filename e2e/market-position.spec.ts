@@ -101,17 +101,17 @@ test('Your position lists each bet with its fixed payout, and a parlay pick; par
   const outcomes = page.getByRole('region', { name: 'Outcomes' })
 
   const leg = position.getByRole('listitem').filter({ hasText: 'Parlay pick: Yes' })
-  await expect(leg.getByText(/^5 DC · 2 picks · Pays \d+ DC if every pick wins\./)).toBeVisible()
+  await expect(leg.getByText(/^5\sDC · 2 picks · Pays \d+\sDC if every pick wins\./)).toBeVisible()
   await expect(leg.getByRole('link', { name: /^View parlay/ })).toHaveAttribute('href', `/parlays/${parlayId}`)
 
   // Parlay money shows once, under the outcomes, never in a row (#390).
-  await expect(outcomes.getByText(/^Includes 5 DC riding in parlays\./)).toBeVisible()
+  await expect(outcomes.getByText(/^Includes 5\sDC riding in parlays\./)).toBeVisible()
   await expect(outcomes.getByRole('listitem').getByText(/riding in parlays/)).toHaveCount(0)
 
   // A solo bet joins the card with the payout fixed when it was placed, and no Cancel.
   await placeSolo(page, 'No', 5)
   const solo = position.getByRole('listitem').filter({ hasText: '5 DC on No' })
-  await expect(solo.getByText(/^Pays \d+ DC$/)).toBeVisible()
+  await expect(solo.getByText(/^Pays \d+\sDC$/)).toBeVisible()
   await expect(solo.getByRole('button')).toHaveCount(0)
   await expect(position.getByText('5 DC on this market · Bets are final.')).toBeVisible()
 
@@ -125,7 +125,7 @@ test('Your position lists each bet with its fixed payout, and a parlay pick; par
   const [backer1] = await backers()
   await lmsrParlay(backer1.client, [here.outcome('Yes'), there.outcome('No')], 10)
   await page.reload()
-  await expect(outcomes.getByText(/^Includes 15 DC riding in parlays\./)).toBeVisible()
+  await expect(outcomes.getByText(/^Includes 15\sDC riding in parlays\./)).toBeVisible()
 
   // From lg the position strip tops the right rail, level with the chart, with the outcomes under it (#440).
   await page.setViewportSize({ width: 1280, height: 900 })
@@ -171,7 +171,7 @@ test('once the market resolves, Your position shows each result, the net and the
   await expect(outcomes.getByText('Solo bets have been paid; parlays pay once every pick has settled.')).toBeVisible()
   await expect(page.getByRole('region', { name: 'No more bets' })).toHaveCount(0)
   // A pending parlay still rides on the winning outcome.
-  await expect(outcomes.getByText(/^Includes 5 DC riding in parlays\./)).toBeVisible()
+  await expect(outcomes.getByText(/^Includes 5\sDC riding in parlays\./)).toBeVisible()
 })
 
 test('a member with nothing on the market sees no Your position card', async ({ page }) => {

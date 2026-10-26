@@ -63,7 +63,8 @@ Light and dark are the same markup with different variables. Values are light / 
 - Separation language: tone steps, not lines or shadows. Hairlines (`--line` #D5DFD8 / #17434A) stay
   only for dividers inside a card, form fields and tables; only what floats (a sheet, a menu, a
   dialog, a card lifted under the mouse) casts `--overlay-shadow` or `--lift-shadow`. In dark, where
-  a soft shadow vanishes, both are a 1px `--line-s` ring plus a deep shadow.
+  a soft shadow vanishes, a lifted card gains a 1px `--line-s` ring and a floating popup's own border
+  brightens to `--overlay-edge` (`--line` in light, `--line-s` in dark), so it has one edge, not two.
 
 ## Spacing
 

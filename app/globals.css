@@ -91,6 +91,7 @@
   --sym-d: #03272D;
   --shadow: 0 1px 2px rgba(3, 39, 45, 0.05), 0 6px 20px rgba(3, 39, 45, 0.05);
   --overlay-shadow: 0 2px 6px rgba(3, 39, 45, 0.08), 0 18px 48px rgba(3, 39, 45, 0.18);
+  --overlay-edge: var(--line);
   --lift-shadow: 0 2px 6px rgba(3, 39, 45, 0.06), 0 12px 28px rgba(3, 39, 45, 0.12);
   --tab-shadow: 0 1px 3px rgba(3, 39, 45, 0.12);
   --scrim: rgba(3, 39, 45, 0.45);
@@ -201,7 +202,9 @@ html {
   --wm-b: #72DB2B;
   --sym-d: #FFFFFF;
   --shadow: none;
-  --overlay-shadow: 0 0 0 1px var(--line-s), 0 18px 48px rgba(0, 8, 10, 0.6);
+  --overlay-shadow: 0 18px 48px rgba(0, 8, 10, 0.6);
+  /* Dark surfaces hide a soft shadow, so a floating edge brightens instead of gaining a ring. */
+  --overlay-edge: var(--line-s);
   /* Dark surfaces hide a soft shadow, so the lifted card's edge brightens too. */
   --lift-shadow: 0 0 0 1px var(--line-s), 0 12px 28px rgba(0, 8, 10, 0.55);
   --tab-shadow: 0 1px 3px rgba(0, 8, 10, 0.5);
@@ -266,7 +269,9 @@ html {
     --wm-b: #72DB2B;
     --sym-d: #FFFFFF;
     --shadow: none;
-    --overlay-shadow: 0 0 0 1px var(--line-s), 0 18px 48px rgba(0, 8, 10, 0.6);
+    --overlay-shadow: 0 18px 48px rgba(0, 8, 10, 0.6);
+    /* Dark surfaces hide a soft shadow, so a floating edge brightens instead of gaining a ring. */
+    --overlay-edge: var(--line-s);
   /* Dark surfaces hide a soft shadow, so the lifted card's edge brightens too. */
   --lift-shadow: 0 0 0 1px var(--line-s), 0 12px 28px rgba(0, 8, 10, 0.55);
   --tab-shadow: 0 1px 3px rgba(0, 8, 10, 0.5);
@@ -288,6 +293,7 @@ html {
   --color-ink2: var(--ink2);
   --color-line: var(--line);
   --color-line-s: var(--line-s);
+  --color-overlay-edge: var(--overlay-edge);
   --color-primary: var(--primary);
   --color-on-primary: var(--on-primary);
   --color-lime: var(--lime);
@@ -1088,6 +1094,8 @@ html {
     --ink2: #46605E;
     --line: #D5DFD8;
     --line-s: #6F8581;
+    --on-tab-active: #03272D;
+    --wm-a: #03272D;
     --link: #03272D;
     --acc-soft: #E3F4D5;
     --acc-text: #2A6E0B;

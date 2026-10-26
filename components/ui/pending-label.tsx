@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 import { LeafLoader } from '@/components/brand/leaf-loader'
 import { cn } from '@/lib/utils'
 
-const layerClass = 'col-start-1 row-start-1 inline-flex items-center justify-center gap-2'
+// The quiet variant's underline doesn't reach into an inline-grid on its own, so each layer inherits it.
+const layerClass = 'col-start-1 row-start-1 inline-flex items-center justify-center gap-2 [text-decoration:inherit]'
 
 // A busy button says what it's doing ("Placing…") beside the leaf loader, the way sign-in does,
 // rather than only greying out like an unavailable one. Both labels share one grid cell, so the
@@ -10,7 +11,7 @@ const layerClass = 'col-start-1 row-start-1 inline-flex items-center justify-cen
 // out, so it stays the button's name; the words are announced by PendingStatus beside the button.
 export function PendingLabel({ pending, pendingLabel, children }: { pending: boolean; pendingLabel: string; children: ReactNode }) {
   return (
-    <span className="inline-grid">
+    <span className="inline-grid [text-decoration:inherit]">
       <span className={cn(layerClass, pending && 'opacity-0')}>{children}</span>
       <span aria-hidden="true" className={cn(layerClass, !pending && 'opacity-0')}>
         <LeafLoader />

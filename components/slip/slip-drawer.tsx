@@ -102,7 +102,7 @@ export function SlipDrawer({
                 return count === 0 ? focusPageHeading() : (closingTarget.current ?? returnFocusTo.current ?? true)
               }}
               className={cn(
-                'flex flex-col border-line bg-bg text-ink shadow-overlay outline-none',
+                'flex flex-col border-overlay-edge bg-bg text-ink shadow-overlay outline-none',
                 EASE,
                 isDesktop
                   ? 'h-full w-[440px] max-w-full border-l pt-(--safe-top) [transform:translateX(var(--drawer-swipe-movement-x))] data-starting-style:[transform:translateX(100%)] data-ending-style:[transform:translateX(100%)]'

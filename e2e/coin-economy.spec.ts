@@ -8,7 +8,7 @@ test('create a proof-required task, submit it with proof, and approve it as admi
   const bobPage = await member.newPage()
   await bobPage.goto('/')
   // The desktop Balance card's first "N DC" is the balance (#388).
-  const balance = bobPage.getByRole('region', { name: 'Balance' }).getByText(/^[\d,]+ DC$/).first()
+  const balance = bobPage.getByRole('region', { name: 'Balance' }).getByText(/^[\d,]+\sDC$/).first()
   const startingBalance = Number((await balance.textContent())!.replace(/,/g, '').match(/\d+/)![0])
 
   await page.goto('/admin/tasks')

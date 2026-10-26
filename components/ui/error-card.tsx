@@ -43,7 +43,7 @@ export function ErrorCard({ retry, digest }: { retry: () => void; digest?: strin
       <Card padded={false} className="flex w-full max-w-[440px] flex-col items-start gap-3 p-7 md:p-10">
         <h1 className={h2Class}>{ERROR_TITLE}</h1>
         <p className="text-ink2">
-          {online ? 'This page couldn’t load. Try again, or go back to Home.' : 'You’re offline. Try again once you’re back online.'}
+          {online ? 'It may be your connection or our side. Try again, or go back to Home.' : 'You’re offline. Try again once you’re back online.'}
         </p>
         <div className="mt-1 flex w-full flex-col gap-2 md:flex-row">
           <Button block className="md:w-auto" onClick={retry}>

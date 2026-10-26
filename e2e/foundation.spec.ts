@@ -9,7 +9,7 @@ test('signed-in member sees their name and balance', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1, name: /Alice/ })).toBeVisible()
   // The desktop Balance card (#388); on a phone the top bar's chip carries it.
-  await expect(page.getByRole('region', { name: 'Balance' }).getByText(/^[\d,]+ DC$/).first()).toBeAttached()
+  await expect(page.getByRole('region', { name: 'Balance' }).getByText(/^[\d,]+\sDC$/).first()).toBeAttached()
 })
 
 test('admin can add and revoke an invite', async ({ page }) => {

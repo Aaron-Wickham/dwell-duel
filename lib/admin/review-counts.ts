@@ -5,7 +5,7 @@ import type { LiveSubscription } from '@/components/live/live-refresh'
 
 export type ReviewCounts = { tasks: number; markets: number }
 
-// What is waiting on the viewer, for the avatar's red dot, its menu's Admin count and Home's
+// What is waiting on the viewer, for the avatar's gold dot, its menu's Admin count and Home's
 // Needs you (#385, #388). my_review_counts (0058) applies the
 // roles: another member's task submissions for a reviewer and above, closed markets with no result
 // for an admin and above. A plain member has nothing, so it costs them no query.

@@ -11,7 +11,7 @@ describe('ErrorCard', () => {
 
     const heading = screen.getByRole('heading', { level: 1, name: 'This page didn’t load' })
     expect(heading).not.toHaveClass('md:text-[40px]')
-    expect(screen.getByText('This page couldn’t load. Try again, or go back to Home.')).toBeInTheDocument()
+    expect(screen.getByText('It may be your connection or our side. Try again, or go back to Home.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/')
 
     const button = screen.getByRole('button', { name: 'Try again' })
@@ -36,7 +36,7 @@ describe('ErrorCard', () => {
     act(() => {
       window.dispatchEvent(new Event('online'))
     })
-    expect(screen.getByText('This page couldn’t load. Try again, or go back to Home.')).toBeInTheDocument()
+    expect(screen.getByText('It may be your connection or our side. Try again, or go back to Home.')).toBeInTheDocument()
     onLine.mockRestore()
   })
 })

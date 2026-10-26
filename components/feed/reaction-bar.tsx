@@ -88,7 +88,7 @@ export function ReactionBar({ eventId, reactions }: { eventId: string; reactions
         </Popover.Trigger>
         <Popover.Portal>
           <Popover.Positioner side="top" align="end" sideOffset={6} className="z-40 outline-none">
-            <Popover.Popup className="flex items-center gap-1 rounded-full border border-line bg-surface p-1 shadow-overlay outline-none transition-[opacity,scale] duration-(--duration-fast) data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0 motion-reduce:transition-none">
+            <Popover.Popup className="flex items-center gap-1 rounded-full border border-overlay-edge bg-surface p-1 shadow-overlay outline-none transition-[opacity,scale] duration-(--duration-fast) data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0 motion-reduce:transition-none">
               <Popover.Title className="sr-only">React</Popover.Title>
               {REACTIONS.map(({ kind, emoji, name }) => {
                 const count = shown[kind]

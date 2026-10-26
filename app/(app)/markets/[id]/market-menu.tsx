@@ -71,7 +71,7 @@ export function MarketMenu({
         </Menu.Trigger>
         <Menu.Portal>
           <Menu.Positioner sideOffset={6} align="end" className="z-40 outline-none">
-            <Menu.Popup className="flex min-w-56 origin-(--transform-origin) flex-col gap-0.5 rounded-tile border border-line bg-surface p-1.5 text-ink shadow-overlay outline-none transition-[opacity,scale] duration-(--duration-fast) data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0 motion-reduce:transition-none">
+            <Menu.Popup className="flex min-w-56 origin-(--transform-origin) flex-col gap-0.5 rounded-tile border border-overlay-edge bg-surface p-1.5 text-ink shadow-overlay outline-none transition-[opacity,scale] duration-(--duration-fast) data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0 motion-reduce:transition-none">
               <Menu.Item className={menuItemClass} onClick={() => void share()}>
                 <ItemContent icon={Share2}>Share</ItemContent>
               </Menu.Item>

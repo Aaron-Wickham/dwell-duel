@@ -146,17 +146,19 @@ export function ReviewButtons({
 
   return (
     <div className="flex flex-col items-end gap-2">
+      {/* While the window is open: what's happening, above the one way to stop it, so the row is no
+          wider than Approve and Reject were (beside it, it ran over the proof on a phone). Once the
+          approval is sent, the button stays in place (keeping focus) as "Approving…". */}
+      {holding && hold.open && (
+        <span aria-hidden="true" className="text-sm font-bold whitespace-nowrap text-ink2">
+          Approving…
+        </span>
+      )}
       <div className="flex items-center gap-1">
         {holding ? (
           <>
-            {/* While the window is open: what's happening, then the one way to stop it. Once the
-                approval is sent, the button stays in place (keeping focus) as "Approving…". */}
-            {hold.open && (
-              <span aria-hidden="true" className="px-1 text-sm font-bold text-ink2">
-                Approving…
-              </span>
-            )}
             <Button
+              key="undo"
               ref={undoButton}
               onFocus={() => {
                 undoFocused.current = true
@@ -181,6 +183,7 @@ export function ReviewButtons({
         ) : (
           <>
             <Button
+              key="approve"
               ref={approveButton}
               size="sm"
               variant="secondary"

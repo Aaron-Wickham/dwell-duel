@@ -128,6 +128,8 @@ function DeviceStatus({
     try {
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
+        // Blocked swaps Turn on for Check again, so focus follows to it.
+        if (permission === 'denied') flipped.current = true
         setDevice(permission === 'denied' ? 'denied' : 'off')
         if (permission === 'default') setError('To get notifications, tap Turn on notifications again and choose Allow.')
         return

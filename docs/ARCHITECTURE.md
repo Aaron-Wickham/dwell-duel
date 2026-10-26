@@ -874,7 +874,8 @@ button runs the action (`ConfirmSubmitDialog`). Balance adjustments and
 role changes ask the same way. Files upload straight from the browser to the
 private `proof` bucket (`lib/proof/upload.ts`), then `record_proof`
 checks the paths when the RPC runs. A refused upload is logged and mapped to
-member words (`uploadErrorMessage`: the insert policy's daily quota, size,
+member words (`uploadErrorMessage`: the insert policy's daily quota (for a
+resolution upload, the quota or no longer being able to resolve), size,
 type, else the connection), and `uploadProof`'s `onProgress` lets a button
 say which file is going up. Pages show proof through short-lived
 signed URLs made with the viewer's own session. `toProofViews` hands a

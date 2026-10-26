@@ -152,6 +152,8 @@ describe('NotificationSettings', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Turn on notifications' }))
     expect(await screen.findByText(/Notifications are blocked/)).toBeInTheDocument()
     expect(savePushSubscriptionAction).not.toHaveBeenCalled()
+    // Turn on is replaced by Check again, so focus follows instead of dropping to the page.
+    expect(screen.getByRole('button', { name: 'Check again' })).toHaveFocus()
   })
 
   it('is on when this device’s subscription is saved for the member, and turns off', async () => {

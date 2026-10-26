@@ -14,14 +14,24 @@ export const PROOF_CACHE_SECONDS = String(24 * 60 * 60)
 // What Storage's refusals mean to a member (#253's caps in 0089), never its raw message: the
 // rolling-day quota is an insert-policy refusal, which Storage reports as a row-level security
 // violation. Matched on the status code, the error code or the message, since Storage versions
-// differ in which they fill in.
+// differ in which they fill in. A resolution upload is also refused when the uploader can no longer
+// resolve the market, and Storage can't say which, so its refusal names both.
 export const UPLOAD_LIMIT_ERROR =
   'You’ve reached today’s upload limit (30 files or 60 MB). Try again tomorrow, or add a link instead.'
 
-export function uploadErrorMessage(name: string, error: { message?: string; statusCode?: string; code?: string }): string {
+export const RESOLUTION_REFUSED_ERROR =
+  'That proof didn’t upload: you may have reached today’s upload limit, or can no longer resolve this market. Reload the page and try again.'
+
+export function uploadErrorMessage(
+  name: string,
+  error: { message?: string; statusCode?: string; code?: string },
+  prefix = 'task/',
+): string {
   const message = error.message?.toLowerCase() ?? ''
   const status = error.statusCode ?? ''
-  if (status === '403' || error.code === 'AccessDenied' || message.includes('row-level security')) return UPLOAD_LIMIT_ERROR
+  if (status === '403' || error.code === 'AccessDenied' || message.includes('row-level security')) {
+    return prefix.startsWith('resolution/') ? RESOLUTION_REFUSED_ERROR : UPLOAD_LIMIT_ERROR
+  }
   if (status === '413' || error.code === 'EntityTooLarge' || message.includes('maximum allowed size')) {
     return `${name} is over 3 MB. Pick a smaller file.`
   }
@@ -67,7 +77,7 @@ export async function uploadProof(
       const { error } = await bucket.upload(path, file, { contentType: file.type || undefined, cacheControl: PROOF_CACHE_SECONDS })
       if (error) {
         console.error('Proof upload failed', error)
-        throw new Error(uploadErrorMessage(draft.file.name, error))
+        throw new Error(uploadErrorMessage(draft.file.name, error, prefix))
       }
       uploaded.push(path)
       records.push({ kind: draft.kind, storage_path: path, file_name: draft.file.name, size_bytes: file.size })

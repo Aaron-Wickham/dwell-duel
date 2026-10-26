@@ -5,7 +5,7 @@ const remove = vi.fn()
 vi.mock('@/lib/supabase/client', () => ({ browserClient: () => ({ storage: { from: () => ({ upload, remove }) } }) }))
 vi.mock('@/lib/proof/downscale', () => ({ downscaleImage: async (f: File) => f }))
 
-import { UPLOAD_LIMIT_ERROR, uploadErrorMessage, uploadProof } from '@/lib/proof/upload'
+import { RESOLUTION_REFUSED_ERROR, UPLOAD_LIMIT_ERROR, uploadErrorMessage, uploadProof } from '@/lib/proof/upload'
 import { PROOF_MAX_BYTES, PROOF_MAX_FILES, PROOF_MAX_ITEMS, PROOF_MAX_TOTAL_BYTES, PROOF_FILE_ACCEPT, PROOF_FILE_TYPES } from '@/lib/proof/types'
 
 beforeEach(() => {
@@ -76,6 +76,10 @@ describe('upload failures (TSK-4)', () => {
     [{ message: 'Failed to fetch' }, 'a.jpg didn’t upload. Check your connection and try again.'],
   ])('maps %o to words a member can act on', (error, words) => {
     expect(uploadErrorMessage('a.jpg', error)).toBe(words)
+  })
+
+  it('names both possible reasons when a resolution upload is refused', () => {
+    expect(uploadErrorMessage('a.jpg', { statusCode: '403' }, 'resolution/m1/')).toBe(RESOLUTION_REFUSED_ERROR)
   })
 
   it('reports which file is going up, counting only files', async () => {

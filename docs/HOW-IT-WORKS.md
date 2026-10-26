@@ -363,7 +363,7 @@ and when the soonest repeating task opens again.
   which an honest submission never comes near; past it, an upload says so
   and you can add a link instead. Once you've submitted proof you can't delete it.
   So that the app's free storage doesn't fill up, the **files expire**: proof
-  on a task submission that has been approved or rejected is deleted **30 days
+  on a task submission that has been approved or not approved is deleted **30 days
   after the review**, and proof on a market's result **90 days after it was
   resolved**. A pending submission's proof is kept until it's reviewed. After
   expiry the row still says how many attachments there were and that they've

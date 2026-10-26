@@ -142,14 +142,19 @@ a line to `CHANGELOG.md` under the next release.
   form through its `form` attribute. A form with several submit buttons
   passes `useConfirmSubmit` a predicate naming which ones ask. The one
   exception is approving a single task submission from its row, which
-  asks nothing but is held for an Undo instead (D-7): `useUndoWindow`
-  (`lib/ui/undo-window.ts`) keeps it 5 seconds, sending nothing, while the
-  row shows "Approving…" with Undo (focus moves to Undo, and back to
-  Approve on Undo) and a toast offers Undo too; it sends once the window
-  ends, or at once when the row unmounts or the page is left, never
-  silently dropping it. The e2e specs click a row's own "Approve" and wait
-  out the window. "Approve selected" confirms, saying how many it approves
-  and what it pays.
+  asks nothing but is held for an Undo instead (UX audit D-7):
+  `useUndoWindow` (`lib/ui/undo-window.ts`) keeps it 5 seconds, sending
+  nothing, while the row shows "Approving…" with Undo (focus moves to
+  Undo, and back to Approve on Undo), the toast "Approving {name}’s
+  submission" offers Undo too, and the row sits out bulk actions (its
+  checkbox disabled). It sends once the window ends, or at once when the
+  row unmounts or the page is hidden or left; there is no leave prompt.
+  A page killed mid-window can lose it, which leaves the submission
+  waiting, never paid twice. Once it lands the toast says "Approved
+  {name}’s submission." and focus on its button moves to the page heading
+  (`focusPageHeading`), since the row goes. The e2e specs click a row's own
+  "Approve" and wait out the window. "Approve selected" confirms, saying
+  how many it approves and what it pays.
   A slow action's button (`FormSubmitButton`, `ConfirmActionButton`,
   `ConfirmSubmitDialog`) takes a `pendingLabel` ("Placing…"), shown with
   `LeafLoader` while it runs, so busy never looks only unavailable. An
@@ -208,7 +213,7 @@ a line to `CHANGELOG.md` under the next release.
   "awaiting resolution" (D7, #403; the database values `voided` and
   `awaiting` and RPC names keep theirs; the admin ledger's labels use
   the members' words too, "Market called off", while `?kind=` keeps the
-  database's type, D-8).
+  database's type, UX audit D-8).
 - **UX Engine is the design skill set for all UI and UX work.** It is the
   `ux-engine` Claude Code plugin (designmotionhq, 2.4.0), installed per
   machine, never in this repo: its licence forbids publishing it and this
@@ -352,7 +357,7 @@ a line to `CHANGELOG.md` under the next release.
   CSS that script also keeps (the sign-in intro's) are custom properties
   script writes from its constants, not copies.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.
-  A row's single Approve (D-7) is held, not optimistic: nothing on screen
+  A row's single Approve (UX audit D-7) is held, not optimistic: nothing on screen
   says it's done and nothing is sent until its 5-second Undo window ends,
   and approve_task_completion refusing a submission that isn't pending
   (with the action counting a replay of the reviewer's own approval as

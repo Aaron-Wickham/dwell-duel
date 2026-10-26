@@ -154,6 +154,16 @@ describe('AdminLedgerPage’s economy card', () => {
     expect(regions).toEqual(['economy-title', 'ledger-title'])
   })
 
+  it('holds the card’s place with its own skeleton while the figures load', async () => {
+    role.current = 'owner'
+    readEconomySummary.mockReturnValue(new Promise(() => {}))
+    const page = await AdminLedgerPage({ searchParams: Promise.resolve({}) } as never)
+    await act(async () => void render(page))
+    expect(document.querySelector('[data-skeleton="admin-economy"]')).not.toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('Loading…')
+    expect(screen.getByRole('region', { name: 'Every coin movement' })).toBeInTheDocument()
+  })
+
   it('never reads the figures for an admin, nor shows the card', async () => {
     role.current = 'admin'
     render(await AdminLedgerPage({ searchParams: Promise.resolve({}) } as never))

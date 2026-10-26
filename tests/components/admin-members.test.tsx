@@ -98,6 +98,17 @@ describe('AdjustBalanceForm confirmation (#65)', () => {
     expect(screen.getByLabelText('Reason')).toHaveValue('Duplicate reward')
   })
 
+  // The page's balance may be stale, so an overdraw still confirms, saying the server will refuse it.
+  it('still asks before an adjustment past the shown balance, saying it would overdraw', async () => {
+    render(<AdjustBalanceForm member={BEN} />)
+    await submit('-80', 'Correction')
+    const dialog = await screen.findByRole('alertdialog', { name: 'Adjust Ben’s balance?' })
+    expect(dialog).toHaveAccessibleDescription(
+      'Taking 80\u00A0DC from Ben’s 60\u00A0DC would take the balance below 0\u00A0DC; the server refuses an overdraw. Reason: “Correction”.',
+    )
+    expect(adjustBalanceAction).not.toHaveBeenCalled()
+  })
+
   it('toasts and clears the fields once the adjustment goes through', async () => {
     adjustBalanceAction.mockResolvedValue(undefined)
     render(<AdjustBalanceForm member={BEN} />)
@@ -116,9 +127,8 @@ describe('AdjustBalanceForm keeps what was filled in (#63)', () => {
   it('keeps the amount and reason after the server refuses', async () => {
     adjustBalanceAction.mockResolvedValue({ formError: 'That would take Ben’s balance below zero — they have 60\u00A0DC.', field: 'amount' })
     render(<AdjustBalanceForm member={BEN} />)
-    // Below zero isn't confirmed (it would be refused), so it goes straight to the server's answer.
     await submit('-80', 'Correction')
-    expect(screen.queryByRole('alertdialog')).toBeNull()
+    await userEvent.click(await screen.findByRole('button', { name: 'Adjust balance' }))
 
     await screen.findByRole('alert')
     expect(screen.getByLabelText('Amount')).toHaveValue(-80)

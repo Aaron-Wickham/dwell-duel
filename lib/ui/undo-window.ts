@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-// How long a held action waits for Undo before it is sent (D-7).
+// How long a held action waits for Undo before it is sent (UX audit D-7).
 export const UNDO_WINDOW_MS = 5_000
 
 // Why a window committed: its timer ran out, or the page or component was going away.
@@ -48,9 +48,11 @@ export function createUndoWindow(commit: (reason: CommitReason) => void, delayMs
 }
 
 // The window as React state. `commit` runs once per window: when the timer ends it ('timer'), or
-// at once when the component unmounts or the page is being left ('leaving'), so leaving during
-// the window sends the action rather than silently dropping it. Leaving the page also asks the
-// browser's "Leave site?" question, which gives the request time to go out.
+// at once when the component unmounts or the page is hidden or left ('leaving'), so leaving during
+// the window sends the action rather than silently dropping it. A hidden page may never run its
+// timer (a phone suspends it), so hiding sends it too. No "Leave site?" prompt: the request is
+// already on its way when the page goes, and a prompt would add nothing but a question. A page
+// killed outright mid-window can still lose it, which leaves the action undone, never doubled.
 export function useUndoWindow(commit: (reason: CommitReason) => void, delayMs: number = UNDO_WINDOW_MS) {
   const [open, setOpen] = useState(false)
   // Created once, so the timer it holds outlives renders; it calls whichever commit the latest
@@ -81,17 +83,19 @@ export function useUndoWindow(commit: (reason: CommitReason) => void, delayMs: n
 
   useEffect(() => {
     if (!open) return
-    function onBeforeUnload(event: BeforeUnloadEvent) {
-      if (held.flush()) event.preventDefault()
-    }
-    function onPageHide() {
+    function onLeave() {
       held.flush()
     }
-    window.addEventListener('beforeunload', onBeforeUnload)
-    window.addEventListener('pagehide', onPageHide)
+    function onVisibilityChange() {
+      if (document.visibilityState === 'hidden') held.flush()
+    }
+    window.addEventListener('beforeunload', onLeave)
+    window.addEventListener('pagehide', onLeave)
+    document.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
-      window.removeEventListener('beforeunload', onBeforeUnload)
-      window.removeEventListener('pagehide', onPageHide)
+      window.removeEventListener('beforeunload', onLeave)
+      window.removeEventListener('pagehide', onLeave)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [open, held])
 

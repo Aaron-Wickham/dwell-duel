@@ -14,7 +14,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { h2Class } from '@/components/ui/page'
 import { LedgerRow } from '@/components/admin/ledger-row'
 import { LedgerFilters } from '@/components/admin/ledger-filters'
-import { EconomyCard } from '@/components/admin/economy-card'
+import { EconomyCard, EconomyCardSkeleton } from '@/components/admin/economy-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { NothingOlder } from '@/components/ui/nothing-older'
 import { BackToNewest, ShowMore } from '@/components/ui/show-more'
@@ -85,10 +85,11 @@ export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>)
 
   return (
     <ContentReveal>
-      {/* Streamed with no fallback: only the owner gets it, and the skeleton can't know who's
-          looking, so it draws only the ledger (ADM-3). */}
+      {/* Only the owner gets it, and the route's skeleton can't know who's looking, so that draws
+          only the ledger; once the page knows, the card streams behind its own skeleton at its
+          real height, so the ledger under it doesn't move when the figures land (ADM-3). */}
       {economy && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<EconomyCardSkeleton />}>
           <OwnerEconomy summary={economy} />
         </Suspense>
       )}

@@ -13,7 +13,7 @@ before v0.4.0 used other headings.)
 ## Unreleased
 
 ### Features
-- **Undo a single approval.** A submission's own Approve in Admin › Tasks now waits five seconds, showing Approving… with Undo (and Undo in a message too), before it pays; leaving the page in that time approves it at once rather than losing it. Approve selected still asks first.
+- **Undo a single approval.** A submission's own Approve in Admin › Tasks now waits five seconds, showing Approving… with Undo (and Undo in a message too), before it pays, and sits out Approve selected meanwhile. Leaving or hiding the page in that time approves it at once; only a page killed outright can lose it, leaving the submission waiting, never paid twice. Approve selected still asks first.
 
 ### Fixes
 - **Menus show where the keyboard is.** In the avatar's menu and a market's More actions, the item you reach with the arrow keys now takes a tint and a focus ring, instead of a grey tint you could barely see.
@@ -24,7 +24,7 @@ before v0.4.0 used other headings.)
 - **A way back from a missing page.** "Page not found" on a market, member or parlay now also offers Back to Markets (or Leaderboard, My bets), and the top-level error and not-found pages have a main landmark for screen readers.
 - **The economy check says what to do.** When the owner's Economy card doesn't reconcile, it now says not to adjust balances to cover it and links the incident steps in the Operations guide.
 - **Closing-alerts warning for the right person.** Reviewers and admins are told members aren't affected and to tell the owner; only the owner gets the Supabase steps.
-- **Admin Tasks and Ledger no longer jump on load.** The skeleton draws only what everyone gets; Create task, the task catalog and the owner's Economy card stream in behind it.
+- **Admin Tasks and Ledger no longer jump on load.** The skeleton draws only what everyone gets; Create task and the task catalog stream in below the queue, and the owner's Economy card streams in behind a skeleton of its own size.
 - **Adjusting a balance says the result.** A hint says to use a minus to take coins away, a reason is required before it's sent, and the confirmation names the balance it ends at and the reason.
 
 ### Polish

@@ -13,7 +13,7 @@ export interface LedgerEntry {
   createdAt: string
 }
 
-// Admins are members too, so the labels use members' words ("called off", D-8); ?kind= keeps the
+// Admins are members too, so the labels use members' words ("called off", UX audit D-8); ?kind= keeps the
 // database's type.
 export const TYPE_LABELS: Record<string, string> = {
   bet_placed: 'Bet placed',

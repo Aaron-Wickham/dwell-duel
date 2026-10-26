@@ -44,8 +44,9 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
   }, undefined)
   const change = Number(amount)
   const after = member.balance + change
-  // Only an adjustment the server would accept needs confirming; anything else just gets its error back.
-  const confirmable = Number.isInteger(change) && change !== 0 && reason.trim() !== '' && after >= 0
+  // Every well-formed adjustment confirms; one with no amount or reason just gets its error back.
+  // The balance shown is the page's, which may be stale, so an overdraw still confirms and says so.
+  const confirmable = Number.isInteger(change) && change !== 0 && reason.trim() !== ''
   const formId = `adjust-${member.id}-form`
   const amountId = `adjust-${member.id}-amount`
   const reasonId = `adjust-${member.id}-reason`
@@ -106,7 +107,11 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
         title={`Adjust ${member.displayName}’s balance?`}
         // The balance it ends at, so an extra zero shows before it's applied, and the reason the
         // ledger will show.
-        description={`${member.displayName}’s balance goes from ${formatDcAmount(member.balance)} to ${formatDcAmount(after)} (${formatSignedDcAmount(change)}), straight away. Reason: “${reason.trim()}”.`}
+        description={
+          after < 0
+            ? `Taking ${formatDcAmount(Math.abs(change))} from ${member.displayName}’s ${formatDcAmount(member.balance)} would take the balance below ${formatDcAmount(0)}; the server refuses an overdraw. Reason: “${reason.trim()}”.`
+            : `${member.displayName}’s balance goes from ${formatDcAmount(member.balance)} to ${formatDcAmount(after)} (${formatSignedDcAmount(change)}), straight away. Reason: “${reason.trim()}”.`
+        }
         confirmLabel="Adjust balance"
         pendingLabel="Adjusting…"
       />

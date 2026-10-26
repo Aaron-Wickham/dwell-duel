@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { StrictMode } from 'react'
 import { act, renderHook } from '@testing-library/react'
 import { UNDO_WINDOW_MS, createUndoWindow, useUndoWindow } from '@/lib/ui/undo-window'
 
 beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }))
 afterEach(() => vi.useRealTimers())
 
-// D-7: a held action waits for Undo, then commits exactly once per window.
+// UX audit D-7: a held action waits for Undo, then commits exactly once per window.
 describe('createUndoWindow', () => {
   it('sends nothing during the window, then commits once when it ends', () => {
     const commit = vi.fn()
@@ -98,16 +99,39 @@ describe('useUndoWindow', () => {
     expect(commit).not.toHaveBeenCalled()
   })
 
-  it('commits as leaving, and asks before the page unloads, during the window', () => {
+  it('commits as leaving when the page unloads during the window, without a leave prompt', () => {
     const commit = vi.fn()
     const { result } = renderHook(() => useUndoWindow(commit))
     act(() => void result.current.start())
     const event = new Event('beforeunload', { cancelable: true })
     act(() => void window.dispatchEvent(event))
-    expect(event.defaultPrevented).toBe(true)
+    expect(event.defaultPrevented).toBe(false)
     expect(commit).toHaveBeenCalledExactlyOnceWith('leaving')
     act(() => void window.dispatchEvent(new Event('pagehide')))
     expect(commit).toHaveBeenCalledTimes(1)
+  })
+
+  it('commits as leaving when the page is hidden during the window, but not when shown', () => {
+    const commit = vi.fn()
+    const { result } = renderHook(() => useUndoWindow(commit))
+    const visibility = vi.spyOn(document, 'visibilityState', 'get')
+    act(() => void result.current.start())
+    visibility.mockReturnValue('visible')
+    act(() => void document.dispatchEvent(new Event('visibilitychange')))
+    expect(commit).not.toHaveBeenCalled()
+    visibility.mockReturnValue('hidden')
+    act(() => void document.dispatchEvent(new Event('visibilitychange')))
+    expect(commit).toHaveBeenCalledExactlyOnceWith('leaving')
+    visibility.mockRestore()
+  })
+
+  it('works the same under StrictMode, whose extra mount and unmount commit nothing', () => {
+    const commit = vi.fn()
+    const { result } = renderHook(() => useUndoWindow(commit), { wrapper: StrictMode })
+    expect(commit).not.toHaveBeenCalled()
+    act(() => void result.current.start())
+    act(() => vi.advanceTimersByTime(UNDO_WINDOW_MS))
+    expect(commit).toHaveBeenCalledExactlyOnceWith('timer')
   })
 
   it('leaves unloading alone with no window open', () => {

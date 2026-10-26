@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { StrictMode } from 'react'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
@@ -25,6 +26,10 @@ vi.mock('@/lib/tasks/review-task-completion', () => ({
   bulkApproveTaskCompletionsAction,
   bulkRejectTaskCompletionsAction,
 }))
+const { toast } = vi.hoisted(() => ({
+  toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), dismiss: vi.fn() }),
+}))
+vi.mock('sonner', () => ({ toast }))
 vi.mock('@/lib/tasks/create-task', () => ({ createTaskAction }))
 vi.mock('@/lib/tasks/update-task', () => ({ updateTaskAction }))
 
@@ -75,6 +80,9 @@ function rowCheckboxes() {
 }
 
 beforeEach(() => {
+  toast.mockReset()
+  toast.success.mockReset()
+  toast.dismiss.mockReset()
   approveTaskCompletionAction.mockReset()
   rejectTaskCompletionAction.mockReset()
   bulkApproveTaskCompletionsAction.mockReset()
@@ -298,7 +306,7 @@ describe('PendingApprovals', () => {
   })
 })
 
-// D-7: a row's Approve is held five seconds for an Undo, and nothing is sent before it ends.
+// UX audit D-7: a row's Approve is held five seconds for an Undo, and nothing is sent before it ends.
 describe('ReviewButtons approve window', () => {
   const APPROVE = 'Approve Alice’s Read Genesis 1-3'
   const UNDO = 'Undo approving Alice’s Read Genesis 1-3'
@@ -306,11 +314,70 @@ describe('ReviewButtons approve window', () => {
   beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true }))
   afterEach(() => vi.useRealTimers())
 
-  function setup() {
+  function setup({ strict = false } = {}) {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    const view = render(<ReviewButtons completionId="c1" submitterName="Alice" taskTitle="Read Genesis 1-3" />)
+    const buttons = (
+      <>
+        <h1>Admin</h1>
+        <ReviewButtons completionId="c1" submitterName="Alice" taskTitle="Read Genesis 1-3" />
+      </>
+    )
+    const view = render(strict ? <StrictMode>{buttons}</StrictMode> : buttons)
     return { user, ...view }
   }
+
+  // The Undo the hold toast offers.
+  function toastUndo() {
+    const [message, options] = toast.mock.calls.at(-1) as [string, { action: { label: string; onClick: () => void } }]
+    expect(message).toBe('Approving Alice’s submission')
+    expect(options.action.label).toBe('Undo')
+    return options.action.onClick
+  }
+
+  it('says it is approving while held, and approved only once it lands, then moves focus to the heading', async () => {
+    approveTaskCompletionAction.mockResolvedValue(undefined)
+    const { user } = setup()
+    await user.click(screen.getByRole('button', { name: APPROVE }))
+    expect(toast).toHaveBeenCalledWith('Approving Alice’s submission', expect.objectContaining({ duration: Infinity }))
+    expect(toast.success).not.toHaveBeenCalled()
+
+    await act(() => vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS))
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Approved Alice’s submission.'))
+    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
+  })
+
+  it('sends nothing when Undo is tapped in the toast', async () => {
+    const { user } = setup()
+    await user.click(screen.getByRole('button', { name: APPROVE }))
+    act(() => toastUndo()())
+
+    expect(screen.getByRole('button', { name: APPROVE })).toHaveFocus()
+    await act(() => vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS * 2))
+    expect(approveTaskCompletionAction).not.toHaveBeenCalled()
+  })
+
+  it('approves once after Approve, Undo, then Approve again', async () => {
+    approveTaskCompletionAction.mockResolvedValue(undefined)
+    const { user } = setup()
+    await user.click(screen.getByRole('button', { name: APPROVE }))
+    await user.click(screen.getByRole('button', { name: UNDO }))
+    await user.click(screen.getByRole('button', { name: APPROVE }))
+    await act(() => vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS))
+
+    await waitFor(() => expect(approveTaskCompletionAction).toHaveBeenCalledTimes(1))
+    await act(() => vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS))
+    expect(approveTaskCompletionAction).toHaveBeenCalledTimes(1)
+  })
+
+  it('approves once under StrictMode', async () => {
+    approveTaskCompletionAction.mockResolvedValue(undefined)
+    const { user } = setup({ strict: true })
+    expect(approveTaskCompletionAction).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: APPROVE }))
+    await act(() => vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS))
+
+    await waitFor(() => expect(approveTaskCompletionAction).toHaveBeenCalledTimes(1))
+  })
 
   it('holds the approval with Undo focused, then sends it once the window ends', async () => {
     approveTaskCompletionAction.mockResolvedValue(undefined)
@@ -363,6 +430,29 @@ describe('ReviewButtons approve window', () => {
     expect(alert).toHaveTextContent('Could not approve that submission.')
     expect(screen.getByRole('button', { name: APPROVE })).toHaveAccessibleDescription('Could not approve that submission.')
     expect(screen.getByRole('button', { name: APPROVE })).toHaveFocus()
+  })
+})
+
+// A row whose own Approve is held sits out bulk actions until it settles.
+describe('PendingApprovals with a held row', () => {
+  beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true }))
+  afterEach(() => vi.useRealTimers())
+
+  it('disables a held row’s checkbox and leaves it out of Select all and the total', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(<PendingApprovals viewerId="viewer-1" pending={PENDING} />)
+    await user.click(screen.getByRole('checkbox', { name: 'Select Alice’s submission' }))
+    await user.click(screen.getByRole('button', { name: 'Approve Alice’s Read Genesis 1-3' }))
+
+    const alice = screen.getByRole('checkbox', { name: 'Select Alice’s submission' })
+    expect(alice).toBeDisabled()
+    expect(alice).not.toBeChecked()
+    await user.click(screen.getByRole('checkbox', { name: 'Select all' }))
+    expect(screen.getByRole('checkbox', { name: 'Select Ben’s submission' })).toBeChecked()
+    expect(screen.getByText(/1 selected · Pays/)).toHaveTextContent(/^1 selected · Pays 25\sDC$/)
+
+    await user.click(screen.getByRole('button', { name: 'Undo approving Alice’s Read Genesis 1-3' }))
+    expect(screen.getByRole('checkbox', { name: 'Select Alice’s submission' })).toBeEnabled()
   })
 })
 

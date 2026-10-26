@@ -230,9 +230,13 @@ proof.
 
 - **Approve** doesn't ask first, but waits five seconds before it pays: the
   row shows **Approving…** with **Undo**, and a message at the bottom of the
-  screen offers Undo too. Tap Undo in that time and nothing is paid. After
-  it, the reward is paid. Leaving the page during those five seconds
-  approves it straight away rather than losing it.
+  screen ("Approving Ben's submission") offers Undo too. Tap Undo in that
+  time and nothing is paid. After it, the reward is paid and the message
+  says "Approved". Leaving the page, or switching away from it, during
+  those five seconds approves it straight away. Only if the browser is
+  closed outright in that moment can it be lost; the submission then stays
+  in the queue, and is never paid twice. While a row waits, its checkbox
+  is off, so Approve selected and Reject selected leave it out.
 - **Reject…** opens a small window asking why, optionally (up to 500
   characters). The member sees "Not approved" and the reason, and can
   submit again.

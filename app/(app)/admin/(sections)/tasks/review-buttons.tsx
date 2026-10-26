@@ -8,29 +8,35 @@ import { Message } from '@/components/ui/message'
 import { PendingLabel, PendingStatus } from '@/components/ui/pending-label'
 import { GENERIC_ERROR } from '@/lib/errors/friendly-error'
 import { haptics } from '@/lib/haptics'
+import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import { toastError } from '@/lib/toast/error-toast'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { UNDO_WINDOW_MS, useUndoWindow, type CommitReason } from '@/lib/ui/undo-window'
 import { RejectDialog } from './reject-dialog'
 
-// A row's Approve pays at once once sent, so it's held for five seconds with an Undo first (D-7):
-// nothing reaches the server until the window ends, and leaving the page during it sends the
-// approval rather than dropping it. The approval itself is exactly-once on the server:
+// A row's Approve pays at once once sent, so it's held for five seconds with an Undo first
+// (UX audit D-7): nothing reaches the server until the window ends, and hiding or leaving the page
+// during it sends the approval rather than dropping it. It never pays twice:
 // approve_task_completion refuses a submission that isn't pending, and the action counts this
-// reviewer's own earlier approval as success, so a replayed request never pays twice. Reject asks
+// reviewer's own earlier approval as success, so a replayed request is a no-op. Reject asks
 // for its optional reason in a dialog rather than a field on every row (COPY-13).
 export function ReviewButtons({
   completionId,
   submitterName,
   taskTitle,
+  onHeldChange,
 }: {
   completionId: string
   submitterName: string
   taskTitle: string
+  // Told when this row's approval is held or being sent, so the queue can keep it out of a bulk
+  // action meanwhile. Keyed by id, so the queue can pass one stable callback to every row.
+  onHeldChange?: (completionId: string, held: boolean) => void
 }) {
   const hasError = (s: ActionState) => Boolean(s?.formError)
   const toastId = `approve-${completionId}`
-  const approved = `Approved ${submitterName}’s submission`
+  const approving = `Approving ${submitterName}’s submission`
+  const approved = `Approved ${submitterName}’s submission.`
   const [approveError, setApproveError] = useState<string | undefined>()
   const [isApprovePending, startApprove] = useTransition()
   const approveButton = useRef<HTMLButtonElement>(null)
@@ -38,6 +44,18 @@ export function ReviewButtons({
   // Which control should take focus after the window opens or closes; set only by the reviewer's
   // own Approve or Undo, so a commit at the timer's end never pulls focus from wherever they are.
   const focusNext = useRef<'approve' | 'undo' | null>(null)
+  // Whether focus was last on Undo / Approving…, which a successful approval removes with the row.
+  // Tracked by events because a removed element's focus can't be read back afterwards.
+  const undoFocused = useRef(false)
+
+  // Once the approval lands the row goes, so focus on its button moves to the page heading rather
+  // than dropping to the page, as ConfirmActionButton does.
+  function moveFocusOffRow() {
+    if (undoFocused.current && (document.activeElement === undoButton.current || document.activeElement === document.body)) {
+      focusPageHeading()?.focus()
+    }
+    undoFocused.current = false
+  }
 
   async function sendApproval(): Promise<string | undefined> {
     try {
@@ -52,10 +70,13 @@ export function ReviewButtons({
     toast.dismiss(toastId)
     if (reason === 'leaving') {
       // The row is going away, so its own error line can't show the outcome: a toast says it.
+      const wasVisible = document.visibilityState === 'visible'
       void sendApproval().then((formError) => {
         if (formError) toastError(formError)
-        else toast.success(`${approved}.`)
+        else toast.success(approved)
       })
+      // Only when the row went and the page stayed: a page being left takes focus with it.
+      if (wasVisible) moveFocusOffRow()
       return
     }
     startApprove(async () => {
@@ -67,8 +88,9 @@ export function ReviewButtons({
         haptics.error()
         return
       }
-      toast.success(`${approved}.`)
+      toast.success(approved)
       haptics.success()
+      moveFocusOffRow()
     })
   }
 
@@ -79,7 +101,7 @@ export function ReviewButtons({
     haptics.tap()
     setApproveError(undefined)
     focusNext.current = 'undo'
-    toast(approved, {
+    toast(approving, {
       id: toastId,
       duration: Infinity,
       action: { label: 'Undo', onClick: undoApproval },
@@ -93,6 +115,11 @@ export function ReviewButtons({
   }
 
   const holding = hold.open || isApprovePending
+  useEffect(() => {
+    if (!holding) return
+    onHeldChange?.(completionId, true)
+    return () => onHeldChange?.(completionId, false)
+  }, [holding, onHeldChange, completionId])
   useEffect(() => {
     const target = focusNext.current === 'undo' ? undoButton.current : focusNext.current === 'approve' ? approveButton.current : null
     focusNext.current = null
@@ -131,6 +158,14 @@ export function ReviewButtons({
             )}
             <Button
               ref={undoButton}
+              onFocus={() => {
+                undoFocused.current = true
+              }}
+              onBlur={(event) => {
+                // A blur with nowhere to go is the button being removed (or a click on nothing),
+                // so it still counts as focus that moveFocusOffRow should rescue.
+                if (event.relatedTarget) undoFocused.current = false
+              }}
               size="sm"
               variant="secondary"
               aria-disabled={isApprovePending || undefined}

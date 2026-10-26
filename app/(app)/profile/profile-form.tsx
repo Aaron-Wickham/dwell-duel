@@ -11,7 +11,7 @@ import { resizePhoto } from '@/lib/profile/resize-photo'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { updateProfileAction, type ActionState } from '@/lib/profile/update-profile'
 import { labelClass } from '@/components/ui/page'
-import { cardPaddingClass } from '@/components/ui/card'
+import { cardClass, cardPaddingClass } from '@/components/ui/card'
 
 type NewPhoto = { blob: Blob; preview: string }
 
@@ -72,7 +72,7 @@ export function ProfileForm({
   return (
     // One card, so a single Save plainly covers photo, name and bio (#397). The preview went:
     // the avatar beside Change photo already shows the new photo.
-    <form action={formAction} className={`flex flex-col gap-5 rounded-card border border-line bg-surface ${cardPaddingClass} shadow-card`}>
+    <form action={formAction} className={`flex flex-col gap-5 ${cardClass} ${cardPaddingClass}`}>
       <fieldset className="flex flex-col gap-3" aria-describedby={avatarErrorId}>
         <legend className={`mb-1.5 ${labelClass}`}>Photo</legend>
         <div className="flex flex-wrap items-center gap-4">

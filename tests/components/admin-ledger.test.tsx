@@ -88,7 +88,7 @@ describe('LedgerRow', () => {
         />
       </ul>,
     )
-    const row = screen.getByRole('listitem', { name: /^Mia: \+10 DC · Task approved: Read Genesis 1-3/ })
+    const row = screen.getByRole('listitem', { name: /^Mia: \+10\u00A0DC · Task approved: Read Genesis 1-3/ })
     expect(row).toHaveAttribute('id', 'ledger-7')
     expect(row).toHaveAttribute('tabindex', '-1')
   })

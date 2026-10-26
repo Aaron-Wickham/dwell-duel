@@ -249,7 +249,7 @@ describe('MarketsPage', () => {
 
   it('says there is nothing older, not that there are no markets, when the window is past the end', async () => {
     await renderPage({ rows: [], next: null, windowed: true }, EMPTY, { open_from: 'A' })
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     expect(screen.queryByText('No open markets.')).toBeNull()
     expect(outline()).toEqual(['Back to newest'])
   })
@@ -257,7 +257,7 @@ describe('MarketsPage', () => {
   it('keeps its empty state when there are no markets at all', async () => {
     await renderPage(EMPTY, EMPTY)
     expect(screen.getByText('No open markets.')).toBeInTheDocument()
-    expect(screen.queryByText('Nothing older here.')).toBeNull()
+    expect(screen.queryByText('Nothing older here')).toBeNull()
     expect(screen.queryByRole('link', { name: 'Show more' })).toBeNull()
   })
 })

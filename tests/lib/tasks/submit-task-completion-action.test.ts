@@ -96,7 +96,7 @@ describe('submitTaskCompletionAction', () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     supabase.rpc.mockResolvedValue({ data: null, error: { message: 'null value in column "task_id" violates not-null constraint' } })
 
-    expect(await submitTaskCompletionAction('task-1', undefined, submission())).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(await submitTaskCompletionAction('task-1', undefined, submission())).toEqual({ formError: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.' })
     expect(log).toHaveBeenCalled()
   })
 })

@@ -159,10 +159,10 @@ describe('FeedList', () => {
         events={[]}
         heading="Recent activity"
         headingId="recent-activity"
-        emptyState={<p>Nothing older here.</p>}
+        emptyState={<p>Nothing older here</p>}
       />,
     )
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     expect(screen.queryByText('Nothing yet.')).toBeNull()
   })
 

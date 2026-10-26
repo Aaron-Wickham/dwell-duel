@@ -5,7 +5,7 @@ import { figureClass } from '@/components/ui/page'
 import { formatDcAmount, formatSignedDcAmount } from '@/lib/format/dc'
 
 function Dc({ value }: { value: number }) {
-  if (value === 0) return <span className="whitespace-nowrap text-ink2">0 DC</span>
+  if (value === 0) return <span className="whitespace-nowrap text-ink2">{formatDcAmount(0)}</span>
   return (
     <span className={cn('font-extrabold whitespace-nowrap', value > 0 ? 'text-win' : 'text-loss')}>{formatSignedDcAmount(value)}</span>
   )

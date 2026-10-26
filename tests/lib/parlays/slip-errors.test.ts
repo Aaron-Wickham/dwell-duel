@@ -24,14 +24,14 @@ describe('parseSlipError', () => {
 
   it('says what a pick pays now when its price moved, and asks to place again', () => {
     expect(parseSlipError(`pick ${A}: price_moved:17`)).toEqual({
-      pickErrors: { [A]: 'The price moved, so this bet now pays 17 DC if it wins. Tap Place again to bet at the new price.' },
+      pickErrors: { [A]: 'The price moved, so this bet now pays 17\u00A0DC if it wins. Tap Place again to bet at the new price.' },
       priceMoved: true,
     })
   })
 
   it('says what the parlay pays now when its price moved (0104)', () => {
     expect(parseSlipError('parlay: price_moved:47')).toEqual({
-      parlayError: 'The price moved, so this parlay now pays 47 DC if every pick wins. Tap Place again to bet at the new price.',
+      parlayError: 'The price moved, so this parlay now pays 47\u00A0DC if every pick wins. Tap Place again to bet at the new price.',
       priceMoved: true,
     })
   })
@@ -45,7 +45,7 @@ describe('parseSlipError', () => {
   it('never passes unknown database text to a member, and hands it to the caller to log', () => {
     const logged: string[] = []
     expect(parseSlipError(`pick ${A}: column "x" does not exist`, (raw) => logged.push(raw))).toEqual({
-      pickErrors: { [A]: 'Something went wrong. Try again.' },
+      pickErrors: { [A]: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.' },
     })
     expect(logged).toEqual(['column "x" does not exist'])
   })

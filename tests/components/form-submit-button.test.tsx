@@ -83,4 +83,25 @@ describe('FormSubmitButton', () => {
     )
     expect(screen.getByRole('button', { name: 'Place bet' })).toBeDisabled()
   })
+
+  it('says what it is doing while pending, when given a pendingLabel, and keeps the click guard', async () => {
+    const action = vi.fn(neverResolves)
+    render(
+      <form action={action}>
+        <FormSubmitButton pendingLabel="Placing…">Place bet</FormSubmitButton>
+      </form>,
+    )
+    const button = screen.getByRole('button', { name: 'Place bet' })
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+
+    await userEvent.click(button)
+
+    await waitFor(() => expect(button).toHaveAttribute('aria-disabled', 'true'))
+    expect(screen.getByRole('status')).toHaveTextContent('Placing…')
+    expect(button).toHaveAccessibleName('Place bet')
+    expect(button).not.toContainElement(screen.getByRole('status'))
+    expect(button.querySelector('svg')).not.toBeNull()
+    await userEvent.click(button)
+    expect(action).toHaveBeenCalledOnce()
+  })
 })

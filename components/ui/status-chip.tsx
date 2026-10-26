@@ -19,7 +19,7 @@ const chipVariants = cva('no-callout inline-flex items-center gap-1.5 whitespace
     },
     size: {
       md: `h-7 px-2.5 ${chipTextClass}`,
-      sm: 'h-6 px-[9px] text-xs',
+      sm: `h-6 px-[9px] ${chipTextClass}`,
     },
   },
   defaultVariants: { size: 'md' },

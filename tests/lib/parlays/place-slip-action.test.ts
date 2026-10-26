@@ -106,7 +106,7 @@ describe('placeSlipAction', () => {
       form([['pick', `${B}:parlay`], ['pick', `${C}:parlay`], ['parlay_stake', '10'], ['parlay_payout', '52']]),
     )
     expect(result).toEqual({
-      parlayError: 'The price moved, so this parlay now pays 47 DC if every pick wins. Tap Place again to bet at the new price.',
+      parlayError: 'The price moved, so this parlay now pays 47\u00A0DC if every pick wins. Tap Place again to bet at the new price.',
       priceMoved: true,
       movedStakes: { parlay: '10' },
     })
@@ -139,7 +139,7 @@ describe('placeSlipAction', () => {
     rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: `pick ${A}: price_moved:17` } })
     const result = await placeSlipAction(undefined, form([['pick', `${A}:solo`], ['stake:' + A, '10'], ['payout:' + A, '18']]))
     expect(result).toEqual({
-      pickErrors: { [A]: 'The price moved, so this bet now pays 17 DC if it wins. Tap Place again to bet at the new price.' },
+      pickErrors: { [A]: 'The price moved, so this bet now pays 17\u00A0DC if it wins. Tap Place again to bet at the new price.' },
       priceMoved: true,
       movedStakes: { [A]: '10' },
     })
@@ -207,7 +207,7 @@ describe('placeSlipAction', () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'This operation was aborted' } })
 
     const result = await placeSlipAction(undefined, form([['pick', `${A}:solo`], ['stake:' + A, '3']]))
-    expect(result).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(result).toEqual({ formError: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.' })
     expect(log).toHaveBeenCalled()
   })
 
@@ -216,7 +216,7 @@ describe('placeSlipAction', () => {
     from.mockReturnValue({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { balance: 7 } }) }) }) })
 
     const result = await placeSlipAction(undefined, form([['pick', `${A}:solo`], ['stake:' + A, '30']]))
-    expect(result).toEqual({ formError: 'You have 7 DC, 23 DC short. Try a smaller stake.' })
+    expect(result).toEqual({ formError: 'You have 7\u00A0DC, 23\u00A0DC short. Try a smaller stake.' })
   })
 
   it('refuses an empty slip and a signed-out member', async () => {

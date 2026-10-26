@@ -27,6 +27,7 @@ export function ConfirmActionButton({
   title,
   description,
   confirmLabel,
+  pendingLabel,
   dismissLabel = 'Cancel',
   hint,
   className,
@@ -43,6 +44,8 @@ export function ConfirmActionButton({
   title: string
   description: ReactNode
   confirmLabel: string
+  // What the confirm button says while the action runs ("Calling off…").
+  pendingLabel?: string
   dismissLabel?: string
   // A standing note under the trigger, which also describes it.
   hint?: string
@@ -96,7 +99,9 @@ export function ConfirmActionButton({
             <AlertDialog.Close className={buttonVariants({ variant: 'secondary' })} aria-disabled={isPending || undefined}>
               {dismissLabel}
             </AlertDialog.Close>
-            <FormSubmitButton variant="danger">{confirmLabel}</FormSubmitButton>
+            <FormSubmitButton variant="danger" pendingLabel={pendingLabel}>
+              {confirmLabel}
+            </FormSubmitButton>
           </form>
         </ConfirmDialogPopup>
       </AlertDialog.Root>

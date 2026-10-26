@@ -147,7 +147,7 @@ test('with a Google client ID, sign-in goes straight to Google, which posts back
   // The stand-in's token passes the state and nonce checks, so it reaches Supabase, which refuses it,
   // and the member is back at sign-in with the destination kept.
   await expect(page).toHaveURL(/\/sign-in\?error=auth&next=%2Fmarkets%3Ffrom%3Dshare$/)
-  await expect(page.getByText('Something went wrong signing you in. Try again.')).toBeVisible()
+  await expect(page.getByText('Google didn’t sign you in. Try again with the account your invite was sent to.')).toBeVisible()
   expect(Object.fromEntries(authorize!.searchParams)).toMatchObject({
     client_id: googleClientId,
     redirect_uri: 'http://localhost:3000/auth/google',

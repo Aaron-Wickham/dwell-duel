@@ -3,10 +3,10 @@
 import { startTransition, useOptimistic, useRef, useState } from 'react'
 import { Popover } from '@base-ui/react/popover'
 import { SmilePlus } from 'lucide-react'
-import { toast } from 'sonner'
 import { haptics } from '@/lib/haptics'
 import { REACTIONS, reactionLabel, toggleReaction, type EventReactions, type ReactionKind } from '@/lib/social/reactions'
 import { setReactionAction } from '@/lib/social/reactions-actions'
+import { toastError } from '@/lib/toast/error-toast'
 import { cn } from '@/lib/utils'
 
 // The button is the 44px target; the pill drawn inside it stays compact, so a row with reactions
@@ -44,7 +44,7 @@ export function ReactionBar({ eventId, reactions }: { eventId: string; reactions
       apply({ kind, on })
       const result = await setReactionAction(eventId, kind, on)
       if (result.error) {
-        toast.error(result.error)
+        toastError(result.error)
         haptics.error()
       }
     })

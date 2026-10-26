@@ -23,13 +23,13 @@ const market = { text: 'Will it rain?', href: '/markets/m1' }
 
 describe('describeEvent', () => {
   it('describes a placed bet', () => {
-    expect(describeEvent(base)).toEqual([sarah, ' bet 20 DC on Yes in ', market])
+    expect(describeEvent(base)).toEqual([sarah, ' bet 20\u00A0DC on Yes in ', market])
   })
 
   it('describes a placed parlay', () => {
     expect(describeEvent({ ...base, kind: 'parlay_placed', marketId: null, marketTitle: null, outcomeLabel: null, amount: 10, legCount: 3 })).toEqual([
       sarah,
-      ' placed a 3-pick parlay for 10 DC',
+      ' placed a 3-pick parlay for 10\u00A0DC',
     ])
   })
 
@@ -54,26 +54,26 @@ describe('describeEvent', () => {
   })
 
   it('describes a bet win', () => {
-    expect(describeEvent({ ...base, kind: 'bet_won', amount: 45 })).toEqual([sarah, ' won 45 DC on ', market])
+    expect(describeEvent({ ...base, kind: 'bet_won', amount: 45 })).toEqual([sarah, ' won 45\u00A0DC on ', market])
   })
 
   it('describes a parlay win', () => {
     expect(describeEvent({ ...base, kind: 'parlay_won', marketId: null, marketTitle: null, outcomeLabel: null, amount: 160, legCount: 3 })).toEqual([
       sarah,
-      "'s 3-pick parlay paid 160 DC",
+      "'s 3-pick parlay paid 160\u00A0DC",
     ])
   })
 
   it('describes an approved task completion', () => {
     expect(
       describeEvent({ ...base, kind: 'task_completed', marketId: null, marketTitle: null, outcomeLabel: null, amount: 10, taskTitle: 'Read Genesis 1-3' }),
-    ).toEqual([sarah, ' completed Read Genesis 1-3 (+10 DC)'])
+    ).toEqual([sarah, ' completed Read Genesis 1-3 (+10\u00A0DC)'])
   })
 
   it("describes a month's champion, with the month and the signed profit", () => {
     const champion = { ...base, id: 'season:2025-10', kind: 'season_champion' as const, marketId: null, marketTitle: null, outcomeLabel: null, amount: 140, season: '2025-10' }
     const segments = describeEvent(champion)
     expect(segments[0]).toEqual(sarah)
-    expect(segments[1]).toMatch(/^ was October( 2025)?’s champion with \+140 DC$/)
+    expect(segments[1]).toMatch(/^ was October( 2025)?’s champion with \+140\u00A0DC$/)
   })
 })

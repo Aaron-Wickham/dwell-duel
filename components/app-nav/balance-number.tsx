@@ -34,7 +34,7 @@ export function BalanceNumber({ value }: { value: number }) {
   if (!live) return text
   return (
     <Suspense fallback={text}>
-      <AnimatedNumber value={mounted ? value : initial} locales="en-US" suffix=" DC" />
+      <AnimatedNumber value={mounted ? value : initial} locales="en-US" suffix={'\u00A0DC'} />
       <Mounted onMount={onMount} />
     </Suspense>
   )

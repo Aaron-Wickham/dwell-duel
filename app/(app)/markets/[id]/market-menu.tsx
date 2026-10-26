@@ -8,13 +8,12 @@ import { CalendarClock, CopyPlus, History, MoreHorizontal, Pencil, Share2, type 
 import { buttonVariants } from '@/components/ui/button'
 import { dialogBackdropClass, dialogPopupClass } from '@/components/ui/dialog-classes'
 import { LocalTime } from '@/components/ui/local-time'
-import { h2Class, uiTextClass } from '@/components/ui/page'
+import { menuItemClass } from '@/components/ui/menu-classes'
+import { h2Class } from '@/components/ui/page'
 import type { MarketEdit } from '@/lib/markets/market-edits'
 import { cn } from '@/lib/utils'
 import { EditMarketDialog, editMenuLabel, type EditMarketMode } from './edit-market-dialog'
 import { ManualShareLink, useMarketShare } from './market-share'
-
-const itemClass = `pressable flex min-h-11 items-center gap-3 rounded-segment px-3 ${uiTextClass} font-bold text-ink no-underline outline-none select-none data-highlighted:bg-sunk`
 
 function ItemContent({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return (
@@ -73,29 +72,29 @@ export function MarketMenu({
         <Menu.Portal>
           <Menu.Positioner sideOffset={6} align="end" className="z-40 outline-none">
             <Menu.Popup className="flex min-w-56 origin-(--transform-origin) flex-col gap-0.5 rounded-tile border border-line bg-surface p-1.5 text-ink shadow-overlay outline-none transition-[opacity,scale] duration-(--duration-fast) data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0 motion-reduce:transition-none">
-              <Menu.Item className={itemClass} onClick={() => void share()}>
+              <Menu.Item className={menuItemClass} onClick={() => void share()}>
                 <ItemContent icon={Share2}>Share</ItemContent>
               </Menu.Item>
               {/* Every member can create markets, so anyone can start a copy; nothing exists until it's submitted. */}
               <Menu.LinkItem
                 closeOnClick
-                className={itemClass}
+                className={menuItemClass}
                 render={<IntentLink prefetchOnTouch pendingMarker={false} href={`/markets/new?from=${marketId}`} transitionTypes={['nav-forward']} />}
               >
                 <ItemContent icon={CopyPlus}>Duplicate</ItemContent>
               </Menu.LinkItem>
               {edit.mode && (
-                <Menu.Item className={itemClass} onClick={() => setDialog(edit.mode)}>
+                <Menu.Item className={menuItemClass} onClick={() => setDialog(edit.mode)}>
                   <ItemContent icon={Pencil}>{editMenuLabel(edit.mode)}</ItemContent>
                 </Menu.Item>
               )}
               {edit.canReopen && (
-                <Menu.Item className={itemClass} onClick={() => setDialog('reopen')}>
+                <Menu.Item className={menuItemClass} onClick={() => setDialog('reopen')}>
                   <ItemContent icon={CalendarClock}>{editMenuLabel('reopen')}</ItemContent>
                 </Menu.Item>
               )}
               {edits.length > 0 && (
-                <Menu.Item className={itemClass} onClick={() => setDialog('history')}>
+                <Menu.Item className={menuItemClass} onClick={() => setDialog('history')}>
                   <ItemContent icon={History}>Edit history</ItemContent>
                 </Menu.Item>
               )}

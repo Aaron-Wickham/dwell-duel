@@ -118,7 +118,7 @@ describe('updateMarketAction', () => {
   it('hides raw database text', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     supabase.rpc.mockResolvedValue({ data: null, error: { message: 'relation "public.market_edits" does not exist' } })
-    expect(await updateMarketAction('m1', undefined, form('Late'))).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(await updateMarketAction('m1', undefined, form('Late'))).toEqual({ formError: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.' })
     expect(log).toHaveBeenCalled()
   })
 })

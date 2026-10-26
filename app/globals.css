@@ -34,9 +34,9 @@
 
 :root {
   color-scheme: light;
-  --bg: #F3F6F1;
+  --bg: #EBF0E9;
   --surface: #FCFDFB;
-  --sunk: #E6EDE6;
+  --sunk: #DFE7DF;
   --ink: #03272D;
   --ink2: #46605E;
   --line: #D5DFD8;
@@ -201,7 +201,7 @@ html {
   --wm-b: #72DB2B;
   --sym-d: #FFFFFF;
   --shadow: none;
-  --overlay-shadow: none;
+  --overlay-shadow: 0 0 0 1px var(--line-s), 0 18px 48px rgba(0, 8, 10, 0.6);
   /* Dark surfaces hide a soft shadow, so the lifted card's edge brightens too. */
   --lift-shadow: 0 0 0 1px var(--line-s), 0 12px 28px rgba(0, 8, 10, 0.55);
   --tab-shadow: 0 1px 3px rgba(0, 8, 10, 0.5);
@@ -266,7 +266,7 @@ html {
     --wm-b: #72DB2B;
     --sym-d: #FFFFFF;
     --shadow: none;
-    --overlay-shadow: none;
+    --overlay-shadow: 0 0 0 1px var(--line-s), 0 18px 48px rgba(0, 8, 10, 0.6);
   /* Dark surfaces hide a soft shadow, so the lifted card's edge brightens too. */
   --lift-shadow: 0 0 0 1px var(--line-s), 0 12px 28px rgba(0, 8, 10, 0.55);
   --tab-shadow: 0 1px 3px rgba(0, 8, 10, 0.5);
@@ -387,11 +387,11 @@ html {
 
 /* The native press: controls give under the finger. Under a mouse a control changes colour and
    doesn't grow (#383 reversed #155's 103%: a growing label fought the sliding pills and read as a
-   landing page). Reduced motion swaps the press for a dim, keeping the colour changes. */
+   landing page). Reduced motion swaps the press for a dim, keeping the colour changes. A long
+   press on touch shouldn't select a card's text, but under a mouse it stays selectable: that's what
+   the stretched link's cover lifting under a fine pointer is for. */
 @utility pressable {
   -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
   transition:
     scale var(--duration-press) ease-out,
     translate var(--duration-hover) var(--ease-ios),
@@ -402,6 +402,17 @@ html {
     text-decoration-color var(--duration-hover) ease-out,
     text-decoration-thickness var(--duration-hover) ease-out,
     opacity var(--duration-fast) ease-out;
+
+  @media not ((hover: hover) and (pointer: fine)) {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* A button's label is never read as text, so a quick double click doesn't select it. */
+  &:is(button, [role="button"], [role="tab"], [role="radio"], label) {
+    -webkit-user-select: none;
+    user-select: none;
+  }
 
   /* A control inside a pressable card presses alone; the card stays put. */
   &:active:not(:disabled, [aria-disabled="true"], :has(.pressable:active)) {
@@ -1065,8 +1076,46 @@ html {
 
 /* Printing a market or the rules (#466): the page alone, without the app's chrome, in light. */
 @media print {
-  :root {
+  /* Browsers drop backgrounds when printing, so the dark theme's near-white text would land on white
+     paper. These two selectors outrank both dark blocks; the values are :root's. */
+  :root:not([data-theme="light"]),
+  :root[data-theme] {
     color-scheme: light;
+    --bg: #EBF0E9;
+    --surface: #FCFDFB;
+    --sunk: #DFE7DF;
+    --ink: #03272D;
+    --ink2: #46605E;
+    --line: #D5DFD8;
+    --line-s: #6F8581;
+    --link: #03272D;
+    --acc-soft: #E3F4D5;
+    --acc-text: #2A6E0B;
+    --gold: #855600;
+    --gold-soft: #F6E7C4;
+    --win: #2A6E0B;
+    --win-soft: #E3F4D5;
+    --loss: #A8281C;
+    --loss-soft: #FAE1DD;
+    --info: #25418C;
+    --info-soft: #E5ECFA;
+    --tint1: #0F5E55;
+    --tint1-soft: #DDF1EC;
+    --tint2: #8A2257;
+    --tint2-soft: #FBE3EE;
+    --tint3: #2B4A9E;
+    --tint3-soft: #E4EBFA;
+    --tint4: #7A4E00;
+    --tint4-soft: #F7EACB;
+    --tint5: #8F3A12;
+    --tint5-soft: #FAE6DA;
+    --tint6: #4A5A12;
+    --tint6-soft: #EEF2D6;
+    --s1: #03272D;
+    --s2: #2A6E0B;
+    --s3: #3155B8;
+    --s4: #B0306F;
+    --s5: #C77700;
   }
 
   nav[aria-label="Primary"],

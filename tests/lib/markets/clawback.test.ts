@@ -36,24 +36,24 @@ describe('parseClawbackError', () => {
 describe('clawbackMessage', () => {
   it('names one member, with what they spent and what they won', () => {
     expect(clawbackMessage([bob])).toBe(
-      'Can’t override: Bob has already spent 40 of 60 DC won on this market. Adjust their balances first if you still want to override.',
+      'Can’t override: Bob has already spent 40 of 60\u00A0DC won on this market. Adjust their balances first if you still want to override.',
     )
   })
 
   it('joins a second member with ", and"', () => {
     expect(clawbackMessage([bob, carol])).toBe(
-      'Can’t override: Bob has already spent 40 of 60 DC won on this market, and Carol 15 of 30. Adjust their balances first if you still want to override.',
+      'Can’t override: Bob has already spent 40 of 60\u00A0DC won on this market, and Carol 15 of 30. Adjust their balances first if you still want to override.',
     )
   })
 
   it('lists three or more with a comma before the last', () => {
     expect(clawbackMessage([bob, carol, dan])).toBe(
-      'Can’t override: Bob has already spent 40 of 60 DC won on this market, Carol 15 of 30, and Dan 5 of 10. Adjust their balances first if you still want to override.',
+      'Can’t override: Bob has already spent 40 of 60\u00A0DC won on this market, Carol 15 of 30, and Dan 5 of 10. Adjust their balances first if you still want to override.',
     )
   })
 
   it('keeps the order it was given', () => {
-    expect(clawbackMessage([carol, bob])).toMatch(/^Can’t override: Carol has already spent 15 of 30 DC won on this market, and Bob 40 of 60\./)
+    expect(clawbackMessage([carol, bob])).toMatch(/^Can’t override: Carol has already spent 15 of 30\u00A0DC won on this market, and Bob 40 of 60\./)
   })
 
   it('returns null for an empty list, rather than throwing', () => {

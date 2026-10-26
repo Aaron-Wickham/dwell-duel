@@ -51,6 +51,8 @@ const TEXT_PAIRS: [string, string][] = [
   ['win', 'win-soft'],
   ['loss', 'loss-soft'],
   ['gold', 'gold-soft'],
+  // A count badge: the gold pair the other way round, as a solid fill.
+  ['gold-soft', 'gold'],
   ['info', 'info-soft'],
   ['tint1', 'tint1-soft'],
   ['tint2', 'tint2-soft'],
@@ -118,5 +120,15 @@ describe('dark theme', () => {
       expect(dark.get(name), name).not.toBe(dark.get('primary'))
       expect(dark.get(name), name).not.toBe(dark.get('acc-text'))
     }
+  })
+})
+
+describe('print', () => {
+  // A dark-theme page prints in light: every colour the print block sets is light :root's own.
+  it('re-declares only light values', () => {
+    const print = tokens('@media print {')
+    expect(print.size).toBeGreaterThan(10)
+    for (const [name, hex] of print) expect(hex, name).toBe(light.get(name))
+    for (const name of ['ink', 'ink2', 'link', 'bg', 'surface']) expect(print.has(name), name).toBe(true)
   })
 })

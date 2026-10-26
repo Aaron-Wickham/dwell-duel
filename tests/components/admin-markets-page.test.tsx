@@ -80,7 +80,7 @@ describe('AdminMarketsPage', () => {
   it('shows "Nothing older here" instead of the empty state for an empty fresh window', async () => {
     listAwaitingMarkets.mockResolvedValue({ rows: [], next: null, windowed: true })
     render(await AdminMarketsPage({ searchParams: Promise.resolve({ after_from: 'abc' }) } as never))
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     expect(screen.queryByText('Nothing to resolve.')).not.toBeInTheDocument()
   })
 

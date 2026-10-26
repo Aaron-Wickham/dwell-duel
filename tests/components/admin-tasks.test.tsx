@@ -180,7 +180,7 @@ describe('PendingApprovals', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
 
     const dialog = await screen.findByRole('alertdialog', { name: 'Approve 2 submissions?' })
-    expect(dialog).toHaveAccessibleDescription('Pays 35 DC in rewards straight away.')
+    expect(dialog).toHaveAccessibleDescription('Pays 35\u00A0DC in rewards straight away.')
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())

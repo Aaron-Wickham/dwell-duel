@@ -1215,7 +1215,7 @@ Admin layout shows admins and the owner a warning (`ClosingAlertsWarning`,
 missing. Only this route stamps it: the daily keep-alive doesn't,
 so it can't hide a dead schedule. Without push keys nothing is sent, so the
 warning never shows. The signed-in
-layout reads `getReviewCounts` for the avatar's red dot and its menu's Admin count, follows the
+layout reads `getReviewCounts` for the avatar's gold dot and its menu's Admin count, follows the
 `reviews` topic (and `markets` for admins) live, and refreshes at the next
 market close. The wording is `lib/push/messages.ts`: payloads are `{ title,
 body, url }`, with an in-app `url`. The OS already names the app, so the
@@ -1252,10 +1252,10 @@ which slides under all four segmented controls: SubNav, the theme control, the
 slip's Solo/Parlay toggle and the chart's range) share one
 slide, `PILL_SLIDE` / `PILL_TRANSITION`: 280ms on the iOS curve, and the
 nav links they slide under (`pill-label`) cross-fade their colour over the
-same 280ms. Every dialog (the confirms, More categories, submitting and rejecting a task, editing a market and its edit history) shares `components/ui/dialog-classes.ts`. `pressable`
+same 280ms. Every dialog (the confirms, More categories, submitting and rejecting a task, editing a market and its edit history) shares `components/ui/dialog-classes.ts`, and both menus (the avatar's and a market's More actions) share `menuItemClass` from `components/ui/menu-classes.ts`. `pressable`
 shrinks every control on press and never grows one on hover (#383); a
 standalone tappable card adds `hover-lift` and lifts onto `--lift-shadow`
-under a mouse, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244; My bets' parlay and bet tiles too, #269), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins). `AnimatedNumber` counts
+under a mouse, while a row or tile inside a card takes `hover-tint`, a flat panel with no lift (#244; My bets' parlay and bet tiles too, #269), its one link covering it through `stretched-link` (on touch; under a mouse the cover is off and `pressable` no longer blocks selection, so text can be selected, and `CardLinkClick` opens the card on click unless a selection wins). `AnimatedNumber` counts
 only when its value changes after mount, so a page load shows final figures.
 Under reduced motion every page transition is a `--duration-fast`
 cross-fade with nothing moving. The sign-in intro's CSS delays are

@@ -79,21 +79,21 @@ describe('EconomyCard', () => {
     render(<EconomyCard summary={toEconomySummary(ROW)} />)
     expect(screen.getByRole('table', { name: 'September 2026, Eastern time' })).toBeInTheDocument()
 
-    expect(within(rowFor('Starting grants')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+300 DC', 'None'])
-    expect(within(rowFor('Task rewards')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+10 DC', 'None'])
-    expect(within(rowFor('Market maker')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0 DC', '0 DC'])
-    expect(within(rowFor('Seed payouts (older results)')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+8 DC', '−22 DC'])
-    expect(within(rowFor('Payout rounding')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0 DC', '−3 DC'])
+    expect(within(rowFor('Starting grants')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+300\u00A0DC', 'None'])
+    expect(within(rowFor('Task rewards')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+10\u00A0DC', 'None'])
+    expect(within(rowFor('Market maker')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0\u00A0DC', '0\u00A0DC'])
+    expect(within(rowFor('Seed payouts (older results)')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+8\u00A0DC', '−22\u00A0DC'])
+    expect(within(rowFor('Payout rounding')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0\u00A0DC', '−3\u00A0DC'])
     expect(within(rowFor('House-paid parlays')).getAllByRole('cell').map((c) => c.textContent)).toEqual([
-      '+30 DC',
-      '−5 DC',
+      '+30\u00A0DC',
+      '−5\u00A0DC',
     ])
     expect(within(rowFor('Owner adjustments')).getAllByRole('cell').map((c) => c.textContent)).toEqual([
-      '0 DC',
-      '−5 DC',
+      '0\u00A0DC',
+      '−5\u00A0DC',
     ])
     // 348 added less 35 removed.
-    expect(within(rowFor('Net change')).getByRole('cell').textContent).toBe('+313 DC')
+    expect(within(rowFor('Net change')).getByRole('cell').textContent).toBe('+313\u00A0DC')
   })
 
   it('says the ledger reconciles when the all-time totals match what is in circulation', () => {

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import { labelClass } from '@/components/ui/page'
 
 const control =
-  'w-full min-h-12 rounded-control border-[1.5px] border-line-s bg-surface px-3.5 text-base text-ink aria-[invalid=true]:border-2 aria-[invalid=true]:border-loss'
+  'w-full min-h-12 rounded-control border-[1.5px] border-line-s bg-surface px-3.5 text-base text-ink placeholder:text-ink2 aria-[invalid=true]:border-2 aria-[invalid=true]:border-loss'
 
 export function Field({
   label,

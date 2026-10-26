@@ -42,7 +42,7 @@ describe('resolveMarketAction', () => {
     })
     expect(state).toEqual({
       formError:
-        'Can’t override: Bob has already spent 40 of 60 DC won on this market. Adjust their balances first if you still want to override.',
+        'Can’t override: Bob has already spent 40 of 60\u00A0DC won on this market. Adjust their balances first if you still want to override.',
       field: 'outcome',
     })
     expect(revalidatePath).not.toHaveBeenCalled()
@@ -54,7 +54,7 @@ describe('resolveMarketAction', () => {
 
     const state = await resolveMarketAction('market-1', undefined, outcomeForm('outcome-1'))
 
-    expect(state).toEqual({ formError: 'Something went wrong. Try again.', field: 'outcome' })
+    expect(state).toEqual({ formError: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.', field: 'outcome' })
     expect(log).toHaveBeenCalled()
   })
 

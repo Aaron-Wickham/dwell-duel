@@ -183,7 +183,7 @@ describe('CopyInviteButton (#85)', () => {
     render(<CopyInviteButton email="newfriend@example.com" />)
     await userEvent.click(screen.getByRole('button', { name: 'Copy invite message for newfriend@example.com' }))
 
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Couldn’t copy the invite message. Try again.'))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Couldn’t copy the invite message. Try again.', { duration: 10_000 }))
     expect(success).not.toHaveBeenCalled()
   })
 })

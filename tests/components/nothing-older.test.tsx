@@ -15,7 +15,7 @@ import { NothingOlder } from '@/components/ui/nothing-older'
 describe('NothingOlder', () => {
   it('says there is nothing older, with a way back to the newest rows', () => {
     render(<NothingOlder href="/admin/ledger" />)
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     const back = screen.getByRole('link', { name: 'Back to newest' })
     expect(back).toHaveAttribute('href', '/admin/ledger')
     expect(back).toHaveAttribute('data-replace', 'true')

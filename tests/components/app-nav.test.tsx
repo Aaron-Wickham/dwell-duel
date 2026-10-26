@@ -176,7 +176,7 @@ describe('AppNav', () => {
 
   it('makes the balance a link to My bets in both top bars, marked current there', () => {
     const { unmount } = render(<Nav balance={120} isAdmin={false} />)
-    const chips = screen.getAllByRole('link', { name: 'Balance 120 DC, view my bets' })
+    const chips = screen.getAllByRole('link', { name: 'Balance 120\u00A0DC, view my bets' })
     expect(chips).toHaveLength(2)
     for (const chip of chips) {
       expect(chip).toHaveAttribute('href', '/bets')
@@ -186,7 +186,7 @@ describe('AppNav', () => {
     unmount()
     pathname = '/bets'
     render(<Nav balance={120} isAdmin={false} />)
-    for (const chip of screen.getAllByRole('link', { name: 'Balance 120 DC, view my bets' })) {
+    for (const chip of screen.getAllByRole('link', { name: 'Balance 120\u00A0DC, view my bets' })) {
       expect(chip).toHaveAttribute('aria-current', 'page')
     }
   })
@@ -322,7 +322,7 @@ describe('AppNav', () => {
     const buttons = screen.getAllByRole('button', { name: 'Your profile and settings, 3 waiting' })
     expect(buttons).toHaveLength(2)
     for (const button of buttons) {
-      const dot = button.querySelector('.bg-loss')
+      const dot = button.querySelector('.bg-gold')
       expect(dot).toHaveAttribute('aria-hidden', 'true')
       expect(dot).toHaveClass('ring-surface')
     }

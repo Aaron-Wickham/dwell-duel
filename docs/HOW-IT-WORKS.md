@@ -535,7 +535,7 @@ sign back in. Your other devices keep theirs.
 
 Reviewers and above see what is waiting on them: other members' task
 submissions (reviewers and above) and closed markets with no result (admins
-and above). Their avatar gets a red dot, its menu's **Admin** item says
+and above). Their avatar gets a gold dot, its menu's **Admin** item says
 "N waiting", and Home's **Needs you** lists each queue with its count; all
 of it disappears at zero. Admin opens on the queue that has work in it.
 

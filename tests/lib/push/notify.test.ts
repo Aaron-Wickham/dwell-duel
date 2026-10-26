@@ -80,7 +80,7 @@ describe('notify', () => {
     expect(rpc).toHaveBeenCalledWith('push_market_result', { p_market_id: 'm-1' })
     expect(sendPush).toHaveBeenCalledWith(
       [
-        { profileId: 'alice', payload: { title: 'You won 26 DC', body: 'Will it rain?: No', url: '/markets/m-1' } },
+        { profileId: 'alice', payload: { title: 'You won 26\u00A0DC', body: 'Will it rain?: No', url: '/markets/m-1' } },
         { profileId: 'bob', payload: { title: 'Market resolved', body: 'Will it rain?: No', url: '/markets/m-1' } },
       ],
       db,

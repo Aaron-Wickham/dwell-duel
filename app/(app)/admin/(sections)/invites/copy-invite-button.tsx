@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { haptics } from '@/lib/haptics'
 import { copyText } from '@/lib/invites/copy-text'
 import { inviteMessage } from '@/lib/invites/invite-message'
+import { toastError } from '@/lib/toast/error-toast'
 import { cn } from '@/lib/utils'
 
 export function CopyInviteButton({ email, className }: { email: string; className?: string }) {
@@ -13,7 +14,7 @@ export function CopyInviteButton({ email, className }: { email: string; classNam
       toast.success('Invite message copied.')
       haptics.success()
     } else {
-      toast.error('Couldn’t copy the invite message. Try again.')
+      toastError('Couldn’t copy the invite message. Try again.')
       haptics.error()
     }
   }

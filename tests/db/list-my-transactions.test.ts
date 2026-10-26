@@ -80,8 +80,8 @@ describe('listMyTransactions', () => {
 
     // An unseeded market with Bob its only bettor pays his stake straight back.
     expect(rows.map((e) => [e.label, e.amount])).toEqual([
-      ['Won 20 DC on Will it rain?', 20],
-      ['Bet 20 DC on Yes · Will it rain?', -20],
+      ['Won 20\u00A0DC on Will it rain?', 20],
+      ['Bet 20\u00A0DC on Yes · Will it rain?', -20],
       ['Task reward: Read Ruth', 10],
       ['Starting balance', 100],
     ])

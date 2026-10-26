@@ -21,16 +21,16 @@ describe('formatDc', () => {
 })
 
 describe('formatDcAmount', () => {
-  it('adds the unit', () => {
-    expect(formatDcAmount(2577831)).toBe('2,577,831 DC')
-    expect(formatDcAmount(-1000)).toBe('−1,000 DC')
+  it('adds the unit after a no-break space', () => {
+    expect(formatDcAmount(2577831)).toBe('2,577,831\u00A0DC')
+    expect(formatDcAmount(-1000)).toBe('−1,000\u00A0DC')
   })
 })
 
 describe('formatSignedDcAmount', () => {
   it('signs a change, the way the ledger shows it', () => {
-    expect(formatSignedDcAmount(2500000)).toBe('+2,500,000 DC')
-    expect(formatSignedDcAmount(-40)).toBe('−40 DC')
-    expect(formatSignedDcAmount(0)).toBe('0 DC')
+    expect(formatSignedDcAmount(2500000)).toBe('+2,500,000\u00A0DC')
+    expect(formatSignedDcAmount(-40)).toBe('−40\u00A0DC')
+    expect(formatSignedDcAmount(0)).toBe('0\u00A0DC')
   })
 })

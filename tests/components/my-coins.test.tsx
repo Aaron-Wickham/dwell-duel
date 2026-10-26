@@ -136,14 +136,14 @@ describe('My bets → Coins', () => {
 
     expect(screen.getByText('No coin movements yet.')).toBeInTheDocument()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
-    expect(screen.queryByText('Nothing older here.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Nothing older here')).not.toBeInTheDocument()
   })
 
   it('shows "Nothing older here" instead of the empty state when a fresh window comes back empty', async () => {
     listMyTransactions.mockResolvedValue({ rows: [], next: null, windowed: true })
     await renderCoinsTab({ tab: 'coins', coins_from: 'abc' })
 
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     expect(screen.queryByText('No coin movements yet.')).not.toBeInTheDocument()
   })
 

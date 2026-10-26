@@ -12,8 +12,27 @@ before v0.4.0 used other headings.)
 
 ## Unreleased
 
+### Fixes
+- **Menus show where the keyboard is.** In the avatar's menu and a market's More actions, the item you reach with the arrow keys now takes a green tint and a focus ring, instead of a grey tint you could barely see.
+- **Placeholders you can read.** The hint text inside search boxes and form fields (Search markets, the create-market form) is now the secondary text colour instead of a faded grey.
+- **Amounts stay on one line.** "12,345 DC" no longer breaks with "DC" on the next line on bet cards, parlays, Home and a market's bets.
+- **Printing in dark mode.** A market or the rules printed from the dark theme now prints dark text on white instead of near-white text.
+- **Text in cards can be selected with a mouse.** On a computer you can now select and copy the words on a tappable card; on a phone a long press still doesn't select it.
+- **A way back from a missing page.** "Page not found" on a market, member or parlay now also offers Back to Markets (or Leaderboard, My bets), and the top-level error and not-found pages have a main landmark for screen readers.
+
+### Polish
+- **Cards stand out from the page in light mode.** The light page background is a step darker, so cards on Home and My bets read as cards on a sunny phone screen; hover tints moved with it.
+- **Waiting counts are gold, not red.** The avatar's dot, the Admin tabs' badges and the menu's "3 waiting" use the same gold as Needs you, since something waiting isn't an error.
+- **Menus and toasts have an edge in dark mode,** a thin ring and a deeper shadow, so they no longer melt into the card under them.
+- **Error toasts stay 10 seconds,** long enough to read what to do next; other toasts still go after 4.
+- **Busy buttons can say what they're doing.** Submit and confirm buttons can show the leaf loader with words like "Placing…" while an action runs, instead of only greying out (later changes turn this on for each form).
+- **The profile and Create market forms** are plain cards like the rest of the app, without a border and shadow.
+- **Small status chips** use the 13px chip size instead of 12px.
+- **Clearer error words.** A failed action now says "That didn’t go through. Try again, and if it keeps happening, tell an admin."; a page that fails to load says "This page couldn’t load", or that you're offline when you are; a failed sign-in says to use the account your invite was sent to; and "Nothing older here" lost its full stop.
+
 ### Under the hood
 - **UX Engine is the design skill set.** `AGENTS.md` now routes every UI and UX change through the UX Engine plugin (installed per machine, not in this public repo), and `DESIGN.md` is a complete design contract extracted from `app/globals.css`, with each status chip's contrast computed.
+- **Link, busy-button and menu rules.** `AGENTS.md` now says a standalone link that leads onward takes a trailing chevron and a caption-weight link takes `prose-link`; slow actions' buttons take a `pendingLabel`; menu items share `menuItemClass`; and error toasts go through `toastError`.
 
 ## v1.1.0 — 2026-10-23
 

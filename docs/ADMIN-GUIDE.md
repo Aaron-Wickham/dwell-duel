@@ -26,7 +26,7 @@ their role away with their invite, straight away.
 
 What's waiting on you is other members' task submissions (reviewers and
 above) and closed markets with no result (admins and above). While
-anything waits, your avatar carries a red dot and its menu's **Admin** item
+anything waits, your avatar carries a gold dot and its menu's **Admin** item
 says "N waiting"; inside Admin, the **Tasks** and **Markets** tabs show
 their share as a red count; and Home's **Needs you** lists each queue with
 its count, opening that section.

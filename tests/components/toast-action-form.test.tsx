@@ -60,7 +60,7 @@ describe('ToastActionForm', () => {
       </ToastActionForm>,
     )
     await userEvent.click(screen.getByRole('button', { name: 'Add' }))
-    await waitFor(() => expect(error).toHaveBeenCalledWith('Your slip is full.'))
+    await waitFor(() => expect(error).toHaveBeenCalledWith('Your slip is full.', { duration: 10_000 }))
     expect(success).not.toHaveBeenCalled()
   })
 

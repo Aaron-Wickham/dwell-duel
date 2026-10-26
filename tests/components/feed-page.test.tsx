@@ -90,7 +90,7 @@ function feedReturning(page: KeysetPage<FeedEvent>) {
 describe('FeedPage', () => {
   it('says there is nothing older, not that nothing has happened, for a window past the end', async () => {
     await renderPage({ rows: [], next: null, windowed: true }, { before_from: 'OLD' })
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to newest' })).toHaveAttribute('href', '/feed')
     expect(screen.queryByText('Nothing yet.')).toBeNull()
   })
@@ -98,7 +98,7 @@ describe('FeedPage', () => {
   it('keeps its own empty state when nothing has ever happened', async () => {
     await renderPage({ rows: [], next: null, windowed: false })
     expect(screen.getByText('Nothing yet.')).toBeInTheDocument()
-    expect(screen.queryByText('Nothing older here.')).toBeNull()
+    expect(screen.queryByText('Nothing older here')).toBeNull()
   })
 
   it("reads the page's reactions in one call and shows them on each item", async () => {

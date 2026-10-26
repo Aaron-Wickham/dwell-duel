@@ -19,22 +19,22 @@ describe('positionSummary', () => {
   it('totals the solo stakes while the market is open, and says bets are final', () => {
     expect(positionSummary([bet(20, { kind: 'open' }), bet(10, { kind: 'open' })])).toEqual({
       tone: 'plain',
-      text: '30 DC on this market · Bets are final.',
+      text: '30\u00A0DC on this market · Bets are final.',
     })
   })
 
   it('waits on the result once the market has closed', () => {
-    expect(positionSummary([bet(20, { kind: 'awaiting' })])?.text).toBe('20 DC on this market · Waiting on the result.')
+    expect(positionSummary([bet(20, { kind: 'awaiting' })])?.text).toBe('20\u00A0DC on this market · Waiting on the result.')
   })
 
   it('nets what was won against what was lost once settled', () => {
     expect(positionSummary([bet(20, { kind: 'won', payout: 36 }), bet(10, { kind: 'lost' })])).toEqual({
       tone: 'win',
-      text: 'You won 6 DC on this market.',
+      text: 'You won 6\u00A0DC on this market.',
     })
     expect(positionSummary([bet(20, { kind: 'won', payout: 26 }), bet(10, { kind: 'lost' })])).toEqual({
       tone: 'loss',
-      text: 'You lost 4 DC on this market.',
+      text: 'You lost 4\u00A0DC on this market.',
     })
   })
 
@@ -83,13 +83,13 @@ function position(overrides: Partial<ParlayView>, here: ParlayLegView, others: P
 describe('legSummary', () => {
   it('describes the parlay while its leg here is open, and says when the odds are set', () => {
     expect(legSummary(position({}, leg('m', 'open'), [leg('a', 'open'), leg('b', 'open')]))).toBe(
-      '5 DC · 3 picks · Pays ~80 DC if every pick wins. This pick’s odds are set when this market closes.',
+      '5\u00A0DC · 3 picks · Pays ~80\u00A0DC if every pick wins. This pick’s odds are set when this market closes.',
     )
   })
 
   it('drops the odds note once they are set', () => {
     expect(legSummary(position({ estimated: false }, leg('m', 'awaiting', true), [leg('a', 'open', true)]))).toBe(
-      '5 DC · 2 picks · Pays 80 DC if every pick wins.',
+      '5\u00A0DC · 2 picks · Pays 80\u00A0DC if every pick wins.',
     )
   })
 
@@ -107,7 +107,7 @@ describe('legSummary', () => {
   })
 
   it('gives the parlay’s own result once it has settled', () => {
-    expect(legSummary(position({ status: 'won', credited: 80 }, leg('m', 'won', true), [leg('a', 'won', true)]))).toBe('Parlay won 80 DC')
+    expect(legSummary(position({ status: 'won', credited: 80 }, leg('m', 'won', true), [leg('a', 'won', true)]))).toBe('Parlay won 80\u00A0DC')
     expect(legSummary(position({ status: 'lost' }, leg('m', 'won', true), [leg('a', 'lost', true)]))).toBe('Parlay lost')
     expect(legSummary(position({ status: 'refunded' }, leg('m', 'voided'), [leg('a', 'voided')]))).toBe('Parlay refunded')
   })

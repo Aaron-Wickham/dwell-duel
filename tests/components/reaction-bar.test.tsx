@@ -144,7 +144,7 @@ describe('ReactionBar', () => {
     const picker = await openPicker()
     await userEvent.click(within(picker).getByRole('button', { name: 'React clap, 0 reactions' }))
 
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Couldn’t add your reaction. Try again.'))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Couldn’t add your reaction. Try again.', { duration: 10_000 }))
     await waitFor(() => expect(within(bar()).queryByRole('button', { name: /React clap/ })).toBeNull())
   })
 

@@ -29,7 +29,7 @@ export function BalanceCard({
       </h2>
       <p>
         <AnimatedText plainText={formatDcAmount(balance)} className={cn(figureHeroClass, 'whitespace-nowrap text-on-hero')}>
-          <AnimatedNumber value={balance} locales="en-US" suffix=" DC" />
+          <AnimatedNumber value={balance} locales="en-US" suffix={'\u00A0DC'} />
         </AnimatedText>
       </p>
       <p className="text-sm text-hero-2">{standingLine({ rank, memberCount, dc: ridingDc, wagers: ridingWagers })}</p>

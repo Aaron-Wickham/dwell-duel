@@ -71,7 +71,7 @@ describe('AdminLedgerPage', () => {
     const jsx = await AdminLedgerPage({ searchParams: Promise.resolve({ before_from: 'abc' }) } as never)
     render(jsx)
 
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     expect(screen.queryByText('No coin movements yet.')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to newest' })).toBeInTheDocument()
   })
@@ -83,7 +83,7 @@ describe('AdminLedgerPage', () => {
     render(jsx)
 
     expect(screen.getByText('No coin movements yet.')).toBeInTheDocument()
-    expect(screen.queryByText('Nothing older here.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Nothing older here')).not.toBeInTheDocument()
   })
 
   // #254: a member's Admin page links here, to their movements alone.
@@ -143,7 +143,7 @@ describe('AdminLedgerPage', () => {
 
     expect(ilikes).toEqual([])
     expect(screen.getByRole('searchbox', { name: 'Member' })).toHaveValue('Ben')
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     profile.current = null
   })
 

@@ -113,8 +113,8 @@ a line to `CHANGELOG.md` under the next release.
   back arrow, the close X, `Message`'s marks, the Needs you chevrons, a
   select's or disclosure's chevron, the plus on Add and Create market,
   search, the category picker's check and Create plus, proof types, the
-  Google G); other secondary buttons are text
-  only.
+  Google G, the trailing chevron on a standalone link that leads onward);
+  other secondary buttons are text only.
 - **Home** (#388, #438). The deep-teal Balance card shows at every width
   (under the greeting on a phone). Your bets are `ListCard`s on the page,
   never inside a card (two columns from `lg:`). Activity and Needs you
@@ -144,6 +144,9 @@ a line to `CHANGELOG.md` under the next release.
   exception is approving a single task submission from its row, which
   stays a direct button (the e2e specs click a row's own "Approve");
   "Approve selected" confirms, saying how many it approves and what it pays.
+  A slow action's button (`FormSubmitButton`, `ConfirmActionButton`,
+  `ConfirmSubmitDialog`) takes a `pendingLabel` ("Placing…"), shown with
+  `LeafLoader` while it runs, so busy never looks only unavailable.
 - **Controls.** Every control is a real `<button>`, `<a>` or `<label>`ed
   input, at least 44px tall. Selects and checkboxes stay native. When a
   form shows a server error, wire `aria-invalid` and `aria-describedby`
@@ -161,8 +164,12 @@ a line to `CHANGELOG.md` under the next release.
   at rest (a mouse hover still underlines), so titles, See all, back links
   and menu items read by their place and weight. A link inside a sentence
   ("How parlays pay", a feed row's names, a bet row's name, the rendered
-  rules) takes the `prose-link` utility, which keeps it underlined. A link
-  styled as a button, tab, chip or nav item may still carry `no-underline`.
+  rules) takes the `prose-link` utility, which keeps it underlined. So does
+  a link set in caption weight or `text-ink2` that isn't a row title, since
+  nothing else marks it as a link. A standalone link that ends a page or
+  section and leads onward ("Read the full rules") takes a trailing chevron.
+  A link styled as a button, tab, chip or nav item may still carry
+  `no-underline`.
 - **Charts** (#391; the handoff's Charts section). A two-outcome market
   draws one line, Yes or Over (`plottedOutcomes`), in `--s2`. Series
   colours come from `outcomeSeries` (the race's from `memberSeries`, by
@@ -329,7 +336,8 @@ a line to `CHANGELOG.md` under the next release.
   caps that move and a middle that stretches, #418), and a nav or tab-bar link it
   slides under takes `pill-label`, so its colour cross-fades over the same
   280ms; every
-  dialog takes `components/ui/dialog-classes.ts`. Reduced motion turns page
+  dialog takes `components/ui/dialog-classes.ts`, and every menu item
+  `menuItemClass` (`components/ui/menu-classes.ts`). Reduced motion turns page
   transitions into a `--duration-fast` cross-fade, never a cut. Times in
   CSS that script also keeps (the sign-in intro's) are custom properties
   script writes from its constants, not copies.

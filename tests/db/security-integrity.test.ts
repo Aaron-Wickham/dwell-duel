@@ -304,7 +304,7 @@ describe('#84 the creator’s stake is shown', () => {
       { id: m.marketId, createdBy: alice.id },
       { id: other.marketId, createdBy: bob.id },
     ])
-    expect(describeCreatorStake(stakes.get(m.marketId), 'has')).toBe('Creator has 40 DC on Yes and a parlay on No.')
+    expect(describeCreatorStake(stakes.get(m.marketId), 'has')).toBe('Creator has 40\u00A0DC on Yes and a parlay on No.')
     expect(describeCreatorStake(stakes.get(other.marketId), 'has')).toBeNull()
   })
 })

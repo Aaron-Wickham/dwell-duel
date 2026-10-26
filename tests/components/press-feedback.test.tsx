@@ -31,6 +31,7 @@ import { MotionSettings, ThemeSetting } from '@/app/(app)/settings/settings-cont
 import { CreateMarketForm } from '@/app/(app)/markets/new/create-market-form'
 import { PositionCard } from '@/components/markets/position-card'
 import { ListCard } from '@/components/ui/list-card'
+import { menuItemClass } from '@/components/ui/menu-classes'
 
 const MEMBER = { id: 'm1', name: 'Grace', avatarSrc: null }
 
@@ -392,6 +393,15 @@ describe('press feedback', () => {
   it('presses the market page’s More actions button and its items', () => {
     const menu = readFileSync(path.resolve(import.meta.dirname, '../../app/(app)/markets/[id]/market-menu.tsx'), 'utf8')
     expect(menu).toMatch(/aria-label="More actions"\s+className="pressable\b/)
-    expect(menu).toMatch(/const itemClass = `pressable\b/)
+    expect(menu).toMatch(/className=\{menuItemClass\}/)
+  })
+
+  it('presses every menu item, through the one shared class', () => {
+    expect(menuItemClass.split(' ')).toContain('pressable')
+    for (const file of ['../../app/(app)/markets/[id]/market-menu.tsx', '../../components/app-nav/profile-menu.tsx']) {
+      const source = readFileSync(path.resolve(import.meta.dirname, file), 'utf8')
+      expect(source, file).not.toMatch(/const itemClass/)
+      expect(source, file).toMatch(/className=\{menuItemClass\}/)
+    }
   })
 })

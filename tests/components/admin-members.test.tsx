@@ -81,7 +81,7 @@ describe('AdjustBalanceForm confirmation (#65)', () => {
     await submit('-20', 'Duplicate reward')
 
     const dialog = await screen.findByRole('alertdialog', { name: 'Adjust Ben’s balance?' })
-    expect(dialog).toHaveAccessibleDescription('Takes 20 DC from Ben’s balance of 60 DC, straight away.')
+    expect(dialog).toHaveAccessibleDescription('Takes 20\u00A0DC from Ben’s balance of 60\u00A0DC, straight away.')
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
@@ -94,10 +94,10 @@ describe('AdjustBalanceForm confirmation (#65)', () => {
     adjustBalanceAction.mockResolvedValue(undefined)
     render(<AdjustBalanceForm member={BEN} />)
     await submit('25', 'Choir volunteer bonus')
-    expect(await screen.findByRole('alertdialog')).toHaveAccessibleDescription('Adds 25 DC to Ben’s balance of 60 DC, straight away.')
+    expect(await screen.findByRole('alertdialog')).toHaveAccessibleDescription('Adds 25\u00A0DC to Ben’s balance of 60\u00A0DC, straight away.')
     await userEvent.click(screen.getByRole('button', { name: 'Adjust balance' }))
 
-    await waitFor(() => expect(success).toHaveBeenCalledWith('Balance adjusted by +25 DC.'))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Balance adjusted by +25\u00A0DC.'))
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
     expect(screen.getByLabelText('Amount')).toHaveValue(null)
     expect(screen.getByLabelText('Reason')).toHaveValue('')
@@ -106,7 +106,7 @@ describe('AdjustBalanceForm confirmation (#65)', () => {
 
 describe('AdjustBalanceForm keeps what was filled in (#63)', () => {
   it('keeps the amount and reason after the server refuses', async () => {
-    adjustBalanceAction.mockResolvedValue({ formError: 'That would take Ben’s balance below zero — they have 60 DC.', field: 'amount' })
+    adjustBalanceAction.mockResolvedValue({ formError: 'That would take Ben’s balance below zero — they have 60\u00A0DC.', field: 'amount' })
     render(<AdjustBalanceForm member={BEN} />)
     await submit('-80', 'Correction')
     await userEvent.click(await screen.findByRole('button', { name: 'Adjust balance' }))

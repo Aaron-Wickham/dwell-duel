@@ -96,7 +96,7 @@ function feedReturning(page: KeysetPage<FeedEvent>) {
 describe('MemberActivity', () => {
   it('says there is nothing older, not that nothing has happened, for a window past the end', async () => {
     await renderActivity({ rows: [], next: null, windowed: true }, { activity_from: 'OLD' })
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to newest' })).toHaveAttribute('href', '/members/p-bob')
     expect(screen.queryByText('Nothing yet.')).toBeNull()
   })
@@ -104,7 +104,7 @@ describe('MemberActivity', () => {
   it('keeps its own empty state when the member has no activity', async () => {
     await renderActivity({ rows: [], next: null, windowed: false })
     expect(screen.getByText('Nothing yet.')).toBeInTheDocument()
-    expect(screen.queryByText('Nothing older here.')).toBeNull()
+    expect(screen.queryByText('Nothing older here')).toBeNull()
   })
 
   it('moves focus to the first new row when Show more is clicked', async () => {

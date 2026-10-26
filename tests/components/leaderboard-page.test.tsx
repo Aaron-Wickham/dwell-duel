@@ -121,7 +121,7 @@ describe('LeaderboardPage', () => {
 
   it('says there is nothing older for a window past the end, not that there are no members', async () => {
     await renderPage({ rows: [], next: null, windowed: true }, { before_from: 'OLD' })
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to newest' })).toHaveAttribute('href', '/leaderboard')
     expect(screen.queryByText('No other members yet.')).toBeNull()
   })
@@ -129,7 +129,7 @@ describe('LeaderboardPage', () => {
   it('keeps its empty state for a board of one', async () => {
     await renderPage({ rows: [member(1, 100, 1)], next: null, windowed: false })
     expect(screen.getByText('No other members yet.')).toBeInTheDocument()
-    expect(screen.queryByText('Nothing older here.')).toBeNull()
+    expect(screen.queryByText('Nothing older here')).toBeNull()
   })
 
   it('ranks by net worth by default, says so, and marks its tab current', async () => {
@@ -409,7 +409,7 @@ describe('LeaderboardPage', () => {
 
     it('says there is nothing older for a search window past the end', async () => {
       await renderSearch({ rows: [], next: null, windowed: true }, { q: 'zed', match_from: 'OLD' })
-      expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+      expect(screen.getByText('Nothing older here')).toBeInTheDocument()
       expect(screen.getByRole('link', { name: 'Back to newest' })).toHaveAttribute('href', '/leaderboard?q=zed')
     })
   })

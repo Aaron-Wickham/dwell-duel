@@ -9,6 +9,6 @@ export function SignInError() {
   if (error === 'expired') {
     return <Message tone="error">That sign-in expired or was started in another tab. Try again.</Message>
   }
-  if (error === 'auth') return <Message tone="error">Something went wrong signing you in. Try again.</Message>
+  if (error === 'auth') return <Message tone="error">Google didn’t sign you in. Try again with the account your invite was sent to.</Message>
   return null
 }

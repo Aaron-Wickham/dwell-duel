@@ -71,7 +71,7 @@ describe('NeedsYou (#388)', () => {
 
   it('points a member at 0 DC to Tasks, in gold, with what tasks pay', () => {
     render(<NeedsYou counts={{ tasks: 0, markets: 0 }} showReviews={false} showAdminMarkets={false} marketsToResolve={NONE} balance={0} taskRewards={{ min: 5, max: 25 }} />)
-    const row = screen.getByRole('link', { name: 'You’re out of Dwell Coin. Earn more with Tasks: they pay 5 to 25 DC.' })
+    const row = screen.getByRole('link', { name: 'You’re out of Dwell Coin. Earn more with Tasks: they pay 5 to 25\u00A0DC.' })
     expect(row).toHaveAttribute('href', '/tasks')
     expect(row).toHaveClass('text-gold')
   })

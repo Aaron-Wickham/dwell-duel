@@ -19,7 +19,7 @@ before v0.4.0 used other headings.)
 - **Printing in dark mode.** A market or the rules printed from the dark theme now prints dark text on white instead of near-white text.
 - **Text in cards can be selected with a mouse.** On a computer you can now select and copy the words on a tappable card; on a phone a long press still doesn't select it.
 - **A way back from a missing page.** "Page not found" on a market, member or parlay now also offers Back to Markets (or Leaderboard, My bets), and the top-level error and not-found pages have a main landmark for screen readers.
-- **One failed read no longer blanks Home.** If the weekly recap, Getting started, Needs you, Activity or your open-bet total can't load, Home shows everything else without it.
+- **One failed read no longer blanks Home.** If the weekly recap, Getting started, Needs you, Activity or your open-bet total can't load, Home shows everything else without it (Activity says it didn't load, in its usual space).
 - **Needs you lands with the page.** It no longer pops in after Home has drawn, so your bet cards don't jump down under your thumb on a phone.
 - **Getting started holds still.** Its "2 of 5 done" and the notifications step wait for the device check instead of flipping to "3 of 5" a moment after the page opens.
 - **Back swipe follows your finger with reduced motion on.** The page now moves with the swipe; only the slide after you let go is skipped.

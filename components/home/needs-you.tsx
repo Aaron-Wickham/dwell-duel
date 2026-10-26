@@ -24,7 +24,7 @@ function NeedsYouTile({ href, count, label, name, tone }: Omit<Tile, 'key'>) {
         aria-label={name}
         className={cn(
           'pressable relative isolate flex min-h-11 flex-col gap-0.5 rounded-tile p-3.5 no-underline',
-          'after:pointer-events-none after:absolute after:inset-0 after:-z-10 after:rounded-tile after:bg-current after:opacity-0 after:transition-opacity after:duration-(--duration-hover) after:ease-out hover:after:opacity-8',
+          'after:pointer-events-none after:absolute after:inset-0 after:-z-10 after:rounded-tile after:bg-current after:opacity-0 after:transition-opacity after:duration-(--duration-hover) after:ease-ios hover:after:opacity-8',
           tone === 'gold' ? 'bg-gold-soft text-gold' : 'bg-info-soft text-info',
         )}
       >

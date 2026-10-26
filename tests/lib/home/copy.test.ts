@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { countNoun, firstName, ridingText, standingLine, taskRewardsDetail } from '@/lib/home/copy'
+import { countNoun, firstName, standingLine, taskRewardsDetail } from '@/lib/home/copy'
 
 describe('firstName', () => {
   it('greets by the first word of the display name, or the fallback', () => {
@@ -7,14 +7,6 @@ describe('firstName', () => {
     expect(firstName('  Ben  ')).toBe('Ben')
     expect(firstName('')).toBe('Member')
     expect(firstName(null)).toBe('Member')
-  })
-})
-
-describe('ridingText', () => {
-  it('says what is in open bets, or that nothing is', () => {
-    expect(ridingText(275, 3)).toBe('275\u00A0DC in open bets')
-    expect(ridingText(1250, 1)).toBe('1,250\u00A0DC in open bets')
-    expect(ridingText(0, 0)).toBe('No open bets')
   })
 })
 

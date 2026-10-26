@@ -24,6 +24,18 @@ export const NOTIFICATIONS_PROMISE = 'Hear when a market you created closes and 
 // Long enough to reach Undo after a stray tap; other toasts keep Sonner's 4 seconds.
 const UNDO_TOAST_DURATION_MS = 8_000
 
+// When Undo was pressed. Dismissing saves a cookie, so Next re-renders Home without this card and
+// unmounts it; Undo's own cookie change brings back a fresh one, which reads this to take focus.
+// It goes stale quickly, so a card mounted much later never grabs focus.
+let restoredAt = 0
+const RESTORE_FOCUS_WINDOW_MS = 10_000
+
+function takeRestoreFocus(): boolean {
+  const recent = Date.now() - restoredAt < RESTORE_FOCUS_WINDOW_MS
+  restoredAt = 0
+  return recent
+}
+
 // How it works comes first, so a new member knows what a Dwell Coin is before spending one (#260).
 const STEPS: {
   key: StepKey
@@ -44,14 +56,15 @@ const STEPS: {
 
 export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
   const [dismissed, setDismissed] = useState(false)
-  const [restored, setRestored] = useState(false)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const push = useDevicePush()
+  const shownNow = Boolean(steps) && !dismissed
 
-  // After Undo the card comes back where it was, and focus with it, rather than staying on the page's h1.
+  // After Undo the card comes back where it was, and focus with it, rather than staying on the
+  // page's h1, whether this instance survived the dismissal or a fresh one has just mounted.
   useEffect(() => {
-    if (restored && !dismissed) headingRef.current?.focus()
-  }, [restored, dismissed])
+    if (shownNow && headingRef.current && takeRestoreFocus()) headingRef.current.focus()
+  }, [shownNow])
 
   if (!steps || dismissed) return null
 
@@ -65,7 +78,7 @@ export function OnboardingCard({ steps }: { steps: OnboardingSteps | null }) {
   if (!checking && doneCount === shown.length) return null
 
   function restore() {
-    setRestored(true)
+    restoredAt = Date.now()
     setDismissed(false)
     restoreOnboardingAction().catch(() => {})
   }

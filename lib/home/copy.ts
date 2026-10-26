@@ -7,11 +7,6 @@ export function firstName(displayName: string | null | undefined): string {
   return displayName?.trim().split(/\s+/)[0] || FALLBACK_NAME
 }
 
-// What's at stake, after the rank: "275 DC in open bets", or "No open bets" rather than a 0.
-export function ridingText(dc: number, wagers: number): string {
-  return wagers === 0 ? 'No open bets' : `${formatDcAmount(dc)} in open bets`
-}
-
 // The Balance card's line: "218th of 502 · 275 DC in 30 open bets" (C-8: "riding" is betting
 // slang). Rank is null until the member has a settled bet, and for a removed member; what's at stake
 // is null when it couldn't be read, so the line keeps the rank alone, or is empty.

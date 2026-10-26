@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { addToSlip, openSlip } from './slip'
+import { serverActionSettled } from './server-action'
 import { MEMBER_STORAGE_STATE_PATH } from './global-setup'
 import { clientForEmail } from '../tests/db/fixtures'
 import { serviceClient } from '../tests/db/helpers'
@@ -25,6 +26,29 @@ test('Getting started opens with How it works, and ticks it off once the page ha
   await page.goto('/')
   await expect(learn.getByRole('link')).toHaveCount(0)
   await expect(learn.getByText('Learn how DwellDuel works')).toHaveClass(/line-through/)
+})
+
+// HOME-7: dismissing saves a cookie, so Home re-renders without the card; Undo brings a fresh one
+// back, with focus on its heading, and clears the cookie for good.
+test('Getting started can be dismissed and brought back with Undo', async ({ page }) => {
+  await page.goto('/')
+  const card = page.getByRole('region', { name: 'Getting started' })
+  await expect(card).toBeVisible()
+
+  const dismissed = serverActionSettled(page)
+  await card.getByRole('button', { name: 'Dismiss getting started' }).click()
+  await dismissed
+  await expect(card).toHaveCount(0)
+  await expect(page.getByRole('heading', { level: 1 })).toBeFocused()
+
+  const restored = serverActionSettled(page)
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await restored
+  await expect(card).toBeVisible()
+  await expect(card.getByRole('heading', { level: 2, name: 'Getting started' })).toBeFocused()
+
+  await page.reload()
+  await expect(card).toBeVisible()
 })
 
 // #398: How it works is the short version; the full rules are a tap away.

@@ -190,6 +190,14 @@ describe('HomeActivity (#388)', () => {
     expect(within(section).queryByRole('button')).toBeNull()
   })
 
+  it('keeps its heading, See all and height when its read failed (HOME-1)', () => {
+    render(<HomeActivity events={null} now={NOW} />)
+    const section = screen.getByRole('region', { name: 'Activity' })
+    expect(within(section).getByRole('link', { name: 'See all' })).toHaveAttribute('href', '/feed')
+    const line = within(section).getByText(/^Activity didn’t load\./)
+    expect(line).toHaveClass('min-h-[230px]', 'md:min-h-[158px]')
+  })
+
   it('says nothing has happened yet', () => {
     render(<HomeActivity events={[]} now={NOW} />)
     expect(screen.getByText('Nothing yet.')).toBeInTheDocument()
@@ -212,8 +220,11 @@ describe('BalanceCard (#388)', () => {
     expect(screen.getByRole('region', { name: 'Balance' })).toHaveTextContent(/No open bets$/)
   })
 
-  it('draws no empty line when neither rank nor stake could be read (HOME-1)', () => {
+  it('keeps the standing line’s height, hidden, when neither rank nor stake could be read (HOME-1)', () => {
     render(<BalanceCard balance={100} rank={null} memberCount={502} riding={null} />)
-    expect(screen.getByRole('region', { name: 'Balance' }).querySelectorAll('p')).toHaveLength(1)
+    const lines = screen.getByRole('region', { name: 'Balance' }).querySelectorAll('p')
+    expect(lines).toHaveLength(2)
+    expect(lines[1]).toHaveAttribute('aria-hidden', 'true')
+    expect(lines[1].textContent).toBe('\u00A0')
   })
 })

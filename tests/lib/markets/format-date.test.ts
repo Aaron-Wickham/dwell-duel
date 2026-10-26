@@ -41,6 +41,13 @@ describe('formatCloseTime', () => {
     expect(formatCloseTime('2026-10-05T01:00:00Z', now, 'UTC')).toMatch(/^tomorrow 1\sAM$/)
   })
 
+  // 2027-03-14 is 23 hours long in Chicago, so 24 hours from late on the 13th reaches the 15th.
+  it('gives the day, not tomorrow, for a close two calendar days on across a DST change', () => {
+    const lateSaturday = Date.parse('2027-03-14T05:50:00Z') // Mar 13, 11:50 PM CST
+    expect(formatCloseTime('2027-03-15T05:30:00Z', lateSaturday, 'America/Chicago')).toBe('Mar 15') // Mar 15, 12:30 AM CDT
+    expect(formatCloseTime('2027-03-14T18:00:00Z', lateSaturday, 'America/Chicago')).toMatch(/^tomorrow 1\sPM$/)
+  })
+
   it('falls back to the day once the close has passed', () => {
     expect(formatCloseTime('2026-10-04T11:00:00Z', now, 'UTC')).toBe('Oct 4')
   })

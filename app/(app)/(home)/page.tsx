@@ -109,7 +109,7 @@ export default async function Home() {
             <NotificationsCard onboardingShown={onboardingShown} />
           </div>
           <div className="contents max-lg:[&>*]:order-6">
-            {activity && <HomeActivity events={activity} now={now} />}
+            <HomeActivity events={activity} now={now} />
           </div>
           <div className="contents max-lg:[&>*]:order-7">
             <WeeklyRecapCard recap={weeklyRecap} />

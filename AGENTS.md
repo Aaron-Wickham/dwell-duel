@@ -334,7 +334,11 @@ a line to `CHANGELOG.md` under the next release.
   A row or tile *inside* a card never lifts (#244: a card floating in a
   card reads as a button in a button): it takes `hover-tint`, a flat
   `--sunk` panel drawn a little wider than a divided list's row, or flush
-  with a padded row that sets `[--tint-inset:0]`. The lift drops its
+  with a padded row that sets `[--tint-inset:0]`. The one exception is
+  Home's Needs you tiles (HOME-8): already filled with their status tint,
+  so a `--sunk` panel behind them can't show; under a mouse they take an
+  8% wash of their own text colour, drawn under the text (an `after:`
+  layer, `--duration-hover` on `ease-ios`). The lift drops its
   movement under reduced motion, and `pressable` carries the transition,
   so a colour hover on a `pressable` eases on its own.
 - **Motion tokens.** Curves, durations and delays are the `--ease-*` /

@@ -142,6 +142,22 @@ describe('OnboardingCard', () => {
     expect(screen.getByRole('heading', { name: 'Getting started' })).toHaveFocus()
   })
 
+  // Next re-renders Home without the card once the dismissal's cookie is saved, so Undo's card is a
+  // fresh mount, which still takes focus.
+  it('focuses a freshly mounted card after Undo, and only then', async () => {
+    const { unmount } = render(<OnboardingCard steps={NONE} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Dismiss getting started' }))
+    unmount()
+    act(() => toastCalls[0][1].action.onClick())
+
+    const { unmount: unmountFresh } = render(<OnboardingCard steps={NONE} />)
+    expect(screen.getByRole('heading', { name: 'Getting started' })).toHaveFocus()
+    unmountFresh()
+
+    render(<OnboardingCard steps={NONE} />)
+    expect(screen.getByRole('heading', { name: 'Getting started' })).not.toHaveFocus()
+  })
+
   // HOME-4: the count and the notifications row wait for the subscription lookup, so nothing jumps.
   it('holds the count and the notifications row while push is still being checked', () => {
     push = 'checking'

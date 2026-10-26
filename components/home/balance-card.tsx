@@ -32,7 +32,10 @@ export function BalanceCard({
           <AnimatedNumber value={balance} locales="en-US" suffix={'\u00A0DC'} />
         </AnimatedText>
       </p>
-      {line && <p className="text-sm text-hero-2">{line}</p>}
+      {/* Kept, a line tall, even when neither rank nor stake could be read, since the skeleton draws it. */}
+      <p aria-hidden={line ? undefined : true} className="text-sm text-hero-2">
+        {line || '\u00A0'}
+      </p>
     </section>
   )
 }

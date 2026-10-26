@@ -40,7 +40,9 @@ function BalanceBlock() {
 // phone, on the right from lg); Your bets' three cards, a title over its stake line, the title two
 // lines on a phone and in the two-column grid from lg; Activity's three sentences, two lines on a phone. Needs you renders with
 // the page (D-11) and Getting started streams in behind an empty boundary (page.tsx), but each shows
-// only for some members, so neither is drawn here.
+// only for some members, so neither is drawn here. When an optional read fails (HOME-1), Activity
+// keeps its heading and these three rows' height, and the Balance card its standing line, so a
+// failure doesn't move the page either.
 export default function Loading() {
   return (
     <SkeletonScreen name="home" className={pageClass}>

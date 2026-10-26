@@ -15,10 +15,17 @@ import { inlineText } from '@/lib/docs/markdown'
 afterEach(() => vi.unstubAllEnvs())
 
 describe('the sign-in page', () => {
+  // PUB-1: a short phone keeps the answer to "is this real money?" as one line.
+  it('keeps a short no-real-money line for short phones', () => {
+    render(<SignInPage />)
+    expect(screen.getByText('Play money only. No real money.')).toHaveClass('hidden', 'short:block')
+    expect(screen.getByText(/^Bet play money/)).toHaveClass('short:hidden')
+  })
+
   it('says what DwellDuel is, and links to the privacy page', () => {
     render(<SignInPage />)
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Friendly bets with your church friends')
-    expect(screen.getByText(/No real money\.$/)).toBeInTheDocument()
+    expect(screen.getByText(/Bible study\. No real money\.$/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy')
   })
 
@@ -46,8 +53,16 @@ describe('the privacy page', () => {
     expect(within(screen.getByRole('table')).getByText('Only you')).toBeInTheDocument()
   })
 
-  it('points links to other sections at How it works', () => {
+  // PUB-4: the rest of the rules is signed-in, so a signed-out reader gets the words, not a link.
+  it('names other sections as plain words, not links into the signed-in rules', () => {
     render(<PrivacyPage />)
-    expect(screen.getAllByRole('link', { name: 'Roles' }).every((a) => a.getAttribute('href') === '/how-it-works/rules#how-roles')).toBe(true)
+    expect(screen.queryByRole('link', { name: 'Roles' })).toBeNull()
+    expect(screen.getAllByRole('link').some((a) => a.getAttribute('href')?.startsWith('/how-it-works'))).toBe(false)
+    expect(screen.getByText(/see Roles\)/)).toBeInTheDocument()
+  })
+
+  it('leads back to DwellDuel', () => {
+    render(<PrivacyPage />)
+    expect(screen.getByRole('link', { name: 'Go to DwellDuel' })).toHaveAttribute('href', '/')
   })
 })

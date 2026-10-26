@@ -10,6 +10,7 @@ import { Message } from '@/components/ui/message'
 import { keepCheckedOnReset } from '@/lib/forms/keep-on-reset'
 import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { createMarketAction, type ActionState } from '@/lib/markets/create-market'
+import { LINE_ERROR } from '@/lib/markets/create-market-errors'
 import { formatLine, type MarketKind } from '@/lib/markets/kind'
 import { DEFAULT_LIQUIDITY } from '@/lib/markets/lmsr'
 import { marketOdds } from '@/lib/markets/pricing'
@@ -38,8 +39,6 @@ const KIND_OPTIONS: { kind: MarketKind; label: string; hint: string }[] = [
 // beside the preview, where it's read before Create market.
 const CLOSE_TIME_HINT = 'Betting stops here, so pick a time before anyone knows the answer.'
 
-// create_market_v4 (0043) takes only a line ending in .5, so a tie can't happen.
-const LINE_ERROR = 'Set the line to a half number, like 3.5.'
 const isHalfLine = (line: string) => {
   const n = Number(line)
   return line.trim() !== '' && Number.isFinite(n) && n >= 0.5 && n % 1 === 0.5

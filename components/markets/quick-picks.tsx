@@ -29,10 +29,20 @@ export interface QuickPick {
 // sides of a two-outcome market look the same (D-3): red is a lost bet, and the word says which
 // side. Its name stays the same when pressed, outcome, chance and market, and aria-pressed says
 // whether it's in the slip; while the add runs it keeps its in-slip look rather than greying out.
-function QuickPickButton({ pick, pct, series, addAction, removeAction, row }: QuickPick & { row: boolean }) {
+function QuickPickButton({
+  pick,
+  pct,
+  series,
+  addAction,
+  removeAction,
+  row,
+  disabledReasonId,
+}: QuickPick & { row: boolean; disabledReasonId?: string }) {
   const slip = useSlipPicks()
   const inSlip = useInSlip(pick.outcomeId)
   const label = pick.outcomeLabel
+  // A full slip can still remove a pick it holds.
+  const disabled = disabledReasonId !== undefined && !inSlip
   return (
     <ToastActionForm
       action={inSlip ? removeAction : addAction}
@@ -43,10 +53,12 @@ function QuickPickButton({ pick, pct, series, addAction, removeAction, row }: Qu
         variant="secondary"
         size="sm"
         quietPending
+        disabled={disabled}
+        aria-describedby={disabled ? disabledReasonId : undefined}
         aria-pressed={inSlip}
         aria-label={`${label}, ${pct}%, ${pick.marketTitle}`}
         className={cn(
-          `group w-full border-0 ${uiTextClass} font-extrabold no-underline hover:ring-2`,
+          `group w-full border-0 ${uiTextClass} font-extrabold no-underline hover:ring-2 disabled:hover:ring-0`,
           row ? 'justify-between gap-3 pr-2 pl-3' : 'justify-center',
           inSlip ? 'bg-nav-active text-on-nav-active hover:bg-nav-active hover:ring-line-s' : 'bg-sunk text-ink hover:bg-sunk hover:ring-line-s',
         )}
@@ -65,7 +77,9 @@ function QuickPickButton({ pick, pct, series, addAction, removeAction, row }: Qu
                   `flex items-center gap-1 rounded-full border px-2.5 py-1 ${chipTextClass}`,
                   inSlip
                     ? 'border-current'
-                    : 'border-line-s group-hover:border-nav-active group-hover:bg-nav-active group-hover:text-on-nav-active',
+                    : disabled
+                      ? 'border-line-s'
+                      : 'border-line-s group-hover:border-nav-active group-hover:bg-nav-active group-hover:text-on-nav-active',
                 )}
               >
                 {inSlip ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}
@@ -90,12 +104,13 @@ function QuickPickButton({ pick, pct, series, addAction, removeAction, row }: Qu
 // side, or every outcome of a multiple-choice market as a row, likeliest first. It sits above the
 // card's stretched link, so a tap here adds rather than opens, and `data-own-hover` keeps the card
 // from lifting while the pointer is on a pick.
-export function QuickPicks({ picks, className }: { picks: QuickPick[]; className?: string }) {
+// `disabledReasonId` names the note saying why a pick can't be added (a full slip).
+export function QuickPicks({ picks, disabledReasonId, className }: { picks: QuickPick[]; disabledReasonId?: string; className?: string }) {
   const rows = picks.some((p) => p.series !== null)
   return (
     <div data-own-hover className={cn('relative z-[1]', rows ? 'flex flex-col gap-1.5' : 'flex gap-2', className)}>
       {picks.map((p) => (
-        <QuickPickButton key={p.pick.outcomeId} {...p} row={rows} />
+        <QuickPickButton key={p.pick.outcomeId} {...p} row={rows} disabledReasonId={disabledReasonId} />
       ))}
     </div>
   )

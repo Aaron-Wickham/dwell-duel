@@ -124,11 +124,14 @@ const removeId = (outcomeId: string) => `slip-remove-${outcomeId}`
 function PickRow({
   pick,
   error,
+  quiet = false,
   showMode,
   onRemove,
 }: {
   pick: SlipPick
   error?: string
+  // The pinned summary announces the refusal, so this one stays silent.
+  quiet?: boolean
   // A parlay needs two picks, so a lone pick has no Solo/Parlay switch, unless it's already a
   // Parlay pick and needs the switch to come back to Solo.
   showMode: boolean
@@ -253,7 +256,7 @@ function PickRow({
         </>
       )}
       {error && (
-        <Message tone="error" id={errorId}>
+        <Message tone="error" id={errorId} live={!quiet}>
           {error}
         </Message>
       )}
@@ -408,6 +411,7 @@ export function SlipPanel() {
               showMode={picks.length >= 2 || pick.parlay}
               onRemove={handleRemove}
               error={pickErrorOf(pick)}
+            quiet={summary !== null}
             />
           ))}
         </ul>
@@ -462,7 +466,7 @@ export function SlipPanel() {
               </>
             )}
             {parlayError && (
-              <Message tone="error" id="slip-parlay-error">
+              <Message tone="error" id="slip-parlay-error" live={summary === null}>
                 {parlayError}
               </Message>
             )}

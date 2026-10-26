@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { marketTitle } from '@/lib/app-shell/page-titles'
 import type { DbClient } from '@/lib/supabase/database'
 import { Suspense } from 'react'
-import { ChevronRight } from 'lucide-react'
 import { redirect, notFound } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
@@ -13,7 +12,7 @@ import { getMarket, type MarketDetail } from '@/lib/markets/get-market'
 import { getResolutionProof } from '@/lib/markets/resolution-proof'
 import { getChartSeries } from '@/lib/markets/chart-series'
 import type { OutcomeOdds } from '@/lib/markets/odds'
-import { lmsrState, marketOdds } from '@/lib/markets/pricing'
+import { marketOdds } from '@/lib/markets/pricing'
 import { chartTitle, outcomeSeries } from '@/lib/markets/outcome-series'
 import { chartClosedAt } from '@/lib/markets/market-status'
 import { readPageParams } from '@/lib/pagination/cursor'
@@ -23,6 +22,7 @@ import { BackLink } from '@/components/ui/back-link'
 import { LoadingStatus } from '@/components/ui/loading-status'
 import { LocalTime } from '@/components/ui/local-time'
 import { Page, figureHeroClass, h1Class, h2Class } from '@/components/ui/page'
+import { PhonePicks } from '@/components/markets/phone-picks'
 import { chartSectionClass } from '@/components/markets/market-detail-skeletons'
 import { leadingOutcome } from '@/components/markets/market-card'
 import { ContentReveal } from '@/components/nav/page-transition'
@@ -35,8 +35,6 @@ import {
   MarketPositionSkeleton,
 } from '@/components/markets/market-detail-skeletons'
 import { ProbabilityChart } from '@/components/markets/probability-chart-lazy'
-import { QuickPicks, type QuickPick } from '@/components/markets/quick-picks'
-import { addToSlipAction, removeFromSlipAction } from '@/lib/parlays/slip-actions'
 import { MarketBets } from './market-bets'
 import { MarketComments } from './market-comments'
 import { MarketManage, hasManageCards, type ManageRights } from './market-manage'
@@ -45,7 +43,7 @@ import { MarketOutcomes } from './market-outcomes'
 import { MarketPosition } from './market-position'
 import { getPositionKeys } from '@/lib/markets/position'
 import { describeMarketStake, getCreatorStakes } from '@/lib/markets/creator-stakes'
-import { hasBetHistory, othersHaveBet } from '@/lib/markets/bet-history'
+import { hasBetHistory } from '@/lib/markets/bet-history'
 import { listMarketEdits } from '@/lib/markets/market-edits'
 import { cachedCategoryCounts, mostUsedCategories } from '@/lib/markets/categories'
 import { getParlayRiding } from '@/lib/markets/parlay-riding'
@@ -74,7 +72,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // take their place straight away: a placeholder that then vanished would shift the page.
   // What rides in parlays is read here too, so the outcomes' skeleton knows whether to hold the
   // line that says so, and the rail below it doesn't move when the outcomes land (#390).
-  const [resolution, edits, role, creatorStakes, positionKeys, categoryCounts, resolvable, voidable, stake, riding] = await Promise.all([
+  const [resolution, edits, role, creatorStakes, positionKeys, categoryCounts, resolvable, voidable, stake, riding, titleChangeable] = await Promise.all([
     market.status === 'resolved' ? getResolutionProof(supabase, market.id, user.id) : null,
     market.editedAt ? listMarketEdits(supabase, market.id) : [],
     getRole(supabase),
@@ -86,6 +84,8 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
     rpcFlag(supabase.rpc('has_stake_in_market', { p_market_id: market.id, p_profile_id: user.id })),
     // A called-off market's picks dropped out of their parlays, but parlay_legs keeps them.
     market.status === 'voided' ? new Map<string, number>() : getParlayRiding(supabase, market.id),
+    // update_market's rule for a new title (0116): once others have bet, it shows read-only.
+    market.status === 'open' ? rpcFlag(supabase.rpc('can_change_market_title', { p_market_id: market.id })) : false,
   ])
   const ridingNote = [...riding.values()].some((dc) => dc > 0)
   const positionRows = positionKeys.betIds.length + positionKeys.parlayIds.length
@@ -108,11 +108,8 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const admin = atLeast(role, 'admin')
   const canEditWording = canBet && (isCreator || admin)
   // can_move_market_close (0106) is update_market's close-time rule: a creator with a stake asks an admin.
-  // A title others have bet on can't change (0073), so the edit dialog shows it read-only.
-  const [canMoveClose, titleLocked] = await Promise.all([
-    market.status === 'open' && (isCreator || admin) ? canMoveMarketClose(supabase, market.id) : false,
-    canEditWording ? othersHaveBet(supabase, market.id, market.createdBy) : false,
-  ])
+  const canMoveClose = market.status === 'open' && (isCreator || admin) && (await canMoveMarketClose(supabase, market.id))
+  const titleLocked = canEditWording && !titleChangeable
   const canReopen = isPastClose && canMoveClose
   const canEditCategory = canEditWording || admin
 
@@ -147,9 +144,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const severalCategories = categoryCounts.filter((c) => c.markets > 0).length > 1
 
   // On a phone the outcomes sit below the chart, so the leading ones come first, under the title,
-  // with their Add buttons in view (D-4): both sides of a two-outcome market, or the likeliest few.
-  const phonePicks = canBet && market.pricing === 'lmsr' ? leadingPicks(market, odds) : []
-
+  // with their Add buttons in view (D-4).
   const when =
     market.status === 'resolved' && market.resolvedAt ? (
       <>
@@ -202,20 +197,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           )}
           {market.description && <p className="max-w-[68ch] whitespace-pre-line break-words text-ink2">{market.description}</p>}
         </div>
-        {phonePicks.length > 0 && (
-          <section aria-labelledby="quick-picks-title" className="flex flex-col gap-2 lg:hidden">
-            <h2 id="quick-picks-title" className="sr-only">
-              Add a pick
-            </h2>
-            <QuickPicks picks={phonePicks} />
-            {phonePicks.length < odds.length && (
-              <a href="#outcomes-title" className="hit-area inline-flex items-center gap-1 self-start font-bold">
-                See all {odds.length} outcomes
-                <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
-              </a>
-            )}
-          </section>
-        )}
+        {canBet && market.pricing === 'lmsr' && <PhonePicks market={market} odds={odds} slip={slip} />}
       </div>
 
       {/* Each section's fallback holds its section's place. The fallbacks announce nothing
@@ -290,32 +272,6 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
       </LoadingStatus>
     </Page>
   )
-}
-
-// The phone's pick block (D-4): a two-outcome market's two sides in their own order, or a multiple
-// choice market's three likeliest outcomes.
-const PHONE_PICKS = 3
-
-function leadingPicks(market: MarketDetail, odds: OutcomeOdds[]): QuickPick[] {
-  const q = lmsrState(market.outcomes)
-  const multiple = market.kind === 'multiple_choice'
-  const all = odds.map((o, index) => ({ o, index, pct: o.impliedProbability === null ? 0 : Math.round(o.impliedProbability * 100) }))
-  const shown = multiple ? [...all].sort((a, b) => b.pct - a.pct).slice(0, PHONE_PICKS) : all
-  return shown.map(({ o, index, pct }) => ({
-    pick: {
-      outcomeId: o.outcomeId,
-      outcomeLabel: o.label,
-      marketId: market.id,
-      marketTitle: market.title,
-      parlay: false,
-      open: true,
-      lmsr: { q, index, liquidity: market.liquidity },
-    },
-    pct,
-    series: multiple ? outcomeSeries(market.kind, o.label, index) : null,
-    addAction: addToSlipAction.bind(null, o.outcomeId),
-    removeAction: removeFromSlipAction.bind(null, o.outcomeId),
-  }))
 }
 
 async function MarketChart({ market, odds, now }: { market: MarketDetail; odds: OutcomeOdds[]; now: number }) {

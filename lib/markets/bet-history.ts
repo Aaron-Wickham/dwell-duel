@@ -13,19 +13,3 @@ export async function hasBetHistory(supabase: DbClient, marketId: string): Promi
   if (legs.error) throw legs.error
   return (cancelled.count ?? 0) > 0 || (legs.count ?? 0) > 0
 }
-
-// update_market (0073) refuses a new title once anyone but the creator has bet, solo or in a
-// parlay, so the edit dialog shows the title read-only rather than lose the rest of the edit with it.
-export async function othersHaveBet(supabase: DbClient, marketId: string, createdBy: string): Promise<boolean> {
-  const [bets, legs] = await Promise.all([
-    supabase.from('bets').select('id', { count: 'exact', head: true }).eq('market_id', marketId).neq('profile_id', createdBy),
-    supabase
-      .from('parlay_legs')
-      .select('id, parlays!inner(profile_id)', { count: 'exact', head: true })
-      .eq('market_id', marketId)
-      .neq('parlays.profile_id', createdBy),
-  ])
-  if (bets.error) throw bets.error
-  if (legs.error) throw legs.error
-  return (bets.count ?? 0) > 0 || (legs.count ?? 0) > 0
-}

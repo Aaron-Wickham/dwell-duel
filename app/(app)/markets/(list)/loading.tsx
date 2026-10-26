@@ -6,7 +6,10 @@ import { Skeleton, SkeletonCard, SkeletonPageHeader, SkeletonScreen } from '@/co
 // category button under them on a phone, then a column of market cards, three across from lg. The
 // button shows only while more than one category holds markets, which is the group's usual state,
 // so the phone skeleton keeps its row rather than have every card jump down when it arrives. From
-// md it sits between the tabs and the field and doesn't change the row's height.
+// md it sits between the tabs and the field and doesn't change the row's height. Each card draws an
+// open two-outcome card's quick-picks row, since Open is the default tab and its cards carry it;
+// Waiting and Resolved cards have none and shrink by that row when they land, the same trade as the
+// category button.
 // It sits in the (list) group because a loading.tsx also wraps every segment below it, and market
 // detail's real 404 needs nothing above it that streams.
 export default function Loading() {
@@ -29,7 +32,6 @@ export default function Loading() {
               <Skeleton className="h-4 w-12" />
             </div>
             <Skeleton className="h-16" />
-            {/* An open two-outcome card's quick picks, the usual first tab's usual card (#439). */}
             <div className="flex gap-2">
               <Skeleton className="h-11 flex-1 rounded-control" />
               <Skeleton className="h-11 flex-1 rounded-control" />

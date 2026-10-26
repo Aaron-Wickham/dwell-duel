@@ -1,12 +1,16 @@
 import type { KnownError } from '@/lib/errors/friendly-error'
 import { RATE_LIMIT_ERRORS, TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
 
+// create_market_v4 (0043) takes only a line ending in .5, so a tie can't happen; the form checks it
+// as it's typed with the same words.
+export const LINE_ERROR = 'Set the line to a half number, like 3.5.'
+
 // create_market's raises (supabase/migrations/0043, 0103), the write limit (0090) and the constraints
 // its inserts can trip.
 export const CREATE_MARKET_ERRORS: readonly KnownError<'title' | 'description' | 'category' | 'close_at' | 'outcomes' | 'line'>[] = [
   { match: 'not invited', formError: 'Only invited members can create markets.' },
   { match: 'invalid market kind', formError: 'Choose a market kind.' },
-  { match: 'the line must end in .5, like 3.5', formError: 'Set the line to a half number, like 3.5.', field: 'line' },
+  { match: 'the line must end in .5, like 3.5', formError: LINE_ERROR, field: 'line' },
   { match: 'a market needs at least 2 outcomes', formError: 'Enter at least 2 outcomes.', field: 'outcomes' },
   { match: 'a binary market must have exactly 2 outcomes', formError: 'A Yes/No market needs exactly 2 outcomes.', field: 'outcomes' },
   { match: 'a market may have at most 6 outcomes', formError: 'A market can have at most 6 outcomes.', field: 'outcomes' },

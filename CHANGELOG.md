@@ -15,7 +15,7 @@ before v0.4.0 used other headings.)
 ### Fixes
 - **Place stays in view in the slip.** The Place button, what's holding it back and "Bets are final" are pinned to the bottom of the slip while you scroll and type stakes. When a pick is refused, a line above Place says how many ("1 pick’s price moved. Check it above, then tap Place again.") and the slip scrolls to it.
 - **Resolve errors in plain words.** A refused resolve now says what happened and what to do ("This market hasn’t closed yet. Resolve it once betting closes.") instead of database text; anything unexpected shows the general error.
-- **Editing a market others have bet on.** Its title now shows read-only with the reason, so a description or category change saves instead of being refused along with the title.
+- **Editing a market others have bet on.** Its title now shows read-only with the reason, so a description or category change saves instead of being refused along with the title; if someone bets while the dialog is open, it says to refresh for the latest title.
 - **Create market errors sit by their field,** and focus moves to it; an over/under's line is checked for the .5 as soon as you leave the field.
 - **Over/Under buttons keep their chance.** On a market card the percentage on an Over or Under button no longer gets cut off; only a long label does.
 - **Adding a pick from a card no longer greys the button out** while the slip saves: it shows In slip at once.
@@ -46,6 +46,7 @@ before v0.4.0 used other headings.)
 - **Clearer error words.** A failed action now says "That didn’t go through. Try again, and if it keeps happening, tell an admin."; a page that fails to load says "This page couldn’t load", or that you're offline when you are; a failed sign-in says to use the account your invite was sent to; and "Nothing older here" lost its full stop.
 
 ### Under the hood
+- **`can_change_market_title`** (migration 0116) tells the market page whether a new title would go through, by the same rule as `update_market`.
 - **UX Engine is the design skill set.** `AGENTS.md` now routes every UI and UX change through the UX Engine plugin (installed per machine, not in this public repo), and `DESIGN.md` is a complete design contract extracted from `app/globals.css`, with each status chip's contrast computed.
 - **Link, busy-button and menu rules.** `AGENTS.md` now says a standalone link that leads onward takes a trailing chevron and a caption-weight link takes `prose-link`; slow actions' buttons take a `pendingLabel`; menu items share `menuItemClass`; and error toasts go through `toastError`.
 

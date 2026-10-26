@@ -177,6 +177,45 @@ describe('a creator with a stake', () => {
   })
 })
 
+// 0116: the market page asks whether a new title would go through, so Edit shows a title others
+// have bet on read-only. It agrees with update_market in every case below.
+describe('can_change_market_title', () => {
+  const canRetitle = async (client: TestClient, m: TestMarket) => (await client.rpc('can_change_market_title', { p_market_id: m.marketId })).data
+
+  it('says yes to the creator and an admin until someone else bets, and the creator’s own bet keeps it', async () => {
+    const m = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true })
+    expect(await canRetitle(aliceClient, m)).toBe(true)
+    expect(await canRetitle(adminClient, m)).toBe(true)
+    expect(await canRetitle(bobClient, m)).toBe(false)
+
+    expect((await solo(aliceClient, m, 0, 10)).error).toBeNull()
+    expect(await canRetitle(aliceClient, m)).toBe(true)
+
+    expect((await solo(bobClient, m, 1, 10)).error).toBeNull()
+    expect(await canRetitle(aliceClient, m)).toBe(false)
+    expect(await canRetitle(adminClient, m)).toBe(false)
+    expectError((await moveClose(aliceClient, m.marketId, null as unknown as string, { title: 'Reworded' })).error, "others have bet on this market, so its title can't change")
+  })
+
+  it('counts another member’s parlay leg, and says no once the market has closed', async () => {
+    const m1 = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true, title: 'Mine' })
+    const m2 = await createTestMarket(adminClient, ['Yes', 'No'], { lmsr: true, title: 'Theirs' })
+    const legs = await Promise.all([m1, m2].map(async (m) => ({ q: await qOf(m), liquidity: B, index: 0 })))
+    const { error } = await bobClient.rpc('place_slip_v4', {
+      p_singles: [],
+      p_parlay_outcome_ids: [m1.outcomeIds[0], m2.outcomeIds[0]],
+      p_parlay_stake: 10,
+      p_parlay_payout: lmsrParlayQuote(legs, 10).payout,
+    })
+    expect(error).toBeNull()
+    expect(await canRetitle(aliceClient, m1)).toBe(false)
+
+    const m3 = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true, title: 'Closing' })
+    await closeNow(m3)
+    expect(await canRetitle(aliceClient, m3)).toBe(false)
+  })
+})
+
 describe('reopening a closed market', () => {
   it('lets the creator or an admin reopen it, and it takes bets again', async () => {
     const m = await createTestMarket(aliceClient, ['Yes', 'No'], { lmsr: true })

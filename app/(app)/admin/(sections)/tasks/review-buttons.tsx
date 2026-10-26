@@ -145,18 +145,24 @@ export function ReviewButtons({
   const approveErrorId = `approve-${completionId}-error`
 
   return (
-    <div className="flex flex-col items-end gap-2">
-      {/* While the window is open: what's happening, above the one way to stop it, so the row is no
-          wider than Approve and Reject were (beside it, it ran over the proof on a phone). Once the
-          approval is sent, the button stays in place (keeping focus) as "Approving…". */}
+    <div className="flex flex-col gap-2 max-lg:items-start lg:items-end">
+      {/* While the window is open: what's happening, then the one way to stop it. In the table it
+          sits above Undo, so the column is no wider than Approve and Reject were; below lg the
+          buttons have a line of their own and it fits beside. Once the approval is sent, the button
+          stays in place (keeping focus) as "Approving…". */}
       {holding && hold.open && (
-        <span aria-hidden="true" className="text-sm font-bold whitespace-nowrap text-ink2">
+        <span aria-hidden="true" className="text-sm font-bold whitespace-nowrap text-ink2 max-lg:hidden">
           Approving…
         </span>
       )}
       <div className="flex items-center gap-1">
         {holding ? (
           <>
+            {hold.open && (
+              <span aria-hidden="true" className="pr-1 text-sm font-bold whitespace-nowrap text-ink2 lg:hidden">
+                Approving…
+              </span>
+            )}
             <Button
               key="undo"
               ref={undoButton}

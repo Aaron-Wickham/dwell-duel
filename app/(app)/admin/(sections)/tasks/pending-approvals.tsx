@@ -58,13 +58,12 @@ const headClass = `${eyebrowClass} py-2.5 pr-3 text-left`
 
 function Attached({ row }: { row: PendingRow }) {
   const summary = attachedSummary(row.note, row.proof)
-  // Below lg the row's buttons sit over the right of this line, so its text stops short of them.
   if (!summary) {
-    return <span className="text-sm text-ink2 max-lg:inline-flex max-lg:min-h-11 max-lg:max-w-[calc(100%-11rem)] max-lg:items-center">Nothing attached</span>
+    return <span className="text-sm text-ink2">Nothing attached</span>
   }
   return (
     <details className="group">
-      <summary className="pressable inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-ink2 underline decoration-[1.5px] underline-offset-[3px] max-lg:max-w-[calc(100%-11rem)]">
+      <summary className="pressable inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-ink2 underline decoration-[1.5px] underline-offset-[3px]">
         {summary}
       </summary>
       <div className="flex flex-col gap-2 pb-2">
@@ -325,10 +324,11 @@ export function PendingApprovals({
                 <td role="cell" className={`${cellClass} text-sm whitespace-nowrap text-ink2 max-lg:col-start-3 max-lg:row-start-1 max-lg:text-right`}>
                   {c.submittedAge}
                 </td>
-                {/* Over the right of the third line below lg, beside what's attached. */}
-                <td role="cell" className={`${cellClass} max-lg:col-start-3 max-lg:row-start-3 max-lg:justify-self-end lg:py-0.5 lg:pr-0`}>
+                {/* A line of its own below lg, under the text: in the third column it widened that
+                    column on every line and squeezed the name to a word a line. */}
+                <td role="cell" className={`${cellClass} max-lg:col-span-2 max-lg:col-start-2 max-lg:row-start-4 max-lg:pb-1 lg:py-0.5 lg:pr-0`}>
                   {own ? (
-                    <p className="max-w-40 pt-2.5 text-right text-sm font-bold text-ink2">Yours: another reviewer reviews it.</p>
+                    <p className="text-sm font-bold text-ink2 lg:max-w-40 lg:pt-2.5 lg:text-right">Yours: another reviewer reviews it.</p>
                   ) : (
                     <ReviewButtons
                       completionId={c.id}

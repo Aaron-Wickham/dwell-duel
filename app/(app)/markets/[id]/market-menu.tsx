@@ -32,6 +32,8 @@ export interface MarketEditOptions {
   // `edit` while the market takes bets; `category` for an admin once it has closed.
   mode: Extract<EditMarketMode, 'edit' | 'category'> | null
   canMoveClose: boolean
+  // Others have bet on it, so update_market refuses a new title (0073).
+  titleLocked?: boolean
   canReopen: boolean
   // Every visible category's name, most used first.
   categories: string[]
@@ -108,6 +110,7 @@ export function MarketMenu({
           {...marketProps}
           mode={edit.mode}
           canMoveClose={edit.canMoveClose}
+          titleLocked={edit.titleLocked}
           categories={edit.categories}
           open={dialog === edit.mode}
           onOpenChange={toggle(edit.mode)}

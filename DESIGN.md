@@ -51,7 +51,7 @@ Light and dark are the same markup with different variables. Values are light / 
 - The top bars' balance chip is `--ink` on `--sunk` (12.49:1 / 11.88:1), not gold, which means
   something waits on you, and is left out on Home, where the Balance card shows it (D-6).
 - `--acc-text` #2A6E0B / #8BE651: positive and open text.
-- `--danger` (destructive, lost, No) is `--loss` #A8281C / #FF9585; its hue sits about 177° from the
+- `--danger` (destructive, lost) is `--loss` #A8281C / #FF9585; its hue sits about 177° from the
   light primary and about 90° from lime, so a destructive action never reads as the main one.
 - `--gold` #855600 / #F0C15A (waiting, to review) and `--info` #25418C / #B9C8F5 (a result, something
   of yours), each with a `-soft` tint. Counts of what waits on you (the avatar's dot, the admin tab
@@ -59,6 +59,8 @@ Light and dark are the same markup with different variables. Values are light / 
 - Category chips and avatar initials take a `--tint1` to `--tint6` pair from `tintFor`
   (`lib/ui/tint.ts`), never a status colour (#445). Chart series are `--s1` to `--s6`, a palette
   validated as a set (`tests/lib/ui/contrast.test.ts`).
+- An outcome's side is never a colour (D-3): Yes and No, Over and Under take the same neutral
+  `--sunk` chip or button, and the word says which. Only a result is win or loss.
 - `--focus` #03272D / #72DB2B: the focus ring.
 
 ## Shape

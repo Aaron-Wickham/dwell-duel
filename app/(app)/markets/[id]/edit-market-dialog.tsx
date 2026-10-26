@@ -73,6 +73,7 @@ export function EditMarketDialog({
   closeAt,
   mode,
   canMoveClose = true,
+  titleLocked = false,
   categories,
   open,
   onOpenChange,
@@ -86,6 +87,9 @@ export function EditMarketDialog({
   mode: EditMarketMode
   // In `edit`, whether the close time is offered: a creator with a stake can't move it (0106).
   canMoveClose?: boolean
+  // In `edit`, whether others have bet, so the title can't change (0073): it shows read-only and
+  // the current one is sent, so the rest of the edit still saves.
+  titleLocked?: boolean
   // Every visible category's name, most used first.
   categories: string[]
   open: boolean
@@ -157,18 +161,31 @@ export function EditMarketDialog({
           <form id={formId} action={formAction} onSubmit={confirm.onSubmit} className="flex flex-col gap-4">
             {wording && (
               <>
-                <Field label="Title" htmlFor={`${formId}-title`}>
-                  <Input
-                    id={`${formId}-title`}
-                    name="title"
-                    required
-                    value={draftTitle}
-                    onChange={(e) => setDraftTitle(e.target.value)}
-                    maxLength={TEXT_LIMITS.marketTitle}
-                    aria-invalid={state?.field === 'title'}
-                    aria-describedby={state?.field === 'title' ? errorId : undefined}
-                  />
-                </Field>
+                {titleLocked ? (
+                  <Field label="Title" htmlFor={`${formId}-title`} hint="Others have bet on this market, so its title can’t change.">
+                    <Input
+                      id={`${formId}-title`}
+                      readOnly
+                      value={title}
+                      aria-describedby={`${formId}-title-hint`}
+                      className="bg-sunk text-ink2"
+                    />
+                    <input type="hidden" name="title" value={title} />
+                  </Field>
+                ) : (
+                  <Field label="Title" htmlFor={`${formId}-title`}>
+                    <Input
+                      id={`${formId}-title`}
+                      name="title"
+                      required
+                      value={draftTitle}
+                      onChange={(e) => setDraftTitle(e.target.value)}
+                      maxLength={TEXT_LIMITS.marketTitle}
+                      aria-invalid={state?.field === 'title'}
+                      aria-describedby={state?.field === 'title' ? errorId : undefined}
+                    />
+                  </Field>
+                )}
                 <Field label="Description" htmlFor={`${formId}-description`}>
                   <Textarea
                     id={`${formId}-description`}

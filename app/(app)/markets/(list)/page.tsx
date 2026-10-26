@@ -12,7 +12,7 @@ import { marketsHref, readMarketSearch } from '@/lib/markets/search'
 import { cachedCategoryCounts, readCategoryParam } from '@/lib/markets/categories'
 import type { KeysetPage } from '@/lib/pagination/keyset'
 import { lmsrState, marketOdds } from '@/lib/markets/pricing'
-import { isPositiveOutcome, outcomeSeries } from '@/lib/markets/outcome-series'
+import { outcomeSeries } from '@/lib/markets/outcome-series'
 import { addToSlipAction, removeFromSlipAction } from '@/lib/parlays/slip-actions'
 import type { QuickPick } from '@/components/markets/quick-picks'
 import { weeklyChange } from '@/lib/markets/chart-summary'
@@ -33,6 +33,7 @@ import { SubNav } from '@/components/ui/sub-nav'
 import { MarketSearch } from '@/components/markets/market-search'
 import { CategoryFilter } from '@/components/markets/category-picker'
 import { cn } from '@/lib/utils'
+import { TAB_TRANSITION } from '@/components/nav/page-transition'
 import { MarketCard, leadingOutcome, type MarketCardChart } from '@/components/markets/market-card'
 
 export const metadata: Metadata = { title: 'Markets' }
@@ -178,7 +179,6 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
         },
         pct,
         series: multiple ? outcomeSeries(market.kind, o.label, index) : null,
-        tone: multiple ? null : isPositiveOutcome(market.kind, o.label) ? 'yes' : 'no',
         addAction: addToSlipAction.bind(null, o.outcomeId),
         removeAction: removeFromSlipAction.bind(null, o.outcomeId),
       }))
@@ -350,13 +350,24 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
           title={category ? `No ${STATUS_WORDS[filter]}markets in ${category.name}.` : EMPTY_TITLES[filter]}
           action={
             <div className="flex flex-wrap gap-2">
-              <Link
-                href="/markets/new"
-                transitionTypes={['nav-forward']}
-                className={buttonVariants({ variant: 'secondary', size: 'sm' })}
-              >
-                Create market
-              </Link>
+              {/* Waiting and Resolved fill from open markets, so their next step is seeing those. */}
+              {filter === 'open' ? (
+                <Link
+                  href="/markets/new"
+                  transitionTypes={['nav-forward']}
+                  className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+                >
+                  Create market
+                </Link>
+              ) : (
+                <Link
+                  href={marketsHref({ status: 'open', category: slug })}
+                  transitionTypes={TAB_TRANSITION}
+                  className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+                >
+                  See open markets
+                </Link>
+              )}
               {category && (
                 <Link href={allCategoriesHref} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
                   Show all categories
@@ -365,7 +376,11 @@ export default async function MarketsPage(props: PageProps<'/markets'>) {
             </div>
           }
         >
-          {category ? 'Make one in this category, or look at the others.' : EMPTY_BODIES[filter]}
+          {category
+            ? filter === 'open'
+              ? 'Make one in this category, or look at the others.'
+              : 'Look at its open markets, or at the other categories.'
+            : EMPTY_BODIES[filter]}
         </EmptyState>
       ) : (
         <>

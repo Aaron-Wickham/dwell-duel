@@ -116,7 +116,7 @@ test('Your position lists each bet with its fixed payout, and a parlay pick; par
   await expect(position.getByText('5 DC on this market · Bets are final.')).toBeVisible()
 
   // On a phone the chart comes first, then the position strip, then the outcomes (#440).
-  const chart = page.getByRole('region', { name: 'Yes over time' })
+  const chart = page.getByRole('region', { name: 'Chance of Yes' })
   expect((await chart.boundingBox())!.y).toBeLessThan((await position.boundingBox())!.y)
   expect((await position.boundingBox())!.y).toBeLessThan((await outcomes.boundingBox())!.y)
 
@@ -184,7 +184,7 @@ test('a member with nothing on the market sees no Your position card', async ({ 
   // From lg the outcomes rail starts level with the chart.
   await page.setViewportSize({ width: 1280, height: 900 })
   const [chartBox, outcomesBox] = await Promise.all([
-    page.getByRole('region', { name: 'Yes over time' }).boundingBox(),
+    page.getByRole('region', { name: 'Chance of Yes' }).boundingBox(),
     page.getByRole('region', { name: 'Outcomes' }).boundingBox(),
   ])
   expect(outcomesBox!.x).toBeGreaterThan(chartBox!.x + chartBox!.width)

@@ -104,4 +104,23 @@ describe('FormSubmitButton', () => {
     await userEvent.click(button)
     expect(action).toHaveBeenCalledOnce()
   })
+
+  // MKT-2: a quick pick already shows its result, so pending mustn't grey it out as if refused.
+  it('with quietPending, marks itself aria-busy rather than aria-disabled while pending, and still swallows a second click', async () => {
+    const action = vi.fn(neverResolves)
+    render(
+      <form action={action}>
+        <FormSubmitButton quietPending>Add Yes</FormSubmitButton>
+      </form>,
+    )
+    const button = screen.getByRole('button', { name: 'Add Yes' })
+
+    await userEvent.click(button)
+    await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'true'))
+    expect(button).not.toHaveAttribute('aria-disabled')
+    expect(action).toHaveBeenCalledOnce()
+
+    await userEvent.click(button)
+    expect(action).toHaveBeenCalledOnce()
+  })
 })

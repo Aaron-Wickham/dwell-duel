@@ -15,7 +15,7 @@ export const ProbabilityChart = dynamic(() => import('./probability-chart').then
         <Skeleton className="h-4 w-12" />
         <Skeleton className="h-[52px] w-40 rounded-tile" />
       </div>
-      <Skeleton className="h-[220px] md:h-[300px]" />
+      <Skeleton className="h-[160px] md:h-[300px]" />
       <Skeleton className="h-5 w-full" />
     </div>
   ),

@@ -24,7 +24,7 @@ describe('positionSummary', () => {
   })
 
   it('waits on the result once the market has closed', () => {
-    expect(positionSummary([bet(20, { kind: 'awaiting' })])?.text).toBe('20\u00A0DC on this market · Waiting on the result.')
+    expect(positionSummary([bet(20, { kind: 'awaiting' })])?.text).toBe('20\u00A0DC on this market · Waiting for a result.')
   })
 
   it('nets what was won against what was lost once settled', () => {

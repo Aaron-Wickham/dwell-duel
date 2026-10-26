@@ -16,12 +16,16 @@ export function Message({
   id,
   className,
   icon,
+  live = true,
   children,
 }: {
   tone: keyof typeof TONES
   id?: string
   className?: string
   icon?: LucideIcon
+  // false for a message another one already announces (the slip's summary of refused picks): no
+  // live region and no haptic, so a screen reader and the phone don't get it twice.
+  live?: boolean
   children: ReactNode
 }) {
   const { className: toneClass, Icon: ToneIcon, role } = TONES[tone]
@@ -29,12 +33,12 @@ export function Message({
   return (
     <p
       id={id}
-      role={role}
+      role={live ? role : undefined}
       className={cn(`flex items-start gap-2.5 rounded-control px-3.5 py-3 ${uiTextClass} font-bold leading-[1.4]`, toneClass, className)}
     >
       <Icon aria-hidden="true" className="mt-px size-5 shrink-0" />
       <span>{children}</span>
-      {tone === 'error' && <ErrorHaptic />}
+      {tone === 'error' && live && <ErrorHaptic />}
     </p>
   )
 }

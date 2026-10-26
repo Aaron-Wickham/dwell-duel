@@ -22,6 +22,7 @@ import { BackLink } from '@/components/ui/back-link'
 import { LoadingStatus } from '@/components/ui/loading-status'
 import { LocalTime } from '@/components/ui/local-time'
 import { Page, figureHeroClass, h1Class, h2Class } from '@/components/ui/page'
+import { PhonePicks } from '@/components/markets/phone-picks'
 import { chartSectionClass } from '@/components/markets/market-detail-skeletons'
 import { leadingOutcome } from '@/components/markets/market-card'
 import { ContentReveal } from '@/components/nav/page-transition'
@@ -71,7 +72,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // take their place straight away: a placeholder that then vanished would shift the page.
   // What rides in parlays is read here too, so the outcomes' skeleton knows whether to hold the
   // line that says so, and the rail below it doesn't move when the outcomes land (#390).
-  const [resolution, edits, role, creatorStakes, positionKeys, categoryCounts, resolvable, voidable, stake, riding] = await Promise.all([
+  const [resolution, edits, role, creatorStakes, positionKeys, categoryCounts, resolvable, voidable, stake, riding, titleChangeable] = await Promise.all([
     market.status === 'resolved' ? getResolutionProof(supabase, market.id, user.id) : null,
     market.editedAt ? listMarketEdits(supabase, market.id) : [],
     getRole(supabase),
@@ -83,6 +84,8 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
     rpcFlag(supabase.rpc('has_stake_in_market', { p_market_id: market.id, p_profile_id: user.id })),
     // A called-off market's picks dropped out of their parlays, but parlay_legs keeps them.
     market.status === 'voided' ? new Map<string, number>() : getParlayRiding(supabase, market.id),
+    // update_market's rule for a new title (0116): once others have bet, it shows read-only.
+    market.status === 'open' ? rpcFlag(supabase.rpc('can_change_market_title', { p_market_id: market.id })) : false,
   ])
   const ridingNote = [...riding.values()].some((dc) => dc > 0)
   const positionRows = positionKeys.betIds.length + positionKeys.parlayIds.length
@@ -106,6 +109,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   const canEditWording = canBet && (isCreator || admin)
   // can_move_market_close (0106) is update_market's close-time rule: a creator with a stake asks an admin.
   const canMoveClose = market.status === 'open' && (isCreator || admin) && (await canMoveMarketClose(supabase, market.id))
+  const titleLocked = canEditWording && !titleChangeable
   const canReopen = isPastClose && canMoveClose
   const canEditCategory = canEditWording || admin
 
@@ -139,6 +143,8 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
   // #387: a category is worth naming only when more than one holds markets.
   const severalCategories = categoryCounts.filter((c) => c.markets > 0).length > 1
 
+  // On a phone the outcomes sit below the chart, so the leading ones come first, under the title,
+  // with their Add buttons in view (D-4).
   const when =
     market.status === 'resolved' && market.resolvedAt ? (
       <>
@@ -170,6 +176,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
               closeAt: market.closeAt,
               mode: canEditWording ? 'edit' : canEditCategory ? 'category' : null,
               canMoveClose,
+              titleLocked,
               canReopen,
               categories: mostUsedCategories(categoryCounts).map((c) => c.name),
             }}
@@ -190,6 +197,7 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           )}
           {market.description && <p className="max-w-[68ch] whitespace-pre-line break-words text-ink2">{market.description}</p>}
         </div>
+        {canBet && market.pricing === 'lmsr' && <PhonePicks market={market} odds={odds} slip={slip} />}
       </div>
 
       {/* Each section's fallback holds its section's place. The fallbacks announce nothing
@@ -199,7 +207,8 @@ export default async function MarketDetailPage(props: PageProps<'/markets/[id]'>
           on top of the outcomes, then any resolve or void cards. On a phone both columns are
           display: contents, so every section is one flex column, ordered (#440): (resolve and void
           first while the market waits on a result the viewer can give), chart, position, outcomes,
-          comments, bets, then any other cards. */}
+          comments, bets, then any other cards. The leading picks sit above all of it, under the
+          title, while the market takes bets (D-4). */}
       <LoadingStatus>
         <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-7">
           <div

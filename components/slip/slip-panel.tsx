@@ -18,6 +18,9 @@ import type { SlipPick } from '@/lib/parlays/get-slip'
 import { lmsrPrices } from '@/lib/markets/lmsr'
 import { formatOdds, lmsrParlayQuote, MAX_PICKS } from '@/lib/parlays/odds'
 import { placeSlipAction, type PlaceSlipState } from '@/lib/parlays/place-slip'
+import { PARLAY_TOO_FEW, PARLAY_TOO_MANY } from '@/lib/parlays/slip-errors'
+import { slipErrorSummary } from '@/lib/parlays/slip-summary'
+import { reducedMotion } from '@/lib/ui/reduced-motion'
 import { soloPays } from '@/lib/parlays/solo-pays'
 import { removeFromSlipAction } from '@/lib/parlays/slip-actions'
 import { haptics } from '@/lib/haptics'
@@ -121,11 +124,14 @@ const removeId = (outcomeId: string) => `slip-remove-${outcomeId}`
 function PickRow({
   pick,
   error,
+  quiet = false,
   showMode,
   onRemove,
 }: {
   pick: SlipPick
   error?: string
+  // The pinned summary announces the refusal, so this one stays silent.
+  quiet?: boolean
   // A parlay needs two picks, so a lone pick has no Solo/Parlay switch, unless it's already a
   // Parlay pick and needs the switch to come back to Solo.
   showMode: boolean
@@ -157,7 +163,7 @@ function PickRow({
   }
 
   return (
-    <ListCard tappable={false} className="flex flex-col gap-3 bg-surface">
+    <ListCard tappable={false} data-refused={error ? '' : undefined} className="flex flex-col gap-3 bg-surface">
       <input type="hidden" name="pick" value={`${pick.outcomeId}:${pick.parlay ? 'parlay' : 'solo'}`} />
       <div className="flex items-start gap-3">
         <div className="flex min-w-0 grow flex-col gap-1">
@@ -169,7 +175,7 @@ function PickRow({
             {pick.open ? (
               chance !== null && <span className="text-ink2">· {chance}</span>
             ) : (
-              <StatusChip tone="lost">No longer available</StatusChip>
+              <StatusChip tone="void">No longer available</StatusChip>
             )}
           </p>
         </div>
@@ -250,13 +256,17 @@ function PickRow({
         </>
       )}
       {error && (
-        <Message tone="error" id={errorId}>
+        <Message tone="error" id={errorId} live={!quiet}>
           {error}
         </Message>
       )}
     </ListCard>
   )
 }
+
+// The sheet's body scrolls; the Place block under it stays pinned to the bottom (MKT-3), so the
+// button and why it can't be pressed stay in view while stakes are typed.
+const bodyClass = 'flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 md:px-6'
 
 const LOST_RESPONSE = 'We couldn’t confirm your bets. Check your connection and tap Place again. Nothing will be placed twice.'
 
@@ -306,9 +316,18 @@ export function SlipPanel() {
     target.focus()
   }, [picks])
 
+  // A refusal names its pick, which may be scrolled out of view above the pinned Place block.
+  const bodyRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!state?.pickErrors && !state?.parlayError) return
+    const refused = bodyRef.current?.querySelector('[data-refused]')
+    // jsdom has no scrollIntoView.
+    if (refused?.scrollIntoView) refused.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' })
+  }, [state])
+
   if (picks.length === 0) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className={cn(bodyClass, 'pb-[calc(24px+var(--safe-bottom))]')}>
         <h2 id="slip-title" className={h2Class}>
           Your slip
         </h2>
@@ -344,12 +363,13 @@ export function SlipPanel() {
   const short = total > balance
   const parlayOverBudget = short && placeableParlayStake(picks, parlayStake) > 0
   const parlayError = state?.parlayError && !stale('parlay', parlayStake) ? state.parlayError : undefined
-  const legNote =
-    legs.length === 1
-      ? 'A parlay needs at least 2 picks. Switch another pick to Parlay, or this one back to Solo.'
-      : legs.length > MAX_PICKS
-        ? `A parlay can have at most ${MAX_PICKS} picks.`
-        : null
+  const pickErrorOf = (pick: SlipPick) => (stale(pick.outcomeId, stakes[pick.outcomeId] ?? '') ? undefined : state?.pickErrors?.[pick.outcomeId])
+  const summary = slipErrorSummary({
+    picks: picks.filter((p) => pickErrorOf(p) !== undefined).length,
+    parlay: parlayError !== undefined,
+    priceMoved: state?.priceMoved === true,
+  })
+  const legNote = legs.length === 1 ? PARLAY_TOO_FEW : legs.length > MAX_PICKS ? PARLAY_TOO_MANY : null
   // The first thing holding Place back, said under it (#260). A pick that's no longer available
   // has its own note above the button. At 0 DC nothing can be placed, so that says where to earn.
   const broke = balance === 0
@@ -366,112 +386,124 @@ export function SlipPanel() {
               : null
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h2 id="slip-title" className={h2Class}>
-          Your slip
-        </h2>
-        <p className="text-sm text-ink2">
-          <span className="sr-only">Balance </span>
-          <span className="whitespace-nowrap">{formatDcAmount(balance)}</span>
-          {short && (
-            <>
-              {' · '}
-              <span className="font-extrabold whitespace-nowrap text-loss">{formatDcAmount(total - balance)} short</span>
-            </>
-          )}
-        </p>
+    <form action={formAction} className="flex min-h-0 flex-1 flex-col">
+      <div ref={bodyRef} className={cn(bodyClass, 'pb-4')}>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <h2 id="slip-title" className={h2Class}>
+            Your slip
+          </h2>
+          <p className="text-sm text-ink2">
+            Balance{' '}
+            <span className="whitespace-nowrap">{formatDcAmount(balance)}</span>
+            {short && (
+              <>
+                {' · '}
+                <span className="font-extrabold whitespace-nowrap text-loss">{formatDcAmount(total - balance)} short</span>
+              </>
+            )}
+          </p>
+        </div>
+        <ul className={listCardsClass}>
+          {picks.map((pick) => (
+            <PickRow
+              key={pick.outcomeId}
+              pick={pick}
+              showMode={picks.length >= 2 || pick.parlay}
+              onRemove={handleRemove}
+              error={pickErrorOf(pick)}
+            quiet={summary !== null}
+            />
+          ))}
+        </ul>
+        {(picks.length >= 2 || legs.length > 0) && (
+          <p className="text-sm">
+            <Link href="/how-it-works/rules#how-the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']} className="hit-area prose-link">
+              How parlays pay
+            </Link>
+          </p>
+        )}
+
+        {legs.length > 0 && (
+          <section aria-labelledby="slip-parlay-title" data-refused={parlayError ? '' : undefined} className="flex flex-col gap-3 rounded-tile bg-sunk p-3.5 md:p-4">
+            <div className="flex items-baseline justify-between gap-3">
+              <h3 id="slip-parlay-title" className="font-extrabold">
+                Parlay · {legs.length} {legs.length === 1 ? 'pick' : 'picks'}
+              </h3>
+              {fixedQuote && <span className="font-extrabold">{formatOdds(fixedQuote.multiplierBp)}×</span>}
+            </div>
+            {legNote ? (
+              <p className="text-sm text-ink2">{legNote}</p>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label htmlFor="slip-parlay-stake" className={labelClass}>
+                    Stake (DC)
+                  </label>
+                  <Input
+                    id="slip-parlay-stake"
+                    name="parlay_stake"
+                    type="number"
+                    inputMode="numeric"
+                    min="1"
+                    step="1"
+                    value={parlayStake}
+                    onChange={(e) => setParlayStake(e.target.value)}
+                    className="w-28 bg-surface"
+                    aria-invalid={Boolean(parlayError) || parlayOverBudget}
+                    aria-describedby={parlayError ? 'slip-parlay-error' : parlayOverBudget ? WHY_ID : undefined}
+                  />
+                </div>
+                <StakeChips label="Quick stakes for the parlay" available={availableFor('parlay', slip)} onPick={setParlayStake} />
+                {fixedQuote && (
+                  <>
+                    {/* The payout shown, so place_lmsr_parlay can refuse one that has since moved by more than 2%. */}
+                    <input type="hidden" name="parlay_payout" value={fixedQuote.payout} />
+                    <p>
+                      Wins <span className="font-extrabold text-win">{formatDcAmount(fixedQuote.payout)}</span> if every pick wins
+                    </p>
+                  </>
+                )}
+              </>
+            )}
+            {parlayError && (
+              <Message tone="error" id="slip-parlay-error" live={summary === null}>
+                {parlayError}
+              </Message>
+            )}
+          </section>
+        )}
+
       </div>
-      <ul className={listCardsClass}>
-        {picks.map((pick) => (
-          <PickRow
-            key={pick.outcomeId}
-            pick={pick}
-            showMode={picks.length >= 2 || pick.parlay}
-            onRemove={handleRemove}
-            error={stale(pick.outcomeId, stakes[pick.outcomeId] ?? '') ? undefined : state?.pickErrors?.[pick.outcomeId]}
-          />
-        ))}
-      </ul>
-      {(picks.length >= 2 || legs.length > 0) && (
-        <p className="text-sm">
-          <Link href="/how-it-works/rules#how-the-slip-solo-bets-and-parlays" transitionTypes={['nav-forward']} className="hit-area prose-link">
-            How parlays pay
-          </Link>
-        </p>
-      )}
 
-      {legs.length > 0 && (
-        <section aria-labelledby="slip-parlay-title" className="flex flex-col gap-3 rounded-tile bg-sunk p-3.5 md:p-4">
-          <div className="flex items-baseline justify-between gap-3">
-            <h3 id="slip-parlay-title" className="font-extrabold">
-              Parlay · {legs.length} {legs.length === 1 ? 'pick' : 'picks'}
-            </h3>
-            {fixedQuote && <span className="font-extrabold">{formatOdds(fixedQuote.multiplierBp)}×</span>}
-          </div>
-          {legNote ? (
-            <p className="text-sm text-ink2">{legNote}</p>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-3">
-                <label htmlFor="slip-parlay-stake" className={labelClass}>
-                  Stake (DC)
-                </label>
-                <Input
-                  id="slip-parlay-stake"
-                  name="parlay_stake"
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  step="1"
-                  value={parlayStake}
-                  onChange={(e) => setParlayStake(e.target.value)}
-                  className="w-28 bg-surface"
-                  aria-invalid={Boolean(parlayError) || parlayOverBudget}
-                  aria-describedby={parlayError ? 'slip-parlay-error' : parlayOverBudget ? WHY_ID : undefined}
-                />
-              </div>
-              <StakeChips label="Quick stakes for the parlay" available={availableFor('parlay', slip)} onPick={setParlayStake} />
-              {fixedQuote && (
-                <>
-                  {/* The payout shown, so place_lmsr_parlay can refuse one that has since moved by more than 2%. */}
-                  <input type="hidden" name="parlay_payout" value={fixedQuote.payout} />
-                  <p>
-                    Wins <span className="font-extrabold text-win">{formatDcAmount(fixedQuote.payout)}</span> if every pick wins
-                  </p>
-                </>
-              )}
-            </>
-          )}
-          {parlayError && (
-            <Message tone="error" id="slip-parlay-error">
-              {parlayError}
-            </Message>
-          )}
-        </section>
-      )}
-
-      {!allOpen && (
-        <Message tone="gold" id="slip-blocked">
-          Remove the picks that are no longer available to place your slip.
-        </Message>
-      )}
-      {formError && (
-        <Message tone="error" id="slip-error">
-          {formError}
-        </Message>
-      )}
-      <div className="flex flex-col gap-2">
+      <div className="flex shrink-0 flex-col gap-2 border-t border-line px-4 pt-3 pb-[calc(16px+var(--safe-bottom))] md:px-6">
+        {!allOpen && (
+          <Message tone="gold" id="slip-blocked">
+            Remove the picks that are no longer available to place your slip.
+          </Message>
+        )}
+        {formError && (
+          <Message tone="error" id="slip-error">
+            {formError}
+          </Message>
+        )}
+        {summary && (
+          <Message tone="error" id="slip-summary">
+            {summary}
+          </Message>
+        )}
         <FormSubmitButton
           block
+          pendingLabel="Placing…"
           disabled={!allOpen || !solosReady || !parlayReady || short}
-          aria-describedby={!allOpen ? 'slip-blocked' : formError ? 'slip-error' : broke || why ? WHY_ID : undefined}
+          aria-describedby={
+            !allOpen ? 'slip-blocked' : formError ? 'slip-error' : summary ? 'slip-summary' : broke || why ? WHY_ID : undefined
+          }
         >
           {placeLabel(solos.length, legs.length > 0, total)}
         </FormSubmitButton>
         {broke ? (
           <Message tone="gold" id={WHY_ID}>
-            You have 0 DC. Earn more with{' '}
+            You have {formatDcAmount(0)}. Earn more with{' '}
             <Link href="/tasks" className="prose-link text-inherit">
               Tasks
             </Link>

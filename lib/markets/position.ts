@@ -125,7 +125,7 @@ export function positionSummary(bets: PositionBet[]): { tone: 'plain' | 'win' | 
     return { tone: 'plain', text: `${formatDcAmount(staked)} on this market · Bets are final.` }
   }
   if (bets.some((b) => b.result.kind === 'awaiting')) {
-    return { tone: 'plain', text: `${formatDcAmount(staked)} on this market · Waiting on the result.` }
+    return { tone: 'plain', text: `${formatDcAmount(staked)} on this market · Waiting for a result.` }
   }
   if (bets.every((b) => b.result.kind === 'refunded')) {
     return { tone: 'plain', text: bets.length === 1 ? 'Your bet was refunded.' : 'Your bets were refunded.' }

@@ -213,6 +213,20 @@ describe('MarketsPage', () => {
     expect(document.body.textContent).not.toMatch(/closed|pending/i)
   })
 
+  // MKT-12: Waiting and Resolved fill from open markets, so that is where their empty state leads;
+  // the header's Create market stays.
+  it('offers the empty Open tab Create market, and the empty Waiting and Resolved tabs open markets', async () => {
+    await renderPage(EMPTY, EMPTY, { status: 'open' })
+    expect(screen.getAllByRole('link', { name: 'Create market' })).toHaveLength(2)
+    expect(screen.queryByRole('link', { name: 'See open markets' })).toBeNull()
+  })
+
+  it.each(['awaiting', 'resolved'])('offers the empty %s tab See open markets', async (status) => {
+    await renderPage(EMPTY, EMPTY, { status })
+    expect(screen.getByRole('link', { name: 'See open markets' })).toHaveAttribute('href', '/markets')
+    expect(screen.getAllByRole('link', { name: 'Create market' })).toHaveLength(1)
+  })
+
   it.each(['bogus', 'all'])('treats ?status=%s as Open', async (status) => {
     await renderPage({ rows: [market(1, 'open')], next: null, windowed: false }, EMPTY, { status })
     expect(listOpenMarkets).toHaveBeenCalledTimes(1)

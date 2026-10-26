@@ -1,6 +1,14 @@
 import { formatDcAmount } from '@/lib/format/dc'
-import { GENERIC_ERROR } from '@/lib/errors/friendly-error'
 import { RATE_LIMIT_ERRORS } from '@/lib/forms/limits'
+import { MAX_PICKS } from './odds'
+
+// The slip's own fallback: a refusal we can't word still says nothing was placed, since place_slip_v4
+// is all or nothing.
+export const SLIP_GENERIC_ERROR = 'We couldn’t place your slip, and nothing was placed. Try again.'
+export const SLIP_EMPTY_ERROR = 'Your slip is empty. Add a pick from a market first.'
+// The slip and placeSlipAction say the parlay's pick limits the same way.
+export const PARLAY_TOO_FEW = 'A parlay needs at least 2 picks. Switch another pick to Parlay, or this one back to Solo.'
+export const PARLAY_TOO_MANY = `A parlay can have at most ${MAX_PICKS} picks. Switch some to Solo.`
 
 // place_slip (0039) prefixes a failure with the pick or the parlay it came from.
 const PICK_ERROR = /^pick ([0-9a-f-]{36}): (.+)$/i
@@ -26,7 +34,7 @@ const KNOWN: Record<string, string> = {
   'a parlay can stake at most 1,000,000 dc': 'A parlay can stake at most 1,000,000 DC. Try a smaller stake.',
   'that bet would pay more than dwellduel can hold': 'That bet would pay more than DwellDuel can hold. Try a smaller stake.',
   'that parlay would pay more than dwellduel can hold': 'That parlay would pay more than DwellDuel can hold. Try a smaller stake.',
-  'your slip is empty': 'Your slip is empty.',
+  'your slip is empty': SLIP_EMPTY_ERROR,
   'not invited': 'This account isn’t on the invite list. Sign in with the account you were invited with.',
   // The daily limits (0114, #450).
   [RATE_LIMIT_ERRORS.bet.match]: RATE_LIMIT_ERRORS.bet.formError,
@@ -53,7 +61,7 @@ function sentence(message: string): string {
   return /[.!?]$/.test(text) ? text : `${text}.`
 }
 
-// Nothing from Postgres reaches a member unmapped: an unknown text becomes GENERIC_ERROR, and
+// Nothing from Postgres reaches a member unmapped: an unknown text becomes SLIP_GENERIC_ERROR, and
 // `onUnknown` lets the caller log the raw one.
 function memberMessage(raw: string, onUnknown?: (raw: string) => void): string {
   const known = KNOWN[raw.toLowerCase().replace(/\.$/, '')]
@@ -62,7 +70,7 @@ function memberMessage(raw: string, onUnknown?: (raw: string) => void): string {
     if (pattern.test(raw)) return next ? `${sentence(raw)} ${next}` : sentence(raw)
   }
   onUnknown?.(raw)
-  return GENERIC_ERROR
+  return SLIP_GENERIC_ERROR
 }
 
 export function parseSlipError(

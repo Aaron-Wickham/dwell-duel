@@ -6,6 +6,7 @@ import type { MarketKind } from '@/lib/markets/kind'
 import { plottedOutcomes } from '@/lib/markets/outcome-series'
 import { availableRanges, type SeriesPoint } from '@/lib/markets/probability-series'
 import { sparklinePath } from '@/lib/markets/sparkline'
+import { chipTextClass } from '@/components/ui/page'
 import { cn } from '@/lib/utils'
 
 const EMPTY_TEXT = 'No bets were placed on this market.'
@@ -45,7 +46,7 @@ export function MarketSparkline({
     return (
       <div className="relative h-16">
         {gridLine}
-        <p className="absolute inset-0 flex items-center justify-center px-4 text-center text-xs font-bold text-ink2">{EMPTY_TEXT}</p>
+        <p className={`absolute inset-0 flex items-center justify-center px-4 text-center ${chipTextClass} font-bold text-ink2`}>{EMPTY_TEXT}</p>
       </div>
     )
   }

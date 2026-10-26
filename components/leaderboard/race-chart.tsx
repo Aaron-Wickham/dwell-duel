@@ -34,7 +34,7 @@ function RaceDescription({ line, more }: { line: string; more?: string }) {
   return (
     <>
       Net profit for this month’s leaders.
-      <span className="block line-clamp-1">{line}</span>
+      <span className="line-clamp-1">{line}</span>
       {more && <span className="sr-only"> {more}</span>}
     </>
   )

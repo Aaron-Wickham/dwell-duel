@@ -98,7 +98,7 @@ describe('YourBets (#388)', () => {
     expect(bet).toHaveTextContent('10 DC on Yes · Pays 18 DC')
     expect(bet).toHaveTextContent('Closes Oct 6')
     expect(within(parlay).getByRole('link', { name: 'Parlay · 3 picks' })).toHaveAttribute('href', '/parlays/p1')
-    expect(parlay).toHaveTextContent('5 DC · Pays 80 DC if all win')
+    expect(parlay).toHaveTextContent('5 DC · Pays 80 DC if every pick wins')
     expect(closed).toHaveTextContent('Closed')
   })
 

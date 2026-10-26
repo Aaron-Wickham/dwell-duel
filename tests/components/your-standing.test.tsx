@@ -46,10 +46,17 @@ describe('YourStandingCard', () => {
     expect(within(card()).getByText('22nd')).toBeInTheDocument()
   })
 
-  it('shows a dash and a note when no bet has settled', () => {
+  it('says None yet for a record with nothing settled, without repeating it in a sentence', () => {
     render(<YourStandingCard standing={standing()} />)
     expect(within(card()).getByText('None yet')).toBeInTheDocument()
-    expect(within(card()).getByText(/No settled bets yet\./)).toBeInTheDocument()
+    expect(within(card()).queryByText(/No settled bets yet/)).toBeNull()
+  })
+
+  it('shows This month’s profit, signed, in place of net worth', () => {
+    render(<YourStandingCard board="month" standing={standing({ score: 140 })} />)
+    expect(within(card()).getByText('Profit')).toBeInTheDocument()
+    expect(within(card()).getByText('+140 DC')).toBeInTheDocument()
+    expect(within(card()).queryByText('Net worth')).toBeNull()
   })
 
   it('gives a member with no rank a short state', () => {

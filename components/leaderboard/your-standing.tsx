@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
 import { SectionCard } from '@/components/ui/section-card'
 import { eyebrowClass, rowTitleClass } from '@/components/ui/page'
-import type { YourStanding } from '@/lib/social/leaderboard'
+import type { Board, YourStanding } from '@/lib/social/leaderboard'
 import type { MemberRecord } from '@/lib/social/leaderboard-extras'
-import { formatDcAmount } from '@/lib/format/dc'
+import { formatDcAmount, formatSignedDcAmount } from '@/lib/format/dc'
 import { ordinal } from '@/lib/format/rank'
 
 export function gapLine({ rank, tiedWith, above }: YourStanding): string {
@@ -21,14 +21,17 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-// The net-worth board's side card at lg, under the podium, with "Jump to me" when your row is further
-// down than the page shows. A phone has the sticky bar (StandingCompact) instead.
+// Each board's side card at lg (under the podium on Net worth, above the awards on This month), with
+// "Jump to me" when your row is further down than the page shows. A phone has the sticky bar
+// (StandingCompact) instead.
 export function YourStandingCard({
+  board = 'all',
   standing,
   record,
   jump,
   className,
 }: {
+  board?: Board
   standing: YourStanding | null
   record?: MemberRecord
   jump?: ReactNode
@@ -43,17 +46,22 @@ export function YourStandingCard({
             <Stat label="Rank">
               {ordinal(standing.rank)} <span className="font-bold text-ink2">of {standing.memberCount}</span>
             </Stat>
-            <Stat label="Net worth">{formatDcAmount(standing.score)}</Stat>
+            {board === 'all' ? (
+              <Stat label="Net worth">{formatDcAmount(standing.score)}</Stat>
+            ) : (
+              <Stat label="Profit">{formatSignedDcAmount(standing.score)}</Stat>
+            )}
             <Stat label="Record">{settled ? `${record.won}-${record.lost}` : 'None yet'}</Stat>
           </dl>
-          <p className="text-sm text-ink2">
-            {gapLine(standing)}
-            {!settled && ' No settled bets yet.'}
-          </p>
+          {gapLine(standing) && <p className="text-sm text-ink2">{gapLine(standing)}</p>}
           {jump && <div className="flex">{jump}</div>}
         </>
       ) : (
-        <p className="text-sm text-ink2">You’re not ranked yet. Your place shows up once you’re on the board.</p>
+        <p className="text-sm text-ink2">
+          {board === 'all'
+            ? 'You’re not ranked yet. Your place shows up once you’re on the board.'
+            : 'You’re not on this month’s board yet. Place a bet to join it.'}
+        </p>
       )}
     </SectionCard>
   )

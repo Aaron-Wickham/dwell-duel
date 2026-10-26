@@ -30,7 +30,11 @@ const labelTop = (name: string) => Number.parseFloat(screen.getByText(name).clos
 describe('RaceChart', () => {
   it('describes the standings to assistive tech and labels each line’s end with the name and total', () => {
     render(<RaceChart series={[series('Aaron', [0, 30, 64]), series('Maci', [0, 10, 41]), series('Py', [0, -3, -3])]} />)
-    expect(screen.getByRole('slider', { name: 'Net betting profit this month: Aaron +64\u00A0DC, Maci +41\u00A0DC, Py −3\u00A0DC' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('slider', { name: 'Net betting profit this month: Aaron rose to +64\u00A0DC, Maci rose to +41\u00A0DC and Py fell to −3\u00A0DC.' }),
+    ).toBeInTheDocument()
+    // SOC-6: the movement is said in the description too, so it isn't left to a screen reader.
+    expect(screen.getByText(/^Net profit for this month’s top 3: Aaron rose to/)).toBeInTheDocument()
     expect(screen.getByText('Aaron')).toBeInTheDocument()
     expect(screen.getByText('−3 DC')).toBeInTheDocument()
   })
@@ -223,7 +227,7 @@ describe('RaceChart', () => {
 
   it('draws a lone point as a flat line', () => {
     render(<RaceChart series={[series('Ada', [12])]} />)
-    expect(screen.getByRole('slider', { name: 'Net betting profit this month: Ada +12\u00A0DC' })).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Net betting profit this month: Ada held at +12\u00A0DC.' })).toBeInTheDocument()
   })
 
   it('says the race hasn’t started until a bet settles', () => {

@@ -99,6 +99,8 @@ describe('FeedPage', () => {
     await renderPage({ rows: [], next: null, windowed: false })
     expect(screen.getByText('Nothing yet.')).toBeInTheDocument()
     expect(screen.queryByText('Nothing older here')).toBeNull()
+    // C-27: the empty All tab points somewhere to start.
+    expect(screen.getByRole('link', { name: 'Browse markets' })).toHaveAttribute('href', '/markets')
   })
 
   it("reads the page's reactions in one call and shows them on each item", async () => {

@@ -8,7 +8,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { EmptyState } from '@/components/ui/empty-state'
 import { SectionCard } from '@/components/ui/section-card'
 import { useTimeZone } from '@/components/ui/local-time'
-import { exitStep, memberSeries, raceLayout } from '@/components/leaderboard/race-layout'
+import { describeRace, exitStep, memberSeries, raceLayout } from '@/components/leaderboard/race-layout'
 import { formatDay } from '@/lib/markets/format-date'
 import type { RaceSeries } from '@/lib/social/leaderboard-extras'
 import { signedDc } from '@/lib/social/season'
@@ -132,7 +132,7 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
     setKeyStep(Math.max(0, Math.min(last, to)))
   }
 
-  const summary = series.map((s) => `${s.name} ${signedDc(s.final)}`).join(', ')
+  const movement = describeRace(series)
   const clippedNotes = [
     clippedTop === null
       ? null
@@ -151,7 +151,7 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
     <SectionCard
       title="The race"
       titleId="leaderboard-race"
-      description={`Net betting profit for this month’s top ${series.length}, move by move since the first bet settled.`}
+      description={`Net profit for this month’s top ${series.length}: ${movement}`}
     >
       <div className="flex flex-col gap-2">
         <div
@@ -159,7 +159,7 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
           aria-hidden="true"
           className="min-h-[5.5rem] md:hidden [&:has([data-readout])>[data-hint]]:hidden"
         >
-          <p data-hint className="text-xs text-ink2">
+          <p data-hint className="text-sm text-ink2">
             Touch the chart to see each move.
           </p>
           {active !== null && <PhoneReadout label={momentLabel(active)} standings={standings(active)} />}
@@ -168,7 +168,7 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
           <div
             role="slider"
             tabIndex={0}
-            aria-label={`Net betting profit this month: ${summary}`}
+            aria-label={`Net betting profit this month: ${movement}`}
             aria-valuemin={0}
             aria-valuemax={last}
             aria-valuenow={active ?? last}
@@ -315,7 +315,7 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
           <span>Now</span>
         </div>
       </div>
-      {clippedNote && <p className="text-xs text-ink2">{clippedNote}</p>}
+      {clippedNote && <p className="text-sm text-ink2">{clippedNote}</p>}
     </SectionCard>
   )
 }

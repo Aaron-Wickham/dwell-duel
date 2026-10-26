@@ -17,14 +17,15 @@ vi.mock('@/lib/auth/require-user', () => ({
 }))
 
 
-const { listMyTransactions, listMyWagers, listMyCancelledBets } = vi.hoisted(() => ({
+const { listMyTransactions, listMyWagers, listMyCancelledBets, hasCancelledBets } = vi.hoisted(() => ({
   listMyTransactions: vi.fn(),
   listMyWagers: vi.fn(),
   listMyCancelledBets: vi.fn(),
+  hasCancelledBets: vi.fn(),
 }))
 vi.mock('@/lib/ledger/my-transactions', () => ({ listMyTransactions }))
 vi.mock('@/lib/bets/list-my-wagers', () => ({ listMyWagers }))
-vi.mock('@/lib/bets/list-my-bets', () => ({ listMyCancelledBets }))
+vi.mock('@/lib/bets/list-my-bets', () => ({ listMyCancelledBets, hasCancelledBets }))
 
 import MyBetsPage from '@/app/(app)/bets/page'
 import { CoinRows } from '@/app/(app)/bets/coin-rows'
@@ -43,6 +44,7 @@ async function renderCoinsTab(searchParams: Record<string, string> = { tab: 'coi
 
 beforeEach(() => {
   listMyTransactions.mockReset()
+  hasCancelledBets.mockReset().mockResolvedValue(false)
 })
 
 describe('CoinRows', () => {
@@ -156,5 +158,33 @@ describe('My bets → Coins', () => {
     await renderCoinsTab()
 
     expect(screen.getByRole('link', { name: /Show more/ })).toHaveAttribute('href', '/bets?tab=coins&coins=CUR')
+  })
+})
+
+// D-10: nothing cancels a bet now, so the Cancelled tab shows only to a member who has one.
+describe('My bets → the Cancelled tab', () => {
+  const tabs = () => within(screen.getByRole('navigation', { name: 'My bets sections' })).getAllByRole('link').map((l) => l.textContent)
+
+  it('is left out for a member with no cancelled bets', async () => {
+    listMyTransactions.mockResolvedValue({ rows: [], next: null, windowed: false })
+    await renderCoinsTab()
+    expect(hasCancelledBets).toHaveBeenCalledWith({}, 'me')
+    expect(tabs()).toEqual(['Open', 'Settled', 'Coins'])
+  })
+
+  it('shows for a member who has one', async () => {
+    hasCancelledBets.mockResolvedValue(true)
+    listMyTransactions.mockResolvedValue({ rows: [], next: null, windowed: false })
+    await renderCoinsTab()
+    expect(tabs()).toEqual(['Open', 'Settled', 'Cancelled', 'Coins'])
+  })
+
+  it('still opens from ?tab=cancelled, current, without asking', async () => {
+    listMyCancelledBets.mockResolvedValue({ rows: [], next: null, windowed: false })
+    await renderCoinsTab({ tab: 'cancelled' })
+    expect(hasCancelledBets).not.toHaveBeenCalled()
+    const nav = screen.getByRole('navigation', { name: 'My bets sections' })
+    expect(within(nav).getByRole('link', { name: 'Cancelled' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByText('No cancelled bets.')).toBeInTheDocument()
   })
 })

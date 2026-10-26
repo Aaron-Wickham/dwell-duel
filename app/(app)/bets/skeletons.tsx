@@ -4,8 +4,9 @@ import { listCardClass } from '@/components/ui/list-card'
 import { betListClass } from './bet-rows'
 import { Skeleton, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
 
+// Open, Settled and Coins: the Cancelled tab shows only to the few members with a cancelled bet (D-10).
 function Tabs() {
-  return <Skeleton className="h-[52px] w-full rounded-tile md:w-[357px]" />
+  return <Skeleton className="h-[52px] w-full rounded-tile md:w-[246px]" />
 }
 
 // Open, Settled and Cancelled: the tabs, then one tab's list cards straight on the page (D2), two

@@ -269,7 +269,8 @@ already moved the chance like any bet, apart from a parlay from before
 October 2026, which never did). It never says whose parlays they are.
 
 **My bets** shows your solo bets and parlays together, newest first, under
-Open, Settled and Cancelled. Only you can see it. Everyone can see who
+Open and Settled, plus Cancelled if you had a bet cancelled before October
+2026. Only you can see it. Everyone can see who
 bet what on each market, and bets and parlays also appear in the feed.
 
 Each open bet says what it pays if it wins ("10 DC on Yes · Pays 18 DC")
@@ -731,7 +732,7 @@ expected payout changed**:
   the switch gets its stake back, as the old rules promised, even if
   someone bets on that outcome afterwards. Bets placed after the switch
   are paid like any other: their shares if they win, nothing if they
-  lose. My bets marks such a refund "Refunded, no winners".
+  lose. My bets marks such a refund "Refunded · No winners", and a bet on a called-off market "Called off · Refunded".
 - **Pending parlays were fixed too.** A pick whose odds weren't set yet
   got them from its market's pool as it stood: other members' DC on the
   market ÷ other members' DC on your pick, at most 5×, or 1.00× without

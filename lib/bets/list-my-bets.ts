@@ -120,6 +120,15 @@ function cancelledQuery(supabase: DbClient, userId: string, columns: string, fil
   return query.order('cancelled_at', { ascending: false }).order('id', { ascending: false }).limit(limit)
 }
 
+// Whether My bets shows its Cancelled tab (D-10): nothing has cancelled a bet since October 2026,
+// so most members have none, and the tab is only for those who do. One row on the
+// (profile_id, cancelled_at, id) index answers it.
+export async function hasCancelledBets(supabase: DbClient, userId: string): Promise<boolean> {
+  const { data, error } = await supabase.from('cancelled_bets').select('id').eq('profile_id', userId).limit(1)
+  if (error) throw error
+  return (data ?? []).length > 0
+}
+
 export async function listMyCancelledBets(
   supabase: DbClient,
   userId: string,

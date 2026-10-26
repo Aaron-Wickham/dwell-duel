@@ -60,7 +60,7 @@ describe('describeEvent', () => {
   it('describes a parlay win', () => {
     expect(describeEvent({ ...base, kind: 'parlay_won', marketId: null, marketTitle: null, outcomeLabel: null, amount: 160, legCount: 3 })).toEqual([
       sarah,
-      "'s 3-pick parlay paid 160\u00A0DC",
+      "’s 3-pick parlay paid 160\u00A0DC",
     ])
   })
 

@@ -79,6 +79,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 664 }
     await expect(page.getByText('Play money only. No real money.')).toBeVisible()
     const button = page.getByRole('button', { name: 'Sign in with Google' })
     await expect(button).toBeInViewport({ ratio: 1 })
+    await expect.poll(() => page.evaluate(() => 'signInIntro' in document.documentElement.dataset), { timeout: 5_000 }).toBe(false)
     expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(viewport.height)
   })
 }

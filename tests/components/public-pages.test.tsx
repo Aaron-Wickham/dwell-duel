@@ -9,6 +9,7 @@ vi.mock('@/app/(auth)/sign-in/sign-in-button', () => ({
 
 import SignInPage from '@/app/(auth)/sign-in/page'
 import PrivacyPage from '@/app/(auth)/privacy/page'
+import TermsPage from '@/app/(auth)/terms/page'
 import { howItWorks } from '@/lib/docs/how-it-works'
 import { inlineText } from '@/lib/docs/markdown'
 
@@ -63,6 +64,13 @@ describe('the privacy page', () => {
 
   it('leads back to DwellDuel', () => {
     render(<PrivacyPage />)
+    expect(screen.getByRole('link', { name: 'Go to DwellDuel' })).toHaveAttribute('href', '/')
+  })
+})
+
+describe('the terms page', () => {
+  it('leads back to DwellDuel', () => {
+    render(<TermsPage />)
     expect(screen.getByRole('link', { name: 'Go to DwellDuel' })).toHaveAttribute('href', '/')
   })
 })

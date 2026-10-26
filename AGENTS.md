@@ -192,16 +192,31 @@ a line to `CHANGELOG.md` under the next release.
   **called off**, never "voided", and **waiting for a result**, never
   "awaiting resolution" (D7, #403; the database values `voided` and
   `awaiting`, RPC names and the admin ledger's labels keep theirs).
-- **Design skills** (#447). Two vendored skills live in `.claude/skills/`:
-  **Impeccable** (`/impeccable`, pbakaus/impeccable 4.6.0 at 08d5b47,
-  Apache 2.0) for app screens (critique, audit, polish, colorize, layout),
-  and **Taste** (`/taste`, Leonxlnx/taste-skill v2 at f624f37, MIT) only for
-  public pages (sign-in, privacy, terms), since it says it isn't for app
-  screens. Impeccable's launcher downloads a binary on first run; that
-  isn't allowed here, so it runs on its "launcher unavailable" path, reading
-  PRODUCT.md and DESIGN.md directly. Taste's `scripts/lint.mjs` is safe to
-  run. Where a skill's rules clash with this file (eyebrows, hairlines), this
-  file wins. Update a skill by re-copying its folder at a pinned commit.
+- **UX Engine is the design skill set for all UI and UX work.** It is the
+  `ux-engine` Claude Code plugin (designmotionhq, 2.4.0), installed per
+  machine, never in this repo: its licence forbids publishing it and this
+  repo is public. Before creating or changing any screen, component, copy,
+  colour or badge, read `DESIGN.md` (its contract, checked by the plugin's
+  `check-design-md.mjs`; keep it `complete` and update it in the same PR as
+  a token change), then consult the matching skill: `ux-intent-discovery`
+  for a new surface (it names the rest), `ux-auditor` to audit or fix an
+  existing one, and `information-hierarchy`, `state-completeness`,
+  `form-ux`, `feedback-and-affordance`, `responsive`, `visual-character`
+  or `design-system` as the surface needs. The commands are `/ux-audit`,
+  `/ux-design`, `/ux-review` (run it before opening a UI PR) and `/restyle`.
+  A one-line change needs none. Its proposals still go through mock-up and
+  approval before they're built. Where a skill's defaults clash with this
+  file (eyebrows, hairlines, chips, type sizes), this file wins. A session
+  without the plugin (a cloud session, another machine) says so instead of
+  imitating it.
+- **Other design skills** (#447) stay vendored in `.claude/skills/` as
+  second opinions: **Impeccable** (`/impeccable`, pbakaus/impeccable 4.6.0
+  at 08d5b47, Apache 2.0) for app screens and **Taste** (`/taste`,
+  Leonxlnx/taste-skill v2 at f624f37, MIT) only for public pages (sign-in,
+  privacy, terms). Impeccable's launcher downloads a binary on first run;
+  that isn't allowed here, so it runs on its "launcher unavailable" path,
+  reading PRODUCT.md and DESIGN.md directly. Taste's `scripts/lint.mjs` is
+  safe to run. Update one by re-copying its folder at a pinned commit.
 - **Visual source of truth:** `docs/design/app-redesign-handoff.md`, which
   describes the app as it is. The dated specs and plans in `docs/archive/`
   are history: they name things the code no longer has, so don't build

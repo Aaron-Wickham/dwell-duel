@@ -12,6 +12,9 @@ before v0.4.0 used other headings.)
 
 ## Unreleased
 
+### Under the hood
+- **UX Engine is the design skill set.** `AGENTS.md` now routes every UI and UX change through the UX Engine plugin (installed per machine, not in this public repo), and `DESIGN.md` is a complete design contract extracted from `app/globals.css`, with each status chip's contrast computed.
+
 ## v1.1.0 — 2026-10-23
 
 Market cards now show every answer, each with its own Add button, so you can put any pick in your slip straight from the list, and categories are one searchable list on Markets and when you create or edit a market. Behind the scenes the app moves to Node 24 and up-to-date libraries, and Safari's skipped page animations no longer show up as errors. Nothing about how you play changes.

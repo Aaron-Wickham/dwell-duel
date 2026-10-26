@@ -85,7 +85,7 @@ before v0.4.0 used other headings.)
 - **Small status chips** use the 13px chip size instead of 12px.
 - **The sign-in sample market's category** is a tinted category chip, like a real market card's.
 - **"Go to DwellDuel" reads as a link** at the end of Privacy and Terms: full-size ink text with a chevron, instead of small grey text.
-- **Clearer error words.** A failed action now says "That didn’t go through. Try again, and if it keeps happening, tell an admin."; a page that fails to load says "This page couldn’t load", or that you're offline when you are; a failed sign-in says to use the account your invite was sent to; and "Nothing older here" lost its full stop.
+- **Clearer error words.** A failed action now says "That didn’t go through. Try again, and if it keeps happening, tell an admin."; a page that fails to load says it may be your connection or our side, or that you’re offline when you are; a failed sign-in says to use the account your invite was sent to; and "Nothing older here" lost its full stop.
 - **The race chart says how the lines moved,** "Aaron rose to +64 DC, …", on one line under its heading and in full to screen readers, and the card keeps one height before and after the first bet settles.
 - **Past champions match the awards:** plain rows with the profit in bold, no chip or trophy.
 - **Parlay picks read the same everywhere.** An open pick's chip is green, not waiting gold, and the tally counts every pick still to play out as "waiting", as the rows do. The progress bar's open segments have an edge, so each pick reads as its own segment.

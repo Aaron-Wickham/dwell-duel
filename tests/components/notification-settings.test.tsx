@@ -3,12 +3,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-const { savePushSubscriptionAction, deletePushSubscriptionAction, saveNotificationPrefsAction } = vi.hoisted(() => ({
+const { savePushSubscriptionAction, deletePushSubscriptionAction, saveNotificationPrefAction } = vi.hoisted(() => ({
   savePushSubscriptionAction: vi.fn(),
   deletePushSubscriptionAction: vi.fn(),
-  saveNotificationPrefsAction: vi.fn(),
+  saveNotificationPrefAction: vi.fn(),
 }))
-vi.mock('@/lib/push/actions', () => ({ savePushSubscriptionAction, deletePushSubscriptionAction, saveNotificationPrefsAction }))
+vi.mock('@/lib/push/actions', () => ({ savePushSubscriptionAction, deletePushSubscriptionAction, saveNotificationPrefAction }))
 
 import { NotificationSettings } from '@/app/(app)/settings/notification-settings'
 import { DEFAULT_NOTIFICATION_PREFS } from '@/lib/push/prefs'
@@ -85,7 +85,7 @@ beforeEach(() => {
   pushManager.subscribe.mockClear()
   savePushSubscriptionAction.mockReset().mockResolvedValue({})
   deletePushSubscriptionAction.mockReset().mockResolvedValue({})
-  saveNotificationPrefsAction.mockReset().mockResolvedValue(undefined)
+  saveNotificationPrefAction.mockReset().mockResolvedValue({})
 })
 
 afterEach(() => {
@@ -209,34 +209,53 @@ describe('NotificationSettings', () => {
     expect(screen.getByRole('checkbox', { name: 'New markets' })).not.toBeChecked()
   })
 
-  it('offers Tasks to review only to a reviewer, and keeps a member’s stored choice through a save', () => {
+  it('offers Tasks to review only to a reviewer', () => {
     stubBrowser()
-    const { container, unmount } = renderCard({ prefs: { ...DEFAULT_NOTIFICATION_PREFS, review_alerts: false } })
+    const { unmount } = renderCard({ prefs: { ...DEFAULT_NOTIFICATION_PREFS, review_alerts: false } })
     expect(screen.queryByRole('checkbox', { name: 'Tasks to review' })).toBeNull()
-    expect(container.querySelector<HTMLInputElement>('input[type="hidden"][name="review_alerts"]')?.value).toBe('')
     unmount()
 
     renderCard({ reviewer: true })
     expect(screen.getByRole('checkbox', { name: 'Tasks to review' })).toBeChecked()
   })
 
-  it('saves the choices, and keeps them as ticked when the save fails', async () => {
+  // TSK-3: each tick saves itself, like Settings' other switches; there's no Save button.
+  it('saves each choice as it is ticked, with no Save button', async () => {
     stubBrowser()
-    saveNotificationPrefsAction.mockResolvedValue({ formError: 'Couldn’t save your notification choices.' })
     renderCard()
-
     await userEvent.click(screen.getByRole('checkbox', { name: 'New markets' }))
     await userEvent.click(screen.getByRole('checkbox', { name: 'Results' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Save choices' }))
 
-    await waitFor(() => expect(saveNotificationPrefsAction).toHaveBeenCalled())
-    const form = saveNotificationPrefsAction.mock.calls[0][1] as FormData
-    expect(form.get('new_markets')).toBe('on')
-    expect(form.get('results')).toBeNull()
-    expect(form.get('resolve_reminders')).toBe('on')
-    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t save your notification choices.')
+    await waitFor(() => expect(saveNotificationPrefAction).toHaveBeenCalledTimes(2))
+    expect(saveNotificationPrefAction.mock.calls).toEqual([
+      ['new_markets', true],
+      ['results', false],
+    ])
     expect(screen.getByRole('checkbox', { name: 'New markets' })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: 'Results' })).not.toBeChecked()
+    expect(screen.queryByRole('button', { name: /Save/ })).toBeNull()
+  })
+
+  it('puts a box back and says so when its save fails', async () => {
+    stubBrowser()
+    saveNotificationPrefAction.mockResolvedValue({ error: 'Couldn’t save that choice. Check your connection and try again.' })
+    renderCard()
+    const newMarkets = screen.getByRole('checkbox', { name: 'New markets' })
+    await userEvent.click(newMarkets)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t save that choice.')
+    expect(newMarkets).not.toBeChecked()
+    expect(screen.getByRole('group', { name: 'Notify me about' })).toHaveAccessibleDescription(/Couldn’t save that choice/)
+  })
+
+  it('puts a box back when the save can’t reach the server', async () => {
+    stubBrowser()
+    saveNotificationPrefAction.mockRejectedValue(new Error('offline'))
+    renderCard()
+    const results = screen.getByRole('checkbox', { name: 'Results' })
+    await userEvent.click(results)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Check your connection')
+    expect(results).toBeChecked()
   })
 
   // #398: the choices can't be changed where notifications can't work, and say why in one line.
@@ -250,7 +269,6 @@ describe('NotificationSettings', () => {
     const newMarkets = screen.getByRole('checkbox', { name: 'New markets' })
     expect(newMarkets).toBeDisabled()
     expect(screen.getByRole('group', { name: 'Notify me about' })).toHaveAccessibleDescription(reason)
-    expect(screen.getByRole('button', { name: 'Save choices' })).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('disables the choices while notifications are blocked on this device', async () => {
@@ -259,6 +277,23 @@ describe('NotificationSettings', () => {
     renderCard()
     expect(await screen.findByText('You can choose these once notifications are allowed.')).toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: 'Results' })).toBeDisabled()
+  })
+
+  // TSK-7: the installed app has no reload button, so the blocked state offers its own re-check.
+  it('re-reads a blocked permission from Check again, moving focus to Turn on once it’s allowed', async () => {
+    stubBrowser()
+    permission = 'denied'
+    renderCard()
+    const check = await screen.findByRole('button', { name: 'Check again' })
+
+    await userEvent.click(check)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Still blocked.')
+
+    permission = 'default'
+    await userEvent.click(check)
+    const turnOn = await screen.findByRole('button', { name: 'Turn on notifications' })
+    await waitFor(() => expect(turnOn).toHaveFocus())
+    expect(screen.getByRole('checkbox', { name: 'Results' })).toBeEnabled()
   })
 
   it('leaves the choices on while this device is off, since they follow the account', async () => {

@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { FileText, ImagePlus, Link2, Paperclip, X } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/field'
-import { TEXT_LIMITS, tooLong } from '@/lib/forms/limits'
+import { TEXT_LIMITS } from '@/lib/forms/limits'
 import { Message } from '@/components/ui/message'
-import { isWebLink, PROOF_FILE_ACCEPT, PROOF_FILE_TYPES, PROOF_IMAGE_ACCEPT, PROOF_MAX_BYTES, PROOF_MAX_FILES, PROOF_MAX_ITEMS, type ProofDraft } from '@/lib/proof/types'
+import { linkProblem } from '@/lib/proof/pending-link'
+import { PROOF_FILE_ACCEPT, PROOF_FILE_TYPES, PROOF_IMAGE_ACCEPT, PROOF_MAX_BYTES, PROOF_MAX_FILES, PROOF_MAX_ITEMS, type ProofDraft } from '@/lib/proof/types'
 import { cn } from '@/lib/utils'
 
 // The labels stand in for their hidden file inputs, so they take the input's focus ring and, once
@@ -17,23 +18,47 @@ const attachClass = cn(
   'peer-disabled:cursor-not-allowed peer-disabled:border-transparent peer-disabled:bg-sunk peer-disabled:text-ink2',
 )
 
+const ADD_PHOTOS = 'add-photos'
+
 // Photos, a document and links, chosen before submitting; nothing uploads until the parent's
-// action runs (lib/proof/upload.ts). Controlled, so the parent owns what's attached.
+// action runs (lib/proof/upload.ts). Controlled, so the parent owns what's attached. A parent that
+// sends a link still in the field (withPendingLink) also owns the field's text, through `link` and
+// `onLinkChange`, and says through `linkError` why it couldn't send it.
 export function ProofPicker({
   id,
   value,
   onChange,
   describedBy,
+  link: linkProp,
+  onLinkChange,
+  linkError = null,
 }: {
   id: string
   value: ProofDraft[]
   onChange: (next: ProofDraft[]) => void
   describedBy?: string
+  link?: string
+  onLinkChange?: (link: string) => void
+  linkError?: string | null
 }) {
-  const [link, setLink] = useState('')
-  const [problem, setProblem] = useState<string | null>(null)
+  const [ownLink, setOwnLink] = useState('')
+  const link = linkProp ?? ownLink
+  const setLink = onLinkChange ?? setOwnLink
+  const [ownProblem, setProblem] = useState<string | null>(null)
+  const problem = linkError ?? ownProblem
   // Only a refused link marks the link field invalid; a file problem belongs to the file buttons.
   const [linkInvalid, setLinkInvalid] = useState(false)
+  // Removing an attachment takes its button away, so focus moves to the next one's, else the one
+  // before, else Add photos, rather than falling to the page behind the dialog.
+  const removeButtons = useRef(new Map<string, HTMLButtonElement>())
+  const refocus = useRef<string | null>(null)
+  useEffect(() => {
+    const target = refocus.current
+    if (!target) return
+    refocus.current = null
+    if (target === ADD_PHOTOS) document.getElementById(`${id}-photos`)?.focus()
+    else removeButtons.current.get(target)?.focus()
+  }, [value, id])
   const previews = useMemo(
     () => new Map(value.flatMap((d) => (d.kind === 'image' ? [[d.key, URL.createObjectURL(d.file)] as const] : []))),
     [value],
@@ -44,7 +69,15 @@ export function ProofPicker({
   const room = PROOF_MAX_ITEMS - value.length
   const fileRoom = PROOF_MAX_FILES - value.filter((d) => d.kind !== 'link').length
   // A problem describes every way of adding proof; the parent's note describes the whole picker.
-  const describedByAll = [describedBy, problem ? problemId : null].filter(Boolean).join(' ') || undefined
+  const limitId = `${id}-limit`
+  // A disabled button says nothing about why, so the limit it reached is a hint beside it.
+  const limit =
+    room <= 0
+      ? `${PROOF_MAX_ITEMS} attachments is the most you can add. Remove one to add another.`
+      : fileRoom <= 0
+        ? `${PROOF_MAX_FILES} photos or files is the most you can add. You can still add a link.`
+        : null
+  const describedByAll = [describedBy, limit ? limitId : null, problem ? problemId : null].filter(Boolean).join(' ') || undefined
 
   function add(drafts: ProofDraft[]) {
     if (drafts.length > room) {
@@ -58,8 +91,8 @@ export function ProofPicker({
     const picked = Array.from(files ?? [])
     const tooBig = picked.find((f) => kind === 'file' && f.size > PROOF_MAX_BYTES)
     const wrongType = picked.find((f) => kind === 'file' && !PROOF_FILE_TYPES.includes(f.type))
-    if (tooBig) return setProblem(`${tooBig.name} is over 3 MB.`)
-    if (wrongType) return setProblem(`${wrongType.name} isn’t a PDF or text file.`)
+    if (tooBig) return setProblem(`${tooBig.name} is over 3 MB. Pick a smaller file.`)
+    if (wrongType) return setProblem(`${wrongType.name} isn’t a PDF or text file. Pick one of those, or use Add photos.`)
     const fits = picked.slice(0, Math.max(0, fileRoom))
     add(fits.map((file) => ({ key: crypto.randomUUID(), kind, file })))
     if (fits.length < picked.length) setProblem(`Add at most ${PROOF_MAX_FILES} photos or files.`)
@@ -67,13 +100,10 @@ export function ProofPicker({
 
   function addLink() {
     const url = link.trim()
-    if (!isWebLink(url)) {
+    const refused = linkProblem(url, value.length)
+    if (refused) {
       setLinkInvalid(true)
-      return setProblem('Links must start with http:// or https://.')
-    }
-    if (url.length > TEXT_LIMITS.proofLink) {
-      setLinkInvalid(true)
-      return setProblem(tooLong('Link', TEXT_LIMITS.proofLink))
+      return setProblem(refused)
     }
     setLinkInvalid(false)
     add([{ key: crypto.randomUUID(), kind: 'link', url }])
@@ -142,7 +172,7 @@ export function ProofPicker({
               addLink()
             }
           }}
-          aria-invalid={linkInvalid || undefined}
+          aria-invalid={linkInvalid || Boolean(linkError) || undefined}
           aria-describedby={describedByAll}
         />
         <Button variant="secondary" size="sm" className="shrink-0" onClick={addLink} disabled={!link.trim() || room <= 0}>
@@ -150,6 +180,11 @@ export function ProofPicker({
           Add link
         </Button>
       </div>
+      {limit && (
+        <p id={limitId} className="text-sm text-ink2">
+          {limit}
+        </p>
+      )}
       {problem && (
         <Message tone="error" id={problemId}>
           {problem}
@@ -157,7 +192,7 @@ export function ProofPicker({
       )}
       {value.length > 0 && (
         <ul className="flex flex-col gap-2" aria-label="Attached proof">
-          {value.map((draft) => {
+          {value.map((draft, index) => {
             const name = draft.kind === 'link' ? draft.url : draft.file.name
             return (
               <li key={draft.key} className="flex min-h-11 items-center gap-3 rounded-control bg-sunk px-2">
@@ -175,7 +210,17 @@ export function ProofPicker({
                   size="sm"
                   className="min-w-11 shrink-0 px-2.5"
                   aria-label={`Remove ${name}`}
-                  onClick={() => onChange(value.filter((d) => d.key !== draft.key))}
+                  ref={(button) => {
+                    if (!button) return
+                    removeButtons.current.set(draft.key, button)
+                    return () => {
+                      removeButtons.current.delete(draft.key)
+                    }
+                  }}
+                  onClick={() => {
+                    refocus.current = (value[index + 1] ?? value[index - 1])?.key ?? ADD_PHOTOS
+                    onChange(value.filter((d) => d.key !== draft.key))
+                  }}
                 >
                   <X aria-hidden="true" className="size-5" />
                 </Button>

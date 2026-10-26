@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { HistoryBackLink } from '@/components/ui/history-back-link'
 import { dividedRowsClass } from '@/components/ui/list-card'
 import { h2Class, Page, PageHeader } from '@/components/ui/page'
@@ -38,7 +38,7 @@ const BASICS: { id: string; title: string; body: ReactNode }[] = [
     title: 'Earning DC',
     body: (
       <>
-        You start with 100 DC. To earn more, do a Bible-study task on Tasks and tap I did this. A reviewer checks it, and
+        You start with 100 DC. To earn more, do a Bible-study task on Tasks and tap <strong>I did this</strong>. A reviewer checks it, and
         its reward is yours once they approve it.
       </>
     ),
@@ -137,8 +137,13 @@ export default function HowItWorksPage() {
           ))}
         </div>
       </section>
-      <Link href="/how-it-works/rules" transitionTypes={['nav-forward']} className="hit-area pressable self-start font-bold">
+      <Link
+        href="/how-it-works/rules"
+        transitionTypes={['nav-forward']}
+        className="hit-area pressable inline-flex items-center gap-1 self-start font-bold"
+      >
         Read the full rules
+        <ChevronRight aria-hidden="true" className="size-5 shrink-0" />
       </Link>
     </Page>
   )

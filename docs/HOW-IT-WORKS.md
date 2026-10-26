@@ -334,15 +334,16 @@ winner and says why, and winners are paid at once.
 
 ## Tasks
 
-*In short:* do a Bible-study task, tap I did this, and a reviewer approves
+*In short:* do a Bible-study task, tap **I did this**, and a reviewer approves
 it to pay its reward.
 
 Admins keep a catalog of Bible-study tasks, each with a DC reward.
 Tasks groups them by what you can do with each: **To do** (tasks you can
-submit now), **Waiting for review**, **Not approved** and **Done**
+submit now), **Not approved**, **Waiting for review** and **Done**
 (approved and not open again yet: this period for a repeating task, for
-good for a one-off). A group with nothing in it
-isn't shown.
+good for a one-off). A group with nothing in it isn't shown, except To
+do: with everything waiting or done, it says "Nothing to do right now."
+and when the soonest repeating task opens again.
 
 - A task is **one-off** or **repeats** daily, weekly (Monday to
   Sunday), monthly or yearly. Periods run on US Eastern time, so a daily
@@ -350,14 +351,17 @@ isn't shown.
   Monday, and so on. Once a repeating task is approved, its row says when
   you can do it again ("Again Monday, midnight ET"), and it moves back to
   To do then.
-- You submit a task once per period with **I did this**, adding an
-  optional note. Some tasks **require proof**: a photo, file or link (their
-  row says "Photo, file or link needed").
+- You submit a task once per period with **I did this**, which shows the
+  task's full instructions, adding an optional note. Some tasks **require
+  proof**: a photo, file or link (their row says "Photo, file or link
+  needed"). A link still in the link field when you send goes with the
+  rest, as if you'd tapped Add link.
 - **Proof limits and expiry.** Proof is a photo, a PDF or a text file, or a
   link: up to 5 attachments, no more than 3 of them files, 3 MB a file and
   6 MB of files together. Photos are shrunk on your device before they upload.
-  There's also a daily upload allowance (30 files or 60 MB), which an honest
-  submission never comes near. Once you've submitted proof you can't delete it.
+  There's also a daily upload allowance (30 files or 60 MB in any 24 hours),
+  which an honest submission never comes near; past it, an upload says so
+  and you can add a link instead. Once you've submitted proof you can't delete it.
   So that the app's free storage doesn't fill up, the **files expire**: proof
   on a task submission that has been approved or rejected is deleted **30 days
   after the review**, and proof on a market's result **90 days after it was
@@ -492,7 +496,8 @@ bets yet." and shows only markets created and tasks approved.
 DwellDuel can send notifications to your phone or computer, even when
 the app is closed. They're off until you turn them on, under **Settings →
 Notifications**, on each device you want them on. You choose what you
-hear about, and your choices follow your account onto every device. Where a
+hear about, each choice saving as you tick or untick it, and your choices
+follow your account onto every device. Where a
 device can't get notifications (an iPhone that hasn't added DwellDuel to
 the Home Screen, a browser without them, or notifications blocked), the
 choices are greyed out there, with a line saying why:
@@ -501,20 +506,20 @@ choices are greyed out there, with a line saying why:
 |---|---|---|
 | **Markets to resolve** | A market you made has closed and is waiting for you to resolve it. Admins and the owner also hear about every closed market that has no result, once each. Sent within about a minute of closing, with a daily backup if that's missed | On |
 | **Results** | A market you bet on, solo or as a parlay pick, is resolved ("You won 26 DC", then the market and its result), changed by an override or called off | On |
-| **Task reviews** | Your task submission is approved or rejected, with the reviewer's reason, if they gave one | On |
-| **Tasks to review** (reviewers and above only) | A member submits a task waiting for review. Never your own | On |
+| **Task reviews** | Your task submission is approved or not approved, with the reviewer's reason, if they gave one | On |
+| **Tasks to review** (reviewers and above only) | A member's submission is waiting for you to review. Never your own | On |
 | **New markets** | Someone else creates a market | Off |
 
 A parlay only pays once all its picks are settled, so if your only stake
 in a market is a parlay pick, the notification just gives the result. A
 cancelled bet gets no notification. Tapping a notification opens the
-market, your tasks, or (for Task to review) the review queue.
+market, your tasks, or (for Tasks to review) the review queue.
 
 **On iPhone and iPad,** notifications only work once DwellDuel is on
 your Home Screen (iOS 16.4 or later): tap Share, then Add to Home Screen,
 open DwellDuel from there and turn them on in Settings. If you've blocked
 notifications for DwellDuel, allow them again in your browser's or
-phone's settings.
+phone's settings, then tap **Check again** in Settings.
 
 **If a device stops getting them,** turn notifications on again in
 Settings. They stay on your ten most recently used devices: turning them on

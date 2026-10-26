@@ -873,7 +873,10 @@ winner (and, for an override, that earlier payouts are reversed); only its
 button runs the action (`ConfirmSubmitDialog`). Balance adjustments and
 role changes ask the same way. Files upload straight from the browser to the
 private `proof` bucket (`lib/proof/upload.ts`), then `record_proof`
-checks the paths when the RPC runs. Pages show proof through short-lived
+checks the paths when the RPC runs. A refused upload is logged and mapped to
+member words (`uploadErrorMessage`: the insert policy's daily quota, size,
+type, else the connection), and `uploadProof`'s `onProgress` lets a button
+say which file is going up. Pages show proof through short-lived
 signed URLs made with the viewer's own session. `toProofViews` hands a
 viewer the URL it signed for them earlier (per server instance, keyed by
 viewer and path) until it has 15 minutes of its hour left, so a re-render or
@@ -1165,7 +1168,9 @@ save as Settings. A device turned on before this shipped gets its memory the
 next time Settings is opened. Signing out deletes this device's subscription first
 (`app/(app)/settings/sign-out-button.tsx`), so a shared phone's next member
 never sees the last one's notifications. Its checkboxes (four, and a fifth,
-Tasks to review, for reviewers and above) save `notification_prefs`. Sending is
+Tasks to review, for reviewers and above) each save their own `notification_prefs`
+column as they're ticked (`saveNotificationPrefAction`), putting the box back if
+the save fails. Sending is
 server-only (`lib/push/send.ts`, `web-push`): it reads the recipients'
 subscriptions with the service-role client, sends up to six at a time, and
 deletes a subscription whose push service answers 404 or 410, and reports

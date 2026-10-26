@@ -11,7 +11,8 @@ export interface ContentsItem {
 
 // The full rules' sticky contents list at lg, marking the section being read (#398): the first
 // section that crosses the top third of the screen, below the top bar. Only a colour and a border
-// change, so it moves nothing under reduced motion either.
+// change, so it moves nothing under reduced motion either. It's capped to the screen and scrolls on
+// its own, so a laptop can reach the last sections (TSK-8); the padding keeps focus rings inside it.
 export function RulesContents({ items }: { items: ContentsItem[] }) {
   const [current, setCurrent] = useState<string | null>(items[0]?.id ?? null)
 
@@ -35,7 +36,7 @@ export function RulesContents({ items }: { items: ContentsItem[] }) {
   }, [items])
 
   return (
-    <nav aria-labelledby="how-contents" className="hidden lg:sticky lg:top-[calc(72px+var(--safe-top)+24px)] lg:flex lg:flex-col lg:gap-2">
+    <nav aria-labelledby="how-contents" className="hidden lg:sticky lg:top-[calc(72px+var(--safe-top)+24px)] lg:-m-1.5 lg:flex lg:max-h-[calc(100dvh-72px-var(--safe-top)-48px)] lg:flex-col lg:gap-2 lg:overflow-y-auto lg:overscroll-contain lg:p-1.5">
       <p id="how-contents" className={eyebrowClass}>
         Contents
       </p>

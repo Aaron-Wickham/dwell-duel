@@ -18,6 +18,12 @@ before v0.4.0 used other headings.)
 - **Amounts stay on one line.** "12,345 DC" no longer breaks with "DC" on the next line on bet cards, parlays, Home and a market's bets.
 - **Printing in dark mode.** A market or the rules printed from the dark theme now prints dark text on white instead of near-white text.
 - **Text in cards can be selected with a mouse.** On a computer you can now select and copy the words on a tappable card; on a phone a long press still doesn't select it.
+- **A link you typed goes with your task.** Tapping Submit for review with a link still in the field now sends it with the rest, instead of dropping it; a link that can't go asks you to add it or clear it first.
+- **Upload problems say what to do.** A photo or file that doesn't upload now says why in plain words (today's upload limit of 30 files or 60 MB, a file too big or of the wrong type, or a connection problem) instead of Storage's own message.
+- **Notification choices save as you tick them,** like the rest of Settings, and put the box back with a message if the save fails. The Save choices button is gone.
+- **Blocked notifications offer Check again,** so the installed app, which has no reload button, can see that you've allowed them.
+- **The full rules' contents list scrolls** on a laptop screen, so its last sections can be reached.
+- **Removing an attachment keeps your place.** Focus moves to the next Remove button (or Add photos) instead of the page behind the dialog.
 - **A way back from a missing page.** "Page not found" on a market, member or parlay now also offers Back to Markets (or Leaderboard, My bets), and the top-level error and not-found pages have a main landmark for screen readers.
 
 ### Polish
@@ -27,6 +33,11 @@ before v0.4.0 used other headings.)
 - **Error toasts stay 10 seconds,** long enough to read what to do next; other toasts still go after 4.
 - **Busy buttons can say what they're doing.** Submit and confirm buttons can show the leaf loader with words like "Placing…" while an action runs, instead of only greying out (later changes turn this on for each form).
 - **The profile and Create market forms** are plain cards like the rest of the app, without a border and shadow.
+- **The submit dialog shows the whole task,** with its full instructions, says proof can't be deleted once it's sent, and its button reads "Uploading 1 of 3…" then "Sending…" while it works. Try again rows show the task's description too.
+- **Tasks says when you're done.** With every task waiting or done, To do reads "Nothing to do right now." and when the next one opens; Not approved now comes before Waiting for review; and admins with no tasks get an Add a task button.
+- **Task rewards are bold ink, not gold,** since gold means waiting. At the attachment limits the proof picker says which limit it reached.
+- **Read the full rules has a chevron,** so it reads as a link onward.
+- **Clearer words in Settings and Tasks.** File problems say what to do next ("Pick a smaller file."), the notification hints say "approved or not approved" and "a member's submission is waiting for you to review", the permission hint says to tap Turn on notifications again, and Install the app says Home Screen.
 - **Small status chips** use the 13px chip size instead of 12px.
 - **Clearer error words.** A failed action now says "That didn’t go through. Try again, and if it keeps happening, tell an admin."; a page that fails to load says "This page couldn’t load", or that you're offline when you are; a failed sign-in says to use the account your invite was sent to; and "Nothing older here" lost its full stop.
 

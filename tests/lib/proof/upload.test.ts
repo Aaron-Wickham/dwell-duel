@@ -5,7 +5,7 @@ const remove = vi.fn()
 vi.mock('@/lib/supabase/client', () => ({ browserClient: () => ({ storage: { from: () => ({ upload, remove }) } }) }))
 vi.mock('@/lib/proof/downscale', () => ({ downscaleImage: async (f: File) => f }))
 
-import { uploadProof } from '@/lib/proof/upload'
+import { UPLOAD_LIMIT_ERROR, uploadErrorMessage, uploadProof } from '@/lib/proof/upload'
 import { PROOF_MAX_BYTES, PROOF_MAX_FILES, PROOF_MAX_ITEMS, PROOF_MAX_TOTAL_BYTES, PROOF_FILE_ACCEPT, PROOF_FILE_TYPES } from '@/lib/proof/types'
 
 beforeEach(() => {
@@ -53,5 +53,38 @@ describe('uploadProof', () => {
   it('uploads each file with a day-long cache lifetime (#452)', async () => {
     await uploadProof([draft(file('a.pdf'))], 'task/u/')
     expect(upload).toHaveBeenCalledWith(expect.stringMatching(/^task\/u\/.+\/a\.pdf$/), expect.anything(), expect.objectContaining({ cacheControl: '86400' }))
+  })
+})
+
+describe('upload failures (TSK-4)', () => {
+  it('says today’s limit for the insert policy’s refusal, never Storage’s words, and logs the raw error', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const refusal = { message: 'new row violates row-level security policy', statusCode: '403' }
+    upload.mockResolvedValueOnce({ error: null }).mockResolvedValueOnce({ error: refusal })
+    const attempt = uploadProof([draft(file('a.pdf')), draft(file('b.pdf'))], 'task/u/')
+    await expect(attempt).rejects.toThrow(UPLOAD_LIMIT_ERROR)
+    expect(UPLOAD_LIMIT_ERROR).toContain('30 files or 60 MB')
+    expect(log).toHaveBeenCalledWith('Proof upload failed', refusal)
+    expect(remove).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    [{ message: 'new row violates row-level security policy' }, UPLOAD_LIMIT_ERROR],
+    [{ message: 'The object exceeded the maximum allowed size', statusCode: '413' }, 'a.jpg is over 3 MB. Pick a smaller file.'],
+    [{ message: 'x', code: 'EntityTooLarge' }, 'a.jpg is over 3 MB. Pick a smaller file.'],
+    [{ message: 'mime type image/gif is not supported', statusCode: '415' }, 'a.jpg isn’t a photo, PDF or text file. Pick one of those.'],
+    [{ message: 'Failed to fetch' }, 'a.jpg didn’t upload. Check your connection and try again.'],
+  ])('maps %o to words a member can act on', (error, words) => {
+    expect(uploadErrorMessage('a.jpg', error)).toBe(words)
+  })
+
+  it('reports which file is going up, counting only files', async () => {
+    const onProgress = vi.fn()
+    const drafts = [draft(file('a.pdf')), { key: 'l', kind: 'link', url: 'https://example.com' } as const, draft(file('b.pdf'))]
+    await uploadProof(drafts, 'task/u/', { onProgress })
+    expect(onProgress.mock.calls).toEqual([
+      [1, 2],
+      [2, 2],
+    ])
   })
 })

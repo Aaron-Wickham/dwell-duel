@@ -53,7 +53,7 @@ test('Settings is reached from the avatar menu', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible()
 })
 
-// Saving the choices is covered by tests/components/notification-settings.test.tsx: they can only
+// Saving each choice as it's ticked is covered by tests/components/notification-settings.test.tsx: they can only
 // be changed where notifications can work, and this server has no VAPID keys (#398).
 test('the Notifications card shows your choices, disabled with a reason where push can’t work', async ({ page }) => {
   await page.goto('/settings')
@@ -69,7 +69,8 @@ test('the Notifications card shows your choices, disabled with a reason where pu
   await expect(newMarkets).not.toBeChecked()
   await expect(newMarkets).toBeDisabled()
   await expect(results).toBeChecked()
-  await expect(card.getByRole('button', { name: 'Save choices' })).toHaveAttribute('aria-disabled', 'true')
+  // Each choice saves as it's ticked (TSK-3), so there's no Save button.
+  await expect(card.getByRole('button', { name: /Save/ })).toHaveCount(0)
 })
 
 test('Settings says which cards apply to this device and which to your account (#398)', async ({ page }) => {

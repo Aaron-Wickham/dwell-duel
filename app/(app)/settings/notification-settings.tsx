@@ -1,19 +1,16 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Button } from '@/components/ui/button'
-import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
 import { keepCheckedOnReset } from '@/lib/forms/keep-on-reset'
 import {
   deletePushSubscriptionAction,
-  saveNotificationPrefsAction,
+  saveNotificationPrefAction,
   savePushSubscriptionAction,
-  type PrefsState,
 } from '@/lib/push/actions'
 import { keyBytes, sameKey, writePushMemory } from '@/lib/push/client'
 import type { NotificationKind, NotificationPrefs } from '@/lib/push/prefs'
-import { withSuccessToast } from '@/lib/toast/with-success-toast'
 import { labelClass } from '@/components/ui/page'
 
 type Support = 'supported' | 'unsupported' | 'ios-install'
@@ -22,7 +19,7 @@ type Device = 'checking' | 'off' | 'on' | 'denied'
 const KINDS: { kind: NotificationKind; label: string; hint: string }[] = [
   { kind: 'resolve_reminders', label: 'Markets to resolve', hint: 'When a market you made has closed and is waiting on you.' },
   { kind: 'results', label: 'Results', hint: 'When a market you bet on is resolved, changed or called off.' },
-  { kind: 'task_reviews', label: 'Task reviews', hint: 'When your task is approved or rejected.' },
+  { kind: 'task_reviews', label: 'Task reviews', hint: 'When your task is approved or not approved.' },
   { kind: 'new_markets', label: 'New markets', hint: 'When someone else creates a market.' },
 ]
 
@@ -30,11 +27,12 @@ const KINDS: { kind: NotificationKind; label: string; hint: string }[] = [
 const REVIEWER_KIND = {
   kind: 'review_alerts',
   label: 'Tasks to review',
-  hint: 'When a member submits a task waiting on you.',
+  hint: 'When a member’s submission is waiting for you to review.',
 } as const satisfies { kind: NotificationKind; label: string; hint: string }
 
 const TURN_ON_FAILED = 'Couldn’t turn on notifications. Check your connection and try again.'
 const TURN_OFF_FAILED = 'Couldn’t turn off notifications. Check your connection and try again.'
+const SAVE_FAILED = 'Couldn’t save that choice. Check your connection and try again.'
 
 // Support never changes without a reload; the external store only reads it without a hydration
 // mismatch, as InstallApp does.
@@ -89,25 +87,39 @@ function DeviceStatus({
     button.current?.focus()
   }, [device])
 
+  // Reads this device's state: on load, and again from Check again once notifications are allowed
+  // in the phone's settings, since the installed app has no reload button.
+  const readDevice = useCallback(async (): Promise<Device> => {
+    if (Notification.permission === 'denied') return 'denied'
+    const subscription = await currentSubscription().catch(() => null)
+    if (subscription && Notification.permission === 'granted' && endpoints.includes(subscription.endpoint)) {
+      // A device that was on before re-sync shipped has no memory yet; this gives it one.
+      writePushMemory(localStorage, userId, { endpoint: subscription.endpoint, syncedAt: Date.now() })
+      return 'on'
+    }
+    return 'off'
+  }, [endpoints, userId])
+
   useEffect(() => {
     let live = true
-    ;(async () => {
-      let next: Device = 'off'
-      if (Notification.permission === 'denied') next = 'denied'
-      else {
-        const subscription = await currentSubscription().catch(() => null)
-        if (subscription && Notification.permission === 'granted' && endpoints.includes(subscription.endpoint)) {
-          next = 'on'
-          // A device that was on before re-sync shipped has no memory yet; this gives it one.
-          writePushMemory(localStorage, userId, { endpoint: subscription.endpoint, syncedAt: Date.now() })
-        }
-      }
+    readDevice().then((next) => {
       if (live) setDevice(next)
-    })()
+    })
     return () => {
       live = false
     }
-  }, [endpoints, userId, setDevice])
+  }, [readDevice, setDevice])
+
+  async function checkAgain() {
+    if (busy) return
+    setBusy(true)
+    setError(null)
+    const next = await readDevice()
+    setBusy(false)
+    if (next === 'denied') return setError('Still blocked. Allow notifications for DwellDuel in your settings first.')
+    flipped.current = true
+    setDevice(next)
+  }
 
   async function turnOn() {
     if (busy) return
@@ -117,7 +129,7 @@ function DeviceStatus({
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
         setDevice(permission === 'denied' ? 'denied' : 'off')
-        if (permission === 'default') setError('Choose Allow when your browser asks, to get notifications.')
+        if (permission === 'default') setError('To get notifications, tap Turn on notifications again and choose Allow.')
         return
       }
       const registration = await readyRegistration()
@@ -173,10 +185,15 @@ function DeviceStatus({
     <div className="flex flex-col items-start gap-3">
       {device === 'checking' && <p className="text-ink2">Checking this device…</p>}
       {device === 'denied' && (
-        <Message tone="gold">
-          Notifications are blocked for DwellDuel on this device. Allow them for this site in your browser or phone settings,
-          then reload this page.
-        </Message>
+        <>
+          <Message tone="gold">
+            Notifications are blocked for DwellDuel on this device. Allow them for this site in your browser or phone
+            settings, then tap Check again.
+          </Message>
+          <Button ref={button} variant="secondary" size="sm" onClick={checkAgain} aria-disabled={busy || undefined}>
+            Check again
+          </Button>
+        </>
       )}
       {device === 'off' && (
         <>
@@ -210,19 +227,28 @@ function PrefsForm({
   unavailable: string | null
 }) {
   const [values, setValues] = useState(prefs)
-  const [state, formAction] = useActionState<PrefsState, FormData>(
-    withSuccessToast(saveNotificationPrefsAction, (s) => Boolean(s?.formError), 'Notification choices saved.'),
-    undefined,
-  )
+  const [error, setError] = useState<string | null>(null)
   const errorId = 'notification-prefs-error'
   const reasonId = 'notification-prefs-unavailable'
 
+  // Each tick saves itself, as Settings' other switches do; a failed save puts that box back and
+  // says so, so what's ticked is always what's saved.
+  async function change(kind: NotificationKind, on: boolean) {
+    setValues((v) => ({ ...v, [kind]: on }))
+    setError(null)
+    const result = await saveNotificationPrefAction(kind, on).catch(() => ({ error: SAVE_FAILED }))
+    if (result.error) {
+      setValues((v) => ({ ...v, [kind]: !on }))
+      setError(result.error)
+    }
+  }
+
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
       <fieldset
         className="flex flex-col gap-3"
         disabled={unavailable !== null}
-        aria-describedby={[unavailable ? reasonId : null, state?.formError ? errorId : null].filter(Boolean).join(' ') || undefined}
+        aria-describedby={[unavailable ? reasonId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined}
       >
         <legend className={`mb-1.5 ${labelClass}`}>Notify me about</legend>
         {unavailable && (
@@ -238,7 +264,7 @@ function PrefsForm({
                 name={kind}
                 checked={values[kind]}
                 ref={keepCheckedOnReset(values[kind])}
-                onChange={(e) => setValues((v) => ({ ...v, [kind]: e.target.checked }))}
+                onChange={(e) => change(kind, e.target.checked)}
                 aria-describedby={`notify-${kind}-hint`}
                 className="m-0 size-[22px] accent-primary"
               />
@@ -250,18 +276,13 @@ function PrefsForm({
           </div>
         ))}
       </fieldset>
-      {/* Not offered to a member, but a save mustn't switch it off for when they become a reviewer. */}
-      {!reviewer && <input type="hidden" name="review_alerts" value={values.review_alerts ? 'on' : ''} />}
       {!unavailable && <p className="text-sm text-ink2">These choices follow your account, on every device where notifications are on.</p>}
-      {state?.formError && (
+      {error && (
         <Message tone="error" id={errorId}>
-          {state.formError}
+          {error}
         </Message>
       )}
-      <FormSubmitButton variant="secondary" size="sm" className="self-start" disabled={unavailable !== null}>
-        Save choices
-      </FormSubmitButton>
-    </form>
+    </div>
   )
 }
 

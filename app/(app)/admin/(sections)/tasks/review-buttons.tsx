@@ -6,7 +6,7 @@ import { approveTaskCompletionAction, rejectTaskCompletionAction, type ActionSta
 import { Button } from '@/components/ui/button'
 import { Message } from '@/components/ui/message'
 import { PendingLabel, PendingStatus } from '@/components/ui/pending-label'
-import { GENERIC_ERROR } from '@/lib/errors/friendly-error'
+import { GENERIC_ERROR } from '@/lib/errors/messages'
 import { haptics } from '@/lib/haptics'
 import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import { toastError } from '@/lib/toast/error-toast'

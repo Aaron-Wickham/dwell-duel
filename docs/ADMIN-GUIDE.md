@@ -10,7 +10,8 @@ Everything here happens under **Admin**, which reviewers and above open
 from their avatar's menu or from Home's **Needs you**, and on market pages.
 Admin opens on whatever is waiting: submissions to review first, then (for
 admins) markets to resolve; with nothing waiting, a reviewer lands on Tasks
-and an admin on Invites. Its header links to this guide.
+and an admin on Invites. Its header links to this guide (**Admin guide on
+GitHub**, opening in a new tab).
 
 ## Roles at a glance
 
@@ -104,8 +105,8 @@ Members' DC waits on a market until it's resolved, so resolve within 48
 hours of it closing.
 
 **Where to find them.** **Admin → Markets** lists every market that has
-closed with no result, oldest first, with when it closed, the DC in it, who
-made it and a Resolve button. Home's **Needs you** shows what's waiting on
+closed with no result, oldest first, with when it closed, the DC staked on
+it, who made it and a Resolve button. Home's **Needs you** shows what's waiting on
 *you*: an admin sees how many markets wait, opening Admin → Markets; a
 creator sees each of their own as soon as it closes ("… closed. Resolve
 it."), and a reviewer also sees any market still unresolved 48 hours after
@@ -213,7 +214,8 @@ or yearly. Periods run on US Eastern time, so a daily task resets at
 midnight Eastern. A member can submit a task once per period.
 
 In the **Task catalog** each task has **Edit** (which can't change whether
-it repeats, or its cadence, once it's created), and **Deactivate**, which
+it repeats, or its cadence, once it's created; the form says so, and the
+fix is a new task), and **Deactivate**, which
 hides it from members without losing its history (**Reactivate** brings it
 back). The owner can also **Delete** a task nobody has submitted yet.
 
@@ -226,7 +228,11 @@ about five to a screen.
 Tap a row's proof line ("Note · 1 photo") to read their note and open any
 proof.
 
-- **Approve** pays the reward at once. It doesn't ask first.
+- **Approve** doesn't ask first, but waits five seconds before it pays: the
+  row shows **Approving…** with **Undo**, and a message at the bottom of the
+  screen offers Undo too. Tap Undo in that time and nothing is paid. After
+  it, the reward is paid. Leaving the page during those five seconds
+  approves it straight away rather than losing it.
 - **Reject…** opens a small window asking why, optionally (up to 500
   characters). The member sees "Not approved" and the reason, and can
   submit again.
@@ -244,8 +250,8 @@ at it when you review.
 ## Members (owner)
 
 **Admin → Members** lists everyone, A to Z, in two tabs: **Active** and
-**Removed**: on a computer a table of name and email, role (on Removed,
-"Removed"), balance, net worth (balance plus DC riding on open bets) and
+**Removed**: on a computer a table of name and email, role (left out on
+Removed, which the tab already says), balance, net worth (balance plus DC riding on open bets) and
 when they joined; on a phone, one row each. Tap **Balance**, **Net worth**
 or **Joined** above the list to sort by it (highest or newest first; tap
 again for the other way), and **Member** to go back to A to Z. Those sort
@@ -255,7 +261,7 @@ their role (or Removed), a link to their public profile, their email, when
 they joined and last signed in, their balance and their last five coin
 movements (**Open in Ledger** shows all of them), then the owner's cards
 below: Role (not shown for a removed member), Adjust balance, and Access
-last. Admins can look; the cards are the owner's.
+last. Admins can look; the cards are the owner's, and the page says so.
 
 ### Adjusting a balance
 
@@ -263,9 +269,10 @@ For corrections: a payout an override couldn't take back, a mistake, a
 prize the group agreed.
 
 1. On the member's Admin page, **Adjust balance**: an amount (positive
-   adds, negative takes away) and a **reason** (required, up to 200
+   adds; a minus takes away, like -50) and a **reason** (required, up to 200
    characters).
-2. Confirm. The adjustment and its reason appear in the ledger, and in the
+2. Confirm. The confirmation says the balance it ends at and the reason, so
+   check both (an extra zero shows there). The adjustment and its reason appear in the ledger, and in the
    member's own coin history.
 
 A balance can't go below 0. If the answer is lost (a dropped connection),
@@ -302,7 +309,7 @@ Removing a member doesn't erase their data. If someone asks for that, see
 **Admin → Ledger** lists every DC movement, newest first: starting grants,
 bets, payouts, refunds, parlays, task rewards, adjustments, and reversals
 when a result is overridden. Type a **Member**'s name (or part of it,
-removed members too; names only, not emails), pick a **Kind** above the
+removed members too; names only, not emails), pick a **Kind** (in the words members see, like "Market called off") above the
 list and tap **Filter** to see only those. A name that is exactly one
 member's whole name picks them, even beside longer names that contain it;
 otherwise a name that fits more than one member lists up to five of them
@@ -319,15 +326,17 @@ house-paid parlays and owner adjustments, plus seed payouts in a month
 when an older result was paid or overridden. It also checks that **everything ever added,
 less everything ever removed, equals what's in circulation**. If it says
 the check fails, or that the ledger holds a type it doesn't know, coins
-have moved outside the rules: tell Aaron, and don't adjust balances to
-paper over it.
+have moved outside the rules: the card links Operations' incident steps.
+Tell Aaron, and don't adjust balances to paper over it. What each source
+counts is folded under **How each source is counted**.
 
 ## Warnings in Admin
 
 - **"Closing alerts last ran …"**: the timer that tells creators and admins
   a market has closed may have stopped. Members aren't affected and the
-  daily backup still sends them, but tell Aaron; it's in OPERATIONS.md's
-  Incidents.
+  daily backup still sends them. Reviewers and admins are told to tell the
+  owner; the owner's warning names what to check in Supabase, and the rest
+  is in OPERATIONS.md's Incidents.
 - **"Couldn't check whether closing alerts are running"**: a passing
   read failure; reload. If it stays, tell Aaron.
 

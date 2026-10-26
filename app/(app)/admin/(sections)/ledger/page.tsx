@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
+import { Suspense, use } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { requireUser } from '@/lib/auth/require-user'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { TYPE_LABELS, isLedgerType, listAllTransactions } from '@/lib/ledger/list-transactions'
 import { NAME_MATCHES_SHOWN, findMembersByName, type MemberName } from '@/lib/members/find-by-name'
-import { readEconomySummary } from '@/lib/economy/summary'
+import { readEconomySummary, type EconomySummary } from '@/lib/economy/summary'
 import { newestHref, readPageParams, showMoreHref, type SearchParams } from '@/lib/pagination/cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
 import { cardClass } from '@/components/ui/card'
@@ -72,16 +73,25 @@ export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>)
     if (matches.length === 1) redirect(hrefWith(searchParams, { member: matches[0].id }))
   }
   const filtered = Boolean(member || kind || matches)
-  // The economy's figures are the owner's alone, like balances (0052), and cover everyone.
-  const [ledger, economy] = await Promise.all([
-    matches ? null : listAllTransactions(supabase, readPageParams(searchParams, 'before'), { memberId: member?.id, type: kind ?? undefined }),
-    atLeast(role, 'owner') && !filtered ? readEconomySummary(supabase) : null,
-  ])
+  // The economy's figures are the owner's alone, like balances (0052), and cover everyone. Read
+  // beside the ledger, but streamed after it.
+  const economy = atLeast(role, 'owner') && !filtered ? readEconomySummary(supabase) : null
+  // Its failure surfaces where it's used; this only stops a ledger failure leaving it unhandled.
+  economy?.catch(() => {})
+  const ledger = matches
+    ? null
+    : await listAllTransactions(supabase, readPageParams(searchParams, 'before'), { memberId: member?.id, type: kind ?? undefined })
   const kindLabel = kind ? TYPE_LABELS[kind] : null
 
   return (
     <ContentReveal>
-      {economy && <EconomyCard summary={economy} />}
+      {/* Streamed with no fallback: only the owner gets it, and the skeleton can't know who's
+          looking, so it draws only the ledger (ADM-3). */}
+      {economy && (
+        <Suspense fallback={null}>
+          <OwnerEconomy summary={economy} />
+        </Suspense>
+      )}
       {member && (
         <p className="text-sm text-ink2">
           Showing {member.name}’s coin movements.{' '}
@@ -118,6 +128,10 @@ export default async function AdminLedgerPage(props: PageProps<'/admin/ledger'>)
       </section>
     </ContentReveal>
   )
+}
+
+function OwnerEconomy({ summary }: { summary: Promise<EconomySummary> }) {
+  return <EconomyCard summary={use(summary)} />
 }
 
 // A typed name that picked nobody, or more than one member: each match links to their movements.

@@ -1,4 +1,6 @@
+import { ChevronDown } from 'lucide-react'
 import { SectionCard } from '@/components/ui/section-card'
+import { OPERATIONS_INCIDENTS_URL } from '@/lib/admin/docs-links'
 import { monthLabel, type EconomySummary } from '@/lib/economy/summary'
 import { cn } from '@/lib/utils'
 import { figureClass } from '@/components/ui/page'
@@ -69,24 +71,45 @@ export function EconomyCard({ summary }: { summary: EconomySummary }) {
         </tfoot>
       </table>
 
-      <p className="text-sm text-ink2">
-        Market maker is what the house paid winners, less every stake it took. Each winning share pays 1
-        DC, rounded down, so payout rounding is the fractions of a DC that rounding keeps (an override can
-        pay some back). Seed payouts appear only for older results, which counted the seed. Parlays remove
-        the stakes they lose, and overrides take back earlier payouts.
-      </p>
+      {/* Folded, since it's the same every month; the table reads without it (C-42). */}
+      <details className="group">
+        {/* flex drops the browser's disclosure marker, so the chevron says this opens. */}
+        <summary className="pressable flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold">
+          How each source is counted
+          <ChevronDown
+            aria-hidden="true"
+            className="size-5 shrink-0 text-ink2 transition-transform duration-(--duration-fast) group-open:rotate-180 motion-reduce:transition-none"
+          />
+        </summary>
+        <p className="pb-1 text-sm text-ink2">
+          Market maker is what the house paid winners, less every stake it took. Each winning share pays 1
+          DC, rounded down, so payout rounding is the fractions of a DC that rounding keeps (an override can
+          pay some back). Seed payouts appear only for older results, which counted the seed. Parlays remove
+          the stakes they lose, and overrides take back earlier payouts.
+        </p>
+      </details>
 
       {reconciles ? (
         <p className="text-sm text-ink2">
           Reconciles with the ledger: everything ever added, less everything removed, is what’s in circulation.
         </p>
       ) : (
-        <p className="text-sm font-extrabold text-loss">
-          {summary.discrepancy !== 0 && `Doesn’t reconcile with the ledger: off by ${formatDcAmount(summary.discrepancy)}.`}
-          {summary.discrepancy !== 0 && summary.unclassified > 0 && ' '}
-          {summary.unclassified > 0 &&
-            `${summary.unclassified} ledger ${summary.unclassified === 1 ? 'row has' : 'rows have'} a type the panel doesn’t count.`}
-        </p>
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-extrabold text-loss">
+            {summary.discrepancy !== 0 && `Doesn’t reconcile with the ledger: off by ${formatDcAmount(summary.discrepancy)}.`}
+            {summary.discrepancy !== 0 && summary.unclassified > 0 && ' '}
+            {summary.unclassified > 0 &&
+              `${summary.unclassified} ledger ${summary.unclassified === 1 ? 'row has' : 'rows have'} a type the panel doesn’t count.`}
+          </p>
+          {/* What it means and what to do, since Adjust balance is one tap away and the wrong fix (ADM-1). */}
+          <p className="text-sm text-ink2">
+            Coins have moved outside the rules. Don’t adjust balances to cover it: follow the{' '}
+            <a href={OPERATIONS_INCIDENTS_URL} target="_blank" rel="noreferrer" className="hit-area prose-link">
+              incident steps in the Operations guide
+            </a>
+            <span className="sr-only"> (opens GitHub in a new tab)</span>.
+          </p>
+        </div>
       )}
     </SectionCard>
   )

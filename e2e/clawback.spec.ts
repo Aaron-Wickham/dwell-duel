@@ -54,7 +54,7 @@ test('an override is blocked, naming the member who has spent their winnings', a
   const adjust = page.getByRole('region', { name: 'Adjust balance' })
   await adjust.getByLabel('Amount').fill(String(20 - afterWin.balance))
   await adjust.getByLabel('Reason').fill('Spent elsewhere')
-  await adjust.getByRole('button', { name: 'Adjust Bob' }).click()
+  await adjust.getByRole('button', { name: 'Adjust balance for Bob' }).click()
   await page.getByRole('alertdialog', { name: 'Adjust Bob’s balance?' }).getByRole('button', { name: 'Adjust balance' }).click()
   await expect(page.getByText('20 DC', { exact: true })).toBeVisible()
 

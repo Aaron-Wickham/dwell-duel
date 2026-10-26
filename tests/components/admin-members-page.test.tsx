@@ -132,12 +132,12 @@ describe('AdminMembersPage (#254)', () => {
   })
 
   // #265
-  it('explains the Removed tab and marks its members', async () => {
+  it('explains the Removed tab, without repeating Removed on each row (#387)', async () => {
     listMembersPage.mockResolvedValue({ rows: [{ ...BEN, removed: true }], next: null, windowed: false })
     await renderPage({ show: 'removed' })
     const section = screen.getByRole('region', { name: 'Removed members' })
     expect(section).toHaveTextContent('They can’t sign in and aren’t ranked. Their coins, bets and history stay.')
-    expect(within(section).getByText('Removed')).toBeInTheDocument()
+    expect(within(section).queryByText('Removed')).toBeNull()
   })
 
   it('says nobody has been removed when nobody has', async () => {

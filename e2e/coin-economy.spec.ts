@@ -44,8 +44,13 @@ test('create a proof-required task, submit it with proof, and approve it as admi
   await pending.getByText('Note · 1 link').click()
   await expect(pending.getByText('“Read it with my small group”')).toBeVisible()
   await expect(pending.getByRole('link', { name: 'example.com/genesis-notes' })).toBeVisible()
+  // A row's Approve is held five seconds for an Undo, and nothing is sent until then (D-7).
+  const approved = serverActionSettled(page)
   await pending.getByRole('button', { name: 'Approve' }).click()
-  await expect(page.getByText('No tasks to review.')).toBeVisible()
+  await expect(pending.getByRole('button', { name: /^Undo approving/ })).toBeVisible()
+  await expect(page.getByText('Approved Bob’s submission')).toBeVisible()
+  await approved
+  await expect(page.getByText('No submissions to review.')).toBeVisible()
 
   await bobPage.goto('/')
   await expect(balance).toHaveText(`${(startingBalance + 10).toLocaleString('en-US')} DC`)

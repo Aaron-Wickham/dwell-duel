@@ -15,7 +15,12 @@ import { cn } from '@/lib/utils'
 // list (#418). The roles are explicit because the phone layout changes the elements' display,
 // which can drop their implicit roles.
 export const membersTableClass = 'w-full border-collapse max-lg:block'
-const headClass = `${eyebrowClass} h-11 text-left align-middle max-lg:block max-lg:h-auto lg:pr-3 lg:last:pr-0`
+// Below lg the header row is the only way to sort, so its links read as normal 14px words there,
+// not 12px capitals.
+const headClass = cn(
+  eyebrowClass,
+  'h-11 text-left align-middle max-lg:block max-lg:h-auto max-lg:text-sm max-lg:font-bold max-lg:tracking-normal max-lg:normal-case lg:pr-3 lg:last:pr-0',
+)
 const cellClass = 'lg:py-3 lg:pr-3 lg:align-top lg:last:pr-0'
 const numberClass = 'lg:text-right lg:tabular-nums'
 // Separates the phone line's figures; the table's columns do that from lg.
@@ -116,12 +121,13 @@ export function MemberRow({ member, domId, netWorth }: { member: MemberSummary; 
           {member.email && <span className="text-sm text-ink2 wrap-anywhere">{member.email}</span>}
         </div>
       </td>
-      <td role="cell" className={`${cellClass} text-ink2`}>
-        {/* A removed member's role is already back to Member, so Removed takes its place (#265). */}
-        {member.removed ? 'Removed' : ROLE_LABELS[member.role]}
+      {/* A removed member's role is already back to Member (#265), and the Removed tab already says
+          they're removed (#387), so the cell is empty there and the phone line starts at the balance. */}
+      <td role="cell" className={cn(cellClass, 'text-ink2', member.removed && 'max-lg:hidden')}>
+        {member.removed ? null : ROLE_LABELS[member.role]}
       </td>
       <td role="cell" className={`${cellClass} ${numberClass} whitespace-nowrap`}>
-        {dot}
+        {!member.removed && dot}
         <span className="font-extrabold">{formatDcAmount(member.balance)}</span>
         <span className="text-ink2 lg:hidden"> balance</span>
       </td>

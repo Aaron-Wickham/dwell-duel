@@ -29,7 +29,7 @@ export function AddInviteForm() {
   return (
     <form action={formAction} className="flex flex-col gap-2">
       <label htmlFor="invite-email" className={labelClass}>
-        Email
+        Google email
       </label>
       <div className="flex gap-2">
         <Input
@@ -45,7 +45,9 @@ export function AddInviteForm() {
           aria-invalid={Boolean(state?.formError)}
           aria-describedby={state?.formError ? 'invite-email-hint add-invite-error' : 'invite-email-hint'}
         />
-        <FormSubmitButton className="shrink-0">Add invite</FormSubmitButton>
+        <FormSubmitButton className="shrink-0" pendingLabel="Adding…">
+          Add invite
+        </FormSubmitButton>
       </div>
       <p id="invite-email-hint" className="text-sm text-ink2">
         They can sign in with this Google account right away.

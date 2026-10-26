@@ -13,11 +13,13 @@ export interface LedgerEntry {
   createdAt: string
 }
 
+// Admins are members too, so the labels use members' words ("called off", D-8); ?kind= keeps the
+// database's type.
 export const TYPE_LABELS: Record<string, string> = {
   bet_placed: 'Bet placed',
   bet_won: 'Bet won',
   bet_refunded: 'Bet refunded',
-  bet_voided_refund: 'Market voided',
+  bet_voided_refund: 'Market called off',
   bet_cancelled: 'Bet cancelled',
   resolution_reversed: 'Resolution reversed',
   task_completed: 'Task reward',
@@ -94,7 +96,7 @@ export async function fetchLookups(supabase: DbClient, metas: EntryMeta[]): Prom
 }
 
 // Every other type's context is its label, plus ": {market title}" when the row has a
-// market_id (e.g. a voided-market refund) -- the specific movements below read differently
+// market_id (e.g. a called-off market's refund) -- the specific movements below read differently
 // enough (different wording, or no market involved at all) that they need their own copy.
 // Exported (and kept pure -- no supabase client) so its fallback branches get direct unit
 // coverage instead of only being reachable through a DB-backed listAllTransactions test.

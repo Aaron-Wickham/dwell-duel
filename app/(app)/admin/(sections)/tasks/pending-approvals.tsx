@@ -92,8 +92,8 @@ export function PendingApprovals({
   const selectedIds = selectable.filter((id) => selected.has(id))
   const selectedCount = selectedIds.length
   const selectedDc = pending.filter((c) => selected.has(c.id) && c.submitterId !== viewerId).reduce((sum, c) => sum + c.rewardAmount, 0)
-  // Approve selected pays every reward at once, so it asks first; a row's Approve stays direct
-  // (AGENTS.md). An empty selection goes straight to the server's "Select at least one" error
+  // Approve selected pays every reward at once, so it asks first; a row's Approve is held for an
+  // Undo instead (D-7, AGENTS.md). An empty selection goes straight to the server's "Select at least one" error
   // rather than a dialog about nothing.
   const confirm = useConfirmSubmit(() => selectedCount > 0)
   const [approveState, approveAction, isApprovePending] = useActionState<BulkActionState | undefined, FormData>(
@@ -171,7 +171,7 @@ export function PendingApprovals({
     return (
       <div className="flex flex-col gap-3">
         {results}
-        {emptyState ?? <EmptyState title="No tasks to review." />}
+        {emptyState ?? <EmptyState title="No submissions to review." />}
       </div>
     )
   }
@@ -333,6 +333,7 @@ export function PendingApprovals({
         title={`Approve ${selectedCount} ${selectedCount === 1 ? 'submission' : 'submissions'}?`}
         description={`Pays ${formatDcAmount(selectedDc)} in rewards straight away.`}
         confirmLabel="Approve and pay"
+        pendingLabel="Approving…"
       />
       <RejectDialog
         formId={BULK_REJECT_FORM_ID}

@@ -12,6 +12,9 @@ before v0.4.0 used other headings.)
 
 ## Unreleased
 
+### Features
+- **Undo a single approval.** A submission's own Approve in Admin › Tasks now waits five seconds, showing Approving… with Undo (and Undo in a message too), before it pays; leaving the page in that time approves it at once rather than losing it. Approve selected still asks first.
+
 ### Fixes
 - **Menus show where the keyboard is.** In the avatar's menu and a market's More actions, the item you reach with the arrow keys now takes a tint and a focus ring, instead of a grey tint you could barely see.
 - **Placeholders you can read.** The hint text inside search boxes and form fields (Search markets, the create-market form) is now the secondary text colour instead of a faded grey.
@@ -19,6 +22,10 @@ before v0.4.0 used other headings.)
 - **Printing in dark mode.** A market or the rules printed from the dark theme now prints dark text on white instead of near-white text.
 - **Text in cards can be selected with a mouse.** On a computer you can now select and copy the words on a tappable card; on a phone a long press still doesn't select it.
 - **A way back from a missing page.** "Page not found" on a market, member or parlay now also offers Back to Markets (or Leaderboard, My bets), and the top-level error and not-found pages have a main landmark for screen readers.
+- **The economy check says what to do.** When the owner's Economy card doesn't reconcile, it now says not to adjust balances to cover it and links the incident steps in the Operations guide.
+- **Closing-alerts warning for the right person.** Reviewers and admins are told members aren't affected and to tell the owner; only the owner gets the Supabase steps.
+- **Admin Tasks and Ledger no longer jump on load.** The skeleton draws only what everyone gets; Create task, the task catalog and the owner's Economy card stream in behind it.
+- **Adjusting a balance says the result.** A hint says to use a minus to take coins away, a reason is required before it's sent, and the confirmation names the balance it ends at and the reason.
 
 ### Polish
 - **Cards stand out from the page in light mode.** The light page background is a step darker, so cards on Home and My bets read as cards on a sunny phone screen; hover tints moved with it.
@@ -29,10 +36,16 @@ before v0.4.0 used other headings.)
 - **The profile and Create market forms** are plain cards like the rest of the app, without a border and shadow.
 - **Small status chips** use the 13px chip size instead of 12px.
 - **Clearer error words.** A failed action now says "That didn’t go through. Try again, and if it keeps happening, tell an admin."; a page that fails to load says "This page couldn’t load", or that you're offline when you are; a failed sign-in says to use the account your invite was sent to; and "Nothing older here" lost its full stop.
+- **Admin uses members' words.** The ledger's Kind filter and rows say "Market called off", not "Market voided"; a waiting market shows "140 DC staked" with "Just now" capitalised; an empty queue says "No submissions to review."; Invites reads "Newest first" and "Google email"; buttons say "Adjust balance" and "Save task".
+- **Quieter admin lists.** Resolve on a waiting market is a secondary button; roles take a neutral chip and Inactive the called-off grey, instead of gold and green; claimed invites drop "(claimed)" and removed members drop "Removed", which their tabs already say.
+- **Admin busy buttons say what they're doing:** Adjusting…, Saving…, Approving…, Adding…, Revoking…, Removing…, Inviting…, Creating… and Deleting….
+- **Invite again confirms in the main colour,** not red, since it gives access back (`ConfirmActionButton` takes a `confirmVariant`).
+- **Smaller admin gaps.** The Members sort links on a phone are normal 14px words; the task edit form says how often the task repeats and that a new task changes it; the Admin guide link says it opens GitHub; an admin on a member's page is told only the owner can change role, balance or access; "under Invites" is a link; the approve toast names whose submission; Description is marked optional; and the Economy card folds its explanation under "How each source is counted".
 
 ### Under the hood
 - **UX Engine is the design skill set.** `AGENTS.md` now routes every UI and UX change through the UX Engine plugin (installed per machine, not in this public repo), and `DESIGN.md` is a complete design contract extracted from `app/globals.css`, with each status chip's contrast computed.
 - **Link, busy-button and menu rules.** `AGENTS.md` now says a standalone link that leads onward takes a trailing chevron and a caption-weight link takes `prose-link`; slow actions' buttons take a `pendingLabel`; menu items share `menuItemClass`; and error toasts go through `toastError`.
+- **Approve's Undo window, and members' words in the ledger.** `AGENTS.md`'s confirm, "Never optimistic" and Words we use notes describe the held single Approve (`useUndoWindow`, `lib/ui/undo-window.ts`) and the ledger's member labels.
 
 ## v1.1.0 — 2026-10-23
 

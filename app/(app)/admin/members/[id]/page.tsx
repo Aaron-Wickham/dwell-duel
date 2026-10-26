@@ -79,6 +79,8 @@ export default async function AdminMemberPage(props: PageProps<'/admin/members/[
       >
         <CoinHistory memberId={member.id} />
       </Suspense>
+      {/* An admin sees who's who but not the owner's cards, so the page says why they're missing (ADM-11). */}
+      {!isOwner && <p className="text-sm text-ink2">Only the owner can change a member’s role, balance or access.</p>}
       {isOwner && member.role !== 'owner' && !member.removed && (
         <SectionCard title="Role" titleId="role">
           <RoleForm member={member} />

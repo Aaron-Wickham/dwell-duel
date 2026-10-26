@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { EconomyCard } from '@/components/admin/economy-card'
 import { toEconomySummary, type EconomySummaryRow } from '@/lib/economy/summary'
 import type { Role } from '@/lib/auth/roles'
@@ -108,6 +110,32 @@ describe('EconomyCard', () => {
     ).toBeInTheDocument()
     expect(screen.queryByText(/^Reconciles with the ledger/)).not.toBeInTheDocument()
   })
+
+  // ADM-1: what the failure means, and the incident steps rather than an adjustment.
+  it('says not to adjust balances when it doesn’t reconcile, and links the incident steps', () => {
+    render(<EconomyCard summary={toEconomySummary({ ...ROW, all_time_added: 353 })} />)
+    expect(screen.getByText(/Don’t adjust balances to cover it/)).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: /incident steps/ })
+    const href = link.getAttribute('href')!
+    expect(href).toBe('https://github.com/Aaron-Wickham/dwell-duel/blob/main/docs/OPERATIONS.md#incidents')
+    expect(link).toHaveAttribute('target', '_blank')
+    // The anchor names a heading in this repo, so renaming it fails here.
+    expect(readFileSync(path.resolve(import.meta.dirname, '../../docs/OPERATIONS.md'), 'utf8')).toMatch(/^## Incidents$/m)
+  })
+
+  it('leaves out the incident steps while it reconciles', () => {
+    render(<EconomyCard summary={toEconomySummary(ROW)} />)
+    expect(screen.queryByRole('link', { name: /incident steps/ })).toBeNull()
+  })
+
+  // C-42: the explanation is folded under a summary.
+  it('folds how each source is counted into a disclosure', () => {
+    render(<EconomyCard summary={toEconomySummary(ROW)} />)
+    const summary = screen.getByText('How each source is counted')
+    expect(summary.tagName).toBe('SUMMARY')
+    expect(summary.closest('details')).not.toHaveAttribute('open')
+    expect(summary.closest('details')).toHaveTextContent(/Market maker is what the house paid winners/)
+  })
 })
 
 describe('AdminLedgerPage’s economy card', () => {
@@ -118,7 +146,10 @@ describe('AdminLedgerPage’s economy card', () => {
 
   it('shows the owner the card above the ledger', async () => {
     role.current = 'owner'
-    render(await AdminLedgerPage({ searchParams: Promise.resolve({}) } as never))
+    const page = await AdminLedgerPage({ searchParams: Promise.resolve({}) } as never)
+    // Streamed behind its own Suspense (ADM-3), so it arrives after the ledger.
+    await act(async () => void render(page))
+    await screen.findByRole('region', { name: 'Economy' })
     const regions = screen.getAllByRole('region').map((r) => r.getAttribute('aria-labelledby'))
     expect(regions).toEqual(['economy-title', 'ledger-title'])
   })

@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
+import { Suspense, use } from 'react'
 import { redirect } from 'next/navigation'
 import { requireUser } from '@/lib/auth/require-user'
 import { LiveTables } from '@/components/live/live-tables'
 import { renderStamp } from '@/lib/live/render-stamp'
 import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { atLeast, getRole } from '@/lib/auth/roles'
-import { listTasks } from '@/lib/tasks/list-tasks'
+import { listTasks, type TaskSummary } from '@/lib/tasks/list-tasks'
 import { getReviewCounts } from '@/lib/admin/review-counts'
 import { newestHref, readPageParams, showMoreHref } from '@/lib/pagination/cursor'
 import { rowDomId } from '@/lib/pagination/row-id'
@@ -33,8 +34,11 @@ export default async function AdminTasksPage(props: PageProps<'/admin/tasks'>) {
   if (!atLeast(role, 'reviewer')) redirect('/')
   const canManage = atLeast(role, 'admin')
 
-  const [tasks, pendingPage, counts] = await Promise.all([
-    canManage ? listTasks(supabase) : Promise.resolve([]),
+  // Read beside the queue, but streamed after it.
+  const tasks = canManage ? listTasks(supabase) : null
+  // Its failure surfaces where it's used; this only stops a queue failure leaving it unhandled.
+  tasks?.catch(() => {})
+  const [pendingPage, counts] = await Promise.all([
     listPendingTaskCompletions(supabase, readPageParams(searchParams, 'after'), user.id),
     getReviewCounts(supabase, role),
   ])
@@ -70,26 +74,37 @@ export default async function AdminTasksPage(props: PageProps<'/admin/tasks'>) {
             />
           )}
         </SectionCard>
-        {/* Reviewers only review; creating and editing tasks is for admins. */}
-        {canManage && (
-          <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-7">
-            <SectionCard title="Create task" titleId="create-task" className="gap-4">
-              <CreateTaskForm />
-            </SectionCard>
-            <SectionCard title="Task catalog" titleId="task-catalog">
-              {tasks.length === 0 ? (
-                <EmptyState title="No tasks yet." />
-              ) : (
-                <ul className={dividedRowsClass}>
-                  {tasks.map((task) => (
-                    <TaskCatalogItem key={task.id} task={task} canDelete={role === 'owner'} />
-                  ))}
-                </ul>
-              )}
-            </SectionCard>
-          </div>
+        {/* Reviewers only review; creating and editing tasks is for admins. Streamed below the
+            queue with no fallback, since the skeleton can't know the role and a reviewer never
+            gets these cards (ADM-3). */}
+        {tasks && (
+          <Suspense fallback={null}>
+            <TaskManagement tasks={tasks} canDelete={role === 'owner'} />
+          </Suspense>
         )}
       </div>
     </ContentReveal>
+  )
+}
+
+function TaskManagement({ tasks: read, canDelete }: { tasks: Promise<TaskSummary[]>; canDelete: boolean }) {
+  const tasks = use(read)
+  return (
+    <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-7">
+      <SectionCard title="Create task" titleId="create-task" className="gap-4">
+        <CreateTaskForm />
+      </SectionCard>
+      <SectionCard title="Task catalog" titleId="task-catalog">
+        {tasks.length === 0 ? (
+          <EmptyState title="No tasks yet." />
+        ) : (
+          <ul className={dividedRowsClass}>
+            {tasks.map((task) => (
+              <TaskCatalogItem key={task.id} task={task} canDelete={canDelete} />
+            ))}
+          </ul>
+        )}
+      </SectionCard>
+    </div>
   )
 }

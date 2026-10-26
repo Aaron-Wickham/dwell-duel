@@ -27,7 +27,7 @@ describe('buildContext', () => {
   })
 
   it('falls back to the bare label when the default branch\'s market lookup is missing', () => {
-    expect(buildContext('bet_voided_refund', { market_id: 'missing-market' }, EMPTY_LOOKUPS)).toBe('Market voided')
+    expect(buildContext('bet_voided_refund', { market_id: 'missing-market' }, EMPTY_LOOKUPS)).toBe('Market called off')
   })
 
   it('gives the parlay lines their own fixed wording, ignoring meta', () => {

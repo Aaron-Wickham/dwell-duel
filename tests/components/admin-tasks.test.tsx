@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { TaskSummary } from '@/lib/tasks/list-tasks'
 
@@ -30,6 +30,7 @@ vi.mock('@/lib/tasks/update-task', () => ({ updateTaskAction }))
 
 import { PendingApprovals, type PendingRow } from '@/app/(app)/admin/(sections)/tasks/pending-approvals'
 import { ReviewButtons } from '@/app/(app)/admin/(sections)/tasks/review-buttons'
+import { UNDO_WINDOW_MS } from '@/lib/ui/undo-window'
 import { CreateTaskForm } from '@/app/(app)/admin/(sections)/tasks/create-task-form'
 import { TaskCatalogItem } from '@/app/(app)/admin/(sections)/tasks/task-catalog-item'
 
@@ -168,7 +169,8 @@ describe('PendingApprovals', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Approve selected' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Approve and pay' }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent('1 approved.')
+    // Each row also keeps a status region for its own approval, so the summary is found by its words.
+    expect((await screen.findByText('1 approved.')).closest('[role="status"]')).not.toBeNull()
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
     const [, formData] = bulkApproveTaskCompletionsAction.mock.calls[0]
     expect(formData.getAll('completionIds')).toEqual(['c2'])
@@ -209,7 +211,8 @@ describe('PendingApprovals', () => {
     await userEvent.type(within(dialog).getByLabelText('Why not? (optional)'), 'Needs a photo')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Reject' }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent('1 rejected.')
+    // Each row also keeps a status region for its own approval, so the summary is found by its words.
+    expect((await screen.findByText('1 rejected.')).closest('[role="status"]')).not.toBeNull()
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     const formData = bulkRejectTaskCompletionsAction.mock.calls[0][1] as FormData
     expect(formData.getAll('completionIds')).toEqual(['c1'])
@@ -241,7 +244,7 @@ describe('PendingApprovals', () => {
 
   it('shows the empty state, and no bulk controls, when nothing is pending', () => {
     render(<PendingApprovals viewerId="viewer-1" pending={[]} />)
-    expect(screen.getByText('No tasks to review.')).toBeInTheDocument()
+    expect(screen.getByText('No submissions to review.')).toBeInTheDocument()
     expect(screen.queryByRole('checkbox')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Approve selected' })).toBeNull()
   })
@@ -295,18 +298,75 @@ describe('PendingApprovals', () => {
   })
 })
 
-describe('ReviewButtons', () => {
+// D-7: a row's Approve is held five seconds for an Undo, and nothing is sent before it ends.
+describe('ReviewButtons approve window', () => {
+  const APPROVE = 'Approve Alice’s Read Genesis 1-3'
+  const UNDO = 'Undo approving Alice’s Read Genesis 1-3'
+
+  beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true }))
+  afterEach(() => vi.useRealTimers())
+
+  function setup() {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const view = render(<ReviewButtons completionId="c1" submitterName="Alice" taskTitle="Read Genesis 1-3" />)
+    return { user, ...view }
+  }
+
+  it('holds the approval with Undo focused, then sends it once the window ends', async () => {
+    approveTaskCompletionAction.mockResolvedValue(undefined)
+    const { user } = setup()
+    await user.click(screen.getByRole('button', { name: APPROVE }))
+
+    expect(screen.getByRole('button', { name: UNDO })).toHaveFocus()
+    expect(screen.queryByRole('button', { name: /^Reject/ })).toBeNull()
+    expect(screen.getByText(/Approving Alice’s Read Genesis 1-3 in 5 seconds/)).toBeInTheDocument()
+    await act(() => vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS - 100))
+    expect(approveTaskCompletionAction).not.toHaveBeenCalled()
+
+    await act(() => vi.advanceTimersByTimeAsync(100))
+    await waitFor(() => expect(approveTaskCompletionAction).toHaveBeenCalledTimes(1))
+    expect(approveTaskCompletionAction.mock.calls[0][0]).toBe('c1')
+    await act(() => vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS))
+    expect(approveTaskCompletionAction).toHaveBeenCalledTimes(1)
+  })
+
+  it('sends nothing after Undo, and puts focus back on Approve', async () => {
+    const { user } = setup()
+    await user.click(screen.getByRole('button', { name: APPROVE }))
+    await user.click(screen.getByRole('button', { name: UNDO }))
+
+    expect(screen.getByRole('button', { name: APPROVE })).toHaveFocus()
+    await act(() => vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS * 2))
+    expect(approveTaskCompletionAction).not.toHaveBeenCalled()
+  })
+
+  it('sends the approval at once if the row goes away during the window', async () => {
+    approveTaskCompletionAction.mockResolvedValue(undefined)
+    const { user, unmount } = setup()
+    await user.click(screen.getByRole('button', { name: APPROVE }))
+    unmount()
+
+    expect(approveTaskCompletionAction).toHaveBeenCalledTimes(1)
+    await act(() => vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS))
+    expect(approveTaskCompletionAction).toHaveBeenCalledTimes(1)
+  })
+
   it('ties an approve error to the Approve button, and asks for no reason on the row', async () => {
     approveTaskCompletionAction.mockResolvedValue({ formError: 'Could not approve that submission.' })
-    render(<ReviewButtons completionId="c1" submitterName="Alice" taskTitle="Read Genesis 1-3" />)
+    const { user } = setup()
     expect(screen.queryByRole('textbox')).toBeNull()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Approve Alice’s Read Genesis 1-3' }))
+    await user.click(screen.getByRole('button', { name: APPROVE }))
+    await act(() => vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS))
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('Could not approve that submission.')
-    expect(screen.getByRole('button', { name: 'Approve Alice’s Read Genesis 1-3' })).toHaveAccessibleDescription('Could not approve that submission.')
+    expect(screen.getByRole('button', { name: APPROVE })).toHaveAccessibleDescription('Could not approve that submission.')
+    expect(screen.getByRole('button', { name: APPROVE })).toHaveFocus()
   })
+})
+
+describe('ReviewButtons', () => {
 
   // COPY-13: a row's Reject asks for its optional reason in a dialog.
   it('rejects one submission through the reason dialog, sending the reason', async () => {
@@ -425,13 +485,26 @@ describe('TaskCatalogItem', () => {
     expect(edit).toHaveFocus()
   })
 
+  // ADM-10: how often a task repeats can't be edited, so the form says so.
+  it('says the edit form can’t change how often a task repeats', async () => {
+    renderItem({ ...GENESIS, isRepeatable: true, period: 'weekly' })
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Read Genesis 1-3' }))
+    expect(screen.getByText('Repeats weekly. Create a new task to change how often.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Description (optional)')).toBeInTheDocument()
+  })
+
+  it('shows an inactive task with a neutral Inactive chip', () => {
+    renderItem({ ...GENESIS, isActive: false })
+    expect(screen.getByText('Inactive').className).not.toMatch(/gold/)
+  })
+
   it('saves an edit, keeping the task active, and closes the form', async () => {
     updateTaskAction.mockResolvedValue(undefined)
     renderItem(GENESIS)
     await userEvent.click(screen.getByRole('button', { name: 'Edit Read Genesis 1-3' }))
     await userEvent.clear(screen.getByLabelText('Title'))
     await userEvent.type(screen.getByLabelText('Title'), 'Read Genesis 1-4')
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save task' }))
 
     await waitFor(() => expect(screen.queryByLabelText('Title')).toBeNull())
     expect(screen.getByRole('button', { name: 'Edit Read Genesis 1-3' })).toHaveFocus()
@@ -445,7 +518,7 @@ describe('TaskCatalogItem', () => {
     updateTaskAction.mockResolvedValue({ formError: 'Enter a title.', field: 'title' })
     renderItem(GENESIS)
     await userEvent.click(screen.getByRole('button', { name: 'Edit Read Genesis 1-3' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save task' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Enter a title.')
     expect(screen.getByLabelText('Title')).toHaveAttribute('aria-invalid', 'true')

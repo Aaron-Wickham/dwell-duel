@@ -99,5 +99,16 @@ describe('ReinviteMemberButton', () => {
     await userEvent.click(button)
     expect(screen.queryByRole('alertdialog')).toBeNull()
     expect(reinviteMemberAction).not.toHaveBeenCalled()
+    // ADM-11: Invites is a link to where that's done.
+    expect(screen.getByRole('link', { name: 'Invites' })).toHaveAttribute('href', '/admin/invites')
+  })
+
+  // ADM-5: inviting again restores access, so it confirms with the primary button, not a red one.
+  it('confirms with the primary button', async () => {
+    render(<ReinviteMemberButton member={REMOVED} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Invite Ben again' }))
+    const confirm = await screen.findByRole('button', { name: 'Invite again' })
+    expect(confirm.className).toMatch(/bg-primary/)
+    expect(confirm.className).not.toMatch(/text-loss/)
   })
 })

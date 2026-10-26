@@ -19,6 +19,10 @@ before v0.4.0 used other headings.)
 - **Printing in dark mode.** A market or the rules printed from the dark theme now prints dark text on white instead of near-white text.
 - **Text in cards can be selected with a mouse.** On a computer you can now select and copy the words on a tappable card; on a phone a long press still doesn't select it.
 - **A way back from a missing page.** "Page not found" on a market, member or parlay now also offers Back to Markets (or Leaderboard, My bets), and the top-level error and not-found pages have a main landmark for screen readers.
+- **One failed read no longer blanks Home.** If the weekly recap, Getting started, Needs you, Activity or your open-bet total can't load, Home shows everything else without it.
+- **Needs you lands with the page.** It no longer pops in after Home has drawn, so your bet cards don't jump down under your thumb on a phone.
+- **Getting started holds still.** Its "2 of 5 done" and the notifications step wait for the device check instead of flipping to "3 of 5" a moment after the page opens.
+- **Back swipe follows your finger with reduced motion on.** The page now moves with the swipe; only the slide after you let go is skipped.
 
 ### Polish
 - **Cards stand out from the page in light mode.** The light page background is a step darker, so cards on Home and My bets read as cards on a sunny phone screen; hover tints moved with it.
@@ -27,12 +31,22 @@ before v0.4.0 used other headings.)
 - **Error toasts stay 10 seconds,** long enough to read what to do next; other toasts still go after 4.
 - **Busy buttons can say what they're doing.** Submit and confirm buttons can show the leaf loader with words like "Placing…" while an action runs, instead of only greying out (later changes turn this on for each form).
 - **The profile and Create market forms** are plain cards like the rest of the app, without a border and shadow.
+- **The current tab is a lime tile.** On a phone, the tab you're on is now a lime tile filling its space, with a darker, bolder label and icon, in light and dark.
+- **Labels on tablets and small laptops.** From 768 to 1279px wide the top bar shows each section's short name (Home, Markets, Bets, Tasks, Leaders) instead of five bare icons.
+- **A calmer balance in the top bar.** Your balance is dark text on grey instead of gold, since gold means something waits on you, and it's left out on Home, where the Balance card already shows it.
+- **Bet cards say when they close.** Home's bets and the markets closing soonest read "Closes Oct 28", or "Closes 6 PM" within a day, in your own time zone.
+- **Whole rows open.** With no open bets, each of the markets closing soonest opens from anywhere on its row, not only its title.
+- **Undo for Getting started.** Dismissing it shows "Getting started hidden" with Undo, so a stray tap doesn't lose it.
+- **Needs you tiles answer the mouse** with a deeper wash of their colour, and the weekly recap's market names are underlined links.
+- **Turn on notifications lost its bell,** and its "Not now" now says what it does: "Don't show again".
+- **Plainer Home words.** "275 DC in 3 open bets" instead of "riding"; "Yes won at 8%"; "Time to resolve: …" for your closed markets; "Add a pick to your slip"; one line for what notifications are for; "approved tasks" in Activity's empty state; and "Add a pick from any market to place your first bet." when nothing is open.
 - **Small status chips** use the 13px chip size instead of 12px.
 - **Clearer error words.** A failed action now says "That didn’t go through. Try again, and if it keeps happening, tell an admin."; a page that fails to load says "This page couldn’t load", or that you're offline when you are; a failed sign-in says to use the account your invite was sent to; and "Nothing older here" lost its full stop.
 
 ### Under the hood
 - **UX Engine is the design skill set.** `AGENTS.md` now routes every UI and UX change through the UX Engine plugin (installed per machine, not in this public repo), and `DESIGN.md` is a complete design contract extracted from `app/globals.css`, with each status chip's contrast computed.
 - **Link, busy-button and menu rules.** `AGENTS.md` now says a standalone link that leads onward takes a trailing chevron and a caption-weight link takes `prose-link`; slow actions' buttons take a `pendingLabel`; menu items share `menuItemClass`; and error toasts go through `toastError`.
+- **Lime current tab, Home's reads and skeleton rules.** `AGENTS.md` now allows lime as the phone's current-tab fill in both themes (the old `--tab-active` is `--menu-highlight`, the menu highlight it still drew), says Needs you renders with the first paint from the layout's `readReviewCounts`, and that Home's optional blocks read through `optionalRead`.
 
 ## v1.1.0 — 2026-10-23
 

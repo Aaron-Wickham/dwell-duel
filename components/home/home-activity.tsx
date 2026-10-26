@@ -11,7 +11,7 @@ export function HomeActivity({ events, now }: { events: FeedEvent[]; now: number
       {knownEvents(events).length === 0 ? (
         <div className="pt-2">
           <EmptyState title="Nothing yet.">
-            Bets, new markets, results and finished tasks show up here as they happen.
+            Bets, new markets, results and approved tasks show up here as they happen.
           </EmptyState>
         </div>
       ) : (

@@ -56,7 +56,7 @@ describe('WeeklyRecapCard', () => {
     expect(within(region).getByText('+20 DC')).toBeInTheDocument()
     expect(region).toHaveTextContent('Bob turned 10 DC into 26 DC on Will it rain?')
     expect(within(region).getByRole('link', { name: 'Will it rain?' })).toHaveAttribute('href', '/markets/m1')
-    expect(region).toHaveTextContent('Sermon past noon?: Yes won with a 31% chance')
+    expect(region).toHaveTextContent('Sermon past noon?: Yes won at 31%')
     expect(within(region).getByRole('link', { name: 'Sermon past noon?' })).toHaveAttribute('href', '/markets/m2')
     expect(region).toHaveTextContent('Carol, 3 tasks approved')
 

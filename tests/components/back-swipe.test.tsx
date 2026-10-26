@@ -209,16 +209,31 @@ describe('BackSwipe', () => {
     expect(push).not.toHaveBeenCalled()
   })
 
-  it('under reduced motion, never moves the page but still completes', () => {
+  // HOME-11: following the finger is direct manipulation, so it stays; only the settle is skipped.
+  it('under reduced motion, still follows the finger, then completes at once with no settle', () => {
     reduceMotion = true
     const { heading, content, backdrop } = setup()
     touch(heading, 'touchstart', 5, 400, 1000)
     touch(heading, 'touchmove', 200, 400, 1100)
-    expect(content.style.transform).toBe('')
-    expect(backdrop).not.toHaveAttribute('data-swiping')
+    expect(content.style.transform).toBe('translate3d(195px, 0, 0)')
+    expect(backdrop).toHaveAttribute('data-swiping')
     touch(heading, 'touchend', 200, 400, 1300)
 
     expect(push).toHaveBeenCalledWith('/markets', { transitionTypes: ['nav-back'] })
+    expect(content.style.transition).toBe('none')
+    expect(content.style.transform).toBe('translate3d(375px, 0, 0)')
+  })
+
+  it('under reduced motion, puts a cancelled drag back at once', () => {
+    reduceMotion = true
+    const { heading, content } = setup()
+    touch(heading, 'touchstart', 5, 400, 1000)
+    touch(heading, 'touchmove', 40, 400, 1100)
+    expect(content.style.transform).toBe('translate3d(35px, 0, 0)')
+    touch(heading, 'touchend', 40, 400, 1600)
+
+    expect(push).not.toHaveBeenCalled()
+    expect(content.style.transform).toBe('')
   })
 
   it('stops listening once unmounted', () => {

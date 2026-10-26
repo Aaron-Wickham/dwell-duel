@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getReviewCounts, reviewSubscriptions } from '@/lib/admin/review-counts'
+import { getReviewCounts, readReviewCounts, reviewSubscriptions } from '@/lib/admin/review-counts'
 import type { DbClient } from '@/lib/supabase/database'
 
 const clientReturning = (data: unknown, error: unknown = null) => {
@@ -24,6 +24,23 @@ describe('getReviewCounts', () => {
     const failure = new Error('db down')
     const { client } = clientReturning(null, failure)
     await expect(getReviewCounts(client, 'admin')).rejects.toBe(failure)
+  })
+})
+
+// D-11: the layout's badge and Home's Needs you share this read; either renders without it.
+describe('readReviewCounts', () => {
+  it('reads the counts', async () => {
+    const { client } = clientReturning([{ tasks: 3, markets: 0 }])
+    expect(await readReviewCounts(client, 'reviewer')).toEqual({ tasks: 3, markets: 0 })
+  })
+
+  it('logs a failed read and reports nothing waiting', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const failure = new Error('db down')
+    const { client } = clientReturning(null, failure)
+    expect(await readReviewCounts(client, 'admin')).toEqual({ tasks: 0, markets: 0 })
+    expect(log).toHaveBeenCalledWith('Reading the review counts failed', failure)
+    log.mockRestore()
   })
 })
 

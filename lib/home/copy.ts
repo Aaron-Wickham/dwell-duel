@@ -7,16 +7,20 @@ export function firstName(displayName: string | null | undefined): string {
   return displayName?.trim().split(/\s+/)[0] || FALLBACK_NAME
 }
 
-// What's riding, after the rank: "275 DC riding", or "No open bets" rather than a 0.
+// What's at stake, after the rank: "275 DC in open bets", or "No open bets" rather than a 0.
 export function ridingText(dc: number, wagers: number): string {
-  return wagers === 0 ? 'No open bets' : `${formatDcAmount(dc)} riding`
+  return wagers === 0 ? 'No open bets' : `${formatDcAmount(dc)} in open bets`
 }
 
-// The desktop Balance card's line: "218th of 502 · 275 DC riding on 30 bets". Rank is null
-// until the member has a settled bet, and for a removed member.
-export function standingLine({ rank, memberCount, dc, wagers }: { rank: number | null; memberCount: number; dc: number; wagers: number }): string {
-  const riding = wagers === 0 ? 'No open bets' : `${formatDcAmount(dc)} riding on ${wagers === 1 ? '1 bet' : `${wagers} bets`}`
-  return rank ? `${rankText(rank, memberCount)} · ${riding}` : riding
+// The Balance card's line: "218th of 502 · 275 DC in 30 open bets" (C-8: "riding" is betting
+// slang). Rank is null until the member has a settled bet, and for a removed member; what's at stake
+// is null when it couldn't be read, so the line keeps the rank alone, or is empty.
+export function standingLine({ rank, memberCount, riding }: { rank: number | null; memberCount: number; riding: { dc: number; wagers: number } | null }): string {
+  const parts = rank ? [rankText(rank, memberCount)] : []
+  if (riding) {
+    parts.push(riding.wagers === 0 ? 'No open bets' : `${formatDcAmount(riding.dc)} in ${riding.wagers === 1 ? '1 open bet' : `${riding.wagers} open bets`}`)
+  }
+  return parts.join(' · ')
 }
 
 export function countNoun(n: number, one: string, many: string): string {

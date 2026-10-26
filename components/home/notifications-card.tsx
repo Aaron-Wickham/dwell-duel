@@ -2,11 +2,10 @@
 
 import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
-import { Bell } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cardClass, cardPaddingClass } from '@/components/ui/card'
 import { h2Class } from '@/components/ui/page'
-import { NOTIFICATIONS_HREF } from '@/components/home/onboarding-card'
+import { NOTIFICATIONS_HREF, NOTIFICATIONS_PROMISE } from '@/components/home/onboarding-card'
 import { useDevicePush } from '@/lib/push/use-device-push'
 import { focusPageHeading } from '@/lib/ui/focus-page-heading'
 import { cn } from '@/lib/utils'
@@ -49,19 +48,11 @@ export function NotificationsCard({ onboardingShown }: { onboardingShown: boolea
 
   return (
     <section aria-labelledby="notifications-card-title" className={cn(cardClass, `flex flex-col gap-3 ${cardPaddingClass}`)}>
-      <div className="flex items-start gap-3">
-        <span
-          aria-hidden="true"
-          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-acc-soft text-acc-text"
-        >
-          <Bell className="size-6" />
-        </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h2 id="notifications-card-title" className={h2Class}>
-            Turn on notifications
-          </h2>
-          <p className="text-ink2">Know when a market you made closes, and when your bets pay.</p>
-        </div>
+      <div className="flex flex-col gap-1">
+        <h2 id="notifications-card-title" className={h2Class}>
+          Turn on notifications
+        </h2>
+        <p className="text-ink2">{NOTIFICATIONS_PROMISE}</p>
       </div>
       <div className="flex gap-2">
         <Link
@@ -71,8 +62,9 @@ export function NotificationsCard({ onboardingShown }: { onboardingShown: boolea
         >
           Turn on
         </Link>
+        {/* It never comes back on this device, so the button says so (C-12). */}
         <Button variant="quiet" size="sm" onClick={dismiss}>
-          Not now
+          Don’t show again
         </Button>
       </div>
     </section>

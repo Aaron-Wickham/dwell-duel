@@ -48,12 +48,14 @@
   --lime: #72DB2B;
   --on-lime: #03272D;
   --link: #03272D;
-  /* The desktop nav's active pill, the phone tab bar's, and a segmented control's chosen segment. */
+  /* The desktop nav's active pill and a segmented control's chosen segment. The phone tab bar's
+     current tab is a --lime tile in both themes (D-1), its label and icon --on-lime and bolder, since
+     the tile is only 1.73:1 on the light surface. */
   --nav-active: #03272D;
   --on-nav-active: #FFFFFF;
-  /* A soft tint behind the active tab's icon, not a lime pill (#444). */
-  --tab-active: #DDF0CF;
-  --on-tab-active: #03272D;
+  /* A menu item's keyboard highlight (menuItemClass). */
+  --menu-highlight: #DDF0CF;
+  --on-menu-highlight: #03272D;
   --segment-active: #FCFDFB;
   --acc-soft: #E3F4D5;
   --acc-text: #2A6E0B;
@@ -163,12 +165,12 @@ html {
   --primary: #72DB2B;
   --on-primary: #03272D;
   --link: #EAF4EE;
-  /* Lime in dark marks only the primary action and first place, so active navigation is a
-     neutral raised surface. */
+  /* Lime in dark marks only the primary action, first place and the phone's current tab, so the
+     desktop nav's active pill is neutral. */
   --nav-active: #EAF4EE;
   --on-nav-active: #021B1F;
-  --tab-active: #17434A;
-  --on-tab-active: #EAF4EE;
+  --menu-highlight: #17434A;
+  --on-menu-highlight: #EAF4EE;
   --segment-active: #17434A;
   --acc-soft: #143A1E;
   --acc-text: #8BE651;
@@ -230,12 +232,12 @@ html {
     --primary: #72DB2B;
     --on-primary: #03272D;
     --link: #EAF4EE;
-    /* Lime in dark marks only the primary action and first place, so active navigation is a
-       neutral raised surface. */
+    /* Lime in dark marks only the primary action, first place and the phone's current tab, so the
+       desktop nav's active pill is neutral. */
     --nav-active: #EAF4EE;
     --on-nav-active: #021B1F;
-    --tab-active: #17434A;
-    --on-tab-active: #EAF4EE;
+    --menu-highlight: #17434A;
+    --on-menu-highlight: #EAF4EE;
     --segment-active: #17434A;
     --acc-soft: #143A1E;
     --acc-text: #8BE651;
@@ -301,8 +303,8 @@ html {
   --color-link: var(--link);
   --color-nav-active: var(--nav-active);
   --color-on-nav-active: var(--on-nav-active);
-  --color-tab-active: var(--tab-active);
-  --color-on-tab-active: var(--on-tab-active);
+  --color-menu-highlight: var(--menu-highlight);
+  --color-on-menu-highlight: var(--on-menu-highlight);
   --color-segment-active: var(--segment-active);
   --color-acc-soft: var(--acc-soft);
   --color-acc-text: var(--acc-text);
@@ -1094,7 +1096,7 @@ html {
     --ink2: #46605E;
     --line: #D5DFD8;
     --line-s: #6F8581;
-    --on-tab-active: #03272D;
+    --on-menu-highlight: #03272D;
     --wm-a: #03272D;
     --link: #03272D;
     --acc-soft: #E3F4D5;

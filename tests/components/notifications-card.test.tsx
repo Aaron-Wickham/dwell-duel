@@ -49,8 +49,10 @@ describe('NotificationsCard (#260)', () => {
     setStandalone(true)
     render(<NotificationsCard onboardingShown={false} />)
     expect(screen.getByRole('region', { name: 'Turn on notifications' })).toHaveTextContent(
-      'Know when a market you made closes, and when your bets pay.',
+      'Hear when a market you created closes and when your bets pay.',
     )
+    // HOME-9: no decorative bell.
+    expect(screen.getByRole('region', { name: 'Turn on notifications' }).querySelector('svg')).toBeNull()
     expect(screen.getByRole('link', { name: 'Turn on' })).toHaveAttribute('href', '/settings#settings-notifications')
   })
 
@@ -67,7 +69,7 @@ describe('NotificationsCard (#260)', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('remembers Not now, and moves focus to the page heading', async () => {
+  it('remembers Don’t show again, and moves focus to the page heading', async () => {
     setStandalone(true)
     const { unmount } = render(
       <>
@@ -75,7 +77,7 @@ describe('NotificationsCard (#260)', () => {
         <NotificationsCard onboardingShown={false} />
       </>,
     )
-    await userEvent.click(screen.getByRole('button', { name: 'Not now' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Don’t show again' }))
     expect(screen.queryByRole('region', { name: 'Turn on notifications' })).toBeNull()
     expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
     expect(localStorage.getItem(NOTIFICATIONS_CARD_DISMISSED_KEY)).toBe('1')

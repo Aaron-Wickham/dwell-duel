@@ -1,11 +1,18 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { DevicePush } from '@/lib/push/use-device-push'
 
 const dismissOnboardingAction = vi.fn(async () => {})
-vi.mock('@/lib/home/dismiss-onboarding', () => ({ dismissOnboardingAction: () => dismissOnboardingAction() }))
+const restoreOnboardingAction = vi.fn(async () => {})
+vi.mock('@/lib/home/dismiss-onboarding', () => ({
+  dismissOnboardingAction: () => dismissOnboardingAction(),
+  restoreOnboardingAction: () => restoreOnboardingAction(),
+}))
+type ToastOptions = { action: { label: string; onClick: () => void } }
+const { toastCalls } = vi.hoisted(() => ({ toastCalls: [] as [string, ToastOptions][] }))
+vi.mock('sonner', () => ({ toast: (message: string, options: ToastOptions) => toastCalls.push([message, options]) }))
 let push: DevicePush = 'off'
 vi.mock('@/lib/push/use-device-push', () => ({ useDevicePush: () => push }))
 
@@ -20,6 +27,8 @@ function step(name: string) {
 
 beforeEach(() => {
   dismissOnboardingAction.mockClear()
+  restoreOnboardingAction.mockClear()
+  toastCalls.length = 0
   push = 'off'
 })
 
@@ -112,5 +121,47 @@ describe('OnboardingCard', () => {
     expect(dismissOnboardingAction).toHaveBeenCalledOnce()
     expect(screen.queryByRole('region', { name: 'Getting started' })).toBeNull()
     expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
+  })
+
+  // HOME-7: a stray tap mustn't lose the checklist for good.
+  it('offers Undo in a toast, which brings the card back with focus and clears the cookie', async () => {
+    render(
+      <>
+        <h1>Welcome</h1>
+        <OnboardingCard steps={NONE} />
+      </>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Dismiss getting started' }))
+    expect(toastCalls).toHaveLength(1)
+    const [message, options] = toastCalls[0]
+    expect(message).toBe('Getting started hidden')
+    expect(options.action.label).toBe('Undo')
+
+    act(() => options.action.onClick())
+    expect(restoreOnboardingAction).toHaveBeenCalledOnce()
+    expect(screen.getByRole('heading', { name: 'Getting started' })).toHaveFocus()
+  })
+
+  // HOME-4: the count and the notifications row wait for the subscription lookup, so nothing jumps.
+  it('holds the count and the notifications row while push is still being checked', () => {
+    push = 'checking'
+    render(<OnboardingCard steps={{ ...NONE, photo: true }} />)
+    expect(screen.getByText('1 of 5 done')).toHaveClass('invisible')
+    const row = document.querySelector('li[data-step="notify"]')!
+    expect(row).toHaveAttribute('aria-busy', 'true')
+    expect(row).toHaveClass('[&>*]:invisible')
+    expect(document.querySelector('li[data-step="photo"]')).not.toHaveAttribute('aria-busy')
+  })
+
+  it('stays up while checking even when every other step is done', () => {
+    push = 'checking'
+    render(<OnboardingCard steps={ALL} />)
+    expect(screen.getByRole('region', { name: 'Getting started' })).toBeInTheDocument()
+  })
+
+  it('names a pick, not an outcome, in the first-bet step (C-11)', () => {
+    render(<OnboardingCard steps={NONE} />)
+    expect(screen.getByText('Add a pick to your slip, then place it.')).toBeInTheDocument()
+    expect(screen.getByText('Hear when a market you created closes and when your bets pay.')).toBeInTheDocument()
   })
 })

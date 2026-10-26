@@ -38,8 +38,9 @@ function BalanceBlock() {
 // Mirrors Home (#388, #438) with only what every member sees, at its real heights, so nothing moves
 // when it lands (measured at 375 and 1280): the greeting; the Balance card (under the greeting on a
 // phone, on the right from lg); Your bets' three cards, a title over its stake line, the title two
-// lines on a phone and in the two-column grid from lg; Activity's three sentences, two lines on a phone. Needs you and Getting started
-// stream in behind empty boundaries of their own (page.tsx), so they aren't drawn here.
+// lines on a phone and in the two-column grid from lg; Activity's three sentences, two lines on a phone. Needs you renders with
+// the page (D-11) and Getting started streams in behind an empty boundary (page.tsx), but each shows
+// only for some members, so neither is drawn here.
 export default function Loading() {
   return (
     <SkeletonScreen name="home" className={pageClass}>

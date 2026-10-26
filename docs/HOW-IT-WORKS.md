@@ -652,7 +652,8 @@ or reach them through
 ## Around the app
 
 - **Home:** a greeting, then your balance in a deep teal card with your
-  rank (once you've had a bet settled) and the DC riding on your open bets.
+  rank (once you've had a bet settled) and the DC in your open bets. The
+  balance at the top of the screen is left out on Home, since the card shows it.
   **Needs you** appears when something does: counts of submissions to
   review and markets to resolve, your own markets to resolve, and at 0 DC a
   pointer to Tasks. **Your bets** shows the three closing soonest as cards
@@ -661,9 +662,9 @@ or reach them through
   started** card: read How it works, turn on notifications on this device (left
   out on a browser that can't get them), add your photo, place your first bet
   and try a task. It goes away once you've done them all, when you dismiss
-  it, or once you've had a bet settled and a task approved. After that, the
+  it (Undo brings it back), or once you've had a bet settled and a task approved. After that, the
   installed app without notifications asks once to turn them on, until you
-  tap Not now.
+  tap Don't show again.
 - **Weekly recap:** on Sundays and Mondays (Eastern time), Home recaps
   the week, Monday to Sunday. On Sunday it's the week so far; on Monday
   it's the same week, finished. It shows your net betting profit for the

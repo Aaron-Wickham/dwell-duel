@@ -44,12 +44,15 @@ a line to `CHANGELOG.md` under the next release.
   `app/globals.css`, through Tailwind utilities (`bg-surface`, `text-ink2`,
   `border-line` and so on). Light and dark are the same markup with
   different variables. In dark, links are the near-white ink and lime
-  *fills* mark only the primary action and first place; `acc-text` (dark
-  `#8BE651`) stays the positive and open text colour. Active navigation uses
-  `nav-active`, `tab-active` and `segment-active`, and a card or row title
-  link takes `text-ink`. In light, lime is a fill or brand only (first place,
-  Getting started's step dots), never text on the background nor a state shown
-  by colour alone. `StatusChip` tones come only from the semantic
+  *fills* mark only the primary action, first place and the phone tab bar's
+  current tab; `acc-text` (dark `#8BE651`) stays the positive and open text
+  colour. The current phone tab is a `--lime` tile in both themes (D-1), its
+  label and icon `--on-lime`, extrabold and with a heavier stroke, since the
+  tile is only 1.73:1 on the light surface; the desktop nav's pill is
+  `nav-active` and a segmented control's `segment-active`, and a card or row
+  title link takes `text-ink`. In light, lime is a fill or brand only (first
+  place, Getting started's step dots, the current tab), never text on the
+  background nor a state shown by colour alone. `StatusChip` tones come only from the semantic
   tokens (`open` is acc-soft / acc-text, `won` win, `lost` loss, `wait`
   gold, `info` blue for a result or something of yours, `done` and `void`
   sunk), never `primary`. Category chips and avatar initials take a
@@ -116,7 +119,8 @@ a line to `CHANGELOG.md` under the next release.
   Google G, the trailing chevron on a standalone link that leads onward);
   other secondary buttons are text only.
 - **Home** (#388, #438). The deep-teal Balance card shows at every width
-  (under the greeting on a phone). Your bets are `ListCard`s on the page,
+  (under the greeting on a phone), so the top bars' balance chip (ink on
+  `sunk`, never gold, which means something waits) is left out on `/` (D-6). Your bets are `ListCard`s on the page,
   never inside a card (two columns from `lg:`). Activity and Needs you
   (`HomeSection`, `components/home/home-section.tsx`) are rows on the page
   under an `<h2>` below `lg:` and cards from `lg:`; Needs you's review and
@@ -254,8 +258,14 @@ a line to `CHANGELOG.md` under the next release.
   height at 375 and 1280 (a text line is a box as tall as the line, a
   header description 24px lines, two below `md:`), so nothing jumps when
   the page arrives (#401). A block that shows only sometimes streams
-  behind a `<Suspense fallback={null}>` instead, as Home's Needs you and
-  Getting started do (#388).
+  behind a `<Suspense fallback={null}>` instead, as Home's Getting started
+  does (#388), unless streaming in would push content under a thumb: Home's
+  Needs you, above Your bets on a phone, renders with the first paint (D-11),
+  from the review counts the signed-in layout already read
+  (`readReviewCounts`, a `cache()`d read both call). Home's optional blocks
+  read through `optionalRead` (`lib/home/optional-read.ts`): a failed read is
+  logged and the block left out, and only standing and the closing-soon reads
+  fail the page (HOME-1).
 - **Drill-down pages** pass `Page`'s `transition="drill-down"`, which
   also enables the back-swipe; its logical parents live in
   `lib/nav/back-swipe.ts`.

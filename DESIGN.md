@@ -43,7 +43,13 @@ Light and dark are the same markup with different variables. Values are light / 
 - `--primary` (the accent for the primary action) #03272D / #72DB2B, with `--on-primary` #FFFFFF /
   #03272D (15.8:1 and 8.9:1). One filled primary per screen.
 - `--lime` #72DB2B: the brand. In light it is a fill or the brand mark only (first place, Getting
-  started's dots), never text; in dark it is the primary fill and first place.
+  started's dots, the phone's current tab), never text; in dark it is the primary fill, first place
+  and the current tab. The current tab (D-1) is a lime tile in both themes with `--on-lime` #03272D
+  (8.92:1) on it, extrabold with a heavier icon stroke; the other tabs are `--ink2`. The tile is
+  1.73:1 on the light `--surface` (8.79:1 on the dark), so its label's colour and weight carry the
+  state as well.
+- The top bars' balance chip is `--ink` on `--sunk` (12.49:1 / 11.88:1), not gold, which means
+  something waits on you, and is left out on Home, where the Balance card shows it (D-6).
 - `--acc-text` #2A6E0B / #8BE651: positive and open text.
 - `--danger` (destructive, lost, No) is `--loss` #A8281C / #FF9585; its hue sits about 177° from the
   light primary and about 90° from lime, so a destructive action never reads as the main one.
@@ -81,8 +87,9 @@ Light and dark are the same markup with different variables. Values are light / 
   `--lift-shadow` (`hover-lift`); a row inside a card takes `hover-tint`, a flat `--sunk` panel. A
   link underlines on hover.
 - Focus: `:focus-visible` draws a 3px `--focus` outline at a 2px offset, everywhere but a menu item
-  (`menuItemClass`), whose keyboard highlight is the `--tab-active` tint with an inset 2px `--focus`
-  ring; under the mouse it is the tint alone.
+  (`menuItemClass`), whose keyboard highlight is the `--menu-highlight` tint (#DDF0CF / #17434A, with
+  `--on-menu-highlight` at 13.09:1 / 9.63:1) with an inset 2px `--focus` ring; under the mouse it is
+  the tint alone.
 - Pressed: `pressable` scales to 0.97 on touch over `--duration-press` (120ms); a pending link dims its card
   (`pendingMarker`).
 - Disabled: `bg-sunk` with `text-ink2` and `cursor-not-allowed` (`components/ui/button.tsx`), the
@@ -114,7 +121,9 @@ A chip appears only when it adds information the context doesn't (#387).
   `app/globals.css`, mirrored by `lib/ui/motion.ts`: press 120ms, fast 150ms, hover 180ms, enter
   210ms, slide 280ms (every sliding pill), page 360ms, sheet 450ms, on `--ease-ios`.
 - Reduced motion (the device setting or Settings' choice) turns page transitions into a
-  `--duration-fast` cross-fade; animated numbers count only on a change after mount.
+  `--duration-fast` cross-fade; animated numbers count only on a change after mount. A back swipe
+  still follows the finger, since that's direct manipulation; only its settle after release is
+  skipped.
 
 ## Components
 
@@ -130,7 +139,8 @@ The building blocks are in `components/ui/`; `AGENTS.md` says when each is used.
   `ShowMore`.
 - Status: `StatusChip`, `AttentionBadge`, `Avatar`, `Message`.
 - Feedback: `Toaster` (Sonner). An error toast goes through `toastError` (`lib/toast/error-toast.ts`) and
-  stays 10 seconds, long enough to read its next step; other toasts keep 4.
+  stays 10 seconds, long enough to read its next step; a toast with Undo (hiding Getting started)
+  stays 8; other toasts keep 4.
 - Menus: Base UI `Menu` with `menuItemClass` (`components/ui/menu-classes.ts`).
 
 ## Voice

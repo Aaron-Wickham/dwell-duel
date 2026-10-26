@@ -152,6 +152,11 @@ describe('OnboardingCard', () => {
 
     const { unmount: unmountFresh } = render(<OnboardingCard steps={NONE} />)
     expect(screen.getByRole('heading', { name: 'Getting started' })).toHaveFocus()
+    // Once the restore action has settled and its frame has run with the card on screen, the
+    // flag is spent.
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(null)))
+    })
     unmountFresh()
 
     render(<OnboardingCard steps={NONE} />)

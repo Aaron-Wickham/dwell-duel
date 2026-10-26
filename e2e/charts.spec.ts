@@ -4,8 +4,10 @@ import { placeSolo } from './slip'
 import { chooseCategory } from './category'
 
 test('a market with a bet shows its chart, on the market page and its list card', async ({ page }) => {
+  // Its own title each run, so a retry doesn't find the last attempt's card too.
+  const title = `Will the charts render? ${Date.now()}`
   await page.goto('/markets/new')
-  await page.getByLabel('Title').fill('Will the charts render?')
+  await page.getByLabel('Title').fill(title)
   await chooseCategory(page, 'Testing')
   await page.getByLabel('Close time').fill(localDateTimeString(new Date(Date.now() + 60 * 60 * 1000)))
   await page.getByRole('button', { name: 'Create market' }).click()
@@ -27,7 +29,8 @@ test('a market with a bet shows its chart, on the market page and its list card'
   await expect(page.getByTestId('chart-announcer')).toHaveText('Now: Yes 59%')
 
   await page.goto('/markets')
-  const card = page.getByRole('article').filter({ hasText: 'Will the charts render?' })
+  const card = page.getByRole('article').filter({ hasText: title })
   await expect(card.getByRole('img', { name: 'Yes rose from 50% to 59% since it opened.' })).toBeVisible()
-  await expect(card.getByText('59%', { exact: true })).toBeVisible()
+  // The card's headline figure; the Yes quick pick repeats 59% after it (MKT-1).
+  await expect(card.getByText('59%', { exact: true }).first()).toBeVisible()
 })

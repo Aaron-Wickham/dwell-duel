@@ -137,6 +137,8 @@ describe('the How it works page', () => {
   it('links to the full rules, and no section is a card', () => {
     const { container } = render(<HowItWorksPage />)
     expect(screen.getByRole('link', { name: 'Read the full rules' })).toHaveAttribute('href', '/how-it-works/rules')
+    // D-9: a standalone link that ends the page and leads onward takes a trailing chevron.
+    expect(screen.getByRole('link', { name: 'Read the full rules' }).querySelector('svg[aria-hidden="true"]')).not.toBeNull()
     expect(container.querySelector('.rounded-card')).toBeNull()
   })
 

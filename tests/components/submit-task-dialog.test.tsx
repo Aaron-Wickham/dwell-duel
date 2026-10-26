@@ -63,7 +63,11 @@ describe('SubmitTaskDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Submit for review' }))
 
     await waitFor(() => expect(submitTaskCompletionAction).toHaveBeenCalled())
-    expect(uploadProof).toHaveBeenCalledWith([expect.objectContaining({ kind: 'link', url: 'https://example.com/notes' })], 'task/m1/')
+    expect(uploadProof).toHaveBeenCalledWith(
+      [expect.objectContaining({ kind: 'link', url: 'https://example.com/notes' })],
+      'task/m1/',
+      expect.objectContaining({ onProgress: expect.any(Function) }),
+    )
     const formData = submitTaskCompletionAction.mock.calls[0][2] as FormData
     expect(formData.get('note')).toBe('Read it at breakfast')
     expect(JSON.parse(String(formData.get('attachments')))).toEqual([{ kind: 'link', url: 'https://example.com/notes' }])
@@ -124,6 +128,77 @@ describe('SubmitTaskDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add link' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Links must start with http:// or https://.')
     expect(screen.queryByRole('list', { name: 'Attached proof' })).not.toBeInTheDocument()
+  })
+
+  // TSK-1, TSK-9: the row clamps the instructions to a line, so the dialog shows them whole.
+  it('shows the task’s full instructions, and says proof can’t be deleted once sent', async () => {
+    render(
+      <SubmitTaskDialog
+        taskId="t1"
+        taskTitle="Read Psalm 23"
+        description="Read it aloud, then write one verse from memory."
+        memberId="m1"
+        proofRequired={false}
+      />,
+    )
+    const dialog = await openDialog()
+    expect(dialog).toHaveTextContent('Read it aloud, then write one verse from memory.')
+    expect(dialog).toHaveAccessibleDescription(expect.stringContaining('Proof can’t be deleted once it’s sent.'))
+  })
+
+  // TSK-2: a link typed but never added with Add link is still what the member means to send.
+  it('sends a good link still in the field, as if Add link had been tapped', async () => {
+    submitTaskCompletionAction.mockResolvedValue(undefined)
+    renderDialog(true)
+    await openDialog()
+    await userEvent.type(screen.getByLabelText('Link'), 'https://example.com/notes')
+    await userEvent.click(screen.getByRole('button', { name: 'Submit for review' }))
+
+    await waitFor(() => expect(submitTaskCompletionAction).toHaveBeenCalled())
+    const formData = submitTaskCompletionAction.mock.calls[0][2] as FormData
+    expect(JSON.parse(String(formData.get('attachments')))).toEqual([{ kind: 'link', url: 'https://example.com/notes' }])
+  })
+
+  it('stops on a link in the field that can’t be sent, saying so on the field', async () => {
+    renderDialog()
+    await openDialog()
+    const link = screen.getByLabelText('Link')
+    await userEvent.type(link, 'example.com')
+    await userEvent.click(screen.getByRole('button', { name: 'Submit for review' }))
+
+    await waitFor(() => expect(link).toHaveAttribute('aria-invalid', 'true'))
+    expect(link).toHaveAccessibleDescription(expect.stringContaining('Add the link or clear it before sending.'))
+    expect(link).toHaveFocus()
+    expect(screen.getAllByText('Add the link or clear it before sending.')).toHaveLength(1)
+    expect(uploadProof).not.toHaveBeenCalled()
+    expect(submitTaskCompletionAction).not.toHaveBeenCalled()
+    expect(success).not.toHaveBeenCalled()
+
+    await userEvent.clear(link)
+    expect(link).not.toHaveAttribute('aria-invalid')
+    expect(screen.queryByText('Add the link or clear it before sending.')).toBeNull()
+  })
+
+  // SYS-3: the button says which file is going up, then that it's sending.
+  it('says which file is uploading, then that it’s sending', async () => {
+    const uploads = deferred<void>()
+    const answer = deferred<undefined>()
+    uploadProof.mockImplementation(async (_drafts: unknown, _prefix: string, options?: { onProgress?: (c: number, t: number) => void }) => {
+      // The real upload loads the Storage client first, so progress always follows an await.
+      await Promise.resolve()
+      options?.onProgress?.(1, 2)
+      await uploads.promise
+      return []
+    })
+    submitTaskCompletionAction.mockReturnValue(answer.promise)
+    renderDialog()
+    await openDialog()
+    await userEvent.click(screen.getByRole('button', { name: 'Submit for review' }))
+
+    expect(await screen.findByText('Uploading 1 of 2…', { selector: '[role="status"]' })).toBeInTheDocument()
+    await act(async () => uploads.resolve())
+    await waitFor(() => expect(submitTaskCompletionAction).toHaveBeenCalled())
+    await act(async () => answer.resolve(undefined))
   })
 
   it('never says a task is both sent and waiting while the server state lands', async () => {

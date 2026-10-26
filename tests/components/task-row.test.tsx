@@ -19,13 +19,20 @@ function renderRow(props: Partial<ComponentProps<typeof TaskRow>> & Pick<Compone
 const metaLine = (text: string) => (_: string, element: Element | null) => element?.tagName === 'P' && element.textContent === text
 
 describe('TaskRow', () => {
-  it('leads a task to do with the reward in gold, then the cadence, and renders the action', () => {
+  it('leads a task to do with the reward in bold ink, then the cadence, and renders the action', () => {
     renderRow({ state: { kind: 'todo' }, description: 'The creation account and the fall.', action: <button type="button">I did this</button> })
     expect(screen.getByText('Read Genesis 1-3')).toBeInTheDocument()
     expect(screen.getByText(metaLine('10\u00A0DC · Weekly'))).toBeInTheDocument()
-    expect(screen.getByText('10 DC')).toHaveClass('text-gold')
+    // Gold means waiting, which a reward isn't (TSK-10).
+    expect(screen.getByText('10 DC')).toHaveClass('font-bold', 'text-ink')
+    expect(screen.getByText('10 DC')).not.toHaveClass('text-gold')
     expect(screen.getByText('The creation account and the fall.')).toHaveClass('line-clamp-1')
     expect(screen.getByRole('button', { name: 'I did this' })).toBeInTheDocument()
+  })
+
+  it('keeps the description on a Try again row, clamped to a line', () => {
+    renderRow({ state: { kind: 'rejected', note: null }, description: 'The creation account and the fall.' })
+    expect(screen.getByText('The creation account and the fall.')).toHaveClass('line-clamp-1')
   })
 
   it('says "Once" for a one-off task, and carries no chips (#394)', () => {

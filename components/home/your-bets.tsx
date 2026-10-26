@@ -14,31 +14,29 @@ import { PickChip } from '@/components/markets/pick-chip'
 import { h2Class } from '@/components/ui/page'
 import { HomeSection, SeeAll, homeRowsClass } from './home-section'
 
-function Row({ href, title, detail, closeAt, now }: { href: string; title: string; detail?: ReactNode; closeAt: string; now: number }) {
+// "Closes Oct 28", or "Closes 6 PM" within a day (HOME-3): a bare date could be when it was placed.
+function Closes({ closeAt, now }: { closeAt: string; now: number }) {
+  return (
+    <>
+      Closes <LocalTime iso={closeAt} format="close" now={now} />
+    </>
+  )
+}
+
+// The whole row opens the market (HOME-6), not only its title.
+function Row({ href, title, closeAt, now }: { href: string; title: string; closeAt: string; now: number }) {
   const closed = Date.parse(closeAt) <= now
   return (
-    <li className="flex items-center justify-between gap-3 py-3">
-      <div className="flex min-w-0 flex-col gap-1">
-        <IntentLink href={href} transitionTypes={['nav-forward']} className={cn(rowTitleClass, 'pressable hit-area break-words text-ink')}>
-          {title}
-        </IntentLink>
-        {detail && <p className="text-sm">{detail}</p>}
-      </div>
-      <span className="shrink-0 text-sm whitespace-nowrap text-ink2">
-        {closed ? (
-          'Closed'
-        ) : (
-          <>
-            <span className="sr-only">Closes </span>
-            <LocalTime iso={closeAt} format="day" />
-          </>
-        )}
-      </span>
+    <li className="pressable hover-tint relative flex items-center justify-between gap-3 py-3">
+      <IntentLink href={href} transitionTypes={['nav-forward']} className={cn(rowTitleClass, 'stretched-link min-w-0 break-words text-ink')}>
+        {title}
+      </IntentLink>
+      <span className="shrink-0 text-sm whitespace-nowrap text-ink2">{closed ? 'Closed' : <Closes closeAt={closeAt} now={now} />}</span>
     </li>
   )
 }
 
-// One open bet or parlay as a card (#438): the title with the day it closes, then the stake, the
+// One open bet or parlay as a card (#438): the title with when it closes, then the stake, the
 // pick in its colour and what it pays. A closed one says it's waiting for a result instead of a day.
 function BetCard({ href, title, detail, closeAt, now }: { href: string; title: string; detail: ReactNode; closeAt: string; now: number }) {
   const closed = Date.parse(closeAt) <= now
@@ -54,8 +52,7 @@ function BetCard({ href, title, detail, closeAt, now }: { href: string; title: s
           </StatusChip>
         ) : (
           <span className="shrink-0 pt-0.5 text-sm whitespace-nowrap text-ink2">
-            <span className="sr-only">Closes </span>
-            <LocalTime iso={closeAt} format="day" />
+            <Closes closeAt={closeAt} now={now} />
           </span>
         )}
       </div>
@@ -82,8 +79,8 @@ export function YourBets({
   now,
 }: {
   wagers: ClosingWager[]
-  // Every open bet and parlay, for "See all N".
-  openCount: number
+  // Every open bet and parlay, for "See all N"; null when it couldn't be read.
+  openCount: number | null
   markets: ClosingMarket[]
   now: number
 }) {
@@ -102,7 +99,7 @@ export function YourBets({
         {markets.length === 0 ? (
           <div className="pt-2">
             <EmptyState title="No open bets." action={browse}>
-              New markets show up on Markets.
+              Add a pick from any market to place your first bet.
             </EmptyState>
           </div>
         ) : (
@@ -127,7 +124,7 @@ export function YourBets({
         <h2 id="your-bets-title" className={h2Class}>
           Your bets
         </h2>
-        <SeeAll href="/bets" label={`See all ${openCount}`} />
+        <SeeAll href="/bets" label={openCount === null ? 'See all' : `See all ${openCount}`} />
       </div>
       <ul className={cn(listCardsClass, 'lg:grid lg:grid-cols-2')}>
         {wagers.map((w) =>

@@ -79,7 +79,7 @@ describe('FeedList', () => {
     expect(region).not.toHaveClass('bg-surface')
     expect(region).not.toHaveClass('border')
     expect(region).toHaveTextContent('Nothing yet.')
-    expect(region).toHaveTextContent('Bets, new markets, results and finished tasks show up here as they happen.')
+    expect(region).toHaveTextContent('Bets, new markets, results and approved tasks show up here as they happen.')
     expect(screen.getByRole('heading', { name: 'Events' })).toHaveClass('sr-only')
   })
 

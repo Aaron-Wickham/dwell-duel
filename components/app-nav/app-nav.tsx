@@ -17,7 +17,7 @@ import { PILL_TRANSITION } from '@/lib/ui/motion'
 import { useMotionSettingReduced } from '@/lib/ui/reduced-motion'
 import { cn } from '@/lib/utils'
 import { BalanceNumber } from './balance-number'
-import { NAV_ITEMS, activeNavId, tabAriaLabel, type NavId } from './nav-items'
+import { NAV_ITEMS, activeNavId, tabAriaLabel, type NavId, type NavItem } from './nav-items'
 import { ProfileMenu, type NavMember } from './profile-menu'
 import { uiTextClass } from '@/components/ui/page'
 import { formatDcAmount } from '@/lib/format/dc'
@@ -46,7 +46,8 @@ function PendingReporter({ href, onPending }: { href: string; onPending: ReportP
 }
 
 // Tapping your balance shows where your coins are. The chip keeps its 36px look inside a 44px link.
-// The gold "4,886 DC" says what it is, so it has no coin icon (#385).
+// "4,886 DC" says what it is, so it has no coin icon (#385). It's ink on sunk, not gold, since gold
+// means something waits on you (D-6).
 function BalanceChip({ balance, active, onPending }: { balance: number; active: boolean; onPending: ReportPending }) {
   return (
     <IntentLink
@@ -58,7 +59,7 @@ function BalanceChip({ balance, active, onPending }: { balance: number; active: 
       className="pressable inline-flex min-h-11 shrink-0 items-center rounded-full no-underline"
     >
       <PendingReporter href="/bets" onPending={onPending} />
-      <span className={`inline-flex h-9 items-center whitespace-nowrap rounded-full bg-gold-soft px-3 ${uiTextClass} font-extrabold text-gold`}>
+      <span className={`inline-flex h-9 items-center whitespace-nowrap rounded-full bg-sunk px-3 ${uiTextClass} font-extrabold text-ink`}>
         <AnimatedText plainText={`Balance ${formatDcAmount(balance)}, view my bets`}>
           <BalanceNumber value={balance} />
         </AnimatedText>
@@ -69,24 +70,23 @@ function BalanceChip({ balance, active, onPending }: { balance: number; active: 
 
 export type { NavMember }
 
-// Below xl every label won't fit beside the wordmark, balance and avatar, so each link is a 44px
-// icon until then, its label kept for assistive tech and as a hover tooltip. `active` is the page
-// you're on; `shown` is where the pill sits, which moves to a tapped link before its page arrives.
+// Below xl the full labels won't fit beside the wordmark, balance and avatar, so each link shows the
+// tab bar's short label until then (a bare icon told a touch screen nothing, HOME-2). Its name is
+// tabAriaLabel's, which holds both words, so voice control can say either one on screen. `active` is
+// the page you're on; `shown` is where the pill sits, which moves to a tapped link before its page
+// arrives.
 function DesktopLink({
-  href,
-  label,
+  item,
   active,
   shown,
   onPending,
-  icon: Icon,
 }: {
-  href: string
-  label: string
+  item: NavItem
   active: boolean
   shown: boolean
   onPending: ReportPending
-  icon: LucideIcon
 }) {
+  const { href, label, shortLabel } = item
   return (
     <IntentLink
       prefetchOnTouch
@@ -94,11 +94,10 @@ function DesktopLink({
       href={href}
       transitionTypes={TAB_TRANSITION}
       aria-current={active ? 'page' : undefined}
-      aria-label={label}
-      title={label}
+      aria-label={tabAriaLabel(item)}
       onClick={(event) => scrollToTopOnCurrentTab(event, href)}
       className={cn(
-        `pressable pill-label relative isolate inline-flex min-h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap rounded-full ${uiTextClass} font-bold no-underline xl:px-3.5`,
+        `pressable pill-label relative isolate inline-flex min-h-11 min-w-11 items-center justify-center whitespace-nowrap rounded-full px-3 ${uiTextClass} font-bold no-underline xl:px-3.5`,
         shown ? 'text-on-nav-active' : 'text-ink2 hover:bg-sunk hover:text-ink',
       )}
     >
@@ -112,8 +111,14 @@ function DesktopLink({
           transition={PILL_TRANSITION}
         />
       )}
-      <Icon aria-hidden="true" className="size-5 xl:hidden" />
-      <span className="max-xl:sr-only">{label}</span>
+      {shortLabel === label ? (
+        label
+      ) : (
+        <>
+          <span className="xl:hidden">{shortLabel}</span>
+          <span className="max-xl:hidden">{label}</span>
+        </>
+      )}
       <NavPendingHint className="inset-x-3.5 bottom-1 h-0.5" />
     </IntentLink>
   )
@@ -146,6 +151,8 @@ export function AppNav({
     [],
   )
   const shown = pendingHref ? activeNavId(pendingHref) : active
+  // Home's Balance card shows the same figure a few lines down (D-6).
+  const balanceChip = pathname === '/' ? null : <BalanceChip balance={balance} active={active === 'bets'} onPending={onPending} />
 
   return (
     <LazyMotion features={loadMotionFeatures} strict>
@@ -165,9 +172,7 @@ export function AppNav({
             {NAV_ITEMS.map((item) => (
               <DesktopLink
                 key={item.id}
-                href={item.href}
-                label={item.label}
-                icon={ICONS[item.id]}
+                item={item}
                 active={active === item.id}
                 shown={shown === item.id}
                 onPending={onPending}
@@ -175,7 +180,7 @@ export function AppNav({
             ))}
           </nav>
           <span className="grow" />
-          <BalanceChip balance={balance} active={active === 'bets'} onPending={onPending} />
+          {balanceChip}
           <ProfileMenu me={me} active={avatarActive} adminHref={adminHref} attention={adminAttention} />
         </header>
 
@@ -186,7 +191,7 @@ export function AppNav({
         >
           <Wordmark size="sm" />
           <span className="grow" />
-          <BalanceChip balance={balance} active={active === 'bets'} onPending={onPending} />
+          {balanceChip}
           <ProfileMenu me={me} active={avatarActive} adminHref={adminHref} attention={adminAttention} />
         </header>
 
@@ -214,34 +219,31 @@ export function AppNav({
                   scrollToTopOnCurrentTab(event, item.href)
                 }}
                 className={cn(
-                  'pressable pill-label relative flex min-h-[50px] flex-col items-center justify-center gap-0.5 rounded-tile text-xs leading-[1.1] no-underline',
-                  isShown ? 'text-ink' : 'text-ink2',
+                  'pressable pill-label relative isolate flex min-h-[50px] flex-col items-center justify-center gap-0.5 rounded-tile text-xs leading-[1.1] no-underline',
+                  isShown ? 'text-on-lime' : 'text-ink2',
                 )}
               >
                 <PendingReporter href={item.href} onPending={onPending} />
-                <span
-                  className={cn(
-                    'relative isolate flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-(--duration-slide) ease-ios motion-reduce:transition-none',
-                    isShown && 'text-on-tab-active',
-                  )}
-                >
-                  {/* One pill that slides between tabs, like the desktop nav's. The tab bar stays
-                      pinned through page transitions, and its new snapshot is live, so the slide
-                      shows while the page moves under it. */}
-                  {/* layoutDependency: the pill measures itself only when it moves to another tab.
-                      Otherwise the re-render when the new page arrives, scrolled back to the top,
-                      re-measured it mid-slide and restarted the slide off by the scroll distance (#442). */}
-                  {isShown && (
-                    <m.span
-                      layoutId="tabbar-pill"
-                      layoutDependency={item.id}
-                      aria-hidden="true"
-                      className="absolute inset-0 -z-10 rounded-full bg-tab-active"
-                      transition={PILL_TRANSITION}
-                    />
-                  )}
-                  <Icon aria-hidden="true" className="size-[22px]" />
-                </span>
+                {/* The current tab is a lime tile filling its cell, inset a little from its
+                    neighbours (D-1). One tile slides between tabs, like the desktop nav's pill;
+                    every cell is the same width, so it only translates. The tab bar stays pinned
+                    through page transitions, and its new snapshot is live, so the slide shows
+                    while the page moves under it. */}
+                {/* layoutDependency: the tile measures itself only when it moves to another tab.
+                    Otherwise the re-render when the new page arrives, scrolled back to the top,
+                    re-measured it mid-slide and restarted the slide off by the scroll distance (#442). */}
+                {isShown && (
+                  <m.span
+                    layoutId="tabbar-pill"
+                    layoutDependency={item.id}
+                    aria-hidden="true"
+                    className="absolute inset-y-0 inset-x-0.5 -z-10 rounded-tile bg-lime"
+                    transition={PILL_TRANSITION}
+                  />
+                )}
+                {/* Lime is 1.73:1 on the light surface, so the tile isn't the only cue: the label
+                    and icon also turn ink and heavier. */}
+                <Icon aria-hidden="true" className="size-[22px]" strokeWidth={isShown ? 2.5 : 2} />
                 {/* Manrope is variable, so the weight eases between bold and extrabold; the label
                     is centred in a fixed-width column, so nothing beside it moves. */}
                 <span

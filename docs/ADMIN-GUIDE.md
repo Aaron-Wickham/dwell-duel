@@ -107,8 +107,8 @@ hours of it closing.
 closed with no result, oldest first, with when it closed, the DC in it, who
 made it and a Resolve button. Home's **Needs you** shows what's waiting on
 *you*: an admin sees how many markets wait, opening Admin → Markets; a
-creator sees each of their own as soon as it closes ("… closed. Resolve
-it."), and a reviewer also sees any market still unresolved 48 hours after
+creator sees each of their own as soon as it closes ("Time to resolve:
+…"), and a reviewer also sees any market still unresolved 48 hours after
 closing, and straight away one whose creator has money on it (since the
 creator can't resolve that one).
 

@@ -13,7 +13,8 @@ type Row = { key: string; href: string; drillDown: boolean; tone?: 'gold'; conte
 type Tile = { key: string; href: string; count: number; label: string; name: string; tone: 'gold' | 'info' }
 
 // A count waiting on the member (#438): the number large on its status colour, gold for submissions
-// to review and blue for markets to resolve, so the queue reads at a glance.
+// to review and blue for markets to resolve, so the queue reads at a glance. Under a mouse a wash of
+// its own colour deepens the tile (HOME-8), drawn under the text so the text keeps its contrast.
 function NeedsYouTile({ href, count, label, name, tone }: Omit<Tile, 'key'>) {
   return (
     <li>
@@ -22,11 +23,12 @@ function NeedsYouTile({ href, count, label, name, tone }: Omit<Tile, 'key'>) {
         transitionTypes={['nav-forward']}
         aria-label={name}
         className={cn(
-          'pressable flex min-h-11 flex-col gap-0.5 rounded-tile p-3.5 no-underline',
+          'pressable relative isolate flex min-h-11 flex-col gap-0.5 rounded-tile p-3.5 no-underline',
+          'after:pointer-events-none after:absolute after:inset-0 after:-z-10 after:rounded-tile after:bg-current after:opacity-0 after:transition-opacity after:duration-(--duration-hover) after:ease-ios hover:after:opacity-8',
           tone === 'gold' ? 'bg-gold-soft text-gold' : 'bg-info-soft text-info',
         )}
       >
-        <span className={cn(figureClass, 'tabular-nums')}>{count.toLocaleString('en-US')}</span>
+        <span className={figureClass}>{count.toLocaleString('en-US')}</span>
         <span className={cn(uiTextClass, 'flex items-center gap-0.5 font-bold')}>
           {label}
           <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
@@ -105,7 +107,7 @@ export function NeedsYou({
         drillDown: true,
         content: (
           <>
-            <b>{market.title}</b> closed. Resolve it.
+            Time to resolve: <b>{market.title}</b>
           </>
         ),
       })

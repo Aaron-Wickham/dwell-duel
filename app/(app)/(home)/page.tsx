@@ -8,7 +8,6 @@ import { pageSubscriptions } from '@/lib/live/page-subscriptions'
 import { atLeast, getRole } from '@/lib/auth/roles'
 import { getAtStake } from '@/lib/home/at-stake'
 import type { DbClient } from '@/lib/supabase/database'
-import type { Role } from '@/lib/auth/roles'
 import { getOnboarding, onboardingDismissed } from '@/lib/home/onboarding'
 import { getClosingSoon, getHomeHistory, getMarketsClosingSoon } from '@/lib/home/closing-soon'
 import { OnboardingCard } from '@/components/home/onboarding-card'
@@ -17,7 +16,8 @@ import { RefreshAt } from '@/components/home/refresh-at'
 import { getWeeklyRecap } from '@/lib/home/recap'
 import { WeeklyRecapCard } from '@/components/home/weekly-recap-card'
 import { getMemberStanding } from '@/lib/social/leaderboard'
-import { getReviewCounts } from '@/lib/admin/review-counts'
+import { readReviewCounts } from '@/lib/admin/review-counts'
+import { optionalRead } from '@/lib/home/optional-read'
 import { listLatestFeed } from '@/lib/social/list-feed'
 import { Page, h1Class } from '@/components/ui/page'
 import { NotificationsCard } from '@/components/home/notifications-card'
@@ -32,31 +32,13 @@ export const metadata: Metadata = { title: 'Home' }
 
 const ACTIVITY_ROWS = 3
 
-// Needs you and Getting started show only when they apply, which the skeleton can't know, so they
-// stream in behind boundaries that draw nothing while they wait: the rest of the page lands where
-// its skeleton drew it, without waiting on their reads (#388).
-async function HomeNeedsYou({ supabase, role, balance }: { supabase: DbClient; role: Role; balance: number }) {
-  const [reviewCounts, marketsToResolve, taskRewards] = await Promise.all([
-    // The same counts as the avatar's dot: other members' submissions, never the viewer's own (#221).
-    getReviewCounts(supabase, role),
-    getMarketsToResolve(supabase),
-    // Only a member with nothing left sees what tasks pay, so only they pay for that read.
-    balance === 0 ? getTaskRewardRange(supabase) : null,
-  ])
-  return (
-    <NeedsYou
-      counts={reviewCounts}
-      showReviews={atLeast(role, 'reviewer')}
-      showAdminMarkets={atLeast(role, 'admin')}
-      marketsToResolve={marketsToResolve}
-      balance={balance}
-      taskRewards={taskRewards}
-    />
-  )
-}
+const NOTHING_TO_RESOLVE = { total: 0, markets: [] }
 
+// Getting started shows only when it applies, which the skeleton can't know, so it streams in behind
+// a boundary that draws nothing while it waits: the rest of the page lands where its skeleton drew
+// it, without waiting on its read (#388). If the read fails, the card is left out (HOME-1).
 async function HomeOnboarding({ supabase }: { supabase: DbClient }) {
-  return <OnboardingCard steps={await getOnboarding(supabase)} />
+  return <OnboardingCard steps={await optionalRead('Getting started', () => getOnboarding(supabase), null)} />
 }
 
 // #388: a greeting, then what needs you, your bets closing soonest and the newest activity. On a
@@ -69,15 +51,27 @@ export default async function Home() {
 
   const role = await getRole(supabase)
   const reviewer = atLeast(role, 'reviewer')
-  const [standing, atStake, nextResolveCheck, dismissed, weeklyRecap, history, wagers, activity] = await Promise.all([
-    getMemberStanding(supabase, user.id),
-    getAtStake(supabase),
-    nextResolveCheckAt(supabase, user.id, reviewer),
+  const standingRead = getMemberStanding(supabase, user.id)
+  // Only standing and the closing-soon reads may fail the page; every other block is left out if its
+  // read fails (HOME-1). Needs you renders with the first paint (D-11): on a phone it sits above Your
+  // bets, so streaming it in pushed the cards down under a thumb, and its review counts are the read
+  // the layout already made for the avatar's dot (readReviewCounts), so it costs no extra wait.
+  const [standing, atStake, nextResolveCheck, dismissed, weeklyRecap, history, wagers, activity, reviewCounts, marketsToResolve, taskRewards] = await Promise.all([
+    standingRead,
+    optionalRead('what is at stake', () => getAtStake(supabase), null),
+    optionalRead('the next market close', () => nextResolveCheckAt(supabase, user.id, reviewer), null),
     onboardingDismissed(),
-    getWeeklyRecap(supabase),
+    optionalRead('the weekly recap', () => getWeeklyRecap(supabase), null),
     getHomeHistory(supabase, user.id),
     getClosingSoon(supabase, user.id),
-    listLatestFeed(supabase, ACTIVITY_ROWS),
+    optionalRead('the latest activity', () => listLatestFeed(supabase, ACTIVITY_ROWS), null),
+    // The same counts as the avatar's dot: other members' submissions, never the viewer's own (#221).
+    readReviewCounts(supabase, role),
+    optionalRead('markets to resolve', () => getMarketsToResolve(supabase), NOTHING_TO_RESOLVE),
+    // Only a member with nothing left sees what tasks pay, so only they pay for that read.
+    standingRead.then((s) =>
+      (s?.balance ?? 0) === 0 ? optionalRead('task rewards', () => getTaskRewardRange(supabase), null) : null,
+    ),
   ])
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now()
@@ -109,7 +103,7 @@ export default async function Home() {
             )}
           </div>
           <div className="contents max-lg:[&>*]:order-4">
-            <YourBets wagers={wagers} openCount={atStake.wagers} markets={closingMarkets} now={now} />
+            <YourBets wagers={wagers} openCount={atStake?.wagers ?? null} markets={closingMarkets} now={now} />
           </div>
           <div className="contents max-lg:[&>*]:order-5">
             <NotificationsCard onboardingShown={onboardingShown} />
@@ -127,13 +121,17 @@ export default async function Home() {
             balance={balance}
             rank={rank}
             memberCount={memberCount}
-            ridingDc={atStake.dc}
-            ridingWagers={atStake.wagers}
+            riding={atStake}
           />
           <div className="contents max-lg:[&>*]:order-2">
-            <Suspense fallback={null}>
-              <HomeNeedsYou supabase={supabase} role={role} balance={balance} />
-            </Suspense>
+            <NeedsYou
+              counts={reviewCounts}
+              showReviews={reviewer}
+              showAdminMarkets={atLeast(role, 'admin')}
+              marketsToResolve={marketsToResolve}
+              balance={balance}
+              taskRewards={taskRewards}
+            />
           </div>
         </div>
       </div>

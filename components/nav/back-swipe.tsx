@@ -106,6 +106,8 @@ export function BackSwipe({ children }: { children: ReactNode }) {
 
     function release(velocity: number, dx: number, dy: number) {
       const decision = backSwipeDecision({ dx, dy, width: window.innerWidth, velocity })
+      // Under reduced motion the page still follows the finger, since that's direct manipulation, not
+      // decoration (HOME-11); only the settle after release is skipped, so it lands at once.
       if (decision !== 'complete') {
         if (reduceMotion) reset()
         else settle(0, reset)
@@ -113,6 +115,7 @@ export function BackSwipe({ children }: { children: ReactNode }) {
       }
       if (reduceMotion) {
         busy = true
+        paint(window.innerWidth)
         navigateBack()
         timer = window.setTimeout(reset, STUCK_RESET_MS)
         return
@@ -165,13 +168,13 @@ export function BackSwipe({ children }: { children: ReactNode }) {
           return
         }
         dragging = true
-        if (!reduceMotion) lift()
+        lift()
       }
       // Once the swipe owns the touch, the page mustn't scroll under the finger.
       if (event.cancelable) event.preventDefault()
       samples.push({ x: touch.clientX, t: event.timeStamp })
       while (samples.length > 2 && samples[0].t < event.timeStamp - VELOCITY_WINDOW_MS) samples.shift()
-      if (!reduceMotion) paint(Math.max(0, dx))
+      paint(Math.max(0, dx))
     }
 
     function onTouchEnd(event: TouchEvent) {

@@ -33,7 +33,7 @@ test.describe('desktop', () => {
     )
 
     await page.goto('/')
-    const link = page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Leaderboard', exact: true })
+    const link = page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Leaders, leaderboard', exact: true })
     await link.hover()
     await prefetched
 

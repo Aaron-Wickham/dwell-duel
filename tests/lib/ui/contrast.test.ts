@@ -46,7 +46,7 @@ const TEXT_PAIRS: [string, string][] = [
   ['on-primary', 'primary'],
   ['on-lime', 'lime'],
   ['on-nav-active', 'nav-active'],
-  ['on-tab-active', 'tab-active'],
+  ['on-menu-highlight', 'menu-highlight'],
   ['ink', 'segment-active'],
   ['acc-text', 'acc-soft'],
   ['win', 'win-soft'],
@@ -116,8 +116,10 @@ describe('dark theme', () => {
     expect(Object.fromEntries(systemDark)).toEqual(Object.fromEntries(dark))
   })
 
-  it('keeps lime off links and active navigation', () => {
-    for (const name of ['link', 'nav-active', 'tab-active', 'segment-active']) {
+  // The phone's current tab is the one lime navigation fill, in both themes (D-1), drawn with
+  // --lime itself rather than a navigation token.
+  it('keeps lime off links, the desktop nav and segmented controls', () => {
+    for (const name of ['link', 'nav-active', 'menu-highlight', 'segment-active']) {
       expect(dark.get(name), name).not.toBe(dark.get('primary'))
       expect(dark.get(name), name).not.toBe(dark.get('acc-text'))
     }

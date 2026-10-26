@@ -57,13 +57,13 @@ export function WeeklyRecapCard({ recap }: { recap: WeeklyRecap | null }) {
         {bestCall && (
           <Row term="Best call">
             {bestCall.memberName} turned {formatDcAmount(bestCall.stake)} into {formatDcAmount(bestCall.payout)} on{' '}
-            <MarketLink id={bestCall.marketId} title={bestCall.marketTitle} />
+            <MarketLink id={bestCall.marketId} title={bestCall.marketTitle} className="prose-link hit-area" />
           </Row>
         )}
         {upset && (
           <Row term="Biggest upset">
-            <MarketLink id={upset.marketId} title={upset.marketTitle} />: {upset.outcomeLabel} won with a{' '}
-            {percent(upset.chance)} chance
+            <MarketLink id={upset.marketId} title={upset.marketTitle} className="prose-link hit-area" />: {upset.outcomeLabel} won at{' '}
+            {percent(upset.chance)}
           </Row>
         )}
         {topTasker && (

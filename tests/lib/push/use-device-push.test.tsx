@@ -48,6 +48,16 @@ describe('useDevicePush', () => {
     await waitFor(() => expect(result.current).toBe('off'))
   })
 
+  // HOME-4: without a granted permission the answer is known on the first render, not after a lookup.
+  it('knows off and unsupported on its first render', () => {
+    setDevice({ permission: 'default', subscribed: false })
+    expect(renderHook(() => useDevicePush()).result.current).toBe('off')
+    vi.unstubAllGlobals()
+    Reflect.deleteProperty(navigator, 'serviceWorker')
+    vi.stubGlobal('Notification', { permission: 'default' })
+    expect(renderHook(() => useDevicePush()).result.current).toBe('unsupported')
+  })
+
   it('is off when permission is blocked, so the step stays and Settings explains', async () => {
     setDevice({ permission: 'denied', subscribed: false })
     const { result } = renderHook(() => useDevicePush())

@@ -105,6 +105,7 @@ Every screen got a careful once-over. The current tab on your phone is now a bri
 - **Smaller admin gaps.** The Members sort links on a phone are normal 14px words; the task edit form says how often the task repeats and that a new task changes it; the Admin guide link says it opens GitHub; an admin on a member's page is told only the owner can change role, balance or access; "under Invites" is a link; the approve toast names whose submission; Description is marked optional; and the Economy card folds its explanation under "How each source is counted" (#515).
 
 ### Under the hood
+- **`npm run check:ios` measures again.** Its measuring script now takes the page's CSP nonce, which the nonce CSP (#449) had been blocking (#519).
 - **`can_change_market_title`** (migration 0116) tells the market page whether a new title would go through, by the same rule as `update_market` (#511).
 - **UX Engine is the design skill set.** `AGENTS.md` now routes every UI and UX change through the UX Engine plugin (installed per machine, not in this public repo), and `DESIGN.md` is a complete design contract extracted from `app/globals.css`, with each status chip's contrast computed (#509).
 - **Link, busy-button and menu rules.** `AGENTS.md` now says a standalone link that leads onward takes a trailing chevron and a caption-weight link takes `prose-link`; slow actions' buttons take a `pendingLabel`; menu items share `menuItemClass`; and error toasts go through `toastError` (#510).

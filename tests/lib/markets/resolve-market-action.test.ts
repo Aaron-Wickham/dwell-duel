@@ -10,6 +10,7 @@ vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ supabase
 vi.mock('next/cache', () => ({ revalidatePath, updateTag: vi.fn() }))
 
 import { resolveMarketAction } from '@/lib/markets/resolve-market'
+import { GENERIC_ERROR } from '@/lib/errors/friendly-error'
 
 function outcomeForm(outcomeId: string, note = 'Final score 3–1') {
   const form = new FormData()
@@ -42,7 +43,7 @@ describe('resolveMarketAction', () => {
     })
     expect(state).toEqual({
       formError:
-        'Can’t override: Bob has already spent 40 of 60 DC won on this market. Adjust their balances first if you still want to override.',
+        'Can’t override: Bob has already spent 40 of 60\u00A0DC won on this market. Adjust their balances first if you still want to override.',
       field: 'outcome',
     })
     expect(revalidatePath).not.toHaveBeenCalled()
@@ -54,7 +55,7 @@ describe('resolveMarketAction', () => {
 
     const state = await resolveMarketAction('market-1', undefined, outcomeForm('outcome-1'))
 
-    expect(state).toEqual({ formError: 'Something went wrong. Try again.', field: 'outcome' })
+    expect(state).toEqual({ formError: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.', field: 'outcome' })
     expect(log).toHaveBeenCalled()
   })
 
@@ -67,12 +68,35 @@ describe('resolveMarketAction', () => {
     expect(revalidatePath).not.toHaveBeenCalled()
   })
 
-  it('keeps every other error message as it is', async () => {
-    supabase.rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'only an admin can change an already-resolved market' } })
+  // MKT-4: each raise says what happened and what to do, pointing at the field it's about.
+  it.each([
+    ['only an admin can change an already-resolved market', 'This market already has a result. Only an admin can change it.', 'outcome'],
+    ['market was voided', 'This market was called off, so it can’t be resolved.', 'outcome'],
+    ['market has not closed yet', 'This market hasn’t closed yet. Resolve it once betting closes.', 'outcome'],
+    [
+      'you have a stake in this market, so someone else resolves it',
+      'You have a stake in this market, so a reviewer or an admin resolves it.',
+      'outcome',
+    ],
+    ['say why this outcome won', 'Say why this outcome won.', 'note'],
+    ["the result can't equal the line", 'The result can’t equal the line. Check the number you entered.', 'outcome'],
+    ["an attachment didn't finish uploading; try again", 'An attachment didn’t finish uploading. Try again.', 'outcome'],
+  ])('words the refusal %j', async (message, formError, field) => {
+    supabase.rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message } })
 
     const state = await resolveMarketAction('market-1', undefined, outcomeForm('outcome-2'))
 
-    expect(state).toEqual({ formError: 'only an admin can change an already-resolved market', field: 'outcome' })
+    expect(state).toEqual({ formError, field })
+  })
+
+  it('logs a refusal it has no words for and shows generic copy, not its text', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    supabase.rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'some new raise nobody mapped' } })
+
+    const state = await resolveMarketAction('market-1', undefined, outcomeForm('outcome-2'))
+
+    expect(state).toEqual({ formError: GENERIC_ERROR, field: 'outcome' })
+    expect(log).toHaveBeenCalled()
   })
 
   it('requires a note saying why, without calling the database', async () => {

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { h1Class } from '@/components/ui/page'
 import { buttonVariants } from '@/components/ui/button'
+import { NotFoundParentLink } from './parent-link'
 
 export function NotFoundBody() {
   return (
@@ -8,9 +9,12 @@ export function NotFoundBody() {
       <div className="flex w-full max-w-[560px] flex-col items-start gap-4">
         <h1 className={h1Class}>Page not found</h1>
         <p className="text-ink2">The link may be old, or what it pointed to was removed.</p>
-        <Link href="/" className={buttonVariants({ variant: 'primary' })}>
-          Go to Home
-        </Link>
+        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+          <Link href="/" className={buttonVariants({ variant: 'primary' })}>
+            Go to Home
+          </Link>
+          <NotFoundParentLink />
+        </div>
       </div>
     </div>
   )

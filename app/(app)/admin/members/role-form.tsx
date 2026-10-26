@@ -77,6 +77,7 @@ export function RoleForm({ member }: { member: MemberSummary }) {
         title={`Change ${member.displayName}’s role?`}
         description={`${member.displayName} goes from ${ROLE_LABELS[member.role]} to ${ROLE_LABELS[role]}, straight away.`}
         confirmLabel="Change role"
+        pendingLabel="Saving…"
       />
     </form>
   )

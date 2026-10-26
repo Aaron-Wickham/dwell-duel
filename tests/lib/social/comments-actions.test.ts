@@ -76,7 +76,7 @@ describe('deleteCommentAction', () => {
 
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     rpc.mockResolvedValue({ error: { message: 'permission denied for table market_comments' } })
-    expect(await deleteCommentAction(7, undefined, new FormData())).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(await deleteCommentAction(7, undefined, new FormData())).toEqual({ formError: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.' })
     expect(log).toHaveBeenCalled()
   })
 })

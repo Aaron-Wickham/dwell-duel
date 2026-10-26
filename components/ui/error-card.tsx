@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { reportClientError } from '@/lib/observability/client'
@@ -19,15 +19,32 @@ export function useReportError(error: Error & { digest?: string }): void {
   }, [error])
 }
 
+function subscribeToConnection(onChange: () => void) {
+  window.addEventListener('online', onChange)
+  window.addEventListener('offline', onChange)
+  return () => {
+    window.removeEventListener('online', onChange)
+    window.removeEventListener('offline', onChange)
+  }
+}
+
+// Offline, Try again can't work yet, so the card says what will.
+function useOnline(): boolean {
+  return useSyncExternalStore(subscribeToConnection, () => navigator.onLine, () => true)
+}
+
 // A card-sized headline, not the page h1's 40px squeezed into a 440px card (ST-11), plain words that
 // say what to do, and a way out: Try again re-renders the segment (Next 16's retry()), Go to Home
 // is a plain link so it reloads even when the client is what broke.
 export function ErrorCard({ retry, digest }: { retry: () => void; digest?: string }) {
+  const online = useOnline()
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-10 md:px-20">
       <Card padded={false} className="flex w-full max-w-[440px] flex-col items-start gap-3 p-7 md:p-10">
         <h1 className={h2Class}>{ERROR_TITLE}</h1>
-        <p className="text-ink2">Something went wrong on our side. Try again, or go back to Home.</p>
+        <p className="text-ink2">
+          {online ? 'It may be your connection or our side. Try again, or go back to Home.' : 'You’re offline. Try again once you’re back online.'}
+        </p>
         <div className="mt-1 flex w-full flex-col gap-2 md:flex-row">
           <Button block className="md:w-auto" onClick={retry}>
             Try again

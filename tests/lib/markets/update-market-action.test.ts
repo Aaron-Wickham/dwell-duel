@@ -109,8 +109,9 @@ describe('updateMarketAction', () => {
     expect(await updateMarketAction('m1', undefined, form('Late'))).toEqual({ formError: 'This market has closed, so it can’t be edited.' })
 
     supabase.rpc.mockResolvedValue({ data: null, error: { message: "others have bet on this market, so its title can't change" } })
+    // The dialog locks a title others have bet on (0116), so this refusal means a bet landed after the page loaded.
     expect(await updateMarketAction('m1', undefined, form('New title'))).toEqual({
-      formError: 'Others have bet on this market, so its title can’t change.',
+      formError: 'Someone else has bet since this page loaded. Refresh to see the latest title.',
       field: 'title',
     })
   })
@@ -118,7 +119,7 @@ describe('updateMarketAction', () => {
   it('hides raw database text', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     supabase.rpc.mockResolvedValue({ data: null, error: { message: 'relation "public.market_edits" does not exist' } })
-    expect(await updateMarketAction('m1', undefined, form('Late'))).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(await updateMarketAction('m1', undefined, form('Late'))).toEqual({ formError: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.' })
     expect(log).toHaveBeenCalled()
   })
 })

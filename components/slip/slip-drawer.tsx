@@ -102,7 +102,7 @@ export function SlipDrawer({
                 return count === 0 ? focusPageHeading() : (closingTarget.current ?? returnFocusTo.current ?? true)
               }}
               className={cn(
-                'flex flex-col border-line bg-bg text-ink shadow-overlay outline-none',
+                'flex flex-col border-overlay-edge bg-bg text-ink shadow-overlay outline-none',
                 EASE,
                 isDesktop
                   ? 'h-full w-[440px] max-w-full border-l pt-(--safe-top) [transform:translateX(var(--drawer-swipe-movement-x))] data-starting-style:[transform:translateX(100%)] data-ending-style:[transform:translateX(100%)]'
@@ -123,7 +123,8 @@ export function SlipDrawer({
               </div>
               <Drawer.Content
                 onClick={handleContentClick}
-                className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(24px+var(--safe-bottom))] md:px-6"
+                // SlipPanel scrolls its own body and pins the Place block under it.
+                className="flex min-h-0 flex-1 flex-col"
               >
                 <SlipPanel />
               </Drawer.Content>

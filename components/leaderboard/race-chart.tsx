@@ -8,7 +8,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { EmptyState } from '@/components/ui/empty-state'
 import { SectionCard } from '@/components/ui/section-card'
 import { useTimeZone } from '@/components/ui/local-time'
-import { exitStep, memberSeries, raceLayout } from '@/components/leaderboard/race-layout'
+import { describeRace, exitStep, memberSeries, raceLayout } from '@/components/leaderboard/race-layout'
+import { RACE_BODY_HEIGHT } from '@/components/leaderboard/race-size'
 import { formatDay } from '@/lib/markets/format-date'
 import type { RaceSeries } from '@/lib/social/leaderboard-extras'
 import { signedDc } from '@/lib/social/season'
@@ -25,6 +26,19 @@ const SERIES_TEXT = ['', 'text-s1', 'text-s2', 'text-s3', 'text-s4', 'text-s5', 
 const SERIES_BG = ['', 'bg-s1', 'bg-s2', 'bg-s3', 'bg-s4', 'bg-s5', 'bg-s6'] as const
 
 type Standing = { id: string; name: string; profit: number; hue: number }
+
+// A fixed sentence and one clamped line, two lines at every width in both states, so the card's
+// height never depends on the members' names. The clamp is visual only: a screen reader reads the
+// whole movement line.
+function RaceDescription({ line, more }: { line: string; more?: string }) {
+  return (
+    <>
+      Net profit for this month’s leaders.
+      <span className="line-clamp-1">{line}</span>
+      {more && <span className="sr-only"> {more}</span>}
+    </>
+  )
+}
 
 // The readout as it shows above the plot on a phone, where a box beside the cursor would cover
 // the lines under the finger.
@@ -75,10 +89,12 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
 
   if (series.length === 0) {
     return (
-      <SectionCard title="The race" titleId="leaderboard-race">
-        <EmptyState title="The race starts once bets settle.">
-          Then each of the month’s top five gets a line that steps up or down as their bets pay out.
-        </EmptyState>
+      <SectionCard title="The race" titleId="leaderboard-race" description={<RaceDescription line="Nothing has settled yet." />}>
+        <div className={cn('flex items-center', RACE_BODY_HEIGHT)}>
+          <EmptyState title="The race starts once bets settle.">
+            Then each of the month’s top five gets a line that steps up or down as their bets pay out.
+          </EmptyState>
+        </div>
       </SectionCard>
     )
   }
@@ -132,7 +148,7 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
     setKeyStep(Math.max(0, Math.min(last, to)))
   }
 
-  const summary = series.map((s) => `${s.name} ${signedDc(s.final)}`).join(', ')
+  const movement = describeRace(series)
   const clippedNotes = [
     clippedTop === null
       ? null
@@ -151,15 +167,17 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
     <SectionCard
       title="The race"
       titleId="leaderboard-race"
-      description={`Net betting profit for this month’s top ${series.length}, move by move since the first bet settled.`}
+      // A runaway's note takes the visible line while there is one, so the card never grows a line
+      // for it; the movement is still read out in full.
+      description={clippedNote ? <RaceDescription line={clippedNote} more={movement} /> : <RaceDescription line={movement} />}
     >
-      <div className="flex flex-col gap-2">
+      <div className={cn('flex flex-col gap-2', RACE_BODY_HEIGHT)}>
         <div
           ref={setPhoneSlot}
           aria-hidden="true"
           className="min-h-[5.5rem] md:hidden [&:has([data-readout])>[data-hint]]:hidden"
         >
-          <p data-hint className="text-xs text-ink2">
+          <p data-hint className="text-sm text-ink2">
             Touch the chart to see each move.
           </p>
           {active !== null && <PhoneReadout label={momentLabel(active)} standings={standings(active)} />}
@@ -168,7 +186,7 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
           <div
             role="slider"
             tabIndex={0}
-            aria-label={`Net betting profit this month: ${summary}`}
+            aria-label={`Net betting profit this month: ${movement}`}
             aria-valuemin={0}
             aria-valuemax={last}
             aria-valuenow={active ?? last}
@@ -315,7 +333,6 @@ export function RaceChart({ series }: { series: RaceSeries[] }) {
           <span>Now</span>
         </div>
       </div>
-      {clippedNote && <p className="text-xs text-ink2">{clippedNote}</p>}
     </SectionCard>
   )
 }

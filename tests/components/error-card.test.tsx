@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ErrorCard } from '@/components/ui/error-card'
 
@@ -11,7 +11,7 @@ describe('ErrorCard', () => {
 
     const heading = screen.getByRole('heading', { level: 1, name: 'This page didn’t load' })
     expect(heading).not.toHaveClass('md:text-[40px]')
-    expect(screen.getByText('Something went wrong on our side. Try again, or go back to Home.')).toBeInTheDocument()
+    expect(screen.getByText('It may be your connection or our side. Try again, or go back to Home.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/')
 
     const button = screen.getByRole('button', { name: 'Try again' })
@@ -26,5 +26,17 @@ describe('ErrorCard', () => {
     expect(screen.getByText('Error code: 1234567890')).toHaveClass('select-text')
     rerender(<ErrorCard retry={() => {}} />)
     expect(screen.queryByText(/Error code/)).not.toBeInTheDocument()
+  })
+
+  it('says to try again once back online while the browser is offline, and follows the connection', () => {
+    const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    render(<ErrorCard retry={() => {}} />)
+    expect(screen.getByText('You’re offline. Try again once you’re back online.')).toBeInTheDocument()
+    onLine.mockReturnValue(true)
+    act(() => {
+      window.dispatchEvent(new Event('online'))
+    })
+    expect(screen.getByText('It may be your connection or our side. Try again, or go back to Home.')).toBeInTheDocument()
+    onLine.mockRestore()
   })
 })

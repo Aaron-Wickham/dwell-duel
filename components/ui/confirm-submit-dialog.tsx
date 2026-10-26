@@ -4,6 +4,7 @@ import { useState, type ComponentProps, type FormEvent, type ReactNode } from 'r
 import { AlertDialog } from '@base-ui/react/alert-dialog'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { ConfirmDialogPopup } from '@/components/ui/confirm-action-button'
+import { PendingLabel, PendingStatus } from '@/components/ui/pending-label'
 
 const CONFIRMED = 'data-confirmed-submit'
 
@@ -33,6 +34,7 @@ export function ConfirmSubmitDialog({
   title,
   description,
   confirmLabel,
+  pendingLabel,
   dismissLabel = 'Cancel',
   variant = 'primary',
   finalFocus = true,
@@ -44,6 +46,8 @@ export function ConfirmSubmitDialog({
   title: string
   description: ReactNode
   confirmLabel: string
+  // What the confirm button says while the form's action runs ("Resolving…").
+  pendingLabel?: string
   dismissLabel?: string
   variant?: 'primary' | 'danger'
   finalFocus?: ComponentProps<typeof AlertDialog.Popup>['finalFocus']
@@ -72,8 +76,15 @@ export function ConfirmSubmitDialog({
               if (pending) event.preventDefault()
             }}
           >
-            {confirmLabel}
+            {pendingLabel ? (
+              <PendingLabel pending={pending} pendingLabel={pendingLabel}>
+                {confirmLabel}
+              </PendingLabel>
+            ) : (
+              confirmLabel
+            )}
           </Button>
+          {pendingLabel && <PendingStatus pending={pending} pendingLabel={pendingLabel} />}
         </div>
       </ConfirmDialogPopup>
     </AlertDialog.Root>

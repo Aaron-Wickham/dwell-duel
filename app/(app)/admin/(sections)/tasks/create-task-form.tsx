@@ -56,7 +56,7 @@ export function CreateTaskForm() {
           aria-describedby={state?.field === 'title' ? 'create-task-error' : undefined}
         />
       </Field>
-      <Field label="Description" htmlFor="create-task-description">
+      <Field label="Description (optional)" htmlFor="create-task-description">
         <Textarea
           id="create-task-description"
           name="description"
@@ -127,7 +127,7 @@ export function CreateTaskForm() {
           {state.formError}
         </Message>
       )}
-      <FormSubmitButton block className="md:w-auto md:self-start">
+      <FormSubmitButton block className="md:w-auto md:self-start" pendingLabel="Creating…">
         Create task
       </FormSubmitButton>
     </form>

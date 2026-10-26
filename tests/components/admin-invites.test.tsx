@@ -66,9 +66,11 @@ afterEach(() => {
 })
 
 describe('InviteListItem', () => {
-  it('marks a claimed invite and offers no revoke or copy', () => {
+  // Claimed invites have their own tab, so the row doesn't repeat it (#387).
+  it('shows a claimed invite without a (claimed) note, and offers no revoke or copy', () => {
     renderItem({ email: 'sarah@example.com', claimed: true, createdAt: '2026-09-01T00:00:00Z' })
-    expect(screen.getByRole('listitem')).toHaveTextContent('sarah@example.com (claimed)')
+    expect(screen.getByRole('listitem')).toHaveTextContent('sarah@example.com')
+    expect(screen.queryByText(/claimed/)).toBeNull()
     expect(screen.queryByRole('button')).toBeNull()
   })
 
@@ -120,7 +122,7 @@ describe('InviteListItem', () => {
 describe('AddInviteForm', () => {
   it('keeps the placeholder the e2e suite fills, and describes the input with its hint', () => {
     render(<AddInviteForm />)
-    const input = screen.getByLabelText('Email')
+    const input = screen.getByLabelText('Google email')
     expect(input).toHaveAttribute('placeholder', 'friend@gmail.com')
     expect(input).toHaveAccessibleDescription('They can sign in with this Google account right away.')
     expect(screen.getByRole('button', { name: 'Add invite' })).toHaveAttribute('type', 'submit')
@@ -129,12 +131,12 @@ describe('AddInviteForm', () => {
   it('ties a server error to the email input', async () => {
     addInviteAction.mockResolvedValue({ formError: 'That email is already invited.' })
     render(<AddInviteForm />)
-    await userEvent.type(screen.getByLabelText('Email'), 'sarah@example.com')
+    await userEvent.type(screen.getByLabelText('Google email'), 'sarah@example.com')
     await userEvent.click(screen.getByRole('button', { name: 'Add invite' }))
 
     const error = await screen.findByRole('alert')
     expect(error).toHaveTextContent('That email is already invited.')
-    const input = screen.getByLabelText('Email')
+    const input = screen.getByLabelText('Google email')
     expect(input).toHaveAttribute('aria-invalid', 'true')
     expect(input).toHaveAccessibleDescription(
       'They can sign in with this Google account right away. That email is already invited.',
@@ -183,7 +185,7 @@ describe('CopyInviteButton (#85)', () => {
     render(<CopyInviteButton email="newfriend@example.com" />)
     await userEvent.click(screen.getByRole('button', { name: 'Copy invite message for newfriend@example.com' }))
 
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Couldn’t copy the invite message. Try again.'))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Couldn’t copy the invite message. Try again.', { duration: 10_000 }))
     expect(success).not.toHaveBeenCalled()
   })
 })
@@ -192,10 +194,11 @@ describe('AddInviteForm after adding (#85)', () => {
   it('offers to copy the invite message for the email just added, without repeating it as text', async () => {
     addInviteAction.mockResolvedValue({ addedEmail: 'newfriend@example.com' })
     render(<AddInviteForm />)
-    await userEvent.type(screen.getByLabelText('Email'), 'NewFriend@example.com')
+    await userEvent.type(screen.getByLabelText('Google email'), 'NewFriend@example.com')
     await userEvent.click(screen.getByRole('button', { name: 'Add invite' }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Invite added. Send them the invite message so they know to sign in.')
+    // The Add invite button keeps a status region of its own for "Adding…", so the message is found by its words.
+    expect((await screen.findByText('Invite added. Send them the invite message so they know to sign in.')).closest('[role="status"]')).not.toBeNull()
     expect(screen.getByRole('button', { name: 'Copy invite message for newfriend@example.com' })).toBeInTheDocument()
     expect(screen.queryByText(/newfriend@example\.com/)).toBeNull()
   })

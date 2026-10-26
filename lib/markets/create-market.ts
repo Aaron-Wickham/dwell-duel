@@ -9,7 +9,7 @@ import { friendlyError, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { afterAction, notifyNewMarket } from '@/lib/push/notify'
 import { isUuid } from '@/lib/uuid'
 import { normalizeCategoryName } from './categories'
-import { CREATE_MARKET_ERRORS } from './create-market-errors'
+import { CREATE_MARKET_ERRORS, LINE_ERROR } from './create-market-errors'
 
 export type ActionState =
   | { formError?: string; field?: 'title' | 'description' | 'category' | 'close_at' | 'outcomes' | 'line' | `outcome_${number}` }
@@ -52,7 +52,7 @@ export async function createMarketAction(_prevState: ActionState, formData: Form
   if (kind === 'over_under') {
     const line = Number(formData.get('line'))
     if (!Number.isFinite(line) || line < 0.5 || line % 1 !== 0.5) {
-      return { formError: 'Set the line to a half number, like 3.5.', field: 'line' }
+      return { formError: LINE_ERROR, field: 'line' }
     }
     const { data, error } = await supabase.rpc('create_market_v4', {
       p_title: title,

@@ -44,17 +44,23 @@ a line to `CHANGELOG.md` under the next release.
   `app/globals.css`, through Tailwind utilities (`bg-surface`, `text-ink2`,
   `border-line` and so on). Light and dark are the same markup with
   different variables. In dark, links are the near-white ink and lime
-  *fills* mark only the primary action and first place; `acc-text` (dark
-  `#8BE651`) stays the positive and open text colour. Active navigation uses
-  `nav-active`, `tab-active` and `segment-active`, and a card or row title
-  link takes `text-ink`. In light, lime is a fill or brand only (first place,
-  Getting started's step dots), never text on the background nor a state shown
-  by colour alone. `StatusChip` tones come only from the semantic
+  *fills* mark only the primary action, first place and the phone tab bar's
+  current tab; `acc-text` (dark `#8BE651`) stays the positive and open text
+  colour. The current phone tab is a `--lime` tile in both themes (D-1), its
+  label and icon `--on-lime`, extrabold and with a heavier stroke, since the
+  tile is only 1.73:1 on the light surface; the desktop nav's pill is
+  `nav-active` and a segmented control's `segment-active`, and a card or row
+  title link takes `text-ink`. In light, lime is a fill or brand only (first
+  place, Getting started's step dots, the current tab), never text on the
+  background nor a state shown by colour alone. `StatusChip` tones come only from the semantic
   tokens (`open` is acc-soft / acc-text, `won` win, `lost` loss, `wait`
   gold, `info` blue for a result or something of yours, `done` and `void`
   sunk), never `primary`. Category chips and avatar initials take a
   `--tint1`…`--tint6` pair from `tintFor` (`lib/ui/tint.ts`), never a
-  status colour (#445).
+  status colour (#445). An outcome is never coloured by its side
+  (D-3): `PickChip` and quick picks give Yes and No, Over and Under the
+  same neutral `--sunk`, and the word says which; only a result is win or
+  loss.
 - **Every page exports a title** (`metadata` or `generateMetadata`, #460); the root
   layout's template adds " · DwellDuel", and a test fails on a page without one.
 - **Every signed-in page is a `<Page>`.** It lives in `components/ui/page.tsx`
@@ -113,10 +119,11 @@ a line to `CHANGELOG.md` under the next release.
   back arrow, the close X, `Message`'s marks, the Needs you chevrons, a
   select's or disclosure's chevron, the plus on Add and Create market,
   search, the category picker's check and Create plus, proof types, the
-  Google G); other secondary buttons are text
-  only.
+  Google G, the trailing chevron on a standalone link that leads onward);
+  other secondary buttons are text only.
 - **Home** (#388, #438). The deep-teal Balance card shows at every width
-  (under the greeting on a phone). Your bets are `ListCard`s on the page,
+  (under the greeting on a phone), so the top bars' balance chip (ink on
+  `sunk`, never gold, which means something waits) is left out on `/` (D-6). Your bets are `ListCard`s on the page,
   never inside a card (two columns from `lg:`). Activity and Needs you
   (`HomeSection`, `components/home/home-section.tsx`) are rows on the page
   under an `<h2>` below `lg:` and cards from `lg:`; Needs you's review and
@@ -142,8 +149,24 @@ a line to `CHANGELOG.md` under the next release.
   form through its `form` attribute. A form with several submit buttons
   passes `useConfirmSubmit` a predicate naming which ones ask. The one
   exception is approving a single task submission from its row, which
-  stays a direct button (the e2e specs click a row's own "Approve");
-  "Approve selected" confirms, saying how many it approves and what it pays.
+  asks nothing but is held for an Undo instead (UX audit D-7):
+  `useUndoWindow` (`lib/ui/undo-window.ts`) keeps it 5 seconds, sending
+  nothing, while the row shows "Approving…" with Undo (focus moves to
+  Undo, and back to Approve on Undo), the toast "Approving {name}’s
+  submission" offers Undo too, and the row sits out bulk actions (its
+  checkbox disabled). It sends once the window ends, or at once when the
+  row unmounts or the page is hidden or left; there is no leave prompt.
+  A page killed mid-window can lose it, which leaves the submission
+  waiting, never paid twice. Once it lands the toast says "Approved
+  {name}’s submission." and focus on its button moves to the page heading
+  (`focusPageHeading`), since the row goes. The e2e specs click a row's own
+  "Approve" and wait out the window. "Approve selected" confirms, saying
+  how many it approves and what it pays.
+  A slow action's button (`FormSubmitButton`, `ConfirmActionButton`,
+  `ConfirmSubmitDialog`) takes a `pendingLabel` ("Placing…"), shown with
+  `LeafLoader` while it runs, so busy never looks only unavailable. An
+  error toast goes through `toastError` (`lib/toast/error-toast.ts`), which
+  keeps it up 10 seconds; a test fails on a direct `toast.error`.
 - **Controls.** Every control is a real `<button>`, `<a>` or `<label>`ed
   input, at least 44px tall. Selects and checkboxes stay native. When a
   form shows a server error, wire `aria-invalid` and `aria-describedby`
@@ -161,8 +184,12 @@ a line to `CHANGELOG.md` under the next release.
   at rest (a mouse hover still underlines), so titles, See all, back links
   and menu items read by their place and weight. A link inside a sentence
   ("How parlays pay", a feed row's names, a bet row's name, the rendered
-  rules) takes the `prose-link` utility, which keeps it underlined. A link
-  styled as a button, tab, chip or nav item may still carry `no-underline`.
+  rules) takes the `prose-link` utility, which keeps it underlined. So does
+  a link set in caption weight or `text-ink2` that isn't a row title, since
+  nothing else marks it as a link. A standalone link that ends a page or
+  section and leads onward ("Read the full rules") takes a trailing chevron.
+  A link styled as a button, tab, chip or nav item may still carry
+  `no-underline`.
 - **Charts** (#391; the handoff's Charts section). A two-outcome market
   draws one line, Yes or Over (`plottedOutcomes`), in `--s2`. Series
   colours come from `outcomeSeries` (the race's from `memberSeries`, by
@@ -191,17 +218,34 @@ a line to `CHANGELOG.md` under the next release.
   "opened"; **Time to resolve** for a closed market without a result;
   **called off**, never "voided", and **waiting for a result**, never
   "awaiting resolution" (D7, #403; the database values `voided` and
-  `awaiting`, RPC names and the admin ledger's labels keep theirs).
-- **Design skills** (#447). Two vendored skills live in `.claude/skills/`:
-  **Impeccable** (`/impeccable`, pbakaus/impeccable 4.6.0 at 08d5b47,
-  Apache 2.0) for app screens (critique, audit, polish, colorize, layout),
-  and **Taste** (`/taste`, Leonxlnx/taste-skill v2 at f624f37, MIT) only for
-  public pages (sign-in, privacy, terms), since it says it isn't for app
-  screens. Impeccable's launcher downloads a binary on first run; that
-  isn't allowed here, so it runs on its "launcher unavailable" path, reading
-  PRODUCT.md and DESIGN.md directly. Taste's `scripts/lint.mjs` is safe to
-  run. Where a skill's rules clash with this file (eyebrows, hairlines), this
-  file wins. Update a skill by re-copying its folder at a pinned commit.
+  `awaiting` and RPC names keep theirs; the admin ledger's labels use
+  the members' words too, "Market called off", while `?kind=` keeps the
+  database's type, UX audit D-8).
+- **UX Engine is the design skill set for all UI and UX work.** It is the
+  `ux-engine` Claude Code plugin (designmotionhq, 2.4.0), installed per
+  machine, never in this repo: its licence forbids publishing it and this
+  repo is public. Before creating or changing any screen, component, copy,
+  colour or badge, read `DESIGN.md` (its contract, checked by the plugin's
+  `check-design-md.mjs`; keep it `complete` and update it in the same PR as
+  a token change), then consult the matching skill: `ux-intent-discovery`
+  for a new surface (it names the rest), `ux-auditor` to audit or fix an
+  existing one, and `information-hierarchy`, `state-completeness`,
+  `form-ux`, `feedback-and-affordance`, `responsive`, `visual-character`
+  or `design-system` as the surface needs. The commands are `/ux-audit`,
+  `/ux-design`, `/ux-review` (run it before opening a UI PR) and `/restyle`.
+  A one-line change needs none. Its proposals still go through mock-up and
+  approval before they're built. Where a skill's defaults clash with this
+  file (eyebrows, hairlines, chips, type sizes), this file wins. A session
+  without the plugin (a cloud session, another machine) says so instead of
+  imitating it.
+- **Other design skills** (#447) stay vendored in `.claude/skills/` as
+  second opinions: **Impeccable** (`/impeccable`, pbakaus/impeccable 4.6.0
+  at 08d5b47, Apache 2.0) for app screens and **Taste** (`/taste`,
+  Leonxlnx/taste-skill v2 at f624f37, MIT) only for public pages (sign-in,
+  privacy, terms). Impeccable's launcher downloads a binary on first run;
+  that isn't allowed here, so it runs on its "launcher unavailable" path,
+  reading PRODUCT.md and DESIGN.md directly. Taste's `scripts/lint.mjs` is
+  safe to run. Update one by re-copying its folder at a pinned commit.
 - **Visual source of truth:** `docs/design/app-redesign-handoff.md`, which
   describes the app as it is. The dated specs and plans in `docs/archive/`
   are history: they name things the code no longer has, so don't build
@@ -230,8 +274,14 @@ a line to `CHANGELOG.md` under the next release.
   height at 375 and 1280 (a text line is a box as tall as the line, a
   header description 24px lines, two below `md:`), so nothing jumps when
   the page arrives (#401). A block that shows only sometimes streams
-  behind a `<Suspense fallback={null}>` instead, as Home's Needs you and
-  Getting started do (#388).
+  behind a `<Suspense fallback={null}>` instead, as Home's Getting started
+  does (#388), unless streaming in would push content under a thumb: Home's
+  Needs you, above Your bets on a phone, renders with the first paint (D-11),
+  from the review counts the signed-in layout already read
+  (`readReviewCounts`, a `cache()`d read both call). Home's optional blocks
+  read through `optionalRead` (`lib/home/optional-read.ts`): a failed read is
+  logged and the block left out, and only standing and the closing-soon reads
+  fail the page (HOME-1).
 - **Drill-down pages** pass `Page`'s `transition="drill-down"`, which
   also enables the back-swipe; its logical parents live in
   `lib/nav/back-swipe.ts`.
@@ -300,7 +350,11 @@ a line to `CHANGELOG.md` under the next release.
   A row or tile *inside* a card never lifts (#244: a card floating in a
   card reads as a button in a button): it takes `hover-tint`, a flat
   `--sunk` panel drawn a little wider than a divided list's row, or flush
-  with a padded row that sets `[--tint-inset:0]`. The lift drops its
+  with a padded row that sets `[--tint-inset:0]`. The one exception is
+  Home's Needs you tiles (HOME-8): already filled with their status tint,
+  so a `--sunk` panel behind them can't show; under a mouse they take an
+  8% wash of their own text colour, drawn under the text (an `after:`
+  layer, `--duration-hover` on `ease-ios`). The lift drops its
   movement under reduced motion, and `pressable` carries the transition,
   so a colour hover on a `pressable` eases on its own.
 - **Motion tokens.** Curves, durations and delays are the `--ease-*` /
@@ -314,11 +368,17 @@ a line to `CHANGELOG.md` under the next release.
   caps that move and a middle that stretches, #418), and a nav or tab-bar link it
   slides under takes `pill-label`, so its colour cross-fades over the same
   280ms; every
-  dialog takes `components/ui/dialog-classes.ts`. Reduced motion turns page
+  dialog takes `components/ui/dialog-classes.ts`, and every menu item
+  `menuItemClass` (`components/ui/menu-classes.ts`). Reduced motion turns page
   transitions into a `--duration-fast` cross-fade, never a cut. Times in
   CSS that script also keeps (the sign-in intro's) are custom properties
   script writes from its constants, not copies.
 - **Never optimistic:** bet, parlay, resolve, void and balance actions.
+  A row's single Approve (UX audit D-7) is held, not optimistic: nothing on screen
+  says it's done and nothing is sent until its 5-second Undo window ends,
+  and approve_task_completion refusing a submission that isn't pending
+  (with the action counting a replay of the reviewer's own approval as
+  success) keeps it to one payout. No other action may be held this way.
 - **Every action that creates something is retry-safe,** not only the ones
   that move coins: `experimental.useOffline` replays an action whose
   response was lost, even when it had committed. Creating a market, a

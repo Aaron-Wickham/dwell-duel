@@ -3,9 +3,9 @@ import { currentSeasonName, seasonName, seasonOfEventId, signedDc } from '@/lib/
 
 describe('signedDc', () => {
   it.each([
-    [140, '+140 DC'],
-    [-25, '−25 DC'],
-    [0, '0 DC'],
+    [140, '+140\u00A0DC'],
+    [-25, '−25\u00A0DC'],
+    [0, '0\u00A0DC'],
   ])('shows %i as %s', (amount, text) => {
     expect(signedDc(amount)).toBe(text)
   })

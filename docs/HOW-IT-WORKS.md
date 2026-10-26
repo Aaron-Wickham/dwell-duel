@@ -64,7 +64,8 @@ typing its name for a market brings it back.
 
 While a market is open, its creator (or an admin) can edit the
 description and the category, and can reword the title until someone else
-has bet on it, solo or as a parlay pick. An admin can change a market's
+has bet on it, solo or as a parlay pick (after that, Edit shows the title
+but doesn't let it change). An admin can change a market's
 category at any time, even after it closes. Everyone can see every past
 version under Edit history, in the market's More actions menu (the ⋯
 button at its top right, which also holds Share, Duplicate, Edit and
@@ -183,7 +184,8 @@ position** strip just above its outcomes (under the chart on a phone, at
 the top of the right-hand column on a computer). Only you see it. While the market is open it lists
 each of your bets with exactly what it pays if it wins, and each parlay
 that has a pick on the market, linking to the parlay. Once the market
-settles, each bet shows Won, Lost or Refunded, the card says what you won
+settles, each bet shows Won, Lost, Called off (its market was called off
+and the stake came back) or "Refunded · No winners", the card says what you won
 or lost on the market overall (left out when it comes to 0), and each
 parlay pick says where it and its parlay stand.
 
@@ -200,8 +202,10 @@ other stakes already in the slip, and a chip for more than that is
 greyed out. Each pick shows its chance, and a Solo pick what its stake
 wins. The top
 of the slip shows your balance (and how many DC short the slip is, when
-it is), and when Place can't be tapped, a line under it says why. At 0 DC
-it points you to Tasks; your picks stay in the slip. Adding or removing a
+it is). Place stays at the bottom of the slip while you scroll, and when
+it can't be tapped, a line under it says why. At 0 DC it points you to
+Tasks; your picks stay in the slip. If a pick is refused when you place,
+a line above Place says how many and the slip scrolls to the first one. Adding or removing a
 pick doesn't pop up a message: the outcome's row and the slip button's
 count change instead. Once the slip holds two or more picks, each is
 either:
@@ -269,20 +273,25 @@ already moved the chance like any bet, apart from a parlay from before
 October 2026, which never did). It never says whose parlays they are.
 
 **My bets** shows your solo bets and parlays together, newest first, under
-Open, Settled and Cancelled. Only you can see it. Everyone can see who
+Open and Settled, plus Cancelled if you had a bet cancelled before October
+2026. Only you can see it. Everyone can see who
 bet what on each market, and bets and parlays also appear in the feed.
 
 Each open bet says what it pays if it wins ("10 DC on Yes · Pays 18 DC")
 and when its market closes; a settled one says what it did ("Won 18 DC",
-"Lost", "Refunded"). A parlay's card says its stake and what it pays if
-all its picks win, and lists its picks with a word for each: Won, Lost,
+"Lost", "Called off · Refunded" when its market was called off, or
+"Refunded · No winners"). A parlay's card says its stake and what it pays
+if every pick wins ("Pays 210 DC if every pick wins"), or "Refunded" when
+every pick was called off, and lists its picks with a word for each: Won, Lost,
 Waiting or Called off.
 
 Tap a parlay to open its **breakdown**: what it pays (or paid, or "Lost"),
-its stake and how many times your stake it pays, each pick with its odds
-and where its market stands (Won, Lost, Waiting or Called off), and a short
-sum showing how the multiplier adds up. A called-off pick is shown as left
-out, and the rest carry on.
+its stake and how many times your stake it pays, when it was placed, each
+pick with its odds and where its market stands (Won, Lost, Waiting or
+Called off), and a short sum showing how the multiplier adds up. A
+called-off pick is shown as left out, and the rest carry on. A refunded
+parlay shows "Refunded" over its stake and "Every pick was called off",
+with no multiplier, since no odds were left to multiply.
 
 My bets' **Coins** tab is your coin history: every DC that came in or went
 out, newest first, in plain words ("Won 26 DC on Will it rain?", "Task
@@ -334,15 +343,16 @@ winner and says why, and winners are paid at once.
 
 ## Tasks
 
-*In short:* do a Bible-study task, tap I did this, and a reviewer approves
+*In short:* do a Bible-study task, tap **I did this**, and a reviewer approves
 it to pay its reward.
 
 Admins keep a catalog of Bible-study tasks, each with a DC reward.
 Tasks groups them by what you can do with each: **To do** (tasks you can
-submit now), **Waiting for review**, **Not approved** and **Done**
+submit now), **Not approved**, **Waiting for review** and **Done**
 (approved and not open again yet: this period for a repeating task, for
-good for a one-off). A group with nothing in it
-isn't shown.
+good for a one-off). A group with nothing in it isn't shown, except To
+do: with everything waiting or done, it says "Nothing to do right now."
+and when the soonest repeating task opens again.
 
 - A task is **one-off** or **repeats** daily, weekly (Monday to
   Sunday), monthly or yearly. Periods run on US Eastern time, so a daily
@@ -350,16 +360,19 @@ isn't shown.
   Monday, and so on. Once a repeating task is approved, its row says when
   you can do it again ("Again Monday, midnight ET"), and it moves back to
   To do then.
-- You submit a task once per period with **I did this**, adding an
-  optional note. Some tasks **require proof**: a photo, file or link (their
-  row says "Photo, file or link needed").
+- You submit a task once per period with **I did this**, which shows the
+  task's full instructions, adding an optional note. Some tasks **require
+  proof**: a photo, file or link (their row says "Photo, file or link
+  needed"). A link still in the link field when you send goes with the
+  rest, as if you'd tapped Add link.
 - **Proof limits and expiry.** Proof is a photo, a PDF or a text file, or a
   link: up to 5 attachments, no more than 3 of them files, 3 MB a file and
   6 MB of files together. Photos are shrunk on your device before they upload.
-  There's also a daily upload allowance (30 files or 60 MB), which an honest
-  submission never comes near. Once you've submitted proof you can't delete it.
+  There's also a daily upload allowance (30 files or 60 MB in any 24 hours),
+  which an honest submission never comes near; past it, an upload says so
+  and you can add a link instead. Once you've submitted proof you can't delete it.
   So that the app's free storage doesn't fill up, the **files expire**: proof
-  on a task submission that has been approved or rejected is deleted **30 days
+  on a task submission that has been approved or not approved is deleted **30 days
   after the review**, and proof on a market's result **90 days after it was
   resolved**. A pending submission's proof is kept until it's reviewed. After
   expiry the row still says how many attachments there were and that they've
@@ -392,7 +405,9 @@ month ranks the month's betting profit, so everyone starts level.
   and stays pinned to the bottom of the screen until you scroll to it.
   When you're further down than the list shows, a bar with your rank and
   net worth stands in for it on a phone, with **Jump to me**, which opens
-  the list ten places above you instead of paging down from the top.
+  the list ten places above you instead of paging down from the top. This
+  month has the same bar, with your profit, and its Jump to me stays on
+  This month.
 - **This month** ranks **net betting profit** for the calendar month, on
   Eastern time (America/New_York): winnings, refunds and cancelled-bet
   refunds, minus stakes, and minus any winnings an override took back.
@@ -408,9 +423,12 @@ month ranks the month's betting profit, so everyone starts level.
 - **Only current members are ranked.** Someone the owner has removed drops
   off both boards and out of the count in a rank like "218th of 502"; their profile still shows
   their net worth, marked "Not ranked".
-- **Your standing** (Net worth, wide screens only): a card beside the
-  rankings, under the podium, shows your rank, net worth, record and how
-  far you are behind the member above you, with Jump to me.
+- **Your standing** (wide screens only, on both boards): a card beside the
+  rankings shows your rank, record and how far you are behind the member
+  above you, with Jump to me. On Net worth it sits under the podium and
+  shows your net worth; on This month it sits above the awards and shows
+  your profit, signed ("+40 DC", "−20 DC"). If you haven't bet this month
+  it says so instead.
 - **Podium and records:** once three members are ranked, the top three
   of the Net worth board stand on a podium (This month leads with the
   race instead). From tablet width up, each row shows a win-loss record (like 6-3):
@@ -492,7 +510,8 @@ bets yet." and shows only markets created and tasks approved.
 DwellDuel can send notifications to your phone or computer, even when
 the app is closed. They're off until you turn them on, under **Settings →
 Notifications**, on each device you want them on. You choose what you
-hear about, and your choices follow your account onto every device. Where a
+hear about, each choice saving as you tick or untick it, and your choices
+follow your account onto every device. Where a
 device can't get notifications (an iPhone that hasn't added DwellDuel to
 the Home Screen, a browser without them, or notifications blocked), the
 choices are greyed out there, with a line saying why:
@@ -501,20 +520,20 @@ choices are greyed out there, with a line saying why:
 |---|---|---|
 | **Markets to resolve** | A market you made has closed and is waiting for you to resolve it. Admins and the owner also hear about every closed market that has no result, once each. Sent within about a minute of closing, with a daily backup if that's missed | On |
 | **Results** | A market you bet on, solo or as a parlay pick, is resolved ("You won 26 DC", then the market and its result), changed by an override or called off | On |
-| **Task reviews** | Your task submission is approved or rejected, with the reviewer's reason, if they gave one | On |
-| **Tasks to review** (reviewers and above only) | A member submits a task waiting for review. Never your own | On |
+| **Task reviews** | Your task submission is approved or not approved, with the reviewer's reason, if they gave one | On |
+| **Tasks to review** (reviewers and above only) | A member's submission is waiting for you to review. Never your own | On |
 | **New markets** | Someone else creates a market | Off |
 
 A parlay only pays once all its picks are settled, so if your only stake
 in a market is a parlay pick, the notification just gives the result. A
 cancelled bet gets no notification. Tapping a notification opens the
-market, your tasks, or (for Task to review) the review queue.
+market, your tasks, or (for Tasks to review) the review queue.
 
 **On iPhone and iPad,** notifications only work once DwellDuel is on
 your Home Screen (iOS 16.4 or later): tap Share, then Add to Home Screen,
 open DwellDuel from there and turn them on in Settings. If you've blocked
 notifications for DwellDuel, allow them again in your browser's or
-phone's settings.
+phone's settings, then tap **Check again** in Settings.
 
 **If a device stops getting them,** turn notifications on again in
 Settings. They stay on your ten most recently used devices: turning them on
@@ -535,7 +554,7 @@ sign back in. Your other devices keep theirs.
 
 Reviewers and above see what is waiting on them: other members' task
 submissions (reviewers and above) and closed markets with no result (admins
-and above). Their avatar gets a red dot, its menu's **Admin** item says
+and above). Their avatar gets a gold dot, its menu's **Admin** item says
 "N waiting", and Home's **Needs you** lists each queue with its count; all
 of it disappears at zero. Admin opens on the queue that has work in it.
 
@@ -652,7 +671,8 @@ or reach them through
 ## Around the app
 
 - **Home:** a greeting, then your balance in a deep teal card with your
-  rank (once you've had a bet settled) and the DC riding on your open bets.
+  rank (once you've had a bet settled) and the DC in your open bets. The
+  balance at the top of the screen is left out on Home, since the card shows it.
   **Needs you** appears when something does: counts of submissions to
   review and markets to resolve, your own markets to resolve, and at 0 DC a
   pointer to Tasks. **Your bets** shows the three closing soonest as cards
@@ -661,9 +681,9 @@ or reach them through
   started** card: read How it works, turn on notifications on this device (left
   out on a browser that can't get them), add your photo, place your first bet
   and try a task. It goes away once you've done them all, when you dismiss
-  it, or once you've had a bet settled and a task approved. After that, the
+  it (Undo brings it back), or once you've had a bet settled and a task approved. After that, the
   installed app without notifications asks once to turn them on, until you
-  tap Not now.
+  tap Don't show again.
 - **Weekly recap:** on Sundays and Mondays (Eastern time), Home recaps
   the week, Monday to Sunday. On Sunday it's the week so far; on Monday
   it's the same week, finished. It shows your net betting profit for the
@@ -731,7 +751,7 @@ expected payout changed**:
   the switch gets its stake back, as the old rules promised, even if
   someone bets on that outcome afterwards. Bets placed after the switch
   are paid like any other: their shares if they win, nothing if they
-  lose. My bets marks such a refund "Refunded, no winners".
+  lose. My bets marks such a refund "Refunded · No winners", and a bet on a called-off market "Called off · Refunded".
 - **Pending parlays were fixed too.** A pick whose odds weren't set yet
   got them from its market's pool as it stood: other members' DC on the
   market ÷ other members' DC on your pick, at most 5×, or 1.00× without

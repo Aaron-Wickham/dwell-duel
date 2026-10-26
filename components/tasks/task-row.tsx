@@ -18,7 +18,8 @@ export type TaskRowState =
   // again: when a repeating task can be done again, from its period; null for a one-off (#266).
   | { kind: 'done'; again?: string | null }
 
-// A divided row on the page (D2): no card and no chips. The reward leads in gold, then the cadence;
+// A divided row on the page (D2): no card and no chips. The reward leads in bold ink (gold means
+// waiting, which a reward isn't), then the cadence;
 // only a fact that changes what you do (proof needed, a rejection's reason) gets a line of its own.
 export function TaskRow({
   title,
@@ -68,7 +69,7 @@ export function TaskRow({
       <div className="flex min-w-0 flex-col gap-1">
         <p className={cn(rowTitleClass, 'break-words')}>{title}</p>
         <p className="text-sm">
-          <span className="font-bold text-gold">{formatDcAmount(rewardAmount)}</span>
+          <span className="font-bold text-ink">{formatDcAmount(rewardAmount)}</span>
           <span className="text-ink2">
             {state.kind === 'waiting' ? (
               <>
@@ -88,7 +89,7 @@ export function TaskRow({
             )}
           </span>
         </p>
-        {state.kind === 'todo' && description && <p className="line-clamp-1 text-sm break-words text-ink2">{description}</p>}
+        {(state.kind === 'todo' || state.kind === 'rejected') && description && <p className="line-clamp-1 text-sm break-words text-ink2">{description}</p>}
         {state.kind !== 'waiting' && proofRequired && <p className="text-sm text-ink2">Photo, file or link needed</p>}
         {state.kind === 'rejected' && (
           <p className="text-sm break-words text-loss">{state.note ? `“${state.note}”` : 'No reason given.'}</p>

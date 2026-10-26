@@ -37,11 +37,11 @@ describe('describeCreatorStake and describeMarketStake', () => {
 
   // #84: every member sees what the creator has riding; the creator reads it as "You".
   it('names the creator to every member, and says "You" to the creator', () => {
-    expect(describeCreatorStake(stake, 'had')).toBe('Creator had 1,200 DC on Yes and a parlay on No.')
-    expect(describeMarketStake(stake, 'Ben', true)).toBe('Ben has 1,200 DC on Yes and a parlay on No.')
-    expect(describeMarketStake(stake, 'Ben', false)).toBe('Ben had 1,200 DC on Yes and a parlay on No.')
-    expect(describeMarketStake(stake, null, true)).toBe('You have 1,200 DC on Yes and a parlay on No.')
-    expect(describeMarketStake(stake, null, false)).toBe('You had 1,200 DC on Yes and a parlay on No.')
+    expect(describeCreatorStake(stake, 'had')).toBe('Creator had 1,200\u00A0DC on Yes and a parlay on No.')
+    expect(describeMarketStake(stake, 'Ben', true)).toBe('Ben has 1,200\u00A0DC on Yes and a parlay on No.')
+    expect(describeMarketStake(stake, 'Ben', false)).toBe('Ben had 1,200\u00A0DC on Yes and a parlay on No.')
+    expect(describeMarketStake(stake, null, true)).toBe('You have 1,200\u00A0DC on Yes and a parlay on No.')
+    expect(describeMarketStake(stake, null, false)).toBe('You had 1,200\u00A0DC on Yes and a parlay on No.')
   })
 
   it('says nothing when there is no stake', () => {

@@ -76,7 +76,7 @@ describe('createTaskAction database errors', () => {
 
     const state = await createTaskAction(undefined, taskForm('Read Genesis 1-3'))
 
-    expect(state).toEqual({ formError: 'A task can reward at most 500 DC.', field: 'reward_amount' })
+    expect(state).toEqual({ formError: 'A task can reward at most 500\u00A0DC.', field: 'reward_amount' })
   })
 
   it('hides an unknown error behind a generic message', async () => {
@@ -85,7 +85,7 @@ describe('createTaskAction database errors', () => {
 
     const state = await createTaskAction(undefined, taskForm('Read Genesis 1-3'))
 
-    expect(state).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(state).toEqual({ formError: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.' })
     log.mockRestore()
   })
 })

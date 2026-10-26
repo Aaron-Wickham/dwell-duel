@@ -14,14 +14,14 @@ const FOUND: Lookups = {
 describe('coinLabel', () => {
   it.each([
     ['starting_grant', 100, {}, 'Starting balance'],
-    ['bet_placed', -10, { market_id: 'm1', outcome_id: 'o1' }, 'Bet 10 DC on Yes · Will it rain?'],
-    ['bet_won', 26, { market_id: 'm1' }, 'Won 26 DC on Will it rain?'],
+    ['bet_placed', -10, { market_id: 'm1', outcome_id: 'o1' }, 'Bet 10\u00A0DC on Yes · Will it rain?'],
+    ['bet_won', 26, { market_id: 'm1' }, 'Won 26\u00A0DC on Will it rain?'],
     ['bet_voided_refund', 10, { market_id: 'm1' }, 'Refund: market called off · Will it rain?'],
     ['bet_refunded', 10, { market_id: 'm1' }, 'Refund: nobody picked the winner · Will it rain?'],
     ['bet_cancelled', 10, { market_id: 'm1', outcome_id: 'o1' }, 'Refund: cancelled bet on Yes · Will it rain?'],
     ['resolution_reversed', -26, { market_id: 'm1' }, 'Payout taken back: result changed · Will it rain?'],
-    ['parlay_placed', -5, {}, 'Parlay 5 DC'],
-    ['parlay_won', 20, {}, 'Won 20 DC on a parlay'],
+    ['parlay_placed', -5, {}, 'Parlay 5\u00A0DC'],
+    ['parlay_won', 20, {}, 'Won 20\u00A0DC on a parlay'],
     ['parlay_refunded', 5, {}, 'Refund: parlay called off'],
     ['parlay_reversed', -20, {}, 'Parlay payout taken back: result changed'],
     ['task_completed', 10, { task_id: 't1' }, 'Task reward: Read Ruth'],
@@ -31,8 +31,8 @@ describe('coinLabel', () => {
   })
 
   it('falls back to wording without names when the lookups are missing (a deleted market or task)', () => {
-    expect(coinLabel('bet_placed', -10, { market_id: 'm1', outcome_id: 'o1' }, EMPTY)).toBe('Bet 10 DC')
-    expect(coinLabel('bet_won', 26, { market_id: 'm1' }, EMPTY)).toBe('Won 26 DC')
+    expect(coinLabel('bet_placed', -10, { market_id: 'm1', outcome_id: 'o1' }, EMPTY)).toBe('Bet 10\u00A0DC')
+    expect(coinLabel('bet_won', 26, { market_id: 'm1' }, EMPTY)).toBe('Won 26\u00A0DC')
     expect(coinLabel('bet_voided_refund', 10, { market_id: 'm1' }, EMPTY)).toBe('Refund: market called off')
     expect(coinLabel('bet_cancelled', 10, { market_id: 'm1' }, EMPTY)).toBe('Refund: cancelled bet')
     expect(coinLabel('task_completed', 10, { task_id: 't1' }, EMPTY)).toBe('Task reward')
@@ -40,7 +40,7 @@ describe('coinLabel', () => {
 
   it('names the market alone when a bet has no outcome label', () => {
     const noOutcome: Lookups = { ...FOUND, outcomes: new Map() }
-    expect(coinLabel('bet_placed', -10, { market_id: 'm1', outcome_id: 'o1' }, noOutcome)).toBe('Bet 10 DC on Will it rain?')
+    expect(coinLabel('bet_placed', -10, { market_id: 'm1', outcome_id: 'o1' }, noOutcome)).toBe('Bet 10\u00A0DC on Will it rain?')
   })
 
   it('leaves off the reason when an adjustment has none', () => {
@@ -90,7 +90,7 @@ describe('listMyTransactions', () => {
     expect(page.rows[0]).toEqual({
       id: 200,
       amount: -1,
-      label: 'Bet 1 DC on Name of o200 · Name of m200',
+      label: 'Bet 1\u00A0DC on Name of o200 · Name of m200',
       createdAt: row(200).created_at,
     })
     expect(page.next).toEqual({

@@ -17,8 +17,8 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'leaderboard', href: '/leaderboard', label: 'Leaderboard', shortLabel: 'Leaders' },
 ]
 
-// Voice control says the word on screen, so a phone tab's accessible name has to contain its short
-// label; "Leaders" isn't inside "Leaderboard".
+// Voice control says the word on screen, so a tab's accessible name has to contain its short label
+// (the phone tab bar, and the desktop nav below xl); "Leaders" isn't inside "Leaderboard".
 export function tabAriaLabel({ label, shortLabel }: NavItem): string | undefined {
   if (label.toLowerCase().includes(shortLabel.toLowerCase())) return label === shortLabel ? undefined : label
   return `${shortLabel}, ${label.toLowerCase()}`

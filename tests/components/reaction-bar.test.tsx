@@ -76,6 +76,13 @@ describe('ReactionBar', () => {
     expect(pill).not.toHaveClass('border-line')
   })
 
+  it('marks your own reaction by its edge and ink text, not by its tint alone (SOC-11)', () => {
+    renderBar(<ReactionBar eventId="bet:1" reactions={SOME} />)
+    const pill = screen.getByRole('button', { name: /^React fire, 3 reactions, you reacted$/ }).firstElementChild
+    expect(pill).toHaveClass('border-acc-text', 'ring-1', 'ring-acc-text', 'text-ink')
+    expect(pill).not.toHaveClass('text-acc-text')
+  })
+
   it('shows only React when nobody has reacted', () => {
     renderBar(<ReactionBar eventId="bet:1" reactions={noReactions()} />)
     expect(within(bar()).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['React'])
@@ -144,7 +151,7 @@ describe('ReactionBar', () => {
     const picker = await openPicker()
     await userEvent.click(within(picker).getByRole('button', { name: 'React clap, 0 reactions' }))
 
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Couldn’t add your reaction. Try again.'))
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Couldn’t add your reaction. Try again.', { duration: 10_000 }))
     await waitFor(() => expect(within(bar()).queryByRole('button', { name: /React clap/ })).toBeNull())
   })
 

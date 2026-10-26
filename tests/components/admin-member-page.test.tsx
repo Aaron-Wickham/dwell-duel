@@ -97,9 +97,10 @@ describe('AdminMemberPage (#254)', () => {
 
   it('gives the owner the balance, role and access controls', async () => {
     await renderPage()
-    expect(within(screen.getByRole('region', { name: 'Adjust balance' })).getByRole('button', { name: 'Adjust Ben' })).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Adjust balance' })).getByRole('button', { name: 'Adjust balance for Ben' })).toBeInTheDocument()
     expect(within(screen.getByRole('region', { name: 'Role' })).getByLabelText('Role')).toHaveValue('reviewer')
     expect(within(screen.getByRole('region', { name: 'Access' })).getByRole('button', { name: 'Remove Ben from DwellDuel' })).toBeInTheDocument()
+    expect(screen.queryByText(/Only the owner can change/)).toBeNull()
   })
 
   it('shows an admin who’s who, and none of the owner’s controls', async () => {
@@ -109,6 +110,8 @@ describe('AdminMemberPage (#254)', () => {
     expect(screen.queryByRole('region', { name: 'Adjust balance' })).toBeNull()
     expect(screen.queryByRole('region', { name: 'Role' })).toBeNull()
     expect(screen.queryByRole('region', { name: 'Access' })).toBeNull()
+    // ADM-11: and says why they're missing.
+    expect(screen.getByText('Only the owner can change a member’s role, balance or access.')).toBeInTheDocument()
   })
 
   it('never offers to remove, or change the role of, the owner', async () => {

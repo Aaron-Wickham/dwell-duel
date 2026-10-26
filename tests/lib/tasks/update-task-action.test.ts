@@ -84,7 +84,7 @@ describe('updateTaskAction database errors', () => {
 
     const state = await updateTaskAction('t1', undefined, taskForm('Read Genesis 1-3'))
 
-    expect(state).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(state).toEqual({ formError: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.' })
     log.mockRestore()
   })
 })

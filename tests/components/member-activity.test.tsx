@@ -75,6 +75,7 @@ async function renderActivity(activity: KeysetPage<FeedEvent>, searchParams: Rec
   render(
     await MemberActivity({
       memberId: 'p-bob',
+      memberName: 'Bob',
       page: { before: null, before_from: null },
       searchParams,
     } as never),
@@ -96,15 +97,16 @@ function feedReturning(page: KeysetPage<FeedEvent>) {
 describe('MemberActivity', () => {
   it('says there is nothing older, not that nothing has happened, for a window past the end', async () => {
     await renderActivity({ rows: [], next: null, windowed: true }, { activity_from: 'OLD' })
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to newest' })).toHaveAttribute('href', '/members/p-bob')
-    expect(screen.queryByText('Nothing yet.')).toBeNull()
+    expect(screen.queryByText('No activity yet.')).toBeNull()
   })
 
-  it('keeps its own empty state when the member has no activity', async () => {
+  it('keeps its own empty state, naming the member, when the member has no activity (C-26)', async () => {
     await renderActivity({ rows: [], next: null, windowed: false })
-    expect(screen.getByText('Nothing yet.')).toBeInTheDocument()
-    expect(screen.queryByText('Nothing older here.')).toBeNull()
+    expect(screen.getByText('No activity yet.')).toBeInTheDocument()
+    expect(screen.getByText('Bob’s bets, markets and finished tasks show up here.')).toBeInTheDocument()
+    expect(screen.queryByText('Nothing older here')).toBeNull()
   })
 
   it('moves focus to the first new row when Show more is clicked', async () => {

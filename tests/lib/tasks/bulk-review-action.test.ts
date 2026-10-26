@@ -150,7 +150,7 @@ describe('bulkRejectTaskCompletionsAction', () => {
     const state = await bulkRejectTaskCompletionsAction(undefined, selection(['c-1', 'c-2']))
 
     // Raw Postgres text never reaches a member (#203).
-    expect(state).toEqual({ summary: '0 rejected, 2 failed: Something went wrong. Try again.' })
+    expect(state).toEqual({ summary: '0 rejected, 2 failed: That didn’t go through. Try again, and if it keeps happening, tell an admin.' })
     expect(log).toHaveBeenCalled()
   })
 })

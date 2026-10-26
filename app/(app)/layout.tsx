@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { requireUser } from '@/lib/auth/require-user'
 import { adminHref, atLeast, getRole } from '@/lib/auth/roles'
-import { getReviewCounts, reviewSubscriptions } from '@/lib/admin/review-counts'
+import { readReviewCounts, reviewSubscriptions } from '@/lib/admin/review-counts'
 import { nextResolveCheckAt } from '@/lib/markets/markets-to-resolve'
 import { RefreshAt } from '@/components/home/refresh-at'
 import { avatarUrl } from '@/lib/profile/avatar'
@@ -38,12 +38,10 @@ export default async function SignedInLayout({ children }: LayoutProps<'/'>) {
   ])
   if (error) throw error
   const isAdmin = atLeast(role, 'admin')
-  // The badge is a nicety: if reading it fails, the page still renders, without it.
+  // The badge is a nicety: if reading it fails, the page still renders, without it. Home reads the
+  // same counts for Needs you, and readReviewCounts makes that one query.
   const [reviewCounts, nextClose] = await Promise.all([
-    getReviewCounts(supabase, role).catch((error: unknown) => {
-      console.error('Reading the review counts failed', error)
-      return { tasks: 0, markets: 0 }
-    }),
+    readReviewCounts(supabase, role),
     isAdmin
       ? nextResolveCheckAt(supabase, user.id, true).catch((error: unknown) => {
           console.error('Reading the next market close failed', error)

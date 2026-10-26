@@ -91,7 +91,7 @@ describe('updateProfileAction', () => {
 
     const state = await updateProfileAction(undefined, profileForm())
 
-    expect(state).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(state).toEqual({ formError: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.' })
     expect(log).toHaveBeenCalledWith('update_my_profile failed', { message: 'boom' })
     expect(upload).not.toHaveBeenCalled()
     expect(remove).not.toHaveBeenCalled()
@@ -138,7 +138,7 @@ describe('updateProfileAction', () => {
 
     const state = await updateProfileAction(undefined, profileForm({ photo: jpeg() }))
 
-    expect(state).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(state).toEqual({ formError: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.' })
     expect(upload).not.toHaveBeenCalled()
     expect(supabase.rpc).not.toHaveBeenCalled()
   })

@@ -4,7 +4,7 @@ import { legTally, tallySummary } from '@/lib/parlays/get-parlay'
 import { cn } from '@/lib/utils'
 
 const LEG_TONE: Record<LegStatus, StatusChipTone> = {
-  open: 'wait',
+  open: 'open',
   awaiting: 'wait',
   won: 'won',
   lost: 'lost',
@@ -19,12 +19,15 @@ const LEG_LABEL: Record<LegStatus, string> = {
   voided: 'Called off',
 }
 
+// Filled once a pick is decided (won, lost, or called off in grey); a pick still to play out is a
+// sunk segment with a --line-s edge, 3.85:1 on the card, so the bar reads as one segment per pick
+// (SOC-12).
 const SEGMENT: Record<LegStatus, string> = {
   won: 'bg-win',
   lost: 'bg-loss',
-  open: 'bg-line',
-  awaiting: 'bg-line',
-  voided: 'border border-line bg-sunk',
+  open: 'border border-line-s bg-sunk',
+  awaiting: 'border border-line-s bg-sunk',
+  voided: 'bg-line-s',
 }
 
 export function LegPill({ status }: { status: LegStatus }) {

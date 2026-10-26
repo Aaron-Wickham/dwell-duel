@@ -26,6 +26,7 @@ import HowItWorksLoading from '@/app/(app)/how-it-works/loading'
 import HowItWorksRulesLoading from '@/app/(app)/how-it-works/rules/loading'
 import FeedLoading from '@/app/(app)/feed/loading'
 import LeaderboardLoading from '@/app/(app)/leaderboard/loading'
+import { MonthSkeleton } from '@/app/(app)/leaderboard/skeletons'
 import AdminInvitesLoading from '@/app/(app)/admin/(sections)/invites/loading'
 import AdminTasksLoading from '@/app/(app)/admin/(sections)/tasks/loading'
 import AdminMembersLoading from '@/app/(app)/admin/(sections)/members/loading'
@@ -45,6 +46,7 @@ const SKELETONS: [string, ComponentType][] = [
   ['how-it-works-rules', HowItWorksRulesLoading],
   ['feed', FeedLoading],
   ['leaderboard', LeaderboardLoading],
+  ['leaderboard-month', MonthSkeleton],
   ['admin-invites', AdminInvitesLoading],
   ['admin-tasks', AdminTasksLoading],
   ['admin-members', AdminMembersLoading],
@@ -94,6 +96,17 @@ describe('the My bets skeleton', () => {
     const { container } = render(<BetsLoading />)
     expect(container.querySelector('[data-skeleton="bets-coins"]')).toBeNull()
     expect(container.querySelector('[data-skeleton="bets"]')).toHaveClass('max-w-[1280px]')
+  })
+
+  it('draws three tabs, or all four on Cancelled, which only a member with a cancelled bet sees (D-10)', () => {
+    const bar = () => [...document.querySelectorAll('.skeleton')].find((b) => b.classList.contains('h-[52px]'))!
+    search.params = new URLSearchParams('tab=settled')
+    const { unmount } = render(<BetsLoading />)
+    expect(bar()).toHaveClass('md:w-[246px]')
+    unmount()
+    search.params = new URLSearchParams('tab=cancelled')
+    render(<BetsLoading />)
+    expect(bar()).toHaveClass('md:w-[357px]')
   })
 })
 
@@ -150,6 +163,23 @@ describe('skeletons match their pages', () => {
     expect(side.querySelector('.items-end.justify-center')).not.toBeNull()
     expect(side.lastElementChild).toHaveClass('hidden', 'lg:flex')
     expect(rankings).toHaveClass('divide-y', 'lg:col-start-1')
+  })
+
+  // SOC-2: This month has no podium, so its skeleton draws the race card instead, and the
+  // standing card beside the rankings at lg.
+  it('the leaderboard skeleton draws This month’s race and rankings on ?tab=month, with no podium', () => {
+    search.params = new URLSearchParams('tab=month')
+    const { container } = render(<LeaderboardLoading />)
+    search.params = null
+    expect(container.querySelector('[data-skeleton="leaderboard"]')).toBeNull()
+    const month = container.querySelector('[data-skeleton="leaderboard-month"]')!
+    expect(month.querySelector('.items-end.justify-center')).toBeNull()
+    expect(withClass(container, 'h-[340px]')).toHaveLength(1)
+    const grid = month.querySelector('[class*="lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]"]')!
+    const [rankings, side] = [...grid.children]
+    expect(rankings).toHaveClass('divide-y', 'lg:col-start-1')
+    expect(rankings.children).toHaveLength(8)
+    expect(side).toHaveClass('hidden', 'lg:flex', 'lg:col-start-2')
   })
 
   // #388: only what every member sees, so nothing conditional: Your bets' and Activity's three

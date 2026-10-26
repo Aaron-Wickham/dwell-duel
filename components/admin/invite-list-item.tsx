@@ -10,15 +10,8 @@ export function InviteListItem({ invite, actions, domId }: { invite: InviteRow; 
       className="flex min-h-16 flex-col justify-center gap-2 py-2.5 md:flex-row md:items-center md:justify-between md:gap-3"
     >
       <div className="flex min-w-0 flex-col">
-        <span className="wrap-anywhere">
-          {invite.email}
-          {invite.claimed && (
-            <>
-              {' '}
-              <span className="text-ink2">(claimed)</span>
-            </>
-          )}
-        </span>
+        {/* Claimed invites have their own tab, so the row doesn't say it again (#387). */}
+        <span className="wrap-anywhere">{invite.email}</span>
         <span className="text-sm text-ink2">
           Added <LocalTime iso={invite.createdAt} format="day" />
         </span>

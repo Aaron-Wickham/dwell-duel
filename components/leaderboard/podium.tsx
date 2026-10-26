@@ -28,7 +28,7 @@ function Place({ member, signed, meId }: { member: PodiumMember; signed: boolean
       <IntentLink href={`/members/${member.id}`} transitionTypes={['nav-forward']} className={`stretched-link max-w-full ${uiTextClass} truncate font-extrabold text-ink no-underline`}>
         {member.name}
       </IntentLink>
-      {member.id === meId && <span className="-mt-1 text-xs font-bold text-ink2">you</span>}
+      {member.id === meId && <span className="text-sm font-bold text-ink2">(you)</span>}
       <span className="text-sm font-bold whitespace-nowrap text-ink2">
         {signed ? signedDc(member.score) : formatDcAmount(member.score)}
       </span>

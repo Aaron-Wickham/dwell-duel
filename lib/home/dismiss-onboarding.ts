@@ -12,3 +12,8 @@ export async function dismissOnboardingAction(): Promise<void> {
     maxAge: 60 * 60 * 24 * 365,
   })
 }
+
+// Undo for a dismissal (HOME-7): Getting started comes back on this device.
+export async function restoreOnboardingAction(): Promise<void> {
+  ;(await cookies()).delete(ONBOARDING_COOKIE)
+}

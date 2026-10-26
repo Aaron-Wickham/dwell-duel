@@ -3,10 +3,10 @@
 import { startTransition, useOptimistic, useRef, useState } from 'react'
 import { Popover } from '@base-ui/react/popover'
 import { SmilePlus } from 'lucide-react'
-import { toast } from 'sonner'
 import { haptics } from '@/lib/haptics'
 import { REACTIONS, reactionLabel, toggleReaction, type EventReactions, type ReactionKind } from '@/lib/social/reactions'
 import { setReactionAction } from '@/lib/social/reactions-actions'
+import { toastError } from '@/lib/toast/error-toast'
 import { cn } from '@/lib/utils'
 
 // The button is the 44px target; the pill drawn inside it stays compact, so a row with reactions
@@ -14,9 +14,11 @@ import { cn } from '@/lib/utils'
 const pillButtonClass = 'pressable group inline-flex min-h-11 cursor-pointer items-center'
 const pillClass = 'inline-flex h-8 items-center gap-1 rounded-full border px-2.5 text-sm font-bold'
 
-// --line-s, not --line: the edge is all that marks an unselected pill as a control (A11Y-07).
+// --line-s, not --line: the edge is all that marks an unselected pill as a control (A11Y-07). Your
+// own reaction is told by more than its tint (SOC-11): a doubled edge (border plus an inset ring, so
+// the pill keeps its size) and ink text.
 function pillTone(mine: boolean) {
-  return mine ? 'border-acc-text bg-acc-soft text-acc-text' : 'border-line-s bg-surface text-ink2'
+  return mine ? 'border-acc-text bg-acc-soft text-ink ring-1 ring-acc-text ring-inset' : 'border-line-s bg-surface text-ink2'
 }
 
 // Reactions on demand (#395): only the reactions someone has used show, as pills, plus one React
@@ -44,7 +46,7 @@ export function ReactionBar({ eventId, reactions }: { eventId: string; reactions
       apply({ kind, on })
       const result = await setReactionAction(eventId, kind, on)
       if (result.error) {
-        toast.error(result.error)
+        toastError(result.error)
         haptics.error()
       }
     })
@@ -88,7 +90,7 @@ export function ReactionBar({ eventId, reactions }: { eventId: string; reactions
         </Popover.Trigger>
         <Popover.Portal>
           <Popover.Positioner side="top" align="end" sideOffset={6} className="z-40 outline-none">
-            <Popover.Popup className="flex items-center gap-1 rounded-full border border-line bg-surface p-1 shadow-overlay outline-none transition-[opacity,scale] duration-(--duration-fast) data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0 motion-reduce:transition-none">
+            <Popover.Popup className="flex items-center gap-1 rounded-full border border-overlay-edge bg-surface p-1 shadow-overlay outline-none transition-[opacity,scale] duration-(--duration-fast) data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0 motion-reduce:transition-none">
               <Popover.Title className="sr-only">React</Popover.Title>
               {REACTIONS.map(({ kind, emoji, name }) => {
                 const count = shown[kind]
@@ -104,7 +106,7 @@ export function ReactionBar({ eventId, reactions }: { eventId: string; reactions
                     }}
                     className={cn(
                       'pressable inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-xl',
-                      count.mine ? 'bg-acc-soft' : 'hover:bg-sunk',
+                      count.mine ? 'bg-acc-soft ring-2 ring-acc-text ring-inset' : 'hover:bg-sunk',
                     )}
                   >
                     <span aria-hidden="true">{emoji}</span>

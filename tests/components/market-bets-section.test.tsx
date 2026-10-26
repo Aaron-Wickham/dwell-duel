@@ -112,7 +112,7 @@ beforeEach(() => {
 describe('MarketBets', () => {
   it('says there is nothing older, not that there are no bets, for a window past the end', async () => {
     await renderBets({ rows: [], next: null, windowed: true }, { bets_from: 'OLD' })
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to newest' })).toHaveAttribute('href', '/markets/m-1')
     expect(screen.queryByText('No bets yet.')).toBeNull()
   })
@@ -120,7 +120,7 @@ describe('MarketBets', () => {
   it('keeps its own empty state when the market has no bets', async () => {
     await renderBets({ rows: [], next: null, windowed: false })
     expect(screen.getByText('No bets yet.')).toBeInTheDocument()
-    expect(screen.queryByText('Nothing older here.')).toBeNull()
+    expect(screen.queryByText('Nothing older here')).toBeNull()
   })
 
   it('moves focus to the first new bet when Show more is clicked', async () => {

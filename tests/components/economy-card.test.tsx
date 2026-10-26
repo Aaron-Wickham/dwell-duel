@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { EconomyCard } from '@/components/admin/economy-card'
 import { toEconomySummary, type EconomySummaryRow } from '@/lib/economy/summary'
 import type { Role } from '@/lib/auth/roles'
@@ -79,21 +81,21 @@ describe('EconomyCard', () => {
     render(<EconomyCard summary={toEconomySummary(ROW)} />)
     expect(screen.getByRole('table', { name: 'September 2026, Eastern time' })).toBeInTheDocument()
 
-    expect(within(rowFor('Starting grants')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+300 DC', 'None'])
-    expect(within(rowFor('Task rewards')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+10 DC', 'None'])
-    expect(within(rowFor('Market maker')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0 DC', '0 DC'])
-    expect(within(rowFor('Seed payouts (older results)')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+8 DC', '−22 DC'])
-    expect(within(rowFor('Payout rounding')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0 DC', '−3 DC'])
+    expect(within(rowFor('Starting grants')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+300\u00A0DC', 'None'])
+    expect(within(rowFor('Task rewards')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+10\u00A0DC', 'None'])
+    expect(within(rowFor('Market maker')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0\u00A0DC', '0\u00A0DC'])
+    expect(within(rowFor('Seed payouts (older results)')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['+8\u00A0DC', '−22\u00A0DC'])
+    expect(within(rowFor('Payout rounding')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0\u00A0DC', '−3\u00A0DC'])
     expect(within(rowFor('House-paid parlays')).getAllByRole('cell').map((c) => c.textContent)).toEqual([
-      '+30 DC',
-      '−5 DC',
+      '+30\u00A0DC',
+      '−5\u00A0DC',
     ])
     expect(within(rowFor('Owner adjustments')).getAllByRole('cell').map((c) => c.textContent)).toEqual([
-      '0 DC',
-      '−5 DC',
+      '0\u00A0DC',
+      '−5\u00A0DC',
     ])
     // 348 added less 35 removed.
-    expect(within(rowFor('Net change')).getByRole('cell').textContent).toBe('+313 DC')
+    expect(within(rowFor('Net change')).getByRole('cell').textContent).toBe('+313\u00A0DC')
   })
 
   it('says the ledger reconciles when the all-time totals match what is in circulation', () => {
@@ -108,6 +110,32 @@ describe('EconomyCard', () => {
     ).toBeInTheDocument()
     expect(screen.queryByText(/^Reconciles with the ledger/)).not.toBeInTheDocument()
   })
+
+  // ADM-1: what the failure means, and the incident steps rather than an adjustment.
+  it('says not to adjust balances when it doesn’t reconcile, and links the incident steps', () => {
+    render(<EconomyCard summary={toEconomySummary({ ...ROW, all_time_added: 353 })} />)
+    expect(screen.getByText(/Don’t adjust balances to cover it/)).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: /incident steps/ })
+    const href = link.getAttribute('href')!
+    expect(href).toBe('https://github.com/Aaron-Wickham/dwell-duel/blob/main/docs/OPERATIONS.md#incidents')
+    expect(link).toHaveAttribute('target', '_blank')
+    // The anchor names a heading in this repo, so renaming it fails here.
+    expect(readFileSync(path.resolve(import.meta.dirname, '../../docs/OPERATIONS.md'), 'utf8')).toMatch(/^## Incidents$/m)
+  })
+
+  it('leaves out the incident steps while it reconciles', () => {
+    render(<EconomyCard summary={toEconomySummary(ROW)} />)
+    expect(screen.queryByRole('link', { name: /incident steps/ })).toBeNull()
+  })
+
+  // C-42: the explanation is folded under a summary.
+  it('folds how each source is counted into a disclosure', () => {
+    render(<EconomyCard summary={toEconomySummary(ROW)} />)
+    const summary = screen.getByText('How each source is counted')
+    expect(summary.tagName).toBe('SUMMARY')
+    expect(summary.closest('details')).not.toHaveAttribute('open')
+    expect(summary.closest('details')).toHaveTextContent(/Market maker is what the house paid winners/)
+  })
 })
 
 describe('AdminLedgerPage’s economy card', () => {
@@ -118,9 +146,22 @@ describe('AdminLedgerPage’s economy card', () => {
 
   it('shows the owner the card above the ledger', async () => {
     role.current = 'owner'
-    render(await AdminLedgerPage({ searchParams: Promise.resolve({}) } as never))
+    const page = await AdminLedgerPage({ searchParams: Promise.resolve({}) } as never)
+    // Streamed behind its own Suspense (ADM-3), so it arrives after the ledger.
+    await act(async () => void render(page))
+    await screen.findByRole('region', { name: 'Economy' })
     const regions = screen.getAllByRole('region').map((r) => r.getAttribute('aria-labelledby'))
     expect(regions).toEqual(['economy-title', 'ledger-title'])
+  })
+
+  it('holds the card’s place with its own skeleton while the figures load', async () => {
+    role.current = 'owner'
+    readEconomySummary.mockReturnValue(new Promise(() => {}))
+    const page = await AdminLedgerPage({ searchParams: Promise.resolve({}) } as never)
+    await act(async () => void render(page))
+    expect(document.querySelector('[data-skeleton="admin-economy"]')).not.toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('Loading…')
+    expect(screen.getByRole('region', { name: 'Every coin movement' })).toBeInTheDocument()
   })
 
   it('never reads the figures for an admin, nor shows the card', async () => {

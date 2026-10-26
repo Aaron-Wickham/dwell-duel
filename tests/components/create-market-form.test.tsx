@@ -117,6 +117,23 @@ describe('CreateMarketForm', () => {
     for (const button of removeButtons) expect(button).toBeDisabled()
   })
 
+  it('checks an over/under line for the .5 once it is left, and keeps a whole number from being sent (MKT-11)', async () => {
+    const user = userEvent.setup()
+    render(<CreateMarketForm />)
+    await user.click(screen.getByRole('radio', { name: 'Over/Under' }))
+    const line = screen.getByLabelText('Line')
+    await user.type(line, '3')
+    expect(line).toHaveAttribute('aria-invalid', 'false')
+    await user.tab()
+    expect(line).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('alert')).toHaveTextContent('Set the line to a half number, like 3.5.')
+
+    await user.click(line)
+    await user.type(line, '.5')
+    expect(line).toHaveAttribute('aria-invalid', 'false')
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('ties a close_at server error to the Close time field, leaving Title untouched', async () => {
     createMarketAction.mockResolvedValue({ formError: 'Choose a close time in the future.', field: 'close_at' })
     const user = userEvent.setup()
@@ -129,9 +146,11 @@ describe('CreateMarketForm', () => {
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('Choose a close time in the future.')
-    expect(alert).toHaveAttribute('id', 'create-market-error')
+    // MKT-11: the error sits under its field, which takes focus, rather than by the button.
+    expect(alert).toHaveAttribute('id', 'cm-close-error')
 
     const closeTime = screen.getByLabelText('Close time')
+    expect(closeTime).toHaveFocus()
     expect(closeTime).toHaveAttribute('aria-invalid', 'true')
     expect(closeTime).toHaveAccessibleDescription(`${CLOSE_HINT} Choose a close time in the future.`)
 
@@ -266,7 +285,7 @@ describe('CreateMarketForm category (#327)', () => {
     const user = userEvent.setup()
     const { container } = render(<CreateMarketForm categories={categories} />)
     expect(field()).toHaveAccessibleName('Category Choose a category')
-    expect(field()).toHaveAccessibleDescription('Pick one, or type a new one.')
+    expect(field()).toHaveAccessibleDescription('Pick one, or search for a new one to create it.')
     await user.click(field())
     const dialog = await screen.findByRole('dialog', { name: 'Choose a category' })
     expect(within(dialog).getByRole('searchbox', { name: 'Search categories' })).toHaveAttribute('maxLength', '24')
@@ -319,7 +338,7 @@ describe('CreateMarketForm category (#327)', () => {
     expect(createMarketAction).not.toHaveBeenCalled()
     expect(field()).toHaveFocus()
     expect(field()).toHaveAttribute('aria-invalid', 'true')
-    expect(field()).toHaveAccessibleDescription('Pick one, or type a new one. Choose a category, or make a new one.')
+    expect(field()).toHaveAccessibleDescription('Pick one, or search for a new one to create it. Choose a category, or make a new one.')
     await chooseCategory(user, 'Weather')
     expect(screen.queryByText('Choose a category, or make a new one.')).toBeNull()
   })
@@ -337,7 +356,7 @@ describe('CreateMarketForm category (#327)', () => {
     expect((createMarketAction.mock.calls[0][1] as FormData).get('category')).toBe('Winter')
     expect(field()).toHaveAccessibleName('Category Winter')
     expect(field()).toHaveAttribute('aria-invalid', 'true')
-    expect(field()).toHaveAccessibleDescription('Pick one, or type a new one. Category can be at most 24 characters.')
+    expect(field()).toHaveAccessibleDescription('Pick one, or search for a new one to create it. Category can be at most 24 characters.')
   })
 })
 

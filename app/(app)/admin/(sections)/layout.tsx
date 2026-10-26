@@ -7,9 +7,7 @@ import { AdminNav } from '@/components/admin/admin-nav'
 import { ClosingAlertsWarning } from '@/components/admin/closing-alerts-warning'
 import { readClosingAlertsHealth } from '@/lib/admin/cron-health'
 import { getReviewCounts } from '@/lib/admin/review-counts'
-
-// docs/ADMIN-GUIDE.md on GitHub (the repo is public), so the guide is read where it's maintained.
-const ADMIN_GUIDE_URL = 'https://github.com/Aaron-Wickham/dwell-duel/blob/main/docs/ADMIN-GUIDE.md'
+import { ADMIN_GUIDE_URL } from '@/lib/admin/docs-links'
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   // Reviewers and up get the Admin header; each page keeps its own, stricter check, because a
@@ -36,14 +34,15 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <PageHeader
           title="Admin"
           action={
+            // It leaves the app for GitHub in a new tab, so it says where it goes (ADM-11).
             <a href={ADMIN_GUIDE_URL} target="_blank" rel="noreferrer" className="pressable hit-area shrink-0 font-bold">
-              Admin guide
+              Admin guide on GitHub <span className="sr-only">(opens in a new tab)</span>
             </a>
           }
         />
         <AdminNav role={role} counts={counts} />
       </div>
-      <ClosingAlertsWarning health={closingAlerts} now={now} />
+      <ClosingAlertsWarning health={closingAlerts} now={now} isOwner={role === 'owner'} />
       {children}
     </Page>
   )

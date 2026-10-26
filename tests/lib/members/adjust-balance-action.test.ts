@@ -36,7 +36,7 @@ describe('adjustBalanceAction', () => {
 
     const state = await adjustBalanceAction('p-mia', undefined, adjustForm('-50'))
 
-    expect(state).toEqual({ formError: 'That would take Mia’s balance below zero: they have 15 DC.', field: 'amount' })
+    expect(state).toEqual({ formError: 'That would take Mia’s balance below zero: they have 15\u00A0DC.', field: 'amount' })
     expect(supabase.from).toHaveBeenCalledWith('profiles')
     expect(eq).toHaveBeenCalledWith('id', 'p-mia')
   })
@@ -57,7 +57,7 @@ describe('adjustBalanceAction', () => {
 
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     supabase.rpc.mockResolvedValue({ data: null, error: { code: 'XX000', message: 'relation "public.profiles" does not exist' } })
-    expect(await adjustBalanceAction('p-mia', undefined, adjustForm('10'))).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(await adjustBalanceAction('p-mia', undefined, adjustForm('10'))).toEqual({ formError: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.' })
     expect(log).toHaveBeenCalled()
     expect(supabase.from).not.toHaveBeenCalled()
   })

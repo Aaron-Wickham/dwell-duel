@@ -90,7 +90,7 @@ export function FeedList({
   const known = knownEvents(events)
   const body =
     known.length === 0 ? (
-      emptyState ?? <EmptyState title="Nothing yet.">Bets, new markets, results and finished tasks show up here as they happen.</EmptyState>
+      emptyState ?? <EmptyState title="Nothing yet.">Bets, new markets, results and approved tasks show up here as they happen.</EmptyState>
     ) : (
       <ul className={dividedRowsClass}>
         <FeedItems events={known} reactions={reactions} now={now} rowIdPrefix={rowIdPrefix} plainHref={plainHref} />

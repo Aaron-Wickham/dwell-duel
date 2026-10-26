@@ -21,6 +21,7 @@ export function RevokeInviteButton({ email }: { email: string }) {
       title="Revoke this invite?"
       description={`${email} won’t be able to join with this invite. You can invite them again later.`}
       confirmLabel="Revoke invite"
+      pendingLabel="Revoking…"
       successMessage="Invite revoked."
       action={revoke}
     />

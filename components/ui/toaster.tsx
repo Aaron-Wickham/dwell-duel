@@ -34,7 +34,7 @@ export function Toaster() {
           fontFamily: 'var(--font-manrope), ui-sans-serif, system-ui, sans-serif',
           '--border-radius': 'var(--radius-control)',
           '--normal-bg': 'var(--surface)',
-          '--normal-border': 'var(--line)',
+          '--normal-border': 'var(--overlay-edge)',
           '--normal-text': 'var(--ink)',
           '--success-bg': 'var(--acc-soft)',
           '--success-border': 'var(--acc-soft)',

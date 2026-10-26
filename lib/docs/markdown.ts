@@ -174,15 +174,13 @@ export function parseDoc(markdown: string): Doc {
   return doc
 }
 
-// A section shown away from its doc (/privacy shows How it works' Your data) keeps its links to the
-// doc's other sections by pointing them at the page that has them.
-export function rebaseHashLinks(blocks: Block[], prefix: string): Block[] {
+// A section shown away from its doc (/privacy shows How it works' Your data) to someone who can't
+// open the doc: its links to the doc's other sections become their plain words.
+export function unlinkHashLinks(blocks: Block[]): Block[] {
   const inline = (nodes: Inline[]): Inline[] =>
-    nodes.map((node) => {
-      if (node.type === 'link') {
-        return { ...node, href: node.href.startsWith('#') ? `${prefix}${node.href.slice(1)}` : node.href, children: inline(node.children) }
-      }
-      return node.type === 'strong' || node.type === 'em' ? { ...node, children: inline(node.children) } : node
+    nodes.flatMap((node): Inline[] => {
+      if (node.type === 'link') return node.href.startsWith('#') ? inline(node.children) : [{ ...node, children: inline(node.children) }]
+      return node.type === 'strong' || node.type === 'em' ? [{ ...node, children: inline(node.children) }] : [node]
     })
   return blocks.map((block) => {
     switch (block.type) {

@@ -15,7 +15,7 @@ test('the avatar shows what waits once a market has closed with no result', asyn
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+$/)
   const marketId = page.url().split('/').pop()!
 
-  // #385: the avatar carries the count in its name ("…, 3 waiting") and a red dot.
+  // #385: the avatar carries the count in its name ("…, 3 waiting") and a gold dot.
   const avatar = page.getByRole('banner').getByRole('button', { name: /^Your profile and settings/ })
   // Compared with the count before, not with no badge: a retry, or another spec, can leave markets
   // already waiting, and then "no badge yet" could never hold.
@@ -41,7 +41,7 @@ test('the avatar shows what waits once a market has closed with no result', asyn
       { timeout: 20_000, intervals: [1_000, 2_000, 3_000] },
     )
     .toBeGreaterThan(before)
-  await expect(avatar.locator('.bg-loss')).toBeVisible()
+  await expect(avatar.locator('.bg-gold')).toBeVisible()
   await avatar.click()
   await expect(page.getByRole('menu').getByRole('menuitem', { name: /Admin/ })).toHaveText(/\d+ waiting/)
 })

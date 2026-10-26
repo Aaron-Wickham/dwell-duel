@@ -9,7 +9,7 @@ import { rowTitleClass } from '@/components/ui/page'
 // The phone's stand-in for your own row while it's further down the board than the page shows: it
 // sits after the rankings and sticks to the bottom of the viewport (#396), with "Jump to me" to
 // open the board at your place. At lg, Your standing in the side column does this job.
-export function StandingCompact({ standing, jump }: { standing: YourStanding; jump: ReactNode }) {
+export function StandingCompact({ standing, signed = false, jump }: { standing: YourStanding; signed?: boolean; jump: ReactNode }) {
   const gap = gapLine(standing)
   return (
     <section aria-labelledby="leaderboard-standing-compact" className={cn(stickyMineClass, 'flex min-h-14 items-center gap-3 py-2 lg:hidden')}>
@@ -22,7 +22,7 @@ export function StandingCompact({ standing, jump }: { standing: YourStanding; ju
         {gap && <span className="truncate text-sm text-ink2">{gap}</span>}
       </div>
       <span className="shrink-0 font-extrabold whitespace-nowrap tabular-nums">
-        {scoreText(standing.score, false)}
+        {scoreText(standing.score, signed)}
         <span className="sr-only"> DC</span>
       </span>
       {jump}

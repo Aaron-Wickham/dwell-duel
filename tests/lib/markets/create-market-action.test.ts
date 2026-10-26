@@ -200,7 +200,7 @@ describe('createMarketAction database errors', () => {
 
     const state = await createMarketAction(undefined, binaryForm('Will it rain?'))
 
-    expect(state).toEqual({ formError: 'Something went wrong. Try again.' })
+    expect(state).toEqual({ formError: 'That didn’t go through. Try again, and if it keeps happening, tell an admin.' })
     expect(log).toHaveBeenCalled()
     log.mockRestore()
   })

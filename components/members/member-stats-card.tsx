@@ -96,7 +96,7 @@ export function MemberStatsCard({ stats }: { stats: MemberStats }) {
                   <Link
                     href={`/markets/${stats.biggestWin.marketId}`}
                     transitionTypes={['nav-forward']}
-                    className="hit-area"
+                    className="hit-area prose-link"
                   >
                     {stats.biggestWin.marketTitle}
                   </Link>

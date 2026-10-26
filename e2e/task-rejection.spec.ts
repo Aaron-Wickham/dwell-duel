@@ -14,7 +14,7 @@ test('reject a task submission with a reason the member then sees', async ({ pag
   const member = await browser.newContext({ storageState: MEMBER_STORAGE_STATE_PATH })
   const bobPage = await member.newPage()
   await bobPage.goto('/')
-  const balance = bobPage.getByRole('region', { name: 'Balance' }).getByText(/^[\d,]+ DC$/).first()
+  const balance = bobPage.getByRole('region', { name: 'Balance' }).getByText(/^[\d,]+\sDC$/).first()
   const startingBalance = await balance.textContent()
 
   await bobPage.goto('/tasks')
@@ -35,7 +35,7 @@ test('reject a task submission with a reason the member then sees', async ({ pag
   await dialog.getByRole('button', { name: 'Reject', exact: true }).click()
   await expect(page.getByText('Submission rejected.').first()).toBeVisible()
   await expect(dialog).toBeHidden()
-  await expect(page.getByText('No tasks to review.')).toBeVisible()
+  await expect(page.getByText('No submissions to review.')).toBeVisible()
 
   await bobPage.goto('/tasks')
   const rejected = group('Not approved')

@@ -43,11 +43,14 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
     return next
   }, undefined)
   const change = Number(amount)
-  // Only an adjustment the server would accept needs confirming; anything else just gets its error back.
+  const after = member.balance + change
+  // Every well-formed adjustment confirms; one with no amount or reason just gets its error back.
+  // The balance shown is the page's, which may be stale, so an overdraw still confirms and says so.
   const confirmable = Number.isInteger(change) && change !== 0 && reason.trim() !== ''
   const formId = `adjust-${member.id}-form`
   const amountId = `adjust-${member.id}-amount`
   const reasonId = `adjust-${member.id}-reason`
+  const amountHintId = `${amountId}-hint`
   const errorId = `adjust-${member.id}-error`
 
   return (
@@ -70,15 +73,15 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
               required
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="+/−"
               aria-invalid={state?.field === 'amount'}
-              aria-describedby={state?.field === 'amount' ? errorId : undefined}
+              aria-describedby={state?.field === 'amount' ? `${amountHintId} ${errorId}` : amountHintId}
             />
           </Field>
           <Field label="Reason" htmlFor={reasonId} className="grow">
             <Input
               id={reasonId}
               name="reason"
+              required
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               maxLength={TEXT_LIMITS.adjustReason}
@@ -87,9 +90,13 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
             />
           </Field>
         </div>
+        {/* Under both fields rather than in the narrow Amount column, where it would push that
+            field's label out of line with Reason's. */}
+        <p id={amountHintId} className="-mt-1 text-sm text-ink2">
+          Use a minus to take coins away, like -50.
+        </p>
         <FormSubmitButton block>
-          Adjust{' '}
-          <span className="sr-only">{member.displayName}</span>
+          Adjust balance <span className="sr-only">for {member.displayName}</span>
         </FormSubmitButton>
       </form>
       <ConfirmSubmitDialog
@@ -98,8 +105,15 @@ export function AdjustBalanceForm({ member }: { member: MemberSummary }) {
         onOpenChange={confirm.setOpen}
         pending={isPending}
         title={`Adjust ${member.displayName}’s balance?`}
-        description={`${change > 0 ? `Adds ${formatDcAmount(change)} to` : `Takes ${formatDcAmount(Math.abs(change))} from`} ${member.displayName}’s balance of ${formatDcAmount(member.balance)}, straight away.`}
+        // The balance it ends at, so an extra zero shows before it's applied, and the reason the
+        // ledger will show.
+        description={
+          after < 0
+            ? `Taking ${formatDcAmount(Math.abs(change))} from ${member.displayName}’s ${formatDcAmount(member.balance)} would take the balance below ${formatDcAmount(0)}; the server refuses an overdraw. Reason: “${reason.trim()}”.`
+            : `${member.displayName}’s balance goes from ${formatDcAmount(member.balance)} to ${formatDcAmount(after)} (${formatSignedDcAmount(change)}), straight away. Reason: “${reason.trim()}”.`
+        }
         confirmLabel="Adjust balance"
+        pendingLabel="Adjusting…"
       />
       {state?.formError && (
         <Message tone="error" id={errorId}>

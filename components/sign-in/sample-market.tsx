@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { cardClass } from '@/components/ui/card'
 import { StatusChip } from '@/components/ui/status-chip'
+import { CategoryChip } from '@/components/markets/category-chip'
 import { AnimatedNumber } from '@/components/ui/animated-number'
 import { rowTitleClass, chipTextClass } from '@/components/ui/page'
 import { INTRO, SAMPLE, samplePath, sampleTop } from './intro-timeline'
@@ -13,7 +14,8 @@ const LABEL = `Sample market: ${SAMPLE.title} Yes ${SAMPLE.yes}%, No ${100 - SAM
 
 // A market card as the markets list draws one, hard-coded. One image to a screen reader: it's an
 // illustration, so its parts aren't read one by one. The `sign-in-intro-*` classes animate only
-// while the intro plays (globals.css).
+// while the intro plays (globals.css). On a short phone the bet line goes, so the sign-in page's
+// "No real money" line can stay without the page scrolling.
 export function SampleMarket() {
   const [yes, setYes] = useState<number>(SAMPLE.yes)
 
@@ -33,7 +35,7 @@ export function SampleMarket() {
     <div role="img" aria-label={LABEL} className={cn(cardClass, 'flex flex-col gap-2.5 p-4 lg:gap-3 lg:p-5')}>
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip tone="open">Open</StatusChip>
-        <StatusChip tone="void" size="sm">Church</StatusChip>
+        <CategoryChip name="Church" />
         <span className="text-sm text-ink2">Sample</span>
       </div>
       <p className={rowTitleClass}>{SAMPLE.title}</p>
@@ -55,7 +57,7 @@ export function SampleMarket() {
           </span>
         </div>
       </div>
-      <div className="sign-in-intro-bet flex items-center justify-between gap-3">
+      <div className="sign-in-intro-bet flex items-center justify-between gap-3 short:hidden">
         <span className="text-sm text-ink2">{SAMPLE.bet}</span>
         <span className="font-extrabold text-s2 tabular-nums">
           <AnimatedNumber value={yes} suffix="%" />

@@ -32,7 +32,7 @@ export function InstallApp() {
   if (!platform) return null
   return (
     <SectionCard title="Install the app" titleId="settings-install">
-      <p className="text-ink2">Open DwellDuel from your home screen, like any app. {HOW_TO[platform]}</p>
+      <p className="text-ink2">Open DwellDuel from your Home Screen, like any app. {HOW_TO[platform]}</p>
     </SectionCard>
   )
 }

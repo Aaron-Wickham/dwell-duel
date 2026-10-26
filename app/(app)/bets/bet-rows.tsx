@@ -82,7 +82,7 @@ function BetOutcome({ bet }: { bet: MyBet }) {
         </>
       )
     case 'refunded':
-      return <>{result.reason === 'no_winners' ? ' · Refunded, no winners' : ' · Refunded'}</>
+      return <>{result.reason === 'no_winners' ? ' · Refunded · No winners' : ' · Called off · Refunded'}</>
   }
 }
 

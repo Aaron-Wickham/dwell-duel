@@ -2,9 +2,9 @@
 
 import { headers } from 'next/headers'
 import { requireUser } from '@/lib/auth/require-user'
-import { NOTIFICATION_KINDS } from './prefs'
+import { NOTIFICATION_KINDS, type NotificationKind, type NotificationPrefs } from './prefs'
 import { SUBSCRIPTION_LIMITS, validSubscription } from './subscription'
-import { SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
+import { GENERIC_ERROR, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 
 export type SubscriptionResult = { error?: string }
 
@@ -41,19 +41,22 @@ export async function deletePushSubscriptionAction(endpoint: string): Promise<Su
   return {}
 }
 
-export type PrefsState = { formError?: string } | undefined
+export type PrefResult = { error?: string }
 
-export async function saveNotificationPrefsAction(_prev: PrefsState, formData: FormData): Promise<PrefsState> {
+// One choice at a time, as each box is ticked (TSK-3): the upsert names only that column, so a new
+// row takes 0057's and 0058's defaults for the rest, and two quick ticks can't undo each other.
+export async function saveNotificationPrefAction(kind: NotificationKind, on: boolean): Promise<PrefResult> {
   const { supabase, user } = await requireUser()
-  if (!user) return { formError: SIGNED_OUT_ERROR }
+  if (!user) return { error: SIGNED_OUT_ERROR }
+  if (!NOTIFICATION_KINDS.includes(kind) || typeof on !== 'boolean') return { error: GENERIC_ERROR }
+  const choice: Partial<NotificationPrefs> = { [kind]: on }
 
-  const choices = Object.fromEntries(NOTIFICATION_KINDS.map((kind) => [kind, formData.get(kind) === 'on']))
   const { error } = await supabase
     .from('notification_prefs')
-    .upsert({ profile_id: user.id, ...choices, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
+    .upsert({ profile_id: user.id, ...choice, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
   if (error) {
-    console.error('Saving notification preferences failed', error)
-    return { formError: 'Couldn’t save your notification choices. Check your connection and try again.' }
+    console.error('Saving a notification preference failed', error)
+    return { error: 'Couldn’t save that choice. Check your connection and try again.' }
   }
-  return undefined
+  return {}
 }

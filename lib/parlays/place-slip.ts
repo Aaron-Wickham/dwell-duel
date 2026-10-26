@@ -3,12 +3,12 @@
 import { revalidatePath } from 'next/cache'
 import { revalidateGroupReads } from '@/lib/cache/group-reads'
 import { requireUser } from '@/lib/auth/require-user'
-import { GENERIC_ERROR, SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
+import { SIGNED_OUT_ERROR } from '@/lib/errors/friendly-error'
 import { isDeliberateRaise } from '@/lib/errors/deliberate-raise'
 import { reportError } from '@/lib/observability/report'
 import { insufficientBalanceMessage, isBalanceCheckViolation } from '@/lib/errors/balance-error'
 import { factorBp } from './odds'
-import { parseSlipError } from './slip-errors'
+import { PARLAY_TOO_FEW, SLIP_EMPTY_ERROR, SLIP_GENERIC_ERROR, parseSlipError } from './slip-errors'
 import { readSlip, writeSlip } from './slip'
 
 // What place_slip_v4 (0104, as place_slip_v2 in 0072) returns: what was placed, and whether this
@@ -59,7 +59,7 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
     .getAll('pick')
     .map((v) => String(v).split(':'))
     .filter(([id, mode]) => inSlip.has(id) && (mode === 'solo' || mode === 'parlay'))
-  if (picks.length === 0) return { formError: 'Your slip is empty.' }
+  if (picks.length === 0) return { formError: SLIP_EMPTY_ERROR }
 
   const pickErrors: Record<string, string> = {}
   const singles: { outcome_id: string; amount: number; payout?: number }[] = []
@@ -75,7 +75,7 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
   let parlayStake = 0
   let parlayPayout: number | undefined
   let parlayError: string | undefined
-  if (legs.length === 1) parlayError = 'A parlay needs at least 2 picks. Add another, or switch this one to Solo.'
+  if (legs.length === 1) parlayError = PARLAY_TOO_FEW
   else if (legs.length > 1) {
     const stake = stakeOf(formData.get('parlay_stake'))
     if (stake === null) parlayError = WHOLE_DC
@@ -100,7 +100,7 @@ export async function placeSlipAction(_prevState: PlaceSlipState, formData: Form
     }
     if (!isDeliberateRaise(error)) {
       reportError('place_slip failed', error)
-      return { formError: GENERIC_ERROR }
+      return { formError: SLIP_GENERIC_ERROR }
     }
     const refused = parseSlipError(error.message, () => reportError('place_slip refused with unmapped text', error))
     if (!refused.priceMoved) return refused

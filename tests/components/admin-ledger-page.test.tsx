@@ -71,7 +71,7 @@ describe('AdminLedgerPage', () => {
     const jsx = await AdminLedgerPage({ searchParams: Promise.resolve({ before_from: 'abc' }) } as never)
     render(jsx)
 
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     expect(screen.queryByText('No coin movements yet.')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to newest' })).toBeInTheDocument()
   })
@@ -83,7 +83,7 @@ describe('AdminLedgerPage', () => {
     render(jsx)
 
     expect(screen.getByText('No coin movements yet.')).toBeInTheDocument()
-    expect(screen.queryByText('Nothing older here.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Nothing older here')).not.toBeInTheDocument()
   })
 
   // #254: a member's Admin page links here, to their movements alone.
@@ -127,6 +127,9 @@ describe('AdminLedgerPage', () => {
     expect(container.querySelector('input[type="hidden"][name="member"]')).toHaveValue(BEN)
     expect(screen.getByRole('combobox', { name: 'Kind' })).toHaveValue('task_completed')
     expect(screen.getByRole('option', { name: 'Task reward' })).toHaveValue('task_completed')
+    // UX audit D-8: members' words in the label, the database's type in ?kind=.
+    expect(screen.getByRole('option', { name: 'Market called off' })).toHaveValue('bet_voided_refund')
+    expect(screen.queryByRole('option', { name: /voided/i })).toBeNull()
     expect(screen.getByText('No “Task reward” movements for Ben.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Show every kind' })).toHaveAttribute('href', `/admin/ledger?member=${BEN}`)
     expect(screen.getByRole('link', { name: 'Show everyone’s' })).toHaveAttribute('href', '/admin/ledger?kind=task_completed')
@@ -143,7 +146,7 @@ describe('AdminLedgerPage', () => {
 
     expect(ilikes).toEqual([])
     expect(screen.getByRole('searchbox', { name: 'Member' })).toHaveValue('Ben')
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     profile.current = null
   })
 

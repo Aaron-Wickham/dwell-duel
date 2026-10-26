@@ -9,6 +9,11 @@ import { focusTarget } from '@/lib/pagination/row-id'
 import { cn } from '@/lib/utils'
 import { formatDcAmount } from '@/lib/format/dc'
 
+// A phrase after a · starts with a capital ("Just now"); "2h ago" starts with a number.
+const sentenceStart = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
+
+// Resolve is secondary, like the review queue's Approve: a list of ten waiting markets would
+// otherwise be ten primary fills.
 // A divided row in its Waiting to be resolved card (D2) that the title opens (its link stretches
 // over it); the creator's name and Resolve sit above the cover, so each still goes where it says.
 export function AwaitingMarketRow({ market, now, domId }: { market: AwaitingMarket; now: number; domId?: string }) {
@@ -25,8 +30,8 @@ export function AwaitingMarketRow({ market, now, domId }: { market: AwaitingMark
           {market.title}
         </Link>
         <p className="text-sm text-ink2">
-          Closed <LocalTime iso={market.closeAt} format="dateTime" /> · {relativeTime(market.closeAt, now)} ·{' '}
-          <span className="whitespace-nowrap">{formatDcAmount(market.pooled)}</span> in the pool · By{' '}
+          Closed <LocalTime iso={market.closeAt} format="dateTime" /> · {sentenceStart(relativeTime(market.closeAt, now))} ·{' '}
+          <span className="whitespace-nowrap">{formatDcAmount(market.pooled)}</span> staked · By{' '}
           <span className="relative z-[1]">
             <Link href={`/members/${market.creatorId}`} transitionTypes={['nav-forward']} className="prose-link">
               {market.creatorName}
@@ -39,7 +44,7 @@ export function AwaitingMarketRow({ market, now, domId }: { market: AwaitingMark
           href={`/markets/${market.id}#manage-title`}
           transitionTypes={['nav-forward']}
           aria-label={`Resolve ${market.title}`}
-          className={buttonVariants({ size: 'sm' })}
+          className={buttonVariants({ variant: 'secondary', size: 'sm' })}
         >
           Resolve
         </Link>

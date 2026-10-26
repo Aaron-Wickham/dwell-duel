@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseBlocks, parseDoc, parseInline, rebaseHashLinks } from '@/lib/docs/markdown'
+import { parseBlocks, parseDoc, parseInline, unlinkHashLinks } from '@/lib/docs/markdown'
 
 describe('parseInline', () => {
   it('reads bold, italics, code and links, nesting inside them', () => {
@@ -51,17 +51,22 @@ describe('parseDoc', () => {
   })
 })
 
-describe('rebaseHashLinks', () => {
-  it('points the doc’s own anchors at another page, everywhere a link can sit, and leaves other links alone', () => {
+describe('unlinkHashLinks', () => {
+  it('turns the doc’s own anchors into their words, everywhere a link can sit, and leaves other links alone', () => {
     const blocks = parseBlocks(
       ['See [Roles](#roles) and **[Tasks](#tasks)**.', '', '- [web](https://example.com)', '', '| a |', '|---|', '| [Limits](#limits) |'].join('\n'),
     )
-    const hrefs = JSON.stringify(rebaseHashLinks(blocks, '/how-it-works#how-')).match(/"href":"[^"]+"/g)
-    expect(hrefs).toEqual([
-      '"href":"/how-it-works#how-roles"',
-      '"href":"/how-it-works#how-tasks"',
-      '"href":"https://example.com"',
-      '"href":"/how-it-works#how-limits"',
-    ])
+    const out = unlinkHashLinks(blocks)
+    expect(JSON.stringify(out).match(/"href":"[^"]+"/g)).toEqual(['"href":"https://example.com"'])
+    expect(out[0]).toEqual({
+      type: 'paragraph',
+      children: [
+        { type: 'text', text: 'See ' },
+        { type: 'text', text: 'Roles' },
+        { type: 'text', text: ' and ' },
+        { type: 'strong', children: [{ type: 'text', text: 'Tasks' }] },
+        { type: 'text', text: '.' },
+      ],
+    })
   })
 })

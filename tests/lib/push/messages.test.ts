@@ -35,7 +35,7 @@ describe('push payloads', () => {
 
   it('tells a winner what they won in the title', () => {
     expect(marketResultPayload('m-1', { ...resolved, won: 26 })).toEqual({
-      title: 'You won 26 DC',
+      title: 'You won 26\u00A0DC',
       body: 'Will it rain?: No',
       url: '/markets/m-1',
     })
@@ -56,7 +56,7 @@ describe('push payloads', () => {
 
   it('words an override as a change', () => {
     expect(result({ isOverride: true })).toEqual({ title: 'Result changed', body: 'Will it rain? changed to No' })
-    expect(result({ isOverride: true, won: 26 })).toEqual({ title: 'You won 26 DC', body: 'Will it rain? changed to No' })
+    expect(result({ isOverride: true, won: 26 })).toEqual({ title: 'You won 26\u00A0DC', body: 'Will it rain? changed to No' })
     expect(result({ isOverride: true, refunded: 5 })).toEqual({
       title: 'Result changed',
       body: 'Will it rain? changed to No. Your stake is refunded',
@@ -78,7 +78,7 @@ describe('push payloads', () => {
   it('tells a submitter their task was approved, with the reward', () => {
     expect(taskReviewPayload({ taskTitle: 'Read Psalm 23', status: 'approved', rewardAmount: 10, reviewNote: null })).toEqual({
       title: 'Task approved',
-      body: 'Read Psalm 23: +10 DC',
+      body: 'Read Psalm 23: +10\u00A0DC',
       url: '/tasks',
     })
   })

@@ -14,6 +14,7 @@ export function ParlayDetailSkeleton({ legs }: { legs: number }) {
             <Skeleton className="h-5 w-24" />
             <Skeleton className="h-10 w-32 md:h-14" />
             <Skeleton className="h-5 w-56 max-w-full" />
+            <Skeleton className="h-5 w-40 max-w-full" />
           </div>
           <div className="flex flex-col gap-1.5">
             <div className="flex gap-[3px]">

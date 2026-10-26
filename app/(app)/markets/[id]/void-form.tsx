@@ -72,6 +72,7 @@ export function VoidForm({ marketId }: { marketId: string }) {
         title="Call off this market?"
         description="Every bet is refunded. Parlays drop this pick and carry on with the rest; a parlay with no picks left is refunded. This can’t be undone."
         confirmLabel="Call off market"
+        pendingLabel="Calling off…"
       />
       {state?.formError && (
         <Message tone="error" id="void-error">

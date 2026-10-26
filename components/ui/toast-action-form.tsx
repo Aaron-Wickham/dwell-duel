@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
 import { haptics } from '@/lib/haptics'
+import { toastError } from '@/lib/toast/error-toast'
 
 export type ToastActionResult = void | boolean | { error: string }
 
@@ -33,7 +34,7 @@ export function ToastActionForm({
     optimistic?.()
     const result = await action(formData)
     if (typeof result === 'object' && result !== null) {
-      toast.error(result.error)
+      toastError(result.error)
       haptics.error()
     } else if (result !== false && successMessage) toast.success(successMessage)
   }

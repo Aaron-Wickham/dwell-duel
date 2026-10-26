@@ -18,7 +18,8 @@ const UPDATE_MARKET_ERRORS: readonly KnownError<Field>[] = [
   { match: 'choose a category', formError: 'Choose a category.', field: 'category' },
   { match: 'market not found', formError: 'This market was deleted. Go back to Markets.' },
   { match: "only the market's creator or an admin can edit it", formError: 'Only the market’s creator or an admin can edit it.' },
-  { match: "others have bet on this market, so its title can't change", formError: 'Others have bet on this market, so its title can’t change.', field: 'title' },
+  // The dialog shows a title others have bet on read-only (0116), so this means a bet landed since.
+  { match: "others have bet on this market, so its title can't change", formError: 'Someone else has bet since this page loaded. Refresh to see the latest title.', field: 'title' },
   { match: "this market has closed, so it can't be edited", formError: 'This market has closed, so it can’t be edited.' },
   { match: 'close time must be in the future', formError: 'Choose a close time in the future.', field: 'close_at' },
   {

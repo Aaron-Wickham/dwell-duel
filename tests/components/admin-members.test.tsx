@@ -20,14 +20,14 @@ beforeEach(() => {
 async function submit(amount: string, reason: string) {
   await userEvent.type(screen.getByLabelText('Amount'), amount)
   if (reason) await userEvent.type(screen.getByLabelText('Reason'), reason)
-  await userEvent.click(screen.getByRole('button', { name: 'Adjust Ben' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Adjust balance for Ben' }))
 }
 
 describe('AdjustBalanceForm', () => {
   // The member's name, email and balance are their Admin page's header now (#254).
   it('is only the fields and a submit button named for the member', () => {
     render(<AdjustBalanceForm member={BEN} />)
-    expect(screen.getByRole('button', { name: 'Adjust Ben' })).toHaveAttribute('type', 'submit')
+    expect(screen.getByRole('button', { name: 'Adjust balance for Ben' })).toHaveAttribute('type', 'submit')
     expect(screen.queryByRole('link')).toBeNull()
     expect(screen.queryByText('ben@example.com')).toBeNull()
     expect(screen.getByLabelText('Amount').closest('form')).toHaveClass('flex', 'flex-col', 'gap-3')
@@ -52,7 +52,8 @@ describe('AdjustBalanceForm', () => {
       field: 'reason',
     })
     render(<AdjustBalanceForm member={BEN} />)
-    await submit('-50', '')
+    // Reason is required, so only a reason of spaces reaches the server to be refused.
+    await submit('-50', '   ')
 
     const error = await screen.findByRole('alert')
     expect(error).toHaveTextContent('Add a reason — it’s shown in the ledger next to this adjustment.')
@@ -60,7 +61,13 @@ describe('AdjustBalanceForm', () => {
     expect(screen.getByLabelText('Reason')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByLabelText('Reason')).toHaveAttribute('aria-describedby', 'adjust-p-ben-error')
     expect(screen.getByLabelText('Amount')).toHaveAttribute('aria-invalid', 'false')
-    expect(screen.getByLabelText('Amount')).not.toHaveAttribute('aria-describedby')
+    expect(screen.getByLabelText('Amount')).toHaveAttribute('aria-describedby', 'adjust-p-ben-amount-hint')
+  })
+
+  it('says how to take coins away, and requires a reason', () => {
+    render(<AdjustBalanceForm member={BEN} />)
+    expect(screen.getByLabelText('Amount')).toHaveAccessibleDescription('Use a minus to take coins away, like -50.')
+    expect(screen.getByLabelText('Reason')).toBeRequired()
   })
 
   it('ties an amount error to the amount input only', async () => {
@@ -70,7 +77,7 @@ describe('AdjustBalanceForm', () => {
 
     await screen.findByRole('alert')
     expect(screen.getByLabelText('Amount')).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getByLabelText('Amount')).toHaveAttribute('aria-describedby', 'adjust-p-ben-error')
+    expect(screen.getByLabelText('Amount')).toHaveAttribute('aria-describedby', 'adjust-p-ben-amount-hint adjust-p-ben-error')
     expect(screen.getByLabelText('Reason')).toHaveAttribute('aria-invalid', 'false')
   })
 })
@@ -81,7 +88,8 @@ describe('AdjustBalanceForm confirmation (#65)', () => {
     await submit('-20', 'Duplicate reward')
 
     const dialog = await screen.findByRole('alertdialog', { name: 'Adjust Ben’s balance?' })
-    expect(dialog).toHaveAccessibleDescription('Takes 20 DC from Ben’s balance of 60 DC, straight away.')
+    // ADM-7: the balance it ends at and the reason, so an extra zero shows before it's applied.
+    expect(dialog).toHaveAccessibleDescription('Ben’s balance goes from 60\u00A0DC to 40\u00A0DC (\u221220\u00A0DC), straight away. Reason: “Duplicate reward”.')
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
@@ -90,14 +98,25 @@ describe('AdjustBalanceForm confirmation (#65)', () => {
     expect(screen.getByLabelText('Reason')).toHaveValue('Duplicate reward')
   })
 
+  // The page's balance may be stale, so an overdraw still confirms, saying the server will refuse it.
+  it('still asks before an adjustment past the shown balance, saying it would overdraw', async () => {
+    render(<AdjustBalanceForm member={BEN} />)
+    await submit('-80', 'Correction')
+    const dialog = await screen.findByRole('alertdialog', { name: 'Adjust Ben’s balance?' })
+    expect(dialog).toHaveAccessibleDescription(
+      'Taking 80\u00A0DC from Ben’s 60\u00A0DC would take the balance below 0\u00A0DC; the server refuses an overdraw. Reason: “Correction”.',
+    )
+    expect(adjustBalanceAction).not.toHaveBeenCalled()
+  })
+
   it('toasts and clears the fields once the adjustment goes through', async () => {
     adjustBalanceAction.mockResolvedValue(undefined)
     render(<AdjustBalanceForm member={BEN} />)
     await submit('25', 'Choir volunteer bonus')
-    expect(await screen.findByRole('alertdialog')).toHaveAccessibleDescription('Adds 25 DC to Ben’s balance of 60 DC, straight away.')
+    expect(await screen.findByRole('alertdialog')).toHaveAccessibleDescription('Ben’s balance goes from 60\u00A0DC to 85\u00A0DC (+25\u00A0DC), straight away. Reason: “Choir volunteer bonus”.')
     await userEvent.click(screen.getByRole('button', { name: 'Adjust balance' }))
 
-    await waitFor(() => expect(success).toHaveBeenCalledWith('Balance adjusted by +25 DC.'))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('Balance adjusted by +25\u00A0DC.'))
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
     expect(screen.getByLabelText('Amount')).toHaveValue(null)
     expect(screen.getByLabelText('Reason')).toHaveValue('')
@@ -106,7 +125,7 @@ describe('AdjustBalanceForm confirmation (#65)', () => {
 
 describe('AdjustBalanceForm keeps what was filled in (#63)', () => {
   it('keeps the amount and reason after the server refuses', async () => {
-    adjustBalanceAction.mockResolvedValue({ formError: 'That would take Ben’s balance below zero — they have 60 DC.', field: 'amount' })
+    adjustBalanceAction.mockResolvedValue({ formError: 'That would take Ben’s balance below zero — they have 60\u00A0DC.', field: 'amount' })
     render(<AdjustBalanceForm member={BEN} />)
     await submit('-80', 'Correction')
     await userEvent.click(await screen.findByRole('button', { name: 'Adjust balance' }))
@@ -128,14 +147,14 @@ describe('AdjustBalanceForm keeps what was filled in (#63)', () => {
     await waitFor(() => expect(adjustBalanceAction).toHaveBeenCalledTimes(1))
     await screen.findByText(/We couldn’t confirm the adjustment/)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Adjust Ben' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Adjust balance for Ben' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Adjust balance' }))
     await waitFor(() => expect(adjustBalanceAction).toHaveBeenCalledTimes(2))
     expect(keyOf(1)).toBe(keyOf(0))
 
     await userEvent.clear(screen.getByLabelText('Amount'))
     await userEvent.type(screen.getByLabelText('Amount'), '50')
-    await userEvent.click(screen.getByRole('button', { name: 'Adjust Ben' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Adjust balance for Ben' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Adjust balance' }))
     await waitFor(() => expect(adjustBalanceAction).toHaveBeenCalledTimes(3))
     expect(keyOf(2)).not.toBe(keyOf(0))

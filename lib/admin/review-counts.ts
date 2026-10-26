@@ -1,11 +1,13 @@
+import { cache } from 'react'
 import type { DbClient } from '@/lib/supabase/database'
 import type { Role } from '@/lib/auth/roles'
 import { atLeast } from '@/lib/auth/roles'
+import { optionalRead } from '@/lib/home/optional-read'
 import type { LiveSubscription } from '@/components/live/live-refresh'
 
 export type ReviewCounts = { tasks: number; markets: number }
 
-// What is waiting on the viewer, for the avatar's red dot, its menu's Admin count and Home's
+// What is waiting on the viewer, for the avatar's gold dot, its menu's Admin count and Home's
 // Needs you (#385, #388). my_review_counts (0058) applies the
 // roles: another member's task submissions for a reviewer and above, closed markets with no result
 // for an admin and above. A plain member has nothing, so it costs them no query.
@@ -16,6 +18,14 @@ export async function getReviewCounts(supabase: DbClient, role: Role): Promise<R
   const row = data?.[0]
   return { tasks: Number(row?.tasks ?? 0), markets: Number(row?.markets ?? 0) }
 }
+
+// The signed-in layout's badge and Home's Needs you read the same counts in one request, so they share
+// this one read (D-11). Either can do without them, so a failed read is logged and reads as nothing
+// waiting rather than failing the page.
+export const readReviewCounts = cache(
+  (supabase: DbClient, role: Role): Promise<ReviewCounts> =>
+    optionalRead('the review counts', () => getReviewCounts(supabase, role), { tasks: 0, markets: 0 }),
+)
 
 // The tables whose changes move the badge, for the layout to keep live. A market closing is only
 // the clock passing, so nothing here hears that: the layout also refreshes at the next close.

@@ -28,6 +28,16 @@ describe('NeedsYou (#388)', () => {
     expect(within(section).getByRole('link', { name: '1 market to resolve' })).toHaveAttribute('href', '/admin/markets')
   })
 
+  // HOME-8: the tiles answer a mouse with a wash of their own colour, and a lone figure isn't tabular.
+  it('gives each tile a hover wash and no tabular figures', () => {
+    render(<NeedsYou counts={{ tasks: 12, markets: 1 }} showReviews showAdminMarkets marketsToResolve={NONE} balance={50} taskRewards={null} />)
+    for (const name of ['12 task submissions to review', '1 market to resolve']) {
+      const tile = screen.getByRole('link', { name })
+      expect(tile).toHaveClass('pressable', 'isolate', 'after:bg-current', 'hover:after:opacity-8')
+      expect(tile.querySelector('.tabular-nums')).toBeNull()
+    }
+  })
+
   it('shows a reviewer only the submissions, and a member nothing of the queue', () => {
     const { unmount } = render(
       <NeedsYou counts={{ tasks: 2, markets: 0 }} showReviews showAdminMarkets={false} marketsToResolve={NONE} balance={50} taskRewards={null} />,
@@ -51,7 +61,7 @@ describe('NeedsYou (#388)', () => {
         taskRewards={null}
       />,
     )
-    expect(screen.getByRole('link', { name: 'Will the bake sale top $500? closed. Resolve it.' })).toHaveAttribute('href', '/markets/k1')
+    expect(screen.getByRole('link', { name: 'Time to resolve: Will the bake sale top $500?' })).toHaveAttribute('href', '/markets/k1')
     expect(screen.getByRole('link', { name: '2 more markets to resolve' })).toHaveAttribute('href', '/markets?status=awaiting')
   })
 
@@ -71,7 +81,7 @@ describe('NeedsYou (#388)', () => {
 
   it('points a member at 0 DC to Tasks, in gold, with what tasks pay', () => {
     render(<NeedsYou counts={{ tasks: 0, markets: 0 }} showReviews={false} showAdminMarkets={false} marketsToResolve={NONE} balance={0} taskRewards={{ min: 5, max: 25 }} />)
-    const row = screen.getByRole('link', { name: 'You’re out of Dwell Coin. Earn more with Tasks: they pay 5 to 25 DC.' })
+    const row = screen.getByRole('link', { name: 'You’re out of Dwell Coin. Earn more with Tasks: they pay 5 to 25\u00A0DC.' })
     expect(row).toHaveAttribute('href', '/tasks')
     expect(row).toHaveClass('text-gold')
   })
@@ -98,17 +108,58 @@ describe('YourBets (#388)', () => {
     expect(bet).toHaveTextContent('10 DC on Yes · Pays 18 DC')
     expect(bet).toHaveTextContent('Closes Oct 6')
     expect(within(parlay).getByRole('link', { name: 'Parlay · 3 picks' })).toHaveAttribute('href', '/parlays/p1')
-    expect(parlay).toHaveTextContent('5 DC · Pays 80 DC if all win')
+    expect(parlay).toHaveTextContent('5 DC · Pays 80 DC if every pick wins')
     expect(closed).toHaveTextContent('Closed')
+  })
+
+  // HOME-3: the close is labelled, and within a day it's the time. These render in the runner's own
+  // time zone, so they check the shape; formatCloseTime's own tests pin the zones.
+  it('says when a bet closes, as the time within a day', () => {
+    render(
+      <YourBets
+        openCount={2}
+        markets={[]}
+        now={NOW}
+        wagers={[
+          { kind: 'bet', key: 'bet:1', marketId: 'k1', marketTitle: 'Tonight', outcomeLabel: 'Yes', amount: 10, payout: 18, closeAt: '2026-10-04T18:00:00Z' },
+          { kind: 'bet', key: 'bet:2', marketId: 'k2', marketTitle: 'Tomorrow', outcomeLabel: 'Yes', amount: 10, payout: 18, closeAt: '2026-10-05T09:30:00Z' },
+        ]}
+      />,
+    )
+    const [tonight, tomorrow] = within(screen.getByRole('region', { name: 'Your bets' })).getAllByRole('listitem')
+    expect(tonight).toHaveTextContent(/Closes (tomorrow )?\d{1,2}(:\d{2})?\s[AP]M/)
+    expect(tomorrow).toHaveTextContent(/Closes (tomorrow )?\d{1,2}:30\s[AP]M/)
+  })
+
+  it('says See all without a count when the count could not be read (HOME-1)', () => {
+    render(
+      <YourBets
+        openCount={null}
+        markets={[]}
+        now={NOW}
+        wagers={[{ kind: 'bet', key: 'bet:1', marketId: 'k1', marketTitle: 'A', outcomeLabel: 'Yes', amount: 10, payout: 18, closeAt: '2026-10-06T12:00:00Z' }]}
+      />,
+    )
+    expect(screen.getByRole('link', { name: 'See all' })).toHaveAttribute('href', '/bets')
   })
 
   it('offers the markets closing soonest when nothing is open', () => {
     render(<YourBets openCount={0} wagers={[]} now={NOW} markets={[{ id: 'k1', title: 'Who wins the chili cook-off?', closeAt: '2026-10-05T12:00:00Z' }]} />)
     const section = screen.getByRole('region', { name: 'Your bets' })
     expect(section).toHaveTextContent('No open bets.')
-    expect(within(section).getByRole('link', { name: 'Who wins the chili cook-off?' })).toHaveAttribute('href', '/markets/k1')
+    const title = within(section).getByRole('link', { name: 'Who wins the chili cook-off?' })
+    expect(title).toHaveAttribute('href', '/markets/k1')
+    // HOME-6: the whole row opens the market, not only its title.
+    expect(title).toHaveClass('stretched-link')
+    expect(title.closest('li')).toHaveClass('pressable', 'hover-tint', 'relative')
+    expect(title.closest('li')).toHaveTextContent(/Closes \S/)
     expect(within(section).getByRole('link', { name: 'Browse markets' })).toHaveAttribute('href', '/markets')
     expect(within(section).queryByRole('link', { name: /See all/ })).toBeNull()
+  })
+
+  it('says how to place a first bet when no market is open either (C-14)', () => {
+    render(<YourBets openCount={0} wagers={[]} now={NOW} markets={[]} />)
+    expect(screen.getByText('Add a pick from any market to place your first bet.')).toBeInTheDocument()
   })
 })
 
@@ -139,24 +190,41 @@ describe('HomeActivity (#388)', () => {
     expect(within(section).queryByRole('button')).toBeNull()
   })
 
+  it('keeps its heading, See all and height when its read failed (HOME-1)', () => {
+    render(<HomeActivity events={null} now={NOW} />)
+    const section = screen.getByRole('region', { name: 'Activity' })
+    expect(within(section).getByRole('link', { name: 'See all' })).toHaveAttribute('href', '/feed')
+    const line = within(section).getByText(/^Activity didn’t load\./)
+    expect(line).toHaveClass('min-h-[230px]', 'md:min-h-[158px]')
+  })
+
   it('says nothing has happened yet', () => {
     render(<HomeActivity events={[]} now={NOW} />)
     expect(screen.getByText('Nothing yet.')).toBeInTheDocument()
+    expect(screen.getByText(/results and approved tasks show up here/)).toBeInTheDocument()
   })
 })
 
 describe('BalanceCard (#388)', () => {
-  it('shows the balance with rank and what is riding on the deep teal hero, at every width (#438)', () => {
-    render(<BalanceCard balance={4886} rank={218} memberCount={502} ridingDc={275} ridingWagers={30} />)
+  it('shows the balance with rank and what is in open bets on the deep teal hero, at every width (#438)', () => {
+    render(<BalanceCard balance={4886} rank={218} memberCount={502} riding={{ dc: 275, wagers: 30 }} />)
     const card = screen.getByRole('region', { name: 'Balance' })
     expect(card).toHaveClass('flex', 'bg-hero', 'text-on-hero')
     expect(card).not.toHaveClass('hidden')
     expect(card).toHaveTextContent('4,886 DC')
-    expect(card).toHaveTextContent('218th of 502 · 275 DC riding on 30 bets')
+    expect(card).toHaveTextContent('218th of 502 · 275 DC in 30 open bets')
   })
 
   it('leaves the rank out until there is one', () => {
-    render(<BalanceCard balance={100} rank={null} memberCount={502} ridingDc={0} ridingWagers={0} />)
+    render(<BalanceCard balance={100} rank={null} memberCount={502} riding={{ dc: 0, wagers: 0 }} />)
     expect(screen.getByRole('region', { name: 'Balance' })).toHaveTextContent(/No open bets$/)
+  })
+
+  it('keeps the standing line’s height, hidden, when neither rank nor stake could be read (HOME-1)', () => {
+    render(<BalanceCard balance={100} rank={null} memberCount={502} riding={null} />)
+    const lines = screen.getByRole('region', { name: 'Balance' }).querySelectorAll('p')
+    expect(lines).toHaveLength(2)
+    expect(lines[1]).toHaveAttribute('aria-hidden', 'true')
+    expect(lines[1].textContent).toBe('\u00A0')
   })
 })

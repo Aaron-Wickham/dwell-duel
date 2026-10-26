@@ -42,11 +42,13 @@ beforeEach(() => {
 })
 
 describe('the nav pills (#154)', () => {
-  it('draws one tab bar pill, in the current tab, behind its icon', () => {
+  // D-1: a lime tile filling the tab's cell, a little inset from its neighbours, not a round pill.
+  it('draws one tab bar tile, filling the current tab', () => {
     render(<Nav />)
     const [pill, ...rest] = tabBar().querySelectorAll('[data-layout-id="tabbar-pill"]')
     expect(rest).toHaveLength(0)
-    expect(pill).toHaveClass('bg-tab-active', 'absolute', 'inset-0', '-z-10')
+    expect(pill).toHaveClass('bg-lime', 'rounded-tile', 'absolute', 'inset-y-0', 'inset-x-0.5', '-z-10')
+    expect(pill.parentElement).toHaveClass('isolate')
     expect(pill.closest('a')).toHaveAttribute('aria-current', 'page')
     expect(pill.closest('a')).toHaveAttribute('href', '/markets')
   })
@@ -58,7 +60,7 @@ describe('the nav pills (#154)', () => {
     const found = tabBar().querySelectorAll('[data-layout-id="tabbar-pill"]')
     expect(found).toHaveLength(1)
     expect(found[0].closest('a')).toHaveAttribute('href', '/tasks')
-    expect(within(tabBar()).getByRole('link', { name: 'Markets' }).querySelector('.bg-tab-active')).toBeNull()
+    expect(within(tabBar()).getByRole('link', { name: 'Markets' }).querySelector('.bg-lime')).toBeNull()
   })
 
   it('slides the tab bar and desktop pills the same way', () => {
@@ -79,9 +81,14 @@ describe('the nav pills (#154)', () => {
   it('cross-fades each link’s colour over the pill’s slide', () => {
     render(<Nav />)
     for (const link of within(tabBar()).getAllByRole('link')) expect(link).toHaveClass('pill-label')
+    // The tile isn't the only cue: lime is 1.73:1 on the light surface, so the label and icon turn
+    // ink and heavier too.
     const markets = within(tabBar()).getByRole('link', { name: 'Markets' })
-    const iconWell = markets.querySelector('[data-layout-id="tabbar-pill"]')!.parentElement!
-    expect(iconWell).toHaveClass('transition-colors', 'duration-(--duration-slide)', 'ease-ios', 'motion-reduce:transition-none')
+    expect(markets).toHaveClass('text-on-lime')
+    expect(markets.querySelector('svg')).toHaveAttribute('stroke-width', '2.5')
+    const tasks = within(tabBar()).getByRole('link', { name: 'Tasks' })
+    expect(tasks).toHaveClass('text-ink2')
+    expect(tasks.querySelector('svg')).toHaveAttribute('stroke-width', '2')
     const desktop = screen.getAllByRole('navigation', { name: 'Primary' })[0]
     for (const link of within(desktop).getAllByRole('link')) expect(link).toHaveClass('pill-label')
   })

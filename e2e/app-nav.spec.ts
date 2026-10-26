@@ -7,7 +7,8 @@ test.describe('desktop', () => {
   test('the top bar reaches every destination and marks the current one', async ({ page }) => {
     await page.goto('/markets')
     const nav = page.getByRole('navigation', { name: 'Primary' })
-    for (const name of ['Home', 'Markets', 'My bets', 'Tasks', 'Leaderboard']) {
+    // Named as the tab bar's are, so voice control can say "Leaders" below xl or "Leaderboard" from it.
+    for (const name of ['Home', 'Markets', 'My bets', 'Tasks', 'Leaders, leaderboard']) {
       await expect(nav.getByRole('link', { name, exact: true })).toBeVisible()
     }
     // D1 (#385): the feed is Home's Activity, and Admin opens from the avatar menu.
@@ -23,7 +24,7 @@ test.describe('desktop', () => {
   test('the balance opens My bets and the avatar menu opens your profile, Settings and Admin', async ({ page }) => {
     await page.goto('/markets')
     const banner = page.getByRole('banner')
-    await banner.getByRole('link', { name: /^Balance [\d,]+ DC, view my bets$/ }).click()
+    await banner.getByRole('link', { name: /^Balance [\d,]+\sDC, view my bets$/ }).click()
     await expect(page).toHaveURL(/\/bets$/)
 
     await banner.getByRole('button', { name: /^Your profile and settings/ }).click()
@@ -51,6 +52,8 @@ test.describe('phone', () => {
     // The top bar holds the wordmark, the balance and the avatar, for every role (#385).
     await expect(banner.getByRole('link', { name: 'Admin', exact: true })).toHaveCount(0)
     await expect(banner.getByRole('button', { name: /^Your profile and settings/ })).toBeVisible()
+    // Home's Balance card shows the balance, so the top bar leaves it out there (D-6).
+    await expect(banner.getByRole('link', { name: /^Balance/ })).toHaveCount(0)
 
     await tabs.getByRole('link', { name: 'Leaders, leaderboard', exact: true }).click()
     await expect(page).toHaveURL(/\/leaderboard$/)
@@ -67,8 +70,9 @@ test.describe('phone top bar', () => {
     expect(error).toBeNull()
     try {
       await db.from('profiles').update({ balance: 99999 }).eq('id', admin!.id)
-      await page.goto('/')
-      await expect(page.getByRole('banner').getByText('Balance 99,999 DC, view my bets')).toBeAttached()
+      // Home leaves the chip out (D-6), so this measures a page that has it.
+      await page.goto('/markets')
+      await expect(page.getByRole('banner').getByText(/^Balance 99,999\sDC, view my bets$/)).toBeAttached()
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
       expect(overflow).toBe(0)
     } finally {

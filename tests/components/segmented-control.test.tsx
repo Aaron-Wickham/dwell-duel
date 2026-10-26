@@ -7,6 +7,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ prefetch: vi.fn(), push:
 import { SegmentedControl, segmentClass, segmentMarker } from '@/components/ui/segmented-control'
 import { SubNav } from '@/components/ui/sub-nav'
 import { StatusChip } from '@/components/ui/status-chip'
+import { chipTextClass } from '@/components/ui/page'
 
 function Control({ active }: { active: 'a' | 'b' }) {
   return (
@@ -158,12 +159,14 @@ describe('StatusChip', () => {
     expect(screen.getByText('Resolved').className).not.toMatch(/primary|lime/)
   })
 
-  it('comes in a small size', () => {
+  it('comes in a small size, on the chip text size', () => {
     render(
       <StatusChip tone="void" size="sm">
         Weekly
       </StatusChip>,
     )
-    expect(screen.getByText('Weekly')).toHaveClass('h-6', 'px-[9px]', 'text-xs')
+    const chip = screen.getByText('Weekly')
+    expect(chip).toHaveClass('h-6', 'px-[9px]', ...chipTextClass.split(' '))
+    expect(chip).not.toHaveClass('text-xs')
   })
 })

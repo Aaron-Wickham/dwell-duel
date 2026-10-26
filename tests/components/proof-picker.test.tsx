@@ -87,8 +87,33 @@ describe('ProofPicker', () => {
     render(<Picker />)
     const input = screen.getByLabelText('Add file')
     await userEvent.upload(input, new File(['x'], 'notes.doc', { type: 'application/msword' }), { applyAccept: false })
-    expect(screen.getByText('notes.doc isn’t a PDF or text file.')).toBeInTheDocument()
+    expect(screen.getByText('notes.doc isn’t a PDF or text file. Pick one of those, or use Add photos.')).toBeInTheDocument()
     await userEvent.upload(input, new File([new Uint8Array(3 * 1024 * 1024 + 1)], 'big.pdf', { type: 'application/pdf' }))
-    expect(screen.getByText('big.pdf is over 3 MB.')).toBeInTheDocument()
+    expect(screen.getByText('big.pdf is over 3 MB. Pick a smaller file.')).toBeInTheDocument()
+  })
+
+  // TSK-6: removing an attachment takes its button away, so focus moves on instead of to the page.
+  it('moves focus to the next Remove, else the one before, else Add photos', async () => {
+    render(<Picker initial={links(3)} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Remove https://example.com/1' }))
+    expect(screen.getByRole('button', { name: 'Remove https://example.com/2' })).toHaveFocus()
+    await userEvent.click(screen.getByRole('button', { name: 'Remove https://example.com/2' }))
+    expect(screen.getByRole('button', { name: 'Remove https://example.com/0' })).toHaveFocus()
+    await userEvent.click(screen.getByRole('button', { name: 'Remove https://example.com/0' }))
+    expect(screen.getByLabelText('Add photos')).toHaveFocus()
+  })
+
+  // TSK-12: a disabled button doesn't say why, so the limit it reached is a hint beside it.
+  it('says which limit it reached beside the disabled buttons', async () => {
+    const { unmount } = render(<Picker initial={links(PROOF_MAX_ITEMS)} />)
+    const hint = '5 attachments is the most you can add. Remove one to add another.'
+    expect(screen.getByText(hint)).toBeInTheDocument()
+    expect(screen.getByLabelText('Add photos')).toHaveAccessibleDescription(hint)
+    unmount()
+
+    render(<Picker />)
+    const photos = [1, 2, 3].map((n) => new File(['x'], `${n}.jpg`, { type: 'image/jpeg' }))
+    await userEvent.upload(screen.getByLabelText('Add photos'), photos)
+    expect(screen.getByText('3 photos or files is the most you can add. You can still add a link.')).toBeInTheDocument()
   })
 })

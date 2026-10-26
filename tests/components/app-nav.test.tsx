@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 
 type NumberFlowProps = { value: number; suffix?: string; locales?: unknown; format?: { useGrouping?: boolean } }
 const { numberFlowCalls } = vi.hoisted(() => ({ numberFlowCalls: [] as NumberFlowProps[] }))
-let pathname = '/'
+let pathname = '/markets'
 vi.mock('next/navigation', () => ({ usePathname: () => pathname }))
 const { tap } = vi.hoisted(() => ({ tap: vi.fn() }))
 vi.mock('@/lib/haptics', () => ({ haptics: { tap, success: vi.fn(), error: vi.fn() } }))
@@ -42,7 +42,7 @@ function Nav({
 }
 
 beforeEach(() => {
-  pathname = '/'
+  pathname = '/markets'
   tap.mockClear()
   numberFlowCalls.length = 0
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -82,9 +82,9 @@ describe('AppNav', () => {
   it('links every destination in both navs', () => {
     render(<Nav balance={120} isAdmin={false} />)
     const [desktop, phone] = screen.getAllByRole('navigation', { name: 'Primary' })
-    for (const name of ['Home', 'Markets', 'My bets', 'Tasks', 'Leaderboard']) {
+    for (const name of ['Home', 'Markets', 'My bets', 'Tasks', 'Leaders, leaderboard']) {
       expect(within(desktop).getByRole('link', { name })).toBeInTheDocument()
-      expect(within(phone).getByRole('link', { name: name === 'Leaderboard' ? 'Leaders, leaderboard' : name })).toBeInTheDocument()
+      expect(within(phone).getByRole('link', { name })).toBeInTheDocument()
     }
     // D1 (#385): the feed is Home's Activity, Admin opens from the avatar, parlays live on My bets.
     for (const nav of [desktop, phone]) {
@@ -94,18 +94,24 @@ describe('AppNav', () => {
     expect(phone).toHaveClass('grid-cols-5')
   })
 
-  // jsdom applies no CSS, so these pin the classes that make the desktop row fit from 768px:
-  // labels and the wordmark's name only show from xl / lg.
-  it('keeps every desktop link a 44px icon until xl, still named by its label', () => {
+  // jsdom applies no CSS, so these pin the classes that make the desktop row fit from 768px: the
+  // short labels until xl, the full ones from it, and the wordmark's name only from lg (HOME-2).
+  it('shows each desktop link’s short label until xl and its full label from it, with no icon', () => {
     render(<Nav balance={120} isAdmin />)
     const desktop = screen.getAllByRole('navigation', { name: 'Primary' })[0]
-    for (const name of ['Home', 'Markets', 'My bets', 'Tasks', 'Leaderboard']) {
+    for (const [name, short, full] of [
+      ['My bets', 'Bets', 'My bets'],
+      ['Leaders, leaderboard', 'Leaders', 'Leaderboard'],
+    ]) {
       const link = within(desktop).getByRole('link', { name })
-      expect(link).toHaveClass('min-h-11', 'min-w-11')
-      expect(link).toHaveAttribute('title', name)
-      expect(within(link).getByText(name)).toHaveClass('max-xl:sr-only')
-      expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
-      expect(link.querySelector('svg')).toHaveClass('xl:hidden')
+      expect(link).toHaveClass('min-h-11', 'min-w-11', 'px-3')
+      expect(within(link).getByText(short)).toHaveClass('xl:hidden')
+      expect(within(link).getByText(full)).toHaveClass('max-xl:hidden')
+    }
+    for (const name of ['Home', 'Markets', 'Tasks']) expect(within(desktop).getByRole('link', { name })).toHaveTextContent(new RegExp(`^${name}$`))
+    for (const link of within(desktop).getAllByRole('link')) {
+      expect(link.querySelector('svg')).toBeNull()
+      expect(link).not.toHaveAttribute('title')
     }
   })
 
@@ -174,9 +180,30 @@ describe('AppNav', () => {
     expect(within(adminMenu).getByRole('menuitem', { name: /Admin/ })).toHaveAttribute('href', '/admin/invites')
   })
 
+  // D-6: Home's Balance card shows the same figure a few lines down.
+  it('leaves the balance out of both top bars on Home only', () => {
+    pathname = '/'
+    const { unmount } = render(<Nav balance={120} isAdmin={false} />)
+    expect(screen.queryByRole('link', { name: /^Balance/ })).toBeNull()
+    unmount()
+    pathname = '/feed'
+    render(<Nav balance={120} isAdmin={false} />)
+    expect(screen.getAllByRole('link', { name: /^Balance/ })).toHaveLength(2)
+  })
+
+  // D-6: gold means something waits on you, so the balance is neutral.
+  it('draws the balance chip in ink on sunk, not gold', () => {
+    render(<Nav balance={120} isAdmin={false} />)
+    for (const chip of screen.getAllByRole('link', { name: /^Balance/ })) {
+      const pill = chip.querySelector('span.rounded-full')
+      expect(pill).toHaveClass('bg-sunk', 'text-ink')
+      expect(pill).not.toHaveClass('bg-gold-soft')
+    }
+  })
+
   it('makes the balance a link to My bets in both top bars, marked current there', () => {
     const { unmount } = render(<Nav balance={120} isAdmin={false} />)
-    const chips = screen.getAllByRole('link', { name: 'Balance 120 DC, view my bets' })
+    const chips = screen.getAllByRole('link', { name: 'Balance 120\u00A0DC, view my bets' })
     expect(chips).toHaveLength(2)
     for (const chip of chips) {
       expect(chip).toHaveAttribute('href', '/bets')
@@ -186,7 +213,7 @@ describe('AppNav', () => {
     unmount()
     pathname = '/bets'
     render(<Nav balance={120} isAdmin={false} />)
-    for (const chip of screen.getAllByRole('link', { name: 'Balance 120 DC, view my bets' })) {
+    for (const chip of screen.getAllByRole('link', { name: 'Balance 120\u00A0DC, view my bets' })) {
       expect(chip).toHaveAttribute('aria-current', 'page')
     }
   })
@@ -307,7 +334,7 @@ describe('AppNav', () => {
       render(<Nav balance={120} isAdmin={false} />)
       const [desktop, phone] = screen.getAllByRole('navigation', { name: 'Primary' })
       // fireEvent returns false when the click's default, the navigation, was prevented.
-      expect(fireEvent.click(within(desktop).getByRole('link', { name: 'Leaderboard' }))).toBe(false)
+      expect(fireEvent.click(within(desktop).getByRole('link', { name: 'Leaders, leaderboard' }))).toBe(false)
       expect(fireEvent.click(within(phone).getByRole('link', { name: /Leaders/ }))).toBe(false)
       expect(scrollTo).toHaveBeenCalledTimes(2)
       expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
@@ -322,7 +349,7 @@ describe('AppNav', () => {
     const buttons = screen.getAllByRole('button', { name: 'Your profile and settings, 3 waiting' })
     expect(buttons).toHaveLength(2)
     for (const button of buttons) {
-      const dot = button.querySelector('.bg-loss')
+      const dot = button.querySelector('.bg-gold')
       expect(dot).toHaveAttribute('aria-hidden', 'true')
       expect(dot).toHaveClass('ring-surface')
     }

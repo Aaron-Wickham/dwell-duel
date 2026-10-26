@@ -137,12 +137,12 @@ export function legTally(legs: { status: LegStatus }[]): Record<LegStatus, numbe
   return tally
 }
 
+// The picks still to play out are one count, "waiting", open or closed, as each pick's row says.
 export function tallySummary(tally: ReturnType<typeof legTally>): string {
   const parts = [
     tally.won > 0 && `${tally.won} won`,
     tally.lost > 0 && `${tally.lost} lost`,
-    tally.open > 0 && `${tally.open} open`,
-    tally.awaiting > 0 && `${tally.awaiting} waiting`,
+    tally.open + tally.awaiting > 0 && `${tally.open + tally.awaiting} waiting`,
     tally.voided > 0 && `${tally.voided} called off`,
   ].filter(Boolean)
   return parts.join(' · ')

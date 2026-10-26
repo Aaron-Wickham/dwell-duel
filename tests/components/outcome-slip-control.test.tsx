@@ -173,7 +173,7 @@ describe('OutcomeSlipControl, in its row', () => {
 
     expect(screen.getByRole('button', { name: 'Add Yes to slip' })).toBeInTheDocument()
     expect(screen.getByLabelText('Slip')).toHaveTextContent('Picks 0')
-    expect(error).toHaveBeenCalledWith('Your slip is full (10 picks). Place or remove some to add more.')
+    expect(error).toHaveBeenCalledWith('Your slip is full (10 picks). Place or remove some to add more.', { duration: 10_000 })
     expect(success).not.toHaveBeenCalled()
   })
 

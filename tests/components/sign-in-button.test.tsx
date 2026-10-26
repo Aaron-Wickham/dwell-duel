@@ -107,6 +107,6 @@ describe('SignInButton', () => {
   it('shows the friendly error after a failed redirect back', () => {
     params = new URLSearchParams('error=auth')
     render(<SignInButton />)
-    expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong signing you in. Try again.')
+    expect(screen.getByRole('alert')).toHaveTextContent('Google didn’t sign you in. Try again with the account your invite was sent to.')
   })
 })

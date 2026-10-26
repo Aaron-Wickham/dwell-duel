@@ -55,7 +55,7 @@ const MARKET = {
 
 describe('AdminMarketsPage', () => {
   beforeEach(() => cachedCategoryCounts.mockResolvedValue([SPORTS, OLD, FOOTY, OTHER]))
-  it('lists each waiting market with its pool, creator and a Resolve link to its resolve form', async () => {
+  it('lists each waiting market with its stakes, creator and a Resolve link to its resolve form', async () => {
     listAwaitingMarkets.mockResolvedValue({ rows: [MARKET], next: null, windowed: false })
     render(await AdminMarketsPage({ searchParams: Promise.resolve({}) } as never))
 
@@ -67,7 +67,7 @@ describe('AdminMarketsPage', () => {
       `/markets/${MARKET.id}#manage-title`,
     )
     expect(within(row).getByRole('link', { name: 'Dawit' })).toHaveAttribute('href', `/members/${MARKET.creatorId}`)
-    expect(row).toHaveTextContent('140 DC in the pool')
+    expect(row).toHaveTextContent('140 DC staked')
     expect(row).toHaveTextContent('2d ago')
   })
 
@@ -80,7 +80,7 @@ describe('AdminMarketsPage', () => {
   it('shows "Nothing older here" instead of the empty state for an empty fresh window', async () => {
     listAwaitingMarkets.mockResolvedValue({ rows: [], next: null, windowed: true })
     render(await AdminMarketsPage({ searchParams: Promise.resolve({ after_from: 'abc' }) } as never))
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     expect(screen.queryByText('Nothing to resolve.')).not.toBeInTheDocument()
   })
 

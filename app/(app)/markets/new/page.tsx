@@ -56,7 +56,7 @@ export default async function NewMarketPage(props: PageProps<'/markets/new'>) {
       <PageHeader title="Create market" />
       {initial && (
         <p className="max-w-[68ch] text-ink2">
-          A copy of “{initial.title}”, closing at the same time in a week to come. Check it over: nothing is created until
+          A copy of “{initial.title}”, closing at the same time of week, on the next date still to come. Check it over: nothing is created until
           you tap Create market.
         </p>
       )}

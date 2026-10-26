@@ -1,30 +1,131 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import { approveTaskCompletionAction, rejectTaskCompletionAction, type ActionState } from '@/lib/tasks/review-task-completion'
 import { Button } from '@/components/ui/button'
-import { FormSubmitButton } from '@/components/ui/form-submit-button'
 import { Message } from '@/components/ui/message'
+import { PendingLabel, PendingStatus } from '@/components/ui/pending-label'
+import { GENERIC_ERROR } from '@/lib/errors/messages'
+import { haptics } from '@/lib/haptics'
+import { focusPageHeading } from '@/lib/ui/focus-page-heading'
+import { toastError } from '@/lib/toast/error-toast'
 import { withSuccessToast } from '@/lib/toast/with-success-toast'
+import { UNDO_WINDOW_MS, useUndoWindow, type CommitReason } from '@/lib/ui/undo-window'
 import { RejectDialog } from './reject-dialog'
 
-// A row's Approve stays a direct button (AGENTS.md); Reject asks for its optional reason in a
-// dialog rather than a field on every row (COPY-13).
+// A row's Approve pays at once once sent, so it's held for five seconds with an Undo first
+// (UX audit D-7): nothing reaches the server until the window ends, and hiding or leaving the page
+// during it sends the approval rather than dropping it. It never pays twice:
+// approve_task_completion refuses a submission that isn't pending, and the action counts this
+// reviewer's own earlier approval as success, so a replayed request is a no-op. Reject asks
+// for its optional reason in a dialog rather than a field on every row (COPY-13).
 export function ReviewButtons({
   completionId,
   submitterName,
   taskTitle,
+  onHeldChange,
 }: {
   completionId: string
   submitterName: string
   taskTitle: string
+  // Told when this row's approval is held or being sent, so the queue can keep it out of a bulk
+  // action meanwhile. Keyed by id, so the queue can pass one stable callback to every row.
+  onHeldChange?: (completionId: string, held: boolean) => void
 }) {
   const hasError = (s: ActionState) => Boolean(s?.formError)
-  const boundApprove = withSuccessToast(
-    approveTaskCompletionAction.bind(null, completionId),
-    hasError,
-    'Submission approved.',
-  )
+  const toastId = `approve-${completionId}`
+  const approving = `Approving ${submitterName}’s submission`
+  const approved = `Approved ${submitterName}’s submission.`
+  const [approveError, setApproveError] = useState<string | undefined>()
+  const [isApprovePending, startApprove] = useTransition()
+  const approveButton = useRef<HTMLButtonElement>(null)
+  const undoButton = useRef<HTMLButtonElement>(null)
+  // Which control should take focus after the window opens or closes; set only by the reviewer's
+  // own Approve or Undo, so a commit at the timer's end never pulls focus from wherever they are.
+  const focusNext = useRef<'approve' | 'undo' | null>(null)
+  // Whether focus was last on Undo / Approving…, which a successful approval removes with the row.
+  // Tracked by events because a removed element's focus can't be read back afterwards.
+  const undoFocused = useRef(false)
+
+  // Once the approval lands the row goes, so focus on its button moves to the page heading rather
+  // than dropping to the page, as ConfirmActionButton does.
+  function moveFocusOffRow() {
+    if (undoFocused.current && (document.activeElement === undoButton.current || document.activeElement === document.body)) {
+      focusPageHeading()?.focus()
+    }
+    undoFocused.current = false
+  }
+
+  async function sendApproval(): Promise<string | undefined> {
+    try {
+      const result = await approveTaskCompletionAction(completionId, undefined, new FormData())
+      return result?.formError
+    } catch {
+      return GENERIC_ERROR
+    }
+  }
+
+  function commit(reason: CommitReason) {
+    toast.dismiss(toastId)
+    if (reason === 'leaving') {
+      // The row is going away, so its own error line can't show the outcome: a toast says it.
+      const wasVisible = document.visibilityState === 'visible'
+      void sendApproval().then((formError) => {
+        if (formError) toastError(formError)
+        else toast.success(approved)
+      })
+      // Only when the row went and the page stayed: a page being left takes focus with it.
+      if (wasVisible) moveFocusOffRow()
+      return
+    }
+    startApprove(async () => {
+      const formError = await sendApproval()
+      setApproveError(formError)
+      if (formError) {
+        // The Approving… button goes back to Approve, so focus follows it rather than dropping.
+        if (document.activeElement === undoButton.current) focusNext.current = 'approve'
+        haptics.error()
+        return
+      }
+      toast.success(approved)
+      haptics.success()
+      moveFocusOffRow()
+    })
+  }
+
+  const hold = useUndoWindow(commit)
+
+  function startApproval() {
+    if (!hold.start()) return
+    haptics.tap()
+    setApproveError(undefined)
+    focusNext.current = 'undo'
+    toast(approving, {
+      id: toastId,
+      duration: Infinity,
+      action: { label: 'Undo', onClick: undoApproval },
+    })
+  }
+
+  function undoApproval() {
+    if (!hold.undo()) return
+    toast.dismiss(toastId)
+    focusNext.current = 'approve'
+  }
+
+  const holding = hold.open || isApprovePending
+  useEffect(() => {
+    if (!holding) return
+    onHeldChange?.(completionId, true)
+    return () => onHeldChange?.(completionId, false)
+  }, [holding, onHeldChange, completionId])
+  useEffect(() => {
+    const target = focusNext.current === 'undo' ? undoButton.current : focusNext.current === 'approve' ? approveButton.current : null
+    focusNext.current = null
+    target?.focus()
+  }, [holding])
+
   const [rejecting, setRejecting] = useState(false)
   // Controlled, so a refused reject keeps the typed reason; cleared once the reject goes through.
   const [reason, setReason] = useState('')
@@ -40,30 +141,70 @@ export function ReviewButtons({
     hasError,
     'Submission rejected.',
   )
-  const [approveState, approveAction] = useActionState<ActionState, FormData>(boundApprove, undefined)
   const [rejectState, rejectAction, isRejectPending] = useActionState<ActionState, FormData>(boundReject, undefined)
   const approveErrorId = `approve-${completionId}-error`
 
   return (
     <div className="flex flex-col items-end gap-2">
+      {/* While the window is open: what's happening, above the one way to stop it, so the row is no
+          wider than Approve and Reject were (beside it, it ran over the proof on a phone). Once the
+          approval is sent, the button stays in place (keeping focus) as "Approving…". */}
+      {holding && hold.open && (
+        <span aria-hidden="true" className="text-sm font-bold whitespace-nowrap text-ink2">
+          Approving…
+        </span>
+      )}
       <div className="flex items-center gap-1">
-        <form action={approveAction} className="flex">
-          <FormSubmitButton
-            size="sm"
-            variant="secondary"
-            className="grow"
-            aria-describedby={approveState?.formError ? approveErrorId : undefined}
-          >
-            Approve <span className="sr-only">{submitterName}’s {taskTitle}</span>
-          </FormSubmitButton>
-        </form>
-        <Button size="sm" variant="quiet" onClick={() => setRejecting(true)}>
-          <span>Reject<span aria-hidden="true">…</span></span> <span className="sr-only">{submitterName}’s {taskTitle}</span>
-        </Button>
+        {holding ? (
+          <>
+            <Button
+              key="undo"
+              ref={undoButton}
+              onFocus={() => {
+                undoFocused.current = true
+              }}
+              onBlur={(event) => {
+                // A blur with nowhere to go is the button being removed (or a click on nothing),
+                // so it still counts as focus that moveFocusOffRow should rescue.
+                if (event.relatedTarget) undoFocused.current = false
+              }}
+              size="sm"
+              variant="secondary"
+              aria-disabled={isApprovePending || undefined}
+              onClick={() => {
+                if (!isApprovePending) undoApproval()
+              }}
+            >
+              <PendingLabel pending={isApprovePending} pendingLabel="Approving…">
+                Undo <span className="sr-only">approving {submitterName}’s {taskTitle}</span>
+              </PendingLabel>
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              key="approve"
+              ref={approveButton}
+              size="sm"
+              variant="secondary"
+              onClick={startApproval}
+              aria-describedby={approveError ? approveErrorId : undefined}
+            >
+              Approve <span className="sr-only">{submitterName}’s {taskTitle}</span>
+            </Button>
+            <Button size="sm" variant="quiet" onClick={() => setRejecting(true)}>
+              <span>Reject<span aria-hidden="true">…</span></span> <span className="sr-only">{submitterName}’s {taskTitle}</span>
+            </Button>
+          </>
+        )}
       </div>
-      {approveState?.formError && (
+      <span role="status" className="sr-only">
+        {hold.open ? `Approving ${submitterName}’s ${taskTitle} in ${UNDO_WINDOW_MS / 1000} seconds. Undo to stop it.` : ''}
+      </span>
+      <PendingStatus pending={isApprovePending} pendingLabel="Approving…" />
+      {approveError && !holding && (
         <Message tone="error" id={approveErrorId}>
-          {approveState.formError}
+          {approveError}
         </Message>
       )}
       <RejectDialog

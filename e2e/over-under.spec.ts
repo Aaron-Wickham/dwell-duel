@@ -14,7 +14,7 @@ test('create an over/under, reword it, and resolve it from the actual number', a
   await expect(page).toHaveURL(/\/markets\/[0-9a-f-]+/)
   const outcomes = page.getByRole('region', { name: 'Outcomes' })
   await expect(outcomes.getByRole('listitem')).toHaveText([/^Over 42\.5/, /^Under 42\.5/])
-  await expect(page.getByRole('region', { name: 'Over 42.5 over time' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Chance of Over 42.5' })).toBeVisible()
 
   const moreActions = page.getByRole('button', { name: 'More actions' })
   await moreActions.click()

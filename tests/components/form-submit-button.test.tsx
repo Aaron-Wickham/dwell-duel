@@ -83,4 +83,44 @@ describe('FormSubmitButton', () => {
     )
     expect(screen.getByRole('button', { name: 'Place bet' })).toBeDisabled()
   })
+
+  it('says what it is doing while pending, when given a pendingLabel, and keeps the click guard', async () => {
+    const action = vi.fn(neverResolves)
+    render(
+      <form action={action}>
+        <FormSubmitButton pendingLabel="Placing…">Place bet</FormSubmitButton>
+      </form>,
+    )
+    const button = screen.getByRole('button', { name: 'Place bet' })
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+
+    await userEvent.click(button)
+
+    await waitFor(() => expect(button).toHaveAttribute('aria-disabled', 'true'))
+    expect(screen.getByRole('status')).toHaveTextContent('Placing…')
+    expect(button).toHaveAccessibleName('Place bet')
+    expect(button).not.toContainElement(screen.getByRole('status'))
+    expect(button.querySelector('svg')).not.toBeNull()
+    await userEvent.click(button)
+    expect(action).toHaveBeenCalledOnce()
+  })
+
+  // MKT-2: a quick pick already shows its result, so pending mustn't grey it out as if refused.
+  it('with quietPending, marks itself aria-busy rather than aria-disabled while pending, and still swallows a second click', async () => {
+    const action = vi.fn(neverResolves)
+    render(
+      <form action={action}>
+        <FormSubmitButton quietPending>Add Yes</FormSubmitButton>
+      </form>,
+    )
+    const button = screen.getByRole('button', { name: 'Add Yes' })
+
+    await userEvent.click(button)
+    await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'true'))
+    expect(button).not.toHaveAttribute('aria-disabled')
+    expect(action).toHaveBeenCalledOnce()
+
+    await userEvent.click(button)
+    expect(action).toHaveBeenCalledOnce()
+  })
 })

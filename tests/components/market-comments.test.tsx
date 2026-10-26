@@ -131,7 +131,7 @@ describe('MarketComments', () => {
 
   it('says there is nothing older, not that nobody has commented, for a window past the end', async () => {
     await renderComments({ rows: [], next: null, windowed: true }, { comments_from: 'OLD' })
-    expect(screen.getByText('Nothing older here.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing older here')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to newest' })).toHaveAttribute('href', '/markets/m-1')
     expect(screen.queryByText('No comments yet.')).toBeNull()
   })

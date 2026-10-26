@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+import { TAB_TRANSITION } from '@/components/nav/page-transition'
 import type { MemberSummary } from '@/lib/members/list-members'
 import { reinviteMemberAction } from '@/lib/admin/owner-actions'
 import { Button } from '@/components/ui/button'
@@ -20,7 +22,11 @@ export function ReinviteMemberButton({ member }: { member: MemberSummary }) {
           {trigger}
         </Button>
         <p id={`${id}-hint`} className="text-sm text-ink2">
-          There’s no email on file for {member.displayName}, so there’s nothing to invite. Add their Google email under Invites instead.
+          There’s no email on file for {member.displayName}, so there’s nothing to invite. Add their Google email under{' '}
+          <Link href="/admin/invites" transitionTypes={TAB_TRANSITION} className="prose-link">
+            Invites
+          </Link>{' '}
+          instead.
         </p>
       </div>
     )
@@ -35,6 +41,8 @@ export function ReinviteMemberButton({ member }: { member: MemberSummary }) {
       title={`Invite ${member.displayName} again?`}
       description={`${member.displayName} can sign in again straight away, as a Member, and is ranked again. Their coins, bets and history are as they left them.`}
       confirmLabel="Invite again"
+      confirmVariant="primary"
+      pendingLabel="Inviting…"
       successMessage={`${member.displayName} invited again.`}
       action={reinviteMemberAction.bind(null, member.id)}
     />

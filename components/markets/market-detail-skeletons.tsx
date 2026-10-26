@@ -41,7 +41,7 @@ export function MarketChartSkeleton({ figure = true }: { figure?: boolean }) {
           <Skeleton className="h-[52px] w-40 rounded-tile" />
         </div>
         <div className="flex flex-col gap-3 max-md:px-2">
-          <Skeleton className="h-[220px] md:h-[300px]" />
+          <Skeleton className="h-[160px] md:h-[300px]" />
           <Skeleton className="h-5 w-full" />
         </div>
       </div>

@@ -129,7 +129,7 @@ describe('EditMarketDialog', () => {
 describe('CreateTaskForm', () => {
   async function fillRepeatableTask() {
     await userEvent.type(screen.getByLabelText('Title'), 'Read Ruth')
-    await userEvent.type(screen.getByLabelText('Description'), 'All four chapters')
+    await userEvent.type(screen.getByLabelText('Description (optional)'), 'All four chapters')
     await userEvent.type(screen.getByLabelText('Reward (DC)'), '15')
     await userEvent.click(screen.getByRole('checkbox', { name: 'Require proof' }))
     await userEvent.click(screen.getByRole('checkbox', { name: 'Repeatable' }))
@@ -144,7 +144,7 @@ describe('CreateTaskForm', () => {
 
     await screen.findByRole('alert')
     expect(screen.getByLabelText('Title')).toHaveValue('Read Ruth')
-    expect(screen.getByLabelText('Description')).toHaveValue('All four chapters')
+    expect(screen.getByLabelText('Description (optional)')).toHaveValue('All four chapters')
     expect(screen.getByLabelText('Reward (DC)')).toHaveValue(15)
     expect(screen.getByRole('checkbox', { name: 'Require proof' })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: 'Repeatable' })).toBeChecked()
@@ -174,11 +174,11 @@ describe('EditTaskForm', () => {
     await userEvent.clear(screen.getByLabelText('Reward (DC)'))
     await userEvent.type(screen.getByLabelText('Reward (DC)'), '12')
     await userEvent.click(screen.getByRole('checkbox', { name: 'Require proof' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save task' }))
 
     await screen.findByRole('alert')
     expect(screen.getByLabelText('Title')).toHaveValue('Read Genesis 1-4')
-    expect(screen.getByLabelText('Description')).toHaveValue('Before Sunday')
+    expect(screen.getByLabelText('Description (optional)')).toHaveValue('Before Sunday')
     expect(screen.getByLabelText('Reward (DC)')).toHaveValue(12)
     expect(screen.getByRole('checkbox', { name: 'Require proof' })).toBeChecked()
     expect(onDone).not.toHaveBeenCalled()
@@ -188,7 +188,7 @@ describe('EditTaskForm', () => {
     actions.updateTaskAction.mockResolvedValue(undefined)
     const onDone = vi.fn()
     render(<EditTaskForm id="edit-task-t1" task={GENESIS} onDone={onDone} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save task' }))
 
     await waitFor(() => expect(success).toHaveBeenCalledWith('Task saved.'))
     expect(onDone).toHaveBeenCalled()
@@ -224,6 +224,14 @@ describe('TaskCatalogItem', () => {
 })
 
 describe('ProfileForm', () => {
+  // SOC-5: a photo change waits for Save, so the form says so.
+  it('says a removed photo is gone only once the profile is saved', async () => {
+    render(<ProfileForm displayName="Ben" bio="" avatarSrc="https://example.test/ben.jpg" />)
+    expect(screen.queryByText(/^Save profile to/)).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Remove photo' }))
+    expect(screen.getByText('Save profile to remove your photo.')).toBeInTheDocument()
+  })
+
   it('keeps the bio after the server refuses it', async () => {
     actions.updateProfileAction.mockResolvedValue({ formError: 'Could not save your profile.' })
     render(<ProfileForm displayName="Ben" bio="Choir" avatarSrc={null} />)
@@ -368,7 +376,7 @@ describe('Reject reasons (#200)', () => {
     await userEvent.type(within(dialog).getByLabelText(REASON), 'Try again next week')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Reject' }))
 
-    await screen.findByRole('status')
+    await screen.findByText('1 rejected.')
     expect((actions.bulkRejectTaskCompletionsAction.mock.calls[0][1] as FormData).get('reason')).toBe('Try again next week')
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }))
@@ -381,22 +389,22 @@ describe('AddInviteForm (#221)', () => {
   it('keeps the email after the server refuses it', async () => {
     actions.addInviteAction.mockResolvedValue({ formError: 'That email is already invited.' })
     render(<AddInviteForm />)
-    await userEvent.type(screen.getByLabelText('Email'), 'sarah@example.com')
+    await userEvent.type(screen.getByLabelText('Google email'), 'sarah@example.com')
     await userEvent.click(screen.getByRole('button', { name: 'Add invite' }))
 
     await screen.findByRole('alert')
-    expect(screen.getByLabelText('Email')).toHaveValue('sarah@example.com')
+    expect(screen.getByLabelText('Google email')).toHaveValue('sarah@example.com')
     expect(success).not.toHaveBeenCalled()
   })
 
   it('clears the email once the invite is added', async () => {
     actions.addInviteAction.mockResolvedValue({ addedEmail: 'sarah@example.com' })
     render(<AddInviteForm />)
-    await userEvent.type(screen.getByLabelText('Email'), 'sarah@example.com')
+    await userEvent.type(screen.getByLabelText('Google email'), 'sarah@example.com')
     await userEvent.click(screen.getByRole('button', { name: 'Add invite' }))
 
     await waitFor(() => expect(success).toHaveBeenCalledWith('Invite added.'))
     expect((actions.addInviteAction.mock.calls[0][1] as FormData).get('email')).toBe('sarah@example.com')
-    await waitFor(() => expect(screen.getByLabelText('Email')).toHaveValue(''))
+    await waitFor(() => expect(screen.getByLabelText('Google email')).toHaveValue(''))
   })
 })

@@ -97,6 +97,17 @@ describe('the My bets skeleton', () => {
     expect(container.querySelector('[data-skeleton="bets-coins"]')).toBeNull()
     expect(container.querySelector('[data-skeleton="bets"]')).toHaveClass('max-w-[1280px]')
   })
+
+  it('draws three tabs, or all four on Cancelled, which only a member with a cancelled bet sees (D-10)', () => {
+    const bar = () => [...document.querySelectorAll('.skeleton')].find((b) => b.classList.contains('h-[52px]'))!
+    search.params = new URLSearchParams('tab=settled')
+    const { unmount } = render(<BetsLoading />)
+    expect(bar()).toHaveClass('md:w-[246px]')
+    unmount()
+    search.params = new URLSearchParams('tab=cancelled')
+    render(<BetsLoading />)
+    expect(bar()).toHaveClass('md:w-[357px]')
+  })
 })
 
 describe('skeletons of reading-width pages', () => {
@@ -163,7 +174,7 @@ describe('skeletons match their pages', () => {
     expect(container.querySelector('[data-skeleton="leaderboard"]')).toBeNull()
     const month = container.querySelector('[data-skeleton="leaderboard-month"]')!
     expect(month.querySelector('.items-end.justify-center')).toBeNull()
-    expect(withClass(container, 'h-[220px]')).toHaveLength(1)
+    expect(withClass(container, 'h-[340px]')).toHaveLength(1)
     const grid = month.querySelector('[class*="lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]"]')!
     const [rankings, side] = [...grid.children]
     expect(rankings).toHaveClass('divide-y', 'lg:col-start-1')

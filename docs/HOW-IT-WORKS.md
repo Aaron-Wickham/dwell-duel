@@ -183,7 +183,8 @@ position** strip just above its outcomes (under the chart on a phone, at
 the top of the right-hand column on a computer). Only you see it. While the market is open it lists
 each of your bets with exactly what it pays if it wins, and each parlay
 that has a pick on the market, linking to the parlay. Once the market
-settles, each bet shows Won, Lost or Refunded, the card says what you won
+settles, each bet shows Won, Lost, Called off (its market was called off
+and the stake came back) or "Refunded · No winners", the card says what you won
 or lost on the market overall (left out when it comes to 0), and each
 parlay pick says where it and its parlay stand.
 
@@ -275,15 +276,19 @@ bet what on each market, and bets and parlays also appear in the feed.
 
 Each open bet says what it pays if it wins ("10 DC on Yes · Pays 18 DC")
 and when its market closes; a settled one says what it did ("Won 18 DC",
-"Lost", "Refunded"). A parlay's card says its stake and what it pays if
-all its picks win, and lists its picks with a word for each: Won, Lost,
+"Lost", "Called off · Refunded" when its market was called off, or
+"Refunded · No winners"). A parlay's card says its stake and what it pays
+if every pick wins ("Pays 210 DC if every pick wins"), or "Refunded" when
+every pick was called off, and lists its picks with a word for each: Won, Lost,
 Waiting or Called off.
 
 Tap a parlay to open its **breakdown**: what it pays (or paid, or "Lost"),
-its stake and how many times your stake it pays, each pick with its odds
-and where its market stands (Won, Lost, Waiting or Called off), and a short
-sum showing how the multiplier adds up. A called-off pick is shown as left
-out, and the rest carry on.
+its stake and how many times your stake it pays, when it was placed, each
+pick with its odds and where its market stands (Won, Lost, Waiting or
+Called off), and a short sum showing how the multiplier adds up. A
+called-off pick is shown as left out, and the rest carry on. A refunded
+parlay shows "Refunded" over its stake and "Every pick was called off",
+with no multiplier, since no odds were left to multiply.
 
 My bets' **Coins** tab is your coin history: every DC that came in or went
 out, newest first, in plain words ("Won 26 DC on Will it rain?", "Task
@@ -393,7 +398,9 @@ month ranks the month's betting profit, so everyone starts level.
   and stays pinned to the bottom of the screen until you scroll to it.
   When you're further down than the list shows, a bar with your rank and
   net worth stands in for it on a phone, with **Jump to me**, which opens
-  the list ten places above you instead of paging down from the top.
+  the list ten places above you instead of paging down from the top. This
+  month has the same bar, with your profit, and its Jump to me stays on
+  This month.
 - **This month** ranks **net betting profit** for the calendar month, on
   Eastern time (America/New_York): winnings, refunds and cancelled-bet
   refunds, minus stakes, and minus any winnings an override took back.
@@ -409,9 +416,12 @@ month ranks the month's betting profit, so everyone starts level.
 - **Only current members are ranked.** Someone the owner has removed drops
   off both boards and out of the count in a rank like "218th of 502"; their profile still shows
   their net worth, marked "Not ranked".
-- **Your standing** (Net worth, wide screens only): a card beside the
-  rankings, under the podium, shows your rank, net worth, record and how
-  far you are behind the member above you, with Jump to me.
+- **Your standing** (wide screens only, on both boards): a card beside the
+  rankings shows your rank, record and how far you are behind the member
+  above you, with Jump to me. On Net worth it sits under the podium and
+  shows your net worth; on This month it sits above the awards and shows
+  your profit, signed ("+40 DC", "−20 DC"). If you haven't bet this month
+  it says so instead.
 - **Podium and records:** once three members are ranked, the top three
   of the Net worth board stand on a podium (This month leads with the
   race instead). From tablet width up, each row shows a win-loss record (like 6-3):

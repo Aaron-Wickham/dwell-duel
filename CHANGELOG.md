@@ -35,7 +35,7 @@ before v0.4.0 used other headings.)
 - **The profile and Create market forms** are plain cards like the rest of the app, without a border and shadow.
 - **Small status chips** use the 13px chip size instead of 12px.
 - **Clearer error words.** A failed action now says "That didn’t go through. Try again, and if it keeps happening, tell an admin."; a page that fails to load says "This page couldn’t load", or that you're offline when you are; a failed sign-in says to use the account your invite was sent to; and "Nothing older here" lost its full stop.
-- **The race chart says how the lines moved,** "Aaron rose to +64 DC, …", under its heading and to screen readers.
+- **The race chart says how the lines moved,** "Aaron rose to +64 DC, …", on one line under its heading and in full to screen readers, and the card keeps one height before and after the first bet settles.
 - **Past champions match the awards:** plain rows with the profit in bold, no chip or trophy.
 - **Parlay picks read the same everywhere.** An open pick's chip is green, not waiting gold, and the tally counts every pick still to play out as "waiting", as the rows do. The progress bar's open segments have an edge, so each pick reads as its own segment.
 - **The parlay page goes back where you came from,** shows when it was placed in the summary, and every pick row opens its market.

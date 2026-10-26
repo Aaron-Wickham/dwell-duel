@@ -2,6 +2,7 @@ import { pageClass } from '@/components/ui/page'
 import { dividedRowsClass } from '@/components/ui/list-card'
 import { Skeleton, SkeletonCard, SkeletonPageHeader, SkeletonScreen } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { RACE_SKELETON_BODY } from '@/components/leaderboard/race-size'
 
 // The podium's blocks by place (components/leaderboard/podium.tsx), drawn in DOM order.
 const PODIUM = [
@@ -84,10 +85,11 @@ export function NetWorthSkeleton() {
   )
 }
 
-// This month: no podium (#396). The race card across the page (its heading, the movement line,
-// three lines on a phone and one from md, the phone's readout strip, the plot and its day labels),
-// then the rankings, with Your standing beside them at lg. The awards and past champions show
-// only some months, so they aren't drawn.
+// This month: no podium (#396). The race card across the page: its heading, a two-line description
+// (a fixed sentence and one clamped line, components/leaderboard/race-chart.tsx) and a body that is
+// the same height with the plot or its empty state (RACE_SKELETON_BODY); then the rankings, with Your
+// standing beside them at lg. The awards and past champions show only some months, so they aren't
+// drawn.
 export function MonthSkeleton() {
   return (
     <SkeletonScreen name="leaderboard-month" className={pageClass}>
@@ -99,28 +101,14 @@ export function MonthSkeleton() {
           </div>
           <div className="flex flex-col">
             <div className="flex h-5 items-center">
+              <Skeleton className="h-3.5 w-60 max-w-full" />
+            </div>
+            <div className="flex h-5 items-center">
               <Skeleton className="h-3.5 w-full md:w-3/4" />
             </div>
-            <div className="flex h-5 items-center md:hidden">
-              <Skeleton className="h-3.5 w-full" />
-            </div>
-            <div className="flex h-5 items-center md:hidden">
-              <Skeleton className="h-3.5 w-1/2" />
-            </div>
           </div>
         </div>
-        <div className="flex flex-col gap-2">
-          <div className="min-h-[5.5rem] md:hidden">
-            <div className="flex h-5 items-center">
-              <Skeleton className="h-3.5 w-48" />
-            </div>
-          </div>
-          <Skeleton className="h-[220px] md:h-[260px]" />
-          <div className="flex h-4 items-center justify-between pr-[96px] md:pr-[120px]">
-            <Skeleton className="h-3 w-10" />
-            <Skeleton className="h-3 w-8" />
-          </div>
-        </div>
+        <Skeleton className={RACE_SKELETON_BODY} />
       </SkeletonCard>
       <div className="flex flex-col gap-5 md:gap-7 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
         <Rankings className="lg:col-start-1 lg:row-start-1" />

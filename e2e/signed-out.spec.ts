@@ -69,15 +69,20 @@ test('not-invited names the refused account once, and Try another account keeps 
   await expect(page.getByText(/You signed in as/)).toHaveCount(0)
 })
 
-// #329: an iPhone SE's viewport. The intro sentence drops out so the sign-in button is on screen without
-// scrolling, once the intro (if any) has settled.
-test('on a short phone the sign-in button stays above the fold', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 667 })
-  await page.goto('/sign-in')
-  await expect(page.getByText(/^Bet on friendly questions/)).toBeHidden()
-  const button = page.getByRole('button', { name: 'Sign in with Google' })
-  await expect(button).toBeInViewport({ ratio: 1 })
-})
+// #329, PUB-1: an iPhone SE's viewport and an iPhone's Safari tab with its bars. The intro sentence
+// shrinks to one "No real money" line, and the page doesn't scroll, once the intro (if any) has settled.
+for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 664 }]) {
+  test(`on a short phone (${viewport.width}×${viewport.height}) the sign-in page fits without scrolling`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await page.goto('/sign-in')
+    await expect(page.getByText(/^Bet play money on friendly questions/)).toBeHidden()
+    await expect(page.getByText('Play money only. No real money.')).toBeVisible()
+    const button = page.getByRole('button', { name: 'Sign in with Google' })
+    await expect(button).toBeInViewport({ ratio: 1 })
+    await expect.poll(() => page.evaluate(() => 'signInIntro' in document.documentElement.dataset), { timeout: 5_000 }).toBe(false)
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(viewport.height)
+  })
+}
 
 // #329: once a session, and reduced motion skips it, so the page opens on its final frame.
 test('the sign-in intro plays once a session', async ({ page }) => {

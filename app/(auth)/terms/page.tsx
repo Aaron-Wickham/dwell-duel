@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { ChevronRight } from 'lucide-react'
 import { h1Class, h2Class } from '@/components/ui/page'
 import { Card } from '@/components/ui/card'
 import { DwellDuelSymbol } from '@/components/brand/wordmark'
@@ -68,8 +69,9 @@ export default function TermsPage() {
           .
         </p>
       </Card>
-      <Link href="/" className="hit-area text-sm font-bold text-ink2">
+      <Link href="/" className="pressable inline-flex min-h-11 items-center gap-1 font-bold text-ink">
         Go to DwellDuel
+        <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
       </Link>
     </main>
   )

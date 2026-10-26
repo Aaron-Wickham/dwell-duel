@@ -19,6 +19,9 @@ before v0.4.0 used other headings.)
 - **Printing in dark mode.** A market or the rules printed from the dark theme now prints dark text on white instead of near-white text.
 - **Text in cards can be selected with a mouse.** On a computer you can now select and copy the words on a tappable card; on a phone a long press still doesn't select it.
 - **A way back from a missing page.** "Page not found" on a market, member or parlay now also offers Back to Markets (or Leaderboard, My bets), and the top-level error and not-found pages have a main landmark for screen readers.
+- **"No real money" on every iPhone.** On a short screen, which is most Safari tabs, the sign-in page now keeps one line, "Play money only. No real money.", and the sample card drops its bet line to make room, so the page still doesn't scroll.
+- **Screen readers reach the heading first** on sign-in and Not invited, and skip the dimmed sample market on Not invited.
+- **Privacy no longer sends you to sign in.** Its mentions of other parts of the rules (Roles, Tasks) are plain words, since those pages are for members.
 
 ### Polish
 - **Cards stand out from the page in light mode.** The light page background is a step darker, so cards on Home and My bets read as cards on a sunny phone screen; hover tints moved with it.
@@ -28,6 +31,8 @@ before v0.4.0 used other headings.)
 - **Busy buttons can say what they're doing.** Submit and confirm buttons can show the leaf loader with words like "Placing…" while an action runs, instead of only greying out (later changes turn this on for each form).
 - **The profile and Create market forms** are plain cards like the rest of the app, without a border and shadow.
 - **Small status chips** use the 13px chip size instead of 12px.
+- **The sign-in sample market's category** is a tinted category chip, like a real market card's.
+- **"Go to DwellDuel" reads as a link** at the end of Privacy and Terms: full-size ink text with a chevron, instead of small grey text.
 - **Clearer error words.** A failed action now says "That didn’t go through. Try again, and if it keeps happening, tell an admin."; a page that fails to load says "This page couldn’t load", or that you're offline when you are; a failed sign-in says to use the account your invite was sent to; and "Nothing older here" lost its full stop.
 
 ### Under the hood

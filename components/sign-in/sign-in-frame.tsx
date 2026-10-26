@@ -7,8 +7,10 @@ import { SignInIntro } from './sign-in-intro'
 import { WORDMARK_SYMBOL_ID } from './intro-clock'
 
 // The public pages a new invitee meets: the wordmark, a sample market and the page's own copy. One
-// column on a phone, card first; at lg the copy sits left of a larger card. `intro` plays the
-// brand moment (sign-in only); `dimmed` steps the card back behind /not-invited's notice.
+// column on a phone, card first; at lg the copy sits left of a larger card. The copy comes first in
+// the DOM all the same, so a screen reader reaches the heading before the illustration. `intro`
+// plays the brand moment (sign-in only); `dimmed` steps the card back behind /not-invited's notice
+// and out of the accessibility tree.
 export function SignInFrame({ intro = false, dimmed = false, children }: { intro?: boolean; dimmed?: boolean; children: ReactNode }) {
   return (
     <main
@@ -21,9 +23,6 @@ export function SignInFrame({ intro = false, dimmed = false, children }: { intro
         <WordmarkName className="text-[21px]" />
       </div>
       <div className="grid flex-1 content-start gap-5 short:gap-3.5 lg:grid-cols-2 lg:items-center lg:gap-16 lg:pt-8">
-        <div data-dimmed={dimmed || undefined} className={cn('sign-in-intro-card lg:col-start-2 lg:row-start-1', dimmed && 'opacity-35')}>
-          <SampleMarket />
-        </div>
         <div className="sign-in-intro-text flex flex-col gap-5 short:gap-3.5 lg:col-start-1 lg:row-start-1 lg:max-w-[480px]">
           {children}
           <p className="text-center text-sm lg:max-w-[380px]">
@@ -35,6 +34,13 @@ export function SignInFrame({ intro = false, dimmed = false, children }: { intro
               Terms
             </Link>
           </p>
+        </div>
+        <div
+          data-dimmed={dimmed || undefined}
+          aria-hidden={dimmed || undefined}
+          className={cn('sign-in-intro-card order-first lg:col-start-2 lg:row-start-1', dimmed && 'opacity-35')}
+        >
+          <SampleMarket />
         </div>
       </div>
     </main>

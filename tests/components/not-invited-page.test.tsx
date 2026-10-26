@@ -51,9 +51,18 @@ describe('NotInvitedPage', () => {
     expect(screen.getByRole('link', { name: 'Try another account' })).toHaveAttribute('href', '/sign-in')
   })
 
-  it('shows the sample market dimmed, behind the notice', async () => {
+  it('shows the sample market dimmed, behind the notice, and hides it from screen readers (PUB-3)', async () => {
     await renderPage()
-    expect(screen.getByRole('img', { name: /^Sample market:/ }).closest('[data-dimmed]')).not.toBeNull()
+    expect(screen.queryByRole('img', { name: /^Sample market:/ })).toBeNull()
+    const dimmed = screen.getByRole('img', { name: /^Sample market:/, hidden: true }).closest('[data-dimmed]')
+    expect(dimmed).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('puts the heading before the sample market in reading order (PUB-3)', async () => {
+    await renderPage()
+    const heading = screen.getByRole('heading', { level: 1 })
+    const sample = screen.getByRole('img', { name: /^Sample market:/, hidden: true })
+    expect(heading.compareDocumentPosition(sample) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('puts its content in the main landmark', async () => {
